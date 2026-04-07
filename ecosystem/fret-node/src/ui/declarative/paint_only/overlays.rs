@@ -17,15 +17,14 @@ use super::marquee_rect_screen;
 use super::overlay_elements::{
     build_hover_tooltip_overlay_spec, push_hover_tooltip_overlay, push_marquee_overlay,
 };
-use super::portals::collect_hovered_node_label_and_ports;
-use super::read_authoritative_graph_in_models;
+use super::surface_support::{collect_node_label_and_ports, read_authoritative_graph_in_models};
 
 pub(super) struct HoverTooltipOverlayParams<'a> {
     pub(super) binding: &'a crate::ui::NodeGraphSurfaceBinding,
     pub(super) portal_bounds_store: &'a Model<PortalBoundsStore>,
     pub(super) hover_anchor_store: &'a Model<HoverAnchorStore>,
     pub(super) style_tokens: &'a NodeGraphStyle,
-    pub(super) diag_keys_enabled: bool,
+    pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) panning: bool,
     pub(super) marquee_active: bool,
     pub(super) node_dragging: bool,
@@ -41,7 +40,10 @@ pub(super) fn push_hover_tooltip_overlay_if_needed<H: UiHost + 'static>(
     overlay_children: &mut Vec<AnyElement>,
     params: HoverTooltipOverlayParams<'_>,
 ) {
-    if !params.diag_keys_enabled || params.panning || params.marquee_active || params.node_dragging
+    if !params.diagnostics.hover_tooltip_enabled
+        || params.panning
+        || params.marquee_active
+        || params.node_dragging
     {
         return;
     }
@@ -94,7 +96,7 @@ pub(super) fn push_hover_tooltip_overlay_if_needed<H: UiHost + 'static>(
 
     let (hovered_label, ports_in, ports_out) =
         read_authoritative_graph_in_models(cx.app.models_mut(), params.binding, |graph| {
-            collect_hovered_node_label_and_ports(graph, hovered_id)
+            collect_node_label_and_ports(graph, hovered_id)
         })
         .flatten()
         .unwrap_or_else(|| (Arc::<str>::from("node"), 0, 0));

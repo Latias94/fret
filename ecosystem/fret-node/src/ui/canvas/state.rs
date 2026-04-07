@@ -12,6 +12,7 @@ use crate::runtime::callbacks::ViewportMoveKind;
 
 mod state_drag_sessions;
 mod state_geometry_cache;
+mod state_overlay_policy;
 mod state_overlay_sessions;
 mod state_paste_series;
 mod state_preview_cache;
@@ -23,9 +24,9 @@ pub(crate) use state_drag_sessions::{
     PendingMarqueeDrag, PendingNodeDrag, PendingNodeResize, PendingNodeSelectAction,
     PendingWireDrag, WireDrag, WireDragKind,
 };
+pub(crate) use state_overlay_policy::{ContextMenuTarget, SearcherRowsMode};
 pub(crate) use state_overlay_sessions::{
-    ContextMenuState, ContextMenuTarget, LastConversionContext, PendingPaste, SearcherRowsMode,
-    SearcherState, ToastState,
+    ContextMenuState, LastConversionContext, PendingPaste, SearcherState, ToastState,
 };
 #[cfg(test)]
 pub(crate) use state_preview_cache::DerivedBuildCounters;

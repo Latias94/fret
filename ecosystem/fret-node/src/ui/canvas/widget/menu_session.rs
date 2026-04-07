@@ -14,12 +14,7 @@ pub(super) fn build_searcher_rows(
     recent_kinds: &[NodeKindKey],
     rows_mode: SearcherRowsMode,
 ) -> Vec<SearcherRow> {
-    match rows_mode {
-        SearcherRowsMode::Catalog => {
-            crate::ui::canvas::searcher::build_rows(candidates, query, recent_kinds)
-        }
-        SearcherRowsMode::Flat => crate::ui::canvas::searcher::build_rows_flat(candidates, query),
-    }
+    searcher::build_searcher_rows(candidates, query, recent_kinds, rows_mode)
 }
 
 pub(super) fn build_context_menu_state<M: NodeGraphCanvasMiddleware>(

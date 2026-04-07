@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_canvas::view::{PanZoom2D, screen_rect_to_canvas_rect, visible_canvas_rect};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
+    Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
 };
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
@@ -13,43 +13,22 @@ use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::controller::NodeGraphController;
 use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
-use crate::ui::{
-    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphSetViewportOptions,
-    NodeGraphStyle,
-};
+use crate::ui::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphStyle};
 
 use super::OverlayPlacement;
+use super::minimap_navigation_policy::{
+    NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding, apply_minimap_viewport_update,
+    normalize_minimap_navigation_zoom,
+};
+use super::minimap_policy::{
+    MiniMapKeyboardAction, minimap_keyboard_action_from_key, plan_minimap_keyboard_pan,
+    plan_minimap_keyboard_zoom,
+};
 
 #[derive(Debug, Clone)]
 struct MiniMapDragState {
     start_canvas: fret_core::Point,
     start_pan: crate::core::CanvasPoint,
-}
-
-/// Navigation wiring knobs for the minimap overlay.
-///
-/// This is intentionally policy-light: it only affects how viewport updates are emitted.
-#[derive(Clone)]
-pub enum NodeGraphMiniMapNavigationBinding {
-    /// Uses the overlay's default behavior (updates `NodeGraphViewState`, and `NodeGraphStore` when attached).
-    Default,
-    /// Disables navigation (no viewport updates).
-    Disabled,
-    /// Routes viewport updates through `NodeGraphController`.
-    Controller(NodeGraphController),
-}
-
-#[derive(Clone)]
-pub struct NodeGraphMiniMapBindings {
-    pub navigation: NodeGraphMiniMapNavigationBinding,
-}
-
-impl Default for NodeGraphMiniMapBindings {
-    fn default() -> Self {
-        Self {
-            navigation: NodeGraphMiniMapNavigationBinding::Default,
-        }
-    }
 }
 
 pub struct NodeGraphMiniMapOverlay {
@@ -270,42 +249,20 @@ impl NodeGraphMiniMapOverlay {
             .view_state
             .read_ref(host, |s| s.zoom)
             .ok()
+            .map(normalize_minimap_navigation_zoom)
             .unwrap_or(1.0);
         self.update_viewport(host, pan, zoom);
     }
 
     fn update_viewport<H: UiHost>(&self, host: &mut H, pan: crate::core::CanvasPoint, zoom: f32) {
-        let z = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
-        };
-
-        match &self.bindings.navigation {
-            NodeGraphMiniMapNavigationBinding::Disabled => {}
-            NodeGraphMiniMapNavigationBinding::Controller(controller) => {
-                if controller.set_viewport_with_options(
-                    host,
-                    pan,
-                    z,
-                    NodeGraphSetViewportOptions::default(),
-                ) {
-                    let _ = controller.sync_view_state_model_from_store(host, &self.view_state);
-                }
-            }
-            NodeGraphMiniMapNavigationBinding::Default => {
-                let _ = self.view_state.update(host, |s, _cx| {
-                    s.pan = pan;
-                    s.zoom = z;
-                });
-
-                if let Some(store) = self.store.as_ref() {
-                    let _ = store.update(host, |store, _cx| {
-                        store.set_viewport(pan, z);
-                    });
-                }
-            }
-        }
+        apply_minimap_viewport_update(
+            host,
+            &self.bindings.navigation,
+            &self.view_state,
+            self.store.as_ref(),
+            pan,
+            zoom,
+        );
     }
 }
 
@@ -330,110 +287,63 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                 key,
                 modifiers: _,
                 repeat: _,
-            } => match *key {
-                KeyCode::ArrowLeft
-                | KeyCode::ArrowRight
-                | KeyCode::ArrowUp
-                | KeyCode::ArrowDown => {
-                    let (pan, zoom) = self
-                        .view_state
-                        .read_ref(cx.app, |s| (s.pan, s.zoom))
-                        .ok()
-                        .unwrap_or_default();
-                    let zoom = if zoom.is_finite() && zoom > 0.0 {
-                        zoom
-                    } else {
-                        1.0
-                    };
-                    let step = Self::KEYBOARD_PAN_STEP_SCREEN_PX / zoom;
-                    let mut pan = pan;
-                    match *key {
-                        KeyCode::ArrowLeft => pan.x += step,
-                        KeyCode::ArrowRight => pan.x -= step,
-                        KeyCode::ArrowUp => pan.y += step,
-                        KeyCode::ArrowDown => pan.y -= step,
-                        _ => {}
-                    }
+            } => {
+                let Some(action) = minimap_keyboard_action_from_key(*key) else {
+                    return;
+                };
 
-                    self.update_pan(cx.app, pan);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                KeyCode::Equal | KeyCode::NumpadAdd | KeyCode::Minus | KeyCode::NumpadSubtract => {
-                    let snapshot = self.internals.snapshot();
-                    let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
-
-                    let (pan, zoom) = self
-                        .view_state
-                        .read_ref(cx.app, |s| (s.pan, s.zoom))
-                        .ok()
-                        .unwrap_or_default();
-                    let zoom = if zoom.is_finite() && zoom > 0.0 {
-                        zoom
-                    } else {
-                        1.0
-                    };
-
-                    let factor = match *key {
-                        KeyCode::Equal | KeyCode::NumpadAdd => Self::KEYBOARD_ZOOM_STEP_MUL,
-                        KeyCode::Minus | KeyCode::NumpadSubtract => {
-                            1.0 / Self::KEYBOARD_ZOOM_STEP_MUL
+                match action {
+                    MiniMapKeyboardAction::PanLeft
+                    | MiniMapKeyboardAction::PanRight
+                    | MiniMapKeyboardAction::PanUp
+                    | MiniMapKeyboardAction::PanDown => {
+                        let view_state = self
+                            .view_state
+                            .read_ref(cx.app, |state| state.clone())
+                            .ok()
+                            .unwrap_or_default();
+                        if let Some(pan) = plan_minimap_keyboard_pan(
+                            &view_state,
+                            action,
+                            Self::KEYBOARD_PAN_STEP_SCREEN_PX,
+                        ) {
+                            self.update_pan(cx.app, pan);
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
                         }
-                        _ => 1.0,
-                    };
-
-                    let mut new_zoom = zoom * factor;
-                    let min_zoom = self.style.geometry.min_zoom;
-                    let max_zoom = self.style.geometry.max_zoom;
-                    if min_zoom.is_finite()
-                        && max_zoom.is_finite()
-                        && min_zoom > 0.0
-                        && max_zoom > 0.0
-                    {
-                        let (min_z, max_z) = if min_zoom <= max_zoom {
-                            (min_zoom, max_zoom)
-                        } else {
-                            (max_zoom, min_zoom)
-                        };
-                        new_zoom = new_zoom.clamp(min_z, max_z);
-                    } else {
-                        new_zoom = if new_zoom.is_finite() && new_zoom > 0.0 {
-                            new_zoom
-                        } else {
-                            1.0
-                        };
                     }
+                    MiniMapKeyboardAction::ZoomIn | MiniMapKeyboardAction::ZoomOut => {
+                        let snapshot = self.internals.snapshot();
+                        let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
+                        let view_state = self
+                            .view_state
+                            .read_ref(cx.app, |state| state.clone())
+                            .ok()
+                            .unwrap_or_default();
 
-                    // Zoom about the current viewport center in canvas space.
-                    let view = PanZoom2D {
-                        pan: Point::new(Px(pan.x), Px(pan.y)),
-                        zoom,
-                    };
-                    let vis = visible_canvas_rect(canvas_bounds, view);
-                    let cx_canvas = vis.origin.x.0 + 0.5 * vis.size.width.0;
-                    let cy_canvas = vis.origin.y.0 + 0.5 * vis.size.height.0;
-
-                    let bw = canvas_bounds.size.width.0;
-                    let bh = canvas_bounds.size.height.0;
-                    let new_pan = crate::core::CanvasPoint {
-                        x: bw / (2.0 * new_zoom) - cx_canvas,
-                        y: bh / (2.0 * new_zoom) - cy_canvas,
-                    };
-
-                    self.update_viewport(cx.app, new_pan, new_zoom);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                        if let Some((pan, zoom)) = plan_minimap_keyboard_zoom(
+                            &view_state,
+                            canvas_bounds,
+                            self.style.geometry.min_zoom,
+                            self.style.geometry.max_zoom,
+                            Self::KEYBOARD_ZOOM_STEP_MUL,
+                            action,
+                        ) {
+                            self.update_viewport(cx.app, pan, zoom);
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                        }
+                    }
+                    MiniMapKeyboardAction::FocusCanvas => {
+                        cx.request_focus(self.canvas_node);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
                 }
-                KeyCode::Escape => {
-                    cx.request_focus(self.canvas_node);
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                _ => {}
-            },
+            }
             Event::Pointer(fret_core::PointerEvent::Down {
                 position, button, ..
             }) => {

@@ -19,12 +19,14 @@ use super::overlay_elements::{
     build_hover_tooltip_overlay_spec, clamp_marquee_overlay_rect_to_bounds,
 };
 use super::pointer_down::read_left_pointer_down_snapshot_action_host;
+use super::surface_support::collect_node_label_and_ports;
 use super::{
     AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
     DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
     Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
     MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
-    NodeDragReleaseOutcome, NodeDragState, NodeRectDraw, PendingSelectionState, PortalBoundsStore,
+    NodeDragReleaseOutcome, NodeDragState, NodeGraphDiagnosticsConfig,
+    NodeGraphVisibleSubsetPortalConfig, NodeRectDraw, PendingSelectionState, PortalBoundsStore,
     PortalDebugFlags, PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
     authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
     begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
@@ -3087,6 +3089,59 @@ fn declarative_paint_only_graph_edit_paths_stay_on_transactions_seam() {
     }
 }
 
+#[test]
+fn visible_subset_portal_hosting_config_defaults_to_enabled_capped_layer() {
+    let config = NodeGraphVisibleSubsetPortalConfig::default();
+    assert!(config.enabled);
+    assert_eq!(config.max_nodes, 32);
+}
+
+#[test]
+fn node_graph_surface_props_declare_visible_subset_portal_hosting_config() {
+    let source = include_str!("../paint_only.rs");
+    assert!(source.contains("pub portal_hosting: NodeGraphVisibleSubsetPortalConfig"));
+    assert!(!source.contains("pub portals_enabled: bool"));
+    assert!(!source.contains("pub portal_max_nodes: usize"));
+}
+
+#[test]
+fn diagnostics_config_defaults_to_disabled() {
+    let config = NodeGraphDiagnosticsConfig::default();
+    assert!(!config.key_actions_enabled);
+    assert!(!config.hover_tooltip_enabled);
+}
+
+#[test]
+fn node_graph_surface_props_declare_explicit_diagnostics_config() {
+    let source = include_str!("../paint_only.rs");
+    assert!(source.contains("pub diagnostics: NodeGraphDiagnosticsConfig"));
+    assert!(!source.contains("std::env::var(\"FRET_DIAG\")"));
+}
+
+#[test]
+fn root_ui_surface_reexports_declarative_policy_configs() {
+    let source = include_str!("../../mod.rs");
+    assert!(source.contains("NodeGraphDiagnosticsConfig"));
+    assert!(source.contains("NodeGraphVisibleSubsetPortalConfig"));
+}
+
+#[test]
+fn declarative_paint_only_runtime_does_not_read_diag_env_directly() {
+    for (path, source) in declarative_paint_only_runtime_sources() {
+        assert!(
+            !source.contains("FRET_DIAG"),
+            "{path} must not read diagnostics policy from process env; use surface diagnostics config instead",
+        );
+    }
+}
+
+#[test]
+fn declarative_overlay_runtime_does_not_depend_on_portal_hosting_module() {
+    let source = include_str!("overlays.rs");
+    assert!(!source.contains("use super::portals::"));
+    assert!(!source.contains("collect_hovered_node_label_and_ports("));
+}
+
 fn test_node_drag_state(phase: NodeDragPhase, current_screen: Point) -> NodeDragState {
     NodeDragState {
         start_screen: Point::new(Px(0.0), Px(0.0)),
@@ -3250,6 +3305,73 @@ fn effective_selected_nodes_for_paint_falls_back_from_inactive_marquee_to_pendin
 
     assert_eq!(from_pending, vec![node_b]);
     assert_eq!(from_view, vec![node_a]);
+}
+
+#[test]
+fn collect_node_label_and_ports_reads_kind_and_direction_counts() {
+    let node = NodeId::from_u128(9097);
+    let port_in = PortId::from_u128(9098);
+    let port_out_a = PortId::from_u128(9099);
+    let port_out_b = PortId::from_u128(9100);
+    let mut graph = Graph::new(GraphId::from_u128(9096));
+    graph.nodes.insert(
+        node,
+        Node {
+            kind: NodeKindKey::new("test.portal.summary"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 0.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: None,
+            hidden: false,
+            collapsed: false,
+            ports: vec![port_in, port_out_a, port_out_b],
+            data: Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_in,
+        Port {
+            node,
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
+            ty: None,
+            data: Value::Null,
+        },
+    );
+    for (port, key) in [(port_out_a, "out_a"), (port_out_b, "out_b")] {
+        graph.ports.insert(
+            port,
+            Port {
+                node,
+                key: PortKey::new(key),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+    }
+
+    let (label, ports_in, ports_out) =
+        collect_node_label_and_ports(&graph, node).expect("summary should exist");
+    assert_eq!(&*label, "test.portal.summary");
+    assert_eq!(ports_in, 1);
+    assert_eq!(ports_out, 2);
 }
 
 #[test]

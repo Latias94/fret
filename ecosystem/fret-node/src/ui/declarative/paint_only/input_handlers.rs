@@ -40,7 +40,7 @@ pub(super) struct KeyHandlerParams {
     pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) portal_bounds_store: Model<PortalBoundsStore>,
     pub(super) portal_debug_flags: Model<PortalDebugFlags>,
-    pub(super) diag_keys_enabled: bool,
+    pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) diag_paint_overrides_value: Arc<NodeGraphPaintOverridesMap>,
     pub(super) diag_paint_overrides_enabled: Model<bool>,
     pub(super) min_zoom: f32,
@@ -122,7 +122,8 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
             return false;
         }
 
-        if let Some(action) = DeclarativeDiagKeyAction::from_key(params.diag_keys_enabled, key.key)
+        if let Some(action) =
+            DeclarativeDiagKeyAction::from_key(params.diagnostics.key_actions_enabled, key.key)
         {
             let handled = handle_declarative_diag_key_action_host(
                 host,

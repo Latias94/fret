@@ -60,7 +60,10 @@ pub use controller::{
     NodeGraphController, NodeGraphControllerError, NodeGraphEdgeUpdate,
     NodeGraphNodeConnectionsQuery, NodeGraphNodeUpdate, NodeGraphPortConnectionsQuery,
 };
-pub use declarative::{NodeGraphSurfaceProps, node_graph_surface};
+pub use declarative::{
+    NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps, NodeGraphVisibleSubsetPortalConfig,
+    node_graph_surface,
+};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use geometry_overrides::{
     EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,

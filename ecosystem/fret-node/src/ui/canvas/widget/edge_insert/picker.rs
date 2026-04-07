@@ -7,21 +7,12 @@ pub(in super::super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanv
     edge: EdgeId,
     invoked_at: Point,
 ) {
-    let menu_candidates = canvas.list_edge_insert_candidates(host, edge);
-
-    let snapshot = canvas.sync_view_state(host);
-    let bounds = canvas.interaction.last_bounds.unwrap_or_default();
-    let searcher = super::super::build_searcher_state(
-        canvas,
+    let request = super::super::searcher_picker::edge_insert_searcher_picker_request(
+        edge,
         invoked_at,
-        bounds,
-        &snapshot,
-        ContextMenuTarget::EdgeInsertNodePicker(edge),
-        menu_candidates,
-        canvas.interaction.recent_kinds.clone(),
-        super::super::SearcherRowsMode::Catalog,
+        canvas.list_edge_insert_candidates(host, edge),
     );
-    if searcher.rows.is_empty() {
+    if request.candidates.is_empty() {
         canvas.show_toast(
             host,
             window,
@@ -31,5 +22,5 @@ pub(in super::super) fn open_edge_insert_node_picker<H: UiHost, M: NodeGraphCanv
         return;
     }
 
-    canvas.install_searcher_overlay(searcher);
+    super::super::searcher_picker::open_searcher_picker_request(canvas, host, request);
 }

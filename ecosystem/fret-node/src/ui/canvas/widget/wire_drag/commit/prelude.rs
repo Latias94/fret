@@ -1,6 +1,6 @@
 pub(super) use std::sync::Arc;
 
-pub(super) use fret_core::{Point, Px, Rect};
+pub(super) use fret_core::{Point, Rect};
 pub(super) use fret_ui::UiHost;
 
 pub(super) use crate::core::{EdgeId, PortId};
@@ -11,7 +11,7 @@ pub(super) use crate::ui::presenter::InsertNodeCandidate;
 
 pub(super) use crate::ui::canvas::conversion;
 pub(super) use crate::ui::canvas::state::{
-    ContextMenuTarget, LastConversionContext, ViewSnapshot, WireDrag, WireDragKind,
+    LastConversionContext, ViewSnapshot, WireDrag, WireDragKind,
 };
 
 pub(super) use super::{

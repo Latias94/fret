@@ -4,67 +4,18 @@ use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
     SceneOp, Size, TextBlobId, TextConstraints, TextOverflow, TextWrap,
 };
-use fret_runtime::{CommandId, Model};
+use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
 
-use crate::interaction::NodeGraphConnectionMode;
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ui::NodeGraphStyle;
-use crate::ui::commands::{
-    CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_RESET_VIEW,
-    CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
-};
 use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 
 use super::OverlayPlacement;
-
-/// Command dispatch override for a controls overlay action.
-#[derive(Debug, Clone, PartialEq)]
-pub enum NodeGraphControlsCommandBinding {
-    /// Uses the overlay's built-in command mapping.
-    Default,
-    /// Disables the action (no command dispatch).
-    Disabled,
-    /// Dispatches a custom command when the action is activated.
-    Command(CommandId),
-}
-
-/// B-layer wiring knobs for the controls overlay.
-///
-/// This is intentionally policy-light: it only affects what gets dispatched on activation, and does
-/// not change layout, hit-testing, or focus behavior.
-#[derive(Debug, Clone)]
-pub struct NodeGraphControlsBindings {
-    pub toggle_connection_mode: NodeGraphControlsCommandBinding,
-    pub zoom_in: NodeGraphControlsCommandBinding,
-    pub zoom_out: NodeGraphControlsCommandBinding,
-    pub frame_all: NodeGraphControlsCommandBinding,
-    pub frame_selection: NodeGraphControlsCommandBinding,
-    pub reset_view: NodeGraphControlsCommandBinding,
-}
-
-impl Default for NodeGraphControlsBindings {
-    fn default() -> Self {
-        Self {
-            toggle_connection_mode: NodeGraphControlsCommandBinding::Default,
-            zoom_in: NodeGraphControlsCommandBinding::Default,
-            zoom_out: NodeGraphControlsCommandBinding::Default,
-            frame_all: NodeGraphControlsCommandBinding::Default,
-            frame_selection: NodeGraphControlsCommandBinding::Default,
-            reset_view: NodeGraphControlsCommandBinding::Default,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ControlsButton {
-    ToggleConnectionMode,
-    ZoomIn,
-    ZoomOut,
-    FrameAll,
-    FrameSelection,
-    ResetView,
-}
+use super::controls_policy::{
+    ControlsButton, NodeGraphControlsBindings, controls_button_a11y_label, controls_button_label,
+    controls_buttons, next_controls_button, resolve_controls_command_id,
+};
 
 struct ControlsLayout {
     panel: Rect,
@@ -121,18 +72,9 @@ impl NodeGraphControlsOverlay {
         let gap = self.style.paint.controls_gap.max(0.0);
         let button = self.style.paint.controls_button_size.max(10.0);
 
-        let items = [
-            ControlsButton::ToggleConnectionMode,
-            ControlsButton::ZoomIn,
-            ControlsButton::ZoomOut,
-            ControlsButton::FrameAll,
-            ControlsButton::FrameSelection,
-            ControlsButton::ResetView,
-        ];
-
         let panel_w = button + 2.0 * pad;
-        let panel_h =
-            (items.len() as f32) * button + ((items.len() as f32 - 1.0) * gap) + 2.0 * pad;
+        let item_count = controls_buttons().len() as f32;
+        let panel_h = item_count * button + (item_count - 1.0) * gap + 2.0 * pad;
         (panel_w, panel_h)
     }
 
@@ -141,15 +83,6 @@ impl NodeGraphControlsOverlay {
         let pad = self.style.paint.controls_padding.max(0.0);
         let gap = self.style.paint.controls_gap.max(0.0);
         let button = self.style.paint.controls_button_size.max(10.0);
-
-        let items = [
-            ControlsButton::ToggleConnectionMode,
-            ControlsButton::ZoomIn,
-            ControlsButton::ZoomOut,
-            ControlsButton::FrameAll,
-            ControlsButton::FrameSelection,
-            ControlsButton::ResetView,
-        ];
 
         let (panel_w, panel_h) = self.panel_size_px();
 
@@ -165,9 +98,9 @@ impl NodeGraphControlsOverlay {
             OverlayPlacement::PanelBounds => bounds,
         };
 
-        let mut buttons = Vec::with_capacity(items.len());
+        let mut buttons = Vec::with_capacity(controls_buttons().len());
         let mut cy = panel.origin.y.0 + pad;
-        for item in items {
+        for item in controls_buttons().iter().copied() {
             let rect = Rect::new(
                 Point::new(Px(panel.origin.x.0 + pad), Px(cy)),
                 Size::new(Px(button), Px(button)),
@@ -189,88 +122,13 @@ impl NodeGraphControlsOverlay {
         None
     }
 
-    fn binding_for(&self, btn: ControlsButton) -> &NodeGraphControlsCommandBinding {
-        match btn {
-            ControlsButton::ToggleConnectionMode => &self.bindings.toggle_connection_mode,
-            ControlsButton::ZoomIn => &self.bindings.zoom_in,
-            ControlsButton::ZoomOut => &self.bindings.zoom_out,
-            ControlsButton::FrameAll => &self.bindings.frame_all,
-            ControlsButton::FrameSelection => &self.bindings.frame_selection,
-            ControlsButton::ResetView => &self.bindings.reset_view,
-        }
-    }
-
     fn dispatch_button<H: UiHost>(&self, cx: &mut EventCx<'_, H>, btn: ControlsButton) {
         cx.request_focus(self.canvas_node);
 
-        let id = match self.binding_for(btn) {
-            NodeGraphControlsCommandBinding::Disabled => None,
-            NodeGraphControlsCommandBinding::Command(id) => Some(id.clone()),
-            NodeGraphControlsCommandBinding::Default => Some(match btn {
-                ControlsButton::ToggleConnectionMode => {
-                    CommandId::from(CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE)
-                }
-                ControlsButton::ZoomIn => CommandId::from(CMD_NODE_GRAPH_ZOOM_IN),
-                ControlsButton::ZoomOut => CommandId::from(CMD_NODE_GRAPH_ZOOM_OUT),
-                ControlsButton::FrameAll => CommandId::from(CMD_NODE_GRAPH_FRAME_ALL),
-                ControlsButton::FrameSelection => CommandId::from(CMD_NODE_GRAPH_FRAME_SELECTION),
-                ControlsButton::ResetView => CommandId::from(CMD_NODE_GRAPH_RESET_VIEW),
-            }),
-        };
-
-        if let Some(id) = id {
+        if let Some(id) = resolve_controls_command_id(&self.bindings, btn) {
             cx.dispatch_command(id);
         }
         cx.request_redraw();
-    }
-
-    fn items() -> &'static [ControlsButton] {
-        &[
-            ControlsButton::ToggleConnectionMode,
-            ControlsButton::ZoomIn,
-            ControlsButton::ZoomOut,
-            ControlsButton::FrameAll,
-            ControlsButton::FrameSelection,
-            ControlsButton::ResetView,
-        ]
-    }
-
-    fn next_button(current: Option<ControlsButton>, dir: i32) -> ControlsButton {
-        let items = Self::items();
-        let idx = current
-            .and_then(|c| items.iter().position(|b| *b == c))
-            .unwrap_or(0);
-        let len = items.len().max(1);
-        let idx_i32 = idx as i32;
-        let len_i32 = len as i32;
-        let mut next = idx_i32 + dir;
-        next = ((next % len_i32) + len_i32) % len_i32;
-        items[next as usize]
-    }
-
-    fn a11y_button_label(btn: ControlsButton) -> &'static str {
-        match btn {
-            ControlsButton::ToggleConnectionMode => "Toggle connection mode",
-            ControlsButton::ZoomIn => "Zoom in",
-            ControlsButton::ZoomOut => "Zoom out",
-            ControlsButton::FrameAll => "Frame all",
-            ControlsButton::FrameSelection => "Frame selection",
-            ControlsButton::ResetView => "Reset view",
-        }
-    }
-
-    fn label_for(btn: ControlsButton, mode: NodeGraphConnectionMode) -> &'static str {
-        match btn {
-            ControlsButton::ToggleConnectionMode => match mode {
-                NodeGraphConnectionMode::Strict => "S",
-                NodeGraphConnectionMode::Loose => "L",
-            },
-            ControlsButton::ZoomIn => "+",
-            ControlsButton::ZoomOut => "–",
-            ControlsButton::FrameAll => "Fit",
-            ControlsButton::FrameSelection => "Sel",
-            ControlsButton::ResetView => "1:1",
-        }
     }
 }
 
@@ -301,7 +159,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 KeyCode::ArrowDown => {
                     self.hovered = None;
                     self.pressed = None;
-                    self.keyboard_active = Some(Self::next_button(self.keyboard_active, 1));
+                    self.keyboard_active = Some(next_controls_button(self.keyboard_active, 1));
                     cx.stop_propagation();
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -309,7 +167,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 KeyCode::ArrowUp => {
                     self.hovered = None;
                     self.pressed = None;
-                    self.keyboard_active = Some(Self::next_button(self.keyboard_active, -1));
+                    self.keyboard_active = Some(next_controls_button(self.keyboard_active, -1));
                     cx.stop_propagation();
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -317,7 +175,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 KeyCode::Home => {
                     self.hovered = None;
                     self.pressed = None;
-                    self.keyboard_active = Self::items().first().copied();
+                    self.keyboard_active = controls_buttons().first().copied();
                     cx.stop_propagation();
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -325,7 +183,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 KeyCode::End => {
                     self.hovered = None;
                     self.pressed = None;
-                    self.keyboard_active = Self::items().last().copied();
+                    self.keyboard_active = controls_buttons().last().copied();
                     cx.stop_propagation();
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -333,7 +191,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                     let btn = self
                         .keyboard_active
-                        .or_else(|| Self::items().first().copied())
+                        .or_else(|| controls_buttons().first().copied())
                         .expect("controls buttons");
                     self.dispatch_button(cx, btn);
                     cx.stop_propagation();
@@ -406,9 +264,9 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
 
         let active = self
             .keyboard_active
-            .or_else(|| Self::items().first().copied())
+            .or_else(|| controls_buttons().first().copied())
             .expect("controls buttons");
-        cx.set_value(Self::a11y_button_label(active));
+        cx.set_value(controls_button_a11y_label(active));
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -474,7 +332,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
 
-            let label = Self::label_for(*btn, mode);
+            let label = controls_button_label(*btn, mode);
             let (id, metrics) = cx
                 .services
                 .text()

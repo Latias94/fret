@@ -12,43 +12,25 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::retained_bridge::*;
 
-use crate::core::{
-    CanvasPoint, CanvasSize, Graph, Node, NodeId, NodeKindKey, SYMBOL_REF_NODE_KIND, Symbol,
-    SymbolId, is_symbol_ref_node, symbol_ref_node_data, symbol_ref_target_symbol_id,
-};
+use crate::core::{Graph, Symbol, SymbolId};
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphOpBuilderExt as _, GraphTransaction};
+use crate::ops::GraphTransaction;
 use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
 use crate::ui::screen_space_placement::{AxisAlign, rect_in_bounds};
 use crate::ui::style::NodeGraphStyle;
 
 use super::NodeGraphOverlayState;
-
 use super::SymbolRenameOverlay;
+use super::blackboard_policy::{
+    BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
+    blackboard_action_button_label, blackboard_actions_in_order, next_blackboard_action,
+    plan_blackboard_action,
+};
 
 const PANEL_MARGIN_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 6.0;
 const LABEL_PADDING_PX: f32 = 4.0;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BlackboardAction {
-    AddSymbol,
-    InsertRef { symbol: SymbolId },
-    Rename { symbol: SymbolId },
-    Delete { symbol: SymbolId },
-}
-
-impl BlackboardAction {
-    fn a11y_label(&self) -> &'static str {
-        match self {
-            BlackboardAction::AddSymbol => "Add symbol",
-            BlackboardAction::InsertRef { .. } => "Insert symbol reference",
-            BlackboardAction::Rename { .. } => "Rename symbol",
-            BlackboardAction::Delete { .. } => "Delete symbol",
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 struct BlackboardRowLayout {
@@ -164,35 +146,6 @@ impl NodeGraphBlackboardOverlay {
             .unwrap_or_default()
     }
 
-    fn actions_in_order(layout: &BlackboardLayout) -> Vec<BlackboardAction> {
-        let mut out = Vec::new();
-        out.push(BlackboardAction::AddSymbol);
-        for row in &layout.rows {
-            out.push(BlackboardAction::InsertRef { symbol: row.symbol });
-            out.push(BlackboardAction::Rename { symbol: row.symbol });
-            out.push(BlackboardAction::Delete { symbol: row.symbol });
-        }
-        out
-    }
-
-    fn next_action(
-        current: Option<BlackboardAction>,
-        delta: i32,
-        items: &[BlackboardAction],
-    ) -> Option<BlackboardAction> {
-        if items.is_empty() {
-            return None;
-        }
-
-        let len = items.len() as i32;
-        let idx0 = current
-            .and_then(|a| items.iter().position(|x| *x == a))
-            .unwrap_or(0) as i32;
-        let mut next = idx0 + delta;
-        next = ((next % len) + len) % len;
-        Some(items[next as usize])
-    }
-
     fn compute_layout(
         &self,
         bounds: Rect,
@@ -300,42 +253,6 @@ impl NodeGraphBlackboardOverlay {
         None
     }
 
-    fn default_symbol_name(symbols: &BTreeMap<SymbolId, Symbol>) -> String {
-        if !symbols.values().any(|s| s.name == "Symbol") {
-            return "Symbol".to_string();
-        }
-
-        for i in 2..=9999 {
-            let candidate = format!("Symbol {i}");
-            if !symbols.values().any(|s| s.name == candidate) {
-                return candidate;
-            }
-        }
-
-        "Symbol".to_string()
-    }
-
-    fn viewport_center_canvas_point<H: fret_ui::UiHost>(
-        host: &H,
-        view: &Model<NodeGraphViewState>,
-        bounds: Rect,
-    ) -> CanvasPoint {
-        let (pan, zoom) = view
-            .read_ref(host, |s| (s.pan, s.zoom))
-            .ok()
-            .unwrap_or_default();
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
-        };
-
-        CanvasPoint {
-            x: 0.5 * bounds.size.width.0 / zoom - pan.x,
-            y: 0.5 * bounds.size.height.0 / zoom - pan.y,
-        }
-    }
-
     fn dispatch_action<H: fret_ui::UiHost>(
         &mut self,
         host: &mut H,
@@ -343,52 +260,29 @@ impl NodeGraphBlackboardOverlay {
         action: BlackboardAction,
         invoked_at_window: Point,
     ) {
-        match action {
-            BlackboardAction::AddSymbol => {
-                let symbols = self.snapshot_symbols(host);
-                let id = SymbolId::new();
-                let symbol = Symbol {
-                    name: Self::default_symbol_name(&symbols),
-                    ty: None,
-                    default_value: None,
-                    meta: serde_json::Value::Null,
-                };
-                let tx = GraphTransaction {
-                    label: Some("Add Symbol".to_string()),
-                    ops: vec![GraphOp::AddSymbol { id, symbol }],
-                };
-                self.submit_transaction(host, &tx);
-            }
-            BlackboardAction::InsertRef { symbol } => {
-                let center = Self::viewport_center_canvas_point(host, &self.view_state, bounds);
-                let node = Node {
-                    kind: NodeKindKey::new(SYMBOL_REF_NODE_KIND),
-                    kind_version: 1,
-                    pos: center,
-                    selectable: None,
-                    draggable: None,
-                    connectable: None,
-                    deletable: None,
-                    parent: None,
-                    extent: None,
-                    expand_parent: None,
-                    size: Some(CanvasSize {
-                        width: 140.0,
-                        height: 40.0,
-                    }),
-                    hidden: false,
-                    collapsed: false,
-                    ports: Vec::new(),
-                    data: symbol_ref_node_data(symbol),
-                };
-                let id = NodeId::new();
-                let tx = GraphTransaction {
-                    label: Some("Insert Symbol Ref".to_string()),
-                    ops: vec![GraphOp::AddNode { id, node }],
-                };
-                self.submit_transaction(host, &tx);
-            }
-            BlackboardAction::Rename { symbol } => {
+        let graph = self
+            .graph
+            .read_ref(host, |graph| graph.clone())
+            .ok()
+            .unwrap_or_else(|| Graph::new(crate::core::GraphId::new()));
+        let view_state = self
+            .view_state
+            .read_ref(host, |state| state.clone())
+            .ok()
+            .unwrap_or_default();
+
+        let Some(plan) =
+            plan_blackboard_action(&graph, &view_state, bounds, action, invoked_at_window)
+        else {
+            return;
+        };
+
+        match plan {
+            BlackboardActionPlan::Transaction(tx) => self.submit_transaction(host, &tx),
+            BlackboardActionPlan::OpenSymbolRename(SymbolRenameOverlay {
+                symbol,
+                invoked_at_window,
+            }) => {
                 let _ = self.overlays.update(host, |s, _cx| {
                     s.group_rename = None;
                     s.symbol_rename = Some(SymbolRenameOverlay {
@@ -396,48 +290,6 @@ impl NodeGraphBlackboardOverlay {
                         invoked_at_window,
                     });
                 });
-            }
-            BlackboardAction::Delete { symbol } => {
-                let graph = self
-                    .graph
-                    .read_ref(host, |g| g.clone())
-                    .ok()
-                    .unwrap_or_else(|| Graph::new(crate::core::GraphId::new()));
-                let Some(symbol_value) = graph.symbols.get(&symbol).cloned() else {
-                    return;
-                };
-
-                let mut ref_nodes: Vec<NodeId> = graph
-                    .nodes
-                    .iter()
-                    .filter_map(|(node_id, node)| {
-                        if !is_symbol_ref_node(node) {
-                            return None;
-                        }
-                        let Ok(Some(target)) = symbol_ref_target_symbol_id(*node_id, node) else {
-                            return None;
-                        };
-                        (target == symbol).then_some(*node_id)
-                    })
-                    .collect();
-                ref_nodes.sort();
-
-                let mut ops = Vec::new();
-                for node_id in ref_nodes {
-                    if let Some(op) = graph.build_remove_node_op(node_id) {
-                        ops.push(op);
-                    }
-                }
-                ops.push(GraphOp::RemoveSymbol {
-                    id: symbol,
-                    symbol: symbol_value,
-                });
-
-                let tx = GraphTransaction {
-                    label: Some("Delete Symbol".to_string()),
-                    ops,
-                };
-                self.submit_transaction(host, &tx);
             }
         }
     }
@@ -483,12 +335,14 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
         let Some(layout) = self.last_layout.as_ref() else {
             return;
         };
-        let items = Self::actions_in_order(layout);
+        let symbols = self.snapshot_symbols(&*cx.app);
+        let items = blackboard_actions_in_order(&symbols);
         let active = self
             .keyboard_active
             .or_else(|| items.first().copied())
             .unwrap_or(BlackboardAction::AddSymbol);
-        cx.set_value(active.a11y_label());
+        let _ = layout;
+        cx.set_value(blackboard_action_a11y_label(active));
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -497,13 +351,16 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 let Some(layout) = self.last_layout.as_ref() else {
                     return;
                 };
-                let items = Self::actions_in_order(layout);
+                let symbols = self.snapshot_symbols(&*cx.app);
+                let items = blackboard_actions_in_order(&symbols);
+                let _ = layout;
 
                 match *key {
                     KeyCode::ArrowDown => {
                         self.hovered = None;
                         self.pressed = None;
-                        self.keyboard_active = Self::next_action(self.keyboard_active, 1, &items);
+                        self.keyboard_active =
+                            next_blackboard_action(self.keyboard_active, 1, &items);
                         cx.stop_propagation();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -511,7 +368,8 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                     KeyCode::ArrowUp => {
                         self.hovered = None;
                         self.pressed = None;
-                        self.keyboard_active = Self::next_action(self.keyboard_active, -1, &items);
+                        self.keyboard_active =
+                            next_blackboard_action(self.keyboard_active, -1, &items);
                         cx.stop_propagation();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -714,10 +572,11 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
 
-            let (id, metrics) = cx
-                .services
-                .text()
-                .prepare_str("+", &text_style, constraints);
+            let (id, metrics) = cx.services.text().prepare_str(
+                blackboard_action_button_label(BlackboardAction::AddSymbol),
+                &text_style,
+                constraints,
+            );
             self.text_blobs.push(id);
             let tx = layout.add_button.origin.x.0
                 + 0.5 * (layout.add_button.size.width.0 - metrics.size.width.0);
@@ -781,19 +640,19 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 cx,
                 row.insert_ref,
                 BlackboardAction::InsertRef { symbol: row.symbol },
-                "R",
+                blackboard_action_button_label(BlackboardAction::InsertRef { symbol: row.symbol }),
             );
             draw_button(
                 cx,
                 row.rename,
                 BlackboardAction::Rename { symbol: row.symbol },
-                "E",
+                blackboard_action_button_label(BlackboardAction::Rename { symbol: row.symbol }),
             );
             draw_button(
                 cx,
                 row.delete,
                 BlackboardAction::Delete { symbol: row.symbol },
-                "X",
+                blackboard_action_button_label(BlackboardAction::Delete { symbol: row.symbol }),
             );
 
             let (id, metrics) = cx

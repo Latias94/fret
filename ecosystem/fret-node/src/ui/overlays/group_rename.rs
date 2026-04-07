@@ -1,40 +1,21 @@
 //! Node graph overlay host state (UI-only).
 
-use fret_core::{KeyCode, Point, Px, Rect, Size};
+use fret_core::{KeyCode, Point, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{GroupId, SymbolId};
-use crate::ops::{GraphOp, GraphTransaction};
+use crate::ops::GraphTransaction;
 use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::controller::NodeGraphController;
-use crate::ui::screen_space_placement::clamp_rect_to_bounds;
 use crate::ui::style::NodeGraphStyle;
 
 use super::layout_hidden_child_and_release_focus;
-
-fn group_rename_size_at(style: &NodeGraphStyle) -> Size {
-    let w = style.paint.context_menu_width.max(40.0);
-    let h = (style.paint.context_menu_item_height.max(20.0)
-        + 2.0 * style.paint.context_menu_padding)
-        .max(24.0);
-    Size::new(Px(w), Px(h))
-}
-
-fn group_rename_rect_at(style: &NodeGraphStyle, desired_origin: Point, bounds: Rect) -> Rect {
-    clamp_rect_to_bounds(
-        Rect::new(desired_origin, group_rename_size_at(style)),
-        bounds,
-    )
-}
-
-fn rename_overlay_should_cancel_on_focus_loss(
-    child: Option<fret_core::NodeId>,
-    focus: Option<fret_core::NodeId>,
-    just_opened: bool,
-) -> bool {
-    !just_opened && child.is_some_and(|child| focus != Some(child))
-}
+use super::rename_policy::{
+    RenameOverlaySession, RenameOverlaySessionKey, active_rename_session,
+    build_rename_commit_transaction, clear_rename_sessions, rename_overlay_rect_at,
+    rename_overlay_should_cancel_on_focus_loss, rename_session_seed_text,
+};
 
 /// UI-only overlay state for a node graph editor instance.
 #[derive(Debug, Default, Clone)]
@@ -68,9 +49,8 @@ pub struct NodeGraphOverlayHost {
     canvas_node: fret_core::NodeId,
     style: NodeGraphStyle,
 
-    last_opened_group: Option<GroupId>,
-    last_opened_symbol: Option<SymbolId>,
-    group_rename_bounds: Option<Rect>,
+    last_opened_session: Option<RenameOverlaySessionKey>,
+    rename_bounds: Option<Rect>,
     active: bool,
 }
 
@@ -90,9 +70,8 @@ impl NodeGraphOverlayHost {
             group_rename_text,
             canvas_node,
             style,
-            last_opened_group: None,
-            last_opened_symbol: None,
-            group_rename_bounds: None,
+            last_opened_session: None,
+            rename_bounds: None,
             active: false,
         }
     }
@@ -126,95 +105,39 @@ impl NodeGraphOverlayHost {
         }
     }
 
-    fn current_group_rename<H: UiHost>(&self, host: &H) -> Option<GroupRenameOverlay> {
+    fn active_rename_session<H: UiHost>(&self, host: &H) -> Option<RenameOverlaySession> {
         self.overlays
-            .read_ref(host, |s| s.group_rename.clone())
+            .read_ref(host, active_rename_session)
             .ok()
             .flatten()
     }
 
-    fn current_symbol_rename<H: UiHost>(&self, host: &H) -> Option<SymbolRenameOverlay> {
-        self.overlays
-            .read_ref(host, |s| s.symbol_rename.clone())
-            .ok()
-            .flatten()
-    }
-
-    fn close_group_rename<H: UiHost>(&mut self, host: &mut H) {
+    fn close_rename_sessions<H: UiHost>(&mut self, host: &mut H) {
         let _ = self.overlays.update(host, |s, _cx| {
-            s.group_rename = None;
+            clear_rename_sessions(s);
         });
     }
 
-    fn close_symbol_rename<H: UiHost>(&mut self, host: &mut H) {
-        let _ = self.overlays.update(host, |s, _cx| {
-            s.symbol_rename = None;
-        });
-    }
-
-    fn commit_group_rename<H: UiHost>(&mut self, host: &mut H, group: GroupId) {
+    fn commit_rename_session<H: UiHost>(&mut self, host: &mut H, session: &RenameOverlaySession) {
         let to = self
             .group_rename_text
             .read_ref(host, |t| t.clone())
             .ok()
             .unwrap_or_default();
-        let from = self
+        let tx = self
             .graph
-            .read_ref(host, |g| g.groups.get(&group).map(|gg| gg.title.clone()))
+            .read_ref(host, |g| build_rename_commit_transaction(g, session, &to))
             .ok()
-            .flatten()
-            .unwrap_or_default();
-
-        if from == to {
-            return;
+            .flatten();
+        if let Some(tx) = tx {
+            self.submit_transaction(host, &tx);
         }
-
-        let tx = GraphTransaction {
-            label: Some("Rename Group".to_string()),
-            ops: vec![GraphOp::SetGroupTitle {
-                id: group,
-                from,
-                to,
-            }],
-        };
-        self.submit_transaction(host, &tx);
-    }
-
-    fn commit_symbol_rename<H: UiHost>(&mut self, host: &mut H, symbol: SymbolId) {
-        let to = self
-            .group_rename_text
-            .read_ref(host, |t| t.clone())
-            .ok()
-            .unwrap_or_default();
-        let from = self
-            .graph
-            .read_ref(host, |g| g.symbols.get(&symbol).map(|s| s.name.clone()))
-            .ok()
-            .flatten()
-            .unwrap_or_default();
-
-        if from == to {
-            return;
-        }
-
-        let tx = GraphTransaction {
-            label: Some("Rename Symbol".to_string()),
-            ops: vec![GraphOp::SetSymbolName {
-                id: symbol,
-                from,
-                to,
-            }],
-        };
-        self.submit_transaction(host, &tx);
     }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
     fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
-        self.active
-            && self
-                .group_rename_bounds
-                .is_some_and(|r| r.contains(position))
+        self.active && self.rename_bounds.is_some_and(|r| r.contains(position))
     }
 
     fn semantics_present(&self) -> bool {
@@ -222,36 +145,22 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
-        let group_rename = self.current_group_rename(&*cx.app);
-        let symbol_rename = self.current_symbol_rename(&*cx.app);
-
-        if group_rename.is_none() && symbol_rename.is_none() {
+        let Some(session) = self.active_rename_session(&*cx.app) else {
             return;
-        }
+        };
 
         match event {
             fret_core::Event::KeyDown { key, .. } => match *key {
                 KeyCode::Escape => {
-                    if group_rename.is_some() {
-                        self.close_group_rename(cx.app);
-                    }
-                    if symbol_rename.is_some() {
-                        self.close_symbol_rename(cx.app);
-                    }
+                    self.close_rename_sessions(cx.app);
                     cx.request_focus(self.canvas_node);
                     cx.stop_propagation();
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Layout);
                 }
                 KeyCode::Enter | KeyCode::NumpadEnter => {
-                    if let Some(rename) = group_rename {
-                        self.commit_group_rename(cx.app, rename.group);
-                        self.close_group_rename(cx.app);
-                    }
-                    if let Some(rename) = symbol_rename {
-                        self.commit_symbol_rename(cx.app, rename.symbol);
-                        self.close_symbol_rename(cx.app);
-                    }
+                    self.commit_rename_session(cx.app, &session);
+                    self.close_rename_sessions(cx.app);
                     cx.request_focus(self.canvas_node);
                     cx.stop_propagation();
                     cx.request_redraw();
@@ -269,17 +178,16 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
         cx.observe_model(&self.group_rename_text, Invalidation::Layout);
 
         let child = cx.children.get(0).copied();
-        let group_rename = self.current_group_rename(&*cx.app);
-        let symbol_rename = self.current_symbol_rename(&*cx.app);
-        self.active = group_rename.is_some() || symbol_rename.is_some();
+        let session = self.active_rename_session(&*cx.app);
+        self.active = session.is_some();
 
-        if let Some(rename) = group_rename {
-            self.last_opened_symbol = None;
-            let just_opened = self.last_opened_group != Some(rename.group);
+        if let Some(session) = session {
+            let session_key = session.key();
+            let just_opened = self.last_opened_session != Some(session_key);
             if rename_overlay_should_cancel_on_focus_loss(child, cx.focus, just_opened) {
-                self.close_group_rename(cx.app);
-                self.last_opened_group = None;
-                self.group_rename_bounds = None;
+                self.close_rename_sessions(cx.app);
+                self.last_opened_session = None;
+                self.rename_bounds = None;
                 self.active = false;
                 if let Some(child) = child {
                     layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
@@ -287,68 +195,28 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
                 return cx.bounds.size;
             }
             if just_opened {
-                self.last_opened_group = Some(rename.group);
-                let title = self
+                self.last_opened_session = Some(session_key);
+                let seed_text = self
                     .graph
-                    .read_ref(cx.app, |g| {
-                        g.groups.get(&rename.group).map(|gg| gg.title.clone())
-                    })
+                    .read_ref(cx.app, |g| rename_session_seed_text(g, &session))
                     .ok()
-                    .flatten()
                     .unwrap_or_default();
                 let _ = self.group_rename_text.update(cx.app, |t, _cx| {
-                    *t = title;
+                    *t = seed_text;
                 });
                 if let Some(child) = child {
                     cx.tree.set_focus(Some(child));
                 }
             }
 
-            let rect = group_rename_rect_at(&self.style, rename.invoked_at_window, cx.bounds);
-            self.group_rename_bounds = Some(rect);
-            if let Some(child) = child {
-                cx.layout_in(child, rect);
-            }
-        } else if let Some(rename) = symbol_rename {
-            self.last_opened_group = None;
-            let just_opened = self.last_opened_symbol != Some(rename.symbol);
-            if rename_overlay_should_cancel_on_focus_loss(child, cx.focus, just_opened) {
-                self.close_symbol_rename(cx.app);
-                self.last_opened_symbol = None;
-                self.group_rename_bounds = None;
-                self.active = false;
-                if let Some(child) = child {
-                    layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
-                }
-                return cx.bounds.size;
-            }
-            if just_opened {
-                self.last_opened_symbol = Some(rename.symbol);
-                let name = self
-                    .graph
-                    .read_ref(cx.app, |g| {
-                        g.symbols.get(&rename.symbol).map(|s| s.name.clone())
-                    })
-                    .ok()
-                    .flatten()
-                    .unwrap_or_default();
-                let _ = self.group_rename_text.update(cx.app, |t, _cx| {
-                    *t = name;
-                });
-                if let Some(child) = child {
-                    cx.tree.set_focus(Some(child));
-                }
-            }
-
-            let rect = group_rename_rect_at(&self.style, rename.invoked_at_window, cx.bounds);
-            self.group_rename_bounds = Some(rect);
+            let rect = rename_overlay_rect_at(&self.style, session.invoked_at_window(), cx.bounds);
+            self.rename_bounds = Some(rect);
             if let Some(child) = child {
                 cx.layout_in(child, rect);
             }
         } else {
-            self.last_opened_group = None;
-            self.last_opened_symbol = None;
-            self.group_rename_bounds = None;
+            self.last_opened_session = None;
+            self.rename_bounds = None;
             if let Some(child) = child {
                 layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }

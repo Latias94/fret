@@ -10,65 +10,14 @@ use fret_ui::{UiHost, retained_bridge::*};
 use crate::core::{EdgeId, NodeId};
 use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphInternalsStore;
-use crate::ui::screen_space_placement::{
-    AdjacentPosition, AxisAlign, rect_adjacent_to_rect, rect_anchored_at_point,
-};
+use crate::ui::screen_space_placement::{rect_adjacent_to_rect, rect_anchored_at_point};
 
 use super::layout_hidden_child_and_release_focus;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NodeGraphToolbarPosition {
-    Top,
-    Right,
-    Bottom,
-    Left,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NodeGraphToolbarAlign {
-    Start,
-    Center,
-    End,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NodeGraphToolbarVisibility {
-    /// Show only when the target node is selected.
-    WhenSelected,
-    /// Show whenever the target node exists (independent of selection).
-    Always,
-}
-
-impl Default for NodeGraphToolbarVisibility {
-    fn default() -> Self {
-        Self::WhenSelected
-    }
-}
-
-fn toolbar_align_axis(align: NodeGraphToolbarAlign) -> AxisAlign {
-    match align {
-        NodeGraphToolbarAlign::Start => AxisAlign::Start,
-        NodeGraphToolbarAlign::Center => AxisAlign::Center,
-        NodeGraphToolbarAlign::End => AxisAlign::End,
-    }
-}
-
-fn toolbar_position_to_adjacent(position: NodeGraphToolbarPosition) -> AdjacentPosition {
-    match position {
-        NodeGraphToolbarPosition::Top => AdjacentPosition::Top,
-        NodeGraphToolbarPosition::Right => AdjacentPosition::Right,
-        NodeGraphToolbarPosition::Bottom => AdjacentPosition::Bottom,
-        NodeGraphToolbarPosition::Left => AdjacentPosition::Left,
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum NodeGraphToolbarSize {
-    /// Measure the child (uses `Widget::measure`).
-    Auto,
-    /// Fixed size in window-space logical pixels.
-    Fixed(Size),
-}
+use super::toolbar_policy::{
+    NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize,
+    NodeGraphToolbarVisibility, resolve_edge_toolbar_target, resolve_node_toolbar_target,
+    toolbar_align_axis, toolbar_position_to_adjacent, toolbar_visible,
+};
 
 /// A window-space toolbar anchored to a node's derived window rect (XyFlow `NodeToolbar`-style).
 ///
@@ -190,19 +139,6 @@ impl NodeGraphNodeToolbar {
             }
         }
     }
-
-    fn resolve_target_node<H: UiHost>(&self, host: &H) -> Option<(NodeId, bool)> {
-        self.view_state
-            .read_ref(host, |s| {
-                if let Some(node) = self.node {
-                    Some((node, s.selected_nodes.contains(&node)))
-                } else {
-                    s.selected_nodes.first().copied().map(|id| (id, true))
-                }
-            })
-            .ok()
-            .flatten()
-    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
@@ -218,14 +154,16 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
         let child = cx.children.get(0).copied();
         self.last_child_bounds = None;
 
-        let Some((node_id, is_selected)) = self.resolve_target_node(&*cx.app) else {
+        let Some((node_id, is_selected)) =
+            resolve_node_toolbar_target(&self.view_state, self.node, &*cx.app)
+        else {
             if let Some(child) = child {
                 layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         };
 
-        if self.visibility == NodeGraphToolbarVisibility::WhenSelected && !is_selected {
+        if !toolbar_visible(self.visibility, is_selected) {
             if let Some(child) = child {
                 layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
@@ -382,19 +320,6 @@ impl NodeGraphEdgeToolbar {
             }
         }
     }
-
-    fn resolve_target_edge<H: UiHost>(&self, host: &H) -> Option<(EdgeId, bool)> {
-        self.view_state
-            .read_ref(host, |s| {
-                if let Some(edge) = self.edge {
-                    Some((edge, s.selected_edges.contains(&edge)))
-                } else {
-                    s.selected_edges.first().copied().map(|id| (id, true))
-                }
-            })
-            .ok()
-            .flatten()
-    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
@@ -410,14 +335,16 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
         let child = cx.children.get(0).copied();
         self.last_child_bounds = None;
 
-        let Some((edge_id, is_selected)) = self.resolve_target_edge(&*cx.app) else {
+        let Some((edge_id, is_selected)) =
+            resolve_edge_toolbar_target(&self.view_state, self.edge, &*cx.app)
+        else {
             if let Some(child) = child {
                 layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         };
 
-        if self.visibility == NodeGraphToolbarVisibility::WhenSelected && !is_selected {
+        if !toolbar_visible(self.visibility, is_selected) {
             if let Some(child) = child {
                 layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
@@ -464,10 +391,7 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
 
 #[cfg(test)]
 mod node_toolbar_tests {
-    use super::{
-        NodeGraphNodeToolbar, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
-        NodeGraphToolbarVisibility,
-    };
+    use super::{NodeGraphNodeToolbar, NodeGraphToolbarAlign, NodeGraphToolbarPosition};
     use fret_core::{Point, Px, Rect, Size};
 
     #[test]
@@ -546,14 +470,6 @@ mod node_toolbar_tests {
         // Desired x would be 85 + 20 + 8 = 113, but must clamp to 100 - 50 = 50.
         assert_eq!(rect.origin.x.0, 50.0);
         assert_eq!(rect.origin.y.0, 10.0);
-    }
-
-    #[test]
-    fn visibility_default_is_when_selected() {
-        assert_eq!(
-            NodeGraphToolbarVisibility::default(),
-            NodeGraphToolbarVisibility::WhenSelected
-        );
     }
 }
 

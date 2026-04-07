@@ -69,6 +69,30 @@ pub(super) fn read_authoritative_graph_in_models<T>(
     models.read(&store, |store| f(store.graph())).ok()
 }
 
+pub(super) fn collect_node_label_and_ports(
+    graph: &crate::core::Graph,
+    node_id: crate::core::NodeId,
+) -> Option<(std::sync::Arc<str>, u32, u32)> {
+    graph.nodes.get(&node_id).map(|node| {
+        let mut ports_in = 0u32;
+        let mut ports_out = 0u32;
+        for port_id in &node.ports {
+            let Some(port) = graph.ports.get(port_id) else {
+                continue;
+            };
+            match port.dir {
+                crate::core::PortDirection::In => ports_in += 1,
+                crate::core::PortDirection::Out => ports_out += 1,
+            }
+        }
+        (
+            std::sync::Arc::<str>::from(node.kind.0.as_str()),
+            ports_in,
+            ports_out,
+        )
+    })
+}
+
 pub(super) fn read_authoritative_interaction_config_in_models<T>(
     models: &mut fret_runtime::ModelStore,
     binding: &NodeGraphSurfaceBinding,

@@ -5,7 +5,7 @@ pub(super) fn commit_new_wire<H: UiHost, M: NodeGraphCanvasMiddleware>(
     cx: &mut impl WireCommitCx<H>,
     snapshot: &ViewSnapshot,
     zoom: f32,
-    bounds: Rect,
+    _bounds: Rect,
     pos: Point,
     from: PortId,
     bundle: Vec<PortId>,
@@ -151,22 +151,13 @@ pub(super) fn commit_new_wire<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     candidates: candidates.clone(),
                 });
 
-                let invoked_at = Point::new(Px(convert_at.x), Px(convert_at.y));
-
-                canvas.install_searcher_overlay(super::super::super::build_searcher_state(
+                super::super::super::searcher_picker::open_searcher_picker_request(
                     canvas,
-                    invoked_at,
-                    bounds,
-                    snapshot,
-                    ContextMenuTarget::ConnectionConvertPicker {
-                        from,
-                        to: target,
-                        at: convert_at,
-                    },
-                    candidates,
-                    canvas.interaction.recent_kinds.clone(),
-                    super::super::super::SearcherRowsMode::Flat,
-                ));
+                    cx.host(),
+                    super::super::super::searcher_picker::conversion_searcher_picker_request(
+                        from, target, convert_at, candidates,
+                    ),
+                );
             }
             Outcome::Reject(sev, msg) => {
                 connect_end_outcome = ConnectEndOutcome::Rejected;

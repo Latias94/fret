@@ -3,36 +3,11 @@ use std::sync::Arc;
 use fret_core::{ClipboardToken, Point};
 use fret_runtime::TimerToken;
 
-use crate::core::{CanvasPoint, EdgeId, GroupId, NodeKindKey, PortId};
+use super::state_overlay_policy::{ContextMenuTarget, SearcherRowsMode};
+use crate::core::{CanvasPoint, NodeKindKey, PortId};
 use crate::rules::DiagnosticSeverity;
 use crate::ui::canvas::searcher::SearcherRow;
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphContextMenuItem};
-
-#[derive(Debug, Clone)]
-pub(crate) enum ContextMenuTarget {
-    Background,
-    BackgroundInsertNodePicker {
-        at: CanvasPoint,
-    },
-    ConnectionInsertNodePicker {
-        from: PortId,
-        at: CanvasPoint,
-    },
-    Edge(EdgeId),
-    EdgeInsertNodePicker(EdgeId),
-    ConnectionConvertPicker {
-        from: PortId,
-        to: PortId,
-        at: CanvasPoint,
-    },
-    Group(GroupId),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SearcherRowsMode {
-    Catalog,
-    Flat,
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct SearcherState {

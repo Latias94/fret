@@ -5,18 +5,15 @@ pub(super) fn searcher_row_activation_item(
     row_ix: usize,
 ) -> Option<NodeGraphContextMenuItem> {
     let row = searcher.rows.get(row_ix)?.clone();
-    let SearcherRowKind::Candidate { candidate_ix } = row.kind else {
-        return None;
-    };
-    if !row.enabled {
+    if !super::super::searcher_is_selectable_row(&row) {
         return None;
     }
 
-    Some(NodeGraphContextMenuItem {
-        label: row.label,
-        enabled: true,
-        action: NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
-    })
+    let SearcherRowKind::Candidate { candidate_ix } = row.kind else {
+        return None;
+    };
+    let item = super::super::build_insert_candidate_menu_item(candidate_ix, row.label, row.enabled);
+    item.enabled.then_some(item)
 }
 
 #[cfg(test)]

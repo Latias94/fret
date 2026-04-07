@@ -4,24 +4,30 @@
 //! asset. They are hosted outside the canvas render transform (ADR 0126) so they can use regular
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
 mod blackboard;
+mod blackboard_policy;
 mod controls;
+mod controls_policy;
 mod group_rename;
 mod minimap;
+mod minimap_navigation_policy;
+mod minimap_policy;
+mod rename_policy;
+mod toolbar_policy;
 mod toolbars;
 
 pub use blackboard::NodeGraphBlackboardOverlay;
 pub use controls::NodeGraphControlsOverlay;
-pub use controls::{NodeGraphControlsBindings, NodeGraphControlsCommandBinding};
+pub use controls_policy::{NodeGraphControlsBindings, NodeGraphControlsCommandBinding};
 pub use group_rename::{
     GroupRenameOverlay, NodeGraphOverlayHost, NodeGraphOverlayState, SymbolRenameOverlay,
 };
-pub use minimap::{
-    NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding, NodeGraphMiniMapOverlay,
+pub use minimap::NodeGraphMiniMapOverlay;
+pub use minimap_navigation_policy::{NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding};
+pub use toolbar_policy::{
+    NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize,
+    NodeGraphToolbarVisibility,
 };
-pub use toolbars::{
-    NodeGraphEdgeToolbar, NodeGraphNodeToolbar, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
-    NodeGraphToolbarSize, NodeGraphToolbarVisibility,
-};
+pub use toolbars::{NodeGraphEdgeToolbar, NodeGraphNodeToolbar};
 
 use fret_core::{Px, Rect, Size};
 use fret_ui::{UiHost, retained_bridge::LayoutCx};

@@ -244,6 +244,75 @@ First landing in this worktree:
 
 ### Slice 3 - portal and overlay closure
 
+Status note (2026-04-03):
+
+- Visible-subset portal hosting is now a declared public seam: `NodeGraphSurfaceProps` carries
+  `NodeGraphVisibleSubsetPortalConfig` instead of loose portal booleans, so the editor-facing
+  surface now names the visible-subset hosting contract directly.
+- `paint_only/portals.rs` now consumes that config seam for visible-subset hosting and
+  fit-to-portals replay, while focused gates keep draw-order/cap semantics and dragged-rect
+  visibility behavior locked.
+- Overlay tooltip orchestration no longer depends on the portal-hosting module for node label/port
+  summaries; that shared lookup now lives in the neutral `paint_only/surface_support.rs` seam.
+- Declarative diagnostics policy is now also explicit on the surface: `NodeGraphSurfaceProps`
+  carries `NodeGraphDiagnosticsConfig`, while the demo chooses whether `FRET_DIAG` enables
+  diagnostics instead of the mechanism layer reading process env directly.
+- Root `fret_node::ui::*` now also re-exports `NodeGraphDiagnosticsConfig` and
+  `NodeGraphVisibleSubsetPortalConfig`, so app-facing declarative authoring does not have to mix
+  `ui` and `ui::declarative` import paths just to configure `NodeGraphSurfaceProps`.
+- Retained toolbar target-selection and visibility policy now routes through the private
+  `ui/overlays/toolbar_policy.rs` seam, so node and edge toolbar widgets stop carrying duplicated
+  "selected target vs explicit target" fallback rules inline.
+- The public toolbar policy types now also live with that seam:
+  `NodeGraphToolbarVisibility` / `NodeGraphToolbarPosition` / `NodeGraphToolbarAlign` /
+  `NodeGraphToolbarSize` are no longer declared inside `toolbars.rs`, keeping the widget file
+  focused on anchor layout/measurement rather than public policy type ownership.
+- Retained rename overlays now also route active-session selection, seed-text loading, focus-loss
+  cancel policy, and commit-transaction planning through the private
+  `ui/overlays/rename_policy.rs` seam, so `NodeGraphOverlayHost` no longer duplicates group-vs-
+  symbol rename branches or commits a hidden second session.
+- Retained controls overlays now also route button roster order, default command mapping,
+  override-resolution, a11y labels, and display labels through the private
+  `ui/overlays/controls_policy.rs` seam, so layout, keyboard navigation, and activation all consume
+  one authority table instead of keeping repeated button lists inside `controls.rs`.
+- The public controls binding types now also live with that policy seam:
+  `NodeGraphControlsCommandBinding` / `NodeGraphControlsBindings` are no longer declared inside
+  `controls.rs`, keeping the widget file focused on implementation rather than public policy type
+  ownership.
+- Retained blackboard overlays now also route action roster order, keyboard navigation policy,
+  action labels, default symbol naming, transaction planning, and symbol-rename opening through the
+  private `ui/overlays/blackboard_policy.rs` seam, so `blackboard.rs` keeps layout/paint/event
+  orchestration while action policy no longer sprawls through the widget body.
+- Retained minimap overlays now also route keyboard action mapping, pan/zoom step policy, zoom
+  clamp, and center-based zoom planning through the private `ui/overlays/minimap_policy.rs` seam,
+  so `minimap.rs` now keeps internals sampling, pointer drag handling, and viewport application
+  while keyboard navigation policy stops living inline in the widget event branch.
+- Retained minimap overlays now also route viewport-update ownership and zoom normalization through
+  the private `ui/overlays/minimap_navigation_policy.rs` seam, so controller/store/default
+  navigation binding resolution no longer stays embedded in `minimap.rs`.
+- The public minimap binding types now also live with that policy seam:
+  `NodeGraphMiniMapNavigationBinding` / `NodeGraphMiniMapBindings` are no longer declared inside
+  `minimap.rs`, keeping the widget file focused on implementation rather than public policy type
+  ownership.
+- Canvas menu/searcher overlay-session policy types now also live on a dedicated private seam:
+  `ui/canvas/state/state_overlay_policy.rs` now owns `ContextMenuTarget` and
+  `SearcherRowsMode`, so `state_overlay_sessions.rs` keeps session-container ownership instead of
+  remaining the implicit home for menu/searcher policy enums.
+- Searcher picker opener policy now also lives on one request seam:
+  `ui/canvas/widget/searcher_picker/request.rs` owns `SearcherPickerRequest` including
+  `rows_mode`, so background/connection insert pickers, edge-insert pickers, and conversion
+  pickers stop re-embedding `Catalog` vs `Flat` request policy at each opener.
+- Searcher row activation now also reuses the insert-candidate menu authority:
+  `ui/canvas/widget/insert_candidates/menu.rs` now owns single candidate-to-menu-item synthesis,
+  so `searcher_row_activation` no longer hand-assembles `InsertNodeCandidate(...)` actions outside
+  the same seam used by context-menu candidate lists.
+- Searcher row activation now also reuses selectable-row policy from `searcher_rows`,
+  so activation gating no longer keeps a second implicit "candidate + enabled" rule separate from
+  active-row selection and keyboard navigation.
+- The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
+  policy placement, not on reopening visible-subset portal hosting or the now-aligned
+  toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
+
 Why after callback/commit cleanup:
 
 - portal and overlay seams are now much easier to simplify once commit ownership is unambiguous.

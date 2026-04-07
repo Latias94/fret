@@ -349,7 +349,7 @@ mod wire_drag_helpers;
 mod wire_math;
 
 use edge_path_ctx::EdgePathContext;
-use insert_candidates::build_insert_candidate_menu_items;
+use insert_candidates::{build_insert_candidate_menu_item, build_insert_candidate_menu_items};
 use insert_execution::is_reroute_insert_candidate;
 use menu_session::{build_context_menu_state, build_searcher_rows, build_searcher_state};
 use overlay_hit::{
@@ -359,6 +359,7 @@ use overlay_hit::{
 use rect_math::{
     edge_bounds_rect, inflate_rect, path_bounds_rect, rect_from_points, rect_union, rects_intersect,
 };
+use searcher_rows::searcher_is_selectable_row;
 use view_queue::{NodeGraphViewQueue, NodeGraphViewQueueFitViewOptions};
 use wire_math::{
     closest_point_on_edge_route, closest_point_on_path, dist2_point_to_segment,

@@ -9,11 +9,12 @@ use fret_node::core::{
 };
 use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_node::ui::{
-    EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
-    NodeGraphSurfaceBinding, node_graph_surface,
+    EdgePaintOverrideV1, NodeGraphDiagnosticsConfig, NodeGraphPaintOverridesMap,
+    NodeGraphPaintOverridesRef, NodeGraphSurfaceBinding, node_graph_surface,
 };
 use serde_json::Value;
 
+const ENV_DIAGNOSTICS: &str = "FRET_DIAG";
 const ENV_WIRE_PAINT_COOKBOOK: &str = "FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK";
 const TEST_ID_CANVAS: &str = "node_graph.canvas";
 
@@ -52,6 +53,12 @@ impl View for NodeGraphDemoView {
         let mut props = self.surface.surface_props();
         props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
         props.paint_overrides = self.paint_overrides.clone();
+        if env_enabled(ENV_DIAGNOSTICS) {
+            props.diagnostics = NodeGraphDiagnosticsConfig {
+                key_actions_enabled: true,
+                hover_tooltip_enabled: true,
+            };
+        }
         node_graph_surface(cx.elements(), props).into()
     }
 }

@@ -10,15 +10,17 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
 
-use crate::core::{Graph, NodeId, PortDirection};
+use crate::core::{Graph, NodeId};
 use crate::ui::declarative::view_reducer::apply_fit_view_to_canvas_rect;
 use crate::ui::{NodeGraphSurfaceBinding, style::NodeGraphStyle};
 
 use super::record_portal_measured_node_size_in_state;
+use super::surface_support::collect_node_label_and_ports;
 use super::{
-    NodeDragState, NodeRectDraw, PortalBoundsStore, PortalMeasuredGeometryState,
-    canvas_viewport_rect, node_drag_delta_canvas, read_authoritative_graph_in_models, rect_union,
-    rects_intersect, sync_portal_canvas_bounds_in_models, update_view_state_ui_host,
+    NodeDragState, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw, PortalBoundsStore,
+    PortalMeasuredGeometryState, canvas_viewport_rect, node_drag_delta_canvas,
+    read_authoritative_graph_in_models, rect_union, rects_intersect,
+    sync_portal_canvas_bounds_in_models, update_view_state_ui_host,
 };
 
 #[derive(Debug, Clone)]
@@ -99,7 +101,7 @@ pub(super) fn collect_portal_label_infos_for_visible_subset(
             continue;
         }
 
-        let (label, ports_in, ports_out) = collect_hovered_node_label_and_ports(graph, draw.id)
+        let (label, ports_in, ports_out) = collect_node_label_and_ports(graph, draw.id)
             .unwrap_or_else(|| (Arc::<str>::from("node"), 0, 0));
 
         infos.push(PortalLabelInfo {
@@ -127,7 +129,7 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
     bounds: Rect,
     view: PanZoom2D,
     cull_margin_screen_px: f32,
-    portal_max_nodes: usize,
+    portal_hosting: NodeGraphVisibleSubsetPortalConfig,
     hovered_node: Option<NodeId>,
     selected_nodes: &[NodeId],
     node_drag: Option<&NodeDragState>,
@@ -137,7 +139,7 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
     style_tokens: &NodeGraphStyle,
     theme: &ThemeSnapshot,
 ) -> bool {
-    if portal_max_nodes == 0
+    if portal_hosting.max_nodes == 0
         || !bounds.size.width.0.is_finite()
         || !bounds.size.height.0.is_finite()
         || bounds.size.width.0 <= 0.0
@@ -155,7 +157,7 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
                 bounds,
                 view,
                 cull_canvas,
-                portal_max_nodes,
+                portal_hosting.max_nodes,
                 hovered_node,
                 selected_nodes,
                 node_drag,
@@ -306,7 +308,7 @@ pub(super) fn apply_pending_fit_to_portals<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     binding: &NodeGraphSurfaceBinding,
     portal_bounds_store: &Model<PortalBoundsStore>,
-    portals_enabled: bool,
+    portal_hosting: NodeGraphVisibleSubsetPortalConfig,
     portals_disabled: bool,
     bounds: Rect,
     min_zoom: f32,
@@ -317,7 +319,7 @@ pub(super) fn apply_pending_fit_to_portals<H: UiHost + 'static>(
         .models()
         .read(portal_bounds_store, |state| state.pending_fit_to_portals)
         .unwrap_or(false);
-    if !pending_fit || !portals_enabled || portals_disabled {
+    if !pending_fit || !portal_hosting.enabled || portals_disabled {
         return;
     }
 
@@ -363,24 +365,4 @@ pub(super) fn apply_pending_fit_to_portals<H: UiHost + 'static>(
     if still_pending {
         cx.request_frame();
     }
-}
-
-pub(super) fn collect_hovered_node_label_and_ports(
-    graph: &Graph,
-    node_id: NodeId,
-) -> Option<(Arc<str>, u32, u32)> {
-    graph.nodes.get(&node_id).map(|node| {
-        let mut ports_in = 0u32;
-        let mut ports_out = 0u32;
-        for port_id in node.ports.iter() {
-            let Some(port) = graph.ports.get(port_id) else {
-                continue;
-            };
-            match port.dir {
-                PortDirection::In => ports_in += 1,
-                PortDirection::Out => ports_out += 1,
-            }
-        }
-        (Arc::<str>::from(node.kind.0.as_str()), ports_in, ports_out)
-    })
 }

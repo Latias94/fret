@@ -1,9 +1,9 @@
 use super::super::*;
 
-pub(super) fn open_searcher_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn open_searcher_picker_request<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     host: &mut H,
-    request: super::catalog::SearcherPickerRequest,
+    request: super::request::SearcherPickerRequest,
 ) {
     let snapshot = canvas.sync_view_state(host);
     let bounds = canvas.interaction.last_bounds.unwrap_or_default();
@@ -13,6 +13,6 @@ pub(super) fn open_searcher_picker<H: UiHost, M: NodeGraphCanvasMiddleware>(
         &snapshot,
         request.target,
         request.candidates,
-        SearcherRowsMode::Catalog,
+        request.rows_mode,
     );
 }

@@ -22,6 +22,14 @@ pub(super) fn build_insert_candidate_menu_items(
     menu::build_insert_candidate_menu_items(candidates)
 }
 
+pub(in crate::ui::canvas::widget) fn build_insert_candidate_menu_item(
+    candidate_ix: usize,
+    label: Arc<str>,
+    enabled: bool,
+) -> NodeGraphContextMenuItem {
+    menu::build_insert_candidate_menu_item(candidate_ix, label, enabled)
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn list_background_insert_candidates<H: UiHost>(
         &mut self,

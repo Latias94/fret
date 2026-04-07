@@ -552,13 +552,62 @@ real editors.
   also live under the private `paint_only/portals.rs` seam, so the main paint-only surface stops
   re-embedding portal subtree hosting, bounds-store pruning, and pending-fit orchestration inline
   while keeping the same dragged-rect visibility and portal-bounds contracts.
+- Declarative visible-subset portal hosting is now also declared on the public surface:
+  `NodeGraphSurfaceProps` carries `NodeGraphVisibleSubsetPortalConfig` instead of loose portal
+  booleans, so editor-facing code names visible-subset hosting enablement/cap policy explicitly.
 - Declarative diagnostics hover-tooltip overlay orchestration now also lives under the private
   `paint_only/overlays.rs` seam, so the main paint-only surface stops re-embedding hover-anchor
   reads, portal-bounds fallback, and tooltip element wiring inline while keeping the same
   portal-vs-hover anchor precedence contract.
+- Declarative hover-tooltip overlay lookup no longer reaches into the portal-hosting module for
+  node label/port summaries; that shared graph-summary helper now lives under the neutral
+  `paint_only/surface_support.rs` seam instead.
+- Declarative diagnostics policy is now also explicit on the public surface:
+  `NodeGraphSurfaceProps` carries `NodeGraphDiagnosticsConfig`, while the example app decides
+  whether `FRET_DIAG` enables diagnostics instead of the mechanism layer reading process env
+  directly.
+- Root `fret_node::ui::*` now also re-exports `NodeGraphDiagnosticsConfig` and
+  `NodeGraphVisibleSubsetPortalConfig`, so app-facing declarative surfaces can configure
+  `NodeGraphSurfaceProps` through one import surface instead of mixing root and nested
+  declarative modules.
 - Declarative marquee overlay append and final overlay-layer wrapping now also live under the
   private `paint_only/overlays.rs` seam, so the main paint-only surface stops re-embedding
   overlay child flush/wrap plumbing inline and keeps the overlay stack reviewable from one seam.
+- Retained toolbar target-selection and visibility rules now also live under the private
+  `ui/overlays/toolbar_policy.rs` seam, so node and edge toolbar widgets stop duplicating the
+  same explicit-target vs selected-target fallback policy while keeping the same pointer/focus
+  behavior.
+- The public toolbar policy types now also live with that seam:
+  `NodeGraphToolbarVisibility` / `NodeGraphToolbarPosition` / `NodeGraphToolbarAlign` /
+  `NodeGraphToolbarSize` are no longer declared inside `toolbars.rs`, keeping toolbar widget
+  implementation ownership separate from public policy type ownership.
+- Retained rename overlays now also live on one active-session policy seam,
+  `ui/overlays/rename_policy.rs`, so group/symbol rename state selection, seed-text loading,
+  focus-loss cancel policy, and commit-transaction planning no longer stay duplicated inside
+  `NodeGraphOverlayHost`, and hidden stale rename sessions can no longer be committed implicitly.
+- Retained controls overlays now also live on one button-policy seam,
+  `ui/overlays/controls_policy.rs`, so roster order, default command mapping,
+  override-resolution, a11y labels, and display labels no longer stay duplicated inside
+  `controls.rs` while keyboard navigation and activation keep the same conformance behavior.
+- The public controls binding types now also live with that policy seam:
+  `NodeGraphControlsCommandBinding` / `NodeGraphControlsBindings` are no longer declared inside
+  `controls.rs`, keeping widget implementation ownership separate from public policy type
+  ownership.
+- Retained blackboard overlays now also live on one action-policy seam,
+  `ui/overlays/blackboard_policy.rs`, so roster order, keyboard navigation policy, action labels,
+  default symbol naming, transaction planning, and symbol-rename opening no longer stay mixed into
+  `blackboard.rs` while blackboard overlay conformance keeps the same rename/transaction behavior.
+- Retained minimap overlays now also live on one keyboard-policy seam,
+  `ui/overlays/minimap_policy.rs`, so keyboard action mapping, pan/zoom step policy, zoom clamp,
+  and center-based zoom planning no longer stay mixed into `minimap.rs` while minimap keyboard
+  conformance keeps the same viewport-update and focus-return behavior.
+- Retained minimap overlays now also live on one navigation-ownership seam,
+  `ui/overlays/minimap_navigation_policy.rs`, so controller/store/default viewport-update
+  resolution plus zoom normalization no longer stay mixed into `minimap.rs` while minimap drag and
+  controller-binding conformance keep the same behavior.
+- `NodeGraphMiniMapNavigationBinding` / `NodeGraphMiniMapBindings` now also live with that seam
+  instead of being declared inside `minimap.rs`, keeping public minimap policy type ownership
+  separate from widget implementation.
 - Declarative edge/portal diagnostics aggregation and semantics value assembly now also live under
   the private `paint_only/semantics.rs` seam, so the main paint-only surface stops re-embedding
   observability counters and long semantics formatting inline while keeping the same diagnostics
@@ -1350,6 +1399,24 @@ real editors.
   `canvas/widget/menu_session.rs`, and `SearcherState` now records explicit `SearcherRowsMode`
   policy so flat-vs-catalog presentation is no longer inferred indirectly from
   `ContextMenuTarget` variants when opening or rebuilding overlay state.
+- Menu/searcher overlay-session policy types now also live on a dedicated private seam,
+  `ui/canvas/state/state_overlay_policy.rs`, so `ContextMenuTarget` and `SearcherRowsMode` no
+  longer stay declared inside `state_overlay_sessions.rs` while session container structs keep
+  their original ownership.
+- Searcher picker opener policy now also lives on one request seam,
+  `ui/canvas/widget/searcher_picker/request.rs`, so `SearcherPickerRequest` owns `rows_mode` and
+  background/connection insert pickers, edge-insert pickers, and conversion picker openers no
+  longer duplicate `Catalog` / `Flat` request policy outside the same picker request authority.
+- Searcher row activation now also reuses the insert-candidate menu authority,
+  `ui/canvas/widget/insert_candidates/menu.rs`, so candidate-row activation no longer duplicates
+  single candidate-to-menu-item synthesis outside the same seam used by context-menu candidate
+  lists.
+- Searcher row activation now also reuses selectable-row policy from `searcher_rows`, so
+  activation gating no longer duplicates the same candidate-enabled rule already used by active-row
+  selection and keyboard navigation.
+- The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
+  `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
+  seam instead of remaining duplicated across both wrapper and submodule entrypoints.
 - Insert-node candidate sourcing now also has a named private seam,
   `canvas/widget/insert_candidates.rs`, so background / connection / edge pickers all share the
   same `Reroute` prepend contract and candidate-to-context-menu mapping instead of keeping those
@@ -2975,10 +3042,18 @@ real editors.
 - keep the promoted paint-only suite green
 - add at least one overlay/portal correctness gate
 - add at least one declarative interaction parity gate that is meaningful to real editor usage
+- keep the visible-subset portal-hosting config defaults/source-policy gate green
+- keep the diagnostics-config defaults/source-policy gate green
 
 ### Evidence anchors
 
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/portals.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_support.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+- `apps/fret-examples/src/node_graph_demo.rs`
 - `ecosystem/fret-node/src/ui/screen_space_placement.rs`
 - `ecosystem/fret-node/src/ui/canvas/state.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/menu_session.rs`

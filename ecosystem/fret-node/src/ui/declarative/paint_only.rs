@@ -193,6 +193,31 @@ impl Default for NodeGraphWheelZoomConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NodeGraphVisibleSubsetPortalConfig {
+    /// When true, host a lightweight screen-space portal layer for the visible node subset.
+    pub enabled: bool,
+    /// Upper bound on the number of hosted node portals in a single frame.
+    pub max_nodes: usize,
+}
+
+impl Default for NodeGraphVisibleSubsetPortalConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_nodes: 32,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct NodeGraphDiagnosticsConfig {
+    /// Enables Ctrl/Cmd-based declarative diagnostics hotkeys.
+    pub key_actions_enabled: bool,
+    /// Enables diagnostics-only hover tooltip overlays.
+    pub hover_tooltip_enabled: bool,
+}
+
 #[derive(Clone)]
 pub struct NodeGraphSurfaceProps {
     binding: NodeGraphSurfaceBinding,
@@ -216,15 +241,11 @@ pub struct NodeGraphSurfaceProps {
     /// portal subtrees may publish measured node sizes back into the same store.
     pub measured_geometry: Option<Arc<MeasuredGeometryStore>>,
 
-    /// When true, host a lightweight portal layer that renders node labels as normal element
-    /// subtrees positioned in screen space (semantic zoom).
-    ///
-    /// This is intended as an incremental “world layer” bridge:
-    /// - paint pass still owns grid + edges (and node chrome),
-    /// - portals exercise declarative layout and bounds queries for visible nodes only.
-    pub portals_enabled: bool,
-    /// Upper bound on the number of portal subtrees hosted for visible nodes.
-    pub portal_max_nodes: usize,
+    /// Visible-subset portal hosting policy for the declarative editor surface.
+    pub portal_hosting: NodeGraphVisibleSubsetPortalConfig,
+
+    /// Declarative diagnostics policy for debug-only shortcuts and overlays.
+    pub diagnostics: NodeGraphDiagnosticsConfig,
 
     /// Cull margin in screen pixels around the viewport.
     pub cull_margin_screen_px: f32,
@@ -251,8 +272,8 @@ impl NodeGraphSurfaceProps {
             geometry_overrides: None,
             paint_overrides: None,
             measured_geometry: None,
-            portals_enabled: true,
-            portal_max_nodes: 32,
+            portal_hosting: NodeGraphVisibleSubsetPortalConfig::default(),
+            diagnostics: NodeGraphDiagnosticsConfig::default(),
             cull_margin_screen_px: 256.0,
             pan_button: MouseButton::Middle,
             min_zoom: 0.05,
@@ -287,8 +308,8 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         geometry_overrides,
         paint_overrides,
         measured_geometry,
-        portals_enabled,
-        portal_max_nodes,
+        portal_hosting,
+        diagnostics,
         cull_margin_screen_px,
         pan_button,
         min_zoom,
@@ -344,6 +365,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
             geometry_overrides: geometry_overrides.clone(),
             paint_overrides: paint_overrides.clone(),
             measured_geometry: measured_geometry.clone(),
+            diagnostics,
             cull_margin_screen_px,
             test_id,
         },
@@ -352,7 +374,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let view_for_paint = prepared_frame.view_for_paint;
     let theme = prepared_frame.theme;
     let style_tokens = prepared_frame.style_tokens;
-    let diag_keys_enabled = prepared_frame.diag_keys_enabled;
+    let diagnostics = prepared_frame.diagnostics;
     let diag_paint_overrides_value = prepared_frame.diag_paint_overrides_value;
     let paint_overrides_ref = prepared_frame.paint_overrides_ref;
     let panning = prepared_frame.panning;
@@ -387,8 +409,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     pointer_region,
                     canvas,
                     measured_geometry_present: measured_geometry.is_some(),
-                    portals_enabled,
-                    portal_max_nodes,
+                    portal_hosting,
                     cull_margin_screen_px,
                     pan_button,
                     min_zoom,
@@ -418,7 +439,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                         view_for_paint,
                         theme: theme.clone(),
                         style_tokens: style_tokens.clone(),
-                        diag_keys_enabled,
+                        diagnostics,
                         diag_paint_overrides_value: diag_paint_overrides_value.clone(),
                         paint_overrides_ref: paint_overrides_ref.clone(),
                         panning,

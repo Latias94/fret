@@ -27,7 +27,7 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
     pub(super) view_for_paint: PanZoom2D,
     pub(super) theme: ThemeSnapshot,
     pub(super) style_tokens: NodeGraphStyle,
-    pub(super) diag_keys_enabled: bool,
+    pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) diag_paint_overrides_value: Arc<NodeGraphPaintOverridesMap>,
     pub(super) paint_overrides_ref: Option<NodeGraphPaintOverridesRef>,
     pub(super) panning: bool,
@@ -52,6 +52,7 @@ pub(super) struct PrepareSurfaceFrameParams<'a> {
     pub(super) geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
     pub(super) paint_overrides: Option<NodeGraphPaintOverridesRef>,
     pub(super) measured_geometry: Option<Arc<MeasuredGeometryStore>>,
+    pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) cull_margin_screen_px: f32,
     pub(super) test_id: Option<Arc<str>>,
 }
@@ -66,6 +67,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         geometry_overrides,
         paint_overrides,
         measured_geometry,
+        diagnostics,
         cull_margin_screen_px,
         test_id,
     } = params;
@@ -147,9 +149,6 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
     let view_for_paint = view_from_state(&view_value);
     let theme = Theme::global(&*cx.app).snapshot();
     let style_tokens = NodeGraphStyle::from_snapshot(theme.clone());
-    let diag_keys_enabled = std::env::var("FRET_DIAG")
-        .ok()
-        .is_some_and(|value| !value.trim().is_empty() && value.trim() != "0");
     let geometry_overrides = geometry_overrides.as_deref();
     let geometry_overrides_rev = geometry_overrides
         .map(|overrides| overrides.revision())
@@ -162,8 +161,11 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         .get_model_cloned(diag_paint_overrides, Invalidation::Paint)
         .unwrap_or_else(|| Arc::new(NodeGraphPaintOverridesMap::default()));
     let diag_paint_overrides_ref: NodeGraphPaintOverridesRef = diag_paint_overrides_value.clone();
-    let paint_overrides_ref =
-        paint_overrides.or_else(|| diag_keys_enabled.then_some(diag_paint_overrides_ref));
+    let paint_overrides_ref = paint_overrides.or_else(|| {
+        diagnostics
+            .key_actions_enabled
+            .then_some(diag_paint_overrides_ref)
+    });
     let paint_overrides_rev = paint_overrides_ref
         .as_deref()
         .map(|overrides| overrides.revision())
@@ -314,7 +316,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         view_for_paint,
         theme,
         style_tokens,
-        diag_keys_enabled,
+        diagnostics,
         diag_paint_overrides_value,
         paint_overrides_ref,
         panning,

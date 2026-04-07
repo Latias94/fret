@@ -466,11 +466,14 @@ Execution companion: `design.md` (surface map + next worktree order).
 
 ## M4 - Portal and overlay closure
 
-- [ ] Move from portal/bounds experimentation toward a declared editor-grade portal hosting path for
+- [x] Move from portal/bounds experimentation toward a declared editor-grade portal hosting path for
       the visible subset.
   - Progress: declarative portal hosting now routes visible-subset selection through
     `collect_portal_label_infos_for_visible_subset(...)`, which locks draw-order/cap semantics and
     uses dragged node rects (not stale pre-drag rects) for viewport culling.
+  - Progress: `NodeGraphSurfaceProps` now carries `NodeGraphVisibleSubsetPortalConfig` instead of
+    loose portal booleans, so the public declarative surface explicitly names the visible-subset
+    hosting contract and its cap semantics.
 - [x] Clarify how node content subtrees publish measured geometry into derived stores.
   - Progress: portal subtree bounds harvest now routes through
     `sync_portal_canvas_bounds_in_models(...)`, giving `LayoutQueryRegion` publish semantics an
@@ -498,9 +501,55 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: diagnostics-only tooltip + marquee overlay composition now routes through the private
     `paint_only/overlay_elements.rs` seam, so the main declarative surface only computes overlay
     specs / orchestration instead of re-embedding element composition inline.
+  - Progress: diagnostics hover-tooltip overlay lookup no longer imports the portal-hosting module
+    for node label/port summaries; that shared summary helper now lives under the neutral
+    `paint_only/surface_support.rs` seam instead.
+  - Progress: declarative diagnostics hotkeys and diagnostics-only hover tooltip policy now come
+    from explicit `NodeGraphDiagnosticsConfig` surface props; the mechanism layer no longer reads
+    `FRET_DIAG` directly, and the demo owns that env-to-config choice instead.
+  - Progress: root `fret_node::ui::*` now also re-exports
+    `NodeGraphDiagnosticsConfig` / `NodeGraphVisibleSubsetPortalConfig`, so app-facing
+    declarative authoring does not have to split imports across `ui` and `ui::declarative` to
+    configure `NodeGraphSurfaceProps`.
   - Progress: focused paint-only gates now lock tooltip flip-below fallback and marquee clamp
     behavior, giving the next toolbar/menu policy split a small correctness baseline before moving
     composition into broader overlay surfaces.
+  - Progress: retained toolbar target-selection and visibility rules now route through the private
+    `ui/overlays/toolbar_policy.rs` seam, so node/edge toolbar widgets reuse one target fallback
+    policy instead of embedding the same "explicit target vs first selected target" branches twice.
+  - Progress: the public toolbar policy types now also live with that seam:
+    `NodeGraphToolbarVisibility` / `NodeGraphToolbarPosition` / `NodeGraphToolbarAlign` /
+    `NodeGraphToolbarSize` are no longer declared inside `toolbars.rs`, so the widget file keeps
+    anchor layout ownership while public policy types stay beside toolbar target/visibility policy.
+  - Progress: retained rename overlays now also route active-session choice, seed-text loading,
+    focus-loss cancel policy, and commit-transaction planning through the private
+    `ui/overlays/rename_policy.rs` seam, so `NodeGraphOverlayHost` no longer duplicates
+    group-vs-symbol rename branches or commits a hidden second session when overlay state drifts.
+  - Progress: retained controls overlays now also route button roster order, default command
+    mapping, override-resolution, a11y labels, and display labels through the private
+    `ui/overlays/controls_policy.rs` seam, so layout, keyboard navigation, and activation all
+    consume one authority table instead of repeating the controls button list in multiple helpers.
+  - Progress: the public controls binding types now also live with that policy seam:
+    `NodeGraphControlsCommandBinding` / `NodeGraphControlsBindings` are no longer declared inside
+    `controls.rs`, so the widget file keeps implementation ownership while public policy types stay
+    next to command-resolution logic.
+  - Progress: retained blackboard overlays now also route action roster order, keyboard
+    navigation policy, action labels, default symbol naming, transaction planning, and
+    symbol-rename opening through the private `ui/overlays/blackboard_policy.rs` seam, so
+    `blackboard.rs` now keeps layout/paint/event orchestration while action policy no longer
+    sprawls through the widget body.
+  - Progress: retained minimap overlays now also route keyboard action mapping, pan/zoom step
+    policy, zoom clamp, and center-based zoom planning through the private
+    `ui/overlays/minimap_policy.rs` seam, so `minimap.rs` now keeps internals sampling, pointer
+    drag handling, and viewport application while keyboard navigation policy stops living inline in
+    the widget event branch.
+  - Progress: retained minimap overlays now also route viewport-update ownership and zoom
+    normalization through the private `ui/overlays/minimap_navigation_policy.rs` seam, so
+    controller/store/default navigation binding resolution no longer stays embedded in
+    `minimap.rs`.
+  - Progress: `NodeGraphMiniMapNavigationBinding` / `NodeGraphMiniMapBindings` now also live with
+    that seam instead of being declared inside `minimap.rs`, so the widget file no longer owns the
+    public minimap policy types.
   - Progress: compat-retained window-space placement math now routes through the shared
     `ui/screen_space_placement.rs` seam, so toolbars, panel placement, blackboard, rename,
     controls, and minimap all reuse the same clamp / anchor math instead of keeping subtly
@@ -509,6 +558,23 @@ Execution companion: `design.md` (surface map + next worktree order).
     `canvas/widget/menu_session.rs` seam, and `SearcherState` now carries explicit
     `SearcherRowsMode` policy instead of inferring flat-vs-catalog row building from
     `ContextMenuTarget` branches.
+  - Progress: menu/searcher overlay-session policy types now also live on the dedicated private
+    `ui/canvas/state/state_overlay_policy.rs` seam, so `ContextMenuTarget` and
+    `SearcherRowsMode` no longer stay declared inside `state_overlay_sessions.rs`.
+  - Progress: searcher picker opener policy now also lives on the dedicated private
+    `ui/canvas/widget/searcher_picker/request.rs` seam, so `SearcherPickerRequest` owns
+    `rows_mode`, and background/connection insert pickers, edge-insert pickers, and conversion
+    picker openers no longer hand-assemble `Catalog` / `Flat` request policy separately.
+  - Progress: searcher row activation now also reuses the insert-candidate menu authority in
+    `ui/canvas/widget/insert_candidates/menu.rs`, so candidate-row activation no longer
+    hand-assembles `NodeGraphContextMenuAction::InsertNodeCandidate(...)` outside the same seam
+    used to build context-menu candidate items.
+  - Progress: searcher row activation now also reuses selectable-row policy from
+    `ui/canvas/widget/searcher_rows.rs`, so activation gating no longer keeps a second implicit
+    "candidate + enabled" rule separate from active-row selection and keyboard navigation.
+  - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
+    `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
+    instead of staying duplicated in both the wrapper and the searcher submodule.
   - Progress: insert-node family candidate sourcing now routes through the private
     `canvas/widget/insert_candidates.rs` seam, so background / connection / edge pickers share the
     same `Reroute` prepend rule and edge-insert menus reuse one candidate-to-menu-item mapping
