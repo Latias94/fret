@@ -309,6 +309,22 @@ Status note (2026-04-03):
 - Searcher row activation now also reuses selectable-row policy from `searcher_rows`,
   so activation gating no longer keeps a second implicit "candidate + enabled" rule separate from
   active-row selection and keyboard navigation.
+- Context-menu target dispatch now also routes non-command activation through a named private seam:
+  `ui/canvas/widget/context_menu/activate/target.rs` now owns the target-to-executor route enum,
+  so `activate.rs` keeps command-vs-target action-kind dispatch while background/connection/edge/
+  conversion activation routing stops living as an unowned inline match.
+- Command context-menu activation now also routes target-scoped selection side effects through a
+  named private seam: `ui/canvas/widget/context_menu/activate/command.rs` now owns the
+  group-selection-vs-ignore policy, so command dispatch no longer keeps a hidden "only group
+  targets sync selection before dispatch" branch inline.
+- Edge context-menu activation now also routes edge action planning through a named private seam:
+  `ui/canvas/widget/context_menu/edge_execution.rs` now owns the edge-action route enum, so
+  insert-picker / reroute / delete / custom edge actions no longer stay as an unowned inline match
+  before delegating to their executor modules.
+- Right-click context-menu opening now also routes target-hit priority through a named private seam:
+  `ui/canvas/widget/context_menu/opening.rs` now owns the group-vs-edge-vs-background opening
+  route, so opening priority stops living as an inline `if` chain while the target-specific
+  openers keep only the already-resolved target presentation work.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

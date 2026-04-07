@@ -1414,6 +1414,22 @@ real editors.
 - Searcher row activation now also reuses selectable-row policy from `searcher_rows`, so
   activation gating no longer duplicates the same candidate-enabled rule already used by active-row
   selection and keyboard navigation.
+- Context-menu target dispatch now also routes non-command activation through the private
+  `ui/canvas/widget/context_menu/activate/target.rs` seam, so `activate.rs` keeps the
+  command-vs-target action-kind split while background/connection/edge/conversion target routing
+  stops living as an unowned inline match and gains focused route-mapping coverage.
+- Command context-menu activation now also routes target-scoped selection side effects through the
+  private `ui/canvas/widget/context_menu/activate/command.rs` seam, so the
+  group-selection-vs-ignore policy becomes explicit and gains focused route-mapping coverage
+  instead of staying hidden inside command dispatch glue.
+- Edge context-menu activation now also routes edge-action planning through the private
+  `ui/canvas/widget/context_menu/edge_execution.rs` seam, so insert-picker / reroute / delete /
+  custom edge actions no longer stay as an unowned inline match before delegating to their
+  executor modules and focused route-mapping coverage.
+- Right-click context-menu opening now also routes target-hit priority through the private
+  `ui/canvas/widget/context_menu/opening.rs` seam, so group-vs-edge-vs-background precedence
+  becomes explicit, gains focused route-mapping coverage, and no longer lives as an inline `if`
+  chain in the opening event glue.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.

@@ -572,6 +572,22 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Progress: searcher row activation now also reuses selectable-row policy from
     `ui/canvas/widget/searcher_rows.rs`, so activation gating no longer keeps a second implicit
     "candidate + enabled" rule separate from active-row selection and keyboard navigation.
+  - Progress: context-menu target dispatch now also routes non-command activation through the
+    private `ui/canvas/widget/context_menu/activate/target.rs` seam, so `activate.rs` keeps the
+    command-vs-target action-kind split while background/connection/edge/conversion target routing
+    becomes a named, focused-testable authority instead of an unowned inline match.
+  - Progress: command context-menu activation now also routes target-scoped selection side effects
+    through the private `ui/canvas/widget/context_menu/activate/command.rs` seam, so the
+    group-selection-vs-ignore policy becomes explicit and command dispatch no longer keeps that
+    target-specific selection sync inline.
+  - Progress: edge context-menu activation now also routes edge-action planning through the
+    private `ui/canvas/widget/context_menu/edge_execution.rs` seam, so insert-picker / reroute /
+    delete / custom edge actions no longer stay as an unowned inline match before delegating to
+    their executor modules.
+  - Progress: right-click context-menu opening now also routes target-hit priority through the
+    private `ui/canvas/widget/context_menu/opening.rs` seam, so group-vs-edge-vs-background
+    precedence becomes a named, focused-testable authority while the group/edge opener modules keep
+    only already-resolved target presentation work.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.
