@@ -11,10 +11,10 @@ use crate::ui::controller::NodeGraphController;
 use crate::ui::style::NodeGraphStyle;
 
 use super::layout_hidden_child_and_release_focus;
+use super::rename_host_layout::{RenameHostLayoutPlan, plan_rename_host_layout};
 use super::rename_policy::{
     RenameOverlaySession, RenameOverlaySessionKey, active_rename_session,
-    build_rename_commit_transaction, clear_rename_sessions, rename_overlay_rect_at,
-    rename_overlay_should_cancel_on_focus_loss, rename_session_seed_text,
+    build_rename_commit_transaction, clear_rename_sessions, rename_session_seed_text,
 };
 
 /// UI-only overlay state for a node graph editor instance.
@@ -178,10 +178,15 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
         let session = self.active_rename_session(&*cx.app);
         self.active = session.is_some();
 
-        if let Some(session) = session {
-            let session_key = session.key();
-            let just_opened = self.last_opened_session != Some(session_key);
-            if rename_overlay_should_cancel_on_focus_loss(child, cx.focus, just_opened) {
+        match plan_rename_host_layout(
+            &self.style,
+            cx.bounds,
+            session.as_ref(),
+            child,
+            cx.focus,
+            self.last_opened_session,
+        ) {
+            RenameHostLayoutPlan::CancelActiveSession => {
                 self.close_rename_sessions(cx.app);
                 self.last_opened_session = None;
                 self.rename_bounds = None;
@@ -189,33 +194,40 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
                 if let Some(child) = child {
                     layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
                 }
-                return cx.bounds.size;
             }
-            if just_opened {
+            RenameHostLayoutPlan::Active {
+                rect,
+                session_key,
+                just_opened,
+            } => {
+                let session = session.expect("active rename session for active rename layout plan");
+                self.active = true;
                 self.last_opened_session = Some(session_key);
-                let seed_text = self
-                    .graph
-                    .read_ref(cx.app, |g| rename_session_seed_text(g, &session))
-                    .ok()
-                    .unwrap_or_default();
-                let _ = self.group_rename_text.update(cx.app, |t, _cx| {
-                    *t = seed_text;
-                });
-                if let Some(child) = child {
-                    cx.tree.set_focus(Some(child));
+                if just_opened {
+                    let seed_text = self
+                        .graph
+                        .read_ref(cx.app, |g| rename_session_seed_text(g, &session))
+                        .ok()
+                        .unwrap_or_default();
+                    let _ = self.group_rename_text.update(cx.app, |t, _cx| {
+                        *t = seed_text;
+                    });
                 }
+                if let Some(child) = child {
+                    if just_opened {
+                        cx.tree.set_focus(Some(child));
+                    }
+                    cx.layout_in(child, rect);
+                }
+                self.rename_bounds = Some(rect);
             }
-
-            let rect = rename_overlay_rect_at(&self.style, session.invoked_at_window(), cx.bounds);
-            self.rename_bounds = Some(rect);
-            if let Some(child) = child {
-                cx.layout_in(child, rect);
-            }
-        } else {
-            self.last_opened_session = None;
-            self.rename_bounds = None;
-            if let Some(child) = child {
-                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
+            RenameHostLayoutPlan::Hidden => {
+                self.last_opened_session = None;
+                self.rename_bounds = None;
+                self.active = false;
+                if let Some(child) = child {
+                    layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
+                }
             }
         }
 

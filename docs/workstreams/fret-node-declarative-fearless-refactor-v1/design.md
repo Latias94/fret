@@ -381,6 +381,9 @@ Status note (2026-04-03):
   `ui/overlays/panel_item_state.rs` seam, so controls and blackboard overlays share one authority
   for keyboard selection resets, pointer-to-keyboard promotion, and visible item-state evaluation
   instead of each re-embedding that panel-state policy inline.
+- Retained rename host layout lifecycle now also routes through the private
+  `ui/overlays/rename_host_layout.rs` seam, so hidden/cancelled/active overlay layout planning
+  lives behind one focused authority instead of staying embedded in the rename host widget file.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

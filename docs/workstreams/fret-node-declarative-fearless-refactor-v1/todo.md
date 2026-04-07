@@ -646,6 +646,9 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/overlays/panel_item_state.rs` seam, so controls and blackboard overlays share one
     authority for keyboard selection resets, pointer-to-keyboard promotion, and visible
     item-state evaluation instead of each re-embedding that panel-state policy inline.
+  - Progress: retained rename host layout lifecycle now also routes through the private
+    `ui/overlays/rename_host_layout.rs` seam, so hidden/cancelled/active overlay layout planning
+    lives behind one focused authority instead of staying embedded in the rename host widget file.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.
