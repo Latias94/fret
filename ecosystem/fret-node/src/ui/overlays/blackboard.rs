@@ -28,6 +28,10 @@ use super::blackboard_policy::{
     BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
     blackboard_action_button_label, blackboard_actions_in_order, plan_blackboard_action,
 };
+use super::panel_item_state::{
+    clear_panel_item_state, panel_item_visual_state, promote_pointer_target_to_keyboard_item,
+    select_panel_keyboard_item,
+};
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
 
@@ -229,9 +233,12 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
 
                 match panel_keyboard_action(*key, self.keyboard_active, &items) {
                     PanelKeyboardAction::Select(action) => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = Some(action);
+                        select_panel_keyboard_item(
+                            &mut self.hovered,
+                            &mut self.pressed,
+                            &mut self.keyboard_active,
+                            action,
+                        );
                         crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::Activate(action) => {
@@ -244,9 +251,11 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                         crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::FocusCanvas => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = None;
+                        clear_panel_item_state(
+                            &mut self.hovered,
+                            &mut self.pressed,
+                            &mut self.keyboard_active,
+                        );
                         crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
                             cx,
                             self.canvas_node,
@@ -282,7 +291,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 cx.stop_propagation();
 
                 let action = self.action_at(*position);
-                self.keyboard_active = action.or(self.keyboard_active);
+                promote_pointer_target_to_keyboard_item(&mut self.keyboard_active, action);
                 let Some(action) = action else {
                     return;
                 };
@@ -386,10 +395,15 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
 
         // Add button.
         {
-            let hovered = self.hovered == Some(BlackboardAction::AddSymbol);
-            let pressed = self.pressed == Some(BlackboardAction::AddSymbol);
-            let keyboard = self.keyboard_active == Some(BlackboardAction::AddSymbol);
-            let button_bg = if pressed || hovered || keyboard {
+            let state = panel_item_visual_state(
+                BlackboardAction::AddSymbol,
+                self.hovered,
+                self.pressed,
+                self.keyboard_active,
+                true,
+                false,
+            );
+            let button_bg = if state.active() {
                 hover_bg
             } else {
                 Color::TRANSPARENT
@@ -433,10 +447,15 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
 
             let mut draw_button =
                 |cx: &mut PaintCx<'_, H>, rect: Rect, action: BlackboardAction, label: &str| {
-                    let is_hovered = self.hovered == Some(action);
-                    let is_pressed = self.pressed == Some(action);
-                    let is_keyboard = self.keyboard_active == Some(action);
-                    let button_bg = if is_pressed || is_hovered || is_keyboard {
+                    let state = panel_item_visual_state(
+                        action,
+                        self.hovered,
+                        self.pressed,
+                        self.keyboard_active,
+                        true,
+                        false,
+                    );
+                    let button_bg = if state.active() {
                         hover_bg
                     } else {
                         Color::TRANSPARENT

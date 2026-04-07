@@ -18,6 +18,7 @@ use super::controls_policy::{
     ControlsButton, NodeGraphControlsBindings, controls_button_a11y_label, controls_button_label,
     controls_buttons, resolve_controls_command_id,
 };
+use super::panel_item_state::{panel_item_visual_state, select_panel_keyboard_item};
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
 
@@ -109,9 +110,12 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             Event::KeyDown { key, repeat: _, .. } => {
                 match panel_keyboard_action(*key, self.keyboard_active, controls_buttons()) {
                     PanelKeyboardAction::Select(button) => {
-                        self.hovered = None;
-                        self.pressed = None;
-                        self.keyboard_active = Some(button);
+                        select_panel_keyboard_item(
+                            &mut self.hovered,
+                            &mut self.pressed,
+                            &mut self.keyboard_active,
+                            button,
+                        );
                         crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::Activate(button) => {
@@ -222,15 +226,17 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
         };
 
         for (btn, rect) in &layout.buttons {
-            let hovered = self.hovered == Some(*btn)
-                || (self.hovered.is_none()
-                    && self.pressed.is_none()
-                    && cx.focus == Some(cx.node)
-                    && self.keyboard_active == Some(*btn));
-            let pressed = self.pressed == Some(*btn);
-            let button_bg = if pressed {
+            let state = panel_item_visual_state(
+                *btn,
+                self.hovered,
+                self.pressed,
+                self.keyboard_active,
+                cx.focus == Some(cx.node),
+                true,
+            );
+            let button_bg = if state.pressed {
                 self.style.paint.controls_active_background
-            } else if hovered {
+            } else if state.hovered || state.keyboard {
                 self.style.paint.controls_hover_background
             } else {
                 Color::TRANSPARENT
