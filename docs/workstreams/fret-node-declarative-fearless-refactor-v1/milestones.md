@@ -1468,6 +1468,10 @@ real editors.
   controls/blackboard/minimap/group-rename overlays share one authority for focus-to-canvas,
   stop-propagation, redraw, and paint/layout invalidation tails instead of duplicating those
   handled-event endings inline.
+- Retained action-panel pointer state now also routes through the private
+  `ui/overlays/panel_pointer_policy.rs` seam, so controls and blackboard overlays share one
+  hover sync plus press-on-down / activate-on-matching-up authority instead of each
+  re-embedding that pointer-state policy inline.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.

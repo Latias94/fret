@@ -27,6 +27,7 @@ use super::blackboard_policy::{
     blackboard_action_button_label, blackboard_actions_in_order, plan_blackboard_action,
 };
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
+use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
 
 const PANEL_MARGIN_PX: f32 = 12.0;
 const BUTTON_GAP_PX: f32 = 6.0;
@@ -385,8 +386,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 if hovered.is_some() {
                     cx.set_cursor_icon(CursorIcon::Pointer);
                 }
-                if hovered != self.hovered {
-                    self.hovered = hovered;
+                if sync_panel_hover(&mut self.hovered, hovered) {
                     crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
             }
@@ -429,17 +429,16 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                     cx.stop_propagation();
                 }
 
-                let pressed = self.pressed.take();
+                let released_on = self.action_at(*position);
+                let release = release_panel_press(&mut self.pressed, released_on);
                 cx.release_pointer_capture();
-                if pressed.is_some() {
+                if release.had_pressed {
                     crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
-                let Some(pressed) = pressed else {
+                let Some(pressed) = release.activate else {
                     return;
                 };
-                if self.action_at(*position) == Some(pressed) {
-                    self.dispatch_action(cx.app, cx.bounds, pressed, *position);
-                }
+                self.dispatch_action(cx.app, cx.bounds, pressed, *position);
             }
             _ => {}
         }

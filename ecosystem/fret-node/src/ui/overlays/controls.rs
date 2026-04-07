@@ -17,6 +17,7 @@ use super::controls_policy::{
     controls_buttons, resolve_controls_command_id,
 };
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
+use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
 
 struct ControlsLayout {
     panel: Rect,
@@ -181,8 +182,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 if hovered.is_some() {
                     cx.set_cursor_icon(CursorIcon::Pointer);
                 }
-                if hovered != self.hovered {
-                    self.hovered = hovered;
+                if sync_panel_hover(&mut self.hovered, hovered) {
                     crate::ui::retained_event_tail::request_paint_repaint(cx);
                 }
             }
@@ -206,17 +206,16 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 if *button != MouseButton::Left {
                     return;
                 }
-                let pressed = self.pressed.take();
+                let released_on = self.button_at(cx.bounds, *position);
+                let release = release_panel_press(&mut self.pressed, released_on);
                 cx.release_pointer_capture();
-                if pressed.is_some() {
+                if release.had_pressed {
                     crate::ui::retained_event_tail::finish_paint_event(cx);
                 }
-                let Some(pressed) = pressed else {
+                let Some(pressed) = release.activate else {
                     return;
                 };
-                if self.button_at(cx.bounds, *position) == Some(pressed) {
-                    self.dispatch_button(cx, pressed);
-                }
+                self.dispatch_button(cx, pressed);
             }
             _ => {}
         }

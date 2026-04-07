@@ -363,6 +363,10 @@ Status note (2026-04-03):
   `ui/retained_event_tail.rs` seam, so portal commands plus controls/blackboard/minimap/group-
   rename overlays share one authority for focus-to-canvas, stop-propagation, redraw, and
   paint/layout invalidation tails instead of duplicating those handled-event endings inline.
+- Retained action-panel pointer state now also routes through the private
+  `ui/overlays/panel_pointer_policy.rs` seam, so controls and blackboard overlays share one hover
+  sync plus press-on-down / activate-on-matching-up authority instead of each re-embedding that
+  pointer-state policy inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
