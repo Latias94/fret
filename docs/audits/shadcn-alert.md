@@ -62,6 +62,9 @@ deciding whether any missing runtime mechanism work exists.
 
 - Pass: the gallery now mirrors the shadcn docs path after `Installation`:
   `Demo`, `Usage`, `Basic`, `Destructive`, `Action`, `Custom Colors`, `RTL`, and `API Reference`.
+- Pass: `Demo` now stays on the upstream `alert-demo` three-row composition; richer title,
+  description, and interactive-link teaching remain explicit under later `Fret Extras` sections
+  instead of drifting into the docs path.
 - Pass: Fret-only follow-ups now stay explicit after `API Reference` under `Fret Extras`, so the
   upstream docs path remains readable while composed-content guidance stays copyable.
 - Pass: `Usage` now teaches the builder-first root/slot composition path, and the copyable snippets
