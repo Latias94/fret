@@ -2,12 +2,15 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, ElementKind, Length};
+use fret_ui::element::{
+    AnyElement, CrossAlign, ElementKind, GridProps, GridTrackSizing, Length, MainAlign,
+    SpacingEdges,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::{current_color, style as decl_style};
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, Justify, LayoutRefinement, Space, UiPatch,
-    UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, Justify, LayoutRefinement, MetricRef, Space,
+    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -40,6 +43,27 @@ fn is_card_action_marker(element: &AnyElement) -> bool {
                 .is_some_and(|id| matches_marker(id, CARD_ACTION_MARKER_PREFIX)),
             _ => false,
         }
+}
+
+fn card_header_row_tracks() -> Vec<GridTrackSizing> {
+    vec![GridTrackSizing::Auto, GridTrackSizing::Auto]
+}
+
+fn card_header_action_columns() -> Vec<GridTrackSizing> {
+    vec![GridTrackSizing::Fr(1.0), GridTrackSizing::Auto]
+}
+
+fn patch_card_action_grid_slot_layout(mut element: AnyElement) -> AnyElement {
+    let ElementKind::Container(props) = &mut element.kind else {
+        return element;
+    };
+
+    props.layout.grid.column.start = Some(2);
+    props.layout.grid.row.start = Some(1);
+    props.layout.grid.row.span = Some(2);
+    props.layout.grid.align_self = Some(CrossAlign::Start);
+    props.layout.grid.justify_self = Some(CrossAlign::End);
+    element
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -483,19 +507,31 @@ impl CardHeader {
         let layout = self.layout;
         let props = {
             let theme = Theme::global(&*cx.app);
-            let base = if border_bottom {
-                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`, and uses a
-                // smaller `pb-4` on `size=sm`.
-                ChromeRefinement::default().px(p).pb(pb)
-            } else {
-                // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
-                ChromeRefinement::default().px(p)
-            };
-            decl_style::container_props(
-                theme,
-                base.merge(self.chrome),
-                LayoutRefinement::default().w_full().merge(layout),
-            )
+            let mut padding = SpacingEdges::all(Px(0.0).into());
+            let px = MetricRef::space(p).resolve(theme);
+            padding.left = px.into();
+            padding.right = px.into();
+            if border_bottom {
+                padding.bottom = MetricRef::space(pb).resolve(theme).into();
+            }
+
+            GridProps {
+                layout: decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_w_0().merge(layout),
+                ),
+                cols: 1,
+                rows: Some(2),
+                template_columns: None,
+                template_rows: Some(card_header_row_tracks()),
+                gap: MetricRef::space(Space::N2).resolve(theme).into(),
+                column_gap: None,
+                row_gap: None,
+                padding,
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                justify_items: None,
+            }
         };
 
         let mut action: Option<AnyElement> = None;
@@ -510,33 +546,17 @@ impl CardHeader {
             }
         }
 
-        let content = if let Some(action) = action {
-            let left_col = ui::v_stack(move |_cx| left)
-                // shadcn/ui v4 CardHeader uses `gap-2` between title and description, even
-                // when an action slot is present.
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().flex_1().min_w_0())
-                .into_element(cx);
+        let content = {
+            let mut props = props;
+            if action.is_some() {
+                props.template_columns = Some(card_header_action_columns());
+            }
 
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                shadcn_layout::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_between()
-                    .items_start(),
-                vec![left_col, action],
-            )
-        } else {
-            shadcn_layout::container_vstack_fill_width(
-                cx,
-                props,
-                shadcn_layout::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start(),
-                left,
-            )
+            let mut children = left;
+            if let Some(action) = action {
+                children.push(patch_card_action_grid_slot_layout(action));
+            }
+            cx.grid(props, move |_cx| children)
         };
 
         if border_bottom {
@@ -781,7 +801,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, AttributedText, Axis, Point, Rect, Size, TextSpan};
     use fret_ui::element::{
-        ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, SemanticsProps,
+        ContainerProps, CrossAlign, FlexProps, GridProps, Length, MainAlign, Overflow,
+        SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -1191,7 +1212,80 @@ mod tests {
     }
 
     #[test]
-    fn card_header_without_action_uses_fill_width_flow_root() {
+    fn card_header_without_action_uses_source_aligned_grid_layout() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_gap = MetricRef::space(Space::N2).resolve(Theme::global(&*cx.app));
+            let el = CardHeader::new([
+                CardTitle::new("Overview").into_element(cx),
+                CardDescription::new(
+                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let ElementKind::Grid(GridProps {
+                layout,
+                rows,
+                template_columns,
+                template_rows,
+                gap,
+                padding,
+                align,
+                ..
+            }) = &el.kind
+            else {
+                panic!("expected CardHeader root to be a grid element");
+            };
+
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardHeader root grid to request fill width so wrapped title/description text resolves against the card width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardHeader root grid to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
+            );
+            assert_eq!(
+                *rows,
+                Some(2),
+                "expected CardHeader to keep two source-aligned header rows"
+            );
+            assert_eq!(
+                template_columns, &None,
+                "expected CardHeader without action to avoid forcing the second auto column"
+            );
+            assert_eq!(
+                template_rows.as_deref(),
+                Some(card_header_row_tracks().as_slice()),
+                "expected CardHeader to keep explicit auto/auto row tracks"
+            );
+            assert_eq!(
+                *align,
+                CrossAlign::Start,
+                "expected CardHeader root grid to align items to the start block lane"
+            );
+            assert_eq!(
+                *gap,
+                expected_gap.into(),
+                "expected CardHeader to keep the upstream `gap-2` rhythm"
+            );
+            assert_eq!(padding.top, Px(0.0).into());
+            assert_eq!(padding.bottom, Px(0.0).into());
+        });
+    }
+
+    #[test]
+    fn card_header_with_action_uses_explicit_grid_slot_placement() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1202,65 +1296,47 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let el = CardHeader::new([
                 CardTitle::new("Overview").into_element(cx),
-                CardDescription::new(
-                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
-                )
-                .into_element(cx),
+                CardDescription::new("Source-aligned two-row header").into_element(cx),
+                CardAction::new([ui::text("Action").into_element(cx)]).into_element(cx),
             ])
             .into_element(cx);
 
-            let child = el
+            let ElementKind::Grid(GridProps {
+                template_columns,
+                template_rows,
+                ..
+            }) = &el.kind
+            else {
+                panic!("expected CardHeader root to be a grid element");
+            };
+
+            assert_eq!(
+                template_columns.as_deref(),
+                Some(card_header_action_columns().as_slice()),
+                "expected CardHeader with action to use explicit `1fr auto` column tracks"
+            );
+            assert_eq!(
+                template_rows.as_deref(),
+                Some(card_header_row_tracks().as_slice()),
+                "expected CardHeader with action to keep explicit auto/auto row tracks"
+            );
+
+            let action = el
                 .children
-                .first()
-                .unwrap_or_else(|| panic!("expected CardHeader to have a single inner flow child"));
+                .iter()
+                .find(|child| is_card_action_marker(child))
+                .unwrap_or_else(|| panic!("expected CardHeader children to include CardAction"));
 
-            let ElementKind::Container(ContainerProps {
-                layout: wrapper_layout,
-                ..
-            }) = &child.kind
-            else {
-                panic!("expected CardHeader child to be a fill-width wrapper container");
+            let ElementKind::Container(ContainerProps { layout, .. }) = &action.kind else {
+                panic!("expected CardAction slot root to remain a container");
             };
 
-            let inner = child.children.first().unwrap_or_else(|| {
-                panic!("expected CardHeader fill-width wrapper to contain an inner flex root")
-            });
-
-            let ElementKind::Flex(FlexProps {
-                align,
-                direction,
-                layout,
-                ..
-            }) = &inner.kind
-            else {
-                panic!("expected CardHeader wrapper child to be a flex element");
-            };
-
-            assert_eq!(
-                wrapper_layout.size.width,
-                Length::Fill,
-                "expected CardHeader inner wrapper to request fill width so wrapped title/description text resolves against the card width"
-            );
-            assert_eq!(
-                wrapper_layout.size.min_width,
-                Some(Length::Px(Px(0.0))),
-                "expected CardHeader inner wrapper to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
-            );
-            assert_eq!(
-                *direction,
-                Axis::Vertical,
-                "expected CardHeader inner flow root to stay vertical"
-            );
-            assert_eq!(
-                *align,
-                CrossAlign::Start,
-                "expected CardHeader without an action slot to avoid cross-axis stretch on the inner flow root"
-            );
-            assert_eq!(
-                layout.size.width,
-                Length::Fill,
-                "expected CardHeader inner flow root to request fill width so wrapped title/description text resolves against the card width"
-            );
+            assert_eq!(layout.grid.column.start, Some(2));
+            assert_eq!(layout.grid.column.span, None);
+            assert_eq!(layout.grid.row.start, Some(1));
+            assert_eq!(layout.grid.row.span, Some(2));
+            assert_eq!(layout.grid.align_self, Some(CrossAlign::Start));
+            assert_eq!(layout.grid.justify_self, Some(CrossAlign::End));
         });
     }
 

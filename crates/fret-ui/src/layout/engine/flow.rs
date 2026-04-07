@@ -557,9 +557,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             );
             style.justify_content = Some(taffy_justify(props.justify));
             style.align_items = Some(taffy_align_items(props.align));
+            style.justify_items = props.justify_items.map(taffy_align_items);
             style.gap = TaffySize {
-                width: taffy_lp_from_spacing(sf, props.gap),
-                height: taffy_lp_from_spacing(sf, props.gap),
+                width: taffy_lp_from_spacing(sf, props.resolved_column_gap()),
+                height: taffy_lp_from_spacing(sf, props.resolved_row_gap()),
             };
             style.padding = TaffyRect {
                 left: taffy_lp_from_spacing(sf, props.padding.left),
@@ -567,11 +568,14 @@ fn build_flow_subtree_impl<H: UiHost>(
                 top: taffy_lp_from_spacing(sf, props.padding.top),
                 bottom: taffy_lp_from_spacing(sf, props.padding.bottom),
             };
-            style.grid_template_columns = taffy::style_helpers::evenly_sized_tracks(props.cols);
-            style.grid_template_rows = props
-                .rows
-                .map(taffy::style_helpers::evenly_sized_tracks)
-                .unwrap_or_default();
+            style.grid_template_columns = crate::declarative::taffy_layout::taffy_grid_template(
+                props.template_columns.as_deref(),
+                Some(props.cols),
+            );
+            style.grid_template_rows = crate::declarative::taffy_layout::taffy_grid_template(
+                props.template_rows.as_deref(),
+                props.rows,
+            );
 
             let children = tree.children_ref(node);
             engine.set_style(node, style);
@@ -1153,6 +1157,12 @@ fn style_for_item_in_parent<H: UiHost>(
         ParentLayoutKind::Grid => {
             style.grid_column = taffy_grid_line(layout_style.grid.column);
             style.grid_row = taffy_grid_line(layout_style.grid.row);
+            style.align_self = layout_style.grid.align_self.map(taffy_align_self);
+            style.justify_self = layout_style.grid.justify_self.map(taffy_align_self);
+            crate::declarative::taffy_layout::apply_grid_item_fill_semantics(
+                &mut style,
+                layout_style,
+            );
         }
         ParentLayoutKind::PassthroughOverlayNoStretch | ParentLayoutKind::Overlay => {
             style.grid_column = overlay_grid_line();

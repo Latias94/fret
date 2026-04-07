@@ -24,8 +24,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             shadcn::Button::new("Undo")
                                 .size(shadcn::ButtonSize::Xs)
                                 .ui()
-                                .shadow_none()
-                                .test_id("ui-gallery-alert-action-enable"),
+                                .test_id("ui-gallery-alert-action-undo"),
                         );
                     }),
                 ]

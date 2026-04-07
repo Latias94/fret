@@ -41,6 +41,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview now mirrors the shadcn docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Destructive`, `Action`, `Custom Colors`, `RTL`, and `API Reference`.",
         "The `Demo` section keeps the upstream three-row `alert-demo` surface intact; richer title/description/link teaching stays under explicit `Fret Extras` sections instead of being mixed into the docs path.",
         "Current docs-aligned `Destructive` example tracks the upstream `alert-destructive` surface (`Error` + session-expired copy).",
+        "Current docs-aligned `Action` section tracks the upstream two-row `With Actions` example (`Undo` button row + `Badge` row) instead of a Fret-specific variant.",
         "`Rich Title`, `Rich Description`, and `Interactive Links` stay explicit under `Fret Extras` so composed title/description authoring remains copyable without pretending those sections are upstream docs examples.",
         "Current chrome baseline: the default shadcn registry `Alert` recipe.",
         "Action-slot reference: the radix registry alert recipe and example.",

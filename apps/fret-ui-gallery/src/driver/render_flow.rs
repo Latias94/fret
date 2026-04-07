@@ -2237,6 +2237,8 @@ mod tests {
         for target in [
             "ui-gallery-card-demo-title",
             "ui-gallery-card-demo-sign-up",
+            "ui-gallery-card-demo-email-input",
+            "ui-gallery-card-demo-password-input",
             "ui-gallery-card-demo-login",
             "ui-gallery-card-demo-login-google",
             "ui-gallery-card-size-sm-action",
@@ -2250,6 +2252,119 @@ mod tests {
             assert!(
                 bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
                 "expected Card page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_card_demo_keeps_docs_form_controls_visible_and_aligned() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-demo-email-input",
+            "ui-gallery-card-demo-password-input",
+            "ui-gallery-card-demo-login",
+            "ui-gallery-card-demo-login-google",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let email = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-email-input");
+        let password = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-password-input");
+        let login = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-login");
+        let google = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-login-google");
+
+        let expected_min_width = 300.0;
+        let epsilon = 2.0;
+
+        for (target, bounds) in [
+            ("ui-gallery-card-demo-email-input", email),
+            ("ui-gallery-card-demo-password-input", password),
+            ("ui-gallery-card-demo-login", login),
+            ("ui-gallery-card-demo-login-google", google),
+        ] {
+            assert!(
+                bounds.size.width.0 >= expected_min_width,
+                "expected Card demo control to keep a docs-like full-width lane: target={target} bounds={bounds:?} expected_min_width={expected_min_width}"
+            );
+        }
+
+        assert!(
+            (email.size.width.0 - password.size.width.0).abs() <= epsilon,
+            "expected Card demo email/password inputs to share the same width: email={email:?} password={password:?} epsilon={epsilon}"
+        );
+        assert!(
+            (email.size.width.0 - login.size.width.0).abs() <= epsilon,
+            "expected Card demo email input and primary CTA to align to the same width: email={email:?} login={login:?} epsilon={epsilon}"
+        );
+        assert!(
+            (login.size.width.0 - google.size.width.0).abs() <= epsilon,
+            "expected Card demo action buttons to share the same width: login={login:?} google={google:?} epsilon={epsilon}"
+        );
+    }
+
+    #[test]
+    fn gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-demo",
+            "ui-gallery-card-demo-title",
+            "ui-gallery-card-demo-description",
+            "ui-gallery-card-demo-sign-up",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let card = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo");
+        let title = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-title");
+        let description = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-description");
+        let sign_up = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-sign-up");
+
+        let epsilon = 2.0;
+        let card_right = card.origin.x.0 + card.size.width.0;
+        let sign_up_right = sign_up.origin.x.0 + sign_up.size.width.0;
+        let title_right = title.origin.x.0 + title.size.width.0;
+        let sign_up_center_y = sign_up.origin.y.0 + sign_up.size.height.0 * 0.5;
+        let description_center_y =
+            description.origin.y.0 + description.size.height.0 * 0.5;
+
+        assert!(
+            (sign_up.origin.y.0 - title.origin.y.0).abs() <= epsilon,
+            "expected Card demo Sign Up action to align with the title row top edge like the upstream CardAction lane: title={title:?} sign_up={sign_up:?} epsilon={epsilon}"
+        );
+        assert!(
+            sign_up.origin.x.0 >= title_right + 8.0,
+            "expected Card demo Sign Up action to stay to the right of the title column without overlap: title={title:?} sign_up={sign_up:?}"
+        );
+        assert!(
+            sign_up_center_y < description_center_y - 1.0,
+            "expected Card demo Sign Up action to occupy the header's upper lane instead of drifting into the description row: description={description:?} sign_up={sign_up:?}"
+        );
+        assert!(
+            sign_up_right <= card_right - 16.0,
+            "expected Card demo Sign Up action to remain inset from the card's right padding like the upstream header slot: card={card:?} sign_up={sign_up:?}"
+        );
+    }
+
+    #[test]
+    fn gallery_card_follow_up_surfaces_stay_present() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-api-reference-content",
+            "ui-gallery-card-title-children",
+            "ui-gallery-card-description-children",
+            "ui-gallery-card-compositions",
+            "ui-gallery-card-content-inline-button-demo",
+            "ui-gallery-card-meeting-notes",
+            "ui-gallery-card-section-notes-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Card follow-up target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
     }

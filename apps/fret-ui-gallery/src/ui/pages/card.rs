@@ -84,7 +84,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
         },
         CardDocSectionDiagnostics {
             title: "Image",
-            description: "Media-first card with a featured badge and footer action.",
+            description: "Media-first card with a featured badge, footer action, and a self-contained cover image.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_IMAGE,
             code_source: Some(snippets::image::SOURCE),
             shell: false,
@@ -133,7 +133,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
         },
         CardDocSectionDiagnostics {
             title: "Meeting Notes",
-            description: "Card with text content and a footer stack.",
+            description: "Card with text content, self-contained avatar media, and a footer stack.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_MEETING_NOTES,
             code_source: Some(snippets::meeting_notes::SOURCE),
             shell: false,
@@ -200,8 +200,12 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let show_code_tabs = (bisect & BISECT_DISABLE_CARD_CODE_TABS) == 0;
     let show_intro = (bisect & BISECT_DISABLE_CARD_PAGE_INTRO) == 0;
     let api_reference = doc_layout::notes_block([
+        "Reference baseline: shadcn/base + shadcn/radix Card docs.",
+        "Visual/chrome baseline: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/card.tsx` plus the upstream `Demo`, `Size`, `Image`, and `RTL` examples.",
+        "Base UI / Radix headless references do not add extra Card-specific interaction machinery here; the remaining drift is recipe/docs-surface work rather than a `fret-ui` mechanism bug.",
         "`card(...)` plus the slot helper family is the default copyable path; `Card::new([...])` remains the explicit raw/root collection surface.",
         "`Card`, `CardHeader`, `CardAction`, `CardContent`, and `CardFooter` already accept composable children via `...::new([...])` or the helper-family builders, so no extra generic root-level `children(...)` API is needed for shadcn parity.",
+        "`CardTitle` and `CardDescription` keep compact text lanes by default, while `card_title_children(...)` / `card_description_children(...)` stay as the focused composable-children follow-ups instead of widening the whole family to a generic root `children(...)` / `compose()` API.",
         "`CardTitle::new(text)` stays the compact text lane, and `CardTitle::new_children(...)` / `card_title_children(...)` cover composable children when you need rich/selectable text or a caller-owned inline composition root.",
         "`CardDescription::new(text)` stays the compact supporting-text lane, and `CardDescription::new_children(...)` / `card_description_children(...)` cover matching composable children when the description needs attributed text or a caller-owned inline composition root.",
         "`CardAction` remains the recipe-owned top-right header slot, while card width (`w-full`, `max-w-sm`, fixed px width) stays caller-owned via `refine_layout(...)` on the card root.",
@@ -254,7 +258,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-card-section-image")
             .no_shell()
             .max_w(Px(980.0))
-            .description("Media-first card with a featured badge and footer action, backed by a logical package bundle asset.");
+            .description("Media-first card with a featured badge, footer action, and a self-contained cover image.");
         sections.push(with_card_code(section, snippets::image::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_RTL) == 0 {
@@ -323,7 +327,9 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-card-section-meeting-notes")
             .no_shell()
             .max_w(Px(980.0))
-            .description("Card with text content and a footer stack.");
+            .description(
+                "Card with text content, self-contained avatar media, and a footer stack.",
+            );
         sections.push(with_card_code(section, snippets::meeting_notes::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_NOTES) == 0 {
@@ -334,7 +340,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Default first-party teaching should prefer `card(...)` plus the slot helper family; `Card::build(...)` remains a lower-level builder option when call sites need explicit late child collection.",
             "`Rich Title (Fret)` and `Rich Description (Fret)` keep the `card_title_children(...)` / `card_description_children(...)` lanes copyable on the default app-facing surface instead of making callers drop to slot builders for rich text content.",
             "Gallery order now mirrors the upstream Card docs path through `API Reference` before appending Fret-only regression sections.",
-            "The Image section now resolves its cover image from a gallery-owned logical package bundle, so the teaching surface reflects shipped asset ownership rather than inline demo RGBA buffers.",
+            "The `Image` and `Meeting Notes` snippets now keep their demo media self-contained with inline RGBA sources, so the code tabs stay copyable without UI Gallery-only asset helpers.",
         ]);
         sections.push(
             DocSection::build(cx, "Notes", notes)

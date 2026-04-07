@@ -1,13 +1,30 @@
 pub const SOURCE: &str = include_str!("meeting_notes.rs");
 
 // region: example
-use super::super::avatar::demo_image;
 use fret::{UiChild, UiCx};
+use fret_core::{ImageColorSpace, ImageId};
 use fret_ui::Theme;
+use fret_ui_assets::ImageSource;
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn demo_avatar_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+    let source = ImageSource::rgba8(
+        4,
+        4,
+        vec![
+            245, 214, 193, 255, 240, 203, 180, 255, 103, 145, 186, 255, 75, 108, 146, 255, 244,
+            211, 189, 255, 236, 196, 170, 255, 118, 160, 193, 255, 83, 121, 159, 255, 224, 177,
+            146, 255, 203, 146, 110, 255, 73, 111, 150, 255, 52, 86, 121, 255, 161, 112, 82, 255,
+            132, 90, 68, 255, 49, 73, 104, 255, 33, 54, 80, 255,
+        ],
+        ImageColorSpace::Srgb,
+    );
+    cx.use_image_source_state(&source).image
+}
 
 fn marker(cx: &mut UiCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
     ui::text(text)
@@ -53,7 +70,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .min_w_0();
 
     let avatars = {
-        let avatar_image = demo_image(cx);
+        let avatar_image = demo_avatar_image(cx);
         let avatar_fallbacks = ["CN", "LR", "ER"];
         let avatars = avatar_fallbacks
             .iter()

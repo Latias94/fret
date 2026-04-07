@@ -1573,13 +1573,20 @@ impl ElementHostWidget {
             cx.constraints.available.width.shrink_by(pad_w),
             cx.constraints.available.height.shrink_by(pad_h),
         );
-        let gap_w = spacing_px_for_basis(props.gap, inner_available.width.definite());
-        let gap_h = spacing_px_for_basis(props.gap, inner_available.height.definite());
+        let gap_w = spacing_px_for_basis(
+            props.resolved_column_gap(),
+            inner_available.width.definite(),
+        );
+        let gap_h =
+            spacing_px_for_basis(props.resolved_row_gap(), inner_available.height.definite());
 
         let root_style = TaffyStyle {
             display: Display::Grid,
             justify_content: Some(super::super::taffy_layout::taffy_justify(props.justify)),
             align_items: Some(super::super::taffy_layout::taffy_align_items(props.align)),
+            justify_items: props
+                .justify_items
+                .map(super::super::taffy_layout::taffy_align_items),
             gap: TaffySize {
                 width: LengthPercentage::length(gap_w),
                 height: LengthPercentage::length(gap_h),
@@ -1634,11 +1641,14 @@ impl ElementHostWidget {
                     AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
                 },
             },
-            grid_template_columns: taffy::style_helpers::evenly_sized_tracks(props.cols),
-            grid_template_rows: props
-                .rows
-                .map(taffy::style_helpers::evenly_sized_tracks)
-                .unwrap_or_default(),
+            grid_template_columns: super::super::taffy_layout::taffy_grid_template(
+                props.template_columns.as_deref(),
+                Some(props.cols),
+            ),
+            grid_template_rows: super::super::taffy_layout::taffy_grid_template(
+                props.template_rows.as_deref(),
+                props.rows,
+            ),
             ..Default::default()
         };
 
@@ -1654,7 +1664,7 @@ impl ElementHostWidget {
         let mut child_nodes = Vec::with_capacity(cx.children.len());
         for &child in cx.children {
             let layout_style = layout_style_for_node(cx.app, window, child);
-            let style = TaffyStyle {
+            let mut style = TaffyStyle {
                 display: Display::Block,
                 position: super::super::taffy_layout::taffy_position(layout_style.position),
                 inset: super::super::taffy_layout::taffy_rect_lpa_from_inset(
@@ -1701,8 +1711,17 @@ impl ElementHostWidget {
                 ),
                 grid_column: super::super::taffy_layout::taffy_grid_line(layout_style.grid.column),
                 grid_row: super::super::taffy_layout::taffy_grid_line(layout_style.grid.row),
+                align_self: layout_style
+                    .grid
+                    .align_self
+                    .map(super::super::taffy_layout::taffy_align_self),
+                justify_self: layout_style
+                    .grid
+                    .justify_self
+                    .map(super::super::taffy_layout::taffy_align_self),
                 ..Default::default()
             };
+            super::super::taffy_layout::apply_grid_item_fill_semantics(&mut style, layout_style);
             let node = match taffy.new_leaf_with_context(style, Some(child)) {
                 Ok(node) => node,
                 Err(err) => {

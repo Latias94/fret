@@ -6,20 +6,22 @@ use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn email_field(email: Model<String>) -> impl IntoUiElement<fret_app::App> + use<> {
-    ui::v_stack(|cx| {
+    ui::v_flex(|cx| {
         vec![
             shadcn::Label::new("Email").into_element(cx),
             shadcn::Input::new(email)
                 .a11y_label("Email")
                 .placeholder("m@example.com")
+                .test_id("ui-gallery-card-demo-email-input")
                 .into_element(cx),
         ]
     })
     .gap(Space::N2)
+    .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
 fn password_field(password: Model<String>) -> impl IntoUiElement<fret_app::App> + use<> {
-    ui::v_stack(|cx| {
+    ui::v_flex(|cx| {
         vec![
             ui::h_flex(|cx| {
                 vec![
@@ -37,10 +39,12 @@ fn password_field(password: Model<String>) -> impl IntoUiElement<fret_app::App> 
             shadcn::Input::new(password)
                 .a11y_label("Password")
                 .placeholder("••••••••")
+                .test_id("ui-gallery-card-demo-password-input")
                 .into_element(cx),
         ]
     })
     .gap(Space::N2)
+    .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -67,7 +71,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             cx;
                             shadcn::Button::new("Sign Up")
                                 .variant(shadcn::ButtonVariant::Link)
-                                .size(shadcn::ButtonSize::Sm)
                                 .ui()
                                 .test_id("ui-gallery-card-demo-sign-up"),
                         ]
@@ -84,7 +87,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ]
                     })
                     .gap(Space::N6)
-                    .layout(LayoutRefinement::default().w_full()),
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
                 ]
             }),
             shadcn::card_footer(|cx| {

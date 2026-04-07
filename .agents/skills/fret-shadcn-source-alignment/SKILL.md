@@ -25,6 +25,7 @@ description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Defau
 - What is the upstream source of truth (Radix docs vs shadcn composition/source)?
 - Which authoring surface is drifting: `fret` app-facing snippets, direct `fret_ui_shadcn` usage, or internal recipe code?
 - Which source axis is drifting: semantics, default chrome, docs page grouping, or app-facing teaching surface?
+- Does the drift actually live in example-local props (`size`, `variant`, `className`, slot wrappers) rather than the component source defaults?
 - Is the user asking for a named visual style (`new-york-v4`, `radix-nova`, `base-nova`, etc.) or just “shadcn” in general?
 - Is this actually a public-surface drift (upstream prop-driven API vs Fret model-only authoring surface)?
 - Is this actually a conversion-surface drift (`Ui` / `UiChild` / unified component conversion trait) rather than a widget recipe mismatch?
@@ -35,6 +36,7 @@ description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Defau
 - What platforms and input types must match (native/web; mouse/touch/pen)?
 - Does parity include accessibility outcomes?
 - Does the component rely on responsive breakpoints or container queries?
+- Does a slot depend on multi-row / multi-column placement (`row-span`, `col-start`, `self-start`, `justify-self-end`) that would be lost if we collapse it to a generic flex row?
 
 Defaults if unclear:
 
@@ -67,6 +69,14 @@ Common mappings:
 - `min-w-0` → `.ui().min_w_0()`
 - `truncate` → `.ui().truncate()`
 
+Do not stop at container constraints:
+
+- Compare the upstream example call site too: `size`, `variant`, slot-local wrappers, and utility
+  classes on the example are parity truth for the docs-path demo.
+- If the upstream slot is positioned with grid semantics (`row-span`, `col-start`, `justify-self`,
+  `self-start`), do not assume a generic `justify-between` row is “close enough” without a geometry
+  gate.
+
 Default-style ownership check before changing a recipe:
 
 - If upstream puts the class on the *example call site* (`<Card className="w-full max-w-sm">`), keep it caller-owned in Fret too.
@@ -82,6 +92,8 @@ Default-style ownership check before changing a recipe:
 1. Identify whether the mismatch is layout policy, mechanism, or public-surface parity before touching code.
 2. Decide which Fret authoring surface is the target (`fret` facade vs direct `fret_ui_shadcn` vs recipe internals) before copying imports or helper patterns.
 3. Compare against upstream docs/source (shadcn for composition + sizing; Radix for semantics).
+   - Audit both the component source and the exact docs-path example file.
+   - Check for example-local props/classes before concluding the recipe default is wrong.
 4. If app code is paying for per-row `Model<T>` or surrogate buttons just to keep the intended widget, run `references/public-surface-parity.md` before widening helpers.
 5. Write a compact parity proof note:
    - `Truth`
@@ -204,6 +216,19 @@ dismissal/focus, hit-testing, breakpoints), not styling. Before adding/adjusting
 - `apps/fret-ui-gallery`: first-party exemplar + diagnostics-friendly teaching surface
 
 If the mismatch is interaction policy (dismiss rules, focus restore, hover intent, menu navigation), it almost never belongs in `crates/fret-ui`.
+If the upstream slot depends on non-uniform grid tracks (`grid-cols-[1fr_auto]`, fixed+`fr`,
+explicit `grid-rows-[...]`) and Fret only exposes equal-track grid helpers there, audit
+`crates/fret-ui` grid track vocabulary before calling it a recipe-only issue.
+If explicit tracks are already available but the slot still drifts, inspect grid-item sizing next:
+recipe-authored `w-full` / `Length::Fill` on in-flow grid children can blow out `fr auto` lanes
+unless the runtime maps grid-item fill to grid-area stretch semantics or the recipe relies on the
+upstream default grid stretch instead of forcing `w-full`.
+If explicit tracks and fill semantics are already available but the slot still drifts, audit the
+next grid tier before falling back to a flex approximation:
+- container `justify-items` / `place-items-*`,
+- item `align-self` / `justify-self`,
+- and whether upstream uses separate `gap-x-*` / `gap-y-*` that Fret currently collapses into one
+  shared gap axis.
 
 ### 2) Pick the upstream reference stack and precedence explicitly
 
@@ -267,6 +292,14 @@ When a shadcn page or gallery sample looks wrong, follow this order:
 
 Do not jump straight to token edits when the real drift is missing caller-owned width, flex, or
 overflow constraints.
+
+For docs/demo parity specifically:
+
+- add stable `test_id` hooks to example-local controls/slots that users can point at in screenshots,
+- gate slot geometry when upstream uses slot-specific layout semantics (for example a header action
+  in the top-right lane above supporting text),
+- record whether the mismatch came from the recipe source or from example-local props such as
+  `variant="link"` vs `variant="link" size="sm"`.
 
 ### 4) Lock the change with the smallest gate
 
@@ -345,6 +378,13 @@ Prefer bounded, fast gates:
 
 - Fixing policy mismatches by adding runtime knobs in `crates/fret-ui` (wrong layer most of the time).
 - Baking caller-owned width/overflow/flex constraints into a shadcn recipe default because a single doc page or gallery composition needed them.
+- Matching only the component source while missing example-local truth in the docs-path demo
+  (`size`, `variant`, wrapper layout, slot-local utility classes).
+- Flattening slot-specific grid placement into a generic `justify-between` flex row without a
+  geometry gate proving the slot still occupies the same visual lane.
+- Declaring a sibling component "recipe-only" after explicit tracks land, without checking whether
+  the upstream grid also depends on `justify-items`, `justify-self`, `self-start`, or separate
+  row/column gaps.
 - Relying on goldens alone for state-machine behavior (add a scripted repro).
 - Missing stable `test_id` targets, causing scripts to rot during refactors.
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.

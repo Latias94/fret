@@ -36,11 +36,23 @@ Ask: does this slot use `flex`, `grid`, `gap-*`, or is it just padding/typograph
   - `items-stretch` vs `items-start`
   - `w_full()` on children vs on wrappers
   - implicit `flex_shrink` / `flex_grow` choices
+- Did we only compare the component source and forget the exact docs-path example file?
+  - example-local `size`, `variant`, wrapper layout, and slot-local utility classes are parity
+    truth too
 
 3) Decide the owning layer
 
 - If the issue is “default alignment / fill / shrink / wrap”, it is almost always
   `ecosystem/fret-ui-shadcn` (recipe policy), not `crates/fret-ui`.
+- If the upstream slot uses explicit non-uniform grid tracks (`grid-cols-[1fr_auto]`,
+  `grid-cols-[0_1fr]`, fixed+`fr`, explicit `grid-rows-[...]`) and Fret only exposes evenly sized
+  grid tracks, stop and audit the runtime contract first. That is a mechanism gap, not a recipe
+  polish issue.
+- If explicit tracks are already present, do not close the audit yet. Check the next grid tier:
+  - container `justify-items` / `place-items-*`,
+  - item `align-self` / `justify-self`,
+  - and whether upstream uses separate `gap-x-*` / `gap-y-*` that Fret currently compresses into
+    one gap value.
 - If the issue is “hit-testing / routing / transforms / clipping”, it might be mechanism
   (`crates/fret-ui`) — confirm via the mechanism parity checklist.
 
@@ -141,3 +153,48 @@ Regression protection:
 
 - Unit test for the recipe default (`Card` root width remains `Auto`).
 - UI gallery invariant test that relevant card examples keep the intended shared width.
+
+## Case study: CardHeader action lane “looks close, but Sign Up is in the wrong place”
+
+Upstream shadcn/ui v4:
+
+- `CardHeader` switches to a grid when `CardAction` is present.
+- `CardAction` occupies the top-right lane with `col-start-2 row-start-1 row-span-2 self-start
+  justify-self-end`.
+- The demo file also matters: `Sign Up` is `variant=\"link\"` at the default size, not `size=\"sm\"`.
+
+Failure modes in Fret:
+
+- The recipe collapses the header to a generic `justify-between` row without proving the action
+  still occupies the same visual lane.
+- The runtime gains explicit tracks, but first-column children still author `w-full` / `Length::Fill`
+  as a raw percent width against the whole grid container, so the `1fr` track expands to the full
+  card width and pushes the action slot outside the card.
+- The snippet copies the slot structure but changes example-local props (`size=\"sm\"`), so the
+  visible result drifts even when the component source is otherwise fine.
+
+Fix pattern:
+
+- Audit both `ui/card.tsx` and the exact example file (for example `examples/card-demo.tsx`).
+- Before rewriting the recipe, confirm that Fret can actually express the upstream track list.
+  If the current grid contract only exposes evenly sized tracks, land the runtime vocabulary first
+  and then translate the recipe onto it.
+- After explicit tracks land, check whether the remaining drift is really a child-sizing problem:
+  upstream grid slots often rely on default grid stretch rather than explicit `w-full` on the
+  first-column children. If Fret still needs `w-full`-shaped authoring for that slot family, the
+  runtime may need a grid-item `Fill -> stretch` translation so `fr auto` lanes stay stable.
+- After fill semantics land, check the remaining slot alignment semantics too. Upstream grid slots
+  may still rely on `justify-items-start`, `place-items-center`, `self-start`, or
+  `justify-self-end`; if Fret cannot express those, the recipe is still blocked on the runtime
+  contract even though track placement already works.
+- Keep an eye on axis-specific gaps. `gap-x-*` / `gap-y-*` pressure is often the next parity clue
+  after tracks and self-alignment are correct, especially in Alert / AlertDialog-like headers.
+- Treat header/action placement as recipe-owned when the positioning comes from the component
+  source.
+- Add a geometry gate that checks the action stays in the top-right lane relative to title and
+  description, rather than relying on source similarity alone.
+
+Regression protection:
+
+- UI gallery geometry test for `title / description / action` relative bounds.
+- Source-policy test that the copied demo keeps the upstream example-local button props.

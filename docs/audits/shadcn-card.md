@@ -56,10 +56,24 @@ example implementations in `repo-ref/ui`.
   on this recipe is backed by direct footprint evidence rather than inferred visual judgment.
 - Pass: Root width remains call-site owned; examples opt into widths such as `w-full max-w-sm` rather than the `Card` recipe forcing fill-width by default.
 - Pass: Default recipe styles stay limited to intrinsic card chrome/slot spacing. Page- or container-negotiated constraints such as `w-full`, `min-w-0`, `max-w-*`, or `flex-1` stay at the call site unless the upstream recipe itself owns them.
-- Pass: `CardHeader` keeps title/description/action alignment compatible with the upstream two-row grid outcome.
+- Pass: `CardHeader` now uses the same source-aligned grid family as upstream instead of a flex
+  approximation:
+  - explicit `auto auto` header rows,
+  - explicit `1fr auto` columns when `CardAction` is present,
+  - `CardAction` placed in column 2, row 1, spanning both header rows,
+  - `CardAction` now also carries the upstream `self-start` / `justify-self-end` slot alignment.
+- Pass: the runtime now translates in-flow grid-item `Fill` to grid-area stretch semantics in this
+  slot family, so the first column no longer expands to the full card width and push the action
+  lane outside the card when title/description helpers request fill width.
 - Pass: `CardContent` and `CardFooter` preserve the expected horizontal padding and allow richer compositions without collapsing intrinsic child sizes.
 - Pass: `CardFooter` row/column roots now request `w_full().min_w_0()` so footer-only or narrow-card text wraps against the card's inner width instead of collapsing into one word per line.
-- Verdict: the remaining layout translation is recipe-level, not mechanism-level. `CardContent` uses `items_start()` because Fret's helper stacks are real flex containers, while upstream `CardContent` is a plain `div`; `CardFooter` requests `w_full().min_w_0()` to keep DOM-like wrap behavior inside Fret's GPU-first layout model.
+- Verdict: Card parity required both mechanism and recipe work. The visible docs-path demo bugs were
+  local snippet issues, but the durable fix required:
+  - a runtime grid-track contract strong enough to express the upstream header slot geometry, and
+  - a runtime grid-item fill mapping that preserves `fr auto` slot lanes instead of expanding the
+    first track against the whole card.
+  `CardContent` and `CardFooter` remain recipe-level translations; `CardHeader` is no longer a
+  `justify-between` approximation.
 
 ### Gallery / docs parity
 
@@ -72,11 +86,15 @@ example implementations in `repo-ref/ui`.
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn card_footer_row_requests_fill_width_and_min_w_0 --status-level fail`
+- `CARGO_TARGET_DIR=/tmp/fret-codex-card-target cargo nextest run -p fret-ui -E 'test(grid_places_children_in_columns) or test(grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes)'`
+- `CARGO_TARGET_DIR=/tmp/fret-codex-card-target cargo nextest run -p fret-ui-shadcn --lib -E 'test(card_header_without_action_uses_source_aligned_grid_layout) or test(card_header_with_action_uses_explicit_grid_slot_placement)'`
 - `cargo nextest run -p fret-ui-shadcn card_title_children --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn card --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn web_vs_fret_card_demo_shadow_matches_web_light --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn web_vs_fret_card_demo_shadow_matches_web_dark --status-level fail`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app card_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app card_rich_title_snippet_prefers_copyable_card_title_children_helper`
+- `CARGO_TARGET_DIR=/tmp/fret-codex-card-target cargo nextest run -p fret-ui-gallery --lib -E 'test(gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane) or test(gallery_card_demo_keeps_docs_form_controls_visible_and_aligned)'`
+- `CARGO_TARGET_DIR=/tmp/fret-codex-card-target cargo nextest run -p fret-ui-gallery --test card_docs_surface -E 'test(card_page_documents_source_axes_and_children_api_decision) or test(card_docs_path_snippets_stay_copyable_and_docs_aligned) or test(card_docs_diag_script_covers_docs_path_and_fret_followups)'`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`

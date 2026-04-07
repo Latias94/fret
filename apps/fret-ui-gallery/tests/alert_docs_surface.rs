@@ -138,3 +138,51 @@ fn alert_demo_snippet_matches_upstream_docs_surface_and_keeps_link_logic_in_extr
         );
     }
 }
+
+#[test]
+fn alert_action_snippet_stays_on_the_upstream_with_actions_surface() {
+    let action = include_str!("../src/ui/snippets/alert/action.rs");
+    let page = include_str!("../src/ui/pages/alert.rs");
+    let action_script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json"
+    );
+
+    for needle in [
+        "shadcn::Button::new(\"Undo\")",
+        ".size(shadcn::ButtonSize::Xs)",
+        ".test_id(\"ui-gallery-alert-action-undo\")",
+        "shadcn::Badge::new(\"Badge\")",
+        ".variant(shadcn::BadgeVariant::Secondary)",
+        ".test_id(\"ui-gallery-alert-action-badge-chip\")",
+    ] {
+        assert!(
+            normalize_ws(action).contains(&normalize_ws(needle)),
+            "alert action snippet should stay aligned to the upstream With Actions example; missing `{needle}`",
+        );
+    }
+
+    for needle in [".shadow_none()", "ui-gallery-alert-action-enable"] {
+        assert!(
+            !action.contains(needle),
+            "alert action snippet should not keep old Fret-specific action drift `{needle}`",
+        );
+    }
+
+    assert!(
+        page.contains(
+            "Current docs-aligned `Action` section tracks the upstream two-row `With Actions` example (`Undo` button row + `Badge` row) instead of a Fret-specific variant."
+        ),
+        "alert page notes should record the current action-surface alignment choice",
+    );
+
+    for needle in [
+        "\"ui-gallery-alert-action-undo\"",
+        "\"ui-gallery-alert-action-badge-chip\"",
+        "\"ui-gallery-alert-action-text-non-overlap\"",
+    ] {
+        assert!(
+            action_script.contains(needle),
+            "alert action diag script should keep the aligned action anchors; missing `{needle}`",
+        );
+    }
+}

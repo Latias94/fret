@@ -535,6 +535,8 @@ impl From<Option<Px>> for InsetEdge {
 pub struct GridItemStyle {
     pub column: GridLine,
     pub row: GridLine,
+    pub align_self: Option<CrossAlign>,
+    pub justify_self: Option<CrossAlign>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -2449,15 +2451,42 @@ impl Default for FlexProps {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GridTrackSizing {
+    Auto,
+    Px(Px),
+    Fr(f32),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct GridProps {
     pub layout: LayoutStyle,
     pub cols: u16,
     pub rows: Option<u16>,
+    /// Explicit per-track column sizing.
+    ///
+    /// When present and non-empty, this takes precedence over `cols`.
+    pub template_columns: Option<Vec<GridTrackSizing>>,
+    /// Explicit per-track row sizing.
+    ///
+    /// When present and non-empty, this takes precedence over `rows`.
+    pub template_rows: Option<Vec<GridTrackSizing>>,
     pub gap: SpacingLength,
+    /// Grid inline-axis gap.
+    ///
+    /// When `None`, the runtime falls back to the shared `gap` shorthand.
+    pub column_gap: Option<SpacingLength>,
+    /// Grid block-axis gap.
+    ///
+    /// When `None`, the runtime falls back to the shared `gap` shorthand.
+    pub row_gap: Option<SpacingLength>,
     pub padding: SpacingEdges,
     pub justify: MainAlign,
     pub align: CrossAlign,
+    /// Grid-only inline-axis item alignment (`justify-items`).
+    ///
+    /// When `None`, the runtime preserves the underlying grid default (`stretch`).
+    pub justify_items: Option<CrossAlign>,
 }
 
 impl Default for GridProps {
@@ -2466,11 +2495,26 @@ impl Default for GridProps {
             layout: LayoutStyle::default(),
             cols: 1,
             rows: None,
+            template_columns: None,
+            template_rows: None,
             gap: SpacingLength::Px(Px(0.0)),
+            column_gap: None,
+            row_gap: None,
             padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
+            justify_items: None,
         }
+    }
+}
+
+impl GridProps {
+    pub fn resolved_column_gap(&self) -> SpacingLength {
+        self.column_gap.unwrap_or(self.gap)
+    }
+
+    pub fn resolved_row_gap(&self) -> SpacingLength {
+        self.row_gap.unwrap_or(self.gap)
     }
 }
 

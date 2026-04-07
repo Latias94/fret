@@ -1411,6 +1411,370 @@ fn grid_places_children_in_columns() {
 }
 
 #[test]
+fn grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-explicit-tracks",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Px(Px(40.0)),
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut action = crate::element::ContainerProps::default();
+                    action.layout.size.width = crate::element::Length::Px(Px(40.0));
+                    action.layout.size.height = crate::element::Length::Px(Px(12.0));
+                    action.layout.grid.column.start = Some(2);
+                    action.layout.grid.row.start = Some(1);
+                    action.layout.grid.row.span = Some(2);
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.container(action, |_cx| vec![]),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let children = ui.children(grid_node);
+    assert_eq!(children.len(), 3);
+
+    let title_bounds = ui.debug_node_bounds(children[0]).expect("title bounds");
+    let description_bounds = ui
+        .debug_node_bounds(children[1])
+        .expect("description bounds");
+    let action_bounds = ui.debug_node_bounds(children[2]).expect("action bounds");
+    let engine = ui.take_layout_engine();
+    let action_style = engine
+        .debug_style_for_node(children[2])
+        .cloned()
+        .expect("action style");
+    let grid_dump = engine.debug_dump_subtree_json(grid_node, |node| {
+        Some(format!(
+            "{}:{node:?}",
+            match node {
+                _ if node == grid_node => "grid",
+                _ if node == children[0] => "title",
+                _ if node == children[1] => "description",
+                _ if node == children[2] => "action",
+                _ => "node",
+            }
+        ))
+    });
+    ui.put_layout_engine(engine);
+
+    assert_eq!(title_bounds.origin, Point::new(Px(0.0), Px(0.0)));
+    assert_eq!(description_bounds.origin.x, Px(0.0));
+    assert!(
+        description_bounds.origin.y > title_bounds.origin.y,
+        "explicit grid row placement should keep the second primary-column item below the first row; grid_dump={grid_dump}"
+    );
+    assert_eq!(
+        action_bounds.origin,
+        Point::new(Px(160.0), Px(0.0)),
+        "explicit grid slot placement should keep the spanning child in the top-right lane; action_style={action_style:?}; grid_dump={grid_dump}"
+    );
+    assert_eq!(title_bounds.size.width, Px(160.0));
+    assert_eq!(description_bounds.size.width, Px(160.0));
+    assert_eq!(action_bounds.size.width, Px(40.0));
+    assert!(
+        action_bounds.origin.y < description_bounds.origin.y,
+        "the spanning action should stay aligned with the first header row rather than being pushed into the second row; action_style={action_style:?}; grid_dump={grid_dump}"
+    );
+}
+
+#[test]
+fn grid_justify_items_start_keeps_auto_sized_children_intrinsic() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-justify-items-start",
+        |cx| {
+            let mut grid = |justify_items: Option<crate::element::CrossAlign>| {
+                cx.grid(
+                    crate::element::GridProps {
+                        layout: {
+                            let mut l = crate::element::LayoutStyle::default();
+                            l.size.width = crate::element::Length::Fill;
+                            l.size.height = crate::element::Length::Px(Px(40.0));
+                            l
+                        },
+                        cols: 1,
+                        rows: Some(1),
+                        template_columns: Some(vec![crate::element::GridTrackSizing::Fr(1.0)]),
+                        template_rows: Some(vec![crate::element::GridTrackSizing::Px(Px(40.0))]),
+                        align: crate::element::CrossAlign::Start,
+                        justify_items,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let mut item = crate::element::ContainerProps::default();
+                        item.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                        let mut inner = crate::element::ContainerProps::default();
+                        inner.layout.size.width = crate::element::Length::Px(Px(20.0));
+                        inner.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                        vec![cx.container(item, move |cx| vec![cx.container(inner, |_cx| vec![])])]
+                    },
+                )
+            };
+
+            vec![grid(None), grid(Some(crate::element::CrossAlign::Start))]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let default_grid = ui.children(root)[0];
+    let start_grid = ui.children(root)[1];
+    let default_item = ui.children(default_grid)[0];
+    let start_item = ui.children(start_grid)[0];
+
+    let default_bounds = ui.debug_node_bounds(default_item).expect("default bounds");
+    let start_bounds = ui.debug_node_bounds(start_item).expect("start bounds");
+
+    assert!(
+        default_bounds.size.width.0 >= 199.0,
+        "expected grid default justify-items stretch to expand the auto-sized child, got {default_bounds:?}"
+    );
+    assert!(
+        (start_bounds.size.width.0 - 20.0).abs() < 0.5,
+        "expected justify-items:start to keep the auto-sized child intrinsic, got {start_bounds:?}"
+    );
+    assert_eq!(start_bounds.origin.x, Px(0.0));
+}
+
+#[test]
+fn grid_item_self_alignment_overrides_container_item_alignment() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-self-alignment",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Px(Px(100.0)),
+                        crate::element::GridTrackSizing::Px(Px(100.0)),
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Px(Px(40.0)),
+                        crate::element::GridTrackSizing::Px(Px(40.0)),
+                    ]),
+                    align: crate::element::CrossAlign::End,
+                    justify_items: Some(crate::element::CrossAlign::Start),
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut item = crate::element::ContainerProps::default();
+                    item.layout.grid.column.start = Some(2);
+                    item.layout.grid.row.start = Some(2);
+                    item.layout.grid.align_self = Some(crate::element::CrossAlign::Start);
+                    item.layout.grid.justify_self = Some(crate::element::CrossAlign::End);
+
+                    let mut inner = crate::element::ContainerProps::default();
+                    inner.layout.size.width = crate::element::Length::Px(Px(20.0));
+                    inner.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                    vec![cx.container(item, move |cx| vec![cx.container(inner, |_cx| vec![])])]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid = ui.children(root)[0];
+    let item = ui.children(grid)[0];
+    let item_bounds = ui.debug_node_bounds(item).expect("item bounds");
+
+    assert!(
+        (item_bounds.size.width.0 - 20.0).abs() < 0.5,
+        "expected grid item to keep intrinsic width under justify-self:end, got {item_bounds:?}"
+    );
+    assert_eq!(
+        item_bounds.origin,
+        Point::new(Px(180.0), Px(40.0)),
+        "expected justify-self:end + align-self:start to position the child in the top-right of its slot, got {item_bounds:?}"
+    );
+}
+
+#[test]
+fn grid_axis_specific_gaps_keep_row_and_column_spacing_independent() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-axis-specific-gap",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Px(Px(20.0)),
+                        crate::element::GridTrackSizing::Px(Px(20.0)),
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Px(Px(20.0)),
+                        crate::element::GridTrackSizing::Px(Px(20.0)),
+                    ]),
+                    gap: Px(0.0).into(),
+                    column_gap: Some(Px(30.0).into()),
+                    row_gap: Some(Px(10.0).into()),
+                    align: crate::element::CrossAlign::Start,
+                    justify_items: Some(crate::element::CrossAlign::Start),
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut make_item = |column: i16, row: i16| {
+                        let mut item = crate::element::ContainerProps::default();
+                        item.layout.size.width = crate::element::Length::Px(Px(20.0));
+                        item.layout.size.height = crate::element::Length::Px(Px(20.0));
+                        item.layout.grid.column.start = Some(column);
+                        item.layout.grid.row.start = Some(row);
+                        cx.container(item, |_cx| vec![])
+                    };
+
+                    vec![
+                        make_item(1, 1),
+                        make_item(2, 1),
+                        make_item(1, 2),
+                        make_item(2, 2),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid = ui.children(root)[0];
+    let children = ui.children(grid);
+    assert_eq!(children.len(), 4);
+
+    let top_left = ui.debug_node_bounds(children[0]).expect("top-left bounds");
+    let top_right = ui.debug_node_bounds(children[1]).expect("top-right bounds");
+    let bottom_left = ui
+        .debug_node_bounds(children[2])
+        .expect("bottom-left bounds");
+    let bottom_right = ui
+        .debug_node_bounds(children[3])
+        .expect("bottom-right bounds");
+
+    assert_eq!(top_left.origin, Point::new(Px(0.0), Px(0.0)));
+    assert_eq!(
+        top_right.origin,
+        Point::new(Px(50.0), Px(0.0)),
+        "expected column gap to offset the second column independently of row spacing"
+    );
+    assert_eq!(
+        bottom_left.origin,
+        Point::new(Px(0.0), Px(30.0)),
+        "expected row gap to offset the second row independently of column spacing"
+    );
+    assert_eq!(
+        bottom_right.origin,
+        Point::new(Px(50.0), Px(30.0)),
+        "expected both axis-specific gaps to compose without collapsing to one shared gap"
+    );
+}
+
+#[test]
 fn flex_defaults_to_fit_content_under_constraints() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

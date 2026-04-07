@@ -109,6 +109,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   are not currently emitted as routable `view`/`preview` items in the local snapshot. Visual
   evidence for those examples therefore relies on first-party UI Gallery diagnostics until upstream
   routeable goldens become available.
+- Pass: `AlertDialogHeader` / `AlertDialogMedia` now use a responsive grid translation for the
+  upstream header family instead of a flex approximation:
+  centered one-column grid on compact lanes, `auto 1fr` plus row-span on default `sm:` lanes, and
+  independent row/column gap control for the media variant.
 
 ## Validation
 
@@ -125,6 +129,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_alert_dialog_open_geometry_matches_fret`).
+- Focused grid recipe gate:
+  `cargo nextest run -p fret-ui-shadcn --lib -E 'test(alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm) or test(alert_dialog_media_panel_stays_compact_within_default_width) or test(alert_dialog_small_media_panel_keeps_text_and_footer_within_compact_height)'`.
 - Overlay selectable-span state gate:
   `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_selectable_description_records_interactive_span_bounds_in_overlay_state -- --exact`
   (proves the alert dialog description keeps interactive span bounds after overlay paint).
