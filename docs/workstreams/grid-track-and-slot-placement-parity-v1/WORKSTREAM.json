@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "grid-track-and-slot-placement-parity-v1",
   "title": "Grid Track And Slot Placement Parity v1",
-  "status": "active",
+  "status": "completed",
   "updated": "2026-04-07",
   "scope_kind": "execution",
   "problem": "Keep Fret's declarative grid contract strong enough to express source-aligned shadcn slot placement when upstream components depend on explicit non-uniform tracks, independent row/column gaps, and grid item/container alignment semantics such as `justify-items`, `self-start`, and `justify-self-end`.",
@@ -25,7 +25,7 @@
     }
   ],
   "repro": {
-    "summary": "Resume from the explicit track contract, grid-item Fill-to-stretch semantics, grid item/container alignment + row/column gap surfaces, CardHeader/CardAction parity, and AlertDialogHeader/Media grid parity before finishing the remaining Alert recipe rewrite.",
+    "summary": "This lane is closed: the explicit track contract, grid-item Fill-to-stretch semantics, grid item/container alignment + row/column gap surfaces, CardHeader/CardAction parity, and the Alert / AlertDialog sibling rewrites are all landed.",
     "commands": [
       "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui -E 'test(grid_places_children_in_columns) or test(grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes) or test(grid_justify_items_start_keeps_auto_sized_children_intrinsic) or test(grid_item_self_alignment_overrides_container_item_alignment)'",
       "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-shadcn --lib -E 'test(card_header_without_action_uses_source_aligned_grid_layout) or test(card_header_with_action_uses_explicit_grid_slot_placement)'",
@@ -82,8 +82,8 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane for the remaining Alert recipe rewrite on top of the landed explicit grid track, alignment, and row/column gap contract. Start a narrower follow-on only if later work needs broader responsive taxonomy beyond this contract slice."
+    "default_action": "close",
+    "notes": "Close this lane. If later parity work still drifts on `w-fit` / `self-start` / `items-stretch`, start a narrower declarative item-alignment follow-on rather than reopening the grid runtime contract."
   },
   "follow_on_of": "shadcn-source-alignment-v1"
 }

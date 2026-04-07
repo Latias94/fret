@@ -55,6 +55,11 @@ Ask: does this slot use `flex`, `grid`, `gap-*`, or is it just padding/typograph
     one gap value.
 - If the issue is “hit-testing / routing / transforms / clipping”, it might be mechanism
   (`crates/fret-ui`) — confirm via the mechanism parity checklist.
+- If the issue is specifically item self-alignment (`self-start`, `self-stretch`, `justify-self-*`)
+  and the recipe currently mutates `props.layout.*` after style resolution, prefer landing or
+  using a shared declarative surface first (`LayoutRefinement::self_*`,
+  `LayoutRefinement::justify_self_*`, and the matching `UiBuilder` helpers). Do not keep cloning
+  raw prop patches across recipes once the common surface exists.
 
 ## Default-style ownership (recipe vs call site)
 

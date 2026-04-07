@@ -1,7 +1,7 @@
 # Grid Track And Slot Placement Parity v1 — Evidence And Gates
 
 Date: 2026-04-07  
-Status: Active
+Status: Completed
 
 ## Current slice — Track and alignment contract closure
 
@@ -30,6 +30,8 @@ Executed gates (2026-04-07):
 - PASS: `cargo nextest run -p fret-ui-shadcn --lib -E 'test(alert_description_children_scope_inherited_text_style) or test(alert_description_uses_source_aligned_grid_stack) or test(alert_title_truncates_by_default_like_current_shadcn) or test(alert_root_content_grid_tracks_and_gaps_match_current_shadcn_source) or test(alert_with_icon_uses_source_aligned_grid_columns_and_icon_slot) or test(alert_build_collects_children_on_builder_path) or test(alert_with_action_translates_absolute_action_offsets_to_padding_box_in_ltr) or test(alert_with_action_translates_absolute_action_offsets_to_padding_box_in_rtl)'`
 - PASS: `cargo nextest run -p fret-ui-shadcn --lib -E 'test(alert_with_action_reserves_right_padding_like_shadcn_in_ltr) or test(alert_with_action_reserves_left_padding_like_shadcn_in_rtl) or test(alert_action_explicit_right_override_wins_over_rtl_fallback) or test(alert_action_uses_upstream_offsets_and_merges_layout_refinement) or test(alert_action_uses_logical_end_offsets_in_rtl) or test(alert_action_build_preserves_upstream_offsets) or test(alert_action_build_uses_logical_end_offsets_in_rtl) or test(alert_forces_icon_to_inherit_current_color) or test(alert_attaches_foreground_to_main_content_without_wrapper)'`
 - PASS: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout --test web_vs_fret_control_chrome -E 'test(web_vs_fret_layout_alert_demo_alerts_are_w_full_like_web) or test(web_vs_fret_alert_demo_chrome_matches) or test(web_vs_fret_alert_demo_icon_geometry_matches) or test(web_vs_fret_alert_destructive_chrome_matches)'`
+- PASS: `cargo nextest run -p fret-ui-kit --lib -E 'test(layout_refinement_self_alignment_populates_flex_and_grid_item_axes) or test(layout_refinement_merge_prefers_latest_item_alignment_values)'`
+- PASS: `cargo nextest run -p fret-ui-shadcn --lib -E 'test(button_group_defaults_to_w_fit_horizontal_stretch_and_no_gap) or test(button_group_with_input_promotes_root_width_out_of_w_fit_auto_lane) or test(select_trigger_defaults_to_w_fit_self_start_under_stretch_parity_lane) or test(select_trigger_respects_explicit_width_refinement) or test(tabs_vertical_orientation_does_not_clip_triggers) or test(tabs_vertical_line_variant_stretches_triggers_to_shared_width)'`
 
 Evidence notes:
 
@@ -64,4 +66,7 @@ Audit classification recorded on 2026-04-07:
   row-span / column lane placement, and row/column gaps) with only the normal docs-surface visual
   gates remaining.
 - `Item` family: upstream remains primarily flex + self-alignment (`ItemMedia` `self-start`,
-  `ItemHeader` / `ItemFooter` flex rows). This lane does not need wider grid vocabulary for it.
+  `ItemHeader` / `ItemFooter` flex rows). This lane does not need wider grid vocabulary for it,
+  and the follow-on declarative `self_*` / `justify_self_*` surface now exists in
+  `ecosystem/fret-ui-kit` so later parity fixes can stop patching raw `props.layout.*` fields for
+  common item-alignment cases.

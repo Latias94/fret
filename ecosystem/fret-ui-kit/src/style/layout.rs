@@ -1,5 +1,5 @@
 use fret_core::Px;
-use fret_ui::element::PositionStyle;
+use fret_ui::element::{CrossAlign, PositionStyle};
 
 use super::{
     InsetEdgeRefinement, InsetRefinement, MarginEdgeRefinement, MarginRefinement, MetricRef,
@@ -91,6 +91,8 @@ pub struct LayoutRefinement {
     pub inset: Option<InsetRefinement>,
     pub size: Option<SizeRefinement>,
     pub flex_item: Option<FlexItemRefinement>,
+    pub align_self: Option<CrossAlign>,
+    pub justify_self: Option<CrossAlign>,
     pub overflow: Option<OverflowRefinement>,
 }
 
@@ -119,6 +121,12 @@ impl LayoutRefinement {
         }
         if let Some(f) = other.flex_item {
             self.flex_item = Some(self.flex_item.unwrap_or_default().merge(f));
+        }
+        if other.align_self.is_some() {
+            self.align_self = other.align_self;
+        }
+        if other.justify_self.is_some() {
+            self.justify_self = other.justify_self;
         }
         if other.overflow.is_some() {
             self.overflow = other.overflow;
@@ -936,6 +944,53 @@ impl LayoutRefinement {
     pub fn order(mut self, order: i32) -> Self {
         self.ensure_flex_item_mut().order = Some(order);
         self
+    }
+
+    /// Per-item alignment on the container cross axis.
+    ///
+    /// This feeds both flex and grid `align-self` so first-party surfaces can express `self-*`
+    /// semantics without patching raw layout props after style resolution.
+    pub fn align_self(mut self, align: CrossAlign) -> Self {
+        self.align_self = Some(align);
+        self
+    }
+
+    pub fn self_start(self) -> Self {
+        self.align_self(CrossAlign::Start)
+    }
+
+    pub fn self_center(self) -> Self {
+        self.align_self(CrossAlign::Center)
+    }
+
+    pub fn self_end(self) -> Self {
+        self.align_self(CrossAlign::End)
+    }
+
+    pub fn self_stretch(self) -> Self {
+        self.align_self(CrossAlign::Stretch)
+    }
+
+    /// Inline-axis item alignment for grid children (`justify-self`).
+    pub fn justify_self(mut self, align: CrossAlign) -> Self {
+        self.justify_self = Some(align);
+        self
+    }
+
+    pub fn justify_self_start(self) -> Self {
+        self.justify_self(CrossAlign::Start)
+    }
+
+    pub fn justify_self_center(self) -> Self {
+        self.justify_self(CrossAlign::Center)
+    }
+
+    pub fn justify_self_end(self) -> Self {
+        self.justify_self(CrossAlign::End)
+    }
+
+    pub fn justify_self_stretch(self) -> Self {
+        self.justify_self(CrossAlign::Stretch)
     }
 
     /// Tailwind-like `flex-1` shorthand: `grow=1`, `shrink=1`, `basis=0`.

@@ -1975,7 +1975,11 @@ fn select_impl<H: UiHost>(
         // using `items-stretch`. Approximate that by opting out of cross-axis stretch unless a
         // width is explicitly requested.
         if matches!(trigger_layout.size.width, Length::Auto) {
-            trigger_layout.flex.align_self = Some(CrossAlign::Start);
+            decl_style::apply_layout_refinement(
+                &theme,
+                LayoutRefinement::default().self_start(),
+                &mut trigger_layout,
+            );
         }
         // In narrow containers (e.g. dialog headers), allow the trigger to shrink so surrounding
         // text does not get forced into extreme wrapping.
@@ -4840,6 +4844,62 @@ mod tests {
         let flex = find_first_flex(chrome_el).expect("select trigger chrome flex");
         let expected_gap = MetricRef::space(Space::N2).resolve(&theme);
         assert_eq!(flex.gap, SpacingLength::Px(expected_gap));
+    }
+
+    #[test]
+    fn select_trigger_defaults_to_w_fit_self_start_under_stretch_parity_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(180.0)),
+        );
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "select-trigger-self-start",
+            |cx| {
+                Select::new(value.clone(), open.clone())
+                    .trigger_test_id("select-trigger")
+                    .a11y_label("Select")
+                    .into_element(cx)
+            },
+        );
+
+        fn find_pressable_by_test_id<'a>(
+            el: &'a AnyElement,
+            test_id: &str,
+        ) -> Option<&'a fret_ui::element::PressableProps> {
+            if let ElementKind::Pressable(props) = &el.kind {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(props);
+                }
+            }
+
+            for child in &el.children {
+                if let Some(found) = find_pressable_by_test_id(child, test_id) {
+                    return Some(found);
+                }
+            }
+
+            None
+        }
+
+        let trigger =
+            find_pressable_by_test_id(&el, "select-trigger").expect("select trigger pressable");
+        assert_eq!(trigger.layout.size.width, Length::Auto);
+        assert_eq!(trigger.layout.flex.align_self, Some(CrossAlign::Start));
     }
 
     #[test]
