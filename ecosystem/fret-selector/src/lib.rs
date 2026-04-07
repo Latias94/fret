@@ -97,7 +97,7 @@ impl<Deps: PartialEq, TValue> Selector<Deps, TValue> {
 #[derive(Clone, Default)]
 pub struct DepsSignature {
     tokens: TokenList,
-    #[cfg(debug_assertions)]
+    #[cfg(all(debug_assertions, feature = "ui"))]
     pub(crate) observed_tokens: u16,
 }
 
