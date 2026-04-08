@@ -396,6 +396,10 @@ Status note (2026-04-03):
   `ui/overlays/panel_button_paint.rs` seam, so controls and blackboard overlays share one
   authority for centered button-label placement and left-aligned panel text placement instead of
   each re-embedding that paint-side text geometry inline.
+- Retained blackboard paint orchestration now also routes through the private
+  `ui/overlays/blackboard_paint.rs` seam, so header/title paint ordering, action-button highlight
+  resolution, and missing-symbol label fallback live behind one focused authority instead of
+  staying embedded in the overlay widget file.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

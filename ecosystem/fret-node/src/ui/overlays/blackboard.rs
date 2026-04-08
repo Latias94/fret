@@ -4,10 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{CursorIcon, Event, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextBlobId};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::retained_bridge::*;
@@ -24,19 +21,16 @@ use super::SymbolRenameOverlay;
 use super::blackboard_layout::{
     BlackboardLayout, blackboard_action_at, blackboard_panel_size, compute_blackboard_layout,
 };
+use super::blackboard_paint::{BlackboardPaintState, paint_blackboard_overlay};
 use super::blackboard_policy::{
     BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
-    blackboard_action_button_label, blackboard_actions_in_order, plan_blackboard_action,
+    blackboard_actions_in_order, plan_blackboard_action,
 };
-use super::panel_button_paint::{paint_panel_button, paint_panel_label};
 use super::panel_item_state::{
-    clear_panel_item_state, panel_item_visual_state, promote_pointer_target_to_keyboard_item,
-    select_panel_keyboard_item,
+    clear_panel_item_state, promote_pointer_target_to_keyboard_item, select_panel_keyboard_item,
 };
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
 use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
-
-const LABEL_PADDING_PX: f32 = 4.0;
 
 /// Window-space blackboard (symbols) overlay.
 pub struct NodeGraphBlackboardOverlay {
@@ -169,10 +163,6 @@ impl NodeGraphBlackboardOverlay {
                 });
             }
         }
-    }
-
-    fn text_style(&self) -> TextStyle {
-        self.style.geometry.context_menu_text_style.clone()
     }
 }
 
@@ -347,144 +337,17 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
         let symbols = self.snapshot_symbols(&*cx.app);
         let layout = self.compute_layout(cx.bounds, &symbols);
         self.last_layout = Some(layout.clone());
-
-        let bg = self.style.paint.context_menu_background;
-        let border = self.style.paint.context_menu_border;
-        let hover_bg = self.style.paint.context_menu_hover_background;
-        let text_color = self.style.paint.context_menu_text;
-        let corner = self.style.paint.context_menu_corner_radius;
-
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(20_900),
-            rect: layout.panel,
-            background: fret_core::Paint::Solid(bg).into(),
-
-            border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(border).into(),
-
-            corner_radii: Corners::all(Px(corner)),
-        });
-
-        let text_style = self.text_style();
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: cx.scale_factor,
-        };
-
-        // Header title.
-        {
-            paint_panel_label(
-                cx,
-                &mut self.text_blobs,
-                layout.header,
-                "Symbols",
-                &text_style,
-                constraints,
-                text_color,
-                LABEL_PADDING_PX,
-                DrawOrder(20_901),
-            );
-        }
-
-        // Add button.
-        {
-            let state = panel_item_visual_state(
-                BlackboardAction::AddSymbol,
-                self.hovered,
-                self.pressed,
-                self.keyboard_active,
-                true,
-                false,
-            );
-            let button_bg = if state.active() {
-                hover_bg
-            } else {
-                Color::TRANSPARENT
-            };
-            paint_panel_button(
-                cx,
-                &mut self.text_blobs,
-                layout.add_button,
-                blackboard_action_button_label(BlackboardAction::AddSymbol),
-                &text_style,
-                constraints,
-                button_bg,
-                text_color,
-                corner,
-                DrawOrder(20_901),
-                DrawOrder(20_902),
-            );
-        }
-
-        for row in &layout.rows {
-            let name = symbols
-                .get(&row.symbol)
-                .map(|s| s.name.as_str())
-                .unwrap_or("<missing>");
-
-            let mut draw_button =
-                |cx: &mut PaintCx<'_, H>, rect: Rect, action: BlackboardAction, label: &str| {
-                    let state = panel_item_visual_state(
-                        action,
-                        self.hovered,
-                        self.pressed,
-                        self.keyboard_active,
-                        true,
-                        false,
-                    );
-                    let button_bg = if state.active() {
-                        hover_bg
-                    } else {
-                        Color::TRANSPARENT
-                    };
-                    paint_panel_button(
-                        cx,
-                        &mut self.text_blobs,
-                        rect,
-                        label,
-                        &text_style,
-                        constraints,
-                        button_bg,
-                        text_color,
-                        corner,
-                        DrawOrder(20_901),
-                        DrawOrder(20_902),
-                    );
-                };
-
-            draw_button(
-                cx,
-                row.insert_ref,
-                BlackboardAction::InsertRef { symbol: row.symbol },
-                blackboard_action_button_label(BlackboardAction::InsertRef { symbol: row.symbol }),
-            );
-            draw_button(
-                cx,
-                row.rename,
-                BlackboardAction::Rename { symbol: row.symbol },
-                blackboard_action_button_label(BlackboardAction::Rename { symbol: row.symbol }),
-            );
-            draw_button(
-                cx,
-                row.delete,
-                BlackboardAction::Delete { symbol: row.symbol },
-                blackboard_action_button_label(BlackboardAction::Delete { symbol: row.symbol }),
-            );
-
-            paint_panel_label(
-                cx,
-                &mut self.text_blobs,
-                row.label,
-                name,
-                &text_style,
-                constraints,
-                text_color,
-                LABEL_PADDING_PX,
-                DrawOrder(20_902),
-            );
-        }
+        paint_blackboard_overlay(
+            cx,
+            &mut self.text_blobs,
+            &self.style,
+            &layout,
+            &symbols,
+            BlackboardPaintState {
+                hovered: self.hovered,
+                pressed: self.pressed,
+                keyboard_active: self.keyboard_active,
+            },
+        );
     }
 }

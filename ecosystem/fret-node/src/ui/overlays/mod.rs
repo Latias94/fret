@@ -5,6 +5,7 @@
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
 mod blackboard;
 mod blackboard_layout;
+mod blackboard_paint;
 mod blackboard_policy;
 mod controls;
 mod controls_layout;
