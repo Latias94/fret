@@ -12,85 +12,11 @@ Commands run:
 
 Status:
 
-- `fret-icons-radix`: failed (awaiting earlier waves on crates.io)
-- `fret-render-wgpu`: failed (awaiting earlier waves on crates.io)
-- `fret-runner-web`: failed (awaiting earlier waves on crates.io)
-- `fret-ui`: failed (awaiting earlier waves on crates.io)
-- `fret-webview-wry`: failed (awaiting earlier waves on crates.io)
-
-Failure excerpts:
-
-## `fret-icons-radix`
-
-```text
-Updating crates.io index
-   Packaging fret-icons-radix v0.1.0 (./ecosystem/fret-icons-radix)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-app` found
-  location searched: crates.io index
-  required by package `fret-icons-radix v0.1.0 (./ecosystem/fret-icons-radix)`
-```
-
-## `fret-render-wgpu`
-
-```text
-Updating crates.io index
-   Packaging fret-render-wgpu v0.1.0 (./crates/fret-render-wgpu)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-perf` found
-  location searched: crates.io index
-  required by package `fret-render-wgpu v0.1.0 (./crates/fret-render-wgpu)`
-```
-
-## `fret-runner-web`
-
-```text
-Updating crates.io index
-   Packaging fret-runner-web v0.1.0 (./crates/fret-runner-web)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-platform-web` found
-  location searched: crates.io index
-  required by package `fret-runner-web v0.1.0 (./crates/fret-runner-web)`
-```
-
-## `fret-ui`
-
-```text
-Updating crates.io index
-   Packaging fret-ui v0.1.0 (./crates/fret-ui)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-perf` found
-  location searched: crates.io index
-  required by package `fret-ui v0.1.0 (./crates/fret-ui)`
-```
-
-## `fret-webview-wry`
-
-```text
-Updating crates.io index
-   Packaging fret-webview-wry v0.1.0 (./crates/fret-webview-wry)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-webview` found
-  location searched: crates.io index
-  required by package `fret-webview-wry v0.1.0 (./crates/fret-webview-wry)`
-```
-
+- `fret-icons-radix`: passed
+- `fret-render-wgpu`: passed
+- `fret-runner-web`: passed
+- `fret-ui`: passed
+- `fret-webview-wry`: passed
 Interpretation:
 
-- Wave 5 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
-- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
+- All wave 5 crates passed `cargo publish --dry-run` from the current workspace state.

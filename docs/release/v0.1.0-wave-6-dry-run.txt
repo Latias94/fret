@@ -13,100 +13,12 @@ Commands run:
 
 Status:
 
-- `fret-canvas`: failed (awaiting earlier waves on crates.io)
-- `fret-icons-lucide`: failed (awaiting earlier waves on crates.io)
-- `fret-query`: failed (awaiting earlier waves on crates.io)
-- `fret-render`: failed (awaiting earlier waves on crates.io)
-- `fret-selector`: failed (awaiting earlier waves on crates.io)
-- `fret-ui-app`: failed (awaiting earlier waves on crates.io)
-
-Failure excerpts:
-
-## `fret-canvas`
-
-```text
-Updating crates.io index
-   Packaging fret-canvas v0.1.0 (./ecosystem/fret-canvas)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-runtime` found
-  location searched: crates.io index
-  required by package `fret-canvas v0.1.0 (./ecosystem/fret-canvas)`
-```
-
-## `fret-icons-lucide`
-
-```text
-Updating crates.io index
-   Packaging fret-icons-lucide v0.1.0 (./ecosystem/fret-icons-lucide)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-app` found
-  location searched: crates.io index
-  required by package `fret-icons-lucide v0.1.0 (./ecosystem/fret-icons-lucide)`
-```
-
-## `fret-query`
-
-```text
-Updating crates.io index
-   Packaging fret-query v0.1.0 (./ecosystem/fret-query)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-executor` found
-  location searched: crates.io index
-  required by package `fret-query v0.1.0 (./ecosystem/fret-query)`
-```
-
-## `fret-render`
-
-```text
-Updating crates.io index
-   Packaging fret-render v0.1.0 (./crates/fret-render)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-render-wgpu` found
-  location searched: crates.io index
-  required by package `fret-render v0.1.0 (./crates/fret-render)`
-```
-
-## `fret-selector`
-
-```text
-Updating crates.io index
-   Packaging fret-selector v0.1.0 (./ecosystem/fret-selector)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-runtime` found
-  location searched: crates.io index
-  required by package `fret-selector v0.1.0 (./ecosystem/fret-selector)`
-```
-
-## `fret-ui-app`
-
-```text
-Updating crates.io index
-   Packaging fret-ui-app v0.1.0 (./crates/fret-ui-app)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-app` found
-  location searched: crates.io index
-  required by package `fret-ui-app v0.1.0 (./crates/fret-ui-app)`
-```
-
+- `fret-canvas`: passed
+- `fret-icons-lucide`: passed
+- `fret-query`: passed
+- `fret-render`: passed
+- `fret-selector`: passed
+- `fret-ui-app`: passed
 Interpretation:
 
-- Wave 6 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
-- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
+- All wave 6 crates passed `cargo publish --dry-run` from the current workspace state.
