@@ -34,6 +34,19 @@ pub(super) fn dismiss_searcher_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     event::dismiss_searcher_event(canvas, cx)
 }
 
+pub(super) fn take_searcher_overlay(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> Option<SearcherState> {
+    overlay::take_searcher_overlay(interaction)
+}
+
+pub(super) fn restore_searcher_overlay(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+    searcher: SearcherState,
+) {
+    overlay::restore_searcher_overlay(interaction, searcher);
+}
+
 pub(super) fn handle_searcher_escape_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut EventCx<'_, H>,

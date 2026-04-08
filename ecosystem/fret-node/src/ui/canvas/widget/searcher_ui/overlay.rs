@@ -8,6 +8,19 @@ fn apply_searcher_overlay_state(
     interaction.searcher = Some(searcher);
 }
 
+pub(super) fn take_searcher_overlay(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+) -> Option<SearcherState> {
+    interaction.searcher.take()
+}
+
+pub(super) fn restore_searcher_overlay(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+    searcher: SearcherState,
+) {
+    interaction.searcher = Some(searcher);
+}
+
 pub(super) fn install_searcher_overlay<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     searcher: SearcherState,
@@ -39,7 +52,7 @@ pub(super) fn open_searcher_overlay<M: NodeGraphCanvasMiddleware>(
 
 #[cfg(test)]
 mod tests {
-    use super::apply_searcher_overlay_state;
+    use super::{apply_searcher_overlay_state, restore_searcher_overlay, take_searcher_overlay};
     use crate::core::{CanvasPoint, NodeKindKey};
     use crate::ui::canvas::state::{
         ContextMenuState, ContextMenuTarget, InteractionState, SearcherRowsMode, SearcherState,
@@ -128,6 +141,35 @@ mod tests {
         assert!(matches!(
             interaction.searcher,
             Some(SearcherState { query, .. }) if query == "next"
+        ));
+    }
+
+    #[test]
+    fn take_searcher_overlay_returns_and_clears_current_state() {
+        let mut interaction = InteractionState {
+            searcher: Some(test_searcher()),
+            ..Default::default()
+        };
+
+        let taken = take_searcher_overlay(&mut interaction);
+
+        assert!(taken.is_some());
+        assert!(interaction.searcher.is_none());
+    }
+
+    #[test]
+    fn restore_searcher_overlay_reinstalls_taken_state() {
+        let mut interaction = InteractionState::default();
+        let searcher = test_searcher();
+
+        restore_searcher_overlay(&mut interaction, searcher.clone());
+
+        assert!(matches!(
+            interaction.searcher,
+            Some(SearcherState {
+                target: ContextMenuTarget::BackgroundInsertNodePicker { .. },
+                ..
+            })
         ));
     }
 }

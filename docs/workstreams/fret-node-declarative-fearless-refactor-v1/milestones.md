@@ -1515,6 +1515,10 @@ real editors.
   `ui/canvas/widget/searcher_activation_state/clear.rs` seam, so `pending_insert_node_drag`
   cleanup and searcher dismissal stop being bypassed by direct `interaction.searcher = None`
   writes in `insert_node_drag/session.rs`.
+- Searcher session take/restore now also routes through the private
+  `ui/canvas/widget/searcher_ui/overlay.rs` seam, so failed row activation no longer keeps a
+  second direct `interaction.searcher.take()/= Some(...)` lifecycle path in
+  `searcher_row_activation.rs`.
 - The `menu_session.rs` wrapper now also delegates `build_searcher_rows(...)` directly to
   `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy keeps one authority
   seam instead of remaining duplicated across both wrapper and submodule entrypoints.
