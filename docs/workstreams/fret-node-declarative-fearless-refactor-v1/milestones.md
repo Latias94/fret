@@ -1523,6 +1523,10 @@ real editors.
   `ui/canvas/widget/searcher_ui/overlay.rs` install seam via `searcher_picker`, so
   `command_open_conversion/overlay.rs` no longer clears `interaction.context_menu` before opening
   the searcher and menu-to-searcher replacement keeps one authority path.
+- Context-menu command activation no longer clears the menu slot inside
+  `ui/canvas/widget/context_menu/activate/command.rs`, because pointer/key selection activation
+  already owns the menu `take(...)` lifecycle before dispatch and searcher-row command activation
+  now reuses the same route without a redundant second dismiss path.
 - Active menu/searcher occupancy now also routes through the private
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background
   double-click zoom preflight, and detail/hover cursor gates, so those paths stop
