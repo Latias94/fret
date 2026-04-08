@@ -1470,8 +1470,8 @@ real editors.
   handled-event endings inline.
 - Retained action-panel pointer state now also routes through the private
   `ui/overlays/panel_pointer_policy.rs` seam, so controls and blackboard overlays share one
-  hover sync plus press-on-down / activate-on-matching-up authority instead of each
-  re-embedding that pointer-state policy inline.
+  hover sync plus panel-focus-on-down, pointer-target keyboard promotion, press capture, and
+  activate-on-matching-up authority instead of each re-embedding that pointer-state policy inline.
 - Retained minimap projection math now also routes through the private
   `ui/overlays/minimap_projection.rs` seam, so world-bounds union, project/unproject
   transforms, and center-pan math live behind one focused authority instead of staying
@@ -1534,6 +1534,9 @@ real editors.
 - Rename overlay open-state now also routes through the private `ui/overlays/rename_policy.rs`
   seam, so `command_open_group/rename.rs` and blackboard symbol-rename opening no longer leave a
   stale sibling rename session behind in `NodeGraphOverlayState`.
+- Controls overlay focus-return-to-canvas paths now also clear panel item state before finishing
+  the handled event, so neither activation nor `Escape` leaves a stale keyboard-active button
+  advertised in semantics after focus returns to the canvas.
 - Active menu/searcher occupancy now also routes through the private
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background
   double-click zoom preflight, and detail/hover cursor gates, so those paths stop

@@ -107,6 +107,21 @@ fn controls_panel_rect(bounds: Rect, style: &NodeGraphStyle) -> Rect {
     )
 }
 
+fn controls_semantics_value(
+    host: &mut TestUiHostImpl,
+    services: &mut NullServices,
+    ui: &mut UiTree<TestUiHostImpl>,
+) -> Option<String> {
+    ui.request_semantics_snapshot();
+    ui.layout_all(host, services, bounds(), 1.0);
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("node_graph.controls"))
+        .and_then(|node| node.value.clone())
+}
+
 fn install_tab_focus_next_keymap(host: &mut TestUiHostImpl) {
     host.set_global(PlatformCapabilities::default());
     host.set_global(KeymapService {
@@ -200,6 +215,11 @@ fn controls_overlay_blocks_canvas_input_within_panel_even_off_button() {
         0,
         "expected controls overlay to block pointer-down within its panel bounds"
     );
+    assert_eq!(
+        ui.focus(),
+        Some(controls_node),
+        "expected controls panel clicks to focus the overlay for keyboard follow-up"
+    );
 }
 
 #[test]
@@ -268,6 +288,57 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
 }
 
 #[test]
+fn controls_overlay_pointer_down_promotes_keyboard_active_button_for_semantics() {
+    let (mut host, view, editor_config) = make_host_view_editor_config();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let style = test_style();
+    let panel = controls_panel_rect(bounds(), &style);
+    let pad = style.paint.controls_padding.max(0.0);
+    let button = style.paint.controls_button_size.max(10.0);
+    let gap = style.paint.controls_gap.max(0.0);
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, style);
+    let controls_node = ui.create_node_retained(controls);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, controls_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    let zoom_in_button = Point::new(
+        Px(panel.origin.x.0 + pad + 1.0),
+        Px(panel.origin.y.0 + pad + button + gap + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: zoom_in_button,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(controls_node),
+        "expected controls button pointer-down to acquire overlay focus"
+    );
+    assert_eq!(
+        controls_semantics_value(&mut host, &mut services, &mut ui),
+        Some("Zoom in".to_string())
+    );
+}
+
+#[test]
 fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas()
  {
     let (mut host, view, editor_config) = make_host_view_editor_config();
@@ -318,6 +389,10 @@ fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_re
         ui.focus(),
         Some(underlay),
         "expected activation to request focus to the canvas node"
+    );
+    assert_eq!(
+        controls_semantics_value(&mut host, &mut services, &mut ui),
+        Some("Toggle connection mode".to_string())
     );
 }
 
@@ -438,6 +513,54 @@ fn controls_overlay_escape_returns_focus_to_canvas_without_dispatching_command()
         "expected Escape to only change focus, not dispatch commands"
     );
     assert_eq!(ui.focus(), Some(underlay));
+}
+
+#[test]
+fn controls_overlay_escape_clears_keyboard_active_semantics_value() {
+    let (mut host, view, editor_config) = make_host_view_editor_config();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let controls = NodeGraphControlsOverlay::new(underlay, view, editor_config, test_style());
+    let controls_node = ui.create_node_retained(controls);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, controls_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(controls_node));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert_eq!(
+        controls_semantics_value(&mut host, &mut services, &mut ui),
+        Some("Zoom in".to_string())
+    );
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(ui.focus(), Some(underlay));
+    assert_eq!(
+        controls_semantics_value(&mut host, &mut services, &mut ui),
+        Some("Toggle connection mode".to_string())
+    );
 }
 
 #[test]

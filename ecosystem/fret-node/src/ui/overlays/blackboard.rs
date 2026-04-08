@@ -27,11 +27,9 @@ use super::blackboard_policy::{
     blackboard_actions_in_order, plan_blackboard_action,
 };
 use super::open_symbol_rename_session;
-use super::panel_item_state::{
-    clear_panel_item_state, promote_pointer_target_to_keyboard_item, select_panel_keyboard_item,
-};
+use super::panel_item_state::{clear_panel_item_state, select_panel_keyboard_item};
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
-use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
+use super::panel_pointer_policy::{begin_panel_press, release_panel_press, sync_panel_hover};
 
 /// Window-space blackboard (symbols) overlay.
 pub struct NodeGraphBlackboardOverlay {
@@ -280,18 +278,8 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                     return;
                 }
 
-                // Ensure keyboard focus can be acquired even when clicking on non-button areas.
-                cx.request_focus(cx.node);
-                cx.stop_propagation();
-
                 let action = self.action_at(*position);
-                promote_pointer_target_to_keyboard_item(&mut self.keyboard_active, action);
-                let Some(action) = action else {
-                    return;
-                };
-                self.pressed = Some(action);
-                cx.capture_pointer(cx.node);
-                crate::ui::retained_event_tail::request_paint_repaint(cx);
+                begin_panel_press(cx, &mut self.keyboard_active, &mut self.pressed, action);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..

@@ -19,9 +19,11 @@ use super::controls_policy::{
     controls_buttons, resolve_controls_command_id,
 };
 use super::panel_button_paint::paint_panel_button;
-use super::panel_item_state::{panel_item_visual_state, select_panel_keyboard_item};
+use super::panel_item_state::{
+    clear_panel_item_state, panel_item_visual_state, select_panel_keyboard_item,
+};
 use super::panel_navigation_policy::{PanelKeyboardAction, panel_keyboard_action};
-use super::panel_pointer_policy::{release_panel_press, sync_panel_hover};
+use super::panel_pointer_policy::{begin_panel_press, release_panel_press, sync_panel_hover};
 
 pub struct NodeGraphControlsOverlay {
     canvas_node: fret_core::NodeId,
@@ -84,6 +86,19 @@ impl NodeGraphControlsOverlay {
             cx.dispatch_command(id);
         }
     }
+
+    fn clear_item_state(&mut self) {
+        clear_panel_item_state(
+            &mut self.hovered,
+            &mut self.pressed,
+            &mut self.keyboard_active,
+        );
+    }
+
+    fn activate_button<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, btn: ControlsButton) {
+        self.clear_item_state();
+        self.dispatch_button(cx, btn);
+    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
@@ -120,10 +135,11 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                         crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::Activate(button) => {
-                        self.dispatch_button(cx, button);
+                        self.activate_button(cx, button);
                         crate::ui::retained_event_tail::finish_paint_event(cx);
                     }
                     PanelKeyboardAction::FocusCanvas => {
+                        self.clear_item_state();
                         crate::ui::retained_event_tail::focus_canvas_and_finish_paint_event(
                             cx,
                             self.canvas_node,
@@ -147,13 +163,8 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 if *button != MouseButton::Left {
                     return;
                 }
-                cx.stop_propagation();
-                let Some(btn) = self.button_at(cx.bounds, *position) else {
-                    return;
-                };
-                self.pressed = Some(btn);
-                cx.capture_pointer(cx.node);
-                crate::ui::retained_event_tail::request_paint_repaint(cx);
+                let button = self.button_at(cx.bounds, *position);
+                begin_panel_press(cx, &mut self.keyboard_active, &mut self.pressed, button);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..
@@ -170,7 +181,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 let Some(pressed) = release.activate else {
                     return;
                 };
-                self.dispatch_button(cx, pressed);
+                self.activate_button(cx, pressed);
             }
             _ => {}
         }
