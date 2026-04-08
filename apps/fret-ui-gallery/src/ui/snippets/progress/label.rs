@@ -18,14 +18,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     cx.keyed("ui_gallery.progress.label", |cx| {
         let label_row = ui::h_flex(|cx| {
             vec![
-                shadcn::FieldLabel::new("Upload progress").into_element(cx),
+                shadcn::FieldLabel::new("Upload progress")
+                    .test_id("ui-gallery-progress-label-title")
+                    .into_element(cx),
                 shadcn::FieldLabel::new("66%")
                     .refine_layout(LayoutRefinement::default().ml_auto())
+                    .test_id("ui-gallery-progress-label-value")
                     .into_element(cx),
             ]
         })
         .layout(LayoutRefinement::default().w_full())
         .items_center()
+        .test_id("ui-gallery-progress-label-row")
         .into_element(cx);
 
         let field = shadcn::Field::new(vec![

@@ -2526,6 +2526,70 @@ mod tests {
     }
 
     #[test]
+    fn gallery_progress_label_row_keeps_docs_aligned_trailing_value_lane() {
+        let mut rendered = render_gallery_page(PAGE_PROGRESS);
+
+        for target in [
+            "ui-gallery-progress-label-row",
+            "ui-gallery-progress-label-title",
+            "ui-gallery-progress-label-value",
+            "ui-gallery-progress-rtl-row",
+            "ui-gallery-progress-rtl-title",
+            "ui-gallery-progress-rtl-value",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let ltr_row = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-label-row");
+        let ltr_title = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-label-title");
+        let ltr_value = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-label-value");
+        let rtl_row = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-rtl-row");
+        let rtl_title = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-rtl-title");
+        let rtl_value = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-rtl-value");
+
+        let epsilon = 2.0;
+        let ltr_row_right = ltr_row.origin.x.0 + ltr_row.size.width.0;
+        let ltr_title_right = ltr_title.origin.x.0 + ltr_title.size.width.0;
+        let ltr_value_right = ltr_value.origin.x.0 + ltr_value.size.width.0;
+        let rtl_row_right = rtl_row.origin.x.0 + rtl_row.size.width.0;
+        let rtl_title_right = rtl_title.origin.x.0 + rtl_title.size.width.0;
+        let rtl_value_right = rtl_value.origin.x.0 + rtl_value.size.width.0;
+        let ltr_title_center_y = ltr_title.origin.y.0 + ltr_title.size.height.0 * 0.5;
+        let ltr_value_center_y = ltr_value.origin.y.0 + ltr_value.size.height.0 * 0.5;
+        let rtl_title_center_y = rtl_title.origin.y.0 + rtl_title.size.height.0 * 0.5;
+        let rtl_value_center_y = rtl_value.origin.y.0 + rtl_value.size.height.0 * 0.5;
+
+        assert!(
+            (ltr_title_center_y - ltr_value_center_y).abs() <= epsilon,
+            "expected Progress label title/value to stay on one row in LTR: row={ltr_row:?} title={ltr_title:?} value={ltr_value:?}"
+        );
+        assert!(
+            ltr_title.origin.x.0 >= ltr_row.origin.x.0 - epsilon,
+            "expected Progress label title to stay near the row start in LTR: row={ltr_row:?} title={ltr_title:?}"
+        );
+        assert!(
+            ltr_value.origin.x.0 >= ltr_title_right - epsilon
+                && ltr_value_right <= ltr_row_right + epsilon
+                && ltr_value_right >= ltr_row_right - 16.0,
+            "expected Progress label percentage to stay in the trailing auto-margin lane in LTR: row={ltr_row:?} title={ltr_title:?} value={ltr_value:?}"
+        );
+
+        assert!(
+            (rtl_title_center_y - rtl_value_center_y).abs() <= epsilon,
+            "expected Progress RTL label/value to stay on one row: row={rtl_row:?} title={rtl_title:?} value={rtl_value:?}"
+        );
+        assert!(
+            rtl_value.origin.x.0 >= rtl_row.origin.x.0 - epsilon
+                && rtl_value_right <= rtl_title.origin.x.0 + epsilon,
+            "expected Progress RTL percentage to stay on the visual inline-start lane: row={rtl_row:?} title={rtl_title:?} value={rtl_value:?}"
+        );
+        assert!(
+            rtl_title_right <= rtl_row_right + epsilon && rtl_title_right >= rtl_row_right - 16.0,
+            "expected Progress RTL label to stay on the visual inline-end lane: row={rtl_row:?} title={rtl_title:?}"
+        );
+    }
+
+    #[test]
     fn gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane() {
         let mut rendered = render_gallery_page(PAGE_CARD);
 
@@ -2622,7 +2686,8 @@ mod tests {
         let card = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo");
         let forgot_password =
             layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-forgot-password");
-        let password_input = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-password-input");
+        let password_input =
+            layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-password-input");
         let web = read_card_demo_web_geometry();
 
         let epsilon = 2.0;
@@ -2665,7 +2730,10 @@ mod tests {
 
         let epsilon = 2.0;
 
-        for (name, actual, expected) in [("login", login, web.login), ("login_google", login_google, web.login_google)] {
+        for (name, actual, expected) in [
+            ("login", login, web.login),
+            ("login_google", login_google, web.login_google),
+        ] {
             let actual_x = actual.origin.x.0 - card.origin.x.0;
 
             assert!(
@@ -2740,12 +2808,16 @@ mod tests {
             visual_bounds_by_test_id(&rendered, "ui-gallery-card-content-inline-button-demo");
         let header_action_card =
             visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-action");
-        let header_action_trigger =
-            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-action-trigger");
+        let header_action_trigger = visual_bounds_by_test_id(
+            &rendered,
+            "ui-gallery-card-compositions-header-action-trigger",
+        );
         let full_action_card =
             visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-full-action");
-        let full_action_trigger =
-            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-full-action-trigger");
+        let full_action_trigger = visual_bounds_by_test_id(
+            &rendered,
+            "ui-gallery-card-compositions-full-action-trigger",
+        );
         let inline_button =
             visual_bounds_by_test_id(&rendered, "ui-gallery-card-content-inline-button");
         let notes_card = visual_bounds_by_test_id(&rendered, "ui-gallery-card-meeting-notes");
@@ -3424,7 +3496,10 @@ mod tests {
             ),
             (
                 "bordered_sections",
-                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-bordered-sections"),
+                visual_bounds_by_test_id(
+                    &rendered,
+                    "ui-gallery-card-compositions-bordered-sections",
+                ),
             ),
         ];
 
@@ -3448,10 +3523,7 @@ mod tests {
         );
 
         for (name, card_id) in [
-            (
-                "footer_only",
-                "ui-gallery-card-compositions-footer-only",
-            ),
+            ("footer_only", "ui-gallery-card-compositions-footer-only"),
             (
                 "header_footer",
                 "ui-gallery-card-compositions-header-footer",
@@ -3464,10 +3536,7 @@ mod tests {
                 "header_content_footer",
                 "ui-gallery-card-compositions-header-content-footer",
             ),
-            (
-                "full_action",
-                "ui-gallery-card-compositions-full-action",
-            ),
+            ("full_action", "ui-gallery-card-compositions-full-action"),
             (
                 "bordered_sections",
                 "ui-gallery-card-compositions-bordered-sections",
@@ -3480,10 +3549,8 @@ mod tests {
             );
         }
 
-        let baseline = visual_bounds_by_test_id(
-            &rendered,
-            "ui-gallery-card-compositions-footer-only-text",
-        );
+        let baseline =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-footer-only-text");
         for (name, text_id) in [
             (
                 "header_footer",
