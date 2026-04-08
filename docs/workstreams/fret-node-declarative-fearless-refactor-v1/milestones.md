@@ -1537,6 +1537,9 @@ real editors.
 - Controls overlay focus-return-to-canvas paths now also clear panel item state before finishing
   the handled event, so neither activation nor `Escape` leaves a stale keyboard-active button
   advertised in semantics after focus returns to the canvas.
+- Context-menu selection activation now also treats disabled/non-activatable selections as an
+  explicit keep-open outcome, so pointer clicks and keyboard `Enter` no longer dismiss the menu
+  just because activation payload synthesis rejected the current item.
 - Active menu/searcher occupancy now also routes through the private
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background
   double-click zoom preflight, and detail/hover cursor gates, so those paths stop

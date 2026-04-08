@@ -15,7 +15,12 @@ pub(super) fn handle_context_menu_pointer_down_event<H: UiHost, M: NodeGraphCanv
     match button {
         MouseButton::Left => {
             if let Some(index) = hit_context_menu_item(&canvas.style, &menu, position, zoom) {
-                let _ = canvas.activate_context_menu_selection(cx, &menu, index);
+                if matches!(
+                    canvas.activate_context_menu_selection(cx, &menu, index),
+                    super::ContextMenuSelectionActivationOutcome::KeepOpen
+                ) {
+                    super::super::restore_context_menu(&mut canvas.interaction, menu);
+                }
             }
             ui::finish_context_menu_event(cx)
         }
