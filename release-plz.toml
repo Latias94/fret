@@ -70,6 +70,18 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
+name = "fret-fonts-cjk"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-fonts-emoji"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
 name = "fret-i18n"
 release = true
 publish = true

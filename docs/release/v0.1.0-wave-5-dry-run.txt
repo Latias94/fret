@@ -1,19 +1,19 @@
 # Fret v0.1.0 Wave 5 dry-run status
 
-Date verified: 2026-04-01.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p fret-icons-radix`
-- `cargo publish --dry-run -p fret-render`
-- `cargo publish --dry-run -p fret-runner-web`
-- `cargo publish --dry-run -p fret-ui`
-- `cargo publish --dry-run -p fret-webview-wry`
+- `cargo publish --dry-run --allow-dirty -p fret-icons-radix`
+- `cargo publish --dry-run --allow-dirty -p fret-render-wgpu`
+- `cargo publish --dry-run --allow-dirty -p fret-runner-web`
+- `cargo publish --dry-run --allow-dirty -p fret-ui`
+- `cargo publish --dry-run --allow-dirty -p fret-webview-wry`
 
 Status:
 
 - `fret-icons-radix`: failed (awaiting earlier waves on crates.io)
-- `fret-render`: failed (awaiting earlier waves on crates.io)
+- `fret-render-wgpu`: failed (awaiting earlier waves on crates.io)
 - `fret-runner-web`: failed (awaiting earlier waves on crates.io)
 - `fret-ui`: failed (awaiting earlier waves on crates.io)
 - `fret-webview-wry`: failed (awaiting earlier waves on crates.io)
@@ -34,18 +34,18 @@ Caused by:
   required by package `fret-icons-radix v0.1.0 (./ecosystem/fret-icons-radix)`
 ```
 
-## `fret-render`
+## `fret-render-wgpu`
 
 ```text
 Updating crates.io index
-   Packaging fret-render v0.1.0 (./crates/fret-render)
+   Packaging fret-render-wgpu v0.1.0 (./crates/fret-render-wgpu)
     Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `fret-render-wgpu` found
+  no matching package named `fret-perf` found
   location searched: crates.io index
-  required by package `fret-render v0.1.0 (./crates/fret-render)`
+  required by package `fret-render-wgpu v0.1.0 (./crates/fret-render-wgpu)`
 ```
 
 ## `fret-runner-web`
@@ -57,7 +57,7 @@ Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `fret-core` found
+  no matching package named `fret-platform-web` found
   location searched: crates.io index
   required by package `fret-runner-web v0.1.0 (./crates/fret-runner-web)`
 ```
@@ -71,7 +71,7 @@ Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `fret-core` found
+  no matching package named `fret-perf` found
   location searched: crates.io index
   required by package `fret-ui v0.1.0 (./crates/fret-ui)`
 ```
@@ -85,7 +85,7 @@ Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `fret-core` found
+  no matching package named `fret-webview` found
   location searched: crates.io index
   required by package `fret-webview-wry v0.1.0 (./crates/fret-webview-wry)`
 ```

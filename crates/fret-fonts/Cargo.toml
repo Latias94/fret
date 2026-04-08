@@ -17,9 +17,9 @@ fret-assets = { version = "0.1.0", path = "../fret-assets" }
 read-fonts.workspace = true
 
 [features]
-# The default build includes a minimal UI font bootstrap *subset* set for Web/WASM, plus a
-# small CJK subset to avoid "tofu" for common mixed-script UIs.
-default = ["bootstrap-subset", "cjk-lite"]
+# The published crate now always ships the framework-owned baseline subset bundle. Keep the
+# historical feature names as compatibility aliases so existing dependency specs still resolve.
+default = ["bootstrap-subset"]
 
 # Test-only helpers that convert face manifests into owned byte blobs for deterministic
 # renderer/shaper conformance gates. Not intended for production/runtime loading paths.
@@ -28,15 +28,5 @@ test-support = []
 # Compatibility alias.
 bootstrap = ["bootstrap-subset"]
 
-# UI sans + UI mono subset (plus legacy mono subset) for startup bootstrap or other raw-byte font
-# injection paths.
+# Compatibility alias for the always-on framework baseline bundle.
 bootstrap-subset = []
-
-# Full font files (larger); useful for native debug and for apps that can afford bigger WASM payloads.
-bootstrap-full = []
-
-# Optional future bundles (not implemented yet; kept as placeholders for feature gating strategy).
-emoji = []
-# A "small but useful" CJK font subset intended for Web/WASM bootstrap.
-# Generated via `crates/fret-fonts/scripts/subset_cjk_lite.py`.
-cjk-lite = []

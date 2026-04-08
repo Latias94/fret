@@ -851,9 +851,14 @@ mod tests {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut renderer = crate::Renderer::new(&ctx.adapter, &ctx.device);
 
-        let fonts: Vec<Vec<u8>> =
-            fret_fonts::test_support::face_blobs(fret_fonts::default_profile().faces.iter())
-                .collect();
+        let fonts: Vec<Vec<u8>> = fret_fonts::test_support::face_blobs(
+            fret_fonts::default_profile()
+                .faces
+                .iter()
+                .chain(fret_fonts_cjk::default_profile().faces.iter())
+                .chain(fret_fonts_emoji::default_profile().faces.iter()),
+        )
+        .collect();
         let added = renderer.add_fonts(fonts);
         assert!(added > 0, "expected bundled fonts to load for svg bridge");
 

@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "slug": "font-bundle-release-boundary-v1",
+  "title": "Font Bundle Release Boundary v1",
+  "status": "active",
+  "updated": "2026-04-08",
+  "scope_kind": "execution",
+  "problem": "Keep Fret's bundled-font story correct at the package boundary: the framework must ship a minimal portable text baseline for startup and diagnostics, while optional script coverage and demo-grade large font assets must be explicit extension packages instead of silently inflating the main published crate.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/font-bundle-release-boundary-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/font-bundle-release-boundary-v1/BASELINE_DECISION_2026-04-08.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/font-bundle-release-boundary-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/font-bundle-release-boundary-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/font-bundle-release-boundary-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Open this lane by checking the current packaged `fret-fonts` tarball, the files it contains, the launch feature tree, and the release closure before touching code.",
+    "commands": [
+      "cargo package -p fret-fonts",
+      "ls -lh target/package/fret-fonts-0.1.0.crate",
+      "cargo package -p fret-fonts --list",
+      "cargo tree -e features -p fret-launch | rg \"fret-fonts|bootstrap-subset|cjk-lite|emoji\"",
+      "python3 tools/release_closure_check.py --config release-plz.toml --print-publish-commands"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fret-fonts-tests",
+      "command": "cargo nextest run -p fret-fonts"
+    },
+    {
+      "name": "fret-fonts-feature-matrix",
+      "command": "python3 tools/check_fret_fonts_feature_matrix.py"
+    },
+    {
+      "name": "fret-fonts-package-boundary",
+      "command": "python3 tools/check_fret_fonts_package_boundary.py"
+    },
+    {
+      "name": "fret-render-wgpu-lib",
+      "command": "cargo nextest run -p fret-render-wgpu --lib"
+    },
+    {
+      "name": "fret-fonts-package-preflight",
+      "command": "cargo package --allow-dirty --locked --list -p fret-fonts && cargo package --allow-dirty --locked --list -p fret-fonts-cjk && cargo package --allow-dirty --locked --list -p fret-fonts-emoji"
+    },
+    {
+      "name": "release-closure-check",
+      "command": "python3 tools/release_closure_check.py --config release-plz.toml --print-publish-commands"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/font-bundle-release-boundary-v1/DESIGN.md",
+    "docs/workstreams/font-bundle-release-boundary-v1/BASELINE_DECISION_2026-04-08.md",
+    "docs/workstreams/font-bundle-release-boundary-v1/TODO.md",
+    "docs/workstreams/font-bundle-release-boundary-v1/MILESTONES.md",
+    "docs/workstreams/font-bundle-release-boundary-v1/EVIDENCE_AND_GATES.md",
+    "crates/fret-fonts/Cargo.toml",
+    "crates/fret-fonts/src/assets.rs",
+    "crates/fret-fonts/src/profiles.rs",
+    "crates/fret-fonts/src/tests.rs",
+    "crates/fret-fonts-cjk/Cargo.toml",
+    "crates/fret-fonts-cjk/src/lib.rs",
+    "crates/fret-fonts-emoji/Cargo.toml",
+    "crates/fret-fonts-emoji/src/lib.rs",
+    "crates/fret-launch/Cargo.toml",
+    "crates/fret-launch/src/runner/font_catalog.rs",
+    "crates/fret-render-wgpu/src/text/tests.rs",
+    "tools/check_fret_fonts_feature_matrix.py",
+    "tools/check_fret_fonts_package_boundary.py",
+    "docs/release/v0.1.0-release-checklist.md",
+    "docs/release/v0.1.0-publish-order.txt",
+    "docs/release/v0.1.0-publish-waves.txt",
+    "release-plz.toml"
+  ],
+  "adr_refs": [
+    "docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md",
+    "docs/adr/0152-polychrome-glyphs-and-emoji-pipeline-v1.md",
+    "docs/adr/0257-font-selection-fallback-and-variable-font-instances-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the bundled-font baseline, optional bundle packaging split, and release preflight gates are explicit. The 2026-04-08 baseline decision accepts `bootstrap-subset` as the framework baseline and keeps `cjk-lite`, `emoji`, and `bootstrap-full` out of that baseline."
+  },
+  "follow_on_of": "font-mainline-fearless-refactor-v1"
+}

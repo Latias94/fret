@@ -30,7 +30,7 @@ use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_PREV,
 };
 use fret_workspace::layout::WorkspaceWindowLayout;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
@@ -66,8 +66,8 @@ use router::{
     page_from_gallery_location,
 };
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-struct UiGalleryBundledFontAssetsRegistered(bool);
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct UiGalleryBundledFontAssetsRegistered(HashSet<String>);
 
 #[derive(Debug, Clone, Default)]
 struct UiGalleryImportedFontAssetLayer {
@@ -75,22 +75,59 @@ struct UiGalleryImportedFontAssetLayer {
     resolver: Arc<fret_fonts::ImportedFontAssetResolver>,
 }
 
-fn ensure_ui_gallery_default_bundled_font_assets_registered(app: &mut App) -> bool {
+fn ui_gallery_expected_bundled_faces() -> Vec<&'static fret_fonts::BundledFontFaceSpec> {
+    let mut faces = fret_fonts::default_profile()
+        .faces
+        .iter()
+        .collect::<Vec<_>>();
+    #[cfg(feature = "gallery-web-ime-harness")]
+    faces.extend(fret_fonts_emoji::default_profile().faces.iter());
+    faces
+}
+
+fn ui_gallery_expected_bundled_family_names() -> Vec<&'static str> {
+    let mut seen = HashSet::new();
+    let mut families = Vec::new();
+    for face in ui_gallery_expected_bundled_faces() {
+        if seen.insert(face.family) {
+            families.push(face.family);
+        }
+    }
+    families
+}
+
+fn ensure_ui_gallery_bundle_asset_entries_registered(
+    app: &mut App,
+    bundle: fret::assets::AssetBundleId,
+    entries: impl IntoIterator<Item = fret::assets::StaticAssetEntry>,
+) -> bool {
     app.with_global_mut(
         UiGalleryBundledFontAssetsRegistered::default,
         |registered, app| {
-            if registered.0 {
+            if !registered.0.insert(bundle.as_str().to_string()) {
                 return false;
             }
-            fret_runtime::register_bundle_asset_entries(
-                app,
-                fret_fonts::bundled_asset_bundle(),
-                fret_fonts::default_profile().asset_entries(),
-            );
-            registered.0 = true;
+            fret_runtime::register_bundle_asset_entries(app, bundle, entries);
             true
         },
     )
+}
+
+fn ensure_ui_gallery_default_bundled_font_assets_registered(app: &mut App) -> bool {
+    let mut changed = ensure_ui_gallery_bundle_asset_entries_registered(
+        app,
+        fret_fonts::bundled_asset_bundle(),
+        fret_fonts::default_profile().asset_entries(),
+    );
+    #[cfg(feature = "gallery-web-ime-harness")]
+    {
+        changed |= ensure_ui_gallery_bundle_asset_entries_registered(
+            app,
+            fret_fonts_emoji::bundled_asset_bundle(),
+            fret_fonts_emoji::default_profile().asset_entries(),
+        );
+    }
+    changed
 }
 
 fn ensure_ui_gallery_imported_font_asset_resolver(
@@ -147,8 +184,7 @@ fn ui_gallery_default_profile_expected_families_present(app: &App) -> bool {
         return false;
     };
 
-    fret_fonts::default_profile()
-        .expected_family_names
+    ui_gallery_expected_bundled_family_names()
         .iter()
         .all(|expected| {
             catalog
@@ -218,9 +254,8 @@ pub(crate) fn ui_gallery_default_profile_font_requests(
     app: &mut App,
 ) -> Vec<fret::assets::AssetRequest> {
     let _ = ensure_ui_gallery_default_bundled_font_assets_registered(app);
-    fret_fonts::default_profile()
-        .faces
-        .iter()
+    ui_gallery_expected_bundled_faces()
+        .into_iter()
         .map(|face| face.asset_request())
         .collect()
 }
@@ -2318,9 +2353,8 @@ mod tests {
         let mut app = App::new();
 
         let requests = ui_gallery_default_profile_font_requests(&mut app);
-        let expected: Vec<_> = fret_fonts::default_profile()
-            .faces
-            .iter()
+        let expected: Vec<_> = ui_gallery_expected_bundled_faces()
+            .into_iter()
             .map(|face| face.asset_request())
             .collect();
 
@@ -2396,8 +2430,7 @@ mod tests {
         assert!(app.flush_effects().is_empty());
 
         app.set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
-            families: fret_fonts::default_profile()
-                .expected_family_names
+            families: ui_gallery_expected_bundled_family_names()
                 .iter()
                 .map(|family| (*family).to_string())
                 .collect(),

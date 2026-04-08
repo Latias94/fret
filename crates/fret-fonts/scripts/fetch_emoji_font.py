@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fetch the emoji font (Noto Color Emoji) into `crates/fret-fonts/assets`.
+Fetch the emoji font (Noto Color Emoji) into `crates/fret-fonts-emoji/assets`.
 
 Cross-platform replacement for `crates/fret-fonts/scripts/fetch_emoji_font.ps1`.
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 def _default_assets_dir() -> Path:
-    return Path(__file__).parent.parent / "assets"
+    return Path(__file__).resolve().parents[2] / "fret-fonts-emoji" / "assets"
 
 
 def _download(url: str, out_path: Path) -> None:

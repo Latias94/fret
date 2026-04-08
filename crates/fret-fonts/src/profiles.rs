@@ -3,187 +3,38 @@ use crate::{
     assets::{BOOTSTRAP_FACES, DEFAULT_FACES},
 };
 
-pub(crate) const BOOTSTRAP_EXPECTED_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Inter",
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Roboto Slab",
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "JetBrains Mono",
-    "Fira Mono",
-];
+pub(crate) const BOOTSTRAP_EXPECTED_FAMILIES: &[&str] =
+    &["Inter", "Roboto Slab", "JetBrains Mono", "Fira Mono"];
 
-pub(crate) const DEFAULT_EXPECTED_FAMILIES: &[&str] = &[
-    #[cfg(feature = "emoji")]
-    "Noto Color Emoji",
-    #[cfg(feature = "cjk-lite")]
-    "Noto Sans CJK SC",
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Inter",
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Roboto Slab",
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "JetBrains Mono",
-    "Fira Mono",
-];
+pub(crate) const DEFAULT_EXPECTED_FAMILIES: &[&str] = BOOTSTRAP_EXPECTED_FAMILIES;
 
-#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
 const BOOTSTRAP_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] = &[
     BundledGenericFamily::Sans,
     BundledGenericFamily::Serif,
     BundledGenericFamily::Monospace,
 ];
-#[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
-const BOOTSTRAP_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
-    &[BundledGenericFamily::Monospace];
-
-#[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-const DEFAULT_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] = &[
-    BundledGenericFamily::Sans,
-    BundledGenericFamily::Serif,
-    BundledGenericFamily::Monospace,
-];
-#[cfg(not(any(feature = "bootstrap-subset", feature = "bootstrap-full")))]
 const DEFAULT_GUARANTEED_GENERIC_FAMILIES: &[BundledGenericFamily] =
-    &[BundledGenericFamily::Monospace];
+    BOOTSTRAP_GUARANTEED_GENERIC_FAMILIES;
 
 const BOOTSTRAP_PROVIDED_ROLES: &[BundledFontRole] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     BundledFontRole::UiSans,
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
     BundledFontRole::UiSerif,
     BundledFontRole::UiMonospace,
 ];
 
-pub(crate) const DEFAULT_PROVIDED_ROLES: &[BundledFontRole] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    BundledFontRole::UiSans,
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    BundledFontRole::UiSerif,
-    BundledFontRole::UiMonospace,
-    #[cfg(feature = "emoji")]
-    BundledFontRole::EmojiFallback,
-    #[cfg(feature = "cjk-lite")]
-    BundledFontRole::CjkFallback,
-];
+pub(crate) const DEFAULT_PROVIDED_ROLES: &[BundledFontRole] = BOOTSTRAP_PROVIDED_ROLES;
 
-const BOOTSTRAP_UI_SANS_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Inter",
-];
-const BOOTSTRAP_UI_SERIF_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Roboto Slab",
-];
-const BOOTSTRAP_UI_MONO_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "JetBrains Mono",
-    "Fira Mono",
-];
+const BOOTSTRAP_UI_SANS_FAMILIES: &[&str] = &["Inter"];
+const BOOTSTRAP_UI_SERIF_FAMILIES: &[&str] = &["Roboto Slab"];
+const BOOTSTRAP_UI_MONO_FAMILIES: &[&str] = &["JetBrains Mono", "Fira Mono"];
 
-const DEFAULT_UI_SANS_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Inter",
-];
-const DEFAULT_UI_SERIF_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "Roboto Slab",
-];
-const DEFAULT_UI_MONO_FAMILIES: &[&str] = &[
-    #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]
-    "JetBrains Mono",
-    "Fira Mono",
-];
-const DEFAULT_COMMON_FALLBACK_FAMILIES: &[&str] = &[
-    #[cfg(feature = "cjk-lite")]
-    "Noto Sans CJK SC",
-    #[cfg(feature = "emoji")]
-    "Noto Color Emoji",
-];
+const DEFAULT_UI_SANS_FAMILIES: &[&str] = BOOTSTRAP_UI_SANS_FAMILIES;
+const DEFAULT_UI_SERIF_FAMILIES: &[&str] = BOOTSTRAP_UI_SERIF_FAMILIES;
+const DEFAULT_UI_MONO_FAMILIES: &[&str] = BOOTSTRAP_UI_MONO_FAMILIES;
+const DEFAULT_COMMON_FALLBACK_FAMILIES: &[&str] = &[];
 
-#[cfg(feature = "bootstrap-full")]
-const BOOTSTRAP_PROFILE_NAME: &str = "bootstrap-full";
-#[cfg(all(feature = "bootstrap-subset", not(feature = "bootstrap-full")))]
 const BOOTSTRAP_PROFILE_NAME: &str = "bootstrap-subset";
-#[cfg(all(not(feature = "bootstrap-subset"), not(feature = "bootstrap-full")))]
-const BOOTSTRAP_PROFILE_NAME: &str = "mono-fallback-minimal";
-
-#[cfg(all(feature = "bootstrap-full", feature = "emoji", feature = "cjk-lite"))]
-const DEFAULT_PROFILE_NAME: &str = "default-full+emoji+cjk-lite";
-#[cfg(all(
-    feature = "bootstrap-full",
-    feature = "emoji",
-    not(feature = "cjk-lite")
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-full+emoji";
-#[cfg(all(
-    feature = "bootstrap-full",
-    not(feature = "emoji"),
-    feature = "cjk-lite"
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-full+cjk-lite";
-#[cfg(all(
-    feature = "bootstrap-full",
-    not(feature = "emoji"),
-    not(feature = "cjk-lite")
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-full";
-#[cfg(all(
-    feature = "bootstrap-subset",
-    not(feature = "bootstrap-full"),
-    feature = "emoji",
-    feature = "cjk-lite"
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-subset+emoji+cjk-lite";
-#[cfg(all(
-    feature = "bootstrap-subset",
-    not(feature = "bootstrap-full"),
-    feature = "emoji",
-    not(feature = "cjk-lite")
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-subset+emoji";
-#[cfg(all(
-    feature = "bootstrap-subset",
-    not(feature = "bootstrap-full"),
-    not(feature = "emoji"),
-    feature = "cjk-lite"
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-subset+cjk-lite";
-#[cfg(all(
-    feature = "bootstrap-subset",
-    not(feature = "bootstrap-full"),
-    not(feature = "emoji"),
-    not(feature = "cjk-lite")
-))]
 const DEFAULT_PROFILE_NAME: &str = "default-subset";
-#[cfg(all(
-    not(feature = "bootstrap-subset"),
-    not(feature = "bootstrap-full"),
-    feature = "emoji",
-    feature = "cjk-lite"
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-minimal+emoji+cjk-lite";
-#[cfg(all(
-    not(feature = "bootstrap-subset"),
-    not(feature = "bootstrap-full"),
-    feature = "emoji",
-    not(feature = "cjk-lite")
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-minimal+emoji";
-#[cfg(all(
-    not(feature = "bootstrap-subset"),
-    not(feature = "bootstrap-full"),
-    not(feature = "emoji"),
-    feature = "cjk-lite"
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-minimal+cjk-lite";
-#[cfg(all(
-    not(feature = "bootstrap-subset"),
-    not(feature = "bootstrap-full"),
-    not(feature = "emoji"),
-    not(feature = "cjk-lite")
-))]
-const DEFAULT_PROFILE_NAME: &str = "default-minimal";
 
 const BOOTSTRAP_PROFILE: BundledFontProfile = BundledFontProfile {
     name: BOOTSTRAP_PROFILE_NAME,

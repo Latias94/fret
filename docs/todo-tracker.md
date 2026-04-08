@@ -116,6 +116,21 @@ It complements (but does not replace) ADRs:
   - Current: optional `cjk-lite` font bundle is available (`Noto Sans CJK SC`), gated behind `fret-fonts/cjk-lite`.
   - Current: web runner seeds `TextFontFamilyConfig` (generic family picks + `common_fallback`) from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
 
+- **Separate the framework bootstrap baseline from optional bundled coverage at the package boundary**
+  - Problem: the current `fret-fonts` published crate mixes the framework bootstrap baseline with
+    large optional assets (`emoji`, `bootstrap-full`, and possibly `cjk-lite`), so the package
+    boundary no longer matches the runtime contract boundary.
+  - ADRs: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`, `docs/adr/0152-polychrome-glyphs-and-emoji-pipeline-v1.md`, `docs/adr/0257-font-selection-fallback-and-variable-font-instances-v1.md`
+  - Workstream:
+    - `docs/workstreams/font-bundle-release-boundary-v1/DESIGN.md`
+    - `docs/workstreams/font-bundle-release-boundary-v1/TODO.md`
+    - `docs/workstreams/font-bundle-release-boundary-v1/MILESTONES.md`
+    - `docs/workstreams/font-bundle-release-boundary-v1/EVIDENCE_AND_GATES.md`
+  - Current: `fret-launch` still inherits `fret-fonts` default features, so the launch baseline and
+    crate defaults are coupled today.
+  - TODO: make the bootstrap baseline explicit, move non-baseline bundles out of the main published
+    package, and restore a release-safe preflight gate for `fret-fonts`.
+
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`

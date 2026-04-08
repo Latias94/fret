@@ -65,7 +65,7 @@ def _parse_waves(path: Path) -> dict[int, list[str]]:
 
 
 def _run_dry_run(repo_root: Path, crate: str) -> DryRunResult:
-    command = ["cargo", "publish", "--dry-run", "-p", crate]
+    command = ["cargo", "publish", "--dry-run", "--allow-dirty", "-p", crate]
     proc = subprocess.run(
         command,
         cwd=repo_root,

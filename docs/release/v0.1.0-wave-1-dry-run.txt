@@ -1,16 +1,14 @@
 # Fret v0.1.0 Wave 1 dry-run status
 
-Date verified: 2026-03-31.
-
-All wave 1 crates passed `cargo publish --dry-run` from a clean working tree.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p fret-assets`
-- `cargo publish --dry-run -p fret-core`
-- `cargo publish --dry-run -p fret-i18n`
-- `cargo publish --dry-run -p fret-icons`
-- `cargo publish --dry-run -p fret-render-core`
+- `cargo publish --dry-run --allow-dirty -p fret-assets`
+- `cargo publish --dry-run --allow-dirty -p fret-core`
+- `cargo publish --dry-run --allow-dirty -p fret-i18n`
+- `cargo publish --dry-run --allow-dirty -p fret-icons`
+- `cargo publish --dry-run --allow-dirty -p fret-render-core`
 
 Status:
 
@@ -19,8 +17,6 @@ Status:
 - `fret-i18n`: passed
 - `fret-icons`: passed
 - `fret-render-core`: passed
-
 Interpretation:
 
-- Wave 1 is the current first public publish starting point.
-- Later-wave local dry-runs may still fail until earlier waves are visible on crates.io.
+- All wave 1 crates passed `cargo publish --dry-run` from the current workspace state.

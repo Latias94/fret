@@ -1,22 +1,22 @@
 # Fret v0.1.0 Wave 6 dry-run status
 
-Date verified: 2026-04-01.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p fret-canvas`
-- `cargo publish --dry-run -p fret-icons-lucide`
-- `cargo publish --dry-run -p fret-launch`
-- `cargo publish --dry-run -p fret-query`
-- `cargo publish --dry-run -p fret-selector`
-- `cargo publish --dry-run -p fret-ui-app`
+- `cargo publish --dry-run --allow-dirty -p fret-canvas`
+- `cargo publish --dry-run --allow-dirty -p fret-icons-lucide`
+- `cargo publish --dry-run --allow-dirty -p fret-query`
+- `cargo publish --dry-run --allow-dirty -p fret-render`
+- `cargo publish --dry-run --allow-dirty -p fret-selector`
+- `cargo publish --dry-run --allow-dirty -p fret-ui-app`
 
 Status:
 
 - `fret-canvas`: failed (awaiting earlier waves on crates.io)
 - `fret-icons-lucide`: failed (awaiting earlier waves on crates.io)
-- `fret-launch`: failed (awaiting earlier waves on crates.io)
 - `fret-query`: failed (awaiting earlier waves on crates.io)
+- `fret-render`: failed (awaiting earlier waves on crates.io)
 - `fret-selector`: failed (awaiting earlier waves on crates.io)
 - `fret-ui-app`: failed (awaiting earlier waves on crates.io)
 
@@ -31,7 +31,7 @@ Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `fret-core` found
+  no matching package named `fret-runtime` found
   location searched: crates.io index
   required by package `fret-canvas v0.1.0 (./ecosystem/fret-canvas)`
 ```
@@ -50,20 +50,6 @@ Caused by:
   required by package `fret-icons-lucide v0.1.0 (./ecosystem/fret-icons-lucide)`
 ```
 
-## `fret-launch`
-
-```text
-Updating crates.io index
-   Packaging fret-launch v0.1.0 (./crates/fret-launch)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-app` found
-  location searched: crates.io index
-  required by package `fret-launch v0.1.0 (./crates/fret-launch)`
-```
-
 ## `fret-query`
 
 ```text
@@ -73,9 +59,23 @@ Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `fret-core` found
+  no matching package named `fret-executor` found
   location searched: crates.io index
   required by package `fret-query v0.1.0 (./ecosystem/fret-query)`
+```
+
+## `fret-render`
+
+```text
+Updating crates.io index
+   Packaging fret-render v0.1.0 (./crates/fret-render)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `fret-render-wgpu` found
+  location searched: crates.io index
+  required by package `fret-render v0.1.0 (./crates/fret-render)`
 ```
 
 ## `fret-selector`

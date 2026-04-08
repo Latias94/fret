@@ -19,6 +19,10 @@ def _default_assets_dir() -> Path:
     return Path(__file__).parent.parent / "assets"
 
 
+def _default_sources_dir() -> Path:
+    return Path(__file__).resolve().parents[3] / "assets" / "font-archive" / "fret-fonts-bootstrap-full"
+
+
 def _require_tool(name: str, hint: str) -> None:
     if shutil.which(name) is None:
         raise RuntimeError(f"{name} not found. {hint}")
@@ -27,11 +31,13 @@ def _require_tool(name: str, hint: str) -> None:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--assets-dir", default=str(_default_assets_dir()))
+    parser.add_argument("--sources-dir", default=str(_default_sources_dir()))
     args = parser.parse_args(argv)
 
     _require_tool("pyftsubset", "Install with: python -m pip install fonttools brotli")
 
     assets_dir = Path(args.assets_dir).expanduser().resolve()
+    sources_dir = Path(args.sources_dir).expanduser().resolve()
 
     unicodes = ",".join(
         [
@@ -76,7 +82,7 @@ def main(argv: list[str]) -> int:
     ]
 
     for in_name, out_name in fonts:
-        in_path = assets_dir / in_name
+        in_path = sources_dir / in_name
         out_path = assets_dir / out_name
         if not in_path.exists():
             raise RuntimeError(f"Missing input font: {in_path}")

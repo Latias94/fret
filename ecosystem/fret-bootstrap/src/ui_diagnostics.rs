@@ -2851,10 +2851,9 @@ mod tests {
                 }),
                 font_environment: Some(UiFontEnvironmentDiagnosticsSnapshotV1 {
                     bundled_baseline_source: "bundled_profile".to_string(),
-                    bundled_profile_name: Some("default-subset+cjk-lite".to_string()),
+                    bundled_profile_name: Some("default-subset".to_string()),
                     bundled_asset_bundle: Some("pkg:fret-fonts".to_string()),
                     bundled_asset_keys: vec![
-                        "fonts/NotoSansCJKsc-Regular-cjk-lite-subset.otf".to_string(),
                         "fonts/Inter-roman-subset.ttf".to_string(),
                         "fonts/Inter-italic-subset.ttf".to_string(),
                         "fonts/RobotoSlab-VariableFont_wght.ttf".to_string(),
@@ -2866,7 +2865,6 @@ mod tests {
                         "UiSans".to_string(),
                         "UiSerif".to_string(),
                         "UiMonospace".to_string(),
-                        "CjkFallback".to_string(),
                     ],
                     bundled_guaranteed_generic_families: vec![
                         "Sans".to_string(),

@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-02
+Catalog updated: 2026-04-08
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 202
+- Dedicated directories: 203
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -273,6 +273,7 @@ Rule:
 - `docs/workstreams/foreground-inheritance-late-binding-v2/` — first 2026-02-24, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/foreground-style-context-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-06, 3 markdown docs
 - `docs/workstreams/foundation-closure-p0/` — first 2026-01-28, latest 2026-02-11, 2 markdown docs
+- `docs/workstreams/font-bundle-release-boundary-v1/` — first 2026-04-08, latest 2026-04-08, 4 markdown docs
 - `docs/workstreams/font-system-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 3 markdown docs
 - `docs/workstreams/font-mainline-fearless-refactor-v1/` — first 2026-03-14, latest 2026-03-14, 3 markdown docs
 - `docs/workstreams/framework-modularity-fearless-refactor-v1/` — first 2026-02-27, latest 2026-02-27, 3 markdown docs

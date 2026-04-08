@@ -1,12 +1,12 @@
 # Fret v0.1.0 Wave 9 dry-run status
 
-Date verified: 2026-04-01.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p fret-chart`
-- `cargo publish --dry-run -p fret-router-ui`
-- `cargo publish --dry-run -p fret-ui-assets`
+- `cargo publish --dry-run --allow-dirty -p fret-chart`
+- `cargo publish --dry-run --allow-dirty -p fret-router-ui`
+- `cargo publish --dry-run --allow-dirty -p fret-ui-assets`
 
 Status:
 
@@ -25,7 +25,7 @@ Updating crates.io index
 error: failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `delinea` found
+  no matching package named `fret-canvas` found
   location searched: crates.io index
   required by package `fret-chart v0.1.0 (./ecosystem/fret-chart)`
 ```

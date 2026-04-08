@@ -1,13 +1,14 @@
 # `fret-fonts`
 
-Bundled font bytes for bootstrapping `fret` apps, primarily targeting Web/WASM where system fonts
-are not available.
+Bundled framework-baseline font bytes for bootstrapping `fret` apps, primarily targeting Web/WASM
+where system fonts are not available.
 
 Status note:
 
-- The shipped `bootstrap_profile()` and `default_profile()` now guarantee `sans`, `serif`, and
-  `monospace` whenever `bootstrap-subset` or `bootstrap-full` is enabled.
-- The intentionally minimal mono-only build still avoids promising `sans` / `serif`.
+- The shipped `bootstrap_profile()` and `default_profile()` both describe the framework-owned
+  baseline bundle.
+- Optional large-script bundles now live in dedicated crates such as `fret-fonts-cjk` and
+  `fret-fonts-emoji`.
 
 ## Contents
 
@@ -15,7 +16,6 @@ Status note:
 - Roboto Slab Variable — Apache 2.0 (`assets/RobotoSlab-LICENSE.txt`)
 - JetBrains Mono (roman + italic) — OFL 1.1 (`assets/JetBrainsMono-OFL.txt`)
 - Fira Mono (subset) — OFL 1.1 (`assets/FiraMono-LICENSE`)
-- Noto Color Emoji — OFL 1.1 (`assets/NotoEmoji-LICENSE.txt`) (optional; `emoji` feature)
 
 The canonical API is:
 
@@ -47,33 +47,14 @@ than bypassing the resolver contract. Byte-oriented callers should stay anchored
 bundled faces rather than reintroducing a separate runtime raw-byte lane. The `test_support`
 module is intentionally scoped to tests and golden/conformance harnesses.
 
-## Size strategy (WASM)
+## Size strategy
 
-The default feature set uses **subset fonts** to reduce WASM payload size:
+`fret-fonts` now ships only the framework baseline subset bundle:
 
-- `bootstrap-subset` (default): uses `*-subset.ttf` for Inter/JetBrains Mono.
-- `cjk-lite` (default): adds a small subset of `Noto Sans CJK SC` for basic CJK coverage.
-- `bootstrap-full`: uses the full font files (much larger).
+- Inter subset (roman + italic)
+- Roboto Slab variable
+- JetBrains Mono subset (roman + italic)
+- Fira Mono subset
 
-Emoji:
-
-- `emoji`: includes `assets/NotoColorEmoji.ttf` (large; intended as an explicit opt-in).
-
-## CJK lite (WASM bootstrap)
-
-- `cjk-lite`: includes a subset of `Noto Sans CJK SC` as
-  `assets/NotoSansCJKsc-Regular-cjk-lite-subset.otf` (generated via `fonttools`/`pyftsubset`).
-  Intended to cover a practical baseline of CJK glyphs for bootstrap UI on Web/WASM without pulling
-  in the full font payload.
-
-## Recommended bundles
-
-For a general-purpose app shell:
-
-- Web/WASM: keep `bootstrap-subset` + `cjk-lite` on by default, and gate `emoji` behind an explicit
-  feature or user setting (WASM size impact is significant).
-- Native: either rely on system UI fonts (plus explicitly user-imported local fonts) or use `bootstrap-full` for a
-  deterministic demo experience.
-
-For future expansion, prefer feature-gated bundles (e.g. CJK subsets) rather than growing the
-shipped default profile unconditionally.
+Keep optional CJK and emoji bundles in dedicated extension crates so the main published package does
+not carry their source tarball cost unless an app opts in explicitly.

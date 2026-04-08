@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 def _default_assets_dir() -> Path:
-    return Path(__file__).parent.parent / "assets"
+    return Path(__file__).resolve().parents[2] / "fret-fonts-cjk" / "assets"
 
 
 def _require_tool(name: str, hint: str) -> None:

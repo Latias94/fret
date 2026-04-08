@@ -160,6 +160,7 @@ pub enum BundledGenericFamily {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BundledFontFaceSpec {
+    pub bundle_name: &'static str,
     pub family: &'static str,
     pub roles: &'static [BundledFontRole],
     pub asset_key: &'static str,
@@ -213,7 +214,7 @@ impl BundledFontFaceSpec {
     }
 
     pub fn asset_locator(&self) -> AssetLocator {
-        AssetLocator::bundle(bundled_asset_bundle(), self.asset_key)
+        AssetLocator::bundle(AssetBundleId::package(self.bundle_name), self.asset_key)
     }
 
     pub fn asset_request(&self) -> AssetRequest {

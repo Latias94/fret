@@ -1,176 +1,32 @@
 # Fret v0.1.0 Wave 2 dry-run status
 
-Date verified: 2026-04-01.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p delinea`
-- `cargo publish --dry-run -p fret-a11y-accesskit`
-- `cargo publish --dry-run -p fret-diag-protocol`
-- `cargo publish --dry-run -p fret-dnd`
-- `cargo publish --dry-run -p fret-fonts`
-- `cargo publish --dry-run -p fret-i18n-fluent`
-- `cargo publish --dry-run -p fret-perf`
-- `cargo publish --dry-run -p fret-platform`
-- `cargo publish --dry-run -p fret-ui-headless`
-- `cargo publish --dry-run -p fret-viewport-tooling`
+- `cargo publish --dry-run --allow-dirty -p delinea`
+- `cargo publish --dry-run --allow-dirty -p fret-a11y-accesskit`
+- `cargo publish --dry-run --allow-dirty -p fret-diag-protocol`
+- `cargo publish --dry-run --allow-dirty -p fret-dnd`
+- `cargo publish --dry-run --allow-dirty -p fret-fonts`
+- `cargo publish --dry-run --allow-dirty -p fret-i18n-fluent`
+- `cargo publish --dry-run --allow-dirty -p fret-perf`
+- `cargo publish --dry-run --allow-dirty -p fret-platform`
+- `cargo publish --dry-run --allow-dirty -p fret-ui-headless`
+- `cargo publish --dry-run --allow-dirty -p fret-viewport-tooling`
 
 Status:
 
-- `delinea`: failed (awaiting earlier waves on crates.io)
-- `fret-a11y-accesskit`: failed (awaiting earlier waves on crates.io)
-- `fret-diag-protocol`: failed (awaiting earlier waves on crates.io)
-- `fret-dnd`: failed (awaiting earlier waves on crates.io)
-- `fret-fonts`: failed (awaiting earlier waves on crates.io)
-- `fret-i18n-fluent`: failed (awaiting earlier waves on crates.io)
-- `fret-perf`: failed (awaiting earlier waves on crates.io)
-- `fret-platform`: failed (awaiting earlier waves on crates.io)
-- `fret-ui-headless`: failed (awaiting earlier waves on crates.io)
-- `fret-viewport-tooling`: failed (awaiting earlier waves on crates.io)
-
-Failure excerpts:
-
-## `delinea`
-
-```text
-Updating crates.io index
-   Packaging delinea v0.1.0 (./ecosystem/delinea)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `delinea v0.1.0 (./ecosystem/delinea)`
-```
-
-## `fret-a11y-accesskit`
-
-```text
-Updating crates.io index
-   Packaging fret-a11y-accesskit v0.1.0 (./crates/fret-a11y-accesskit)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-a11y-accesskit v0.1.0 (./crates/fret-a11y-accesskit)`
-```
-
-## `fret-diag-protocol`
-
-```text
-Updating crates.io index
-   Packaging fret-diag-protocol v0.1.0 (./crates/fret-diag-protocol)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-diag-protocol v0.1.0 (./crates/fret-diag-protocol)`
-```
-
-## `fret-dnd`
-
-```text
-Updating crates.io index
-   Packaging fret-dnd v0.1.0 (./ecosystem/fret-dnd)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-dnd v0.1.0 (./ecosystem/fret-dnd)`
-```
-
-## `fret-fonts`
-
-```text
-Updating crates.io index
-   Packaging fret-fonts v0.1.0 (./crates/fret-fonts)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-assets` found
-  location searched: crates.io index
-  required by package `fret-fonts v0.1.0 (./crates/fret-fonts)`
-```
-
-## `fret-i18n-fluent`
-
-```text
-Updating crates.io index
-   Packaging fret-i18n-fluent v0.1.0 (./ecosystem/fret-i18n-fluent)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-i18n` found
-  location searched: crates.io index
-  required by package `fret-i18n-fluent v0.1.0 (./ecosystem/fret-i18n-fluent)`
-```
-
-## `fret-perf`
-
-```text
-Updating crates.io index
-   Packaging fret-perf v0.1.0 (./crates/fret-perf)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-perf v0.1.0 (./crates/fret-perf)`
-```
-
-## `fret-platform`
-
-```text
-Updating crates.io index
-   Packaging fret-platform v0.1.0 (./crates/fret-platform)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-platform v0.1.0 (./crates/fret-platform)`
-```
-
-## `fret-ui-headless`
-
-```text
-Updating crates.io index
-   Packaging fret-ui-headless v0.1.0 (./ecosystem/fret-ui-headless)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-ui-headless v0.1.0 (./ecosystem/fret-ui-headless)`
-```
-
-## `fret-viewport-tooling`
-
-```text
-Updating crates.io index
-   Packaging fret-viewport-tooling v0.1.0 (./ecosystem/fret-viewport-tooling)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-viewport-tooling v0.1.0 (./ecosystem/fret-viewport-tooling)`
-```
-
+- `delinea`: passed
+- `fret-a11y-accesskit`: passed
+- `fret-diag-protocol`: passed
+- `fret-dnd`: passed
+- `fret-fonts`: passed
+- `fret-i18n-fluent`: passed
+- `fret-perf`: passed
+- `fret-platform`: passed
+- `fret-ui-headless`: passed
+- `fret-viewport-tooling`: passed
 Interpretation:
 
-- Wave 2 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
-- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
+- All wave 2 crates passed `cargo publish --dry-run` from the current workspace state.

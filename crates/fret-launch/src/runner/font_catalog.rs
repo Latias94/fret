@@ -1,8 +1,8 @@
-use fret_assets::{AssetLoadError, AssetRequest};
+use fret_assets::{AssetBundleId, AssetLoadError, AssetRequest, StaticAssetEntry};
 use fret_core::TextFontFamilyConfig;
 use fret_runtime::fret_i18n::I18nService;
 use fret_runtime::{FontCatalogEntry, FontCatalogUpdate, FontFamilyDefaultsPolicy, GlobalsHost};
-use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashSet, hash_map::DefaultHasher};
 use std::hash::Hasher as _;
 
 #[doc(hidden)]
@@ -20,8 +20,8 @@ pub trait FontBlobInjectionHost {
         I: IntoIterator<Item = Vec<u8>>;
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-struct DefaultBundledFontAssetsRegistered(bool);
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct BundledFontAssetBundlesRegistered(HashSet<String>);
 
 impl RendererFontEnvironmentHost for fret_render::Renderer {
     fn all_font_catalog_entries_runtime(&mut self) -> Vec<FontCatalogEntry> {
@@ -170,19 +170,18 @@ pub fn default_bundled_font_baseline_snapshot() -> fret_runtime::BundledFontBase
     )
 }
 
-fn ensure_default_bundled_font_assets_registered(app: &mut impl GlobalsHost) -> bool {
+fn ensure_bundled_font_assets_registered(
+    app: &mut impl GlobalsHost,
+    bundle: AssetBundleId,
+    entries: impl IntoIterator<Item = StaticAssetEntry>,
+) -> bool {
     app.with_global_mut(
-        DefaultBundledFontAssetsRegistered::default,
+        BundledFontAssetBundlesRegistered::default,
         |registered, app| {
-            if registered.0 {
+            if !registered.0.insert(bundle.as_str().to_string()) {
                 return false;
             }
-            fret_runtime::register_bundle_asset_entries(
-                app,
-                fret_fonts::bundled_asset_bundle(),
-                fret_fonts::default_profile().asset_entries(),
-            );
-            registered.0 = true;
+            fret_runtime::register_bundle_asset_entries(app, bundle, entries);
             true
         },
     )
@@ -311,6 +310,111 @@ fn bundled_profile_font_assets_from_runtime_assets(
     batch.successes
 }
 
+fn install_startup_bundled_profile(
+    app: &mut impl GlobalsHost,
+    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
+    bundle: AssetBundleId,
+    profile: &fret_fonts::BundledFontProfile,
+) -> usize {
+    let _ = ensure_bundled_font_assets_registered(app, bundle, profile.asset_entries());
+    let assets = bundled_profile_font_assets_from_runtime_assets(app, profile);
+    let (added, accepted_sources) = inject_font_sources(
+        renderer,
+        assets.into_iter().map(|success| {
+            PendingFontInjectionSource::runtime_asset(
+                fret_runtime::RendererFontSourceLane::BundledStartup,
+                success.request,
+                success.font_blob,
+            )
+        }),
+    );
+    let _ = publish_renderer_font_environment_sources(app, accepted_sources);
+    added
+}
+
+#[cfg(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts"))]
+fn merge_unique_family_names(
+    target: &mut Vec<String>,
+    families: impl IntoIterator<Item = &'static str>,
+) {
+    let mut seen = target
+        .iter()
+        .map(|family| family.trim().to_ascii_lowercase())
+        .collect::<HashSet<_>>();
+
+    for family in families {
+        let trimmed = family.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let key = trimmed.to_ascii_lowercase();
+        if seen.insert(key) {
+            target.push(trimmed.to_string());
+        }
+    }
+}
+
+#[cfg(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts"))]
+fn web_startup_font_config(mut config: TextFontFamilyConfig) -> TextFontFamilyConfig {
+    #[cfg(feature = "wasm-cjk-lite-fonts")]
+    merge_unique_family_names(
+        &mut config.common_fallback,
+        fret_fonts_cjk::default_profile()
+            .common_fallback_families
+            .iter()
+            .copied(),
+    );
+    #[cfg(feature = "wasm-emoji-fonts")]
+    merge_unique_family_names(
+        &mut config.common_fallback,
+        fret_fonts_emoji::default_profile()
+            .common_fallback_families
+            .iter()
+            .copied(),
+    );
+    config
+}
+
+#[cfg(not(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts")))]
+fn web_startup_font_config(config: TextFontFamilyConfig) -> TextFontFamilyConfig {
+    config
+}
+
+#[cfg(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts"))]
+fn install_optional_web_startup_font_extensions(
+    app: &mut impl GlobalsHost,
+    renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
+) -> usize {
+    let mut added = 0usize;
+    #[cfg(feature = "wasm-cjk-lite-fonts")]
+    {
+        added = added.saturating_add(install_startup_bundled_profile(
+            app,
+            renderer,
+            fret_fonts_cjk::bundled_asset_bundle(),
+            fret_fonts_cjk::default_profile(),
+        ));
+    }
+    #[cfg(feature = "wasm-emoji-fonts")]
+    {
+        added = added.saturating_add(install_startup_bundled_profile(
+            app,
+            renderer,
+            fret_fonts_emoji::bundled_asset_bundle(),
+            fret_fonts_emoji::default_profile(),
+        ));
+    }
+    added
+}
+
+#[cfg(not(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts")))]
+fn install_optional_web_startup_font_extensions(
+    _app: &mut impl GlobalsHost,
+    _renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
+) -> usize {
+    0
+}
+
 fn inject_font_sources(
     renderer: &mut impl FontBlobInjectionHost,
     sources: impl IntoIterator<Item = PendingFontInjectionSource>,
@@ -389,20 +493,12 @@ pub fn install_default_bundled_font_baseline(
     app: &mut impl GlobalsHost,
     renderer: &mut (impl RendererFontEnvironmentHost + FontBlobInjectionHost),
 ) -> usize {
-    let profile = fret_fonts::default_profile();
-    let _ = ensure_default_bundled_font_assets_registered(app);
-    let assets = bundled_profile_font_assets_from_runtime_assets(app, profile);
-    let (added, accepted_sources) = inject_font_sources(
+    let added = install_startup_bundled_profile(
+        app,
         renderer,
-        assets.into_iter().map(|success| {
-            PendingFontInjectionSource::runtime_asset(
-                fret_runtime::RendererFontSourceLane::BundledStartup,
-                success.request,
-                success.font_blob,
-            )
-        }),
+        fret_fonts::bundled_asset_bundle(),
+        fret_fonts::default_profile(),
     );
-    let _ = publish_renderer_font_environment_sources(app, accepted_sources);
     let _ = publish_bundled_font_baseline_snapshot(app, default_bundled_font_baseline_snapshot());
     added
 }
@@ -415,10 +511,11 @@ pub fn initialize_web_startup_font_environment(
     config: TextFontFamilyConfig,
 ) -> FontCatalogUpdate {
     let _ = install_default_bundled_font_baseline(app, renderer);
+    let _ = install_optional_web_startup_font_extensions(app, renderer);
     initialize_startup_font_environment(
         app,
         renderer,
-        config,
+        web_startup_font_config(config),
         StartupFontEnvironmentMode::WebBundledSync,
     )
 }
@@ -677,6 +774,25 @@ mod tests {
             self.font_blobs.extend(fonts);
             self.font_blobs.len() - start
         }
+    }
+
+    #[cfg(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts"))]
+    fn expected_web_startup_face_count() -> usize {
+        let mut total = fret_fonts::default_profile().faces.len();
+        #[cfg(feature = "wasm-cjk-lite-fonts")]
+        {
+            total += fret_fonts_cjk::default_profile().faces.len();
+        }
+        #[cfg(feature = "wasm-emoji-fonts")]
+        {
+            total += fret_fonts_emoji::default_profile().faces.len();
+        }
+        total
+    }
+
+    #[cfg(not(any(feature = "wasm-cjk-lite-fonts", feature = "wasm-emoji-fonts")))]
+    fn expected_web_startup_face_count() -> usize {
+        fret_fonts::default_profile().faces.len()
     }
 
     #[test]
@@ -968,7 +1084,7 @@ mod tests {
     fn publish_bundled_font_baseline_snapshot_updates_runtime_global() {
         let mut app = TestApp::default();
         let snapshot = fret_runtime::BundledFontBaselineSnapshot::bundled_profile(
-            "default-subset+cjk-lite",
+            "default-subset",
             "pkg:fret-fonts",
             vec!["fonts/Inter-roman-subset.ttf".to_string()],
             vec!["UiSans".to_string(), "UiMonospace".to_string()],
@@ -1311,10 +1427,7 @@ mod tests {
             TextFontFamilyConfig::default(),
         );
 
-        assert_eq!(
-            renderer.font_blobs.len(),
-            fret_fonts::default_profile().faces.len()
-        );
+        assert_eq!(renderer.font_blobs.len(), expected_web_startup_face_count());
         assert_eq!(
             app.global::<fret_runtime::BundledFontBaselineSnapshot>()
                 .cloned()
@@ -1406,7 +1519,12 @@ mod tests {
                 .cloned()
                 .expect("desktop baseline snapshot"),
         );
-        assert_eq!(web_renderer.font_blobs, desktop_renderer.font_blobs);
+        assert!(
+            web_renderer
+                .font_blobs
+                .starts_with(desktop_renderer.font_blobs.as_slice()),
+            "expected desktop baseline blobs to remain the prefix of the web startup bundle set"
+        );
         assert!(
             !web_update.config.ui_mono.is_empty(),
             "expected web startup to seed missing UI families"
@@ -1414,6 +1532,60 @@ mod tests {
         assert!(
             desktop_update.config.ui_mono.is_empty(),
             "expected desktop startup to preserve an empty family config under native policy"
+        );
+    }
+
+    #[cfg(feature = "wasm-cjk-lite-fonts")]
+    #[test]
+    fn web_startup_cjk_extension_seeds_common_fallback_and_injects_bundle() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+
+        let update = initialize_web_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            TextFontFamilyConfig::default(),
+        );
+
+        assert!(
+            update
+                .config
+                .common_fallback
+                .iter()
+                .any(|family| family == "Noto Sans CJK SC")
+        );
+        assert!(
+            renderer
+                .font_blobs
+                .iter()
+                .any(|blob| blob.as_slice() == fret_fonts_cjk::default_profile().faces[0].bytes)
+        );
+    }
+
+    #[cfg(feature = "wasm-emoji-fonts")]
+    #[test]
+    fn web_startup_emoji_extension_seeds_common_fallback_and_injects_bundle() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+
+        let update = initialize_web_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            TextFontFamilyConfig::default(),
+        );
+
+        assert!(
+            update
+                .config
+                .common_fallback
+                .iter()
+                .any(|family| family == "Noto Color Emoji")
+        );
+        assert!(
+            renderer
+                .font_blobs
+                .iter()
+                .any(|blob| blob.as_slice() == fret_fonts_emoji::default_profile().faces[0].bytes)
         );
     }
 

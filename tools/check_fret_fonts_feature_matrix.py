@@ -38,14 +38,16 @@ def main(argv: list[str]) -> int:
         ["cargo", "check", "-p", "fret-fonts", "--locked", "--no-default-features"],
     )
     _run_checked(
-        "full bundle matrix tests",
-        _cargo_test_args(
-            "-p",
-            "fret-fonts",
-            "--locked",
-            "--features",
-            "bootstrap-full,emoji,cjk-lite",
-        ),
+        "cjk extension tests",
+        _cargo_test_args("-p", "fret-fonts-cjk", "--locked"),
+    )
+    _run_checked(
+        "emoji extension tests",
+        _cargo_test_args("-p", "fret-fonts-emoji", "--locked"),
+    )
+    _run_checked(
+        "package boundary",
+        ["python3", "tools/check_fret_fonts_package_boundary.py"],
     )
 
     print("[fonts-matrix] done")

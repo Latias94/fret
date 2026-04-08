@@ -20,8 +20,8 @@ dev-state = ["dep:serde", "dep:serde_json"]
 # into normal builds. See ADR 0105.
 hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
 diag-screenshots = ["dep:serde_json", "dep:image", "dep:fret-diag-protocol"]
-wasm-emoji-fonts = ["fret-fonts/emoji"]
-wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
+wasm-emoji-fonts = ["dep:fret-fonts-emoji"]
+wasm-cjk-lite-fonts = ["dep:fret-fonts-cjk"]
 # Experimental: per-region hit test passthrough on macOS.
 macos-hit-test-regions = ["dep:block2", "objc2-app-kit/block2"]
 webview-wry = ["dep:fret-webview", "dep:fret-webview-wry"]
@@ -31,6 +31,8 @@ fret-app = { version = "0.1.0", path = "../fret-app" }
 fret-assets = { version = "0.1.0", path = "../fret-assets" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
+fret-fonts-cjk = { version = "0.1.0", path = "../fret-fonts-cjk", optional = true }
+fret-fonts-emoji = { version = "0.1.0", path = "../fret-fonts-emoji", optional = true }
 fret-render = { version = "0.1.0", path = "../fret-render" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 bytemuck.workspace = true

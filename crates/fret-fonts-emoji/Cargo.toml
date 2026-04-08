@@ -1,0 +1,19 @@
+[package]
+name = "fret-fonts-emoji"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Optional emoji fallback font bundle for Fret."
+
+[dependencies]
+fret-assets = { version = "0.1.0", path = "../fret-assets" }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", default-features = false }
+
+[features]
+default = []
+test-support = []

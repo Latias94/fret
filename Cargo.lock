@@ -2278,6 +2278,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-fonts-cjk"
+version = "0.1.0"
+dependencies = [
+ "fret-assets",
+ "fret-fonts",
+]
+
+[[package]]
+name = "fret-fonts-emoji"
+version = "0.1.0"
+dependencies = [
+ "fret-assets",
+ "fret-fonts",
+]
+
+[[package]]
 name = "fret-framework"
 version = "0.1.0"
 dependencies = [
@@ -2407,6 +2423,8 @@ dependencies = [
  "fret-core",
  "fret-diag-protocol",
  "fret-fonts",
+ "fret-fonts-cjk",
+ "fret-fonts-emoji",
  "fret-platform",
  "fret-platform-native",
  "fret-platform-web",
@@ -2603,6 +2621,8 @@ dependencies = [
  "blake3",
  "fret-core",
  "fret-fonts",
+ "fret-fonts-cjk",
+ "fret-fonts-emoji",
  "parley",
  "read-fonts 0.37.0",
  "serde",
@@ -2620,6 +2640,8 @@ dependencies = [
  "etagere",
  "fret-core",
  "fret-fonts",
+ "fret-fonts-cjk",
+ "fret-fonts-emoji",
  "fret-perf",
  "fret-render-core",
  "fret-render-text",
@@ -2799,6 +2821,8 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-fonts",
+ "fret-fonts-cjk",
+ "fret-fonts-emoji",
  "fret-render-text",
  "fret-ui",
  "fret-ui-kit",
@@ -2913,6 +2937,7 @@ dependencies = [
  "fret-code-view",
  "fret-core",
  "fret-fonts",
+ "fret-fonts-emoji",
  "fret-icons",
  "fret-icons-lucide",
  "fret-launch",

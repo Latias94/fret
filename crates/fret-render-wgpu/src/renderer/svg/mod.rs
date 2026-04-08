@@ -391,7 +391,11 @@ mod tests {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
         let added = renderer.add_fonts(fret_fonts::test_support::face_blobs(
-            fret_fonts::default_profile().faces.iter(),
+            fret_fonts::default_profile()
+                .faces
+                .iter()
+                .chain(fret_fonts_cjk::default_profile().faces.iter())
+                .chain(fret_fonts_emoji::default_profile().faces.iter()),
         ));
         assert!(
             added > 0,

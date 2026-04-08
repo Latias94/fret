@@ -260,14 +260,8 @@ mod tests {
             fret_fonts::bootstrap_profile()
                 .faces
                 .iter()
-                .chain(
-                    fret_fonts::default_profile()
-                        .faces_for_role(fret_fonts::BundledFontRole::EmojiFallback),
-                )
-                .chain(
-                    fret_fonts::default_profile()
-                        .faces_for_role(fret_fonts::BundledFontRole::CjkFallback),
-                ),
+                .chain(fret_fonts_emoji::default_profile().faces.iter())
+                .chain(fret_fonts_cjk::default_profile().faces.iter()),
         ));
         assert!(added > 0, "expected bundled fonts to load");
         shaper

@@ -15,40 +15,42 @@
 13. fret-ui-headless
 14. fret-viewport-tooling
 15. fret-i18n-fluent
-16. fret-render-text
-17. fret-runtime
-18. fret-runner-winit
-19. fret-diag-ws
-20. fret-platform-native
-21. fret-render-wgpu
-22. fret-app
-23. fret-executor
-24. fret-interaction
-25. fret-platform-web
-26. fret-text-nav
-27. fret-webview
-28. fret-window-style-profiles
-29. fret-render
-30. fret-icons-radix
-31. fret-runner-web
-32. fret-ui
-33. fret-webview-wry
-34. fret-icons-lucide
-35. fret-canvas
-36. fret-query
-37. fret-selector
-38. fret-ui-app
-39. fret-launch
-40. fret-router
-41. fret-authoring
-42. fret-framework
-43. fret-ui-kit
-44. fret-chart
-45. fret-router-ui
-46. fret-ui-assets
-47. fret-ui-shadcn
-48. fret-bootstrap
-49. fret
+16. fret-fonts-cjk
+17. fret-fonts-emoji
+18. fret-runtime
+19. fret-runner-winit
+20. fret-diag-ws
+21. fret-platform-native
+22. fret-render-text
+23. fret-app
+24. fret-executor
+25. fret-interaction
+26. fret-platform-web
+27. fret-text-nav
+28. fret-webview
+29. fret-window-style-profiles
+30. fret-render-wgpu
+31. fret-icons-radix
+32. fret-runner-web
+33. fret-ui
+34. fret-webview-wry
+35. fret-render
+36. fret-icons-lucide
+37. fret-canvas
+38. fret-query
+39. fret-selector
+40. fret-ui-app
+41. fret-launch
+42. fret-router
+43. fret-authoring
+44. fret-framework
+45. fret-ui-kit
+46. fret-chart
+47. fret-router-ui
+48. fret-ui-assets
+49. fret-ui-shadcn
+50. fret-bootstrap
+51. fret
 
 # Commands
 cargo publish -p fret-assets
@@ -66,12 +68,13 @@ cargo publish -p fret-platform
 cargo publish -p fret-ui-headless
 cargo publish -p fret-viewport-tooling
 cargo publish -p fret-i18n-fluent
-cargo publish -p fret-render-text
+cargo publish -p fret-fonts-cjk
+cargo publish -p fret-fonts-emoji
 cargo publish -p fret-runtime
 cargo publish -p fret-runner-winit
 cargo publish -p fret-diag-ws
 cargo publish -p fret-platform-native
-cargo publish -p fret-render-wgpu
+cargo publish -p fret-render-text
 cargo publish -p fret-app
 cargo publish -p fret-executor
 cargo publish -p fret-interaction
@@ -79,11 +82,12 @@ cargo publish -p fret-platform-web
 cargo publish -p fret-text-nav
 cargo publish -p fret-webview
 cargo publish -p fret-window-style-profiles
-cargo publish -p fret-render
+cargo publish -p fret-render-wgpu
 cargo publish -p fret-icons-radix
 cargo publish -p fret-runner-web
 cargo publish -p fret-ui
 cargo publish -p fret-webview-wry
+cargo publish -p fret-render
 cargo publish -p fret-icons-lucide
 cargo publish -p fret-canvas
 cargo publish -p fret-query

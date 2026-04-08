@@ -22,10 +22,11 @@ Each later wave assumes all earlier waves are already visible on crates.io.
 - fret-ui-headless
 - fret-viewport-tooling
 
-## Wave 3 (5 crates)
+## Wave 3 (6 crates)
 - fret-diag-ws
+- fret-fonts-cjk
+- fret-fonts-emoji
 - fret-platform-native
-- fret-render-text
 - fret-runner-winit
 - fret-runtime
 
@@ -34,14 +35,14 @@ Each later wave assumes all earlier waves are already visible on crates.io.
 - fret-executor
 - fret-interaction
 - fret-platform-web
-- fret-render-wgpu
+- fret-render-text
 - fret-text-nav
 - fret-webview
 - fret-window-style-profiles
 
 ## Wave 5 (5 crates)
 - fret-icons-radix
-- fret-render
+- fret-render-wgpu
 - fret-runner-web
 - fret-ui
 - fret-webview-wry
@@ -49,17 +50,18 @@ Each later wave assumes all earlier waves are already visible on crates.io.
 ## Wave 6 (6 crates)
 - fret-canvas
 - fret-icons-lucide
-- fret-launch
 - fret-query
+- fret-render
 - fret-selector
 - fret-ui-app
 
 ## Wave 7 (3 crates)
 - fret-authoring
-- fret-framework
+- fret-launch
 - fret-router
 
-## Wave 8 (1 crate)
+## Wave 8 (2 crates)
+- fret-framework
 - fret-ui-kit
 
 ## Wave 9 (3 crates)

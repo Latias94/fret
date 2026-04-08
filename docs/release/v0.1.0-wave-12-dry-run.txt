@@ -1,10 +1,10 @@
 # Fret v0.1.0 Wave 12 dry-run status
 
-Date verified: 2026-04-01.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p fret`
+- `cargo publish --dry-run --allow-dirty -p fret`
 
 Status:
 

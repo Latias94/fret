@@ -15,7 +15,7 @@ default-run = "fret-ui-gallery"
 default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 gallery-ai = ["dep:fret-ui-ai"]
-gallery-web-ime-harness = ["fret-fonts/emoji"]
+gallery-web-ime-harness = ["dep:fret-fonts-emoji"]
 gallery-chart = [
     "dep:fret-chart",
     "dep:delinea",
@@ -42,6 +42,7 @@ anyhow.workspace = true
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-fonts = { path = "../../crates/fret-fonts" }
+fret-fonts-emoji = { path = "../../crates/fret-fonts-emoji", optional = true }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }

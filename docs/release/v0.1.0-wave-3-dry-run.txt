@@ -1,96 +1,24 @@
 # Fret v0.1.0 Wave 3 dry-run status
 
-Date verified: 2026-04-01.
+Date verified: 2026-04-08.
 
 Commands run:
 
-- `cargo publish --dry-run -p fret-diag-ws`
-- `cargo publish --dry-run -p fret-platform-native`
-- `cargo publish --dry-run -p fret-render-text`
-- `cargo publish --dry-run -p fret-runner-winit`
-- `cargo publish --dry-run -p fret-runtime`
+- `cargo publish --dry-run --allow-dirty -p fret-diag-ws`
+- `cargo publish --dry-run --allow-dirty -p fret-fonts-cjk`
+- `cargo publish --dry-run --allow-dirty -p fret-fonts-emoji`
+- `cargo publish --dry-run --allow-dirty -p fret-platform-native`
+- `cargo publish --dry-run --allow-dirty -p fret-runner-winit`
+- `cargo publish --dry-run --allow-dirty -p fret-runtime`
 
 Status:
 
-- `fret-diag-ws`: failed (awaiting earlier waves on crates.io)
-- `fret-platform-native`: failed (awaiting earlier waves on crates.io)
-- `fret-render-text`: failed (awaiting earlier waves on crates.io)
-- `fret-runner-winit`: failed (awaiting earlier waves on crates.io)
-- `fret-runtime`: failed (awaiting earlier waves on crates.io)
-
-Failure excerpts:
-
-## `fret-diag-ws`
-
-```text
-Updating crates.io index
-   Packaging fret-diag-ws v0.1.0 (./crates/fret-diag-ws)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-diag-protocol` found
-  location searched: crates.io index
-  required by package `fret-diag-ws v0.1.0 (./crates/fret-diag-ws)`
-```
-
-## `fret-platform-native`
-
-```text
-Updating crates.io index
-   Packaging fret-platform-native v0.1.0 (./crates/fret-platform-native)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-platform-native v0.1.0 (./crates/fret-platform-native)`
-```
-
-## `fret-render-text`
-
-```text
-Updating crates.io index
-   Packaging fret-render-text v0.1.0 (./crates/fret-render-text)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-core` found
-  location searched: crates.io index
-  required by package `fret-render-text v0.1.0 (./crates/fret-render-text)`
-```
-
-## `fret-runner-winit`
-
-```text
-Updating crates.io index
-   Packaging fret-runner-winit v0.1.0 (./crates/fret-runner-winit)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-a11y-accesskit` found
-  location searched: crates.io index
-  required by package `fret-runner-winit v0.1.0 (./crates/fret-runner-winit)`
-```
-
-## `fret-runtime`
-
-```text
-Updating crates.io index
-   Packaging fret-runtime v0.1.0 (./crates/fret-runtime)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-assets` found
-  location searched: crates.io index
-  required by package `fret-runtime v0.1.0 (./crates/fret-runtime)`
-```
-
+- `fret-diag-ws`: passed
+- `fret-fonts-cjk`: passed
+- `fret-fonts-emoji`: passed
+- `fret-platform-native`: passed
+- `fret-runner-winit`: passed
+- `fret-runtime`: passed
 Interpretation:
 
-- Wave 3 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
-- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
+- All wave 3 crates passed `cargo publish --dry-run` from the current workspace state.

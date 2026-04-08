@@ -9,6 +9,11 @@ use fret_render_text::{
 };
 use std::sync::Arc;
 
+const INTER_ROMAN_FULL: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../assets/font-archive/fret-fonts-bootstrap-full/Inter-roman.ttf"
+));
+
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
     text.atlas_runtime
         .pending_upload_bytes_for_key(key)
@@ -126,11 +131,66 @@ fn bundled_profile_face_blobs(
     fret_fonts::test_support::face_blobs(profile.faces.iter())
 }
 
-fn bundled_profile_role_face_blobs(
-    profile: &'static fret_fonts::BundledFontProfile,
-    role: fret_fonts::BundledFontRole,
-) -> impl Iterator<Item = Vec<u8>> {
-    fret_fonts::test_support::face_blobs(profile.faces_for_role(role))
+fn emoji_extension_face_blobs() -> impl Iterator<Item = Vec<u8>> {
+    fret_fonts_emoji::test_support::face_blobs(fret_fonts_emoji::default_profile().faces.iter())
+}
+
+fn cjk_extension_face_blobs() -> impl Iterator<Item = Vec<u8>> {
+    fret_fonts_cjk::test_support::face_blobs(fret_fonts_cjk::default_profile().faces.iter())
+}
+
+fn merge_unique_family_names(
+    target: &mut Vec<String>,
+    families: impl IntoIterator<Item = &'static str>,
+) {
+    let mut seen = target
+        .iter()
+        .map(|family| family.trim().to_ascii_lowercase())
+        .collect::<std::collections::HashSet<_>>();
+
+    for family in families {
+        let trimmed = family.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let key = trimmed.to_ascii_lowercase();
+        if seen.insert(key) {
+            target.push(trimmed.to_string());
+        }
+    }
+}
+
+fn bundled_only_web_font_config(
+    ui_sans: impl IntoIterator<Item = &'static str>,
+    include_cjk: bool,
+    include_emoji: bool,
+) -> fret_core::TextFontFamilyConfig {
+    let mut config = fret_core::TextFontFamilyConfig {
+        ui_sans: ui_sans.into_iter().map(str::to_string).collect(),
+        ..Default::default()
+    };
+
+    if include_cjk {
+        merge_unique_family_names(
+            &mut config.common_fallback,
+            fret_fonts_cjk::default_profile()
+                .common_fallback_families
+                .iter()
+                .copied(),
+        );
+    }
+
+    if include_emoji {
+        merge_unique_family_names(
+            &mut config.common_fallback,
+            fret_fonts_emoji::default_profile()
+                .common_fallback_families
+                .iter()
+                .copied(),
+        );
+    }
+
+    config
 }
 
 fn query_fontdb_family(
@@ -981,10 +1041,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::EmojiFallback,
-        ))
+        .chain(emoji_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1039,10 +1096,7 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
     let mut text = super::TextSystem::new(&ctx.device);
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::CjkFallback,
-        ))
+        .chain(cjk_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1106,10 +1160,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
     reset_bundled_only_font_runtime(&mut text);
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::CjkFallback,
-        ))
+        .chain(cjk_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1130,10 +1181,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
         "expected {family_cjk} to be present after loading cjk-lite fonts"
     );
 
-    let config = fret_core::TextFontFamilyConfig {
-        ui_sans: vec![family_inter.to_string()],
-        ..Default::default()
-    };
+    let config = bundled_only_web_font_config([family_inter], true, false);
     let _ = text.set_font_families(&config);
 
     let style = TextStyle {
@@ -1259,10 +1307,7 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
     text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::CjkFallback,
-        ))
+        .chain(cjk_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1283,10 +1328,7 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
         "expected {family_cjk} to be present after loading cjk-lite fonts"
     );
 
-    let config = fret_core::TextFontFamilyConfig {
-        ui_sans: vec![family_inter.to_string()],
-        ..Default::default()
-    };
+    let config = bundled_only_web_font_config([family_inter], true, false);
     let _ = text.set_font_families(&config);
 
     let constraints = TextConstraints {
@@ -1345,10 +1387,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
     text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::EmojiFallback,
-        ))
+        .chain(emoji_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -1369,10 +1408,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         "expected {family_emoji} to be present after loading emoji fonts"
     );
 
-    let config = fret_core::TextFontFamilyConfig {
-        ui_sans: vec![family_inter.to_string()],
-        ..Default::default()
-    };
+    let config = bundled_only_web_font_config([family_inter], false, true);
     let _ = text.set_font_families(&config);
 
     let style = TextStyle {
@@ -1930,10 +1966,7 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
     // Lock a "behavior visible" contract for OpenType feature overrides (e.g. `liga`/`calt`).
     // This avoids relying solely on cache-key correctness: we also want to know the shaping
     // pipeline actually applies feature overrides for fonts that support them.
-    const INTER_ROMAN: &[u8] = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../fret-fonts/assets/Inter-roman.ttf"
-    ));
+    const INTER_ROMAN: &[u8] = INTER_ROMAN_FULL;
 
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
@@ -2057,10 +2090,7 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
     // Lock that OpenType feature overrides can affect layout decisions under `TextWrap::Word`,
     // not just the shaped glyph IDs. This protects against regressions where features are
     // applied for shaping but ignored by line breaking / wrapping codepaths.
-    const INTER_ROMAN: &[u8] = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../fret-fonts/assets/Inter-roman.ttf"
-    ));
+    const INTER_ROMAN: &[u8] = INTER_ROMAN_FULL;
 
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
@@ -2303,10 +2333,7 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
 fn parley_feature_override_calt_0_disables_inter_arrow_ligature() {
     // Sanity check (upstream dependency behavior): Inter contains a `calt` ligature mapping
     // for "->" -> "arrowright". Ensure `calt=0` disables it.
-    const INTER_ROMAN: &[u8] = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../fret-fonts/assets/Inter-roman.ttf"
-    ));
+    const INTER_ROMAN: &[u8] = INTER_ROMAN_FULL;
 
     let text = "->";
 
@@ -2371,10 +2398,7 @@ fn parley_feature_override_calt_0_disables_inter_arrow_ligature() {
 
 #[test]
 fn parley_tree_builder_honors_font_features_for_inter_arrow_ligature() {
-    const INTER_ROMAN: &[u8] = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../fret-fonts/assets/Inter-roman.ttf"
-    ));
+    const INTER_ROMAN: &[u8] = INTER_ROMAN_FULL;
 
     let text = "->";
     use std::borrow::Cow;
@@ -2465,10 +2489,7 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::test_support::face_blobs(
-        fret_fonts::default_profile().faces_for_role(fret_fonts::BundledFontRole::CjkFallback),
-    )
-    .collect();
+    let fonts: Vec<Vec<u8>> = cjk_extension_face_blobs().collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected cjk-lite fonts to load");
 
@@ -2993,14 +3014,8 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::CjkFallback,
-        ))
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::EmojiFallback,
-        ))
+        .chain(cjk_extension_face_blobs())
+        .chain(emoji_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -3019,10 +3034,7 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     }
 
     // Use Inter for the UI generic, and let common fallbacks handle mixed-script coverage.
-    let config = fret_core::TextFontFamilyConfig {
-        ui_sans: vec![family_inter.to_string()],
-        ..Default::default()
-    };
+    let config = bundled_only_web_font_config([family_inter], true, true);
     let _ = text.set_font_families(&config);
 
     let constraints = TextConstraints {
@@ -3108,14 +3120,8 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
     text.font_runtime.font_stack_key = 0;
 
     let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::CjkFallback,
-        ))
-        .chain(bundled_profile_role_face_blobs(
-            fret_fonts::default_profile(),
-            fret_fonts::BundledFontRole::EmojiFallback,
-        ))
+        .chain(cjk_extension_face_blobs())
+        .chain(emoji_extension_face_blobs())
         .collect();
     let added = text.add_fonts(fonts);
     assert!(added > 0, "expected bundled fonts to load");
@@ -3133,10 +3139,7 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
         );
     }
 
-    let config = fret_core::TextFontFamilyConfig {
-        ui_sans: vec![family_inter.to_string()],
-        ..Default::default()
-    };
+    let config = bundled_only_web_font_config([family_inter], true, true);
     let _ = text.set_font_families(&config);
 
     let constraints = TextConstraints {
