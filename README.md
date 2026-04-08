@@ -9,34 +9,54 @@
 >
 > This project is an experiment in AI-driven software development. The vast majority of the code, tests, and documentation were written by AI (Codex). Humans direct architecture, priorities, and design decisions, but have not reviewed most of the code line-by-line. Treat this accordingly — there will be bugs, rough edges, and things that don't work. Use at your own risk.
 
-Fret is the precision fretboard for your Rust UI: a GPU-first framework that turns application logic into crisp, fluid interactions.
+Fret is a GPU-first Rust UI framework for desktop apps, editor-grade tools, and WebGPU/wasm demos.
 
-Modular by design, ecosystem included — start fast for apps today, and scale to editor-grade workflows over time.
+Modular by design, ecosystem included: start with small app surfaces today and grow into docking,
+overlays, multi-window workflows, and embedded viewports without swapping foundations.
 
-This repo focuses on the **core framework** (`crates/`) and incubates components + tooling in-tree (`ecosystem/`, `apps/`).
-Long-term, ecosystem crates may move to a separate components repository.
+This repo focuses on the **core framework** (`crates/`) and incubates components + tooling
+in-tree (`ecosystem/`, `apps/`). Long-term, some ecosystem crates may move to a separate
+components repository.
 
-## What you can build with Fret
+## What Fret looks like
 
-- **General-purpose desktop apps**: productivity tools, dashboards, developer utilities.
-- **Editor-grade tools**: docking layouts, tear-off windows, panels, command palette, rich interaction.
-- **Viewport-heavy apps**: embed one or more GPU viewports (render targets) inside a UI.
-- **Web demos/apps** via wasm (WebGPU path).
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="screenshots/todo_demo.png" alt="Fret todo demo screenshot" />
+      <p><strong>Todo demo</strong><br />Starter-scale app surface built on the default shadcn-based path.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="screenshots/table.png" alt="Fret UI Gallery table screenshot" />
+      <p><strong>UI Gallery / Table</strong><br />Component catalog and conformance surface for the shadcn-aligned layer.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="screenshots/dialog_open.png" alt="Fret UI Gallery dialog screenshot" />
+      <p><strong>UI Gallery / Dialog</strong><br />Open-state overlay behavior with focus management and shadcn-aligned interaction semantics.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="screenshots/text_mixed_script_fallback.png" alt="Fret UI Gallery mixed-script text screenshot" />
+      <p><strong>Text / Mixed-script fallback</strong><br />Deterministic bundled-font rendering across Latin, CJK, and emoji on the native path.</p>
+    </td>
+  </tr>
+</table>
 
-Representative ecosystem surface (`fret-ui-gallery`, Table page):
+## What Fret focuses on
 
-![Fret UI Gallery Table screenshot](screenshots/table.png)
-
-## Why Fret (high-signal features)
-
-- **Editor-grade interaction substrate (not just widgets)**: docking + tear-off windows, multi-root overlays, focus/capture arbitration, and viewport embedding as first-class contracts. *(docking, multi-window, overlays, focus/capture, viewports)*
-- **Web-native ergonomics, Rust-native architecture**: declarative element tree authoring with the view runtime, `LocalState`, typed actions, and explicit advanced escape hatches. *(declarative elements, local state, actions)*
-- **Ecosystem included (batteries, but modular)**: shadcn/ui v4-aligned component taxonomy + recipes, icons, docking UI, markdown, tables, node graph, charts, and more. *(fret-ui-kit, fret-ui-shadcn, icons, docking)*
-- **Mechanism vs policy separation**: the core runtime stays mechanism-only; interaction policies and defaults live in ecosystem crates so apps can stay opinionated without locking the engine. *(runtime contracts, policy in components)*
-- **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(ordered SceneOp, compositing groups (isolated opacity), ClipPath, bounded/budgeted offscreen passes, deterministic degradation)*
-- **Debuggable by design**: semantics-first inspection + shareable diagnostics artifacts so UI bugs are explainable, not “works on my machine”. *(semantics tree, inspector, shareable bundles)*
-- **Performance is observable**: built-in perf attribution surfaces worst-frame regressions and layout/measure hot spots without ad-hoc instrumentation. *(worst-frame triage, attribution, layout/measure)*
-- **Modular backends & integration-friendly**: portable core + pluggable platform/runner/render backends to fit both engine-hosted and editor-hosted GPU contexts; desktop-first with an explicit WebGPU/wasm path. *(pluggable backends, engine-hosted GPU, WebGPU/wasm)*
+- **Small apps to editor shells**: start with ordinary desktop/productivity UIs, then scale into
+  docking, panels, tear-off windows, overlays, and richer interaction models.
+- **GPU-first UI + embedded viewports**: treat GPU-backed surfaces as first-class UI citizens
+  rather than special-case integrations.
+- **Declarative app authoring in Rust**: the default path centers on `View`, `AppUi`,
+  `LocalState`, typed actions, and shadcn-based components.
+- **Mechanism/policy separation**: kernel/runtime crates stay policy-light; higher-level
+  interaction defaults live in ecosystem crates.
+- **Diagnostics and perf tooling**: `fretboard diag` and the in-tree evidence workflow are part of
+  the normal development loop, not an afterthought.
+- **Modular consumption**: portable core, pluggable platform/runner/render crates, and an explicit
+  WebGPU/wasm path.
 
 ## Project Direction
 
@@ -61,24 +81,16 @@ Want the shortest onboarding path? Read [docs/first-hour.md](./docs/first-hour.m
 
 Need help choosing the right example entry point (templates vs cookbook vs gallery vs labs)? See [docs/examples/README.md](./docs/examples/README.md).
 
-For new app authors, keep the default authoring model small and explicit:
-
-- `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state, including starter keyed lists,
-- `cx.actions().locals(...)` for most LocalState-first typed UI actions,
-- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path for view-owned keyed-row interactions; reserve `payload_locals::<A>(...)` for the rarer case where one payload action coordinates multiple locals,
-- `cx.actions().transient(...)` when an action must trigger an `App`-only effect in `render()`,
-- `cx.actions().models(...)` only when you intentionally coordinate shared `Model<T>` graphs,
-- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
-- Everything else (`on_action_notify`, lower-level `cx.actions().payload::<A>()`, redraw-oriented raw `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it; the former single-model raw aliases are deleted.
-- The remaining raw `on_action_notify` examples are cookbook/reference-only host-side integrations (toasts, router availability sync, background scheduling, RAF effects).
-
 Use the onboarding ladder on purpose:
 
 - **Default**: `hello` → `simple-todo` → `todo`
 - **Comparison**: `simple_todo_v2_target` only when you want to compare local-state/list ergonomics against the default path
 - **Advanced**: gallery, interop, docking, renderer, and maintainer demos
 
-See [docs/README.md](./docs/README.md#state-management-authoring-ergonomics) for the full authoring map.
+Keep the default app-authoring model intentionally small: start with `LocalState` for view-owned
+state, typed actions through `cx.actions()`, and the ladder above before dropping into richer
+selector/query or maintainer-only surfaces. See
+[docs/README.md](./docs/README.md#state-management-authoring-ergonomics) for the full surface map.
 
 ### 1) Run a lightweight cookbook example (recommended)
 
@@ -103,25 +115,14 @@ cargo run -p fretboard -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
-### 3) Explore runnable demos (workspace)
+### 3) Explore demos and gallery surfaces
 
 Discover runnable targets:
 
 ```bash
 cargo run -p fretboard -- list cookbook-examples
-cargo run -p fretboard -- list web-demos
-```
-
-Run a cookbook example (this runner auto-enables known feature-gated Lab examples):
-
-```bash
-cargo run -p fretboard -- dev native --example query_basics
-```
-
-Maintainer native demo bins (from `apps/fret-demo`, not the onboarding path):
-
-```bash
 cargo run -p fretboard -- list native-demos --all
+cargo run -p fretboard -- list web-demos
 ```
 
 Run the UI gallery (optional; heavier than cookbook):
@@ -142,10 +143,12 @@ Fret includes an optional diagnostics + scripted UI automation toolchain (`fretb
 If you are new to it, start with the cookbook walkthrough:
 
 - [apps/fret-cookbook/README.md#diagnostics-optional](./apps/fret-cookbook/README.md#diagnostics-optional)
+- [docs/ui-diagnostics-and-scripted-tests.md](./docs/ui-diagnostics-and-scripted-tests.md)
 
-## Todo App API Taste
+## Todo View Example
 
-This is the interface style we optimize for: typed state, typed actions, and shadcn-based components.
+This is the interface shape the default path aims for: typed actions, `LocalState`, and
+shadcn-based components.
 
 ```rust
 use fret::app::prelude::*;
@@ -157,7 +160,7 @@ mod act {
 
 struct TodoView;
 
-fn install_app(app: &mut App) {
+fn install_todo_app(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -178,7 +181,7 @@ impl View for TodoView {
 
         let input = shadcn::Input::new(&draft)
             .a11y_label("New task")
-            .placeholder("Add a task…")
+            .placeholder("Add a task...")
             .submit_action(act::Add);
 
         let add_btn = shadcn::Button::new("Add").disabled(!enabled).action(act::Add);
@@ -195,7 +198,7 @@ fn main() -> fret::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
         .config_files(false)
-        .setup(install_app)
+        .setup(install_todo_app)
         .view::<TodoView>()?
         .run()
 }
@@ -204,12 +207,9 @@ fn main() -> fret::Result<()> {
 Reference implementation:
 
 - Cookbook: [`apps/fret-cookbook/examples/simple_todo.rs`](./apps/fret-cookbook/examples/simple_todo.rs)
-- Template guide: [`docs/first-hour.md`](./docs/first-hour.md)
+- App-grade example: [`apps/fret-examples/src/todo_demo.rs`](./apps/fret-examples/src/todo_demo.rs)
+- Guide: [`docs/examples/todo-app-golden-path.md`](./docs/examples/todo-app-golden-path.md)
 - Example taxonomy: [`docs/examples/README.md`](./docs/examples/README.md)
-
-Default-path demo surface (`todo_demo`):
-
-![Fret Todo Demo screenshot](screenshots/todo_demo.png)
 
 ## Ecosystem Coverage (Incubating)
 
@@ -237,13 +237,16 @@ Fret keeps stable boundaries in `crates/` and incubates faster-moving pieces in 
   - [`fret-icons-radix`](./ecosystem/fret-icons-radix)
   - [`fret-ui-assets`](./ecosystem/fret-ui-assets)
 
-## Public Crate Surfaces (v0.1)
+## Stable Entry Points
 
-- `fret`: framework facade and stable entry point.
+We intentionally keep the first-contact crate story small. Other crates in `ecosystem/` matter,
+but these are the names we treat as stable entry points for most users:
+
+- `fret`: desktop-first app facade and recommended starting point.
+- `fret-ui-shadcn`: default component surface (shadcn/ui-aligned recipes).
 - `fret-ui-kit`: component authoring glue and policy helpers.
-- `fret-ui-shadcn`: shadcn-inspired component recipes.
-- `fret-node`: node-graph foundation for editor workflows.
-- `fret-router`: typed message routing for app architecture.
+- `fret-framework`: advanced/manual assembly facade.
+- `fretboard`: templates, diagnostics, and native/web demo runner.
 
 ## References
 

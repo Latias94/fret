@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Text mixed-script fallback screenshot (start page)",
+    "tags": ["ui-gallery", "text", "fonts", "fallback", "cjk", "emoji", "screenshot"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "text_mixed_script_fallback"
+    },
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-text-mixed-script-fallback-root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-text-mixed-script-fallback-mixed" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 24 },
+    { "type": "capture_screenshot", "label": "ui-gallery-text-mixed-script-fallback-start-page" },
+    { "type": "capture_bundle", "label": "ui-gallery-text-mixed-script-fallback-start-page" }
+  ]
+}
