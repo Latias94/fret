@@ -75,8 +75,7 @@ pub(super) fn finish_pending_insert_node_drag<H: UiHost>(
     interaction: &mut crate::ui::canvas::state::InteractionState,
     cx: &mut EventCx<'_, H>,
 ) {
-    interaction.searcher = None;
-    interaction.pending_insert_node_drag = None;
+    super::super::searcher_activation_state::clear_searcher_overlay(interaction);
     cx.release_pointer_capture();
     invalidate_insert_node_drag_preview(cx);
 }

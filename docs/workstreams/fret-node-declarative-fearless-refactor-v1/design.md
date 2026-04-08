@@ -404,6 +404,10 @@ Status note (2026-04-03):
   private `ui/canvas/widget/context_menu/ui/overlay.rs` seam, so hover-edge preserve-vs-clear
   policy stops being bypassed by direct `interaction.context_menu = Some(...)` writes in
   `edge_insert/context_menu.rs`.
+- Searcher teardown for insert-node drag handoff now also routes through the private
+  `ui/canvas/widget/searcher_activation_state/clear.rs` seam, so `pending_insert_node_drag`
+  cleanup and searcher dismissal stop being bypassed by direct `interaction.searcher = None`
+  writes in `insert_node_drag/session.rs`.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

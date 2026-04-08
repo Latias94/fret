@@ -11,7 +11,9 @@ use super::{
     NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config,
     make_test_graph_two_nodes,
 };
-use crate::ui::canvas::state::PendingInsertNodeDrag;
+use crate::ui::canvas::state::{
+    ContextMenuTarget, PendingInsertNodeDrag, SearcherRowsMode, SearcherState,
+};
 
 #[test]
 fn insert_node_drag_does_not_start_until_threshold() {
@@ -127,4 +129,75 @@ fn insert_node_drag_starts_after_threshold() {
     assert!(drag.dragging);
     assert!(drag.payload::<InsertNodeDragPayload>().is_some());
     assert!(host.redraw.contains(&window));
+}
+
+#[test]
+fn insert_node_drag_start_clears_searcher_overlay_state() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _b) = make_test_graph_two_nodes();
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    let window = AppWindowId::default();
+    let pointer_id = PointerId(0);
+    cx.window = Some(window);
+    cx.pointer_id = Some(pointer_id);
+
+    let candidate = InsertNodeCandidate {
+        kind: crate::core::NodeKindKey::new("test.node"),
+        label: Arc::<str>::from("Test"),
+        enabled: true,
+        template: None,
+        payload: Value::Null,
+    };
+    canvas.interaction.searcher = Some(SearcherState {
+        origin: Point::new(Px(12.0), Px(24.0)),
+        invoked_at: Point::new(Px(12.0), Px(24.0)),
+        target: ContextMenuTarget::BackgroundInsertNodePicker {
+            at: crate::core::CanvasPoint { x: 0.0, y: 0.0 },
+        },
+        rows_mode: SearcherRowsMode::Catalog,
+        query: String::new(),
+        candidates: vec![candidate.clone()],
+        recent_kinds: Vec::new(),
+        rows: Vec::new(),
+        hovered_row: None,
+        active_row: 0,
+        scroll: 0,
+    });
+    canvas.interaction.pending_insert_node_drag = Some(PendingInsertNodeDrag {
+        candidate,
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+        pointer_id,
+        start_tick: fret_runtime::TickId(0),
+    });
+
+    let started = insert_node_drag::handle_pending_insert_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(6.0), Px(0.0)),
+        MouseButtons {
+            left: true,
+            ..Default::default()
+        },
+        1.0,
+    );
+
+    assert!(started);
+    assert!(canvas.interaction.searcher.is_none());
+    assert!(canvas.interaction.pending_insert_node_drag.is_none());
 }
