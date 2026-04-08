@@ -665,6 +665,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/overlays/blackboard_paint.rs` seam, so header/title paint ordering, action-button
     highlight resolution, and missing-symbol label fallback live behind one focused authority
     instead of staying embedded in the overlay widget file.
+  - Progress: context-menu open-state replacement now also routes edge-insert submenu reopening
+    through the private `ui/canvas/widget/context_menu/ui/overlay.rs` seam, so hover-edge
+    preserve-vs-clear policy stops being bypassed by direct `interaction.context_menu = Some(...)`
+    writes in `edge_insert/context_menu.rs`.
   - Progress: the `menu_session.rs` wrapper now delegates `build_searcher_rows(...)` directly to
     `canvas/widget/menu_session/searcher.rs`, so flat-vs-catalog row policy has one authority seam
     instead of staying duplicated in both the wrapper and the searcher submodule.

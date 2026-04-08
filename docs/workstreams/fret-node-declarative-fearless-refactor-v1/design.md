@@ -400,6 +400,10 @@ Status note (2026-04-03):
   `ui/overlays/blackboard_paint.rs` seam, so header/title paint ordering, action-button highlight
   resolution, and missing-symbol label fallback live behind one focused authority instead of
   staying embedded in the overlay widget file.
+- Context-menu open-state replacement now also routes edge-insert submenu reopening through the
+  private `ui/canvas/widget/context_menu/ui/overlay.rs` seam, so hover-edge preserve-vs-clear
+  policy stops being bypassed by direct `interaction.context_menu = Some(...)` writes in
+  `edge_insert/context_menu.rs`.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

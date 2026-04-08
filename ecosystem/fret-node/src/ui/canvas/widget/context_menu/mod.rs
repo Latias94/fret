@@ -16,6 +16,16 @@ mod target_hit;
 mod target_selection;
 mod ui;
 
+pub(super) use ui::ContextMenuHoverEdgePolicy;
+
+pub(super) fn apply_context_menu_open_state(
+    interaction: &mut crate::ui::canvas::state::InteractionState,
+    menu: ContextMenuState,
+    hover_edge_policy: ContextMenuHoverEdgePolicy,
+) {
+    ui::apply_context_menu_open_state(interaction, menu, hover_edge_policy);
+}
+
 pub(super) fn clear_context_menu(
     interaction: &mut crate::ui::canvas::state::InteractionState,
 ) -> bool {
