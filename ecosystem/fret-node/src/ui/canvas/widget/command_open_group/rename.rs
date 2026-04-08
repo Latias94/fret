@@ -1,5 +1,6 @@
 use super::super::*;
 use super::finish_command_paint;
+use crate::ui::overlays::open_group_rename_session;
 
 pub(super) fn cmd_group_rename<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -21,10 +22,13 @@ pub(super) fn cmd_group_rename<H: UiHost, M: NodeGraphCanvasMiddleware>(
     };
     let invoked_at = canvas.command_invoked_at();
     let _ = overlays.update(cx.app, |state, _cx| {
-        state.group_rename = Some(GroupRenameOverlay {
-            group,
-            invoked_at_window: invoked_at,
-        });
+        open_group_rename_session(
+            state,
+            GroupRenameOverlay {
+                group,
+                invoked_at_window: invoked_at,
+            },
+        );
     });
     finish_command_paint(cx)
 }

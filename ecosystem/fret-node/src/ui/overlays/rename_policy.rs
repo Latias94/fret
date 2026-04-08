@@ -51,6 +51,22 @@ pub(super) fn clear_rename_sessions(state: &mut NodeGraphOverlayState) {
     state.symbol_rename = None;
 }
 
+pub(in crate::ui) fn open_group_rename_session(
+    state: &mut NodeGraphOverlayState,
+    rename: GroupRenameOverlay,
+) {
+    state.symbol_rename = None;
+    state.group_rename = Some(rename);
+}
+
+pub(in crate::ui) fn open_symbol_rename_session(
+    state: &mut NodeGraphOverlayState,
+    rename: SymbolRenameOverlay,
+) {
+    state.group_rename = None;
+    state.symbol_rename = Some(rename);
+}
+
 pub(super) fn rename_overlay_rect_at(
     style: &NodeGraphStyle,
     desired_origin: Point,
@@ -134,7 +150,8 @@ fn rename_overlay_size_at(style: &NodeGraphStyle) -> Size {
 mod tests {
     use super::{
         RenameOverlaySession, RenameOverlaySessionKey, active_rename_session,
-        build_rename_commit_transaction, clear_rename_sessions, rename_session_seed_text,
+        build_rename_commit_transaction, clear_rename_sessions, open_group_rename_session,
+        open_symbol_rename_session, rename_session_seed_text,
     };
     use crate::core::{GraphId, Group, GroupId, Symbol, SymbolId};
     use crate::ui::{GroupRenameOverlay, NodeGraphOverlayState, SymbolRenameOverlay};
@@ -176,6 +193,60 @@ mod tests {
         clear_rename_sessions(&mut state);
         assert!(state.group_rename.is_none());
         assert!(state.symbol_rename.is_none());
+    }
+
+    #[test]
+    fn open_group_session_clears_stale_symbol_session() {
+        let group = GroupId::new();
+        let symbol = SymbolId::new();
+        let mut state = NodeGraphOverlayState {
+            group_rename: None,
+            symbol_rename: Some(SymbolRenameOverlay {
+                symbol,
+                invoked_at_window: Point::new(Px(30.0), Px(40.0)),
+            }),
+        };
+
+        open_group_rename_session(
+            &mut state,
+            GroupRenameOverlay {
+                group,
+                invoked_at_window: Point::new(Px(10.0), Px(20.0)),
+            },
+        );
+
+        assert!(matches!(
+            state.group_rename,
+            Some(GroupRenameOverlay { group: active, .. }) if active == group
+        ));
+        assert!(state.symbol_rename.is_none());
+    }
+
+    #[test]
+    fn open_symbol_session_clears_stale_group_session() {
+        let group = GroupId::new();
+        let symbol = SymbolId::new();
+        let mut state = NodeGraphOverlayState {
+            group_rename: Some(GroupRenameOverlay {
+                group,
+                invoked_at_window: Point::new(Px(10.0), Px(20.0)),
+            }),
+            symbol_rename: None,
+        };
+
+        open_symbol_rename_session(
+            &mut state,
+            SymbolRenameOverlay {
+                symbol,
+                invoked_at_window: Point::new(Px(30.0), Px(40.0)),
+            },
+        );
+
+        assert!(state.group_rename.is_none());
+        assert!(matches!(
+            state.symbol_rename,
+            Some(SymbolRenameOverlay { symbol: active, .. }) if active == symbol
+        ));
     }
 
     #[test]

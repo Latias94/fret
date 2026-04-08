@@ -689,6 +689,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one visibility gate
     plus hide-or-layout child authority while `toolbars.rs` keeps only target-specific anchor
     resolution.
+  - Progress: rename overlay open-state now also routes through the private
+    `ui/overlays/rename_policy.rs` seam, so `command_open_group/rename.rs` and blackboard
+    symbol-rename opening no longer leave a stale sibling rename session behind in
+    `NodeGraphOverlayState`.
   - Progress: active menu/searcher occupancy now also routes through the private
     `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background
     double-click zoom preflight, and detail/hover cursor gates, so those paths stop

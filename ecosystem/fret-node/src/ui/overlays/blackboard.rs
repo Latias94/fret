@@ -26,6 +26,7 @@ use super::blackboard_policy::{
     BlackboardAction, BlackboardActionPlan, blackboard_action_a11y_label,
     blackboard_actions_in_order, plan_blackboard_action,
 };
+use super::open_symbol_rename_session;
 use super::panel_item_state::{
     clear_panel_item_state, promote_pointer_target_to_keyboard_item, select_panel_keyboard_item,
 };
@@ -155,11 +156,13 @@ impl NodeGraphBlackboardOverlay {
                 invoked_at_window,
             }) => {
                 let _ = self.overlays.update(host, |s, _cx| {
-                    s.group_rename = None;
-                    s.symbol_rename = Some(SymbolRenameOverlay {
-                        symbol,
-                        invoked_at_window,
-                    });
+                    open_symbol_rename_session(
+                        s,
+                        SymbolRenameOverlay {
+                            symbol,
+                            invoked_at_window,
+                        },
+                    );
                 });
             }
         }

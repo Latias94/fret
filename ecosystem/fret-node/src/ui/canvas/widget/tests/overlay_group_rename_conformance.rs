@@ -5,21 +5,25 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px,
     Rect, Size,
 };
+use fret_runtime::CommandId;
 use fret_runtime::ModelsHost as _;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Group, GroupId};
+use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Group, GroupId, SymbolId};
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::{
     GroupRenameOverlay, NodeGraphController, NodeGraphEditor, NodeGraphOverlayHost,
-    NodeGraphOverlayState, NodeGraphStyle,
+    NodeGraphOverlayState, NodeGraphStyle, SymbolRenameOverlay,
 };
 
-use super::{NullServices, TestUiHostImpl, insert_graph_view};
+use super::{
+    NullServices, TestUiHostImpl, command_cx, insert_graph_view, insert_graph_view_editor_config,
+};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -87,6 +91,65 @@ fn overlay_rect_for(style: &NodeGraphStyle, desired_origin: Point, bounds: Rect)
     let x = desired_origin.x.0.clamp(min_x, max_x);
     let y = desired_origin.y.0.clamp(min_y, max_y);
     Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+}
+
+#[test]
+fn group_rename_command_replaces_stale_symbol_rename_session() {
+    let mut host = TestUiHostImpl::default();
+    let group_id = GroupId::new();
+    let mut graph_value = Graph::new(GraphId::new());
+    graph_value.groups.insert(
+        group_id,
+        Group {
+            title: "Group A".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 60.0,
+                },
+            },
+            color: None,
+        },
+    );
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let _ = view.update(&mut host, |state, _cx| {
+        state.selected_groups = vec![group_id];
+    });
+
+    let symbol_id = SymbolId::new();
+    let overlays = host.models.insert(NodeGraphOverlayState {
+        group_rename: None,
+        symbol_rename: Some(SymbolRenameOverlay {
+            symbol: symbol_id,
+            invoked_at_window: Point::new(Px(11.0), Px(22.0)),
+        }),
+    });
+
+    let mut canvas =
+        new_canvas!(host, graph, view, editor_config).with_overlay_state(overlays.clone());
+    canvas.sync_view_state(&mut host);
+    canvas.interaction.last_pos = Some(Point::new(Px(320.0), Px(240.0)));
+
+    let mut services = NullServices::default();
+    let mut tree: UiTree<TestUiHostImpl> = UiTree::new();
+    let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+    assert!(canvas.command(
+        &mut cx,
+        &CommandId::from(crate::ui::commands::CMD_NODE_GRAPH_GROUP_RENAME),
+    ));
+
+    let (group_rename, symbol_rename) = overlays
+        .read_ref(&host, |state| {
+            (state.group_rename.clone(), state.symbol_rename.clone())
+        })
+        .unwrap_or_default();
+    assert!(matches!(
+        group_rename,
+        Some(GroupRenameOverlay { group, .. }) if group == group_id
+    ));
+    assert!(symbol_rename.is_none());
 }
 
 #[test]

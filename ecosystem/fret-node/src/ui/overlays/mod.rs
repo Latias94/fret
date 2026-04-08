@@ -34,6 +34,7 @@ pub use group_rename::{
 };
 pub use minimap::NodeGraphMiniMapOverlay;
 pub use minimap_navigation_policy::{NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding};
+pub(in crate::ui) use rename_policy::{open_group_rename_session, open_symbol_rename_session};
 pub use toolbar_policy::{
     NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize,
     NodeGraphToolbarVisibility,
