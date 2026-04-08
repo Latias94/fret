@@ -1,6 +1,6 @@
 # Fret v0.1.0 Wave 8 dry-run status
 
-Date verified: 2026-04-08.
+Date verified: 2026-04-09.
 
 Commands run:
 
@@ -9,40 +9,8 @@ Commands run:
 
 Status:
 
-- `fret-framework`: failed (awaiting earlier waves on crates.io)
-- `fret-ui-kit`: failed (awaiting earlier waves on crates.io)
-
-Failure excerpts:
-
-## `fret-framework`
-
-```text
-Updating crates.io index
-   Packaging fret-framework v0.1.0 (./crates/fret-framework)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-app` found
-  location searched: crates.io index
-  required by package `fret-framework v0.1.0 (./crates/fret-framework)`
-```
-
-## `fret-ui-kit`
-
-```text
-Updating crates.io index
-   Packaging fret-ui-kit v0.1.0 (./ecosystem/fret-ui-kit)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-authoring` found
-  location searched: crates.io index
-  required by package `fret-ui-kit v0.1.0 (./ecosystem/fret-ui-kit)`
-```
-
+- `fret-framework`: passed
+- `fret-ui-kit`: passed
 Interpretation:
 
-- Wave 8 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
-- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
+- All wave 8 crates passed `cargo publish --dry-run` from the current workspace state.

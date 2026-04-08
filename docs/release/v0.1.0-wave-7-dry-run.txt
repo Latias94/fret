@@ -10,55 +10,9 @@ Commands run:
 
 Status:
 
-- `fret-authoring`: failed (awaiting earlier waves on crates.io)
-- `fret-launch`: failed (awaiting earlier waves on crates.io)
-- `fret-router`: failed (awaiting earlier waves on crates.io)
-
-Failure excerpts:
-
-## `fret-authoring`
-
-```text
-Updating crates.io index
-   Packaging fret-authoring v0.1.0 (./ecosystem/fret-authoring)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-query` found
-  location searched: crates.io index
-  required by package `fret-authoring v0.1.0 (./ecosystem/fret-authoring)`
-```
-
-## `fret-launch`
-
-```text
-Updating crates.io index
-   Packaging fret-launch v0.1.0 (./crates/fret-launch)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-app` found
-  location searched: crates.io index
-  required by package `fret-launch v0.1.0 (./crates/fret-launch)`
-```
-
-## `fret-router`
-
-```text
-Updating crates.io index
-   Packaging fret-router v0.1.0 (./ecosystem/fret-router)
-    Updating crates.io index
-error: failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `fret-query` found
-  location searched: crates.io index
-  required by package `fret-router v0.1.0 (./ecosystem/fret-router)`
-```
-
+- `fret-authoring`: passed
+- `fret-launch`: passed
+- `fret-router`: passed
 Interpretation:
 
-- Wave 7 is packaging-clean, but local `cargo publish --dry-run` still depends on earlier waves being visible on crates.io.
-- Registry-gap failures are expected when later waves depend on crates that have not been published yet.
+- All wave 7 crates passed `cargo publish --dry-run` from the current workspace state.
