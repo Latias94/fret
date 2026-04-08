@@ -412,6 +412,10 @@ Status note (2026-04-03):
   `ui/canvas/widget/searcher_ui/overlay.rs` seam, so failed row activation no longer keeps a
   second direct `interaction.searcher.take()/= Some(...)` lifecycle path in
   `searcher_row_activation.rs`.
+- Active menu/searcher occupancy now also routes through the private
+  `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background double-click
+  zoom preflight, and detail/hover cursor gates, so those paths stop re-embedding direct
+  `context_menu/searcher` slot checks inline.
 - The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
   policy placement, not on reopening visible-subset portal hosting or the now-aligned
   toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.

@@ -11,8 +11,7 @@ pub(in super::super) fn allow_edge_hover_anchor(interaction: &InteractionState) 
         && interaction.group_drag.is_none()
         && interaction.group_resize.is_none()
         && interaction.marquee.is_none()
-        && interaction.context_menu.is_none()
-        && interaction.searcher.is_none()
+        && !super::super::menu_session::has_active_menu_session(interaction)
 }
 
 #[cfg(test)]

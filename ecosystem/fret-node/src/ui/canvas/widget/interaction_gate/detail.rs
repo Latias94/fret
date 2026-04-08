@@ -10,8 +10,7 @@ pub(in super::super) fn allow_close_button_cursor(
 pub(in super::super) fn allow_canvas_detail_cursor(interaction: &InteractionState) -> bool {
     allows_pointer_detail_gestures(interaction)
         && interaction.marquee.is_none()
-        && interaction.context_menu.is_none()
-        && interaction.searcher.is_none()
+        && !super::super::menu_session::has_active_menu_session(interaction)
 }
 
 fn allows_pointer_detail_gestures(interaction: &InteractionState) -> bool {

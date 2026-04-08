@@ -13,7 +13,7 @@ pub(super) fn handle_active_edge_insert_left_up<H: UiHost, M: NodeGraphCanvasMid
         return false;
     };
 
-    if canvas.interaction.searcher.is_none() && canvas.interaction.context_menu.is_none() {
+    if !super::super::super::menu_session::has_active_menu_session(&canvas.interaction) {
         canvas.open_edge_insert_node_picker(cx.app, cx.window, drag.edge, position);
     }
     canvas.interaction.hover_edge = None;

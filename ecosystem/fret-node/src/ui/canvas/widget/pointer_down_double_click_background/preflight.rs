@@ -7,6 +7,5 @@ pub(super) fn can_zoom_background_double_click<M: NodeGraphCanvasMiddleware>(
 ) -> bool {
     click_count == 2
         && snapshot.interaction.zoom_on_double_click
-        && canvas.interaction.searcher.is_none()
-        && canvas.interaction.context_menu.is_none()
+        && !super::super::menu_session::has_active_menu_session(&canvas.interaction)
 }
