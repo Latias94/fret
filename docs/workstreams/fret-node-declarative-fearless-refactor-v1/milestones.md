@@ -1527,6 +1527,10 @@ real editors.
   `ui/canvas/widget/context_menu/activate/command.rs`, because pointer/key selection activation
   already owns the menu `take(...)` lifecycle before dispatch and searcher-row command activation
   now reuses the same route without a redundant second dismiss path.
+- Retained toolbar anchor layout lifecycle now also routes through the private
+  `ui/overlays/toolbars_layout.rs` seam, so node and edge toolbars share one visibility gate plus
+  hide-or-layout child authority while `toolbars.rs` keeps only target-specific anchor
+  resolution.
 - Active menu/searcher occupancy now also routes through the private
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background
   double-click zoom preflight, and detail/hover cursor gates, so those paths stop

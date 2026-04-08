@@ -14,11 +14,10 @@ use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphInternalsStore;
 use crate::ui::screen_space_placement::{rect_adjacent_to_rect, rect_anchored_at_point};
 
-use super::layout_hidden_child_and_release_focus;
 use super::toolbar_policy::{
     NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize,
     NodeGraphToolbarVisibility, resolve_edge_toolbar_target, resolve_node_toolbar_target,
-    toolbar_align_axis, toolbar_position_to_adjacent, toolbar_visible,
+    toolbar_align_axis, toolbar_position_to_adjacent,
 };
 
 /// A window-space toolbar anchored to a node's derived window rect (XyFlow `NodeToolbar`-style).
@@ -120,14 +119,6 @@ impl NodeGraphNodeToolbar {
             offset,
         )
     }
-
-    fn resolve_child_size<H: UiHost>(
-        &mut self,
-        cx: &mut LayoutCx<'_, H>,
-        child: fret_core::NodeId,
-    ) -> Size {
-        layout::resolve_toolbar_child_size(cx, self.size, child)
-    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
@@ -143,27 +134,24 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
         let child = cx.children.get(0).copied();
         self.last_child_bounds = None;
 
-        let Some((node_id, is_selected)) =
-            resolve_node_toolbar_target(&self.view_state, self.node, &*cx.app)
-        else {
-            layout::hide_toolbar_child(cx, child, self.canvas_node);
-            return cx.bounds.size;
-        };
-
-        if !toolbar_visible(self.visibility, is_selected) {
-            layout::hide_toolbar_child(cx, child, self.canvas_node);
-            return cx.bounds.size;
-        }
-
-        let snapshot = self.internals.snapshot();
-        let Some(node_rect) = snapshot.nodes_window.get(&node_id).copied() else {
-            layout::hide_toolbar_child(cx, child, self.canvas_node);
-            return cx.bounds.size;
-        };
-
+        let resolved_anchor = resolve_node_toolbar_target(&self.view_state, self.node, &*cx.app)
+            .and_then(|(node_id, is_selected)| {
+                self.internals
+                    .snapshot()
+                    .nodes_window
+                    .get(&node_id)
+                    .copied()
+                    .map(|node_rect| (node_rect, is_selected))
+            });
         let bounds = cx.bounds;
-        self.last_child_bounds =
-            layout::layout_toolbar_child(cx, child, self.canvas_node, self.size, |size| {
+        self.last_child_bounds = layout::layout_toolbar_anchor_child(
+            cx,
+            child,
+            self.canvas_node,
+            self.size,
+            self.visibility,
+            resolved_anchor,
+            |node_rect, size| {
                 Self::positioned_rect_for(
                     bounds,
                     node_rect,
@@ -173,7 +161,8 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
                     self.gap_px,
                     self.offset,
                 )
-            });
+            },
+        );
 
         cx.bounds.size
     }
@@ -273,14 +262,6 @@ impl NodeGraphEdgeToolbar {
             offset,
         )
     }
-
-    fn resolve_child_size<H: UiHost>(
-        &mut self,
-        cx: &mut LayoutCx<'_, H>,
-        child: fret_core::NodeId,
-    ) -> Size {
-        layout::resolve_toolbar_child_size(cx, self.size, child)
-    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
@@ -296,27 +277,24 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
         let child = cx.children.get(0).copied();
         self.last_child_bounds = None;
 
-        let Some((edge_id, is_selected)) =
-            resolve_edge_toolbar_target(&self.view_state, self.edge, &*cx.app)
-        else {
-            layout::hide_toolbar_child(cx, child, self.canvas_node);
-            return cx.bounds.size;
-        };
-
-        if !toolbar_visible(self.visibility, is_selected) {
-            layout::hide_toolbar_child(cx, child, self.canvas_node);
-            return cx.bounds.size;
-        }
-
-        let snapshot = self.internals.snapshot();
-        let Some(center) = snapshot.edge_centers_window.get(&edge_id).copied() else {
-            layout::hide_toolbar_child(cx, child, self.canvas_node);
-            return cx.bounds.size;
-        };
-
+        let resolved_anchor = resolve_edge_toolbar_target(&self.view_state, self.edge, &*cx.app)
+            .and_then(|(edge_id, is_selected)| {
+                self.internals
+                    .snapshot()
+                    .edge_centers_window
+                    .get(&edge_id)
+                    .copied()
+                    .map(|center| (center, is_selected))
+            });
         let bounds = cx.bounds;
-        self.last_child_bounds =
-            layout::layout_toolbar_child(cx, child, self.canvas_node, self.size, |size| {
+        self.last_child_bounds = layout::layout_toolbar_anchor_child(
+            cx,
+            child,
+            self.canvas_node,
+            self.size,
+            self.visibility,
+            resolved_anchor,
+            |center, size| {
                 Self::positioned_rect_for(
                     bounds,
                     center,
@@ -325,7 +303,8 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
                     self.align_y,
                     self.offset,
                 )
-            });
+            },
+        );
 
         cx.bounds.size
     }

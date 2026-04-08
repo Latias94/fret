@@ -2,8 +2,9 @@ use fret_core::{Rect, Size};
 use fret_ui::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_ui::{UiHost, retained_bridge::*};
 
-use super::NodeGraphToolbarSize;
-use super::layout_hidden_child_and_release_focus;
+use super::super::layout_hidden_child_and_release_focus;
+use super::super::toolbar_policy::toolbar_visible;
+use super::{NodeGraphToolbarSize, NodeGraphToolbarVisibility};
 
 pub(super) fn resolve_toolbar_child_size<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,
@@ -53,6 +54,30 @@ pub(super) fn layout_toolbar_child<H: UiHost>(
     let rect = positioned_rect_for(size);
     cx.layout_in(child, rect);
     Some(rect)
+}
+
+pub(super) fn layout_toolbar_anchor_child<H: UiHost, Anchor>(
+    cx: &mut LayoutCx<'_, H>,
+    child: Option<fret_core::NodeId>,
+    canvas_node: fret_core::NodeId,
+    size: NodeGraphToolbarSize,
+    visibility: NodeGraphToolbarVisibility,
+    resolved_anchor: Option<(Anchor, bool)>,
+    positioned_rect_for: impl FnOnce(Anchor, Size) -> Rect,
+) -> Option<Rect> {
+    let Some((anchor, is_selected)) = resolved_anchor else {
+        hide_toolbar_child(cx, child, canvas_node);
+        return None;
+    };
+
+    if !toolbar_visible(visibility, is_selected) {
+        hide_toolbar_child(cx, child, canvas_node);
+        return None;
+    }
+
+    layout_toolbar_child(cx, child, canvas_node, size, |size| {
+        positioned_rect_for(anchor, size)
+    })
 }
 
 pub(super) fn paint_toolbar_children<H: UiHost>(cx: &mut PaintCx<'_, H>) {
