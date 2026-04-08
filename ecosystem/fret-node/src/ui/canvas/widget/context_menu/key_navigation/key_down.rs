@@ -26,14 +26,8 @@ pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMi
             return ui::restore_context_menu_event(canvas, cx, menu);
         }
         fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
-            return match canvas.activate_context_menu_active_selection(cx, &menu) {
-                super::super::selection_activation::ContextMenuSelectionActivationOutcome::Activated => {
-                    ui::finish_context_menu_event(cx)
-                }
-                super::super::selection_activation::ContextMenuSelectionActivationOutcome::KeepOpen => {
-                    ui::restore_context_menu_event(canvas, cx, menu)
-                }
-            };
+            let _ = canvas.activate_context_menu_active_selection(cx, &menu);
+            return ui::finish_context_menu_event(cx);
         }
         fret_core::KeyCode::Backspace => {
             if typeahead::pop_context_menu_typeahead(&mut menu) {

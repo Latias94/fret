@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "grid-track-and-slot-placement-parity-v1",
+  "title": "Grid Track And Slot Placement Parity v1",
+  "status": "completed",
+  "updated": "2026-04-07",
+  "scope_kind": "execution",
+  "problem": "Keep Fret's declarative grid contract strong enough to express source-aligned shadcn slot placement when upstream components depend on explicit non-uniform tracks, independent row/column gaps, and grid item/container alignment semantics such as `justify-items`, `self-start`, and `justify-self-end`.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/grid-track-and-slot-placement-parity-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/grid-track-and-slot-placement-parity-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/grid-track-and-slot-placement-parity-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/grid-track-and-slot-placement-parity-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "This lane is closed: the explicit track contract, grid-item Fill-to-stretch semantics, grid item/container alignment + row/column gap surfaces, CardHeader/CardAction parity, and the Alert / AlertDialog sibling rewrites are all landed.",
+    "commands": [
+      "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui -E 'test(grid_places_children_in_columns) or test(grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes) or test(grid_justify_items_start_keeps_auto_sized_children_intrinsic) or test(grid_item_self_alignment_overrides_container_item_alignment)'",
+      "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-shadcn --lib -E 'test(card_header_without_action_uses_source_aligned_grid_layout) or test(card_header_with_action_uses_explicit_grid_slot_placement)'",
+      "CARGO_TARGET_DIR=/tmp/fret-codex-grid-gap-target-5 cargo nextest run -p fret-ui --lib -E 'test(grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes) or test(grid_justify_items_start_keeps_auto_sized_children_intrinsic) or test(grid_item_self_alignment_overrides_container_item_alignment) or test(grid_axis_specific_gaps_keep_row_and_column_spacing_independent)'",
+      "CARGO_TARGET_DIR=/tmp/fret-codex-alert-dialog-grid-target-5 cargo nextest run -p fret-ui-shadcn --lib -E 'test(alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm) or test(alert_dialog_media_panel_stays_compact_within_default_width) or test(alert_dialog_small_media_panel_keeps_text_and_footer_within_compact_height)'",
+      "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-gallery --lib -E 'test(gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane) or test(gallery_card_demo_keeps_docs_form_controls_visible_and_aligned)'",
+      "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-gallery --test card_docs_surface -E 'test(card_page_documents_source_axes_and_children_api_decision) or test(card_docs_path_snippets_stay_copyable_and_docs_aligned) or test(card_docs_diag_script_covers_docs_path_and_fret_followups)'"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fret-ui-grid-track-and-alignment-contract",
+      "command": "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui -E 'test(grid_places_children_in_columns) or test(grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes) or test(grid_justify_items_start_keeps_auto_sized_children_intrinsic) or test(grid_item_self_alignment_overrides_container_item_alignment)'"
+    },
+    {
+      "name": "fret-ui-shadcn-card-grid-slot-placement",
+      "command": "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-shadcn --lib -E 'test(card_header_without_action_uses_source_aligned_grid_layout) or test(card_header_with_action_uses_explicit_grid_slot_placement)'"
+    },
+    {
+      "name": "fret-ui-grid-axis-gap-contract",
+      "command": "CARGO_TARGET_DIR=/tmp/fret-codex-grid-gap-target-5 cargo nextest run -p fret-ui --lib -E 'test(grid_explicit_tracks_place_spanning_child_in_source_aligned_lanes) or test(grid_justify_items_start_keeps_auto_sized_children_intrinsic) or test(grid_item_self_alignment_overrides_container_item_alignment) or test(grid_axis_specific_gaps_keep_row_and_column_spacing_independent)'"
+    },
+    {
+      "name": "fret-ui-shadcn-alert-dialog-header-grid",
+      "command": "CARGO_TARGET_DIR=/tmp/fret-codex-alert-dialog-grid-target-5 cargo nextest run -p fret-ui-shadcn --lib -E 'test(alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm) or test(alert_dialog_media_panel_stays_compact_within_default_width) or test(alert_dialog_small_media_panel_keeps_text_and_footer_within_compact_height)'"
+    },
+    {
+      "name": "ui-gallery-card-docs-geometry",
+      "command": "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-gallery --lib -E 'test(gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane) or test(gallery_card_demo_keeps_docs_form_controls_visible_and_aligned)'"
+    },
+    {
+      "name": "ui-gallery-card-docs-surface",
+      "command": "CARGO_TARGET_DIR=/tmp/fret-codex-grid-align-target cargo nextest run -p fret-ui-gallery --test card_docs_surface -E 'test(card_page_documents_source_axes_and_children_api_decision) or test(card_docs_path_snippets_stay_copyable_and_docs_aligned) or test(card_docs_diag_script_covers_docs_path_and_fret_followups)'"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/grid-track-and-slot-placement-parity-v1/DESIGN.md",
+    "docs/workstreams/grid-track-and-slot-placement-parity-v1/TODO.md",
+    "docs/workstreams/grid-track-and-slot-placement-parity-v1/EVIDENCE_AND_GATES.md",
+    "crates/fret-ui/src/element.rs",
+    "crates/fret-ui/src/declarative/taffy_layout.rs",
+    "crates/fret-ui/src/layout/engine/flow.rs",
+    "crates/fret-ui/src/declarative/host_widget/measure.rs",
+    "crates/fret-ui/src/declarative/tests/layout/basics.rs",
+    "ecosystem/fret-ui-shadcn/src/card.rs",
+    "ecosystem/fret-ui-shadcn/src/alert_dialog.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/card/demo.rs",
+    "apps/fret-ui-gallery/src/driver/render_flow.rs",
+    "apps/fret-ui-gallery/tests/card_docs_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0035-layout-constraints-and-optional-taffy-integration.md",
+    "docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "close",
+    "notes": "Close this lane. If later parity work still drifts on `w-fit` / `self-start` / `items-stretch`, start a narrower declarative item-alignment follow-on rather than reopening the grid runtime contract."
+  },
+  "follow_on_of": "shadcn-source-alignment-v1"
+}

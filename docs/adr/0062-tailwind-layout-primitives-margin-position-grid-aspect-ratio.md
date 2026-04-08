@@ -45,7 +45,15 @@ Extend the declarative `LayoutStyle` vocabulary to cover:
 - **Inset**: per-edge offsets for positioned elements.
   - Negative inset offsets are allowed (signed px), matching Tailwind usage (e.g. `-top-*`).
 - **Aspect ratio**: preferred ratio (width / height).
-- **Grid**: `display: grid` and a minimal repeat-based template vocabulary compatible with Taffy.
+- **Grid**: `display: grid` and a minimal Taffy-compatible template vocabulary that covers:
+  - repeat/even-track shorthand for common equal-column layouts,
+  - explicit non-uniform track lists for common shadcn patterns such as `1fr auto`,
+  - separate row/column gaps for source-aligned `gap-x-*` / `gap-y-*` translation,
+  - grid item row/column start + span placement,
+  - grid container `justify-items` plus grid item `align-self` / `justify-self` for slot-local
+    alignment,
+  - in-flow `Fill` sizing that resolves against the grid area via stretch semantics rather than
+    expanding against the whole grid container.
 
 These are framework-level **layout semantics**, not component-specific behavior.
 
@@ -58,6 +66,12 @@ layout hacks:
 - `mt-*` spacing without extra wrappers
 - `aspect-*` for media cards and preview surfaces
 - basic grid for simple panels and settings layouts
+- source-aligned slot lanes that depend on explicit tracks (for example `1fr auto` headers with an
+  action slot that spans rows)
+- source-aligned slot families that need independent row/column gap control instead of collapsing
+  everything to one shared gap
+- source-aligned slot families that also depend on grid self-alignment rather than a flex
+  approximation (`justify-items-start`, `self-start`, `justify-self-end`)
 
 ### 3) Z-index is not a global primitive (by default)
 

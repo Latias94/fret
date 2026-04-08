@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
+    AnyElement, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -550,7 +550,11 @@ impl ButtonGroup {
         // a width is explicitly requested.
         if outer_layout.flex.align_self.is_none() && matches!(outer_layout.size.width, Length::Auto)
         {
-            outer_layout.flex.align_self = Some(CrossAlign::Start);
+            decl_style::apply_layout_refinement(
+                &theme,
+                LayoutRefinement::default().self_start(),
+                &mut outer_layout,
+            );
         }
         let props = FlexProps {
             layout: outer_layout,

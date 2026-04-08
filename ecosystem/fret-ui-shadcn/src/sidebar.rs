@@ -20,6 +20,7 @@ use fret_ui::element::{
 use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
@@ -1991,11 +1992,18 @@ impl SidebarHeader {
             decl_style::container_props(
                 theme,
                 ChromeRefinement::default().p(Space::N2),
-                LayoutRefinement::default(),
+                LayoutRefinement::default().w_full(),
             )
         };
         let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            children,
+        )
     }
 }
 
@@ -2017,11 +2025,18 @@ impl SidebarFooter {
             decl_style::container_props(
                 theme,
                 ChromeRefinement::default().p(Space::N2),
-                LayoutRefinement::default(),
+                LayoutRefinement::default().w_full(),
             )
         };
         let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            children,
+        )
     }
 }
 
@@ -2064,6 +2079,7 @@ impl SidebarContent {
             let col = FlexProps {
                 direction: fret_core::Axis::Vertical,
                 gap: gap.into(),
+                align: CrossAlign::Stretch,
                 layout: fret_ui::element::LayoutStyle {
                     size: fret_ui::element::SizeStyle {
                         width: fret_ui::element::Length::Fill,
@@ -2398,22 +2414,24 @@ impl SidebarGroupAction {
         let hit_size = Px(size.0 + hit_expand.0 * 2.0);
         let hit_top = Px(top.0 - hit_expand.0);
         let hit_right = Px(right.0 - hit_expand.0);
+        let dir = crate::direction::use_direction(cx, None);
+        let action_layout = match dir {
+            crate::direction::LayoutDirection::Ltr => LayoutRefinement::default()
+                .absolute()
+                .top_px(hit_top)
+                .right_px(hit_right)
+                .w_px(hit_size)
+                .h_px(hit_size),
+            crate::direction::LayoutDirection::Rtl => LayoutRefinement::default()
+                .absolute()
+                .top_px(hit_top)
+                .left_px(hit_right)
+                .w_px(hit_size)
+                .h_px(hit_size),
+        }
+        .merge(self.layout);
 
-        let action_layout = LayoutRefinement::default()
-            .absolute()
-            .top_px(hit_top)
-            .right_px(hit_right)
-            .w_px(hit_size)
-            .h_px(hit_size)
-            .merge(self.layout);
-
-        let label = self.label;
-        let as_child = self.as_child;
-        let on_click = self.on_click;
-        let on_activate = self.on_activate;
-        let test_id = self.test_id;
-        let user_chrome = self.chrome;
-        let content_layout = if !as_child && hit_expand.0 > 0.0 {
+        let content_layout = if !self.as_child && hit_expand.0 > 0.0 {
             LayoutRefinement::default()
                 .absolute()
                 .top_px(hit_expand)
@@ -2423,6 +2441,12 @@ impl SidebarGroupAction {
         } else {
             LayoutRefinement::default().w_full().h_full()
         };
+
+        let label = self.label;
+        let on_click = self.on_click;
+        let on_activate = self.on_activate;
+        let test_id = self.test_id;
+        let user_chrome = self.chrome;
         let disabled = self.disabled
             || on_click
                 .as_ref()
@@ -2549,6 +2573,7 @@ impl SidebarMenu {
         let props = FlexProps {
             direction: fret_core::Axis::Vertical,
             gap: Px(4.0).into(),
+            align: CrossAlign::Stretch,
             layout: fret_ui::element::LayoutStyle {
                 size: fret_ui::element::SizeStyle {
                     width: fret_ui::element::Length::Fill,
@@ -2898,6 +2923,7 @@ impl SidebarMenuAction {
 
         let top = sidebar_menu_affordance_top(self.size);
         let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.is_mobile);
+        let dir = crate::direction::use_direction(cx, None);
         let (right, size, hit_expand) = {
             let theme = Theme::global(&*cx.app);
             let right = theme
@@ -2918,22 +2944,23 @@ impl SidebarMenuAction {
         let hit_size = Px(size.0 + hit_expand.0 * 2.0);
         let hit_top = Px(top.0 - hit_expand.0);
         let hit_right = Px(right.0 - hit_expand.0);
+        let action_layout = match dir {
+            crate::direction::LayoutDirection::Ltr => LayoutRefinement::default()
+                .absolute()
+                .top_px(hit_top)
+                .right_px(hit_right)
+                .w_px(hit_size)
+                .h_px(hit_size),
+            crate::direction::LayoutDirection::Rtl => LayoutRefinement::default()
+                .absolute()
+                .top_px(hit_top)
+                .left_px(hit_right)
+                .w_px(hit_size)
+                .h_px(hit_size),
+        }
+        .merge(self.layout);
 
-        let action_layout = LayoutRefinement::default()
-            .absolute()
-            .top_px(hit_top)
-            .right_px(hit_right)
-            .w_px(hit_size)
-            .h_px(hit_size)
-            .merge(self.layout);
-
-        let label = self.label;
-        let as_child = self.as_child;
-        let on_click = self.on_click;
-        let on_activate = self.on_activate;
-        let test_id = self.test_id;
-        let user_chrome = self.chrome;
-        let content_layout = if !as_child && hit_expand.0 > 0.0 {
+        let content_layout = if !self.as_child && hit_expand.0 > 0.0 {
             LayoutRefinement::default()
                 .absolute()
                 .top_px(hit_expand)
@@ -2943,6 +2970,12 @@ impl SidebarMenuAction {
         } else {
             LayoutRefinement::default().w_full().h_full()
         };
+
+        let label = self.label;
+        let on_click = self.on_click;
+        let on_activate = self.on_activate;
+        let test_id = self.test_id;
+        let user_chrome = self.chrome;
         let disabled = self.disabled
             || on_click
                 .as_ref()
@@ -3080,6 +3113,17 @@ impl SidebarMenuBadge {
                 .metric_by_key("component.sidebar.menu_badge.line_height")
                 .unwrap_or(Px(16.0));
             let fg = sidebar_fg(theme);
+            let dir = crate::direction::use_direction(cx, None);
+            let base_layout = LayoutRefinement::default()
+                .absolute()
+                .top_px(top)
+                .h_px(h)
+                .min_h(h)
+                .min_w(min_w);
+            let layout = match dir {
+                crate::direction::LayoutDirection::Ltr => base_layout.right_px(right),
+                crate::direction::LayoutDirection::Rtl => base_layout.left_px(right),
+            };
 
             let props = decl_style::container_props(
                 theme,
@@ -3087,14 +3131,7 @@ impl SidebarMenuBadge {
                     .px(Space::N1)
                     .rounded(Radius::Md)
                     .merge(self.chrome),
-                LayoutRefinement::default()
-                    .absolute()
-                    .top_px(top)
-                    .right_px(right)
-                    .h_px(h)
-                    .min_h(h)
-                    .min_w(min_w)
-                    .merge(self.layout),
+                layout.merge(self.layout),
             );
             (props, text_px, text_lh, fg)
         };
@@ -3300,8 +3337,12 @@ impl SidebarMenuSub {
             )
         };
         props.border.top = Px(0.0);
-        props.border.right = Px(0.0);
         props.border.bottom = Px(0.0);
+        if crate::direction::use_direction(cx, None) == crate::direction::LayoutDirection::Rtl {
+            props.border.left = Px(0.0);
+        } else {
+            props.border.right = Px(0.0);
+        }
 
         let children = self.children;
         shadcn_layout::container_vstack(
@@ -3574,6 +3615,7 @@ impl SidebarMenuSubButton {
         let active = self.active;
         let size = self.size;
         let chrome_test_id = chrome_test_id.clone();
+        let dir = crate::direction::use_direction(cx, None);
         let navigate_handler: Option<OnActivate> = if let Some(on_navigate) = on_navigate {
             Some(on_navigate)
         } else {
@@ -3642,30 +3684,53 @@ impl SidebarMenuSubButton {
                 };
 
                 let slot_children = slot_children;
+                let fg_ref = ColorRef::Color(fg);
                 vec![cx.flex(row, move |cx| {
-                    if as_child && let Some(children) = slot_children {
-                        return children;
-                    }
-                    let mut out = Vec::new();
-                    if let Some(icon) = icon {
-                        out.push(decl_icon::icon(cx, icon));
-                    }
+                    current_color::scope_children(cx, fg_ref.clone(), |cx| {
+                        let mut slot_children = slot_children;
+                        if as_child && let Some(children) = slot_children.take() {
+                            return children;
+                        }
 
-                    let mut text = ui::text(label.clone())
-                        .w_full()
-                        .min_w_0()
-                        .flex_1()
-                        .basis_0()
-                        .text_size_px(style.size)
-                        .font_weight(style.weight)
-                        .text_color(ColorRef::Color(fg))
-                        .truncate();
-                    if let Some(line_height) = style.line_height {
-                        text = text.line_height_px(line_height);
-                    }
+                        let mut custom_children = slot_children.take().unwrap_or_default();
+                        if !custom_children.is_empty() {
+                            if dir == crate::direction::LayoutDirection::Rtl {
+                                custom_children.reverse();
+                            }
+                            return custom_children;
+                        }
 
-                    out.push(text.into_element(cx));
-                    out
+                        let mut text = ui::text(label.clone())
+                            .w_full()
+                            .min_w_0()
+                            .flex_1()
+                            .basis_0()
+                            .text_size_px(style.size)
+                            .font_weight(style.weight)
+                            .text_color(ColorRef::Color(fg))
+                            .truncate();
+                        if let Some(line_height) = style.line_height {
+                            text = text.line_height_px(line_height);
+                        }
+                        let text = text.into_element(cx);
+
+                        let mut out = Vec::new();
+                        match dir {
+                            crate::direction::LayoutDirection::Ltr => {
+                                if let Some(icon) = icon {
+                                    out.push(decl_icon::icon(cx, icon));
+                                }
+                                out.push(text);
+                            }
+                            crate::direction::LayoutDirection::Rtl => {
+                                out.push(text);
+                                if let Some(icon) = icon {
+                                    out.push(decl_icon::icon(cx, icon));
+                                }
+                            }
+                        }
+                        out
+                    })
                 })]
             });
             if let Some(test_id) = chrome_test_id {
@@ -3938,6 +4003,7 @@ impl SidebarMenuButton {
         let size = self.size;
         let expanded_progress = expanded_progress.clamp(0.0, 1.0);
         let chrome_test_id = chrome_test_id.clone();
+        let dir = crate::direction::use_direction(cx, None);
 
         let navigate_handler: Option<OnActivate> = if let Some(on_navigate) = on_navigate {
             Some(on_navigate)
@@ -4040,45 +4106,70 @@ impl SidebarMenuButton {
                 let icon = icon.clone();
                 let label_opacity = expanded_progress;
                 let slot_children = slot_children;
+                let fg_ref = ColorRef::Color(fg);
                 vec![cx.flex(row, move |cx| {
-                    if as_child && let Some(children) = slot_children {
-                        return children;
-                    }
-                    let mut out = Vec::new();
-                    if let Some(icon) = icon.clone() {
-                        out.push(decl_icon::icon(cx, icon));
-                    }
-                    // Keep the label subtree present (even when fully collapsed) so the flex
-                    // layout remains stable across the width transition. This matches the DOM
-                    // recipe shape (overflow-hidden + truncate) and avoids a "pop" when the label
-                    // branch appears/disappears at `opacity == 0`.
-                    let text = ui::text(label.clone())
-                        .w_full()
-                        .min_w_0()
-                        .flex_1()
-                        .basis_0()
-                        .text_size_px(label_style.size)
-                        .font_weight(label_style.weight)
-                        .text_color(ColorRef::Color(fg))
-                        .truncate();
+                    current_color::scope_children(cx, fg_ref.clone(), |cx| {
+                        let mut slot_children = slot_children;
+                        if as_child && let Some(children) = slot_children.take() {
+                            return children;
+                        }
 
-                    let mut text = text;
-                    if let Some(line_height) = label_style.line_height {
-                        text = text.line_height_px(line_height);
-                    }
-                    if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                        text = text.letter_spacing_em(letter_spacing_em);
-                    }
+                        let mut custom_children = slot_children.take().unwrap_or_default();
+                        if !custom_children.is_empty() {
+                            if dir == crate::direction::LayoutDirection::Rtl {
+                                custom_children.reverse();
+                            }
+                            return custom_children;
+                        }
 
-                    let text = text.into_element(cx);
-                    out.push(cx.opacity_props(
-                        OpacityProps {
-                            layout: fret_ui::element::LayoutStyle::default(),
-                            opacity: label_opacity.clamp(0.0, 1.0),
-                        },
-                        move |_cx| vec![text],
-                    ));
-                    out
+                        // Keep the label subtree present (even when fully collapsed) so the flex
+                        // layout remains stable across the width transition. This matches the DOM
+                        // recipe shape (overflow-hidden + truncate) and avoids a "pop" when the label
+                        // branch appears/disappears at `opacity == 0`.
+                        let text = ui::text(label.clone())
+                            .w_full()
+                            .min_w_0()
+                            .flex_1()
+                            .basis_0()
+                            .text_size_px(label_style.size)
+                            .font_weight(label_style.weight)
+                            .text_color(ColorRef::Color(fg))
+                            .truncate();
+
+                        let mut text = text;
+                        if let Some(line_height) = label_style.line_height {
+                            text = text.line_height_px(line_height);
+                        }
+                        if let Some(letter_spacing_em) = label_style.letter_spacing_em {
+                            text = text.letter_spacing_em(letter_spacing_em);
+                        }
+
+                        let text = text.into_element(cx);
+                        let text = cx.opacity_props(
+                            OpacityProps {
+                                layout: fret_ui::element::LayoutStyle::default(),
+                                opacity: label_opacity.clamp(0.0, 1.0),
+                            },
+                            move |_cx| vec![text],
+                        );
+
+                        let mut out = Vec::new();
+                        match dir {
+                            crate::direction::LayoutDirection::Ltr => {
+                                if let Some(icon) = icon.clone() {
+                                    out.push(decl_icon::icon(cx, icon));
+                                }
+                                out.push(text);
+                            }
+                            crate::direction::LayoutDirection::Rtl => {
+                                out.push(text);
+                                if let Some(icon) = icon.clone() {
+                                    out.push(decl_icon::icon(cx, icon));
+                                }
+                            }
+                        }
+                        out
+                    })
                 })]
             });
             if let Some(test_id) = chrome_test_id {
@@ -4266,6 +4357,38 @@ mod tests {
         match &el.kind {
             ElementKind::SvgIcon(props) => Some(props),
             _ => el.children.iter().find_map(find_first_svg_icon),
+        }
+    }
+
+    fn find_first_pressable(el: &AnyElement) -> Option<&PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_pressable),
+        }
+    }
+
+    fn find_first_container(el: &AnyElement) -> Option<&ContainerProps> {
+        match &el.kind {
+            ElementKind::Container(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_container),
+        }
+    }
+
+    fn find_first_flex_children(el: &AnyElement) -> Option<&Vec<AnyElement>> {
+        match &el.kind {
+            ElementKind::Flex(_) => Some(&el.children),
+            _ => el.children.iter().find_map(find_first_flex_children),
+        }
+    }
+
+    fn sidebar_row_child_signature(el: &AnyElement) -> &'static str {
+        match &el.kind {
+            ElementKind::SvgIcon(_) => "icon",
+            ElementKind::Opacity(_) => "label",
+            ElementKind::Text(props) if props.text.as_ref() == "Custom Leading" => "leading",
+            ElementKind::Text(props) if props.text.as_ref() == "Custom Center" => "center",
+            ElementKind::Text(props) if props.text.as_ref() == "Custom Trailing" => "trailing",
+            _ => "other",
         }
     }
 
@@ -5444,6 +5567,59 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_content_and_menu_stretch_button_width_to_sidebar_lane() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-content-menu-width",
+            |cx| {
+                let button = SidebarMenuButton::new("Inbox")
+                    .test_id("sidebar-content-menu-button")
+                    .into_element(cx);
+                let item = SidebarMenuItem::new(button).into_element(cx);
+                let menu = SidebarMenu::new([item]).into_element(cx);
+                let content = SidebarContent::new([menu]).into_element(cx);
+                let sidebar = Sidebar::new([content]).into_element(cx);
+                vec![sidebar]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-content-menu-button"))
+            .expect("expected sidebar content menu button semantics node");
+
+        assert!(
+            button.bounds.size.width.0 >= 200.0,
+            "expected SidebarContent -> SidebarMenu -> SidebarMenuButton to preserve a full-width menu lane, got {:?}",
+            button.bounds
+        );
+    }
+
+    #[test]
     fn sidebar_header_and_footer_apply_gap_two_spacing_contract() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -5520,6 +5696,12 @@ mod tests {
         let footer_gap = footer_b.bounds.origin.y.0
             - (footer_a.bounds.origin.y.0 + footer_a.bounds.size.height.0);
 
+        assert!(
+            header_a.bounds.size.width.0 >= 200.0 && footer_a.bounds.size.width.0 >= 200.0,
+            "expected sidebar header/footer buttons to stretch to the sidebar lane: header={:?} footer={:?}",
+            header_a.bounds,
+            footer_a.bounds
+        );
         assert!(
             (header_gap - expected_gap).abs() <= 1.0,
             "expected sidebar header child gap ~{expected_gap}, got {header_gap}"
@@ -7492,6 +7674,155 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_menu_button_children_render_without_as_child_and_replace_default_label() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-button-children",
+            |cx| {
+                SidebarMenuButton::new("Projects")
+                    .children([
+                        ui::text("Custom Leading").into_element(cx),
+                        ui::text("Custom Center").into_element(cx),
+                        ui::text("Custom Trailing").into_element(cx),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        assert!(
+            find_text(&element, "Custom Leading").is_some()
+                && find_text(&element, "Custom Center").is_some()
+                && find_text(&element, "Custom Trailing").is_some(),
+            "expected SidebarMenuButton::children(...) to render custom children on the default pressable lane"
+        );
+        assert!(
+            find_text(&element, "Projects").is_none(),
+            "expected SidebarMenuButton::children(...) to suppress the default label subtree instead of rendering both"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_button_default_content_reorders_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let ltr =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-button-ltr", |cx| {
+                SidebarMenuButton::new("Projects")
+                    .icon(IconId::new_static("lucide.folder-kanban"))
+                    .into_element(cx)
+            });
+        let rtl =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-button-rtl", |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| {
+                        SidebarMenuButton::new("Projects")
+                            .icon(IconId::new_static("lucide.folder-kanban"))
+                            .into_element(cx)
+                    })
+            });
+
+        let ltr_children =
+            find_first_flex_children(&ltr).expect("expected LTR sidebar menu button row");
+        let rtl_children =
+            find_first_flex_children(&rtl).expect("expected RTL sidebar menu button row");
+
+        assert_eq!(
+            ltr_children
+                .iter()
+                .map(sidebar_row_child_signature)
+                .collect::<Vec<_>>(),
+            vec!["icon", "label"],
+            "expected LTR sidebar menu button default lane to keep icon before label"
+        );
+        assert_eq!(
+            rtl_children
+                .iter()
+                .map(sidebar_row_child_signature)
+                .collect::<Vec<_>>(),
+            vec!["label", "icon"],
+            "expected RTL sidebar menu button default lane to mirror the DOM visual order"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_sub_button_default_content_reorders_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let ltr = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-sub-button-ltr",
+            |cx| {
+                SidebarMenuSubButton::new("Projects")
+                    .icon(IconId::new_static("lucide.folder-kanban"))
+                    .into_element(cx)
+            },
+        );
+        let rtl = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-sub-button-rtl",
+            |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| {
+                        SidebarMenuSubButton::new("Projects")
+                            .icon(IconId::new_static("lucide.folder-kanban"))
+                            .into_element(cx)
+                    })
+            },
+        );
+
+        let ltr_children =
+            find_first_flex_children(&ltr).expect("expected LTR sidebar menu sub button row");
+        let rtl_children =
+            find_first_flex_children(&rtl).expect("expected RTL sidebar menu sub button row");
+
+        assert_eq!(
+            ltr_children
+                .iter()
+                .map(sidebar_row_child_signature)
+                .collect::<Vec<_>>(),
+            vec!["icon", "other"],
+            "expected LTR sidebar menu sub button default lane to keep icon before label"
+        );
+        assert_eq!(
+            rtl_children
+                .iter()
+                .map(sidebar_row_child_signature)
+                .collect::<Vec<_>>(),
+            vec!["other", "icon"],
+            "expected RTL sidebar menu sub button default lane to mirror the DOM visual order"
+        );
+    }
+
+    #[test]
     fn sidebar_trigger_flips_icon_in_rtl() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -7534,6 +7865,159 @@ mod tests {
         );
         assert_eq!(icon.layout.size.width, Length::Px(icon_px));
         assert_eq!(icon.layout.size.height, Length::Px(icon_px));
+    }
+
+    #[test]
+    fn sidebar_group_action_anchors_to_inline_end_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let ltr =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-group-action-ltr", |cx| {
+                SidebarGroupAction::new([ui::text("+").into_element(cx)]).into_element(cx)
+            });
+        let rtl =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-group-action-rtl", |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| {
+                        SidebarGroupAction::new([ui::text("+").into_element(cx)]).into_element(cx)
+                    })
+            });
+
+        let ltr_pressable =
+            find_first_pressable(&ltr).expect("expected LTR group action pressable");
+        let rtl_pressable =
+            find_first_pressable(&rtl).expect("expected RTL group action pressable");
+        assert_eq!(
+            ltr_pressable.layout.inset.left,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_ne!(
+            ltr_pressable.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_ne!(
+            rtl_pressable.layout.inset.left,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_eq!(
+            rtl_pressable.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let ltr_action =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-action-ltr", |cx| {
+                SidebarMenuAction::new([ui::text("...").into_element(cx)]).into_element(cx)
+            });
+        let rtl_action =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-action-rtl", |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| {
+                        SidebarMenuAction::new([ui::text("...").into_element(cx)]).into_element(cx)
+                    })
+            });
+        let ltr_badge =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-badge-ltr", |cx| {
+                SidebarMenuBadge::new("12").into_element(cx)
+            });
+        let rtl_badge =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-badge-rtl", |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| SidebarMenuBadge::new("12").into_element(cx))
+            });
+
+        let ltr_action_pressable =
+            find_first_pressable(&ltr_action).expect("expected LTR menu action pressable");
+        let rtl_action_pressable =
+            find_first_pressable(&rtl_action).expect("expected RTL menu action pressable");
+        let ltr_badge_container =
+            find_first_container(&ltr_badge).expect("expected LTR menu badge container");
+        let rtl_badge_container =
+            find_first_container(&rtl_badge).expect("expected RTL menu badge container");
+
+        assert_eq!(
+            ltr_action_pressable.layout.inset.left,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_ne!(
+            ltr_action_pressable.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_ne!(
+            rtl_action_pressable.layout.inset.left,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_eq!(
+            rtl_action_pressable.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto
+        );
+
+        assert_eq!(
+            ltr_badge_container.layout.inset.left,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_ne!(
+            ltr_badge_container.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_ne!(
+            rtl_badge_container.layout.inset.left,
+            fret_ui::element::InsetEdge::Auto
+        );
+        assert_eq!(
+            rtl_badge_container.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_sub_keeps_border_on_inline_start_in_rtl() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let ltr =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-sub-ltr", |cx| {
+                SidebarMenuSub::new([cx.text("Docs")]).into_element(cx)
+            });
+        let rtl =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-sub-rtl", |cx| {
+                crate::direction::DirectionProvider::new(crate::direction::LayoutDirection::Rtl)
+                    .into_element(cx, |cx| {
+                        SidebarMenuSub::new([cx.text("Docs")]).into_element(cx)
+                    })
+            });
+
+        let ltr_container = find_first_container(&ltr).expect("expected LTR menu sub container");
+        let rtl_container = find_first_container(&rtl).expect("expected RTL menu sub container");
+
+        assert_ne!(ltr_container.border.left, Px(0.0));
+        assert_eq!(ltr_container.border.right, Px(0.0));
+        assert_eq!(rtl_container.border.left, Px(0.0));
+        assert_ne!(rtl_container.border.right, Px(0.0));
     }
 
     #[test]

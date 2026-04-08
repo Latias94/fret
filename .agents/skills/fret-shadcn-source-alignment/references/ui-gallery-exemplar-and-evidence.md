@@ -20,6 +20,9 @@ Snippet files are the highest-signal source because they serve two roles:
 - copyable code tab via `include_str!`
 
 If a snippet teaches the wrong import or composition pattern, fix the snippet first.
+If the preview looks wrong, compare the snippet against the exact upstream example file before
+touching the recipe: example-local `size`, `variant`, wrapper layout, and slot-local classes are
+part of the teaching-surface truth too.
 
 ## 2) Authoring surface rules after the facade refactor
 

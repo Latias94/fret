@@ -1,13 +1,16 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, ElementKind, Length};
+use fret_core::{Axis, FontWeight, Px, TextOverflow, TextWrap};
+use fret_ui::element::{
+    AnyElement, CrossAlign, ElementKind, FlexProps, GridProps, GridTrackSizing, Length, MainAlign,
+    SpacingEdges,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::{current_color, style as decl_style};
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, Justify, LayoutRefinement, Space, UiPatch,
-    UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, Justify, LayoutRefinement, MetricRef, Space,
+    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -40,6 +43,27 @@ fn is_card_action_marker(element: &AnyElement) -> bool {
                 .is_some_and(|id| matches_marker(id, CARD_ACTION_MARKER_PREFIX)),
             _ => false,
         }
+}
+
+fn card_header_row_tracks() -> Vec<GridTrackSizing> {
+    vec![GridTrackSizing::Auto, GridTrackSizing::Auto]
+}
+
+fn card_header_action_columns() -> Vec<GridTrackSizing> {
+    vec![GridTrackSizing::Flex(1.0), GridTrackSizing::Auto]
+}
+
+fn patch_card_action_grid_slot_layout(mut element: AnyElement) -> AnyElement {
+    let ElementKind::Container(props) = &mut element.kind else {
+        return element;
+    };
+
+    props.layout.grid.column.start = Some(2);
+    props.layout.grid.row.start = Some(1);
+    props.layout.grid.row.span = Some(2);
+    props.layout.grid.align_self = Some(CrossAlign::Start);
+    props.layout.grid.justify_self = Some(CrossAlign::End);
+    element
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -144,42 +168,59 @@ impl Card {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = self.size;
-        with_card_size_provider(cx, size, |cx| {
-            let children = self.children;
-            let gap = match size {
-                CardSize::Default => Space::N6,
-                CardSize::Sm => Space::N4,
-            };
-
-            let fg = {
-                let theme = Theme::global(&*cx.app);
-                theme.color_token("card-foreground")
-            };
-
-            let props = {
-                let theme = Theme::global(&*cx.app);
-                let chrome = card_chrome(theme, size).merge(self.chrome);
-                // Keep the root width caller-owned so the recipe matches upstream shadcn/ui
-                // semantics more closely: examples opt into widths like `w-full max-w-sm` at the
-                // call site, while the card sections themselves still fill the card's resolved
-                // inner width.
-                let layout = LayoutRefinement::default().merge(self.layout);
-                decl_style::container_props(theme, chrome, layout)
-            };
-
-            // Cards behave like block containers in shadcn/ui examples: their sections are expected to
-            // stretch to the card width unless explicitly constrained.
-            shadcn_layout::container_vstack_fill_width(
-                cx,
-                props,
-                shadcn_layout::VStackProps::default()
-                    .gap(gap)
-                    .layout(LayoutRefinement::default().w_full()),
-                children,
-            )
-            .inherit_foreground(fg)
+        let chrome = self.chrome;
+        let layout = self.layout;
+        let children = self.children;
+        build_card_root(cx, size, chrome, layout, move |_cx, out| {
+            out.extend(children);
         })
     }
+}
+
+fn build_card_root<H: UiHost, B>(
+    cx: &mut ElementContext<'_, H>,
+    size: CardSize,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    build: B,
+) -> AnyElement
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    with_card_size_provider(cx, size, |cx| {
+        let gap = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
+
+        let fg = {
+            let theme = Theme::global(&*cx.app);
+            theme.color_token("card-foreground")
+        };
+
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let chrome = card_chrome(theme, size).merge(chrome);
+            // Keep the root width caller-owned so the recipe matches upstream shadcn/ui
+            // semantics more closely: examples opt into widths like `w-full max-w-sm` at the
+            // call site, while the card sections themselves still fill the card's resolved
+            // inner width.
+            let layout = LayoutRefinement::default().merge(layout);
+            decl_style::container_props(theme, chrome, layout)
+        };
+
+        // Build children inside the final card root subtree so section/grid/fill semantics are
+        // authored under their real parent layout context.
+        shadcn_layout::container_vstack_fill_width_build(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(gap)
+                .layout(LayoutRefinement::default().w_full()),
+            build,
+        )
+        .inherit_foreground(fg)
+    })
 }
 
 pub fn card<H: UiHost, I, F, T>(
@@ -246,14 +287,13 @@ where
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = self.size;
-        let children = with_card_size_provider(cx, size, |cx| {
-            collect_built_card_children(cx, self.build.expect("expected card build closure"))
-        });
-        Card::new(children)
-            .size(size)
-            .refine_style(self.chrome)
-            .refine_layout(self.layout)
-            .into_element(cx)
+        build_card_root(
+            cx,
+            size,
+            self.chrome,
+            self.layout,
+            self.build.expect("expected card build closure"),
+        )
     }
 }
 
@@ -483,19 +523,31 @@ impl CardHeader {
         let layout = self.layout;
         let props = {
             let theme = Theme::global(&*cx.app);
-            let base = if border_bottom {
-                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`, and uses a
-                // smaller `pb-4` on `size=sm`.
-                ChromeRefinement::default().px(p).pb(pb)
-            } else {
-                // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
-                ChromeRefinement::default().px(p)
-            };
-            decl_style::container_props(
-                theme,
-                base.merge(self.chrome),
-                LayoutRefinement::default().w_full().merge(layout),
-            )
+            let mut padding = SpacingEdges::all(Px(0.0).into());
+            let px = MetricRef::space(p).resolve(theme);
+            padding.left = px.into();
+            padding.right = px.into();
+            if border_bottom {
+                padding.bottom = MetricRef::space(pb).resolve(theme).into();
+            }
+
+            GridProps {
+                layout: decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_w_0().merge(layout),
+                ),
+                cols: 1,
+                rows: Some(2),
+                template_columns: None,
+                template_rows: Some(card_header_row_tracks()),
+                gap: MetricRef::space(Space::N2).resolve(theme).into(),
+                column_gap: None,
+                row_gap: None,
+                padding,
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                justify_items: None,
+            }
         };
 
         let mut action: Option<AnyElement> = None;
@@ -510,33 +562,17 @@ impl CardHeader {
             }
         }
 
-        let content = if let Some(action) = action {
-            let left_col = ui::v_stack(move |_cx| left)
-                // shadcn/ui v4 CardHeader uses `gap-2` between title and description, even
-                // when an action slot is present.
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().flex_1().min_w_0())
-                .into_element(cx);
+        let content = {
+            let mut props = props;
+            if action.is_some() {
+                props.template_columns = Some(card_header_action_columns());
+            }
 
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                shadcn_layout::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_between()
-                    .items_start(),
-                vec![left_col, action],
-            )
-        } else {
-            shadcn_layout::container_vstack_fill_width(
-                cx,
-                props,
-                shadcn_layout::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start(),
-                left,
-            )
+            let mut children = left;
+            if let Some(action) = action {
+                children.push(patch_card_action_grid_slot_layout(action));
+            }
+            cx.grid(props, move |_cx| children)
         };
 
         if border_bottom {
@@ -683,32 +719,50 @@ impl CardAction {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let props = {
-            let theme = Theme::global(&*cx.app);
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default().merge(self.chrome),
-                LayoutRefinement::default().merge(self.layout),
-            )
-        };
-
+        let chrome = self.chrome;
+        let layout = self.layout;
         let children = self.children;
-        let el = cx.container(props, move |cx| {
-            if children.len() <= 1 {
-                children
-            } else {
-                vec![
-                    ui::h_row(move |_cx| children)
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                ]
-            }
-        });
-
-        let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_ACTION_MARKER_PREFIX, el.id.0));
-        attach_test_id(el, marker)
+        build_card_action_root(cx, chrome, layout, move |_cx, out| {
+            out.extend(children);
+        })
     }
+}
+
+fn build_card_action_root<H: UiHost, B>(
+    cx: &mut ElementContext<'_, H>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    build: B,
+) -> AnyElement
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    let props = {
+        let theme = Theme::global(&*cx.app);
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default().merge(chrome),
+            LayoutRefinement::default().merge(layout),
+        )
+    };
+
+    let el = cx.container(props, move |cx| {
+        let mut children = Vec::new();
+        build(cx, &mut children);
+        if children.len() <= 1 {
+            children
+        } else {
+            vec![
+                ui::h_row(move |_cx| children)
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+            ]
+        }
+    });
+
+    let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_ACTION_MARKER_PREFIX, el.id.0));
+    attach_test_id(el, marker)
 }
 
 pub struct CardActionBuild<H, B> {
@@ -734,14 +788,12 @@ where
 
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let children = collect_built_card_children(
+        build_card_action_root(
             cx,
+            self.chrome,
+            self.layout,
             self.build.expect("expected card action build closure"),
-        );
-        CardAction::new(children)
-            .refine_style(self.chrome)
-            .refine_layout(self.layout)
-            .into_element(cx)
+        )
     }
 }
 
@@ -781,7 +833,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, AttributedText, Axis, Point, Rect, Size, TextSpan};
     use fret_ui::element::{
-        ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, SemanticsProps,
+        ContainerProps, CrossAlign, FlexProps, GridProps, Length, MainAlign, Overflow,
+        SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -1191,7 +1244,80 @@ mod tests {
     }
 
     #[test]
-    fn card_header_without_action_uses_fill_width_flow_root() {
+    fn card_header_without_action_uses_source_aligned_grid_layout() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_gap = MetricRef::space(Space::N2).resolve(Theme::global(&*cx.app));
+            let el = CardHeader::new([
+                CardTitle::new("Overview").into_element(cx),
+                CardDescription::new(
+                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let ElementKind::Grid(GridProps {
+                layout,
+                rows,
+                template_columns,
+                template_rows,
+                gap,
+                padding,
+                align,
+                ..
+            }) = &el.kind
+            else {
+                panic!("expected CardHeader root to be a grid element");
+            };
+
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardHeader root grid to request fill width so wrapped title/description text resolves against the card width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardHeader root grid to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
+            );
+            assert_eq!(
+                *rows,
+                Some(2),
+                "expected CardHeader to keep two source-aligned header rows"
+            );
+            assert_eq!(
+                template_columns, &None,
+                "expected CardHeader without action to avoid forcing the second auto column"
+            );
+            assert_eq!(
+                template_rows.as_deref(),
+                Some(card_header_row_tracks().as_slice()),
+                "expected CardHeader to keep explicit auto/auto row tracks"
+            );
+            assert_eq!(
+                *align,
+                CrossAlign::Start,
+                "expected CardHeader root grid to align items to the start block lane"
+            );
+            assert_eq!(
+                *gap,
+                expected_gap.into(),
+                "expected CardHeader to keep the upstream `gap-2` rhythm"
+            );
+            assert_eq!(padding.top, Px(0.0).into());
+            assert_eq!(padding.bottom, Px(0.0).into());
+        });
+    }
+
+    #[test]
+    fn card_header_with_action_uses_explicit_grid_slot_placement() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1202,65 +1328,47 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let el = CardHeader::new([
                 CardTitle::new("Overview").into_element(cx),
-                CardDescription::new(
-                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
-                )
-                .into_element(cx),
+                CardDescription::new("Source-aligned two-row header").into_element(cx),
+                CardAction::new([ui::text("Action").into_element(cx)]).into_element(cx),
             ])
             .into_element(cx);
 
-            let child = el
+            let ElementKind::Grid(GridProps {
+                template_columns,
+                template_rows,
+                ..
+            }) = &el.kind
+            else {
+                panic!("expected CardHeader root to be a grid element");
+            };
+
+            assert_eq!(
+                template_columns.as_deref(),
+                Some(card_header_action_columns().as_slice()),
+                "expected CardHeader with action to use explicit `minmax(0,1fr) auto` column tracks"
+            );
+            assert_eq!(
+                template_rows.as_deref(),
+                Some(card_header_row_tracks().as_slice()),
+                "expected CardHeader with action to keep explicit auto/auto row tracks"
+            );
+
+            let action = el
                 .children
-                .first()
-                .unwrap_or_else(|| panic!("expected CardHeader to have a single inner flow child"));
+                .iter()
+                .find(|child| is_card_action_marker(child))
+                .unwrap_or_else(|| panic!("expected CardHeader children to include CardAction"));
 
-            let ElementKind::Container(ContainerProps {
-                layout: wrapper_layout,
-                ..
-            }) = &child.kind
-            else {
-                panic!("expected CardHeader child to be a fill-width wrapper container");
+            let ElementKind::Container(ContainerProps { layout, .. }) = &action.kind else {
+                panic!("expected CardAction slot root to remain a container");
             };
 
-            let inner = child.children.first().unwrap_or_else(|| {
-                panic!("expected CardHeader fill-width wrapper to contain an inner flex root")
-            });
-
-            let ElementKind::Flex(FlexProps {
-                align,
-                direction,
-                layout,
-                ..
-            }) = &inner.kind
-            else {
-                panic!("expected CardHeader wrapper child to be a flex element");
-            };
-
-            assert_eq!(
-                wrapper_layout.size.width,
-                Length::Fill,
-                "expected CardHeader inner wrapper to request fill width so wrapped title/description text resolves against the card width"
-            );
-            assert_eq!(
-                wrapper_layout.size.min_width,
-                Some(Length::Px(Px(0.0))),
-                "expected CardHeader inner wrapper to opt into min-w-0 so nested text can shrink and wrap in narrow cards"
-            );
-            assert_eq!(
-                *direction,
-                Axis::Vertical,
-                "expected CardHeader inner flow root to stay vertical"
-            );
-            assert_eq!(
-                *align,
-                CrossAlign::Start,
-                "expected CardHeader without an action slot to avoid cross-axis stretch on the inner flow root"
-            );
-            assert_eq!(
-                layout.size.width,
-                Length::Fill,
-                "expected CardHeader inner flow root to request fill width so wrapped title/description text resolves against the card width"
-            );
+            assert_eq!(layout.grid.column.start, Some(2));
+            assert_eq!(layout.grid.column.span, None);
+            assert_eq!(layout.grid.row.start, Some(1));
+            assert_eq!(layout.grid.row.span, Some(2));
+            assert_eq!(layout.grid.align_self, Some(CrossAlign::Start));
+            assert_eq!(layout.grid.justify_self, Some(CrossAlign::End));
         });
     }
 
@@ -1854,11 +1962,11 @@ mod tests {
                 .gap(Space::N2)
                 .into_element(cx);
 
-            fn find_flex_direction(el: &AnyElement) -> Option<Axis> {
+            fn find_flex(el: &AnyElement) -> Option<&FlexProps> {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Flex(props) = &node.kind {
-                        return Some(props.direction);
+                        return Some(props);
                     }
                     for child in &node.children {
                         stack.push(child);
@@ -1867,10 +1975,27 @@ mod tests {
                 None
             }
 
+            let Some(FlexProps {
+                direction, layout, ..
+            }) = find_flex(&el)
+            else {
+                panic!("expected CardFooter subtree to contain a flex root");
+            };
+
             assert_eq!(
-                find_flex_direction(&el),
-                Some(Axis::Vertical),
+                *direction,
+                Axis::Vertical,
                 "expected CardFooter(direction=Column) to emit a vertical flex node"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected CardFooter(direction=Column) to keep a fill-width flex root"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardFooter(direction=Column) to opt its inner flex root into min-w-0 so narrow cards can shrink without collapsing footer content"
             );
         });
     }
@@ -1935,6 +2060,11 @@ mod tests {
                 layout.size.width,
                 Length::Fill,
                 "expected CardFooter row to request fill width so footer-only text resolves against the card's inner width"
+            );
+            assert_eq!(
+                layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected CardFooter row flex root to opt into min-w-0 so nested shrink contexts keep the same wrap budget as CardContent"
             );
             assert_eq!(
                 root_layout.size.min_width,
@@ -2322,33 +2452,36 @@ impl CardFooter {
                     let children = children
                         .take()
                         .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
-                    if wrap {
-                        ui::h_flex(move |_cx| children)
-                            .wrap()
-                            .gap(gap)
-                            .items_center()
-                            .justify(justify)
-                            .layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)
-                    } else {
-                        ui::h_flex(move |_cx| children)
-                            .gap(gap)
-                            .items_center()
-                            .justify(justify)
-                            .layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)
-                    }
+                    let theme = Theme::global(&*cx.app);
+                    let mut flex_props = FlexProps {
+                        direction: Axis::Horizontal,
+                        gap: MetricRef::space(gap).resolve(theme).into(),
+                        justify: justify.to_main_align(),
+                        align: CrossAlign::Center,
+                        wrap,
+                        ..Default::default()
+                    };
+                    flex_props.layout.size.width = Length::Fill;
+                    flex_props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    cx.flex(flex_props, move |_cx| children)
                 }
                 CardFooterDirection::Column => {
                     let children = children
                         .take()
                         .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
-                    // shadcn/ui v4: `flex-col` uses the default `items-stretch` behavior.
-                    ui::v_flex(move |_cx| children)
-                        .gap(gap)
-                        .justify(justify)
-                        .layout(LayoutRefinement::default().w_full())
-                        .into_element(cx)
+                    let theme = Theme::global(&*cx.app);
+                    let mut flex_props = FlexProps {
+                        direction: Axis::Vertical,
+                        gap: MetricRef::space(gap).resolve(theme).into(),
+                        justify: justify.to_main_align(),
+                        // shadcn/ui v4: `flex-col` uses the default `items-stretch` behavior.
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                        ..Default::default()
+                    };
+                    flex_props.layout.size.width = Length::Fill;
+                    flex_props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    cx.flex(flex_props, move |_cx| children)
                 }
             }]
         });

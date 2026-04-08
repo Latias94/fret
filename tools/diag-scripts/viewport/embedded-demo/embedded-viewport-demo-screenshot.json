@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Embedded viewport demo screenshot",
+    "tags": ["embedded-viewport", "interop", "screenshot"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 720.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "embedded-viewport-demo.root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "embedded-viewport-demo.surface" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "embedded-viewport-demo.surface" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "click", "target": { "kind": "test_id", "id": "embedded-viewport-demo.surface" } },
+    { "type": "wait_frames", "n": 12 },
+    { "type": "capture_bundle", "label": "embedded-viewport-demo-screenshot" },
+    {
+      "type": "capture_screenshot",
+      "label": "embedded-viewport-demo-screenshot"
+    }
+  ]
+}

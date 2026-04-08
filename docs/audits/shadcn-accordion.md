@@ -35,11 +35,14 @@ examples in `repo-ref/ui`.
 - Pass: The curated facade now re-exports the composable surface as
   `AccordionRoot` / `AccordionItemPart` / `AccordionTriggerPart` / `AccordionContentPart`, so the
   copyable Gallery `Usage` lane no longer needs the raw-module escape hatch.
-- Pass: Gallery `Usage` can now use the composable Radix-shaped shadcn surface for closer docs
-  parity, while the legacy builder-style API remains available for compact internal recipes.
+- Pass: Gallery `Usage` can now use `AccordionRoot::children([...])` plus the curated part aliases
+  for a typed compound-children lane that stays closer to the upstream docs shape, while the legacy
+  builder-style API remains available for compact internal recipes.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
 - Pass: Supports uncontrolled `defaultValue` (internal selection model).
+- Pass: No broader untyped heterogeneous children API is currently required beyond the typed root
+  lane; the family still only needs explicit item/trigger/content ownership.
 
 Note: A fully composable, Radix-shaped surface exists in the primitives layer for non-shadcn users
 (`fret-ui-kit::primitives::accordion::AccordionRoot` / `AccordionTrigger` / `AccordionContent`),
@@ -67,6 +70,7 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib accordion`
+- `cargo test -p fret-ui-gallery --test accordion_docs_surface`
 - shadcn web golden (geometry-first): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   - Gates: `web_vs_fret_layout_accordion_demo_geometry_light` / `web_vs_fret_layout_accordion_demo_geometry_dark`
 - Diag hover gate (screenshot-backed, use with pixels-changed check):

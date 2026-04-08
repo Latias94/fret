@@ -89,6 +89,45 @@ pub(crate) fn taffy_grid_line(line: crate::element::GridLine) -> TaffyLine<GridP
     TaffyLine { start, end }
 }
 
+pub(crate) fn taffy_grid_template(
+    explicit: Option<&[crate::element::GridTrackSizing]>,
+    repeat_count: Option<u16>,
+) -> Vec<taffy::style::GridTemplateComponent<String>> {
+    if let Some(explicit) = explicit.filter(|tracks| !tracks.is_empty()) {
+        return explicit
+            .iter()
+            .copied()
+            .map(|track| {
+                taffy::style::GridTemplateComponent::Single(taffy_grid_track_sizing(track))
+            })
+            .collect();
+    }
+
+    repeat_count
+        .filter(|count| *count > 0)
+        .map(taffy::style_helpers::evenly_sized_tracks)
+        .unwrap_or_default()
+}
+
+fn taffy_grid_track_sizing(
+    track: crate::element::GridTrackSizing,
+) -> taffy::style::TrackSizingFunction {
+    match track {
+        crate::element::GridTrackSizing::Auto => taffy::style_helpers::auto(),
+        crate::element::GridTrackSizing::MinContent => taffy::style_helpers::min_content(),
+        crate::element::GridTrackSizing::MaxContent => taffy::style_helpers::max_content(),
+        crate::element::GridTrackSizing::Px(px) => taffy::style_helpers::length(px.0.max(0.0)),
+        crate::element::GridTrackSizing::Fr(fr) => {
+            let fr = if fr.is_finite() { fr.max(0.0) } else { 0.0 };
+            taffy::style_helpers::fr(fr)
+        }
+        crate::element::GridTrackSizing::Flex(fr) => {
+            let fr = if fr.is_finite() { fr.max(0.0) } else { 0.0 };
+            taffy::style_helpers::flex(fr)
+        }
+    }
+}
+
 pub(crate) fn taffy_align_items(align: CrossAlign) -> TaffyAlignItems {
     match align {
         CrossAlign::Start => TaffyAlignItems::FlexStart,
@@ -115,6 +154,25 @@ pub(crate) fn taffy_justify(justify: MainAlign) -> JustifyContent {
         MainAlign::SpaceBetween => JustifyContent::SpaceBetween,
         MainAlign::SpaceAround => JustifyContent::SpaceAround,
         MainAlign::SpaceEvenly => JustifyContent::SpaceEvenly,
+    }
+}
+
+pub(crate) fn apply_grid_item_fill_semantics(
+    style: &mut TaffyStyle,
+    layout_style: crate::element::LayoutStyle,
+) {
+    if layout_style.position == crate::element::PositionStyle::Absolute {
+        return;
+    }
+
+    if matches!(layout_style.size.width, crate::element::Length::Fill) {
+        style.size.width = Dimension::auto();
+        style.justify_self = Some(TaffyAlignSelf::Stretch);
+    }
+
+    if matches!(layout_style.size.height, crate::element::Length::Fill) {
+        style.size.height = Dimension::auto();
+        style.align_self = Some(TaffyAlignSelf::Stretch);
     }
 }
 

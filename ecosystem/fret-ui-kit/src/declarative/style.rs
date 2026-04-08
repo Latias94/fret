@@ -255,6 +255,15 @@ pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
         }
     }
 
+    if let Some(align_self) = refinement.align_self {
+        layout.flex.align_self = Some(align_self);
+        layout.grid.align_self = Some(align_self);
+    }
+
+    if let Some(justify_self) = refinement.justify_self {
+        layout.grid.justify_self = Some(justify_self);
+    }
+
     if let Some(overflow) = refinement.overflow {
         layout.overflow = overflow.to_overflow();
     }
@@ -581,5 +590,64 @@ pub fn shadow_xl(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
         primary,
         secondary: Some(secondary),
         corner_radii: Corners::all(radius),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_ui::element::CrossAlign;
+
+    #[derive(Debug, Default)]
+    struct TestTheme;
+
+    impl ThemeTokenRead for TestTheme {
+        fn color_by_key(&self, _key: &str) -> Option<Color> {
+            None
+        }
+
+        fn color_required(&self, _key: &str) -> Color {
+            Color::TRANSPARENT
+        }
+
+        fn metric_by_key(&self, _key: &str) -> Option<Px> {
+            None
+        }
+
+        fn metric_required(&self, _key: &str) -> Px {
+            Px(0.0)
+        }
+    }
+
+    #[test]
+    fn layout_refinement_self_alignment_populates_flex_and_grid_item_axes() {
+        let layout = layout_style(
+            &TestTheme,
+            LayoutRefinement::default().self_start().justify_self_end(),
+        );
+
+        assert_eq!(layout.flex.align_self, Some(CrossAlign::Start));
+        assert_eq!(layout.grid.align_self, Some(CrossAlign::Start));
+        assert_eq!(layout.grid.justify_self, Some(CrossAlign::End));
+    }
+
+    #[test]
+    fn layout_refinement_merge_prefers_latest_item_alignment_values() {
+        let layout = layout_style(
+            &TestTheme,
+            LayoutRefinement::default()
+                .self_start()
+                .justify_self_start()
+                .merge(
+                    LayoutRefinement::default()
+                        .self_stretch()
+                        .justify_self_center(),
+                ),
+        );
+
+        assert_eq!(layout.flex.align_self, Some(CrossAlign::Stretch));
+        assert_eq!(layout.grid.align_self, Some(CrossAlign::Stretch));
+        assert_eq!(layout.grid.justify_self, Some(CrossAlign::Center));
     }
 }

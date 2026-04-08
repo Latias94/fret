@@ -26,8 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx;
                     ui::text(
                         "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
-                    )
-                    .text_sm(),
+                    ),
                 ]
             }),
             shadcn::card_footer(|cx| {
@@ -37,7 +36,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .variant(shadcn::ButtonVariant::Outline)
                         .size(shadcn::ButtonSize::Sm)
                         .refine_layout(LayoutRefinement::default().w_full())
-                        .ui()
                         .test_id("ui-gallery-card-size-sm-action"),
                 ]
             }),

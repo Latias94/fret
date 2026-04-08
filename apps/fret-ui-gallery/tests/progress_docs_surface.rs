@@ -36,6 +36,7 @@ fn progress_page_documents_source_axes_and_children_api_decision() {
 fn progress_snippets_stay_copyable_and_docs_aligned() {
     let usage = include_str!("../src/ui/snippets/progress/usage.rs");
     let demo = include_str!("../src/ui/snippets/progress/demo.rs");
+    let label = include_str!("../src/ui/snippets/progress/label.rs");
     let rtl = include_str!("../src/ui/snippets/progress/rtl.rs");
 
     for needle in [
@@ -64,6 +65,20 @@ fn progress_snippets_stay_copyable_and_docs_aligned() {
         );
     }
 
+    let normalized_label = normalize_ws(label);
+    assert!(
+        normalized_label.contains(&normalize_ws(
+            "shadcn::FieldLabel::new(\"Upload progress\") .test_id(\"ui-gallery-progress-label-title\")"
+        )),
+        "progress label snippet should keep the upstream label title surface visible",
+    );
+    assert!(
+        normalized_label.contains(&normalize_ws(
+            "shadcn::FieldLabel::new(\"66%\") .refine_layout(LayoutRefinement::default().ml_auto()) .test_id(\"ui-gallery-progress-label-value\")"
+        )),
+        "progress label snippet should keep the percentage value in the trailing auto-margin lane",
+    );
+
     for needle in [
         "shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl)",
         ".mirror_in_rtl(true)",
@@ -76,4 +91,17 @@ fn progress_snippets_stay_copyable_and_docs_aligned() {
             needle
         );
     }
+    let normalized_rtl = normalize_ws(rtl);
+    assert!(
+        normalized_rtl.contains(&normalize_ws(
+            "shadcn::FieldLabel::new(\"تقدم الرفع\") .refine_layout(LayoutRefinement::default().order(1)) .test_id(\"ui-gallery-progress-rtl-title\")"
+        )),
+        "progress RTL snippet should keep the localized label in source order while moving it to the visual inline end",
+    );
+    assert!(
+        normalized_rtl.contains(&normalize_ws(
+            "shadcn::FieldLabel::new(\"٦٦%\") .refine_layout(LayoutRefinement::default().order(0).mr_auto()) .test_id(\"ui-gallery-progress-rtl-value\")"
+        )),
+        "progress RTL snippet should keep the localized percentage on the visual inline start lane",
+    );
 }

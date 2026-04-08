@@ -1889,11 +1889,19 @@ impl Tabs {
         list_props.padding = Edges::all(list_padding).into();
         if list_full_width {
             list_props.layout.size.width = Length::Fill;
-            list_props.layout.flex.align_self = Some(CrossAlign::Stretch);
+            decl_style::apply_layout_refinement(
+                &theme,
+                LayoutRefinement::default().self_stretch(),
+                &mut list_props.layout,
+            );
         } else {
             // new-york-v4: `TabsList` uses `w-fit` (do not stretch to full width).
             // If the parent container happens to be a flex with `align-items: stretch`, opt out.
-            list_props.layout.flex.align_self = Some(CrossAlign::Start);
+            decl_style::apply_layout_refinement(
+                &theme,
+                LayoutRefinement::default().self_start(),
+                &mut list_props.layout,
+            );
         }
         let tab_panel_layout = {
             // `TabsContent` should fill the available width by default. Without this, max-content
@@ -2459,7 +2467,11 @@ impl Tabs {
                                             if let Some(w) = vertical_trigger_width_px {
                                                 props.layout.size.width = Length::Px(w);
                                             }
-                                            props.layout.flex.align_self = Some(CrossAlign::Stretch);
+                                            decl_style::apply_layout_refinement(
+                                                &theme,
+                                                LayoutRefinement::default().self_stretch(),
+                                                &mut props.layout,
+                                            );
                                         }
 
                                         let mut chrome = ContainerProps {

@@ -1,13 +1,29 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
-use super::demo_cover_image;
 use fret::{UiChild, UiCx};
-use fret_core::{Color as CoreColor, ImageId};
+use fret_core::{Color as CoreColor, ImageColorSpace, ImageId};
 use fret_ui::Theme;
+use fret_ui_assets::ImageSource;
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
+
+fn demo_cover_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+    let source = ImageSource::rgba8(
+        4,
+        4,
+        vec![
+            244, 181, 99, 255, 229, 115, 58, 255, 71, 149, 212, 255, 19, 78, 117, 255, 237, 149,
+            74, 255, 206, 86, 52, 255, 79, 172, 167, 255, 23, 103, 124, 255, 221, 91, 47, 255, 196,
+            69, 54, 255, 98, 188, 153, 255, 42, 124, 108, 255, 181, 68, 50, 255, 151, 56, 58, 255,
+            95, 161, 118, 255, 54, 103, 86, 255,
+        ],
+        ImageColorSpace::Srgb,
+    );
+    cx.use_image_source_state(&source).image
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -32,7 +48,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             });
 
             let event_cover: Option<ImageId> = demo_cover_image(cx);
-            let event_cover_source = "inline-rgba8";
+            let event_cover_source = "rgba8";
 
             let image = shadcn::MediaImage::maybe(event_cover)
                 .loading(true)
@@ -106,7 +122,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_action(|cx| ui::children![cx; featured]),
                     shadcn::card_title("Design systems meetup"),
                     shadcn::card_description(
-                        "A practical talk on component APIs, accessibility, and shipping faster. The cover image uses a self-contained demo buffer so the snippet stays copyable outside UI Gallery.",
+                        "A practical talk on component APIs, accessibility, and shipping faster.",
                     ),
                 ]
             }),
@@ -115,7 +131,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx;
                     shadcn::Button::new("View Event")
                         .refine_layout(LayoutRefinement::default().w_full())
-                        .ui()
                         .test_id("ui-gallery-card-image-view-event"),
                 ]
             }),

@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, InsetEdge, Length, PositionStyle, SemanticsDecoration,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, GridProps, GridTrackSizing, InsetEdge,
+    LayoutStyle, Length, MainAlign, MarginEdge, PositionStyle, SemanticsDecoration, SpacingEdges,
     SpacingLength,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
@@ -507,6 +508,71 @@ fn patch_inherited_foreground_recursive(el: &mut AnyElement, from: Color, to: Co
     }
 }
 
+fn with_layout_style_mut(element: &mut AnyElement, mut apply: impl FnMut(&mut LayoutStyle)) {
+    match &mut element.kind {
+        ElementKind::Container(props) => apply(&mut props.layout),
+        ElementKind::Pressable(props) => apply(&mut props.layout),
+        ElementKind::Flex(props) => apply(&mut props.layout),
+        ElementKind::Row(props) => apply(&mut props.layout),
+        ElementKind::Column(props) => apply(&mut props.layout),
+        ElementKind::Stack(props) => apply(&mut props.layout),
+        ElementKind::SemanticFlex(props) => apply(&mut props.flex.layout),
+        ElementKind::Grid(props) => apply(&mut props.layout),
+        ElementKind::Text(props) => apply(&mut props.layout),
+        ElementKind::StyledText(props) => apply(&mut props.layout),
+        ElementKind::SelectableText(props) => apply(&mut props.layout),
+        ElementKind::SvgIcon(props) => apply(&mut props.layout),
+        _ => {}
+    }
+}
+
+fn patch_alert_fill_width_layout(mut element: AnyElement) -> AnyElement {
+    with_layout_style_mut(&mut element, |layout| {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+    });
+    element
+}
+
+fn patch_alert_content_grid_lane(mut element: AnyElement) -> AnyElement {
+    element = patch_alert_fill_width_layout(element);
+    with_layout_style_mut(&mut element, |layout| {
+        if layout.grid.column.start.is_none() {
+            layout.grid.column.start = Some(2);
+        }
+    });
+    element
+}
+
+fn patch_alert_icon_grid_slot(mut element: AnyElement, offset_y: Px) -> AnyElement {
+    with_layout_style_mut(&mut element, |layout| {
+        if layout.grid.column.start.is_none() {
+            layout.grid.column.start = Some(1);
+        }
+        if layout.grid.row.start.is_none() {
+            layout.grid.row.start = Some(1);
+        }
+        if layout.grid.align_self.is_none() {
+            layout.grid.align_self = Some(CrossAlign::Start);
+        }
+        if layout.margin.top == MarginEdge::Px(Px(0.0)) {
+            layout.margin.top = MarginEdge::Px(offset_y);
+        }
+    });
+    element
+}
+
+fn alert_content_grid_columns(icon_size: Px, has_icon: bool) -> Vec<GridTrackSizing> {
+    vec![
+        GridTrackSizing::Px(if has_icon { icon_size } else { Px(0.0) }),
+        GridTrackSizing::Fr(1.0),
+    ]
+}
+
 fn alert_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     variant: AlertVariant,
@@ -552,6 +618,7 @@ fn alert_with_patch<H: UiHost>(
         Some(first) if matches!(first.kind, ElementKind::SvgIcon(_)) => Some(children.remove(0)),
         _ => None,
     };
+    let has_icon = icon.is_some();
     let mut body_children = children;
 
     let action_idx = body_children.iter().position(|child| {
@@ -601,30 +668,35 @@ fn alert_with_patch<H: UiHost>(
         LayoutRefinement::default().w_full().merge(layout_override),
     );
 
-    let body = ui::v_flex(move |_cx| body_children)
-        .gap_px(gap_y)
-        .layout(LayoutRefinement::default().w_full().flex_1().min_w_0())
-        .into_element(cx);
-
-    let main = if let Some(mut icon) = icon {
+    let mut content_children: Vec<AnyElement> = body_children
+        .into_iter()
+        .map(patch_alert_content_grid_lane)
+        .collect();
+    if let Some(mut icon) = icon {
         patch_svg_icon_to_inherit_current_color(&mut icon, fg, icon_size);
-        let icon = cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default(),
-                LayoutRefinement::default().mt_px(icon_offset_y),
-            ),
-            move |_cx| [icon],
-        );
+        content_children.insert(0, patch_alert_icon_grid_slot(icon, icon_offset_y));
+    }
 
-        ui::h_flex(move |_cx| vec![icon, body])
-            .gap_px(gap_x)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full())
-            .into_element(cx)
-    } else {
-        body
-    };
+    let main = cx.grid(
+        GridProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            cols: 1,
+            rows: None,
+            template_columns: Some(alert_content_grid_columns(icon_size, has_icon)),
+            template_rows: None,
+            gap: SpacingLength::Px(Px(0.0)),
+            column_gap: Some(SpacingLength::Px(if has_icon { gap_x } else { Px(0.0) })),
+            row_gap: Some(SpacingLength::Px(gap_y)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
+            justify: MainAlign::Start,
+            align: CrossAlign::Start,
+            justify_items: None,
+        },
+        move |_cx| content_children,
+    );
 
     let mut props = props;
     props.layout.position = PositionStyle::Relative;
@@ -693,8 +765,7 @@ impl AlertTitle {
             .metric_by_key("component.alert.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-        match self.content {
+        let mut title = match self.content {
             AlertTitleContent::Text(text) => ui::text(text)
                 .text_size_px(px)
                 .line_height_px(line_height)
@@ -724,7 +795,15 @@ impl AlertTitle {
                         .into_element(cx),
                 }
             }
-        }
+        };
+
+        let icon_min_height = alert_icon_size(&theme);
+        with_layout_style_mut(&mut title, |layout| {
+            if layout.size.min_height.is_none() {
+                layout.size.min_height = Some(Length::Px(icon_min_height));
+            }
+        });
+        title
     }
 }
 
@@ -866,26 +945,41 @@ impl AlertDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-
-        match self.content {
-            AlertDescriptionContent::Text(text) => scope_description_text(
+        let gap = MetricRef::space(Space::N1).resolve(&theme);
+        let layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
+        let props = GridProps {
+            layout,
+            cols: 1,
+            rows: None,
+            template_columns: Some(vec![GridTrackSizing::Fr(1.0)]),
+            template_rows: None,
+            gap: SpacingLength::Px(gap),
+            column_gap: None,
+            row_gap: None,
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
+            justify: MainAlign::Start,
+            align: CrossAlign::Start,
+            justify_items: Some(CrossAlign::Start),
+        };
+        let children = match self.content {
+            AlertDescriptionContent::Text(text) => vec![patch_alert_fill_width_layout(
                 ui::raw_text(text)
                     .wrap(TextWrap::Word)
                     .overflow(TextOverflow::Clip)
                     .into_element(cx),
-                &theme,
-                "component.alert.description",
-            ),
-            AlertDescriptionContent::Children(children) => scope_description_text(
-                ui::v_flex(move |_cx| children)
-                    .gap(Space::N1)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx),
-                &theme,
-                "component.alert.description",
-            ),
-        }
+            )],
+            AlertDescriptionContent::Children(children) => children
+                .into_iter()
+                .map(patch_alert_fill_width_layout)
+                .collect(),
+        };
+
+        scope_description_text(
+            cx.grid(props, move |_cx| children),
+            &theme,
+            "component.alert.description",
+        )
     }
 }
 
@@ -937,7 +1031,9 @@ mod tests {
         AppWindowId, AttributedText, Color, Point, Px, Rect, Size, TextOverflow, TextSpan,
     };
     use fret_icons::IconId;
-    use fret_ui::element::{ElementKind, InsetEdge, SpacingLength};
+    use fret_ui::element::{
+        CrossAlign, ElementKind, GridProps, InsetEdge, LayoutStyle, Length, SpacingLength,
+    };
     use fret_ui_kit::declarative::icon as decl_icon;
 
     fn contains_foreground_scope(el: &AnyElement) -> bool {
@@ -994,6 +1090,31 @@ mod tests {
             .find_map(|child| find_element_by_test_id(child, needle))
     }
 
+    fn find_first_grid(el: &AnyElement) -> Option<&AnyElement> {
+        if matches!(el.kind, ElementKind::Grid(_)) {
+            return Some(el);
+        }
+        el.children.iter().find_map(find_first_grid)
+    }
+
+    fn layout_style_for(element: &AnyElement) -> Option<&LayoutStyle> {
+        match &element.kind {
+            ElementKind::Container(props) => Some(&props.layout),
+            ElementKind::Pressable(props) => Some(&props.layout),
+            ElementKind::Flex(props) => Some(&props.layout),
+            ElementKind::Row(props) => Some(&props.layout),
+            ElementKind::Column(props) => Some(&props.layout),
+            ElementKind::Stack(props) => Some(&props.layout),
+            ElementKind::SemanticFlex(props) => Some(&props.flex.layout),
+            ElementKind::Grid(props) => Some(&props.layout),
+            ElementKind::Text(props) => Some(&props.layout),
+            ElementKind::StyledText(props) => Some(&props.layout),
+            ElementKind::SelectableText(props) => Some(&props.layout),
+            ElementKind::SvgIcon(props) => Some(&props.layout),
+            _ => None,
+        }
+    }
+
     #[test]
     fn alert_description_children_scope_inherited_text_style() {
         let window = AppWindowId::default();
@@ -1026,6 +1147,48 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn alert_description_uses_source_aligned_grid_stack() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDescription::new_children([cx.text("Line one"), cx.text("Line two")])
+                .into_element(cx)
+        });
+
+        let ElementKind::Grid(GridProps {
+            layout,
+            gap,
+            justify_items,
+            ..
+        }) = &element.kind
+        else {
+            panic!("expected AlertDescription root to be a grid element");
+        };
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(
+            *gap,
+            MetricRef::space(Space::N1)
+                .resolve(Theme::global(&app))
+                .into()
+        );
+        assert_eq!(*justify_items, Some(CrossAlign::Start));
+
+        for child in &element.children {
+            let layout =
+                layout_style_for(child).expect("alert description child should carry layout");
+            assert_eq!(layout.size.width, Length::Fill);
+            assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));
+        }
     }
 
     #[test]
@@ -1075,6 +1238,7 @@ mod tests {
 
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_height, Some(Length::Px(Px(16.0))));
     }
 
     #[test]
@@ -1453,7 +1617,7 @@ mod tests {
     }
 
     #[test]
-    fn alert_root_spacing_defaults_match_current_shadcn_source() {
+    fn alert_root_content_grid_tracks_and_gaps_match_current_shadcn_source() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -1477,6 +1641,97 @@ mod tests {
         assert_eq!(props.padding.right, SpacingLength::Px(Px(16.0)));
         assert_eq!(props.padding.top, SpacingLength::Px(Px(12.0)));
         assert_eq!(props.padding.bottom, SpacingLength::Px(Px(12.0)));
+
+        let grid = find_first_grid(&element).expect("expected Alert to build an inner grid");
+        let ElementKind::Grid(GridProps {
+            layout,
+            template_columns,
+            column_gap,
+            row_gap,
+            align,
+            ..
+        }) = &grid.kind
+        else {
+            panic!("expected Alert content root to be a grid element");
+        };
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));
+        let expected_columns = alert_content_grid_columns(Px(16.0), false);
+        assert_eq!(
+            template_columns.as_deref(),
+            Some(expected_columns.as_slice())
+        );
+        assert_eq!(*column_gap, Some(SpacingLength::Px(Px(0.0))));
+        assert_eq!(*row_gap, Some(SpacingLength::Px(Px(2.0))));
+        assert_eq!(*align, CrossAlign::Start);
+
+        let title = find_text_element(grid, "Heads up!").expect("expected Alert title text");
+        let layout = layout_style_for(title).expect("alert title should carry layout");
+        assert_eq!(layout.grid.column.start, Some(2));
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(layout.size.min_height, Some(Length::Px(Px(16.0))));
+    }
+
+    #[test]
+    fn alert_with_icon_uses_source_aligned_grid_columns_and_icon_slot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Alert::new([
+                decl_icon::icon(cx, IconId::new_static("lucide.terminal")),
+                AlertTitle::new("Heads up!").into_element(cx),
+                AlertDescription::new("You can add components to your app.").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        let grid = find_first_grid(&element).expect("expected Alert to build an inner grid");
+        let ElementKind::Grid(GridProps {
+            template_columns,
+            column_gap,
+            row_gap,
+            ..
+        }) = &grid.kind
+        else {
+            panic!("expected Alert content root to be a grid element");
+        };
+
+        let expected_columns = alert_content_grid_columns(Px(16.0), true);
+        assert_eq!(
+            template_columns.as_deref(),
+            Some(expected_columns.as_slice())
+        );
+        assert_eq!(*column_gap, Some(SpacingLength::Px(Px(12.0))));
+        assert_eq!(*row_gap, Some(SpacingLength::Px(Px(2.0))));
+
+        let icon = grid
+            .children
+            .iter()
+            .find(|child| matches!(child.kind, ElementKind::SvgIcon(_)))
+            .expect("expected Alert grid to keep the leading icon as a direct child");
+        let icon_layout = layout_style_for(icon).expect("alert icon should carry layout");
+        assert_eq!(icon_layout.grid.column.start, Some(1));
+        assert_eq!(icon_layout.grid.row.start, Some(1));
+        assert_eq!(icon_layout.grid.align_self, Some(CrossAlign::Start));
+        assert_eq!(icon_layout.margin.top, MarginEdge::Px(Px(2.0)));
+
+        let description = grid
+            .children
+            .iter()
+            .find(|child| matches!(child.kind, ElementKind::Grid(_)))
+            .expect("expected Alert grid to include the description grid child");
+        let description_layout =
+            layout_style_for(description).expect("alert description should carry layout");
+        assert_eq!(description_layout.grid.column.start, Some(2));
+        assert_eq!(description_layout.size.width, Length::Fill);
     }
 
     #[test]

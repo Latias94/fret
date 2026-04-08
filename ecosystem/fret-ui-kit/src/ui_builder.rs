@@ -6,7 +6,7 @@ use crate::{
 use fret_core::{
     FontId, FontWeight, Px, SemanticsRole, TextLineHeightPolicy, TextOverflow, TextWrap,
 };
-use fret_ui::element::{AnyElement, ScrollAxis, SemanticsDecoration, TextInkOverflow};
+use fret_ui::element::{AnyElement, CrossAlign, ScrollAxis, SemanticsDecoration, TextInkOverflow};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 use std::panic::Location;
@@ -986,6 +986,14 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.flex_shrink(shrink))
     }
 
+    pub fn align_self(self, align: CrossAlign) -> Self {
+        self.layout_with(|l| l.align_self(align))
+    }
+
+    pub fn justify_self(self, align: CrossAlign) -> Self {
+        self.layout_with(|l| l.justify_self(align))
+    }
+
     forward_layout_noargs!(
         relative,
         absolute,
@@ -1008,6 +1016,14 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         flex_shrink_0,
         flex_1,
         flex_none,
+        self_start,
+        self_center,
+        self_end,
+        self_stretch,
+        justify_self_start,
+        justify_self_center,
+        justify_self_end,
+        justify_self_stretch,
         w_0,
         h_0,
         min_h_0,

@@ -26,6 +26,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
 
     let extras = doc_layout::notes_block([
+        "The top-level `Demo` now stays on the upstream `alert-demo` three-row composition, so docs-path parity remains reviewable before the Fret-only follow-ups begin.",
         "`Rich Title` demonstrates the builder-first composed title lane for attributed text.",
         "`Rich Description` demonstrates the composed `AlertDescription` lane for paragraph + list content without pretending that shape is part of the current upstream docs path.",
         "`Interactive Links` demonstrates deterministic, diagnostics-safe composed link content inside `AlertDescription`.",
@@ -38,7 +39,9 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "This audit lands on the recipe/docs axis, not the runtime mechanism axis: `Alert` is a static callout and does not need new `fret-ui` substrate work.",
         "Current new-york-v4 chrome uses `line-clamp-1` for `AlertTitle`, so the base/radix docs' multiline-title examples remain a known chrome-axis difference rather than a `fret-ui` bug.",
         "Preview now mirrors the shadcn docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Destructive`, `Action`, `Custom Colors`, `RTL`, and `API Reference`.",
+        "The `Demo` section keeps the upstream three-row `alert-demo` surface intact; richer title/description/link teaching stays under explicit `Fret Extras` sections instead of being mixed into the docs path.",
         "Current docs-aligned `Destructive` example tracks the upstream `alert-destructive` surface (`Error` + session-expired copy).",
+        "Current docs-aligned `Action` section tracks the upstream two-row `With Actions` example (`Undo` button row + `Badge` row) instead of a Fret-specific variant.",
         "`Rich Title`, `Rich Description`, and `Interactive Links` stay explicit under `Fret Extras` so composed title/description authoring remains copyable without pretending those sections are upstream docs examples.",
         "Current chrome baseline: the default shadcn registry `Alert` recipe.",
         "Action-slot reference: the radix registry alert recipe and example.",
@@ -64,7 +67,9 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Audit conclusions, ownership notes, and upstream reference pointers.")
         .test_id_prefix("ui-gallery-alert-notes");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Top-level docs preview for the current upstream `alert-demo` surface.")
+        .description(
+            "Top-level docs preview matching the upstream `alert-demo` three-row composition.",
+        )
         .test_id_prefix("ui-gallery-alert-demo-docsec")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)

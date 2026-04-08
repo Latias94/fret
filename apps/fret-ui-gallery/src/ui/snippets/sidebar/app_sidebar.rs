@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("app_sidebar.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::Px;
+use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -182,23 +182,64 @@ fn avatar_badge(cx: &mut UiCx<'_>, initials: &'static str) -> AnyElement {
         .into_element(cx)
 }
 
+fn trailing_chevron(cx: &mut UiCx<'_>, icon_id: &'static str, test_id: &'static str) -> AnyElement {
+    let auto_margin = match shadcn::use_direction(cx, None) {
+        shadcn::LayoutDirection::Rtl => LayoutRefinement::default().mr_auto().flex_shrink_0(),
+        shadcn::LayoutDirection::Ltr => LayoutRefinement::default().ml_auto().flex_shrink_0(),
+    };
+    let icon = sidebar_icon(cx, icon_id).test_id(test_id);
+
+    ui::container(move |_cx| vec![icon])
+        .layout(auto_margin)
+        .into_element(cx)
+}
+
 fn copy_stack(
     cx: &mut UiCx<'_>,
     title: impl Into<Arc<str>>,
     subtitle: impl Into<Arc<str>>,
+    root_test_id: Option<&'static str>,
+    title_test_id: Option<&'static str>,
+    subtitle_test_id: Option<&'static str>,
 ) -> AnyElement {
     let title = title.into();
     let subtitle = subtitle.into();
-    ui::v_flex(|cx| {
-        vec![
-            shadcn::raw::typography::small(title.clone()).into_element(cx),
-            shadcn::raw::typography::muted(subtitle.clone()).into_element(cx),
-        ]
+    let mut copy = ui::v_flex(|cx| {
+        let mut title = ui::text(title.clone())
+            .w_full()
+            .min_w_0()
+            .truncate()
+            .text_size_px(Px(14.0))
+            .line_height_px(Px(16.0))
+            .font_weight(FontWeight::MEDIUM)
+            .into_element(cx);
+        if let Some(test_id) = title_test_id {
+            title = title.test_id(test_id);
+        }
+
+        let mut subtitle = ui::text(subtitle.clone())
+            .w_full()
+            .min_w_0()
+            .truncate()
+            .text_size_px(Px(12.0))
+            .line_height_px(Px(14.0))
+            .into_element(cx);
+        if let Some(test_id) = subtitle_test_id {
+            subtitle = subtitle.test_id(test_id);
+        }
+
+        vec![title, subtitle]
     })
     .gap(Space::N0)
     .items_start()
-    .layout(LayoutRefinement::default().flex_1().min_w_0())
-    .into_element(cx)
+    .layout(LayoutRefinement::default().w_full().flex_1().min_w_0())
+    .into_element(cx);
+
+    if let Some(test_id) = root_test_id {
+        copy = copy.test_id(test_id);
+    }
+
+    copy
 }
 
 fn set_text_model(model: Model<Arc<str>>, value: &'static str) -> OnActivate {
@@ -279,9 +320,20 @@ fn team_switcher(
     let trigger = shadcn::SidebarMenuButton::new(team.name)
         .size(shadcn::SidebarMenuButtonSize::Lg)
         .children([
-            sidebar_icon(cx, team.icon),
-            copy_stack(cx, team.name, team.plan),
-            sidebar_icon(cx, "lucide.chevrons-up-down"),
+            sidebar_icon(cx, team.icon).test_id("ui-gallery-sidebar-app-sidebar-team-trigger-icon"),
+            copy_stack(
+                cx,
+                team.name,
+                team.plan,
+                Some("ui-gallery-sidebar-app-sidebar-team-trigger-copy"),
+                Some("ui-gallery-sidebar-app-sidebar-team-trigger-title"),
+                Some("ui-gallery-sidebar-app-sidebar-team-trigger-subtitle"),
+            ),
+            trailing_chevron(
+                cx,
+                "lucide.chevrons-up-down",
+                "ui-gallery-sidebar-app-sidebar-team-trigger-chevron",
+            ),
         ])
         .test_id("ui-gallery-sidebar-app-sidebar-team-trigger")
         .into_element(cx);
@@ -504,9 +556,20 @@ fn nav_user(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
     let trigger = shadcn::SidebarMenuButton::new("shadcn")
         .size(shadcn::SidebarMenuButtonSize::Lg)
         .children([
-            avatar_badge(cx, "SC"),
-            copy_stack(cx, "shadcn", "m@example.com"),
-            sidebar_icon(cx, "lucide.chevrons-up-down"),
+            avatar_badge(cx, "SC").test_id("ui-gallery-sidebar-app-sidebar-user-trigger-avatar"),
+            copy_stack(
+                cx,
+                "shadcn",
+                "m@example.com",
+                Some("ui-gallery-sidebar-app-sidebar-user-trigger-copy"),
+                Some("ui-gallery-sidebar-app-sidebar-user-trigger-title"),
+                Some("ui-gallery-sidebar-app-sidebar-user-trigger-subtitle"),
+            ),
+            trailing_chevron(
+                cx,
+                "lucide.chevrons-up-down",
+                "ui-gallery-sidebar-app-sidebar-user-trigger-chevron",
+            ),
         ])
         .test_id("ui-gallery-sidebar-app-sidebar-user-trigger")
         .into_element(cx);
@@ -630,6 +693,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             cx,
                             "Build Your Application",
                             selected_value.as_ref(),
+                            None,
+                            None,
+                            None,
                         ),
                     ]
                 })

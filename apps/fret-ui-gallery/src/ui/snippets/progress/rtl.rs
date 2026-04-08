@@ -20,14 +20,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx, |cx| {
                 let label_row = ui::h_flex(|cx| {
                     vec![
-                        shadcn::FieldLabel::new("٦٦%").into_element(cx),
                         shadcn::FieldLabel::new("تقدم الرفع")
-                            .refine_layout(LayoutRefinement::default().ml_auto())
+                            .refine_layout(LayoutRefinement::default().order(1))
+                            .test_id("ui-gallery-progress-rtl-title")
+                            .into_element(cx),
+                        shadcn::FieldLabel::new("٦٦%")
+                            .refine_layout(LayoutRefinement::default().order(0).mr_auto())
+                            .test_id("ui-gallery-progress-rtl-value")
                             .into_element(cx),
                     ]
                 })
                 .layout(LayoutRefinement::default().w_full())
                 .items_center()
+                .test_id("ui-gallery-progress-rtl-row")
                 .into_element(cx);
 
                 let field = shadcn::Field::new(vec![

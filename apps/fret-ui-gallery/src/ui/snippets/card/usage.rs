@@ -20,12 +20,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_title("Card Title"),
                     shadcn::card_description("Card Description"),
                     shadcn::card_action(
-                        |cx| ui::children![cx; ui::text("Card Action").text_sm()]
+                        |cx| ui::children![cx; ui::text("Card Action")]
                     ),
                 ]
             }),
-            shadcn::card_content(|cx| ui::children![cx; ui::text("Card Content").text_sm()]),
-            shadcn::card_footer(|cx| ui::children![cx; ui::text("Card Footer").text_sm()]),
+            shadcn::card_content(|cx| ui::children![cx; ui::text("Card Content")]),
+            shadcn::card_footer(|cx| ui::children![cx; ui::text("Card Footer")]),
         ]
     })
     .refine_layout(max_w_sm)

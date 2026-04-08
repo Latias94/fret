@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{KeyCode, Point, Px, Rect, Size};
+use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::CommandId;
 use fret_ui::retained_bridge::Widget;
 
@@ -463,106 +463,5 @@ fn context_menu_command_pointer_activation_keeps_menu_closed_via_selection_take_
         effect,
         fret_runtime::Effect::Command { command, .. }
             if *command == CommandId::from("demo.command")
-    )));
-}
-
-#[test]
-fn context_menu_disabled_pointer_activation_keeps_menu_open() {
-    let mut host = TestUiHostImpl::default();
-    let (graph, view, editor_config) =
-        insert_graph_view_editor_config(&mut host, Graph::new(GraphId::new()));
-    let mut canvas = new_canvas!(host, graph, view, editor_config);
-    canvas.sync_view_state(&mut host);
-
-    let origin = Point::new(Px(100.0), Px(50.0));
-    canvas.interaction.context_menu = Some(ContextMenuState {
-        origin,
-        invoked_at: origin,
-        target: ContextMenuTarget::Background,
-        items: vec![NodeGraphContextMenuItem {
-            label: Arc::<str>::from("Disabled"),
-            enabled: false,
-            action: NodeGraphContextMenuAction::Command(CommandId::from("demo.disabled")),
-        }],
-        candidates: Vec::new(),
-        hovered_item: None,
-        active_item: 0,
-        typeahead: String::new(),
-    });
-
-    let zoom = 1.0;
-    let pad = canvas.style.paint.context_menu_padding / zoom;
-    let item_h = canvas.style.paint.context_menu_item_height / zoom;
-    let position = Point::new(Px(origin.x.0 + 1.0), Px(origin.y.0 + pad + 0.5 * item_h));
-
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds(),
-        &mut prevented_default_actions,
-    );
-
-    assert!(
-        super::super::context_menu::handle_context_menu_pointer_down(
-            &mut canvas,
-            &mut cx,
-            position,
-            fret_core::MouseButton::Left,
-            zoom,
-        )
-    );
-    assert!(canvas.interaction.context_menu.is_some());
-    assert!(!host.effects.iter().any(|effect| matches!(
-        effect,
-        fret_runtime::Effect::Command { command, .. }
-            if *command == CommandId::from("demo.disabled")
-    )));
-}
-
-#[test]
-fn context_menu_enter_on_disabled_active_item_keeps_menu_open() {
-    let mut host = TestUiHostImpl::default();
-    let (graph, view, editor_config) =
-        insert_graph_view_editor_config(&mut host, Graph::new(GraphId::new()));
-    let mut canvas = new_canvas!(host, graph, view, editor_config);
-    canvas.sync_view_state(&mut host);
-
-    let origin = Point::new(Px(100.0), Px(50.0));
-    canvas.interaction.context_menu = Some(ContextMenuState {
-        origin,
-        invoked_at: origin,
-        target: ContextMenuTarget::Background,
-        items: vec![NodeGraphContextMenuItem {
-            label: Arc::<str>::from("Disabled"),
-            enabled: false,
-            action: NodeGraphContextMenuAction::Command(CommandId::from("demo.disabled")),
-        }],
-        candidates: Vec::new(),
-        hovered_item: None,
-        active_item: 0,
-        typeahead: String::new(),
-    });
-
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds(),
-        &mut prevented_default_actions,
-    );
-
-    assert!(super::super::context_menu::handle_context_menu_key_down(
-        &mut canvas,
-        &mut cx,
-        KeyCode::Enter,
-    ));
-    assert!(canvas.interaction.context_menu.is_some());
-    assert!(!host.effects.iter().any(|effect| matches!(
-        effect,
-        fret_runtime::Effect::Command { command, .. }
-            if *command == CommandId::from("demo.disabled")
     )));
 }

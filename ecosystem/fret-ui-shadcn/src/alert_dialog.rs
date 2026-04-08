@@ -8,8 +8,9 @@ use fret_runtime::Model;
 use fret_ui::GlobalElementId;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus, OnSelectableTextActivateSpan};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
-    RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, GridProps, GridTrackSizing,
+    LayoutStyle, Length, MainAlign, RenderTransformProps, SemanticFlexProps, SemanticsDecoration,
+    SizeStyle, SpacingEdges,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -1410,71 +1411,71 @@ impl AlertDialogHeader {
         } else {
             TextAlign::Center
         };
-
-        let props = decl_style::container_props(
-            Theme::global(&*cx.app),
-            ChromeRefinement::default(),
-            LayoutRefinement::default().w_full().min_w_0(),
-        );
-
-        let children = self
-            .children
-            .into_iter()
-            .map(|child| apply_alert_dialog_header_text_alignment(child, text_align))
-            .collect();
-        let Some(media) = self.media else {
-            return shadcn_layout::container_vstack_fill_width(
-                cx,
-                props,
-                shadcn_layout::VStackProps::default()
-                    .gap(Space::N1p5)
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items(if left_aligned {
-                        fret_ui_kit::Items::Stretch
-                    } else {
-                        fret_ui_kit::Items::Center
-                    }),
-                children,
-            );
+        let theme = Theme::global(&*cx.app);
+        let header_gap = MetricRef::space(Space::N1p5).resolve(theme).into();
+        let media_gap = MetricRef::space(Space::N6).resolve(theme).into();
+        let has_media = self.media.is_some();
+        let item_alignment = if left_aligned {
+            CrossAlign::Start
+        } else {
+            CrossAlign::Center
         };
 
-        if left_aligned {
-            let text = ui::v_flex(move |_cx| children)
-                .gap(Space::N1p5)
-                .items_start()
-                .layout(LayoutRefinement::default().flex_1().min_w_0())
-                .into_element(cx);
-
-            return cx.container(props, move |cx| {
-                vec![
-                    ui::h_flex(move |_cx| vec![media, text])
-                        .gap(Space::N6)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx),
-                ]
-            });
+        let mut children = Vec::with_capacity(self.children.len() + if has_media { 1 } else { 0 });
+        if let Some(media) = self.media {
+            children.push(patch_alert_dialog_header_media_grid_slot(
+                media,
+                left_aligned,
+            ));
         }
+        children.extend(self.children.into_iter().map(|child| {
+            let child = apply_alert_dialog_header_text_alignment(child, text_align);
+            if left_aligned && has_media {
+                patch_alert_dialog_header_text_grid_lane(child)
+            } else {
+                child
+            }
+        }));
 
-        let text = ui::v_flex(move |_cx| children)
-            .gap(Space::N1p5)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .into_element(cx);
-        let media = ui::v_flex(move |_cx| vec![media])
-            .items_center()
-            .layout(LayoutRefinement::default().mb(Space::N2))
-            .into_element(cx);
+        let template_columns = if left_aligned && has_media {
+            Some(vec![GridTrackSizing::Auto, GridTrackSizing::Fr(1.0)])
+        } else {
+            Some(vec![GridTrackSizing::Fr(1.0)])
+        };
+        let template_rows = if has_media {
+            if left_aligned {
+                Some(vec![GridTrackSizing::Auto, GridTrackSizing::Fr(1.0)])
+            } else {
+                Some(vec![
+                    GridTrackSizing::Auto,
+                    GridTrackSizing::Auto,
+                    GridTrackSizing::Fr(1.0),
+                ])
+            }
+        } else {
+            Some(vec![GridTrackSizing::Auto, GridTrackSizing::Fr(1.0)])
+        };
 
-        cx.container(props, move |cx| {
-            vec![
-                ui::v_flex(move |_cx| vec![media, text])
-                    .gap(Space::N1p5)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .into_element(cx),
-            ]
-        })
+        cx.grid(
+            GridProps {
+                layout: decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_w_0(),
+                ),
+                cols: 1,
+                rows: None,
+                template_columns,
+                template_rows,
+                gap: header_gap,
+                column_gap: (left_aligned && has_media).then_some(media_gap),
+                row_gap: None,
+                padding: SpacingEdges::all(Px(0.0).into()),
+                justify: MainAlign::Start,
+                align: item_alignment,
+                justify_items: Some(item_alignment),
+            },
+            move |_cx| children,
+        )
     }
 }
 
@@ -1569,6 +1570,7 @@ impl AlertDialogMedia {
             LayoutRefinement::default()
                 .w_px(Px(64.0))
                 .h_px(Px(64.0))
+                .mb(Space::N2)
                 .flex_shrink_0()
                 .merge(self.layout),
         );
@@ -1830,6 +1832,65 @@ fn apply_alert_dialog_header_text_alignment(
         .into_iter()
         .map(|child| apply_alert_dialog_header_text_alignment(child, align))
         .collect();
+    element
+}
+
+fn patch_alert_dialog_header_media_grid_slot(
+    mut element: AnyElement,
+    left_aligned: bool,
+) -> AnyElement {
+    let apply_layout = |layout: &mut LayoutStyle| {
+        if left_aligned {
+            if layout.grid.row.span.is_none() {
+                layout.grid.row.span = Some(2);
+            }
+            if layout.grid.align_self.is_none() {
+                layout.grid.align_self = Some(CrossAlign::Start);
+            }
+            if layout.grid.justify_self.is_none() {
+                layout.grid.justify_self = Some(CrossAlign::Start);
+            }
+        }
+    };
+
+    match &mut element.kind {
+        ElementKind::Container(props) => apply_layout(&mut props.layout),
+        ElementKind::Pressable(props) => apply_layout(&mut props.layout),
+        ElementKind::Flex(props) => apply_layout(&mut props.layout),
+        ElementKind::Row(props) => apply_layout(&mut props.layout),
+        ElementKind::Column(props) => apply_layout(&mut props.layout),
+        ElementKind::Stack(props) => apply_layout(&mut props.layout),
+        ElementKind::SemanticFlex(props) => apply_layout(&mut props.flex.layout),
+        ElementKind::Text(props) => apply_layout(&mut props.layout),
+        ElementKind::StyledText(props) => apply_layout(&mut props.layout),
+        ElementKind::SelectableText(props) => apply_layout(&mut props.layout),
+        _ => {}
+    }
+
+    element
+}
+
+fn patch_alert_dialog_header_text_grid_lane(mut element: AnyElement) -> AnyElement {
+    let apply_layout = |layout: &mut LayoutStyle| {
+        if layout.grid.column.start.is_none() {
+            layout.grid.column.start = Some(2);
+        }
+    };
+
+    match &mut element.kind {
+        ElementKind::Container(props) => apply_layout(&mut props.layout),
+        ElementKind::Pressable(props) => apply_layout(&mut props.layout),
+        ElementKind::Flex(props) => apply_layout(&mut props.layout),
+        ElementKind::Row(props) => apply_layout(&mut props.layout),
+        ElementKind::Column(props) => apply_layout(&mut props.layout),
+        ElementKind::Stack(props) => apply_layout(&mut props.layout),
+        ElementKind::SemanticFlex(props) => apply_layout(&mut props.flex.layout),
+        ElementKind::Text(props) => apply_layout(&mut props.layout),
+        ElementKind::StyledText(props) => apply_layout(&mut props.layout),
+        ElementKind::SelectableText(props) => apply_layout(&mut props.layout),
+        _ => {}
+    }
+
     element
 }
 
@@ -4264,6 +4325,9 @@ mod tests {
             action_id.get().expect("action element id"),
         )
         .expect("action bounds");
+        let media_bounds =
+            bounds_for_element(&mut app, window, media_id.get().expect("media element id"))
+                .expect("media bounds");
 
         let content_left = content_bounds.origin.x.0 - 0.5;
         let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0 + 0.5;
@@ -4290,6 +4354,22 @@ mod tests {
                 "expected {label} to stay inside media alert dialog content; content={content_bounds:?} node={bounds:?}"
             );
         }
+        assert!(
+            (title_bounds.origin.y.0 - media_bounds.origin.y.0).abs() < 1.0,
+            "expected default-size media header title to share the media row's top edge in the two-column grid; media={media_bounds:?} title={title_bounds:?}"
+        );
+        assert!(
+            title_bounds.origin.x.0 >= media_bounds.origin.x.0 + media_bounds.size.width.0 + 23.0,
+            "expected default-size media header title to occupy the second grid column with a wide inline gap; media={media_bounds:?} title={title_bounds:?}"
+        );
+        assert!(
+            (description_bounds.origin.x.0 - title_bounds.origin.x.0).abs() < 1.0,
+            "expected default-size media header description to align to the same second-column start as the title; title={title_bounds:?} description={description_bounds:?}"
+        );
+        assert!(
+            description_bounds.origin.y.0 > title_bounds.origin.y.0 + 4.0,
+            "expected default-size media header description to stay below the title row; title={title_bounds:?} description={description_bounds:?}"
+        );
     }
 
     #[test]

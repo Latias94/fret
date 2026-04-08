@@ -27,7 +27,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::Button::new("Inline Button")
-                        .ui()
                         .test_id("ui-gallery-card-content-inline-button"),
                 ]
             }),
