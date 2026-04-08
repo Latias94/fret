@@ -3,12 +3,18 @@ mod pointer_down;
 
 use crate::ui::canvas::widget::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::ui::canvas::widget) enum ContextMenuSelectionActivationOutcome {
+    Activated,
+    KeepOpen,
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in crate::ui::canvas::widget) fn activate_context_menu_active_selection<H: UiHost>(
         &mut self,
         cx: &mut EventCx<'_, H>,
         menu: &ContextMenuState,
-    ) -> bool {
+    ) -> ContextMenuSelectionActivationOutcome {
         let index = menu.active_item.min(menu.items.len().saturating_sub(1));
         self.activate_context_menu_selection(cx, menu, index)
     }
@@ -18,14 +24,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut EventCx<'_, H>,
         menu: &ContextMenuState,
         index: usize,
-    ) -> bool {
+    ) -> ContextMenuSelectionActivationOutcome {
         let Some((target, invoked_at, item, candidates)) =
             payload::context_menu_activation_payload(menu, index)
         else {
-            return false;
+            return ContextMenuSelectionActivationOutcome::KeepOpen;
         };
         self.activate_context_menu_item(cx, &target, invoked_at, item, &candidates);
-        true
+        ContextMenuSelectionActivationOutcome::Activated
     }
 }
 
