@@ -32,6 +32,10 @@ Ask: does this slot use `flex`, `grid`, `gap-*`, or is it just padding/typograph
 2) Compare what our recipe *adds*
 
 - Does our subtree introduce `vstack/hstack` where upstream is a `div`?
+- If the helper is a wrapper (`h_row`, `h_flex`, `v_stack`, `v_flex`) with an outer container plus
+  an inner flex root, confirm width/min/max constraints reach the actual flex node rather than only
+  the wrapper. A `w_full().min_w_0()` patch on the outer shell is not enough if the inner flex root
+  still resolves intrinsic width.
 - Does it rely on a default that differs from the DOM?
   - `items-stretch` vs `items-start`
   - `w_full()` on children vs on wrappers
@@ -39,6 +43,9 @@ Ask: does this slot use `flex`, `grid`, `gap-*`, or is it just padding/typograph
 - Did we only compare the component source and forget the exact docs-path example file?
   - example-local `size`, `variant`, wrapper layout, and slot-local utility classes are parity
     truth too
+  - example-local placeholder copy, `text-sm` vs default body text, and explanatory copy injected
+    into the demo body are parity truth too; they can change height and visual weight without
+    changing the slot structure
 
 3) Decide the owning layer
 
@@ -132,6 +139,16 @@ Regression protection:
 - Unit test that checks `ColumnProps.align == CrossAlign::Start`.
 - UI gallery demo that places an inline-sized button directly under `CardContent`.
 - Diag script that gates `bounds_max_size` on that button.
+
+### Source-policy test (preferred for docs-path example drift)
+
+Pair geometry gates with a small source assertion when the upstream demo depends on exact
+example-local props or copy:
+
+- link button stays default-sized instead of `size="sm"`
+- password input omits a placeholder if upstream omits it
+- body copy stays on the default text lane instead of drifting to `text-sm`
+- demo-only copyability notes stay in page notes/section descriptions rather than the example body
 
 
 ## Case study: Card root width “should Card default to w-full?”

@@ -92,6 +92,30 @@ fn flex_root_needs_fill_height(direction: Axis, layout: &LayoutRefinement) -> bo
         })
 }
 
+fn apply_inner_flex_root_width_constraints(
+    theme: &Theme,
+    layout: &LayoutRefinement,
+    force_width_fill: bool,
+    flex_props: &mut FlexProps,
+) {
+    let resolved_layout = decl_style::layout_style(theme, layout.clone());
+    let size = layout.size.as_ref();
+
+    if size.and_then(|size| size.width.as_ref()).is_some() {
+        flex_props.layout.size.width = resolved_layout.size.width;
+    } else if force_width_fill {
+        flex_props.layout.size.width = Length::Fill;
+    }
+
+    if size.and_then(|size| size.min_width.as_ref()).is_some() {
+        flex_props.layout.size.min_width = resolved_layout.size.min_width;
+    }
+
+    if size.and_then(|size| size.max_width.as_ref()).is_some() {
+        flex_props.layout.size.max_width = resolved_layout.size.max_width;
+    }
+}
+
 /// Late-lands a single typed child into `Ui` / `Elements`.
 ///
 /// This is the narrow default-path helper for render roots or wrapper closures that only need to
@@ -267,8 +291,8 @@ where
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let needs_fill_height = flex_root_needs_fill_height(self.direction, &self.layout);
-
-        let container = decl_style::container_props(theme, self.chrome, self.layout);
+        let layout = self.layout;
+        let container = decl_style::container_props(theme, self.chrome, layout.clone());
 
         let gap = self.gap_length.as_ref().and_then(|l| match l {
             LengthRefinement::Auto => None,
@@ -287,9 +311,12 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
-        if self.force_width_fill {
-            flex_props.layout.size.width = Length::Fill;
-        }
+        apply_inner_flex_root_width_constraints(
+            theme,
+            &layout,
+            self.force_width_fill,
+            &mut flex_props,
+        );
         if needs_fill_height {
             flex_props.layout.size.height = Length::Fill;
         }
@@ -312,8 +339,8 @@ where
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let needs_fill_height = flex_root_needs_fill_height(self.direction, &self.layout);
-
-        let container = decl_style::container_props(theme, self.chrome, self.layout);
+        let layout = self.layout;
+        let container = decl_style::container_props(theme, self.chrome, layout.clone());
 
         let gap = self.gap_length.as_ref().and_then(|l| match l {
             LengthRefinement::Auto => None,
@@ -332,9 +359,12 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
-        if self.force_width_fill {
-            flex_props.layout.size.width = Length::Fill;
-        }
+        apply_inner_flex_root_width_constraints(
+            theme,
+            &layout,
+            self.force_width_fill,
+            &mut flex_props,
+        );
         if needs_fill_height {
             flex_props.layout.size.height = Length::Fill;
         }
@@ -2449,6 +2479,100 @@ mod tests {
                         props.layout.size.height,
                         Length::Auto,
                         "min_h_0 should not force the inner stack root to fill available height"
+                    );
+                }
+                other => panic!("expected inner flex root, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn h_row_width_constraints_propagate_to_inner_flex_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = h_row(|_cx| [text("hello")])
+                .w_full()
+                .min_w_0()
+                .max_w(Px(280.0))
+                .into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(props) => {
+                    assert_eq!(props.layout.size.width, Length::Fill);
+                    assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+                    assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(280.0))));
+                    el.children
+                        .first()
+                        .expect("flex box container should wrap an inner flex root")
+                }
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Flex(props) => {
+                    assert_eq!(
+                        props.layout.size.width,
+                        Length::Fill,
+                        "expected explicit width constraints on h_row(...) to land on the inner row root"
+                    );
+                    assert_eq!(
+                        props.layout.size.min_width,
+                        Some(Length::Px(Px(0.0))),
+                        "expected min_w_0 on h_row(...) to land on the inner row root"
+                    );
+                    assert_eq!(
+                        props.layout.size.max_width,
+                        Some(Length::Px(Px(280.0))),
+                        "expected max_w on h_row(...) to land on the inner row root"
+                    );
+                }
+                other => panic!("expected inner flex root, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn h_flex_explicit_width_overrides_default_fill_on_inner_flex_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = h_flex(|_cx| [text("hello")])
+                .layout(LayoutRefinement::default().w_auto().min_w_0())
+                .into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(props) => {
+                    assert_eq!(props.layout.size.width, Length::Auto);
+                    assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+                    el.children
+                        .first()
+                        .expect("flex box container should wrap an inner flex root")
+                }
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Flex(props) => {
+                    assert_eq!(
+                        props.layout.size.width,
+                        Length::Auto,
+                        "expected explicit w_auto() to override the default fill-width inner flex root"
+                    );
+                    assert_eq!(
+                        props.layout.size.min_width,
+                        Some(Length::Px(Px(0.0))),
+                        "expected min_w_0 to land on the inner flex root even when explicit width overrides the default fill contract"
                     );
                 }
                 other => panic!("expected inner flex root, got {other:?}"),

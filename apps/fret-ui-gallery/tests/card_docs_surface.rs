@@ -104,10 +104,22 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
         )),
         "card demo Sign Up action should not downsize the upstream default link button",
     );
+    assert!(
+        !normalized_demo.contains(&normalize_ws(".placeholder(\"••••••••\")")),
+        "card demo password input should stay aligned with the upstream example and omit a placeholder",
+    );
+    assert!(
+        !normalize_ws(rtl).contains(&normalize_ws(".placeholder(\"••••••••\")")),
+        "card rtl password input should stay aligned with the upstream translated example and omit a placeholder",
+    );
 
     assert!(
         size.contains(".size(shadcn::CardSize::Sm)"),
         "card size snippet should keep the small-size variant visible on the copyable lane",
+    );
+    assert!(
+        !size.contains(".text_sm()"),
+        "card size snippet body should stay on the upstream default body-text lane",
     );
 
     for needle in [
@@ -115,13 +127,17 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
         "use fret_ui_assets::ui::ImageSourceElementContextExt as _;",
         "ImageSource::rgba8(",
         "fn demo_cover_image(cx: &mut UiCx<'_>) -> Option<ImageId>",
-        "self-contained RGBA source",
+        "A practical talk on component APIs, accessibility, and shipping faster.",
     ] {
         assert!(
             image.contains(needle),
             "card image snippet should stay self-contained and copyable; missing `{needle}`",
         );
     }
+    assert!(
+        !image.contains("self-contained RGBA source"),
+        "card image snippet should keep copyability notes out of the upstream demo body text",
+    );
     assert!(
         !image.contains("super::demo_cover_image"),
         "card image snippet should not depend on a sibling helper module anymore",

@@ -40,7 +40,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::card_content(
-                                |cx| ui::children![cx; ui::text("Content only.").text_sm()],
+                                |cx| ui::children![cx; ui::text("Content only.")],
                             ),
                         ]
                     })
@@ -81,8 +81,40 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 |cx| ui::children![cx; shadcn::card_title("Header + Content")],
                             ),
                             shadcn::card_content(
-                                |cx| ui::children![cx; ui::text("CardContent body.").text_sm()],
+                                |cx| ui::children![cx; ui::text("CardContent body.")],
                             ),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
+            };
+
+            let header_with_action = {
+                cell(
+                    "ui-gallery-card-compositions-header-action",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::card_title("Header + Action")
+                                        .test_id("ui-gallery-card-compositions-header-action-title"),
+                                    shadcn::card_description(
+                                        "Header-only composition with the optional CardAction lane.",
+                                    ),
+                                    shadcn::card_action(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::Button::new("Manage")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .test_id("ui-gallery-card-compositions-header-action-trigger"),
+                                        ]
+                                    }),
+                                ]
+                            }),
                         ]
                     })
                     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
@@ -97,7 +129,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::card_footer(
-                                |cx| ui::children![cx; ui::text("Footer only.").text_sm()],
+                                |cx| {
+                                    ui::children![
+                                        cx;
+                                        ui::text("Footer only.")
+                                            .test_id("ui-gallery-card-compositions-footer-only-text"),
+                                    ]
+                                },
                             ),
                         ]
                     })
@@ -115,9 +153,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             shadcn::card_header(
                                 |cx| ui::children![cx; shadcn::card_title("Header + Footer")],
                             ),
-                            shadcn::card_footer(
-                                |cx| ui::children![cx; ui::text("Footer content.").text_sm()],
-                            ),
+                            shadcn::card_footer(|cx| {
+                                ui::children![
+                                    cx;
+                                    ui::text("Footer content.")
+                                        .test_id("ui-gallery-card-compositions-header-footer-text"),
+                                ]
+                            }),
                         ]
                     })
                     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
@@ -132,11 +174,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::card_content(
-                                |cx| ui::children![cx; ui::text("Body content.").text_sm()],
+                                |cx| ui::children![cx; ui::text("Body content.")],
                             ),
-                            shadcn::card_footer(
-                                |cx| ui::children![cx; ui::text("Footer content.").text_sm()],
-                            ),
+                            shadcn::card_footer(|cx| {
+                                ui::children![
+                                    cx;
+                                    ui::text("Footer content.")
+                                        .test_id("ui-gallery-card-compositions-content-footer-text"),
+                                ]
+                            }),
                         ]
                     })
                     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
@@ -154,14 +200,64 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 ui::children![
                                     cx;
                                     shadcn::card_title("Header + Content + Footer"),
+                                    shadcn::card_description(
+                                        "Full card structure without the optional action lane.",
+                                    ),
                                 ]
                             }),
                             shadcn::card_content(
-                                |cx| ui::children![cx; ui::text("CardContent body.").text_sm()],
+                                |cx| ui::children![cx; ui::text("CardContent body.")],
                             ),
-                            shadcn::card_footer(
-                                |cx| ui::children![cx; ui::text("Footer content.").text_sm()],
+                            shadcn::card_footer(|cx| {
+                                ui::children![
+                                    cx;
+                                    ui::text("Footer content.")
+                                        .test_id(
+                                            "ui-gallery-card-compositions-header-content-footer-text",
+                                        ),
+                                ]
+                            }),
+                        ]
+                    })
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
+                )
+                .into_element(cx)
+            };
+
+            let header_content_footer_action = {
+                cell(
+                    "ui-gallery-card-compositions-full-action",
+                    shadcn::card(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_header(|cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::card_title("Full + Action")
+                                        .test_id("ui-gallery-card-compositions-full-action-title"),
+                                    shadcn::card_description(
+                                        "Full card structure with the optional CardAction lane.",
+                                    ),
+                                    shadcn::card_action(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::Button::new("Review")
+                                                .variant(shadcn::ButtonVariant::Link)
+                                                .test_id("ui-gallery-card-compositions-full-action-trigger"),
+                                        ]
+                                    }),
+                                ]
+                            }),
+                            shadcn::card_content(
+                                |cx| ui::children![cx; ui::text("CardContent body.")],
                             ),
+                            shadcn::card_footer(|cx| {
+                                ui::children![
+                                    cx;
+                                    ui::text("Footer content.")
+                                        .test_id("ui-gallery-card-compositions-full-action-footer-text"),
+                                ]
+                            }),
                         ]
                     })
                     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(260.0))),
@@ -176,7 +272,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::card_header(
-                                |cx| ui::children![cx; shadcn::card_title("Bordered Sections")],
+                                |cx| {
+                                    ui::children![
+                                        cx;
+                                        shadcn::card_title("Header/Footer Borders (Fret)"),
+                                        shadcn::card_description(
+                                            "Fret follow-up: caller-owned section borders beyond the upstream docs path.",
+                                        ),
+                                    ]
+                                },
                             )
                             .border_bottom(true),
                             shadcn::card_content(|cx| {
@@ -185,11 +289,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     ui::text(
                                         "Header/footer borders can be enabled independently.",
                                     )
-                                    .text_sm(),
                                 ]
                             }),
                             shadcn::card_footer(
-                                |cx| ui::children![cx; ui::text("Footer with Border").text_sm()],
+                                |cx| {
+                                    ui::children![
+                                        cx;
+                                        ui::text("Footer with Border")
+                                            .test_id("ui-gallery-card-compositions-bordered-footer-text"),
+                                    ]
+                                },
                             )
                             .border_top(true),
                         ]
@@ -203,10 +312,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 content_only,
                 header_only,
                 header_and_content,
+                header_with_action,
                 footer_only,
                 header_and_footer,
                 content_and_footer,
                 header_content_footer,
+                header_content_footer_action,
                 bordered_sections,
             ]
         },

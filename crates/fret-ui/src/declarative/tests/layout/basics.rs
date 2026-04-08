@@ -1604,6 +1604,921 @@ fn grid_justify_items_start_keeps_auto_sized_children_intrinsic() {
 }
 
 #[test]
+fn pressable_grid_item_shrink_wraps_single_child_in_auto_track() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-pressable-auto-track",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.grid.column.start = Some(2);
+                    pressable.layout.grid.row.start = Some(1);
+                    pressable.layout.grid.row.span = Some(2);
+
+                    let mut inner = crate::element::ContainerProps::default();
+                    inner.layout.size.width = crate::element::Length::Px(Px(40.0));
+                    inner.layout.size.height = crate::element::Length::Px(Px(12.0));
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.pressable(pressable, move |cx, _state| {
+                            vec![cx.container(inner, |_cx| vec![])]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let children = ui.children(grid_node);
+    assert_eq!(children.len(), 3);
+
+    let title_bounds = ui.debug_node_bounds(children[0]).expect("title bounds");
+    let description_bounds = ui
+        .debug_node_bounds(children[1])
+        .expect("description bounds");
+    let pressable_bounds = ui.debug_node_bounds(children[2]).expect("pressable bounds");
+
+    assert_eq!(
+        pressable_bounds.origin,
+        Point::new(Px(160.0), Px(0.0)),
+        "expected shrink-wrapped pressable grid item to remain in the auto right-hand track, got {pressable_bounds:?}"
+    );
+    assert_eq!(
+        pressable_bounds.size.width,
+        Px(40.0),
+        "expected pressable root to inherit its single child's intrinsic width inside a grid auto track, got {pressable_bounds:?}"
+    );
+    assert_eq!(pressable_bounds.size.height, Px(12.0));
+    assert_eq!(title_bounds.size.width, Px(160.0));
+    assert_eq!(description_bounds.size.width, Px(160.0));
+}
+
+#[test]
+fn pressable_with_auto_width_chrome_container_shrink_wraps_in_grid_auto_track() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-pressable-auto-track-chrome",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(1),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![crate::element::GridTrackSizing::Auto]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut filler = crate::element::ContainerProps::default();
+                    filler.layout.size.width = crate::element::Length::Fill;
+                    filler.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    filler.layout.grid.column.start = Some(1);
+                    filler.layout.grid.row.start = Some(1);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.grid.column.start = Some(2);
+                    pressable.layout.grid.row.start = Some(1);
+                    pressable.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    pressable.layout.size.min_height = Some(crate::element::Length::Px(Px(36.0)));
+
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    chrome.padding.left = crate::element::SpacingLength::Px(Px(16.0));
+                    chrome.padding.right = crate::element::SpacingLength::Px(Px(16.0));
+
+                    let mut inner = crate::element::ContainerProps::default();
+                    inner.layout.size.width = crate::element::Length::Px(Px(86.0));
+                    inner.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    vec![
+                        cx.container(filler, |_cx| vec![]),
+                        cx.pressable(pressable, move |cx, _state| {
+                            vec![cx.container(chrome, move |cx| {
+                                vec![cx.container(inner, |_cx| vec![])]
+                            })]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let children = ui.children(grid_node);
+    assert_eq!(children.len(), 2);
+
+    let pressable_bounds = ui.debug_node_bounds(children[1]).expect("pressable bounds");
+
+    assert_eq!(
+        pressable_bounds.origin,
+        Point::new(Px(154.0), Px(0.0)),
+        "expected explicit-height pressable to keep the auto right-hand track origin, got {pressable_bounds:?}"
+    );
+    assert_eq!(
+        pressable_bounds.size.width,
+        Px(86.0),
+        "expected pressable root to inherit its chrome container width inside a grid auto track, got {pressable_bounds:?}"
+    );
+    assert_eq!(pressable_bounds.size.height, Px(36.0));
+}
+
+#[test]
+fn single_child_container_grid_item_preserves_descendant_pressable_intrinsic_width() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-single-child-container-pressable",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut slot = crate::element::ContainerProps::default();
+                    slot.layout.grid.column.start = Some(2);
+                    slot.layout.grid.row.start = Some(1);
+                    slot.layout.grid.row.span = Some(2);
+                    slot.layout.grid.align_self = Some(crate::element::CrossAlign::Start);
+                    slot.layout.grid.justify_self = Some(crate::element::CrossAlign::End);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    pressable.layout.size.min_height = Some(crate::element::Length::Px(Px(36.0)));
+
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    let mut inner = crate::element::ContainerProps::default();
+                    inner.layout.size.width = crate::element::Length::Px(Px(86.0));
+                    inner.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.container(slot, move |cx| {
+                            vec![cx.pressable(pressable, move |cx, _state| {
+                                vec![cx.container(chrome, move |cx| {
+                                    vec![cx.container(inner, |_cx| vec![])]
+                                })]
+                            })]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let children = ui.children(grid_node);
+    assert_eq!(children.len(), 3);
+
+    let slot_bounds = ui.debug_node_bounds(children[2]).expect("slot bounds");
+    let pressable_node = ui.children(children[2])[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+
+    assert_eq!(
+        slot_bounds.origin,
+        Point::new(Px(154.0), Px(0.0)),
+        "expected single-child grid slot container to stay in the auto right-hand track, got {slot_bounds:?}"
+    );
+    assert_eq!(
+        slot_bounds.size.width,
+        Px(86.0),
+        "expected single-child grid slot container to inherit the descendant pressable width, got {slot_bounds:?}"
+    );
+    assert_eq!(slot_bounds.size.height, Px(36.0));
+    assert_eq!(
+        pressable_bounds.size.width,
+        Px(86.0),
+        "expected nested pressable root to preserve intrinsic width through the single-child container wrapper, got {pressable_bounds:?}"
+    );
+}
+
+#[test]
+fn single_child_container_grid_item_preserves_descendant_pressable_intrinsic_width_through_row() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-single-child-container-pressable-row",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut slot = crate::element::ContainerProps::default();
+                    slot.layout.grid.column.start = Some(2);
+                    slot.layout.grid.row.start = Some(1);
+                    slot.layout.grid.row.span = Some(2);
+                    slot.layout.grid.align_self = Some(crate::element::CrossAlign::Start);
+                    slot.layout.grid.justify_self = Some(crate::element::CrossAlign::End);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    pressable.layout.size.min_height = Some(crate::element::Length::Px(Px(36.0)));
+
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    let mut inner = crate::element::ContainerProps::default();
+                    inner.layout.size.width = crate::element::Length::Px(Px(86.0));
+                    inner.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.container(slot, move |cx| {
+                            vec![cx.pressable(pressable, move |cx, _state| {
+                                vec![cx.container(chrome, move |cx| {
+                                    let mut row = crate::element::RowProps::default();
+                                    row.layout.size.height = crate::element::Length::Fill;
+                                    vec![cx.row(row, move |cx| {
+                                        vec![cx.container(inner, |_cx| vec![])]
+                                    })]
+                                })]
+                            })]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let slot_node = ui.children(grid_node)[2];
+    let pressable_node = ui.children(slot_node)[0];
+    let slot_bounds = ui.debug_node_bounds(slot_node).expect("slot bounds");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+
+    assert_eq!(slot_bounds.size.width, Px(86.0));
+    assert_eq!(
+        pressable_bounds.size.width,
+        Px(86.0),
+        "expected nested pressable root to keep intrinsic width even when its chrome container hosts a fill-height row, got {pressable_bounds:?}; slot={slot_bounds:?}"
+    );
+}
+
+#[test]
+fn single_child_container_grid_item_preserves_descendant_pressable_intrinsic_width_through_foreground_scope()
+ {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-single-child-container-pressable-foreground-scope",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut slot = crate::element::ContainerProps::default();
+                    slot.layout.grid.column.start = Some(2);
+                    slot.layout.grid.row.start = Some(1);
+                    slot.layout.grid.row.span = Some(2);
+                    slot.layout.grid.align_self = Some(crate::element::CrossAlign::Start);
+                    slot.layout.grid.justify_self = Some(crate::element::CrossAlign::End);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    pressable.layout.size.min_height = Some(crate::element::Length::Px(Px(36.0)));
+
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    let mut inner = crate::element::ContainerProps::default();
+                    inner.layout.size.width = crate::element::Length::Px(Px(86.0));
+                    inner.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.container(slot, move |cx| {
+                            vec![cx.pressable(pressable, move |cx, _state| {
+                                vec![cx.container(chrome, move |cx| {
+                                    vec![cx.foreground_scope(
+                                        fret_core::Color {
+                                            r: 1.0,
+                                            g: 1.0,
+                                            b: 1.0,
+                                            a: 1.0,
+                                        },
+                                        move |cx| {
+                                            let mut row = crate::element::RowProps::default();
+                                            row.layout.size.height = crate::element::Length::Fill;
+                                            vec![cx.row(row, move |cx| {
+                                                vec![cx.container(inner, |_cx| vec![])]
+                                            })]
+                                        },
+                                    )]
+                                })]
+                            })]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let slot_node = ui.children(grid_node)[2];
+    let pressable_node = ui.children(slot_node)[0];
+    let slot_bounds = ui.debug_node_bounds(slot_node).expect("slot bounds");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+
+    assert_eq!(slot_bounds.size.width, Px(86.0));
+    assert_eq!(
+        pressable_bounds.size.width,
+        Px(86.0),
+        "expected nested pressable root to keep intrinsic width through foreground-scope wrapped content, got {pressable_bounds:?}; slot={slot_bounds:?}"
+    );
+}
+
+#[test]
+fn single_child_container_grid_item_preserves_descendant_pressable_intrinsic_width_through_row_text()
+ {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-single-child-container-pressable-row-text",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut slot = crate::element::ContainerProps::default();
+                    slot.layout.grid.column.start = Some(2);
+                    slot.layout.grid.row.start = Some(1);
+                    slot.layout.grid.row.span = Some(2);
+                    slot.layout.grid.align_self = Some(crate::element::CrossAlign::Start);
+                    slot.layout.grid.justify_self = Some(crate::element::CrossAlign::End);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    pressable.layout.size.min_height = Some(crate::element::Length::Px(Px(36.0)));
+
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.height = crate::element::Length::Px(Px(36.0));
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.container(slot, move |cx| {
+                            vec![cx.pressable(pressable, move |cx, _state| {
+                                vec![cx.container(chrome, move |cx| {
+                                    let mut row = crate::element::RowProps::default();
+                                    row.layout.size.height = crate::element::Length::Fill;
+                                    vec![cx.row(row, move |cx| vec![cx.text("Sign Up")])]
+                                })]
+                            })]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let slot_node = ui.children(grid_node)[2];
+    let pressable_node = ui.children(slot_node)[0];
+    let slot_bounds = ui.debug_node_bounds(slot_node).expect("slot bounds");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+
+    assert!(
+        slot_bounds.size.width.0 > 0.0,
+        "expected grid slot container to inherit non-zero width from nested row+text content, got {slot_bounds:?}"
+    );
+    assert!(
+        pressable_bounds.size.width.0 > 0.0,
+        "expected nested pressable root to keep non-zero intrinsic width through row+text content, got {pressable_bounds:?}; slot={slot_bounds:?}"
+    );
+}
+
+#[test]
+fn single_child_container_grid_item_preserves_descendant_pressable_intrinsic_width_through_padded_row_text()
+ {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "grid-single-child-container-pressable-padded-row-text",
+        |cx| {
+            vec![cx.grid(
+                crate::element::GridProps {
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    cols: 1,
+                    rows: Some(2),
+                    template_columns: Some(vec![
+                        crate::element::GridTrackSizing::Fr(1.0),
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    template_rows: Some(vec![
+                        crate::element::GridTrackSizing::Auto,
+                        crate::element::GridTrackSizing::Auto,
+                    ]),
+                    align: crate::element::CrossAlign::Start,
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut title = crate::element::ContainerProps::default();
+                    title.layout.size.width = crate::element::Length::Fill;
+                    title.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    title.layout.grid.column.start = Some(1);
+                    title.layout.grid.row.start = Some(1);
+
+                    let mut description = crate::element::ContainerProps::default();
+                    description.layout.size.width = crate::element::Length::Fill;
+                    description.layout.size.height = crate::element::Length::Px(Px(20.0));
+                    description.layout.grid.column.start = Some(1);
+                    description.layout.grid.row.start = Some(2);
+
+                    let mut slot = crate::element::ContainerProps::default();
+                    slot.layout.grid.column.start = Some(2);
+                    slot.layout.grid.row.start = Some(1);
+                    slot.layout.grid.row.span = Some(2);
+                    slot.layout.grid.align_self = Some(crate::element::CrossAlign::Start);
+                    slot.layout.grid.justify_self = Some(crate::element::CrossAlign::End);
+
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    pressable.layout.size.min_height = Some(crate::element::Length::Px(Px(36.0)));
+                    pressable.layout.overflow = crate::element::Overflow::Visible;
+
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.height = crate::element::Length::Px(Px(36.0));
+                    chrome.layout.overflow = crate::element::Overflow::Clip;
+                    chrome.padding.left = crate::element::SpacingLength::Px(Px(16.0));
+                    chrome.padding.right = crate::element::SpacingLength::Px(Px(16.0));
+                    chrome.padding.top = crate::element::SpacingLength::Px(Px(8.0));
+                    chrome.padding.bottom = crate::element::SpacingLength::Px(Px(8.0));
+
+                    vec![
+                        cx.container(title, |_cx| vec![]),
+                        cx.container(description, |_cx| vec![]),
+                        cx.container(slot, move |cx| {
+                            vec![cx.pressable(pressable, move |cx, _state| {
+                                vec![cx.container(chrome, move |cx| {
+                                    let mut row = crate::element::RowProps::default();
+                                    row.layout.size.height = crate::element::Length::Fill;
+                                    vec![cx.row(row, move |cx| vec![cx.text("Sign Up")])]
+                                })]
+                            })]
+                        }),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let grid_node = ui.children(root)[0];
+    let slot_node = ui.children(grid_node)[2];
+    let pressable_node = ui.children(slot_node)[0];
+    let chrome_node = ui.children(pressable_node)[0];
+    let slot_bounds = ui.debug_node_bounds(slot_node).expect("slot bounds");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let chrome_bounds = ui.debug_node_bounds(chrome_node).expect("chrome bounds");
+    let engine = ui.take_layout_engine();
+    let grid_dump = engine.debug_dump_subtree_json(grid_node, |node| {
+        Some(format!(
+            "{}:{node:?}",
+            match node {
+                n if n == grid_node => "grid",
+                n if n == slot_node => "slot",
+                n if n == pressable_node => "pressable",
+                n if n == chrome_node => "chrome",
+                _ => "node",
+            }
+        ))
+    });
+    ui.put_layout_engine(engine);
+
+    assert_eq!(
+        slot_bounds.size.width,
+        Px(42.0),
+        "expected grid auto track to include padded button-like chrome width, got slot={slot_bounds:?}; pressable={pressable_bounds:?}; chrome={chrome_bounds:?}; grid_dump={grid_dump}"
+    );
+    assert_eq!(
+        pressable_bounds.size.width,
+        Px(42.0),
+        "expected pressable root to preserve padded row+text intrinsic width, got slot={slot_bounds:?}; pressable={pressable_bounds:?}; chrome={chrome_bounds:?}; grid_dump={grid_dump}"
+    );
+    assert_eq!(chrome_bounds.size.width, Px(42.0));
+}
+
+#[test]
+fn auto_sized_row_treats_zero_available_width_as_unknown_for_intrinsic_measurement() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "row-zero-placeholder-width",
+        |cx| {
+            let mut row = crate::element::RowProps::default();
+            row.layout.size.width = Length::Auto;
+            row.layout.size.height = Length::Auto;
+            vec![cx.row(row, |cx| vec![cx.text("Clear Button")])]
+        },
+    );
+    ui.set_root(root);
+
+    let row_node = ui.children(root)[0];
+
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let max_content = ui.measure_in(&mut app, &mut text, row_node, max_constraints, 1.0);
+
+    let placeholder_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(0.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let placeholder = ui.measure_in(&mut app, &mut text, row_node, placeholder_constraints, 1.0);
+
+    assert!(
+        placeholder.width.0 > 0.01,
+        "expected auto-sized row intrinsic measurement to preserve a non-zero width when available.width=0 is only a placeholder; placeholder={placeholder:?} max_content={max_content:?}"
+    );
+    assert!(
+        (placeholder.width.0 - max_content.width.0).abs() < 0.01,
+        "expected auto-sized row to treat zero-width placeholder availability like max-content on the inline axis; placeholder={placeholder:?} max_content={max_content:?}"
+    );
+    assert!(
+        (placeholder.height.0 - max_content.height.0).abs() < 0.01,
+        "expected auto-sized row to preserve its intrinsic block size under zero-width placeholder availability; placeholder={placeholder:?} max_content={max_content:?}"
+    );
+}
+
+#[test]
+fn auto_sized_container_pressable_chain_treats_zero_available_width_as_unknown_for_intrinsic_measurement()
+ {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "container-pressable-zero-placeholder-width",
+        |cx| {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.layout.size.width = Length::Auto;
+            outer.layout.size.height = Length::Auto;
+
+            vec![cx.container(outer, |cx| {
+                let mut pressable = crate::element::PressableProps::default();
+                pressable.layout.size.width = Length::Auto;
+                pressable.layout.size.height = Length::Auto;
+
+                vec![cx.pressable(pressable, |cx, _state| {
+                    let mut chrome = crate::element::ContainerProps::default();
+                    chrome.layout.size.width = Length::Auto;
+                    chrome.layout.size.height = Length::Px(Px(36.0));
+                    chrome.padding.left = crate::element::SpacingLength::Px(Px(16.0));
+                    chrome.padding.right = crate::element::SpacingLength::Px(Px(16.0));
+
+                    vec![cx.container(chrome, |cx| {
+                        let mut row = crate::element::RowProps::default();
+                        row.layout.size.width = Length::Auto;
+                        row.layout.size.height = Length::Auto;
+                        vec![cx.row(row, |cx| vec![cx.text("Sign Up")])]
+                    })]
+                })]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    let outer_node = ui.children(root)[0];
+
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let max_content = ui.measure_in(&mut app, &mut text, outer_node, max_constraints, 1.0);
+
+    let placeholder_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(0.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let placeholder = ui.measure_in(
+        &mut app,
+        &mut text,
+        outer_node,
+        placeholder_constraints,
+        1.0,
+    );
+
+    assert!(
+        placeholder.width.0 > 0.01,
+        "expected auto-sized container -> pressable -> chrome chain to keep a non-zero intrinsic width when available.width=0 is only a placeholder; placeholder={placeholder:?} max_content={max_content:?}"
+    );
+    assert!(
+        (placeholder.width.0 - max_content.width.0).abs() < 0.01,
+        "expected auto-sized container -> pressable -> chrome chain to treat zero-width placeholder availability like max-content on the inline axis; placeholder={placeholder:?} max_content={max_content:?}"
+    );
+    assert!(
+        (placeholder.height.0 - max_content.height.0).abs() < 0.01,
+        "expected auto-sized container -> pressable -> chrome chain to preserve intrinsic block size under zero-width placeholder availability; placeholder={placeholder:?} max_content={max_content:?}"
+    );
+}
+
+#[test]
 fn grid_item_self_alignment_overrides_container_item_alignment() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

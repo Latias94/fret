@@ -119,7 +119,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
         },
         CardDocSectionDiagnostics {
             title: "Compositions",
-            description: "Spot-check slot combinations: header/content/footer permutations.",
+            description: "Fret-only slot matrix: docs-consistent header/content/footer/action permutations plus bordered-section follow-ups.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_COMPOSITIONS,
             code_source: Some(snippets::compositions::SOURCE),
             shell: false,
@@ -307,7 +307,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-card-section-compositions")
             .no_shell()
             .max_w(Px(980.0))
-            .description("Spot-check slot combinations: header/content/footer permutations.");
+            .description("Fret-only slot matrix: docs-consistent header/content/footer/action permutations plus bordered-section follow-ups.");
         sections.push(with_card_code(section, snippets::compositions::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_CARD_CONTENT) == 0 {
@@ -340,6 +340,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Default first-party teaching should prefer `card(...)` plus the slot helper family; `Card::build(...)` remains a lower-level builder option when call sites need explicit late child collection.",
             "`Rich Title (Fret)` and `Rich Description (Fret)` keep the `card_title_children(...)` / `card_description_children(...)` lanes copyable on the default app-facing surface instead of making callers drop to slot builders for rich text content.",
             "Gallery order now mirrors the upstream Card docs path through `API Reference` before appending Fret-only regression sections.",
+            "`Compositions` is intentionally a Fret-only regression matrix, not an upstream docs-path example; it should stay honest about that and cover the optional `CardAction` lane when demonstrating slot permutations.",
             "The `Image` and `Meeting Notes` snippets now keep their demo media self-contained with inline RGBA sources, so the code tabs stay copyable without UI Gallery-only asset helpers.",
         ]);
         sections.push(

@@ -166,7 +166,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .leading_icon(fret_icons::IconId::new_static("lucide.captions"))
-                                .ui()
                                 .test_id("ui-gallery-card-notes-transcribe"),
                         ]
                     }),

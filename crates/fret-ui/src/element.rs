@@ -2454,8 +2454,12 @@ impl Default for FlexProps {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GridTrackSizing {
     Auto,
+    MinContent,
+    MaxContent,
     Px(Px),
     Fr(f32),
+    /// `minmax(0, Nfr)` style track sizing for shrinkable content columns.
+    Flex(f32),
 }
 
 #[derive(Debug, Clone, PartialEq)]

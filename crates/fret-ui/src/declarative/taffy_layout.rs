@@ -114,10 +114,16 @@ fn taffy_grid_track_sizing(
 ) -> taffy::style::TrackSizingFunction {
     match track {
         crate::element::GridTrackSizing::Auto => taffy::style_helpers::auto(),
+        crate::element::GridTrackSizing::MinContent => taffy::style_helpers::min_content(),
+        crate::element::GridTrackSizing::MaxContent => taffy::style_helpers::max_content(),
         crate::element::GridTrackSizing::Px(px) => taffy::style_helpers::length(px.0.max(0.0)),
         crate::element::GridTrackSizing::Fr(fr) => {
             let fr = if fr.is_finite() { fr.max(0.0) } else { 0.0 };
             taffy::style_helpers::fr(fr)
+        }
+        crate::element::GridTrackSizing::Flex(fr) => {
+            let fr = if fr.is_finite() { fr.max(0.0) } else { 0.0 };
+            taffy::style_helpers::flex(fr)
         }
     }
 }

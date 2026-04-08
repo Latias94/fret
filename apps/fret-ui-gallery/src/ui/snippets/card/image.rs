@@ -122,7 +122,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_action(|cx| ui::children![cx; featured]),
                     shadcn::card_title("Design systems meetup"),
                     shadcn::card_description(
-                        "A practical talk on component APIs, accessibility, and shipping faster. The cover image uses a self-contained RGBA source so the snippet stays copyable outside UI Gallery.",
+                        "A practical talk on component APIs, accessibility, and shipping faster.",
                     ),
                 ]
             }),
@@ -131,7 +131,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx;
                     shadcn::Button::new("View Event")
                         .refine_layout(LayoutRefinement::default().w_full())
-                        .ui()
                         .test_id("ui-gallery-card-image-view-event"),
                 ]
             }),

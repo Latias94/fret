@@ -1,6 +1,7 @@
 use super::super::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
 use super::super::prelude::*;
 use super::ElementHostWidget;
+use crate::element::SizeStyle;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::widget::MeasureCx;
 use fret_core::{FrameId, TextWrap};
@@ -286,6 +287,33 @@ fn normalize_text_measure_constraints(
     constraints
 }
 
+fn normalize_auto_layout_intrinsic_constraints(
+    mut constraints: LayoutConstraints,
+    size: SizeStyle,
+) -> LayoutConstraints {
+    // During intrinsic sizing, parents may pass `available.{width,height} = 0` as a placeholder
+    // for "unknown". Auto-sized flex/grid roots should treat that as non-definite so they can
+    // report their natural size instead of collapsing to zero.
+    let autoish_width = !matches!(size.width, Length::Px(_));
+    let autoish_height = !matches!(size.height, Length::Px(_));
+
+    if autoish_width
+        && constraints.known.width.is_none()
+        && constraints.available.width.definite() == Some(Px(0.0))
+    {
+        constraints.available.width = AvailableSpace::MaxContent;
+    }
+
+    if autoish_height
+        && constraints.known.height.is_none()
+        && constraints.available.height.definite() == Some(Px(0.0))
+    {
+        constraints.available.height = AvailableSpace::MaxContent;
+    }
+
+    constraints
+}
+
 fn max_non_absolute_children<H: UiHost>(
     cx: &mut MeasureCx<'_, H>,
     window: AppWindowId,
@@ -529,8 +557,10 @@ impl ElementHostWidget {
         window: AppWindowId,
         layout: LayoutStyle,
     ) -> Size {
+        let measure_constraints =
+            normalize_auto_layout_intrinsic_constraints(cx.constraints, layout.size);
         let child_constraints =
-            LayoutConstraints::new(LayoutSize::new(None, None), cx.constraints.available);
+            LayoutConstraints::new(LayoutSize::new(None, None), measure_constraints.available);
         let mut max_child = max_non_absolute_children(cx, window, child_constraints);
 
         // During intrinsic sizing, parents may pass `available = 0` as a placeholder for
@@ -598,7 +628,7 @@ impl ElementHostWidget {
             }
         }
 
-        let mut clamp_constraints = cx.constraints;
+        let mut clamp_constraints = measure_constraints;
         if placeholder_width {
             clamp_constraints.available.width = AvailableSpace::MaxContent;
         }
@@ -614,9 +644,11 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: ContainerProps,
     ) -> Size {
+        let measure_constraints =
+            normalize_auto_layout_intrinsic_constraints(cx.constraints, props.layout.size);
         // Tailwind/shadcn assume `box-sizing: border-box` by default. Model borders as part of the
         // container's layout insets so auto-sized containers match web geometry.
-        let padding_basis = cx.constraints.available.width.definite();
+        let padding_basis = measure_constraints.available.width.definite();
         let pad_left =
             spacing_px_for_basis(props.padding.left, padding_basis) + props.border.left.0.max(0.0);
         let pad_right = spacing_px_for_basis(props.padding.right, padding_basis)
@@ -631,8 +663,8 @@ impl ElementHostWidget {
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
             LayoutSize::new(
-                cx.constraints.available.width.shrink_by(pad_w),
-                cx.constraints.available.height.shrink_by(pad_h),
+                measure_constraints.available.width.shrink_by(pad_w),
+                measure_constraints.available.height.shrink_by(pad_h),
             ),
         );
         let max_child = max_non_absolute_children(cx, window, child_constraints);
@@ -641,7 +673,7 @@ impl ElementHostWidget {
             Px((max_child.width.0 + pad_w).max(0.0)),
             Px((max_child.height.0 + pad_h).max(0.0)),
         );
-        clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
+        clamp_to_constraints_in_measure(desired, props.layout, measure_constraints)
     }
 
     fn measure_text<H: UiHost>(
@@ -1192,6 +1224,8 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: FlexProps,
     ) -> Size {
+        let constraints =
+            normalize_auto_layout_intrinsic_constraints(cx.constraints, props.layout.size);
         let max_dimension =
             |available: AvailableSpace, max: Option<Length>, pad: f32| -> Dimension {
                 let max = max.and_then(|l| match l {
@@ -1217,7 +1251,7 @@ impl ElementHostWidget {
                 }
             };
 
-        let padding_basis = cx.constraints.available.width.definite();
+        let padding_basis = constraints.available.width.definite();
         let pad_left = spacing_px_for_basis(props.padding.left, padding_basis);
         let pad_right = spacing_px_for_basis(props.padding.right, padding_basis);
         let pad_top = spacing_px_for_basis(props.padding.top, padding_basis);
@@ -1226,8 +1260,8 @@ impl ElementHostWidget {
         let pad_h = pad_top + pad_bottom;
 
         let inner_available = LayoutSize::new(
-            cx.constraints.available.width.shrink_by(pad_w),
-            cx.constraints.available.height.shrink_by(pad_h),
+            constraints.available.width.shrink_by(pad_w),
+            constraints.available.height.shrink_by(pad_h),
         );
         let gap_w = spacing_px_for_basis(props.gap, inner_available.width.definite());
         let gap_h = spacing_px_for_basis(props.gap, inner_available.height.definite());
@@ -1552,7 +1586,7 @@ impl ElementHostWidget {
             Px((inner_size.width.0 + pad_w).max(0.0)),
             Px((inner_size.height.0 + pad_h).max(0.0)),
         );
-        clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
+        clamp_to_constraints_in_measure(desired, props.layout, constraints)
     }
 
     fn measure_grid<H: UiHost>(
@@ -1561,7 +1595,9 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::GridProps,
     ) -> Size {
-        let padding_basis = cx.constraints.available.width.definite();
+        let constraints =
+            normalize_auto_layout_intrinsic_constraints(cx.constraints, props.layout.size);
+        let padding_basis = constraints.available.width.definite();
         let pad_left = spacing_px_for_basis(props.padding.left, padding_basis);
         let pad_right = spacing_px_for_basis(props.padding.right, padding_basis);
         let pad_top = spacing_px_for_basis(props.padding.top, padding_basis);
@@ -1570,8 +1606,8 @@ impl ElementHostWidget {
         let pad_h = pad_top + pad_bottom;
 
         let inner_available = LayoutSize::new(
-            cx.constraints.available.width.shrink_by(pad_w),
-            cx.constraints.available.height.shrink_by(pad_h),
+            constraints.available.width.shrink_by(pad_w),
+            constraints.available.height.shrink_by(pad_h),
         );
         let gap_w = spacing_px_for_basis(
             props.resolved_column_gap(),
@@ -1798,6 +1834,6 @@ impl ElementHostWidget {
             Px((inner_size.width.0 + pad_w).max(0.0)),
             Px((inner_size.height.0 + pad_h).max(0.0)),
         );
-        clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
+        clamp_to_constraints_in_measure(desired, props.layout, constraints)
     }
 }

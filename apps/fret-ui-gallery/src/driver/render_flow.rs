@@ -442,6 +442,8 @@ mod tests {
     use fret_core::{KeyCode, Scene};
     use fret_launch::WinitAppDriver;
     use fret_runtime::{FrameId, TickId};
+    use serde_json::Value;
+    use std::fs;
 
     #[derive(Default)]
     struct FakeServices;
@@ -757,6 +759,171 @@ mod tests {
                 Size::new(Px(1080.0), Px(720.0)),
             ),
         )
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    struct WebGeometryRect {
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+    }
+
+    impl WebGeometryRect {
+        fn from_value(value: &Value) -> Self {
+            let rect = value
+                .get("rect")
+                .unwrap_or_else(|| panic!("missing rect field in web golden node: {value:?}"));
+            Self {
+                x: rect
+                    .get("x")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(|| panic!("missing rect.x in web golden node: {value:?}"))
+                    as f32,
+                y: rect
+                    .get("y")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(|| panic!("missing rect.y in web golden node: {value:?}"))
+                    as f32,
+                w: rect
+                    .get("w")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(|| panic!("missing rect.w in web golden node: {value:?}"))
+                    as f32,
+                h: rect
+                    .get("h")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(|| panic!("missing rect.h in web golden node: {value:?}"))
+                    as f32,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    struct CardDemoWebGeometry {
+        card: WebGeometryRect,
+        title: WebGeometryRect,
+        description: WebGeometryRect,
+        sign_up: WebGeometryRect,
+        forgot_password: WebGeometryRect,
+        login: WebGeometryRect,
+        login_google: WebGeometryRect,
+    }
+
+    fn find_web_node_by_text<'a>(node: &'a Value, text: &str) -> Option<&'a Value> {
+        if node.get("text").and_then(Value::as_str) == Some(text) {
+            return Some(node);
+        }
+
+        for child in node
+            .get("children")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            if let Some(found) = find_web_node_by_text(child, text) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    fn web_subtree_contains_text(node: &Value, text: &str) -> bool {
+        if node.get("text").and_then(Value::as_str) == Some(text) {
+            return true;
+        }
+
+        node.get("children")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .any(|child| web_subtree_contains_text(child, text))
+    }
+
+    fn find_first_web_node<'a>(
+        node: &'a Value,
+        predicate: &impl Fn(&Value) -> bool,
+    ) -> Option<&'a Value> {
+        if predicate(node) {
+            return Some(node);
+        }
+
+        for child in node
+            .get("children")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            if let Some(found) = find_first_web_node(child, predicate) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    fn find_web_node_by_tag_and_subtree_text<'a>(
+        node: &'a Value,
+        tag: &str,
+        text: &str,
+    ) -> Option<&'a Value> {
+        find_first_web_node(node, &|candidate| {
+            candidate.get("tag").and_then(Value::as_str) == Some(tag)
+                && web_subtree_contains_text(candidate, text)
+        })
+    }
+
+    fn read_card_demo_web_geometry() -> CardDemoWebGeometry {
+        let path = format!(
+            "{}/../../goldens/shadcn-web/v4/new-york-v4/card-demo.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let raw = fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("failed to read card-demo web golden {path}: {err}"));
+        let json: Value = serde_json::from_str(&raw)
+            .unwrap_or_else(|err| panic!("failed to parse card-demo web golden {path}: {err}"));
+        let root = json
+            .get("themes")
+            .and_then(|themes| themes.get("light"))
+            .and_then(|theme| theme.get("root"))
+            .unwrap_or_else(|| panic!("missing light theme root in {path}"));
+
+        let card = find_first_web_node(root, &|candidate| {
+            let class_name = candidate.get("className").and_then(Value::as_str);
+            candidate.get("tag").and_then(Value::as_str) == Some("div")
+                && class_name.is_some_and(|class_name| {
+                    class_name.contains("rounded-xl") && class_name.contains("border")
+                })
+                && web_subtree_contains_text(candidate, "Login to your account")
+        })
+        .unwrap_or_else(|| panic!("missing card container in {path}"));
+
+        let title = find_web_node_by_text(root, "Login to your account")
+            .unwrap_or_else(|| panic!("missing title node in {path}"));
+        let description =
+            find_web_node_by_text(root, "Enter your email below to login to your account")
+                .unwrap_or_else(|| panic!("missing description node in {path}"));
+        let sign_up = find_web_node_by_tag_and_subtree_text(root, "button", "Sign Up")
+            .unwrap_or_else(|| panic!("missing Sign Up button node in {path}"));
+        let forgot_password =
+            find_web_node_by_tag_and_subtree_text(root, "a", "Forgot your password?")
+                .unwrap_or_else(|| panic!("missing forgot-password link node in {path}"));
+        let login = find_web_node_by_tag_and_subtree_text(root, "button", "Login")
+            .unwrap_or_else(|| panic!("missing Login button node in {path}"));
+        let login_google =
+            find_web_node_by_tag_and_subtree_text(root, "button", "Login with Google")
+                .unwrap_or_else(|| panic!("missing Login with Google button node in {path}"));
+
+        CardDemoWebGeometry {
+            card: WebGeometryRect::from_value(card),
+            title: WebGeometryRect::from_value(title),
+            description: WebGeometryRect::from_value(description),
+            sign_up: WebGeometryRect::from_value(sign_up),
+            forgot_password: WebGeometryRect::from_value(forgot_password),
+            login: WebGeometryRect::from_value(login),
+            login_google: WebGeometryRect::from_value(login_google),
+        }
     }
 
     #[test]
@@ -2239,11 +2406,19 @@ mod tests {
             "ui-gallery-card-demo-sign-up",
             "ui-gallery-card-demo-email-input",
             "ui-gallery-card-demo-password-input",
+            "ui-gallery-card-demo-forgot-password",
             "ui-gallery-card-demo-login",
             "ui-gallery-card-demo-login-google",
+            "ui-gallery-card-content-inline-button",
+            "ui-gallery-card-notes-transcribe",
             "ui-gallery-card-size-sm-action",
             "ui-gallery-card-image-featured",
             "ui-gallery-card-image-view-event",
+            "ui-gallery-card-rtl-title",
+            "ui-gallery-card-rtl-sign-up",
+            "ui-gallery-card-rtl-email-input",
+            "ui-gallery-card-rtl-password-input",
+            "ui-gallery-card-rtl-forgot-password",
             "ui-gallery-card-rtl-login",
             "ui-gallery-card-rtl-login-with-google",
         ] {
@@ -2304,6 +2479,53 @@ mod tests {
     }
 
     #[test]
+    fn gallery_card_rtl_keeps_form_controls_visible_and_aligned() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-rtl-email-input",
+            "ui-gallery-card-rtl-password-input",
+            "ui-gallery-card-rtl-login",
+            "ui-gallery-card-rtl-login-with-google",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let email = visual_bounds_by_test_id(&rendered, "ui-gallery-card-rtl-email-input");
+        let password = visual_bounds_by_test_id(&rendered, "ui-gallery-card-rtl-password-input");
+        let login = visual_bounds_by_test_id(&rendered, "ui-gallery-card-rtl-login");
+        let google = visual_bounds_by_test_id(&rendered, "ui-gallery-card-rtl-login-with-google");
+
+        let expected_min_width = 300.0;
+        let epsilon = 2.0;
+
+        for (target, bounds) in [
+            ("ui-gallery-card-rtl-email-input", email),
+            ("ui-gallery-card-rtl-password-input", password),
+            ("ui-gallery-card-rtl-login", login),
+            ("ui-gallery-card-rtl-login-with-google", google),
+        ] {
+            assert!(
+                bounds.size.width.0 >= expected_min_width,
+                "expected Card RTL control to keep a docs-like full-width lane: target={target} bounds={bounds:?} expected_min_width={expected_min_width}"
+            );
+        }
+
+        assert!(
+            (email.size.width.0 - password.size.width.0).abs() <= epsilon,
+            "expected Card RTL email/password inputs to share the same width: email={email:?} password={password:?} epsilon={epsilon}"
+        );
+        assert!(
+            (email.size.width.0 - login.size.width.0).abs() <= epsilon,
+            "expected Card RTL email input and primary CTA to align to the same width: email={email:?} login={login:?} epsilon={epsilon}"
+        );
+        assert!(
+            (login.size.width.0 - google.size.width.0).abs() <= epsilon,
+            "expected Card RTL action buttons to share the same width: login={login:?} google={google:?} epsilon={epsilon}"
+        );
+    }
+
+    #[test]
     fn gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane() {
         let mut rendered = render_gallery_page(PAGE_CARD);
 
@@ -2316,18 +2538,25 @@ mod tests {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
         }
 
-        let card = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo");
-        let title = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-title");
-        let description = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-description");
-        let sign_up = visual_bounds_by_test_id(&rendered, "ui-gallery-card-demo-sign-up");
+        let card = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo");
+        let title = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-title");
+        let description = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-description");
+        let sign_up = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-sign-up");
+        let web = read_card_demo_web_geometry();
 
         let epsilon = 2.0;
         let card_right = card.origin.x.0 + card.size.width.0;
         let sign_up_right = sign_up.origin.x.0 + sign_up.size.width.0;
         let title_right = title.origin.x.0 + title.size.width.0;
         let sign_up_center_y = sign_up.origin.y.0 + sign_up.size.height.0 * 0.5;
-        let description_center_y =
-            description.origin.y.0 + description.size.height.0 * 0.5;
+        let description_center_y = description.origin.y.0 + description.size.height.0 * 0.5;
+        let sign_up_right_in_card = sign_up.origin.x.0 + sign_up.size.width.0 - card.origin.x.0;
+        let sign_up_x_in_card = sign_up.origin.x.0 - card.origin.x.0;
+        let sign_up_y_in_card = sign_up.origin.y.0 - card.origin.y.0;
+        let title_x_in_card = title.origin.x.0 - card.origin.x.0;
+        let title_y_in_card = title.origin.y.0 - card.origin.y.0;
+        let description_x_in_card = description.origin.x.0 - card.origin.x.0;
+        let description_y_in_card = description.origin.y.0 - card.origin.y.0;
 
         assert!(
             (sign_up.origin.y.0 - title.origin.y.0).abs() <= epsilon,
@@ -2345,6 +2574,127 @@ mod tests {
             sign_up_right <= card_right - 16.0,
             "expected Card demo Sign Up action to remain inset from the card's right padding like the upstream header slot: card={card:?} sign_up={sign_up:?}"
         );
+        assert!(
+            (title_x_in_card - web.title.x).abs() <= epsilon
+                && (title_y_in_card - web.title.y).abs() <= epsilon,
+            "expected Card demo title to keep the upstream card-header origin within epsilon={epsilon}: actual=({title_x_in_card:.2}, {title_y_in_card:.2}) web=({:.2}, {:.2}) title={title:?} card={card:?}",
+            web.title.x,
+            web.title.y,
+        );
+        assert!(
+            (description_x_in_card - web.description.x).abs() <= epsilon
+                && (description_y_in_card - web.description.y).abs() <= epsilon,
+            "expected Card demo description to keep the upstream card-header second-row origin within epsilon={epsilon}: actual=({description_x_in_card:.2}, {description_y_in_card:.2}) web=({:.2}, {:.2}) description={description:?} card={card:?}",
+            web.description.x,
+            web.description.y,
+        );
+        assert!(
+            (sign_up_y_in_card - web.sign_up.y).abs() <= epsilon
+                && (sign_up_right_in_card - (web.sign_up.x + web.sign_up.w)).abs() <= epsilon
+                && (sign_up.size.height.0 - web.sign_up.h).abs() <= epsilon,
+            "expected Card demo Sign Up action to keep the upstream top-right lane within epsilon={epsilon}: actual=(right={sign_up_right_in_card:.2}, y={sign_up_y_in_card:.2}, h={:.2}) web=(right={:.2}, y={:.2}, h={:.2}) card={card:?} web_card={:?} sign_up={sign_up:?}",
+            sign_up.size.height.0,
+            web.sign_up.x + web.sign_up.w,
+            web.sign_up.y,
+            web.sign_up.h,
+            web.card,
+        );
+        assert!(
+            (card.size.width.0 - web.card.w).abs() <= epsilon,
+            "expected Card demo card width to stay web-aligned: actual={} web={} card={card:?}",
+            card.size.width.0,
+            web.card.w,
+        );
+    }
+
+    #[test]
+    fn gallery_card_demo_supporting_link_stays_in_the_upstream_right_aligned_support_lane() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-demo",
+            "ui-gallery-card-demo-forgot-password",
+            "ui-gallery-card-demo-password-input",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let card = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo");
+        let forgot_password =
+            layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-forgot-password");
+        let password_input = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-password-input");
+        let web = read_card_demo_web_geometry();
+
+        let epsilon = 2.0;
+        let forgot_right_in_card =
+            forgot_password.origin.x.0 + forgot_password.size.width.0 - card.origin.x.0;
+
+        assert!(
+            forgot_password.size.width.0 > 0.0 && forgot_password.size.height.0 > 0.0,
+            "expected Card demo forgot-password supporting link to keep non-zero bounds: forgot_password={forgot_password:?}"
+        );
+        assert!(
+            (forgot_right_in_card - (web.forgot_password.x + web.forgot_password.w)).abs()
+                <= epsilon,
+            "expected Card demo forgot-password supporting link to keep the upstream right-aligned lane within epsilon={epsilon}: actual_right={forgot_right_in_card:.2} web_right={:.2} card={card:?} forgot_password={forgot_password:?}",
+            web.forgot_password.x + web.forgot_password.w,
+        );
+        assert!(
+            forgot_password.origin.y.0 + forgot_password.size.height.0
+                <= password_input.origin.y.0 - 4.0,
+            "expected Card demo forgot-password supporting link to stay on the row above the password input instead of collapsing into the field lane: forgot_password={forgot_password:?} password_input={password_input:?}"
+        );
+    }
+
+    #[test]
+    fn gallery_card_demo_footer_buttons_match_web_geometry() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-demo",
+            "ui-gallery-card-demo-login",
+            "ui-gallery-card-demo-login-google",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let card = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo");
+        let login = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-login");
+        let login_google = layout_bounds_by_test_id(&rendered, "ui-gallery-card-demo-login-google");
+        let web = read_card_demo_web_geometry();
+
+        let epsilon = 2.0;
+
+        for (name, actual, expected) in [("login", login, web.login), ("login_google", login_google, web.login_google)] {
+            let actual_x = actual.origin.x.0 - card.origin.x.0;
+
+            assert!(
+                (actual_x - expected.x).abs() <= epsilon
+                    && (actual.size.width.0 - expected.w).abs() <= epsilon
+                    && (actual.size.height.0 - expected.h).abs() <= epsilon,
+                "expected Card demo footer button `{name}` to keep the upstream left lane and box size within epsilon={epsilon}: actual=(x={actual_x:.2}, w={:.2}, h={:.2}) web=(x={:.2}, w={:.2}, h={:.2}) card={card:?} actual={actual:?}",
+                actual.size.width.0,
+                actual.size.height.0,
+                expected.x,
+                expected.w,
+                expected.h,
+            );
+        }
+
+        let login_y_in_card = login.origin.y.0 - card.origin.y.0;
+        let google_y_in_card = login_google.origin.y.0 - card.origin.y.0;
+        let actual_stack_gap = login_google.origin.y.0 - (login.origin.y.0 + login.size.height.0);
+        let expected_stack_gap = web.login_google.y - (web.login.y + web.login.h);
+
+        assert!(
+            (actual_stack_gap - expected_stack_gap).abs() <= epsilon,
+            "expected Card demo footer buttons to keep the upstream stacked gap within epsilon={epsilon}: actual_gap={actual_stack_gap:.2} web_gap={expected_stack_gap:.2} login={login:?} login_google={login_google:?}"
+        );
+        assert!(
+            login_y_in_card >= card.size.height.0 * 0.65
+                && google_y_in_card >= card.size.height.0 * 0.75,
+            "expected Card demo footer buttons to remain in the card's lower lane instead of drifting into the content rows: card={card:?} login={login:?} login_google={login_google:?}"
+        );
     }
 
     #[test]
@@ -2356,6 +2706,8 @@ mod tests {
             "ui-gallery-card-title-children",
             "ui-gallery-card-description-children",
             "ui-gallery-card-compositions",
+            "ui-gallery-card-compositions-header-action-trigger",
+            "ui-gallery-card-compositions-full-action-trigger",
             "ui-gallery-card-content-inline-button-demo",
             "ui-gallery-card-meeting-notes",
             "ui-gallery-card-section-notes-content",
@@ -2367,6 +2719,67 @@ mod tests {
                 "expected Card follow-up target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
+    }
+
+    #[test]
+    fn gallery_card_examples_keep_intended_button_width_modes() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-compositions-header-action-trigger",
+            "ui-gallery-card-compositions-full-action-trigger",
+            "ui-gallery-card-content-inline-button",
+            "ui-gallery-card-notes-transcribe",
+            "ui-gallery-card-size-sm-action",
+            "ui-gallery-card-image-view-event",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let inline_card =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-content-inline-button-demo");
+        let header_action_card =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-action");
+        let header_action_trigger =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-action-trigger");
+        let full_action_card =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-full-action");
+        let full_action_trigger =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-full-action-trigger");
+        let inline_button =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-content-inline-button");
+        let notes_card = visual_bounds_by_test_id(&rendered, "ui-gallery-card-meeting-notes");
+        let notes_transcribe =
+            visual_bounds_by_test_id(&rendered, "ui-gallery-card-notes-transcribe");
+        let size_card = visual_bounds_by_test_id(&rendered, "ui-gallery-card-size-sm");
+        let size_action = visual_bounds_by_test_id(&rendered, "ui-gallery-card-size-sm-action");
+        let image_card = visual_bounds_by_test_id(&rendered, "ui-gallery-card-image");
+        let image_action = visual_bounds_by_test_id(&rendered, "ui-gallery-card-image-view-event");
+
+        assert!(
+            header_action_trigger.size.width.0 < header_action_card.size.width.0 * 0.75,
+            "expected Card compositions header action example to keep intrinsic trigger width instead of stretching across the card: button={header_action_trigger:?} card={header_action_card:?}"
+        );
+        assert!(
+            full_action_trigger.size.width.0 < full_action_card.size.width.0 * 0.75,
+            "expected Card compositions full-action example to keep intrinsic trigger width instead of stretching across the card: button={full_action_trigger:?} card={full_action_card:?}"
+        );
+        assert!(
+            inline_button.size.width.0 < inline_card.size.width.0 * 0.75,
+            "expected CardContent inline button example to keep intrinsic width instead of stretching: button={inline_button:?} card={inline_card:?}"
+        );
+        assert!(
+            notes_transcribe.size.width.0 < notes_card.size.width.0 * 0.75,
+            "expected meeting-notes header action to remain intrinsic-width instead of stretching across the card: button={notes_transcribe:?} card={notes_card:?}"
+        );
+        assert!(
+            size_action.size.width.0 >= size_card.size.width.0 * 0.75,
+            "expected small-card footer CTA to keep a docs-like full-width lane: action={size_action:?} card={size_card:?}"
+        );
+        assert!(
+            image_action.size.width.0 >= image_card.size.width.0 * 0.75,
+            "expected image-card footer CTA to keep a docs-like full-width lane: action={image_action:?} card={image_card:?}"
+        );
     }
 
     #[test]
@@ -2966,28 +3379,193 @@ mod tests {
 
         scroll_test_id_into_gallery_viewport(
             &mut rendered,
-            "ui-gallery-card-compositions-footer-only",
+            "ui-gallery-card-compositions-bordered-sections",
         );
 
-        let content_only =
-            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-content-only");
-        let header_only =
-            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-only");
-        let footer_only =
-            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-footer-only");
-        let header_content =
-            visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-content");
+        let cases = [
+            (
+                "content_only",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-content-only"),
+            ),
+            (
+                "header_only",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-only"),
+            ),
+            (
+                "header_content",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-content"),
+            ),
+            (
+                "header_action",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-action"),
+            ),
+            (
+                "footer_only",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-footer-only"),
+            ),
+            (
+                "header_footer",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-header-footer"),
+            ),
+            (
+                "content_footer",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-content-footer"),
+            ),
+            (
+                "header_content_footer",
+                visual_bounds_by_test_id(
+                    &rendered,
+                    "ui-gallery-card-compositions-header-content-footer",
+                ),
+            ),
+            (
+                "full_action",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-full-action"),
+            ),
+            (
+                "bordered_sections",
+                visual_bounds_by_test_id(&rendered, "ui-gallery-card-compositions-bordered-sections"),
+            ),
+        ];
 
-        let expected_width = content_only.size.width.0;
-        for (name, bounds) in [
-            ("header_only", header_only),
-            ("footer_only", footer_only),
-            ("header_content", header_content),
-        ] {
+        let expected_width = cases[0].1.size.width.0;
+        for (name, bounds) in cases.into_iter().skip(1) {
             assert!(
                 (bounds.size.width.0 - expected_width).abs() <= 1.0,
-                "expected Card compositions sample '{name}' to keep the shared card width: expected≈{expected_width} actual={} content_only={content_only:?} header_only={header_only:?} footer_only={footer_only:?} header_content={header_content:?}",
+                "expected Card compositions sample '{name}' to keep the shared card width: expected≈{expected_width} actual={} bounds={bounds:?}",
                 bounds.size.width.0,
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_card_composition_short_footer_texts_stay_single_line() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-card-compositions-bordered-sections",
+        );
+
+        for (name, card_id) in [
+            (
+                "footer_only",
+                "ui-gallery-card-compositions-footer-only",
+            ),
+            (
+                "header_footer",
+                "ui-gallery-card-compositions-header-footer",
+            ),
+            (
+                "content_footer",
+                "ui-gallery-card-compositions-content-footer",
+            ),
+            (
+                "header_content_footer",
+                "ui-gallery-card-compositions-header-content-footer",
+            ),
+            (
+                "full_action",
+                "ui-gallery-card-compositions-full-action",
+            ),
+            (
+                "bordered_sections",
+                "ui-gallery-card-compositions-bordered-sections",
+            ),
+        ] {
+            let bounds = visual_bounds_by_test_id(&rendered, card_id);
+            assert!(
+                bounds.size.width.0 >= 240.0,
+                "expected Card compositions sample '{name}' to keep a docs-like width budget wide enough for short footer copy: bounds={bounds:?}"
+            );
+        }
+
+        let baseline = visual_bounds_by_test_id(
+            &rendered,
+            "ui-gallery-card-compositions-footer-only-text",
+        );
+        for (name, text_id) in [
+            (
+                "header_footer",
+                "ui-gallery-card-compositions-header-footer-text",
+            ),
+            (
+                "content_footer",
+                "ui-gallery-card-compositions-content-footer-text",
+            ),
+            (
+                "header_content_footer",
+                "ui-gallery-card-compositions-header-content-footer-text",
+            ),
+            (
+                "full_action",
+                "ui-gallery-card-compositions-full-action-footer-text",
+            ),
+            (
+                "bordered_sections",
+                "ui-gallery-card-compositions-bordered-footer-text",
+            ),
+        ] {
+            let bounds = visual_bounds_by_test_id(&rendered, text_id);
+            assert!(
+                (bounds.size.height.0 - baseline.size.height.0).abs() <= 1.0,
+                "expected Card compositions footer text '{name}' to stay single-line like the footer-only baseline: baseline={baseline:?} actual={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_card_composition_actions_stay_in_header_lane() {
+        let mut rendered = render_gallery_page(PAGE_CARD);
+
+        for target in [
+            "ui-gallery-card-compositions-header-action",
+            "ui-gallery-card-compositions-header-action-title",
+            "ui-gallery-card-compositions-header-action-trigger",
+            "ui-gallery-card-compositions-full-action",
+            "ui-gallery-card-compositions-full-action-title",
+            "ui-gallery-card-compositions-full-action-trigger",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let epsilon = 2.0;
+        for (name, card_id, title_id, trigger_id) in [
+            (
+                "header_action",
+                "ui-gallery-card-compositions-header-action",
+                "ui-gallery-card-compositions-header-action-title",
+                "ui-gallery-card-compositions-header-action-trigger",
+            ),
+            (
+                "full_action",
+                "ui-gallery-card-compositions-full-action",
+                "ui-gallery-card-compositions-full-action-title",
+                "ui-gallery-card-compositions-full-action-trigger",
+            ),
+        ] {
+            let card = layout_bounds_by_test_id(&rendered, card_id);
+            let title = layout_bounds_by_test_id(&rendered, title_id);
+            let trigger = layout_bounds_by_test_id(&rendered, trigger_id);
+            let card_right = card.origin.x.0 + card.size.width.0;
+            let title_right = title.origin.x.0 + title.size.width.0;
+            let trigger_right = trigger.origin.x.0 + trigger.size.width.0;
+
+            assert!(
+                trigger.size.width.0 > 0.0,
+                "expected Card compositions action trigger to render with non-zero width: case={name} trigger={trigger:?}"
+            );
+            assert!(
+                (trigger.origin.y.0 - title.origin.y.0).abs() <= epsilon,
+                "expected Card compositions action trigger to stay on the header's top lane: case={name} title={title:?} trigger={trigger:?}"
+            );
+            assert!(
+                trigger.origin.x.0 >= title_right + 8.0,
+                "expected Card compositions action trigger to stay to the right of the title lane without overlap: case={name} title={title:?} trigger={trigger:?}"
+            );
+            assert!(
+                trigger_right <= card_right - 12.0,
+                "expected Card compositions action trigger to remain inset from the card edge: case={name} card={card:?} trigger={trigger:?}"
             );
         }
     }
