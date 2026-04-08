@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size};
+use fret_runtime::CommandId;
+use fret_ui::retained_bridge::Widget;
 
 use crate::core::{CanvasPoint, Graph, GraphId, NodeKindKey, PortId};
+use crate::ui::commands::CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER;
 use crate::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
 };
@@ -10,10 +13,10 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::prelude::NodeGraphCanvas;
 use super::prelude::overlay_hit;
-use super::{TestUiHostImpl, insert_graph_view_editor_config};
+use super::{NullServices, TestUiHostImpl, command_cx, insert_graph_view_editor_config};
 use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use crate::ui::canvas::state::{
-    ContextMenuState, ContextMenuTarget, SearcherRowsMode, SearcherState,
+    ContextMenuState, ContextMenuTarget, LastConversionContext, SearcherRowsMode, SearcherState,
 };
 
 fn bounds() -> Rect {
@@ -335,4 +338,75 @@ fn clamp_searcher_origin_keeps_rect_inside_visible_canvas_rect() {
         rect_contains_rect(vis, rect),
         "expected clamped searcher rect to remain inside the visible canvas rect"
     );
+}
+
+#[test]
+fn open_conversion_command_reuses_searcher_install_to_replace_context_menu() {
+    let mut host = TestUiHostImpl::default();
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config(&mut host, Graph::new(GraphId::new()));
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    canvas.sync_view_state(&mut host);
+    canvas.interaction.last_bounds = Some(bounds());
+
+    let from = PortId::new();
+    let to = PortId::new();
+    let at = CanvasPoint { x: 120.0, y: 48.0 };
+    canvas.interaction.context_menu = Some(ContextMenuState {
+        origin: Point::new(Px(16.0), Px(24.0)),
+        invoked_at: Point::new(Px(16.0), Px(24.0)),
+        target: ContextMenuTarget::Background,
+        items: vec![NodeGraphContextMenuItem {
+            label: Arc::<str>::from("Convert"),
+            enabled: true,
+            action: NodeGraphContextMenuAction::Custom(1),
+        }],
+        candidates: Vec::new(),
+        hovered_item: None,
+        active_item: 0,
+        typeahead: String::new(),
+    });
+    canvas.interaction.last_conversion = Some(LastConversionContext {
+        from,
+        to,
+        at,
+        candidates: vec![InsertNodeCandidate {
+            kind: NodeKindKey::new("math.add"),
+            label: Arc::<str>::from("Math/Add"),
+            enabled: true,
+            template: None,
+            payload: serde_json::Value::Null,
+        }],
+    });
+
+    let mut services = NullServices::default();
+    let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+    let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+    assert!(canvas.command(
+        &mut cx,
+        &CommandId::from(CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER),
+    ));
+    assert!(canvas.interaction.context_menu.is_none());
+
+    let searcher = canvas
+        .interaction
+        .searcher
+        .as_ref()
+        .expect("conversion command should open searcher");
+    assert!(matches!(
+        searcher.target,
+        ContextMenuTarget::ConnectionConvertPicker {
+            from: searcher_from,
+            to: searcher_to,
+            at: searcher_at,
+        } if searcher_from == from
+            && searcher_to == to
+            && (searcher_at.x - at.x).abs() <= 1.0e-3
+            && (searcher_at.y - at.y).abs() <= 1.0e-3
+    ));
+    assert!(matches!(searcher.rows_mode, SearcherRowsMode::Flat));
+    assert_eq!(searcher.candidates.len(), 1);
+    assert_eq!(searcher.invoked_at.x.0, at.x);
+    assert_eq!(searcher.invoked_at.y.0, at.y);
 }

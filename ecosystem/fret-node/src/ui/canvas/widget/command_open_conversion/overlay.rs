@@ -16,7 +16,6 @@ pub(super) fn cmd_open_conversion_picker<H: UiHost, M: NodeGraphCanvasMiddleware
         return true;
     };
 
-    canvas.dismiss_command_context_menu();
     super::super::searcher_picker::open_searcher_picker_request(
         canvas,
         cx.app,

@@ -1519,6 +1519,10 @@ real editors.
   `ui/canvas/widget/searcher_ui/overlay.rs` seam, so failed row activation no longer keeps a
   second direct `interaction.searcher.take()/= Some(...)` lifecycle path in
   `searcher_row_activation.rs`.
+- Command-driven conversion-picker menu replacement now also routes through the private
+  `ui/canvas/widget/searcher_ui/overlay.rs` install seam via `searcher_picker`, so
+  `command_open_conversion/overlay.rs` no longer clears `interaction.context_menu` before opening
+  the searcher and menu-to-searcher replacement keeps one authority path.
 - Active menu/searcher occupancy now also routes through the private
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background
   double-click zoom preflight, and detail/hover cursor gates, so those paths stop

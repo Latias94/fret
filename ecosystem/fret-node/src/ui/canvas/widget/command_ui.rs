@@ -6,10 +6,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         super::searcher_activation_state::clear_searcher_overlay(&mut self.interaction);
     }
 
-    pub(super) fn dismiss_command_context_menu(&mut self) {
-        super::context_menu::clear_context_menu(&mut self.interaction);
-    }
-
     pub(super) fn command_invoked_at(&self) -> Point {
         self.interaction
             .last_pos
