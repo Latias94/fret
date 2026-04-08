@@ -3421,6 +3421,56 @@ mod tests {
     }
 
     #[test]
+    fn gallery_sidebar_app_sidebar_triggers_keep_custom_children_lanes_rendered() {
+        let mut rendered = render_gallery_page(PAGE_SIDEBAR);
+
+        for target in [
+            "ui-gallery-sidebar-app-sidebar-team-trigger-icon",
+            "ui-gallery-sidebar-app-sidebar-team-trigger-copy",
+            "ui-gallery-sidebar-app-sidebar-team-trigger-chevron",
+            "ui-gallery-sidebar-app-sidebar-user-trigger-avatar",
+            "ui-gallery-sidebar-app-sidebar-user-trigger-copy",
+            "ui-gallery-sidebar-app-sidebar-user-trigger-chevron",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        for (name, leading_id, copy_id, trailing_id) in [
+            (
+                "team",
+                "ui-gallery-sidebar-app-sidebar-team-trigger-icon",
+                "ui-gallery-sidebar-app-sidebar-team-trigger-copy",
+                "ui-gallery-sidebar-app-sidebar-team-trigger-chevron",
+            ),
+            (
+                "user",
+                "ui-gallery-sidebar-app-sidebar-user-trigger-avatar",
+                "ui-gallery-sidebar-app-sidebar-user-trigger-copy",
+                "ui-gallery-sidebar-app-sidebar-user-trigger-chevron",
+            ),
+        ] {
+            let leading = visual_bounds_by_test_id(&rendered, leading_id);
+            let copy = visual_bounds_by_test_id(&rendered, copy_id);
+            let trailing = visual_bounds_by_test_id(&rendered, trailing_id);
+            let leading_center = leading.origin.x.0 + leading.size.width.0 * 0.5;
+            let copy_center = copy.origin.x.0 + copy.size.width.0 * 0.5;
+            let trailing_center = trailing.origin.x.0 + trailing.size.width.0 * 0.5;
+
+            assert!(
+                leading.size.width.0 > 0.0
+                    && copy.size.width.0 > 40.0
+                    && copy.size.height.0 > 0.0
+                    && trailing.size.width.0 > 0.0,
+                "expected Sidebar AppSidebar trigger custom children to render a visible middle copy lane: case={name} leading={leading:?} copy={copy:?} trailing={trailing:?}"
+            );
+            assert!(
+                leading_center < copy_center && copy_center < trailing_center,
+                "expected Sidebar AppSidebar trigger custom children to keep upstream left/middle/right lane order on the default pressable surface: case={name} leading={leading:?} copy={copy:?} trailing={trailing:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_date_picker_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page(PAGE_DATE_PICKER);
 
