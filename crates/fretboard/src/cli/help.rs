@@ -6,6 +6,7 @@ const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --
   fretboard diag run ./diag/dialog-escape.json --launch -- cargo run --manifest-path ./Cargo.toml
   fretboard dev native --manifest-path ./Cargo.toml
   fretboard dev web --manifest-path ./Cargo.toml --no-open
+  fretboard icons acquire iconify-collection --collection mdi --icon home --out ./iconify/mdi-home.json
   fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app
   fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app --semantic-aliases ./semantic-aliases.json
   fretboard icons import iconify-collection --source ./iconify/lucide.json --crate-name lucide-icons --vendor-namespace lucide
@@ -40,6 +41,7 @@ mod tests {
         assert!(help.contains("fretboard config menubar --path ."));
         assert!(help.contains("fretboard diag latest"));
         assert!(help.contains("fretboard dev native --manifest-path ./Cargo.toml"));
+        assert!(help.contains("fretboard icons acquire iconify-collection"));
         assert!(help.contains("fretboard icons import svg-dir"));
         assert!(help.contains("--semantic-aliases ./semantic-aliases.json"));
         assert!(help.contains("fretboard icons import iconify-collection"));

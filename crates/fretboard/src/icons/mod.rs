@@ -1,3 +1,5 @@
+mod acquire;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -11,8 +13,9 @@ use crate::scaffold::fs::{sanitize_package_name, workspace_prefix_from_out_dir};
 pub mod contracts;
 
 use self::contracts::{
-    IconImportCommandArgs, IconImportSourceContract, IconsCommandArgs, IconsCommandContract,
-    ImportIconifyCollectionArgs, ImportSvgDirArgs,
+    IconAcquireCommandArgs, IconAcquireSourceContract, IconImportCommandArgs,
+    IconImportSourceContract, IconsCommandArgs, IconsCommandContract, ImportIconifyCollectionArgs,
+    ImportSvgDirArgs,
 };
 
 const PUBLIC_RUST_EMBED_VERSION: &str = "8.9.0";
@@ -75,7 +78,23 @@ impl IconsMode {
 
 fn run_icons_contract_with_mode(mode: &IconsMode, args: IconsCommandArgs) -> Result<(), String> {
     match args.command {
+        IconsCommandContract::Acquire(args) => run_acquire_contract(args),
         IconsCommandContract::Import(args) => run_import_contract(mode, args),
+    }
+}
+
+fn run_acquire_contract(args: IconAcquireCommandArgs) -> Result<(), String> {
+    match args.source {
+        IconAcquireSourceContract::IconifyCollection(args) => {
+            let report = acquire::run_iconify_collection_acquire_contract(args)?;
+            println!("Acquired Iconify snapshot:");
+            println!("  snapshot        : {}", report.snapshot_path.display());
+            println!("  provenance      : {}", report.provenance_path.display());
+            println!("  collection      : {}", report.collection);
+            println!("  icons           : {}", report.icon_count);
+            println!("  aliases         : {}", report.alias_count);
+            Ok(())
+        }
     }
 }
 

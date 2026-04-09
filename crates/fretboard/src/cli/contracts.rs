@@ -121,7 +121,18 @@ mod tests {
     #[test]
     fn icons_help_lists_import_sources() {
         let help = render_command_help_path(&["icons"]).expect("icons help should render");
+        assert!(help.contains("acquire"));
         assert!(help.contains("import"));
+
+        let acquire_help = render_command_help_path(&["icons", "acquire"])
+            .expect("icons acquire help should render");
+        assert!(acquire_help.contains("iconify-collection"));
+
+        let acquire_iconify_help =
+            render_command_help_path(&["icons", "acquire", "iconify-collection"])
+                .expect("icons acquire iconify-collection help should render");
+        assert!(acquire_iconify_help.contains("--collection"));
+        assert!(acquire_iconify_help.contains("--icon"));
 
         let import_help = render_command_help_path(&["icons", "import"])
             .expect("icons import help should render");
@@ -207,6 +218,25 @@ mod tests {
             "demo",
         ])
         .expect("icons svg-dir command should parse");
+
+        assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
+    }
+
+    #[test]
+    fn root_contract_parses_icons_acquire_iconify_collection_subcommand() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "icons",
+            "acquire",
+            "iconify-collection",
+            "--collection",
+            "mdi",
+            "--icon",
+            "home",
+            "--out",
+            "./mdi.json",
+        ])
+        .expect("icons acquire iconify-collection command should parse");
 
         assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
     }
