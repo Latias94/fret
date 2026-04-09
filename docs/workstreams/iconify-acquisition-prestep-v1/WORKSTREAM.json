@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "slug": "iconify-acquisition-prestep-v1",
+  "title": "Iconify Acquisition Pre-step v1",
+  "status": "active",
+  "updated": "2026-04-09",
+  "scope_kind": "execution",
+  "problem": "Keep any future Iconify remote acquisition workflow explicit, pinned, and auditable: if Fret offers convenience for acquiring upstream Iconify data, it must remain a separate pre-step that produces local artifacts for the already-shipped generator rather than hiding network state inside `icons import`.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Open the closed generator-lane closeout, this lane's design doc, and rerun the current generator/import baseline before changing acquisition behavior.",
+    "commands": [
+      "cargo nextest run -p fret-icons-generator -p fretboard",
+      "cargo check -p fretboard --quiet"
+    ]
+  },
+  "gates": [
+    {
+      "name": "generator-import-baseline",
+      "command": "cargo nextest run -p fret-icons-generator -p fretboard"
+    },
+    {
+      "name": "fretboard-cli-baseline",
+      "command": "cargo check -p fretboard --quiet"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/iconify-acquisition-prestep-v1/DESIGN.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/TODO.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/MILESTONES.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
+    "docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "crates/fret-icons-generator/src/lib.rs",
+    "crates/fret-icons-generator/src/iconify.rs",
+    "crates/fretboard/src/icons/mod.rs",
+    "repo-ref/dioxus-iconify/README.md",
+    "repo-ref/dioxus-iconify/src/api.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane while the acquisition pre-step contract is still unsettled. Do not reopen `iconify-import-pack-generator-v1`; if scope grows beyond explicit acquisition of pinned local artifacts, split another narrower follow-on."
+  },
+  "follow_on_of": "iconify-import-pack-generator-v1"
+}
