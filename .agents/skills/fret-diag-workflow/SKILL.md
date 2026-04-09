@@ -122,6 +122,8 @@ Ship a result that is reviewable and reusable:
 - Evidence-first triage: `references/evidence-triage.md`
 - Web/WASM workflow: `references/web-runner.md`
 - Perf handoff: `references/perf-handoff.md`
+- Public diagnostics CLI help surface: `crates/fretboard/src/cli/help.rs`
+- Workspace-dev diagnostics CLI help surface: `apps/fretboard/src/cli/help.rs`
 - UI Gallery script corpus: `tools/diag-scripts/ui-gallery/`
 - UI Gallery geometry/test-id helpers: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 - Layout sidecar writer: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
@@ -150,6 +152,9 @@ Ship a result that is reviewable and reusable:
 - Leaving no stable selectors behind, so scripts rot immediately.
 - Jumping straight to screenshots when a layout sidecar would explain width/flex/clipping ownership faster.
 - Treating CI or large artifacts as the first place to discover what happened.
+- Mixing the public `fretboard diag ...` evidence owner with the workspace-dev
+  `fretboard-dev diag ...` help surface; use `crates/fretboard/src/cli/help.rs` for the public CLI
+  and `apps/fretboard/src/cli/help.rs` for the mono-repo developer wrapper.
 
 ## Troubleshooting
 

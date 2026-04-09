@@ -53,7 +53,8 @@ SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
         (".agents/skills/fret-app-ui-builder/references/recipes/INDEX.md", r""),
     ],
     "fret-diag-workflow": [
-        ("apps/fretboard/src/cli/help.rs", r"\bfretboard\s+diag\s+run\b"),
+        ("crates/fretboard/src/cli/help.rs", r"\bfretboard\s+diag\s+run\b"),
+        ("apps/fretboard/src/cli/help.rs", r"\bfretboard-dev\s+diag\s+run\b"),
         ("crates/fret-diag-protocol/src/lib.rs", r"\bClickStable\b"),
         ("crates/fret-diag-protocol/src/lib.rs", r"\bEnsureVisible\b"),
         ("crates/fret-diag-protocol/src/lib.rs", r"\bTypeTextInto\b"),
