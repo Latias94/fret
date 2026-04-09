@@ -27,6 +27,12 @@ What this proves today:
     presentation,
   - third-party local-input pack generation is already a public library + CLI surface,
   - and the remaining contract debt is explicit remote acquisition plus provenance.
+- `docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md` freezes the
+  v1 acquisition contract:
+  - generator-compatible local snapshot,
+  - separate provenance sidecar,
+  - separate `icons acquire ...` public CLI family,
+  - and subset snapshot as the first proof target.
 - `iconify-import-pack-generator-v1` is now closed on the v1 local-input producer contract.
 - The current generator accepts:
   - local SVG directory input,
@@ -58,6 +64,7 @@ cargo check -p fretboard --quiet
 - `docs/workstreams/iconify-acquisition-prestep-v1/MILESTONES.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md`
+- `docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `crates/fret-icons-generator/src/lib.rs`

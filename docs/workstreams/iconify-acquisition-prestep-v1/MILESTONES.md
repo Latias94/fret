@@ -41,6 +41,7 @@ Primary evidence:
 - `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `repo-ref/dioxus-iconify/README.md`
 - `repo-ref/dioxus-iconify/src/api.rs`
+- `docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
 
 ## M2 — Proof surface
 
@@ -54,6 +55,11 @@ Primary gates:
 
 - `cargo nextest run -p fret-icons-generator -p fretboard`
 - `cargo check -p fretboard --quiet`
+
+Current status:
+
+- M1 contract freeze closed on 2026-04-09.
+- The next active work is M2 proof surface.
 
 ## M3 — Docs and closeout
 

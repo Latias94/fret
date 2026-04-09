@@ -21,20 +21,20 @@ Last updated: 2026-04-09
 
 ## M1 — Acquisition contract freeze
 
-- [ ] IAP-020 Decide what artifact shape the acquisition pre-step emits:
+- [x] IAP-020 Decide what artifact shape the acquisition pre-step emits:
   - full Iconify collection snapshot,
   - subset collection snapshot,
   - or snapshot + explicit provenance sidecar.
-- [ ] IAP-021 Decide where the public acquisition surface lives:
+- [x] IAP-021 Decide where the public acquisition surface lives:
   - `fretboard` command only,
   - library + thin CLI split,
   - or another narrower ownership line if proof demands it.
-- [ ] IAP-022 Decide what pinning/provenance facts must be recorded:
+- [x] IAP-022 Decide what pinning/provenance facts must be recorded:
   - collection prefix,
   - requested icon set or subset list,
   - source URL/template,
   - and whether acquisition-time metadata belongs in a sidecar file.
-- [ ] IAP-023 Decide whether the first proof should target:
+- [x] IAP-023 Decide whether the first proof should target:
   - one full collection snapshot,
   - or one explicit subset snapshot that still matches the generator's accepted input shape.
 
@@ -65,3 +65,7 @@ Last updated: 2026-04-09
 Completed M0 evidence:
 
 - `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md`
+
+Completed M1 decision:
+
+- `docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
