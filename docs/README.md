@@ -29,23 +29,26 @@ Default app-author surface to keep in your head:
 Unless a document says otherwise:
 
 - Run commands from the repository root.
-- Current shipped public CLI surface is `assets`, `config`, `dev`, and `new`.
+- Current shipped public CLI surface is `assets`, `config`, `dev`, `diag`, and `new`.
   - Use `cargo run -p fretboard -- ...` or an installed `fretboard` binary.
 - Public project-facing examples:
   - `cargo run -p fretboard -- dev native --manifest-path ./Cargo.toml`
   - `cargo run -p fretboard -- dev web --manifest-path ./Cargo.toml --no-open`
+  - `cargo run -p fretboard -- diag latest`
+  - `cargo run -p fretboard -- diag run ./diag/script.json --launch -- cargo run --manifest-path ./Cargo.toml`
 - Current repo-maintainer / workspace-only commands stay on `cargo run -p fretboard-dev -- ...`:
-  - `diag`
   - `hotpatch`
   - `list`
   - `theme`
   - repo-local `new`
   - repo-local `dev` shortcuts (`--demo`, cookbook `--example`, chooser flows, hotpatch-oriented flags)
+  - maintainer-only `diag` taxonomy and catalogs (`suite`, `campaign`, `registry`, promoted script inventory)
   - Example (cookbook): `cargo run -p fretboard-dev -- dev native --example simple_todo`
   - Example (native demo bin): `cargo run -p fretboard-dev -- dev native --bin todo_demo`
-- Public `dev` implementation and the remaining public `diag` / hotpatch / theme posture are tracked in:
+- Public `dev` / `diag` implementation and the remaining hotpatch / theme posture are tracked in:
   - `docs/workstreams/fretboard-public-dev-implementation-v1/README.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
+  - `docs/workstreams/fretboard-public-diag-implementation-v1/README.md`
 - Some maintainer/labs docs reference the broad harness app directly:
   - `cargo run -p fret-demo --bin <name>`
   - This is not the first-hour onboarding path; start from [docs/first-hour.md](./first-hour.md) and
@@ -133,19 +136,20 @@ these are the only crate names we treat as stable entry points; internal crates 
 - `fret-ui-shadcn`: default component surface (shadcn/ui-aligned taxonomy + recipes).
 - `fret-ui-kit`: component authoring glue (policies + headless primitives + declarative helpers).
 - `fret-framework`: framework facade for advanced/manual assembly and integrations.
-- `fretboard`: public CLI for starter app scaffolds, project dev loops, asset manifests, and
-  project-local config helpers.
+- `fretboard`: public CLI for starter app scaffolds, project dev loops, project-facing diagnostics,
+  asset manifests, and project-local config helpers.
 
 Repo maintainers use the non-published `fretboard-dev` package for repo-local templates, demo runners,
-diagnostics, hotpatch, theme conversion, and other workspace-only flows.
+maintainer-only diagnostics taxonomy, hotpatch, theme conversion, and other workspace-only flows.
 
 CLI split note:
 
-- shipped public `fretboard`: `new`, `assets`, `config`, `dev`
-- repo-only `fretboard-dev`: `diag`, `hotpatch`, `list`, `theme`, and repo-owned `dev` shortcuts
-- current public `dev` implementation lane + remaining public `diag` / non-public theme posture:
+- shipped public `fretboard`: `new`, `assets`, `config`, `dev`, `diag`
+- repo-only `fretboard-dev`: maintainer-only `diag` verbs (`suite`, `campaign`, `registry`, promoted catalogs), `hotpatch`, `list`, `theme`, and repo-owned `dev` shortcuts
+- current public `dev` / `diag` implementation lanes + remaining non-public theme posture:
   - `docs/workstreams/fretboard-public-dev-implementation-v1/README.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
+  - `docs/workstreams/fretboard-public-diag-implementation-v1/README.md`
 
 Web/wasm runs through tooling (not through `fret`):
 

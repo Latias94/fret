@@ -75,14 +75,15 @@ Rust note:
 - `fret-ui-shadcn`: default component surface (apps).
 - `fret-ui-kit`: component authoring glue (ecosystem libraries).
 - `fret-framework`: framework facade for advanced/manual assembly.
-- `fretboard`: public CLI for starter app scaffolds, project dev loops, asset manifests, and
-  project-local config helpers.
+- `fretboard`: public CLI for starter app scaffolds, project dev loops, project-facing diagnostics,
+  asset manifests, and project-local config helpers.
 
 Current CLI split:
 
-- public `fretboard`: `new`, `assets`, `config`, `dev`
-- repo-only `fretboard-dev`: `diag`, `hotpatch`, `list`, `theme`, repo-local template
-  convenience, and richer repo-only `dev` shortcuts
+- public `fretboard`: `new`, `assets`, `config`, `dev`, `diag`
+- repo-only `fretboard-dev`: maintainer-only `diag` taxonomy (`suite`, `campaign`, `registry`,
+  promoted script catalogs), `hotpatch`, `list`, `theme`, repo-local template convenience, and
+  richer repo-only `dev` shortcuts
 - `theme import-vscode` is intentionally kept off the main public CLI; if it becomes public later,
   it should move as a dedicated package around `fret-vscode-theme`
 

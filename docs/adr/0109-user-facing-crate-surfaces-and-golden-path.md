@@ -15,8 +15,9 @@ Status note (2026-04-09): the CLI product split described here has been refined 
 `docs/workstreams/fretboard-public-app-author-surface-v1/README.md` and its target-state
 companions, and the implementation lane now lives in
 `docs/workstreams/fretboard-public-dev-implementation-v1/README.md`. The current shipped public
-`fretboard` surface is `new` + `assets` + `config` + project-facing `dev`. Repo-only
-`fretboard-dev` currently owns `diag`, `hotpatch`, `list`, `theme`, and richer repo-local `dev`
+`fretboard` surface is `new` + `assets` + `config` + project-facing `dev` + project-facing `diag`.
+Repo-only `fretboard-dev` currently owns maintainer-only `diag` taxonomy (`suite`, `campaign`,
+`registry`, promoted catalogs), `hotpatch`, `list`, `theme`, and richer repo-local `dev`
 shortcuts.
 
 ## Context
@@ -109,11 +110,11 @@ We adopt the Dioxus lesson: dev UX matters, but it must be kept out of core libr
     - `config`
     - project-facing `dev native`
     - project-facing `dev web`
-  - future product targets:
-    - reduced `diag` core
+    - reduced project-facing `diag` core (`run`, `perf`, `latest`, `resolve`, `meta`, `pack`,
+      `screenshots`, `windows`, `ai-packet`, `query`, `slice`, `stats`, `compare`)
 - repo-only `fretboard-dev` currently owns:
   - mono-repo demo/cookbook launchers and richer repo-only `dev` shortcuts
-  - diagnostics maintainer tooling
+  - diagnostics maintainer tooling (`suite`, `campaign`, `registry`, promoted script inventory)
   - hotpatch helpers and advanced transport flags
   - `theme import-vscode`
 - `fret-bootstrap` may expose small helpers for dev env wiring (feature-gated), but must not become a toolchain manager.
@@ -182,7 +183,8 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
    - “Manual assembly” (advanced).
 3. Land the frozen follow-on CLI work without reopening the product taxonomy:
    - keep the shipped public project-facing `dev native/web` surface aligned with docs
-   - land a public reduced `diag` core follow-on
+   - keep the shipped public reduced `diag` core aligned with docs while leaving maintainer-only
+     taxonomy on `fretboard-dev`
    - keep hotpatch repo-only until the public `dev` lane is stable
    - keep `theme import-vscode` out of the main public CLI
 
@@ -191,6 +193,7 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
 - Kernel/backends/apps layering: `docs/adr/0092-crate-structure-core-backends-apps.md`
 - Ecosystem bootstrap and tooling: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - Public CLI taxonomy freeze + closeout: `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
+- Public diag implementation lane: `docs/workstreams/fretboard-public-diag-implementation-v1/README.md`
 - Golden-path app driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
 - Resource ownership boundary: `docs/adr/0004-resource-handles.md`
 - Editor asset pipeline (out of scope): `docs/adr/0026-asset-database-and-import-pipeline.md`

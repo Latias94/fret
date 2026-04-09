@@ -53,8 +53,8 @@ components repository.
   `LocalState`, typed actions, and shadcn-based components.
 - **Mechanism/policy separation**: kernel/runtime crates stay policy-light; higher-level
   interaction defaults live in ecosystem crates.
-- **Diagnostics and perf tooling**: `fretboard-dev diag` and the in-tree evidence workflow are part of
-  the normal development loop, not an afterthought.
+- **Diagnostics and perf tooling**: `fretboard diag` gives app authors a shipped diagnostics core,
+  while `fretboard-dev diag` keeps the richer mono-repo maintainer workflows.
 - **Modular consumption**: portable core, pluggable platform/runner/render crates, and an explicit
   WebGPU/wasm path.
 
@@ -83,11 +83,12 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 
 Repo CLI split:
 
-- In this workspace, maintainer commands such as `list`, `diag`, `hotpatch`, and `theme`, plus the
-  repo-local `new` workflow and repo demo/cookbook `dev` shortcuts, run through
+- In this workspace, maintainer commands such as `list`, `hotpatch`, and `theme`, plus the
+  repo-local `new` workflow, repo demo/cookbook `dev` shortcuts, and maintainer-only `diag`
+  taxonomy (`suite`, `campaign`, `registry`, promoted script catalogs) run through
   `cargo run -p fretboard-dev -- ...`.
-- The published `fretboard` CLI keeps the public `dev`, `assets`, `config`, and starter `new`
-  workflows.
+- The published `fretboard` CLI keeps the public `dev`, `diag`, `assets`, `config`, and starter
+  `new` workflows.
 
 Use the onboarding ladder on purpose:
 
@@ -147,7 +148,8 @@ cargo run -p fretboard-dev -- dev web --demo ui_gallery
 
 ### 4) Optional: diagnostics walkthrough (advanced)
 
-Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard-dev diag`).
+Fret includes an optional diagnostics + scripted UI automation toolchain on the public CLI
+(`fretboard diag`). Repo-only suite/campaign tooling remains on `fretboard-dev diag`.
 If you are new to it, start with the cookbook walkthrough:
 
 - [apps/fret-cookbook/README.md#diagnostics-optional](./apps/fret-cookbook/README.md#diagnostics-optional)
