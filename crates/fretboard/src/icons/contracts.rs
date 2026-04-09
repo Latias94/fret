@@ -67,6 +67,8 @@ pub struct IconSuggestCommandArgs {
 pub enum IconSuggestKindContract {
     /// Suggest a presentation-defaults config from Iconify acquisition provenance.
     PresentationDefaults(SuggestPresentationDefaultsArgs),
+    /// Analyze a local SVG directory and suggest explicit presentation overrides.
+    SvgDirPresentationOverrides(SuggestSvgDirPresentationOverridesArgs),
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq)]
@@ -81,6 +83,22 @@ pub struct SuggestPresentationDefaultsArgs {
     ///
     /// This report is advisory and keeps the helper's derivation evidence reviewable without
     /// changing the generator/import contract.
+    #[arg(long, value_name = "FILE")]
+    pub report_out: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq)]
+pub struct SuggestSvgDirPresentationOverridesArgs {
+    /// Source directory containing one or more SVG files.
+    #[arg(long, value_name = "DIR")]
+    pub source: PathBuf,
+    /// Output path for the emitted `presentation-defaults.json` suggestion.
+    ///
+    /// This helper only suggests explicit per-icon overrides when SVG analysis finds strong
+    /// authored-color evidence. It does not infer a pack-level default render mode.
+    #[arg(long, value_name = "FILE")]
+    pub out: PathBuf,
+    /// Optional output path for a versioned SVG analysis report JSON.
     #[arg(long, value_name = "FILE")]
     pub report_out: Option<PathBuf>,
 }

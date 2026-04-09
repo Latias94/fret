@@ -594,6 +594,13 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `--report-out ./iconify/presentation-defaults.report.json`; the optional versioned report records
   the provenance evidence, suggested default, and current helper limitations without becoming a
   new import contract.
+  If the source is a local SVG directory and you want conservative per-icon authored-color
+  scaffolding, run
+  `fretboard icons suggest svg-dir-presentation-overrides --source ./icons --out ./presentation-defaults.json --report-out ./presentation-defaults.report.json`.
+  That helper only emits per-icon `original-colors` overrides when SVG analysis finds strong
+  evidence such as multiple solid colors, gradients, patterns, or embedded images. It does not
+  infer `default_render_mode`, so unlisted icons stay on the existing generator/import default
+  path. Review the emitted config before passing `--presentation-defaults` into `icons import ...`.
   First-party and custom pack crates should also keep pack provenance explicit through
   `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic

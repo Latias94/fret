@@ -54,6 +54,13 @@ pub(crate) fn normalize_icon_name(raw: &str) -> Result<String, GeneratePackError
     Ok(normalized)
 }
 
+/// Normalizes a relative SVG path into the same generated icon name used by `svg-dir` imports.
+pub fn normalize_svg_directory_icon_name(
+    relative_path: &Path,
+) -> Result<String, GeneratePackError> {
+    normalize_svg_icon_name(relative_path)
+}
+
 pub(crate) fn normalize_svg_icon_name(relative_path: &Path) -> Result<String, GeneratePackError> {
     let mut segments = Vec::new();
     let mut components = relative_path.components().peekable();

@@ -19,3 +19,4 @@ fret-icons-generator = { version = "0.1.0", path = "../fret-icons-generator" }
 serde.workspace = true
 serde_json.workspace = true
 ureq.workspace = true
+usvg.workspace = true

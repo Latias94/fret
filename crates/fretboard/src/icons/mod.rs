@@ -1,5 +1,6 @@
 mod acquire;
 mod suggest;
+mod suggest_svg;
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -130,6 +131,18 @@ fn run_suggest_contract(args: IconSuggestCommandArgs) -> Result<(), String> {
                     }
                 }
             );
+            Ok(())
+        }
+        IconSuggestKindContract::SvgDirPresentationOverrides(args) => {
+            let report = suggest_svg::run_svg_dir_presentation_overrides_contract(args)?;
+            println!("Suggested svg-dir presentation overrides:");
+            println!("  output          : {}", report.out_path.display());
+            if let Some(report_path) = &report.report_path {
+                println!("  report          : {}", report_path.display());
+            }
+            println!("  icons analyzed  : {}", report.analyzed_icon_count);
+            println!("  overrides       : {}", report.suggested_override_count);
+            println!("  parse failures  : {}", report.parse_failure_count);
             Ok(())
         }
     }
@@ -286,6 +299,7 @@ mod tests {
         IconImportCommandArgs, IconImportSourceContract, IconSuggestCommandArgs,
         IconSuggestKindContract, IconsCommandArgs, IconsCommandContract, ImportCommonArgs,
         ImportIconifyCollectionArgs, ImportSvgDirArgs, SuggestPresentationDefaultsArgs,
+        SuggestSvgDirPresentationOverridesArgs,
     };
     use super::run_repo_icons_contract;
     use serde_json::Value;
@@ -317,14 +331,28 @@ mod tests {
         std::fs::create_dir_all(source_dir.join("actions")).expect("create nested source dir");
         std::fs::write(
             source_dir.join("actions").join("search.svg"),
-            r#"<svg viewBox="0 0 24 24"><path d="M10 10h4"/></svg>"#,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 10h4"/></svg>"#,
         )
         .expect("write search svg");
         std::fs::write(
             source_dir.join("close.svg"),
-            r#"<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/></svg>"#,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3l18 18"/></svg>"#,
         )
         .expect("write close svg");
+    }
+
+    fn write_demo_svg_dir_for_analysis(source_dir: &Path) {
+        std::fs::create_dir_all(source_dir).expect("create source dir");
+        std::fs::write(
+            source_dir.join("brand-logo.svg"),
+            r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#ff0000" d="M0 0h12v24H0z"/><path fill="#0000ff" d="M12 0h12v24H12z"/></svg>"##,
+        )
+        .expect("write multicolor svg");
+        std::fs::write(
+            source_dir.join("close.svg"),
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3l18 18"/></svg>"#,
+        )
+        .expect("write monochrome svg");
     }
 
     fn write_demo_iconify_collection(source_file: &Path) {
@@ -707,5 +735,78 @@ mod tests {
             "original-colors"
         );
         assert_eq!(provenance["icons"][0]["render_mode"], "original-colors");
+    }
+
+    #[test]
+    fn repo_svg_dir_analysis_suggestion_flows_into_imported_pack_overrides() {
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-svg-analysis-presentation-proof");
+        let source_dir = suite_root.join("source");
+        let suggestion_file = suite_root.join("presentation-defaults.json");
+        let report_file = suite_root.join("presentation-defaults.report.json");
+        let out_dir = suite_root.join("demo-icons-pack");
+        write_demo_svg_dir_for_analysis(&source_dir);
+
+        run_repo_icons_contract(
+            IconsCommandArgs {
+                command: IconsCommandContract::Suggest(IconSuggestCommandArgs {
+                    kind: IconSuggestKindContract::SvgDirPresentationOverrides(
+                        SuggestSvgDirPresentationOverridesArgs {
+                            source: source_dir.clone(),
+                            out: suggestion_file.clone(),
+                            report_out: Some(report_file.clone()),
+                        },
+                    ),
+                }),
+            },
+            &workspace_root,
+        )
+        .expect("repo svg-dir analysis suggestion should succeed");
+
+        run_repo_icons_contract(
+            IconsCommandArgs {
+                command: IconsCommandContract::Import(IconImportCommandArgs {
+                    source: IconImportSourceContract::SvgDir(ImportSvgDirArgs {
+                        source: source_dir,
+                        common: ImportCommonArgs {
+                            crate_name: "demo-icons-pack".to_string(),
+                            vendor_namespace: "demo".to_string(),
+                            pack_id: None,
+                            path: Some(out_dir.clone()),
+                            source_label: Some("demo-source".to_string()),
+                            semantic_aliases: None,
+                            presentation_defaults: Some(suggestion_file),
+                            no_check: true,
+                        },
+                    }),
+                }),
+            },
+            &workspace_root,
+        )
+        .expect("repo svg-dir import with suggested overrides should succeed");
+
+        cargo_check_generated_pack(&out_dir);
+
+        let provenance = std::fs::read_to_string(out_dir.join("pack-provenance.json"))
+            .expect("generated provenance json");
+        let provenance: Value = serde_json::from_str(&provenance).expect("valid provenance json");
+        assert!(provenance["presentation_defaults"]["default_render_mode"].is_null());
+        assert_eq!(
+            provenance["presentation_defaults"]["icon_overrides"][0]["icon_name"],
+            "brand-logo"
+        );
+        assert_eq!(
+            provenance["presentation_defaults"]["icon_overrides"][0]["render_mode"],
+            "original-colors"
+        );
+        assert_eq!(provenance["icons"][0]["icon_name"], "brand-logo");
+        assert_eq!(provenance["icons"][0]["render_mode"], "original-colors");
+        assert_eq!(provenance["icons"][1]["icon_name"], "close");
+        assert_eq!(provenance["icons"][1]["render_mode"], "mask");
+
+        let report = std::fs::read_to_string(report_file).expect("read suggestion report");
+        let report: Value = serde_json::from_str(&report).expect("valid suggestion report");
+        assert_eq!(report["summary"]["suggested_override_count"], 1);
+        assert_eq!(report["summary"]["parse_failure_count"], 0);
     }
 }

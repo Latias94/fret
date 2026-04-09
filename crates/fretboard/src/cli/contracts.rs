@@ -148,6 +148,7 @@ mod tests {
         let suggest_help = render_command_help_path(&["icons", "suggest"])
             .expect("icons suggest help should render");
         assert!(suggest_help.contains("presentation-defaults"));
+        assert!(suggest_help.contains("svg-dir-presentation-overrides"));
 
         let suggest_presentation_help =
             render_command_help_path(&["icons", "suggest", "presentation-defaults"])
@@ -155,6 +156,13 @@ mod tests {
         assert!(suggest_presentation_help.contains("--provenance"));
         assert!(suggest_presentation_help.contains("--out"));
         assert!(suggest_presentation_help.contains("--report-out"));
+
+        let suggest_svg_help =
+            render_command_help_path(&["icons", "suggest", "svg-dir-presentation-overrides"])
+                .expect("icons suggest svg-dir-presentation-overrides help should render");
+        assert!(suggest_svg_help.contains("--source"));
+        assert!(suggest_svg_help.contains("--out"));
+        assert!(suggest_svg_help.contains("--report-out"));
     }
 
     #[test]
@@ -288,6 +296,25 @@ mod tests {
             "./presentation-defaults.report.json",
         ])
         .expect("icons suggest presentation-defaults command should parse");
+
+        assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
+    }
+
+    #[test]
+    fn root_contract_parses_icons_suggest_svg_dir_presentation_overrides_subcommand() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "icons",
+            "suggest",
+            "svg-dir-presentation-overrides",
+            "--source",
+            "./icons",
+            "--out",
+            "./presentation-defaults.json",
+            "--report-out",
+            "./presentation-defaults.report.json",
+        ])
+        .expect("icons suggest svg-dir-presentation-overrides command should parse");
 
         assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
     }

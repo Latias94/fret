@@ -15,6 +15,7 @@ pub use contracts::{
     PresentationRenderMode, SemanticAlias, SemanticAliasConfigFileV1, SourceSpec,
     SvgDirectorySource,
 };
+pub use naming::normalize_svg_directory_icon_name;
 pub use presentation_defaults::load_presentation_defaults_json_file;
 pub use semantic_aliases::load_semantic_aliases_json_file;
 

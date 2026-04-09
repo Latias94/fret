@@ -538,6 +538,18 @@ If you want that review to stay as a committed artifact, add
 the provenance evidence, suggested default, and helper limitations visible without changing import
 behavior.
 
+If your source is only a local SVG directory and you want conservative per-icon authored-color
+scaffolding, run:
+
+```bash
+fretboard icons suggest svg-dir-presentation-overrides --source ./icons --out ./presentation-defaults.json --report-out ./presentation-defaults.report.json
+```
+
+That helper only suggests `original-colors` overrides when SVG analysis finds strong evidence
+such as multiple solid colors, gradients, patterns, or embedded images. It does not infer
+`default_render_mode`, so review the emitted files before passing `--presentation-defaults` into
+`icons import ...`.
+
 That generated crate already emits `PACK_METADATA`, `PACK` / `VENDOR_PACK`, and explicit
 `my_icons::app::install(...)` wiring.
 
