@@ -83,9 +83,9 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 
 Repo CLI split:
 
-- In this workspace, maintainer commands such as `new`, `dev`, `list`, `diag`, `hotpatch`, and `theme`
-  run through `cargo run -p fretboard-dev -- ...`.
-- The published `fretboard` CLI keeps the public `assets` and `config` workflows.
+- In this workspace, maintainer commands such as `dev`, `list`, `diag`, `hotpatch`, and `theme`,
+  plus the repo-local `new` workflow, run through `cargo run -p fretboard-dev -- ...`.
+- The published `fretboard` CLI keeps the public `assets`, `config`, and starter `new` workflows.
 
 Use the onboarding ladder on purpose:
 

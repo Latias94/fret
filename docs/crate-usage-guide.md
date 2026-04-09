@@ -75,9 +75,9 @@ Rust note:
 - `fret-ui-shadcn`: default component surface (apps).
 - `fret-ui-kit`: component authoring glue (ecosystem libraries).
 - `fret-framework`: framework facade for advanced/manual assembly.
-- `fretboard`: public CLI for asset manifests and project-local config helpers.
+- `fretboard`: public CLI for asset manifests, project-local config helpers, and starter app scaffolds.
 
-In this repo, maintainer-only workflows such as templates, demo runners, and diagnostics stay on
+In this repo, maintainer-only workflows such as repo-local templates, demo runners, and diagnostics stay on
 the non-published `fretboard-dev` package.
 
 1) If you are writing a reusable ecosystem library, avoid backend crates (`fret-launch`, `winit`, `wgpu`).

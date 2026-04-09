@@ -26,6 +26,6 @@ These are not stable library surfaces; they exist to prove contracts, capture di
 ## How these fit together
 
 - [`apps/fret-examples`](./fret-examples) is shared harness code used by demo shells; it is not intended to be run directly.
-- The published public CLI lives under `crates/fretboard`; it keeps only the `assets` / `config` workflows.
+- The published public CLI lives under `crates/fretboard`; it keeps the `assets` / `config` / `new` workflows.
 - Many other `apps/*` crates are maintainer tools (stress harnesses, debug utilities, diagnostics exporters).
   If you are onboarding, prefer the “boring ladder” in [docs/examples/README.md](../docs/examples/README.md).

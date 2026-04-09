@@ -122,9 +122,9 @@ these are the only crate names we treat as stable entry points; internal crates 
 - `fret-ui-shadcn`: default component surface (shadcn/ui-aligned taxonomy + recipes).
 - `fret-ui-kit`: component authoring glue (policies + headless primitives + declarative helpers).
 - `fret-framework`: framework facade for advanced/manual assembly and integrations.
-- `fretboard`: public CLI for asset manifests and project-local config helpers.
+- `fretboard`: public CLI for asset manifests, project-local config helpers, and starter app scaffolds.
 
-Repo maintainers use the non-published `fretboard-dev` package for templates, demo runners,
+Repo maintainers use the non-published `fretboard-dev` package for repo-local templates, demo runners,
 diagnostics, hotpatch, and other workspace-only flows.
 
 Web/wasm runs through tooling (not through `fret`):

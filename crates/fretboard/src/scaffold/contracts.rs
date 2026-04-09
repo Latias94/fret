@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use clap::{Args, Subcommand, ValueEnum};
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
-pub(crate) struct NewCommandArgs {
+pub struct NewCommandArgs {
     #[command(subcommand)]
     pub template: Option<NewTemplateContract>,
 }
 
 #[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
-pub(crate) enum NewTemplateContract {
+pub enum NewTemplateContract {
     /// Create a minimal Cargo-like starter app.
     Empty(ScaffoldEmptyCommandArgs),
     /// Create the smallest runnable UI app.
@@ -21,7 +21,7 @@ pub(crate) enum NewTemplateContract {
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
-pub(crate) struct ScaffoldOutputArgs {
+pub struct ScaffoldOutputArgs {
     /// Output directory for the generated app.
     #[arg(long)]
     pub path: Option<PathBuf>,
@@ -34,7 +34,7 @@ pub(crate) struct ScaffoldOutputArgs {
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
-pub(crate) struct ScaffoldIconArgs {
+pub struct ScaffoldIconArgs {
     /// Icon pack to wire into the generated app.
     #[arg(long, value_enum, conflicts_with = "no_icons")]
     pub icons: Option<ScaffoldIconPackValue>,
@@ -47,13 +47,13 @@ pub(crate) struct ScaffoldIconArgs {
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
-pub(crate) struct ScaffoldEmptyCommandArgs {
+pub struct ScaffoldEmptyCommandArgs {
     #[command(flatten)]
     pub output: ScaffoldOutputArgs,
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
-pub(crate) struct ScaffoldHelloCommandArgs {
+pub struct ScaffoldHelloCommandArgs {
     #[command(flatten)]
     pub output: ScaffoldOutputArgs,
     #[command(flatten)]
@@ -61,7 +61,7 @@ pub(crate) struct ScaffoldHelloCommandArgs {
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
-pub(crate) struct ScaffoldTodoCommandArgs {
+pub struct ScaffoldTodoCommandArgs {
     #[command(flatten)]
     pub output: ScaffoldOutputArgs,
     #[command(flatten)]
@@ -72,7 +72,7 @@ pub(crate) struct ScaffoldTodoCommandArgs {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-pub(crate) enum ScaffoldIconPackValue {
+pub enum ScaffoldIconPackValue {
     Lucide,
     Radix,
     None,

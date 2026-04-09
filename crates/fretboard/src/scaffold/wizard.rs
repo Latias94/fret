@@ -1,23 +1,19 @@
 use std::io::{IsTerminal as _, Write as _};
 use std::path::PathBuf;
 
-use crate::cli::workspace_root;
-
 use super::fs::sanitize_package_name;
 use super::{
-    IconPack, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at, init_simple_todo_at,
-    init_todo_at,
+    IconPack, NewMode, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at,
+    init_simple_todo_at, init_todo_at,
 };
 
-pub(super) fn new_wizard() -> Result<(), String> {
+pub(super) fn new_wizard(mode: &NewMode) -> Result<(), String> {
     if !std::io::stdin().is_terminal() {
-        return Err(
-            "interactive wizard requires a TTY (try: `fretboard-dev new todo --name my-todo`)"
-                .to_string(),
-        );
+        return Err(format!(
+            "interactive wizard requires a TTY (try: `{} new todo --name my-todo`)",
+            mode.bin_name()
+        ));
     }
-
-    let root = workspace_root()?;
 
     println!("Fretboard new (interactive)");
     println!();
@@ -43,7 +39,7 @@ pub(super) fn new_wizard() -> Result<(), String> {
     let name_raw = prompt_line("Package name", Some(default_name))?;
     let package_name = sanitize_package_name(&name_raw)?;
 
-    let default_out = root.join("local").join(&package_name);
+    let default_out = mode.default_out_dir(&package_name);
     let out_raw = prompt_line(
         "Output path (blank = default)",
         Some(default_out.to_string_lossy().as_ref()),
@@ -103,10 +99,10 @@ pub(super) fn new_wizard() -> Result<(), String> {
     }
 
     match template {
-        NewTemplate::Empty => init_empty_at(&out_dir, &package_name, true),
-        NewTemplate::Hello => init_hello_at(&root, &out_dir, &package_name, opts, true),
-        NewTemplate::SimpleTodo => init_simple_todo_at(&root, &out_dir, &package_name, opts, true),
-        NewTemplate::Todo => init_todo_at(&root, &out_dir, &package_name, opts, true),
+        NewTemplate::Empty => init_empty_at(&out_dir, &package_name, true, mode.bin_name()),
+        NewTemplate::Hello => init_hello_at(mode, &out_dir, &package_name, opts, true),
+        NewTemplate::SimpleTodo => init_simple_todo_at(mode, &out_dir, &package_name, opts, true),
+        NewTemplate::Todo => init_todo_at(mode, &out_dir, &package_name, opts, true),
     }
 }
 

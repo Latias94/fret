@@ -1,7 +1,10 @@
 const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-app
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-app --surface framework
-  fretboard config menubar --path ."#;
+  fretboard config menubar --path .
+  fretboard new hello --name hello-world
+  fretboard new simple-todo --name my-simple-todo
+  fretboard new todo --name my-todo"#;
 
 fn render_root_help() -> Result<String, String> {
     let mut help = super::contracts::render_command_help_path(&[])?;
@@ -28,5 +31,6 @@ mod tests {
         let help = render_root_help().expect("root help should render");
         assert!(help.contains("fretboard assets manifest write"));
         assert!(help.contains("fretboard config menubar --path ."));
+        assert!(help.contains("fretboard new todo --name my-todo"));
     }
 }

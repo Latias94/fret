@@ -65,6 +65,7 @@ first public teaching story.
 Note:
 
 - The publishable public CLI now lives in `crates/fretboard` (`fretboard` on crates.io).
+- Its public surface includes starter scaffolds (`new`) plus `assets` / `config`.
 - The repo-owned maintainer command surface remains in `apps/fretboard` as package `fretboard-dev`.
 - Deferred ecosystem/editor/design-system crates:
   - `fret-docking`

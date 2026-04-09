@@ -2,6 +2,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 
 use crate::assets::contracts::AssetsCommandArgs;
 use crate::config::contracts::ConfigCommandArgs;
+use crate::scaffold::contracts::NewCommandArgs;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -21,6 +22,8 @@ pub enum FretboardCommandContract {
     Assets(AssetsCommandArgs),
     /// Configure project-local settings and generated config files.
     Config(ConfigCommandArgs),
+    /// Create a new app from a starter template.
+    New(NewCommandArgs),
 }
 
 pub fn try_parse_contract<I, T>(args: I) -> Result<FretboardCliContract, clap::Error>
@@ -89,5 +92,20 @@ mod tests {
         ])
         .expect("assets command should parse");
         matches!(cli.command, FretboardCommandContract::Assets(_));
+    }
+
+    #[test]
+    fn new_help_lists_scaffold_templates() {
+        let help = render_command_help_path(&["new"]).expect("new help should render");
+        assert!(help.contains("hello"));
+        assert!(help.contains("simple-todo"));
+        assert!(help.contains("todo"));
+    }
+
+    #[test]
+    fn root_contract_parses_new_subcommand() {
+        let cli = try_parse_contract(["fretboard", "new", "hello", "--name", "hello-world"])
+            .expect("new command should parse");
+        matches!(cli.command, FretboardCommandContract::New(_));
     }
 }

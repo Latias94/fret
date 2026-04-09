@@ -1,9 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::cli::workspace_root;
-
-pub(crate) mod contracts;
+pub mod contracts;
 
 mod fs;
 mod templates;
@@ -19,23 +17,128 @@ use fs::{
 };
 use templates::{
     empty_template_cargo_toml, empty_template_main_rs, empty_template_readme_md,
-    generated_assets_stub_rs, hello_template_cargo_toml, hello_template_main_rs,
-    hello_template_readme_md, simple_todo_template_cargo_toml, simple_todo_template_main_rs,
-    simple_todo_template_readme_md, template_gitignore, todo_template_cargo_toml,
-    todo_template_main_rs, todo_template_readme_md,
+    generated_assets_stub_rs, hello_template_cargo_toml_public, hello_template_cargo_toml_repo,
+    hello_template_main_rs, hello_template_readme_md, simple_todo_template_cargo_toml_public,
+    simple_todo_template_cargo_toml_repo, simple_todo_template_main_rs,
+    simple_todo_template_readme_md, template_gitignore, todo_template_cargo_toml_public,
+    todo_template_cargo_toml_repo, todo_template_main_rs, todo_template_readme_md,
 };
 
-pub(crate) fn run_new_contract(args: NewCommandArgs) -> Result<(), String> {
+pub fn run_public_new_contract(args: NewCommandArgs) -> Result<(), String> {
+    let cwd = std::env::current_dir().map_err(|e| format!("failed to read current directory: {e}"))?;
+    run_new_contract_with_mode(&NewMode::Public { cwd }, args)
+}
+
+pub fn run_repo_new_contract(args: NewCommandArgs, workspace_root: &Path) -> Result<(), String> {
+    run_new_contract_with_mode(
+        &NewMode::Repo {
+            workspace_root: workspace_root.to_path_buf(),
+        },
+        args,
+    )
+}
+
+fn run_new_contract_with_mode(mode: &NewMode, args: NewCommandArgs) -> Result<(), String> {
     let Some(template) = args.template else {
-        return wizard::new_wizard();
+        return wizard::new_wizard(mode);
     };
 
-    let root = workspace_root()?;
     match template {
-        NewTemplateContract::Empty(args) => run_empty_contract(&root, args),
-        NewTemplateContract::Hello(args) => run_hello_contract(&root, args),
-        NewTemplateContract::SimpleTodo(args) => run_simple_todo_contract(&root, args),
-        NewTemplateContract::Todo(args) => run_todo_contract(&root, args),
+        NewTemplateContract::Empty(args) => run_empty_contract(mode, args),
+        NewTemplateContract::Hello(args) => run_hello_contract(mode, args),
+        NewTemplateContract::SimpleTodo(args) => run_simple_todo_contract(mode, args),
+        NewTemplateContract::Todo(args) => run_todo_contract(mode, args),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum NewMode {
+    Public { cwd: PathBuf },
+    Repo { workspace_root: PathBuf },
+}
+
+impl NewMode {
+    pub(super) fn bin_name(&self) -> &'static str {
+        match self {
+            Self::Public { .. } => "fretboard",
+            Self::Repo { .. } => "fretboard-dev",
+        }
+    }
+
+    pub(super) fn default_out_dir(&self, package_name: &str) -> PathBuf {
+        match self {
+            Self::Public { cwd } => cwd.join(package_name),
+            Self::Repo { workspace_root } => workspace_root.join("local").join(package_name),
+        }
+    }
+
+    fn hello_template_cargo_toml(
+        &self,
+        package_name: &str,
+        opts: ScaffoldOptions,
+        out_dir: &Path,
+    ) -> Result<String, String> {
+        match self {
+            Self::Public { .. } => Ok(hello_template_cargo_toml_public(
+                package_name,
+                opts,
+                env!("CARGO_PKG_VERSION"),
+            )),
+            Self::Repo { workspace_root } => {
+                let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+                Ok(hello_template_cargo_toml_repo(
+                    package_name,
+                    opts,
+                    &workspace_prefix,
+                ))
+            }
+        }
+    }
+
+    fn simple_todo_template_cargo_toml(
+        &self,
+        package_name: &str,
+        opts: ScaffoldOptions,
+        out_dir: &Path,
+    ) -> Result<String, String> {
+        match self {
+            Self::Public { .. } => Ok(simple_todo_template_cargo_toml_public(
+                package_name,
+                opts,
+                env!("CARGO_PKG_VERSION"),
+            )),
+            Self::Repo { workspace_root } => {
+                let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+                Ok(simple_todo_template_cargo_toml_repo(
+                    package_name,
+                    opts,
+                    &workspace_prefix,
+                ))
+            }
+        }
+    }
+
+    fn todo_template_cargo_toml(
+        &self,
+        package_name: &str,
+        opts: ScaffoldOptions,
+        out_dir: &Path,
+    ) -> Result<String, String> {
+        match self {
+            Self::Public { .. } => Ok(todo_template_cargo_toml_public(
+                package_name,
+                opts,
+                env!("CARGO_PKG_VERSION"),
+            )),
+            Self::Repo { workspace_root } => {
+                let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+                Ok(todo_template_cargo_toml_repo(
+                    package_name,
+                    opts,
+                    &workspace_prefix,
+                ))
+            }
+        }
     }
 }
 
@@ -71,17 +174,15 @@ struct ScaffoldOptions {
     ui_assets: bool,
 }
 
-fn run_empty_contract(workspace_root: &Path, args: ScaffoldEmptyCommandArgs) -> Result<(), String> {
-    let (out_dir, package_name, run_check) =
-        resolve_scaffold_output(workspace_root, args.output, "my-app")?;
-    init_empty_at(&out_dir, &package_name, run_check)
+fn run_empty_contract(mode: &NewMode, args: ScaffoldEmptyCommandArgs) -> Result<(), String> {
+    let (out_dir, package_name, run_check) = resolve_scaffold_output(mode, args.output, "my-app")?;
+    init_empty_at(&out_dir, &package_name, run_check, mode.bin_name())
 }
 
-fn run_todo_contract(workspace_root: &Path, args: ScaffoldTodoCommandArgs) -> Result<(), String> {
-    let (out_dir, package_name, run_check) =
-        resolve_scaffold_output(workspace_root, args.output, "todo-app")?;
+fn run_todo_contract(mode: &NewMode, args: ScaffoldTodoCommandArgs) -> Result<(), String> {
+    let (out_dir, package_name, run_check) = resolve_scaffold_output(mode, args.output, "todo-app")?;
     init_todo_at(
-        workspace_root,
+        mode,
         &out_dir,
         &package_name,
         scaffold_options_from_icon_args(args.icons, args.ui_assets),
@@ -90,13 +191,13 @@ fn run_todo_contract(workspace_root: &Path, args: ScaffoldTodoCommandArgs) -> Re
 }
 
 fn run_simple_todo_contract(
-    workspace_root: &Path,
+    mode: &NewMode,
     args: ScaffoldTodoCommandArgs,
 ) -> Result<(), String> {
     let (out_dir, package_name, run_check) =
-        resolve_scaffold_output(workspace_root, args.output, "simple-todo-app")?;
+        resolve_scaffold_output(mode, args.output, "simple-todo-app")?;
     init_simple_todo_at(
-        workspace_root,
+        mode,
         &out_dir,
         &package_name,
         scaffold_options_from_icon_args(args.icons, args.ui_assets),
@@ -104,11 +205,11 @@ fn run_simple_todo_contract(
     )
 }
 
-fn run_hello_contract(workspace_root: &Path, args: ScaffoldHelloCommandArgs) -> Result<(), String> {
+fn run_hello_contract(mode: &NewMode, args: ScaffoldHelloCommandArgs) -> Result<(), String> {
     let (out_dir, package_name, run_check) =
-        resolve_scaffold_output(workspace_root, args.output, "hello-world")?;
+        resolve_scaffold_output(mode, args.output, "hello-world")?;
     init_hello_at(
-        workspace_root,
+        mode,
         &out_dir,
         &package_name,
         scaffold_options_from_icon_args(args.icons, false),
@@ -117,14 +218,12 @@ fn run_hello_contract(workspace_root: &Path, args: ScaffoldHelloCommandArgs) -> 
 }
 
 fn resolve_scaffold_output(
-    workspace_root: &Path,
+    mode: &NewMode,
     args: ScaffoldOutputArgs,
     default_name: &str,
 ) -> Result<(PathBuf, String, bool), String> {
     let package_name = sanitize_package_name(args.name.as_deref().unwrap_or(default_name))?;
-    let out_dir = args
-        .path
-        .unwrap_or_else(|| workspace_root.join("local").join(&package_name));
+    let out_dir = args.path.unwrap_or_else(|| mode.default_out_dir(&package_name));
     Ok((out_dir, package_name, !args.no_check))
 }
 
@@ -149,7 +248,7 @@ fn icon_pack_from_args(args: &ScaffoldIconArgs) -> IconPack {
 }
 
 fn init_simple_todo_at(
-    workspace_root: &Path,
+    mode: &NewMode,
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
@@ -157,9 +256,7 @@ fn init_simple_todo_at(
 ) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
-
-    let cargo_toml = simple_todo_template_cargo_toml(package_name, opts, &workspace_prefix);
+    let cargo_toml = mode.simple_todo_template_cargo_toml(package_name, opts, out_dir)?;
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
     write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
 
@@ -171,9 +268,9 @@ fn init_simple_todo_at(
     )?;
     write_new_file(
         &out_dir.join("README.md"),
-        &simple_todo_template_readme_md(package_name, opts),
+        &simple_todo_template_readme_md(package_name, opts, mode.bin_name()),
     )?;
-    maybe_init_asset_scaffold(out_dir, package_name, opts)?;
+    maybe_init_asset_scaffold(out_dir, package_name, opts, mode.bin_name())?;
 
     maybe_cargo_check(out_dir, run_check)?;
 
@@ -187,7 +284,7 @@ fn init_simple_todo_at(
 }
 
 fn init_todo_at(
-    workspace_root: &Path,
+    mode: &NewMode,
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
@@ -195,9 +292,7 @@ fn init_todo_at(
 ) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
-
-    let cargo_toml = todo_template_cargo_toml(package_name, opts, &workspace_prefix);
+    let cargo_toml = mode.todo_template_cargo_toml(package_name, opts, out_dir)?;
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
     write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
 
@@ -209,9 +304,9 @@ fn init_todo_at(
     )?;
     write_new_file(
         &out_dir.join("README.md"),
-        &todo_template_readme_md(package_name, opts),
+        &todo_template_readme_md(package_name, opts, mode.bin_name()),
     )?;
-    maybe_init_asset_scaffold(out_dir, package_name, opts)?;
+    maybe_init_asset_scaffold(out_dir, package_name, opts, mode.bin_name())?;
 
     maybe_cargo_check(out_dir, run_check)?;
 
@@ -225,7 +320,7 @@ fn init_todo_at(
 }
 
 fn init_hello_at(
-    workspace_root: &Path,
+    mode: &NewMode,
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
@@ -233,9 +328,7 @@ fn init_hello_at(
 ) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
-    let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
-
-    let cargo_toml = hello_template_cargo_toml(package_name, opts, &workspace_prefix);
+    let cargo_toml = mode.hello_template_cargo_toml(package_name, opts, out_dir)?;
     write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
     write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
 
@@ -247,7 +340,7 @@ fn init_hello_at(
     )?;
     write_new_file(
         &out_dir.join("README.md"),
-        &hello_template_readme_md(package_name, opts),
+        &hello_template_readme_md(package_name, opts, mode.bin_name()),
     )?;
 
     maybe_cargo_check(out_dir, run_check)?;
@@ -261,7 +354,12 @@ fn init_hello_at(
     Ok(())
 }
 
-fn init_empty_at(out_dir: &Path, package_name: &str, run_check: bool) -> Result<(), String> {
+fn init_empty_at(
+    out_dir: &Path,
+    package_name: &str,
+    run_check: bool,
+    new_bin_name: &str,
+) -> Result<(), String> {
     ensure_dir_is_new_or_empty(out_dir)?;
 
     let cargo_toml = empty_template_cargo_toml(package_name);
@@ -273,7 +371,7 @@ fn init_empty_at(out_dir: &Path, package_name: &str, run_check: bool) -> Result<
     write_new_file(&src_dir.join("main.rs"), empty_template_main_rs())?;
     write_new_file(
         &out_dir.join("README.md"),
-        &empty_template_readme_md(package_name),
+        &empty_template_readme_md(package_name, new_bin_name),
     )?;
 
     maybe_cargo_check(out_dir, run_check)?;
@@ -310,6 +408,7 @@ fn maybe_init_asset_scaffold(
     out_dir: &Path,
     package_name: &str,
     opts: ScaffoldOptions,
+    new_bin_name: &str,
 ) -> Result<(), String> {
     if !opts.ui_assets {
         return Ok(());
@@ -324,7 +423,7 @@ fn maybe_init_asset_scaffold(
 
     write_new_file(
         &out_dir.join("src/generated_assets.rs"),
-        &generated_assets_stub_rs(package_name),
+        &generated_assets_stub_rs(package_name, new_bin_name),
     )
 }
 
@@ -397,29 +496,29 @@ mod tests {
     }
 
     fn scaffold_template_case(
-        workspace_root: &Path,
+        mode: &NewMode,
         suite_root: &Path,
         case: ScaffoldCompileCase,
     ) -> PathBuf {
         let out_dir = suite_root.join(case.package_name);
         let result = match case.template {
-            NewTemplate::Empty => init_empty_at(&out_dir, case.package_name, false),
+            NewTemplate::Empty => init_empty_at(&out_dir, case.package_name, false, mode.bin_name()),
             NewTemplate::Hello => init_hello_at(
-                workspace_root,
+                mode,
                 &out_dir,
                 case.package_name,
                 case.opts,
                 false,
             ),
             NewTemplate::SimpleTodo => init_simple_todo_at(
-                workspace_root,
+                mode,
                 &out_dir,
                 case.package_name,
                 case.opts,
                 false,
             ),
             NewTemplate::Todo => init_todo_at(
-                workspace_root,
+                mode,
                 &out_dir,
                 case.package_name,
                 case.opts,
@@ -448,10 +547,13 @@ mod tests {
     #[test]
     fn todo_scaffold_with_ui_assets_creates_generated_assets_stub() {
         let workspace_root = make_temp_dir("fretboard-scaffold-todo-assets");
+        let mode = NewMode::Repo {
+            workspace_root: workspace_root.clone(),
+        };
         let out_dir = workspace_root.join("local").join("todo-app");
 
         init_todo_at(
-            &workspace_root,
+            &mode,
             &out_dir,
             "todo-app",
             opts_with_ui_assets(),
@@ -491,10 +593,13 @@ mod tests {
     #[test]
     fn simple_todo_scaffold_without_ui_assets_skips_default_assets_dir() {
         let workspace_root = make_temp_dir("fretboard-scaffold-simple-todo-no-assets");
+        let mode = NewMode::Repo {
+            workspace_root: workspace_root.clone(),
+        };
         let out_dir = workspace_root.join("local").join("simple-todo-app");
 
         init_simple_todo_at(
-            &workspace_root,
+            &mode,
             &out_dir,
             "simple-todo-app",
             ScaffoldOptions {
@@ -515,6 +620,9 @@ mod tests {
         // inside the real workspace under the ignored `local/` tree and then runs cargo check
         // against the generated manifests.
         let workspace_root = repo_workspace_root();
+        let mode = NewMode::Repo {
+            workspace_root: workspace_root.clone(),
+        };
         let suite_root = make_repo_local_dir("fretboard-scaffold-compile");
         let cases = [
             ScaffoldCompileCase {
@@ -547,7 +655,7 @@ mod tests {
         ];
 
         for case in cases {
-            let out_dir = scaffold_template_case(&workspace_root, &suite_root, case);
+            let out_dir = scaffold_template_case(&mode, &suite_root, case);
             cargo_check_generated_app(&out_dir);
         }
     }
@@ -555,6 +663,9 @@ mod tests {
     #[test]
     fn key_scaffold_variants_generate_projects_that_compile() {
         let workspace_root = repo_workspace_root();
+        let mode = NewMode::Repo {
+            workspace_root: workspace_root.clone(),
+        };
         let suite_root = make_repo_local_dir("fretboard-scaffold-variants");
         let cases = [
             ScaffoldCompileCase {
@@ -587,7 +698,7 @@ mod tests {
         ];
 
         for case in cases {
-            let out_dir = scaffold_template_case(&workspace_root, &suite_root, case);
+            let out_dir = scaffold_template_case(&mode, &suite_root, case);
             cargo_check_generated_app(&out_dir);
         }
     }

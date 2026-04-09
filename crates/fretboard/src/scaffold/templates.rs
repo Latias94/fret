@@ -1,5 +1,43 @@
 use super::{IconPack, ScaffoldOptions};
 
+enum DependencySpec<'a> {
+    Published { version: &'a str },
+    WorkspacePath { workspace_prefix: &'a str },
+}
+
+impl DependencySpec<'_> {
+    fn fret_dependency_line(&self, features: &str) -> String {
+        match self {
+            Self::Published { version } => format!(
+                "fret = {{ version = \"{version}\", default-features = false, features = [{features}] }}\n"
+            ),
+            Self::WorkspacePath { workspace_prefix } => {
+                let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
+                format!(
+                    "fret = {{ path = \"{fret_path}\", default-features = false, features = [{features}] }}\n"
+                )
+            }
+        }
+    }
+
+    fn radix_dependency_line(&self) -> String {
+        match self {
+            Self::Published { version } => {
+                format!(
+                    "fret-icons-radix = {{ version = \"{version}\", features = [\"app-integration\"] }}\n"
+                )
+            }
+            Self::WorkspacePath { workspace_prefix } => {
+                let fret_icons_radix_path =
+                    join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
+                format!(
+                    "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
+                )
+            }
+        }
+    }
+}
+
 fn join_workspace_path(workspace_prefix: &str, subpath: &str) -> String {
     if workspace_prefix == "." {
         subpath.to_string()
@@ -49,10 +87,30 @@ Thumbs.db
 "#
 }
 
-pub(super) fn todo_template_cargo_toml(
+pub(super) fn todo_template_cargo_toml_public(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    version: &str,
+) -> String {
+    todo_template_cargo_toml_with(package_name, opts, DependencySpec::Published { version })
+}
+
+pub(super) fn todo_template_cargo_toml_repo(
     package_name: &str,
     opts: ScaffoldOptions,
     workspace_prefix: &str,
+) -> String {
+    todo_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::WorkspacePath { workspace_prefix },
+    )
+}
+
+fn todo_template_cargo_toml_with(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    deps: DependencySpec<'_>,
 ) -> String {
     let mut kit_features: Vec<&str> = vec!["desktop", "shadcn", "state"];
     if opts.command_palette {
@@ -78,16 +136,12 @@ pub(super) fn todo_template_cargo_toml(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
-    let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
-
     let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
-        format!(
-            "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
-        )
+        deps.radix_dependency_line()
     } else {
         String::new()
     };
+    let fret_dep = deps.fret_dependency_line(&kit_features);
 
     format!(
         r#"[package]
@@ -97,17 +151,37 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
+{fret_dep}
 {radix_dep}
 [workspace]
 "#
     )
 }
 
-pub(super) fn simple_todo_template_cargo_toml(
+pub(super) fn simple_todo_template_cargo_toml_public(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    version: &str,
+) -> String {
+    simple_todo_template_cargo_toml_with(package_name, opts, DependencySpec::Published { version })
+}
+
+pub(super) fn simple_todo_template_cargo_toml_repo(
     package_name: &str,
     opts: ScaffoldOptions,
     workspace_prefix: &str,
+) -> String {
+    simple_todo_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::WorkspacePath { workspace_prefix },
+    )
+}
+
+fn simple_todo_template_cargo_toml_with(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    deps: DependencySpec<'_>,
 ) -> String {
     let mut kit_features: Vec<&str> = vec!["desktop", "shadcn"];
     if opts.command_palette {
@@ -133,16 +207,12 @@ pub(super) fn simple_todo_template_cargo_toml(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
-    let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
-
     let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
-        format!(
-            "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
-        )
+        deps.radix_dependency_line()
     } else {
         String::new()
     };
+    let fret_dep = deps.fret_dependency_line(&kit_features);
 
     format!(
         r#"[package]
@@ -152,7 +222,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
+{fret_dep}
 {radix_dep}
 
 [workspace]
@@ -175,10 +245,30 @@ anyhow = "1"
     )
 }
 
-pub(super) fn hello_template_cargo_toml(
+pub(super) fn hello_template_cargo_toml_public(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    version: &str,
+) -> String {
+    hello_template_cargo_toml_with(package_name, opts, DependencySpec::Published { version })
+}
+
+pub(super) fn hello_template_cargo_toml_repo(
     package_name: &str,
     opts: ScaffoldOptions,
     workspace_prefix: &str,
+) -> String {
+    hello_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::WorkspacePath { workspace_prefix },
+    )
+}
+
+fn hello_template_cargo_toml_with(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    deps: DependencySpec<'_>,
 ) -> String {
     let mut kit_features: Vec<&str> = vec!["desktop", "shadcn"];
     if opts.command_palette {
@@ -201,16 +291,12 @@ pub(super) fn hello_template_cargo_toml(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
-    let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
-
     let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
-        format!(
-            "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
-        )
+        deps.radix_dependency_line()
     } else {
         String::new()
     };
+    let fret_dep = deps.fret_dependency_line(&kit_features);
 
     format!(
         r#"[package]
@@ -220,7 +306,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-    fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
+{fret_dep}
 {radix_dep}
 
 [workspace]
@@ -1313,11 +1399,11 @@ pub(super) fn empty_template_main_rs() -> &'static str {
 "#
 }
 
-pub(super) fn generated_assets_stub_rs(package_name: &str) -> String {
+pub(super) fn generated_assets_stub_rs(package_name: &str, new_bin_name: &str) -> String {
     format!(
         r#"#![allow(dead_code)]
 
-// Scaffolded by `fretboard-dev new --ui-assets`.
+// Scaffolded by `{new_bin_name} new --ui-assets`.
 // Regenerate this file after editing `assets/`:
 //   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force
 // Ecosystem/package crates can use `Bundle` or `install(app)` on the app setup surface; apps on
@@ -1375,13 +1461,19 @@ pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::U
     )
 }
 
-pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
+pub(super) fn todo_template_readme_md(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    new_bin_name: &str,
+) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
             "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- File-backed development escape hatch: keep startup on `FretApp::asset_startup(...)` + `AssetStartupPlan::development_dir(...)` when you intentionally want manual native/package-dev layering\n"
         )
     } else {
-        "- UI assets: disabled (use `fretboard-dev new todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
+        format!(
+            "- UI assets: disabled (use `{new_bin_name} new todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n"
+        )
     };
 
     let icons_line = match opts.icon_pack {
@@ -1399,7 +1491,7 @@ pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions)
     format!(
         r#"# {package_name}
 
-Generated by `fretboard-dev new todo`.
+Generated by `{new_bin_name} new todo`.
 
 ## Run
 
@@ -1443,11 +1535,11 @@ cargo run --release
     )
 }
 
-pub(super) fn empty_template_readme_md(package_name: &str) -> String {
+pub(super) fn empty_template_readme_md(package_name: &str, new_bin_name: &str) -> String {
     format!(
         r#"# {package_name}
 
-Generated by `fretboard-dev new`.
+Generated by `{new_bin_name} new`.
 
 ## Run
 
@@ -1466,13 +1558,19 @@ cargo run --release
     )
 }
 
-pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
+pub(super) fn simple_todo_template_readme_md(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    new_bin_name: &str,
+) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
             "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- File-backed development escape hatch: keep startup on `FretApp::asset_startup(...)` + `AssetStartupPlan::development_dir(...)` when you intentionally want manual native/package-dev layering\n"
         )
     } else {
-        "- UI assets: disabled (use `fretboard-dev new simple-todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
+        format!(
+            "- UI assets: disabled (use `{new_bin_name} new simple-todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n"
+        )
     };
 
     let icons_line = match opts.icon_pack {
@@ -1490,7 +1588,7 @@ pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldO
     format!(
         r#"# {package_name}
 
-Generated by `fretboard-dev new simple-todo`.
+Generated by `{new_bin_name} new simple-todo`.
 
 ## Run
 
@@ -1528,7 +1626,11 @@ cargo run --release
     )
 }
 
-pub(super) fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
+pub(super) fn hello_template_readme_md(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    new_bin_name: &str,
+) -> String {
     let icons_line = match opts.icon_pack {
         IconPack::Lucide => "- Icons: enabled (default Lucide pack)\n",
         IconPack::Radix => "- Icons: Radix (via `fret-icons-radix` dependency)\n",
@@ -1544,7 +1646,7 @@ pub(super) fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions
     format!(
         r#"# {package_name}
 
-Generated by `fretboard-dev new hello`.
+Generated by `{new_bin_name} new hello`.
 
 ## Run
 
@@ -1869,16 +1971,27 @@ mod tests {
 
     #[test]
     fn simple_todo_template_cargo_toml_has_no_query_selector_deps() {
-        let toml = simple_todo_template_cargo_toml("simple-todo-app", opts(), ".");
+        let toml = simple_todo_template_cargo_toml_repo("simple-todo-app", opts(), ".");
         assert!(!toml.contains("fret-query"));
         assert!(!toml.contains("fret-selector"));
     }
 
     #[test]
     fn todo_template_cargo_toml_has_no_query_selector_deps() {
-        let toml = todo_template_cargo_toml("todo-app", opts(), ".");
+        let toml = todo_template_cargo_toml_repo("todo-app", opts(), ".");
         assert!(!toml.contains("fret-query"));
         assert!(!toml.contains("fret-selector"));
+    }
+
+    #[test]
+    fn public_template_cargo_toml_uses_versioned_deps() {
+        let hello = hello_template_cargo_toml_public("hello-app", opts(), "0.1.0");
+        assert!(hello.contains("fret = { version = \"0.1.0\""));
+        assert!(!hello.contains("path = "));
+
+        let todo = todo_template_cargo_toml_public("todo-app", opts(), "0.1.0");
+        assert!(todo.contains("fret = { version = \"0.1.0\""));
+        assert!(!todo.contains("path = "));
     }
 
     #[test]
@@ -1911,7 +2024,7 @@ mod tests {
 
     #[test]
     fn template_readmes_capture_authoring_guidance() {
-        let hello = hello_template_readme_md("hello-app", opts());
+        let hello = hello_template_readme_md("hello-app", opts(), "fretboard");
         assert!(hello.contains("Read local state values near the top of `render()`"));
         assert!(hello.contains("Default entrypoints"));
         assert!(hello.contains("cookbook/reference-only host-side glue"));
@@ -1924,7 +2037,7 @@ mod tests {
         assert!(!hello.contains("cx.raw_model::<"));
         assert!(!hello.contains("use_state"));
 
-        let simple = simple_todo_template_readme_md("simple-todo-app", opts());
+        let simple = simple_todo_template_readme_md("simple-todo-app", opts(), "fretboard");
         assert!(simple.contains(
             "Use `ui::single(cx, child)` when a render root or wrapper closure only needs to late-land one typed child."
         ));
@@ -1948,7 +2061,7 @@ mod tests {
         assert!(!simple.contains("use_state"));
 
         let simple_with_assets =
-            simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
+            simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets(), "fretboard");
         assert!(simple_with_assets.contains("`generated_assets::mount(builder)?`"));
         assert!(
             simple_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
@@ -1958,7 +2071,7 @@ mod tests {
         ));
         assert!(simple_with_assets.contains("`AssetBundleId::app(\"simple-todo-app\")`"));
 
-        let todo = todo_template_readme_md("todo-app", opts());
+        let todo = todo_template_readme_md("todo-app", opts(), "fretboard");
         assert!(todo.contains("For App-only effects, prefer `cx.actions().transient::<A>(...)`"));
         assert!(todo.contains("cookbook/reference-only host-side glue"));
         assert!(todo.contains("`cx.actions().models::<A>(...)`"));
@@ -1979,7 +2092,8 @@ mod tests {
         assert!(!todo.contains("cx.raw_model::<"));
         assert!(!todo.contains("use_state"));
 
-        let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
+        let todo_with_assets =
+            todo_template_readme_md("todo-app", opts_with_ui_assets(), "fretboard");
         assert!(todo_with_assets.contains("`generated_assets::mount(builder)?`"));
         assert!(
             todo_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
@@ -1992,7 +2106,7 @@ mod tests {
 
     #[test]
     fn generated_assets_stub_guides_regeneration_and_mounting() {
-        let src = generated_assets_stub_rs("todo-app");
+        let src = generated_assets_stub_rs("todo-app", "fretboard");
         assert!(src.contains("AssetBundleId::app(\"todo-app\")"));
         assert!(src.contains("pub fn locator(key: impl Into<AssetKey>) -> AssetLocator"));
         assert!(src.contains(
