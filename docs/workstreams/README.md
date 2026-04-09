@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 210
+- Dedicated directories: 211
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -296,6 +296,7 @@ Rule:
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/iconify-acquisition-prestep-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for subset-first explicit remote/pinned Iconify acquisition as a separate pre-step that writes local snapshot + provenance artifacts for the closed generator lane)
 - `docs/workstreams/iconify-import-pack-generator-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the v1 third-party icon-pack generator contract: reusable generator + public CLI, local SVG/Iconify snapshot inputs, explicit semantic alias config, and deterministic proof gates all landed)
+- `docs/workstreams/iconify-presentation-defaults-report-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for optional versioned review-report output from the thin presentation-defaults suggestion helper without changing import defaults)
 - `docs/workstreams/iconify-presentation-defaults-suggestion-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the thin `icons suggest presentation-defaults` helper that derives advisory config from explicit Iconify acquisition provenance without changing import defaults)
 - `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
