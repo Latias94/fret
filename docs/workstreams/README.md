@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 217
+- Dedicated directories: 218
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -31,6 +31,7 @@ current sequencing and active cross-workstream stance, start with:
 Useful commands:
 
 ```bash
+python3 tools/check_workstream_catalog.py
 git log -1 --format=%cs -- docs/workstreams/<path>
 git log --format='%cs %h %s' -- docs/workstreams/<path>
 git log --since='2026-01-01' --name-only -- docs/workstreams
@@ -257,8 +258,8 @@ Rule:
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
 - `docs/workstreams/diag-perf-attribution-v1/` — first 2026-02-14, latest 2026-02-14, 4 markdown docs
 - `docs/workstreams/diag-perf-profiling-infra-v1/` — first 2026-02-15, latest 2026-02-16, 3 markdown docs
-- `docs/workstreams/diag-skill-evidence-owner-drift-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the narrow `fret-diag-workflow` evidence-owner correction between public `fretboard` and workspace-dev `fretboard-dev` diagnostics help surfaces)
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs
+- `docs/workstreams/diag-skill-evidence-owner-drift-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the narrow `fret-diag-workflow` evidence-owner correction between public `fretboard` and workspace-dev `fretboard-dev` diagnostics help surfaces)
 - `docs/workstreams/diag-v2-hardening-and-switches-v1/` — first 2026-02-26, latest 2026-03-03, 10 markdown docs
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
@@ -424,6 +425,7 @@ Rule:
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 5 markdown docs
 - `docs/workstreams/webview-wry-v1/` — first 2026-02-11, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/workstream-catalog-integrity-gate-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the section-aware gate that keeps workstream directory/file catalog indexes aligned with actual `docs/workstreams` contents and common maintainer gate entrypoints)
 - `docs/workstreams/workspace-crate-boundaries-v1/` — first 2026-02-07, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 6 markdown docs
 - `docs/workstreams/workspace-tabstrip-editor-grade-v1/` — first 2026-03-01, latest 2026-03-05, 8 markdown docs
@@ -431,6 +433,6 @@ Rule:
 
 ## Standalone Bucket
 
-- `docs/workstreams/standalone/README.md` — first 2026-03-12, latest 2026-03-12, 45 markdown docs
+- `docs/workstreams/standalone/README.md` — first 2026-03-12, latest 2026-03-12, 46 markdown docs
 - `docs/workstreams/standalone/workstream-state-v1.md` — shared machine-readable lane-state convention
 - Use this folder for compact loose notes that still do not justify a dedicated subdirectory.

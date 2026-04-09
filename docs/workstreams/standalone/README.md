@@ -1,6 +1,6 @@
 # Standalone Workstreams
 
-Catalog updated: 2026-04-09
+Catalog updated: 2026-04-10
 Moved under `docs/workstreams/standalone/`: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -24,6 +24,7 @@ back into dedicated folders on 2026-03-12.
 Useful commands:
 
 ```bash
+python3 tools/check_workstream_catalog.py
 git log -1 --follow --format=%cs -- docs/workstreams/standalone/<file>
 git log --follow --format='%cs %h %s' -- docs/workstreams/standalone/<file>
 git log --since='2026-01-01' --name-only -- docs/workstreams/standalone
