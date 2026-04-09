@@ -114,7 +114,6 @@ pub type WindowId = fret_core::AppWindowId;
 /// Re-export the curated default shadcn/ui surface as `shadcn`.
 #[cfg(feature = "shadcn")]
 pub use fret_ui_shadcn::facade as shadcn;
-
 /// Re-export portable action/command identity types for app code and macros.
 pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
@@ -879,6 +878,25 @@ pub struct AssetManifestError(#[from] fret_assets::AssetManifestLoadError);
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct RunnerError(#[from] fret_launch::RunnerError);
+
+impl Error {
+    /// Returns a structured bootstrap failure report when this facade error represents a known
+    /// startup/install failure taxonomy case.
+    pub fn known_bootstrap_failure_report(
+        &self,
+    ) -> Option<fret_bootstrap::BootstrapKnownFailureReport> {
+        match self {
+            Error::Bootstrap(err) => Some(err.0.known_failure_report()),
+            Error::AssetManifest(err) => {
+                Some(fret_bootstrap::BootstrapKnownFailureReport::from_asset_manifest_error(&err.0))
+            }
+            Error::AssetStartup(err) => {
+                Some(fret_bootstrap::BootstrapKnownFailureReport::from_asset_startup_error(err))
+            }
+            Error::Runner(_) => None,
+        }
+    }
+}
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 fn map_bootstrap_asset_builder_error(err: fret_bootstrap::BootstrapError) -> Error {
@@ -2047,6 +2065,68 @@ mod builder_surface_tests {
             Err(err) => err,
         };
         assert!(matches!(ui_builder_err, Error::AssetStartup(_)));
+    }
+
+    #[test]
+    fn fret_error_known_bootstrap_failure_report_maps_asset_failures() {
+        let missing_manifest =
+            std::env::temp_dir().join("definitely-missing-known-bootstrap-assets.manifest.json");
+        let manifest_error = match FretApp::new("builder-view-known-bootstrap-manifest")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().development_manifest(&missing_manifest),
+            )
+            .view::<SmokeView>()
+        {
+            Ok(_) => panic!("missing development manifest should fail on fret app builder path"),
+            Err(err) => err,
+        };
+        let manifest_report = manifest_error
+            .known_bootstrap_failure_report()
+            .expect("asset manifest failure should map to a known bootstrap report");
+        assert_eq!(
+            manifest_report.stage,
+            fret_bootstrap::BootstrapKnownFailureStage::Builder
+        );
+        assert_eq!(
+            manifest_report.kind,
+            fret_bootstrap::BootstrapKnownFailureKind::AssetManifestRead
+        );
+        assert_eq!(manifest_report.surface, Some("asset_manifest"));
+        assert!(
+            manifest_report
+                .summary
+                .contains("failed to read asset manifest")
+        );
+        assert_eq!(manifest_report.details.len(), 1);
+
+        let startup_error = match FretApp::new("builder-view-known-bootstrap-missing-lane")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Packaged,
+                crate::assets::AssetStartupPlan::new().development_dir("assets"),
+            )
+            .view::<SmokeView>()
+        {
+            Ok(_) => panic!("missing packaged lane should fail on fret app builder path"),
+            Err(err) => err,
+        };
+        let startup_report = startup_error
+            .known_bootstrap_failure_report()
+            .expect("asset startup failure should map to a known bootstrap report");
+        assert_eq!(
+            startup_report.stage,
+            fret_bootstrap::BootstrapKnownFailureStage::Builder
+        );
+        assert_eq!(
+            startup_report.kind,
+            fret_bootstrap::BootstrapKnownFailureKind::AssetStartupMissingPackagedLane
+        );
+        assert_eq!(startup_report.surface, Some("asset_startup"));
+        assert_eq!(
+            startup_report.summary,
+            "asset startup plan is missing a packaged lane"
+        );
+        assert!(startup_report.details.is_empty());
     }
 
     #[test]

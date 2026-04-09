@@ -95,6 +95,294 @@ pub enum BootstrapError {
     AssetStartup(#[from] AssetStartupPlanError),
 }
 
+/// Broad bootstrap lifecycle stage for known startup/install failures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum BootstrapKnownFailureStage {
+    Builder,
+    ExplicitInstall,
+}
+
+impl BootstrapKnownFailureStage {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Builder => "builder",
+            Self::ExplicitInstall => "explicit_install",
+        }
+    }
+}
+
+/// Stable taxonomy for bootstrap-level startup/install failures that first-party diagnostics
+/// should recognize without pattern-matching ad-hoc panic text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum BootstrapKnownFailureKind {
+    SettingsRead,
+    SettingsParse,
+    KeymapRead,
+    KeymapParse,
+    MenuBarRead,
+    MenuBarParse,
+    AssetManifestRead,
+    AssetManifestParse,
+    AssetManifestSerialize,
+    AssetManifestWrite,
+    AssetBundleRootRead,
+    AssetManifestInvalid,
+    AssetManifestDuplicateBundleKey,
+    AssetStartupMissingDevelopmentLane,
+    AssetStartupMissingPackagedLane,
+    IconInstallRegistryFreezeFailed,
+    IconInstallMetadataConflict,
+}
+
+impl BootstrapKnownFailureKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::SettingsRead => "settings_read",
+            Self::SettingsParse => "settings_parse",
+            Self::KeymapRead => "keymap_read",
+            Self::KeymapParse => "keymap_parse",
+            Self::MenuBarRead => "menu_bar_read",
+            Self::MenuBarParse => "menu_bar_parse",
+            Self::AssetManifestRead => "asset_manifest_read",
+            Self::AssetManifestParse => "asset_manifest_parse",
+            Self::AssetManifestSerialize => "asset_manifest_serialize",
+            Self::AssetManifestWrite => "asset_manifest_write",
+            Self::AssetBundleRootRead => "asset_bundle_root_read",
+            Self::AssetManifestInvalid => "asset_manifest_invalid",
+            Self::AssetManifestDuplicateBundleKey => "asset_manifest_duplicate_bundle_key",
+            Self::AssetStartupMissingDevelopmentLane => "asset_startup_missing_development_lane",
+            Self::AssetStartupMissingPackagedLane => "asset_startup_missing_packaged_lane",
+            Self::IconInstallRegistryFreezeFailed => "icon_install_registry_freeze_failed",
+            Self::IconInstallMetadataConflict => "icon_install_metadata_conflict",
+        }
+    }
+}
+
+/// Structured report for bootstrap failures that should stay recognizable across returned errors
+/// and panic-only install paths.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct BootstrapKnownFailureReport {
+    pub stage: BootstrapKnownFailureStage,
+    pub kind: BootstrapKnownFailureKind,
+    pub surface: Option<&'static str>,
+    pub pack_id: Option<&'static str>,
+    pub summary: String,
+    pub details: Vec<String>,
+}
+
+impl BootstrapKnownFailureReport {
+    pub fn from_bootstrap_error(error: &BootstrapError) -> Self {
+        match error {
+            BootstrapError::Settings(error) => match error {
+                SettingsError::Read { path, source } => Self::builder_with_source(
+                    BootstrapKnownFailureKind::SettingsRead,
+                    Some("settings"),
+                    format!("failed to read settings file `{path}`"),
+                    source,
+                ),
+                SettingsError::Parse { path, source } => Self::builder_with_source(
+                    BootstrapKnownFailureKind::SettingsParse,
+                    Some("settings"),
+                    format!("failed to parse settings file `{path}`"),
+                    source,
+                ),
+            },
+            BootstrapError::Keymap(error) => match error {
+                KeymapFileError::Read { path, source } => Self::builder_with_source(
+                    BootstrapKnownFailureKind::KeymapRead,
+                    Some("keymap"),
+                    format!("failed to read keymap file `{path}`"),
+                    source,
+                ),
+                KeymapFileError::Parse { path, source } => Self::builder_with_source(
+                    BootstrapKnownFailureKind::KeymapParse,
+                    Some("keymap"),
+                    format!("failed to parse keymap file `{path}`"),
+                    source,
+                ),
+            },
+            BootstrapError::MenuBar(error) => match error {
+                MenuBarFileError::Read { path, source } => Self::builder_with_source(
+                    BootstrapKnownFailureKind::MenuBarRead,
+                    Some("menu_bar"),
+                    format!("failed to read menubar file `{path}`"),
+                    source,
+                ),
+                MenuBarFileError::Parse { path, source } => Self::builder_with_source(
+                    BootstrapKnownFailureKind::MenuBarParse,
+                    Some("menu_bar"),
+                    format!("failed to parse menubar file `{path}`"),
+                    source,
+                ),
+            },
+            BootstrapError::AssetManifest(error) => Self::from_asset_manifest_error(error),
+            BootstrapError::AssetStartup(error) => Self::from_asset_startup_error(error),
+        }
+    }
+
+    pub fn from_asset_manifest_error(error: &fret_assets::AssetManifestLoadError) -> Self {
+        match error {
+            fret_assets::AssetManifestLoadError::ReadManifest { path, source } => {
+                Self::builder_with_source(
+                    BootstrapKnownFailureKind::AssetManifestRead,
+                    Some("asset_manifest"),
+                    format!("failed to read asset manifest `{}`", path.display()),
+                    source,
+                )
+            }
+            fret_assets::AssetManifestLoadError::ParseManifest { path, source } => {
+                Self::builder_with_source(
+                    BootstrapKnownFailureKind::AssetManifestParse,
+                    Some("asset_manifest"),
+                    format!("failed to parse asset manifest `{}`", path.display()),
+                    source,
+                )
+            }
+            fret_assets::AssetManifestLoadError::SerializeManifest { path, source } => {
+                Self::builder_with_source(
+                    BootstrapKnownFailureKind::AssetManifestSerialize,
+                    Some("asset_manifest"),
+                    format!("failed to serialize asset manifest `{}`", path.display()),
+                    source,
+                )
+            }
+            fret_assets::AssetManifestLoadError::WriteManifest { path, source } => {
+                Self::builder_with_source(
+                    BootstrapKnownFailureKind::AssetManifestWrite,
+                    Some("asset_manifest"),
+                    format!("failed to write asset manifest `{}`", path.display()),
+                    source,
+                )
+            }
+            fret_assets::AssetManifestLoadError::ReadBundleRoot { path, source } => {
+                Self::builder_with_source(
+                    BootstrapKnownFailureKind::AssetBundleRootRead,
+                    Some("asset_manifest"),
+                    format!("failed to read asset bundle root `{}`", path.display()),
+                    source,
+                )
+            }
+            fret_assets::AssetManifestLoadError::InvalidManifest { message } => Self::builder(
+                BootstrapKnownFailureKind::AssetManifestInvalid,
+                Some("asset_manifest"),
+                "invalid asset manifest",
+                vec![message.to_string()],
+            ),
+            fret_assets::AssetManifestLoadError::DuplicateBundleKey { bundle, key } => {
+                Self::builder(
+                    BootstrapKnownFailureKind::AssetManifestDuplicateBundleKey,
+                    Some("asset_manifest"),
+                    "duplicate asset manifest entry",
+                    vec![
+                        format!("bundle: {}", bundle.as_str()),
+                        format!("key: {}", key.as_str()),
+                    ],
+                )
+            }
+        }
+    }
+
+    pub fn from_asset_startup_error(error: &AssetStartupPlanError) -> Self {
+        match error {
+            AssetStartupPlanError::MissingDevelopmentLane => Self::builder(
+                BootstrapKnownFailureKind::AssetStartupMissingDevelopmentLane,
+                Some("asset_startup"),
+                "asset startup plan is missing a development lane",
+                Vec::new(),
+            ),
+            AssetStartupPlanError::MissingPackagedLane => Self::builder(
+                BootstrapKnownFailureKind::AssetStartupMissingPackagedLane,
+                Some("asset_startup"),
+                "asset startup plan is missing a packaged lane",
+                Vec::new(),
+            ),
+        }
+    }
+
+    pub fn from_icon_install_failure(report: &fret_icons::IconInstallFailureReport) -> Self {
+        match report.kind {
+            fret_icons::IconInstallFailureKind::RegistryFreezeFailed => Self::explicit_install(
+                BootstrapKnownFailureKind::IconInstallRegistryFreezeFailed,
+                Some(report.surface),
+                report.pack_id,
+                match report.pack_id {
+                    Some(pack_id) => {
+                        format!("failed to freeze icon registry for pack `{pack_id}`")
+                    }
+                    None => {
+                        "failed to freeze icon registry during explicit icon install".to_string()
+                    }
+                },
+                report.details.clone(),
+            ),
+            fret_icons::IconInstallFailureKind::MetadataConflict => Self::explicit_install(
+                BootstrapKnownFailureKind::IconInstallMetadataConflict,
+                Some(report.surface),
+                report.pack_id,
+                match report.pack_id {
+                    Some(pack_id) => {
+                        format!("conflicting installed icon pack metadata for pack `{pack_id}`")
+                    }
+                    None => "conflicting installed icon pack metadata during explicit icon install"
+                        .to_string(),
+                },
+                report.details.clone(),
+            ),
+        }
+    }
+
+    fn builder(
+        kind: BootstrapKnownFailureKind,
+        surface: Option<&'static str>,
+        summary: impl Into<String>,
+        details: Vec<String>,
+    ) -> Self {
+        Self {
+            stage: BootstrapKnownFailureStage::Builder,
+            kind,
+            surface,
+            pack_id: None,
+            summary: summary.into(),
+            details,
+        }
+    }
+
+    fn builder_with_source(
+        kind: BootstrapKnownFailureKind,
+        surface: Option<&'static str>,
+        summary: impl Into<String>,
+        source: &impl std::fmt::Display,
+    ) -> Self {
+        Self::builder(kind, surface, summary, vec![format!("source: {source}")])
+    }
+
+    fn explicit_install(
+        kind: BootstrapKnownFailureKind,
+        surface: Option<&'static str>,
+        pack_id: Option<&'static str>,
+        summary: impl Into<String>,
+        details: Vec<String>,
+    ) -> Self {
+        Self {
+            stage: BootstrapKnownFailureStage::ExplicitInstall,
+            kind,
+            surface,
+            pack_id,
+            summary: summary.into(),
+            details,
+        }
+    }
+}
+
+impl BootstrapError {
+    pub fn known_failure_report(&self) -> BootstrapKnownFailureReport {
+        BootstrapKnownFailureReport::from_bootstrap_error(self)
+    }
+}
+
 pub use fret_launch::assets::{
     AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
 };
@@ -1008,12 +1296,16 @@ mod fn_driver_builder_tests {
     use fret_core::AppWindowId;
     use fret_icons::{
         IconId, IconPackImportModel, IconPackMetadata, IconPackRegistration, IconRegistry,
+        InstalledIconPackMetadataConflict, ResolveError,
     };
     use fret_launch::{
         FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     };
 
-    use super::{AssetStartupMode, AssetStartupPlan, BootstrapBuilder, BootstrapError};
+    use super::{
+        AssetStartupMode, AssetStartupPlan, BootstrapBuilder, BootstrapError,
+        BootstrapKnownFailureKind, BootstrapKnownFailureReport, BootstrapKnownFailureStage,
+    };
 
     struct DriverState;
     struct WindowState;
@@ -1192,6 +1484,134 @@ mod fn_driver_builder_tests {
             result.is_err(),
             "conflicting pack metadata should fail fast"
         );
+    }
+
+    #[test]
+    fn bootstrap_error_known_failure_report_maps_settings_read() {
+        let error = BootstrapError::from(fret_app::SettingsError::Read {
+            path: "/tmp/settings.json".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "missing settings"),
+        });
+
+        let report = error.known_failure_report();
+
+        assert_eq!(report.stage, BootstrapKnownFailureStage::Builder);
+        assert_eq!(report.kind, BootstrapKnownFailureKind::SettingsRead);
+        assert_eq!(report.surface, Some("settings"));
+        assert_eq!(report.pack_id, None);
+        assert_eq!(
+            report.summary,
+            "failed to read settings file `/tmp/settings.json`"
+        );
+        assert_eq!(report.details.len(), 1);
+        assert!(report.details[0].contains("missing settings"));
+    }
+
+    #[test]
+    fn bootstrap_error_known_failure_report_maps_keymap_and_menu_bar_parse() {
+        let keymap_parse_error =
+            fret_runtime::Keymap::from_bytes(br#"{ "keymap_version": "#).unwrap_err();
+        let keymap_error = BootstrapError::from(fret_app::KeymapFileError::Parse {
+            path: "/tmp/keymap.json".to_string(),
+            source: keymap_parse_error,
+        });
+        let keymap_report = keymap_error.known_failure_report();
+        assert_eq!(keymap_report.stage, BootstrapKnownFailureStage::Builder);
+        assert_eq!(keymap_report.kind, BootstrapKnownFailureKind::KeymapParse);
+        assert_eq!(keymap_report.surface, Some("keymap"));
+        assert_eq!(
+            keymap_report.summary,
+            "failed to parse keymap file `/tmp/keymap.json`"
+        );
+        assert_eq!(keymap_report.details.len(), 1);
+        assert!(keymap_report.details[0].contains("failed to parse keymap json"));
+
+        let menu_bar_parse_error =
+            fret_runtime::MenuBarConfig::from_bytes(br#"{ "menu_bar_version": "#).unwrap_err();
+        let menu_bar_error = BootstrapError::from(fret_app::MenuBarFileError::Parse {
+            path: "/tmp/menubar.json".to_string(),
+            source: menu_bar_parse_error,
+        });
+        let menu_bar_report = menu_bar_error.known_failure_report();
+        assert_eq!(menu_bar_report.stage, BootstrapKnownFailureStage::Builder);
+        assert_eq!(
+            menu_bar_report.kind,
+            BootstrapKnownFailureKind::MenuBarParse
+        );
+        assert_eq!(menu_bar_report.surface, Some("menu_bar"));
+        assert_eq!(
+            menu_bar_report.summary,
+            "failed to parse menubar file `/tmp/menubar.json`"
+        );
+        assert_eq!(menu_bar_report.details.len(), 1);
+        assert!(menu_bar_report.details[0].contains("failed to parse menubar json"));
+    }
+
+    #[test]
+    fn bootstrap_known_failure_report_maps_icon_install_failure() {
+        let registry_freeze_report = fret_icons::IconInstallFailureReport::registry_freeze(
+            "demo.app.install",
+            Some("demo-pack"),
+            &[ResolveError::AliasLoop {
+                requested: IconId::new_static("demo.alias"),
+                chain: vec![
+                    IconId::new_static("demo.alias"),
+                    IconId::new_static("demo.target"),
+                ],
+            }],
+        );
+        let bootstrap_registry_freeze =
+            BootstrapKnownFailureReport::from_icon_install_failure(&registry_freeze_report);
+        assert_eq!(
+            bootstrap_registry_freeze.stage,
+            BootstrapKnownFailureStage::ExplicitInstall
+        );
+        assert_eq!(
+            bootstrap_registry_freeze.kind,
+            BootstrapKnownFailureKind::IconInstallRegistryFreezeFailed
+        );
+        assert_eq!(bootstrap_registry_freeze.surface, Some("demo.app.install"));
+        assert_eq!(bootstrap_registry_freeze.pack_id, Some("demo-pack"));
+        assert!(
+            bootstrap_registry_freeze
+                .summary
+                .contains("failed to freeze icon registry")
+        );
+        assert_eq!(bootstrap_registry_freeze.details.len(), 1);
+
+        let metadata_conflict = InstalledIconPackMetadataConflict {
+            existing: IconPackMetadata {
+                pack_id: "demo-pack",
+                vendor_namespace: "demo",
+                import_model: IconPackImportModel::Generated,
+            },
+            attempted: IconPackMetadata {
+                pack_id: "demo-pack",
+                vendor_namespace: "other-demo",
+                import_model: IconPackImportModel::Vendored,
+            },
+        };
+        let metadata_conflict_report = fret_icons::IconInstallFailureReport::metadata_conflict(
+            "demo.app.install",
+            &metadata_conflict,
+        );
+        let bootstrap_metadata_conflict =
+            BootstrapKnownFailureReport::from_icon_install_failure(&metadata_conflict_report);
+        assert_eq!(
+            bootstrap_metadata_conflict.stage,
+            BootstrapKnownFailureStage::ExplicitInstall
+        );
+        assert_eq!(
+            bootstrap_metadata_conflict.kind,
+            BootstrapKnownFailureKind::IconInstallMetadataConflict
+        );
+        assert_eq!(bootstrap_metadata_conflict.pack_id, Some("demo-pack"));
+        assert!(
+            bootstrap_metadata_conflict
+                .summary
+                .contains("conflicting installed icon pack metadata")
+        );
+        assert_eq!(bootstrap_metadata_conflict.details.len(), 2);
     }
 
     #[test]
@@ -1481,22 +1901,24 @@ pub fn init_panic_hook() {
                 .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
                 .unwrap_or_else(|| "<unknown>".to_string());
 
-            let icon_install_failure =
-                fret_icons::current_icon_install_failure_report_for_diagnostics();
+            let bootstrap_known_failure =
+                fret_icons::current_icon_install_failure_report_for_diagnostics()
+                    .map(|report| BootstrapKnownFailureReport::from_icon_install_failure(&report));
             let backtrace = Backtrace::capture();
             match backtrace.status() {
                 std::backtrace::BacktraceStatus::Captured => {
-                    if let Some(report) = icon_install_failure.as_ref() {
+                    if let Some(report) = bootstrap_known_failure.as_ref() {
                         tracing::error!(
                             thread = thread_name,
                             location = location,
                             message = message,
-                            known_panic_kind = "icon_install_failure",
-                            icon_install_surface = report.surface,
-                            icon_install_pack_id = report.pack_id.unwrap_or("<unknown>"),
-                            icon_install_failure_kind = report.kind.as_str(),
-                            icon_install_detail_count = report.details.len(),
-                            icon_install_details = ?report.details,
+                            known_panic_kind = "bootstrap_known_failure",
+                            bootstrap_failure_stage = report.stage.as_str(),
+                            bootstrap_failure_kind = report.kind.as_str(),
+                            bootstrap_failure_surface = report.surface.unwrap_or("<none>"),
+                            bootstrap_failure_pack_id = report.pack_id.unwrap_or("<none>"),
+                            bootstrap_failure_summary = %report.summary,
+                            bootstrap_failure_details = ?report.details,
                             backtrace = %backtrace,
                             "panic"
                         );
@@ -1512,17 +1934,18 @@ pub fn init_panic_hook() {
                 }
                 std::backtrace::BacktraceStatus::Disabled
                 | std::backtrace::BacktraceStatus::Unsupported => {
-                    if let Some(report) = icon_install_failure.as_ref() {
+                    if let Some(report) = bootstrap_known_failure.as_ref() {
                         tracing::error!(
                             thread = thread_name,
                             location = location,
                             message = message,
-                            known_panic_kind = "icon_install_failure",
-                            icon_install_surface = report.surface,
-                            icon_install_pack_id = report.pack_id.unwrap_or("<unknown>"),
-                            icon_install_failure_kind = report.kind.as_str(),
-                            icon_install_detail_count = report.details.len(),
-                            icon_install_details = ?report.details,
+                            known_panic_kind = "bootstrap_known_failure",
+                            bootstrap_failure_stage = report.stage.as_str(),
+                            bootstrap_failure_kind = report.kind.as_str(),
+                            bootstrap_failure_surface = report.surface.unwrap_or("<none>"),
+                            bootstrap_failure_pack_id = report.pack_id.unwrap_or("<none>"),
+                            bootstrap_failure_summary = %report.summary,
+                            bootstrap_failure_details = ?report.details,
                             "panic (set RUST_BACKTRACE=1 to capture a backtrace)"
                         );
                     } else {
@@ -1535,17 +1958,18 @@ pub fn init_panic_hook() {
                     }
                 }
                 _ => {
-                    if let Some(report) = icon_install_failure.as_ref() {
+                    if let Some(report) = bootstrap_known_failure.as_ref() {
                         tracing::error!(
                             thread = thread_name,
                             location = location,
                             message = message,
-                            known_panic_kind = "icon_install_failure",
-                            icon_install_surface = report.surface,
-                            icon_install_pack_id = report.pack_id.unwrap_or("<unknown>"),
-                            icon_install_failure_kind = report.kind.as_str(),
-                            icon_install_detail_count = report.details.len(),
-                            icon_install_details = ?report.details,
+                            known_panic_kind = "bootstrap_known_failure",
+                            bootstrap_failure_stage = report.stage.as_str(),
+                            bootstrap_failure_kind = report.kind.as_str(),
+                            bootstrap_failure_surface = report.surface.unwrap_or("<none>"),
+                            bootstrap_failure_pack_id = report.pack_id.unwrap_or("<none>"),
+                            bootstrap_failure_summary = %report.summary,
+                            bootstrap_failure_details = ?report.details,
                             "panic"
                         );
                     } else {

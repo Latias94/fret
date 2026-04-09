@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 214
+- Dedicated directories: 215
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -225,6 +225,7 @@ Rule:
 - `docs/workstreams/authoring-ergonomics-fluent-builder/` — first 2026-01-21, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/authoring-paradigm-gpui-style-v1/` — first 2026-02-05, latest 2026-03-06, 2 markdown docs
 - `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/` — first 2026-03-10, latest 2026-03-12, 5 markdown docs
+- `docs/workstreams/bootstrap-known-startup-failure-taxonomy-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for one bootstrap-level known startup failure taxonomy that unifies returned settings/keymap/menu/assets startup failures with panic-only explicit icon install failures without reopening lifecycle return types or widening the root `fret` re-export budget)
 - `docs/workstreams/bottom-up-fearless-refactor-v1/` — first 2026-02-07, latest 2026-03-09, 5 markdown docs
 - `docs/workstreams/canvas-world-layer-v1/` — first 2026-02-12, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/carousel-embla-fearless-refactor-v1/` — first 2026-02-26, latest 2026-03-02, 11 markdown docs
