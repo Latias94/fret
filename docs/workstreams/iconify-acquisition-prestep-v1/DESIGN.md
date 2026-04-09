@@ -1,7 +1,13 @@
 # Iconify Acquisition Pre-step v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
+
+Status note (2026-04-09): this lane is now closed on an explicit subset-first
+`fretboard icons acquire iconify-collection ...` proof that writes a local Iconify snapshot plus a
+provenance sidecar and keeps `icons import ...` local-input-only. See
+`docs/workstreams/iconify-acquisition-prestep-v1/M2_PROOF_SURFACE_2026-04-09.md` and
+`docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 
 This workstream is a narrow follow-on to the closed
 `iconify-import-pack-generator-v1` lane. It does not reopen the shipped v1 generator contract, the

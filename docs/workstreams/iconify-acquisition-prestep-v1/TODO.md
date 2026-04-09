@@ -1,6 +1,6 @@
 # Iconify Acquisition Pre-step v1 — TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 ## Lane opening
@@ -40,19 +40,19 @@ Last updated: 2026-04-09
 
 ## M2 — Proof surface
 
-- [ ] IAP-030 Land one smallest acquisition proof that produces a pinned local artifact from remote
+- [x] IAP-030 Land one smallest acquisition proof that produces a pinned local artifact from remote
   Iconify state without hiding network inside `icons import`.
-- [ ] IAP-031 Prove the acquired artifact can flow into the existing generator/import path without
+- [x] IAP-031 Prove the acquired artifact can flow into the existing generator/import path without
   manual cleanup.
-- [ ] IAP-032 Keep the workflow explicitly two-step:
+- [x] IAP-032 Keep the workflow explicitly two-step:
   - acquisition,
   - then pack generation.
 
 ## M3 — Gates and docs
 
-- [ ] IAP-040 Leave one deterministic gate for the acquisition proof.
-- [ ] IAP-041 Teach the acquisition pre-step in user-facing docs only after the contract is real.
-- [ ] IAP-042 Close this lane or split another narrower follow-on instead of widening scope by
+- [x] IAP-040 Leave one deterministic gate for the acquisition proof.
+- [x] IAP-041 Teach the acquisition pre-step in user-facing docs only after the contract is real.
+- [x] IAP-042 Close this lane or split another narrower follow-on instead of widening scope by
   default.
 
 ## Boundaries to protect
@@ -69,3 +69,8 @@ Completed M0 evidence:
 Completed M1 decision:
 
 - `docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
+
+Completed M2/M3 evidence:
+
+- `docs/workstreams/iconify-acquisition-prestep-v1/M2_PROOF_SURFACE_2026-04-09.md`
+- `docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md`

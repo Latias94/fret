@@ -1,6 +1,6 @@
 # Iconify Acquisition Pre-step v1 — Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 ## M0 — Scope and evidence freeze
@@ -59,7 +59,7 @@ Primary gates:
 Current status:
 
 - M1 contract freeze closed on 2026-04-09.
-- The next active work is M2 proof surface.
+- M2 proof surface closed on 2026-04-09.
 
 ## M3 — Docs and closeout
 
@@ -73,3 +73,8 @@ Primary gates:
 
 - `cargo nextest run -p fret-icons-generator -p fretboard`
 - `cargo check -p fretboard --quiet`
+
+Current status:
+
+- M3 docs and closeout closed on 2026-04-09.
+- The lane is now closed.

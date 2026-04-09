@@ -1,6 +1,6 @@
 # Iconify Acquisition Pre-step v1 — Evidence and Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 ## Smallest current repro
@@ -33,6 +33,14 @@ What this proves today:
   - separate provenance sidecar,
   - separate `icons acquire ...` public CLI family,
   - and subset snapshot as the first proof target.
+- `docs/workstreams/iconify-acquisition-prestep-v1/M2_PROOF_SURFACE_2026-04-09.md` proves the
+  shipped surface:
+  - `fretboard icons acquire iconify-collection ...`,
+  - local snapshot write,
+  - local provenance sidecar write,
+  - and flow into the existing import path.
+- `docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md` closes the lane
+  and names future work as narrower follow-ons.
 - `iconify-import-pack-generator-v1` is now closed on the v1 local-input producer contract.
 - The current generator accepts:
   - local SVG directory input,
@@ -65,6 +73,8 @@ cargo check -p fretboard --quiet
 - `docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
+- `docs/workstreams/iconify-acquisition-prestep-v1/M2_PROOF_SURFACE_2026-04-09.md`
+- `docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `crates/fret-icons-generator/src/lib.rs`

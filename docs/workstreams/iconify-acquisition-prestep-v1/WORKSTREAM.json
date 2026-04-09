@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "iconify-acquisition-prestep-v1",
   "title": "Iconify Acquisition Pre-step v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-09",
   "scope_kind": "execution",
   "problem": "Keep any future Iconify remote acquisition workflow explicit, pinned, and auditable: if Fret offers convenience for acquiring upstream Iconify data, it must remain a separate pre-step that produces local artifacts for the already-shipped generator rather than hiding network state inside `icons import`.",
@@ -18,6 +18,14 @@
     {
       "role": "decision",
       "path": "docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md"
+    },
+    {
+      "role": "proof",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/M2_PROOF_SURFACE_2026-04-09.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md"
     },
     {
       "role": "reference",
@@ -57,6 +65,8 @@
     "docs/workstreams/iconify-acquisition-prestep-v1/DESIGN.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/M2_PROOF_SURFACE_2026-04-09.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/TODO.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/MILESTONES.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md",
@@ -73,8 +83,8 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane while the acquisition pre-step contract is still unsettled. Do not reopen `iconify-import-pack-generator-v1`; if scope grows beyond explicit acquisition of pinned local artifacts, split another narrower follow-on."
+    "default_action": "follow_on",
+    "notes": "This lane is closed on a subset-first acquisition proof. Do not reopen `iconify-import-pack-generator-v1` or this lane for fuller vendoring, richer provenance consumers, or multicolor presentation defaults; split a narrower follow-on instead."
   },
   "follow_on_of": "iconify-import-pack-generator-v1"
 }
