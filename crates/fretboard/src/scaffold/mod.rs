@@ -3,7 +3,7 @@ use std::process::Command;
 
 pub mod contracts;
 
-mod fs;
+pub(crate) mod fs;
 mod templates;
 mod wizard;
 

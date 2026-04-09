@@ -2371,6 +2371,15 @@ name = "fret-icons"
 version = "0.1.0"
 
 [[package]]
+name = "fret-icons-generator"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "fret-icons-lucide"
 version = "0.1.0"
 dependencies = [
@@ -3161,6 +3170,7 @@ dependencies = [
  "clap",
  "fret-assets",
  "fret-diag",
+ "fret-icons-generator",
  "serde",
  "serde_json",
 ]

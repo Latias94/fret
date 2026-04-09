@@ -293,7 +293,7 @@ Rule:
 - `docs/workstreams/hotpatch-devloop-alignment-v1/` — first 2026-02-15, latest 2026-03-01, 4 markdown docs
 - `docs/workstreams/image-source-view-cache-v1/` — first 2026-02-13, latest 2026-02-13, 3 markdown docs
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
-- `docs/workstreams/iconify-import-pack-generator-v1/` — first n/a, latest n/a, 7 markdown docs (active follow-on; M1 producer contract frozen for build-time generated third-party icon-pack crates against the shipped v1 icon contract)
+- `docs/workstreams/iconify-import-pack-generator-v1/` — first n/a, latest n/a, 9 markdown docs (active follow-on; M1 producer contract frozen, the M2 SVG-directory proof and M4 local Iconify snapshot proof have landed for build-time generated third-party icon-pack crates against the shipped v1 icon contract, and public semantic alias config remains open)
 - `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-vocabulary-closure-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic immediate helper vocabulary relative to Dear ImGui/egui after the editor-grade and ghost closeouts)

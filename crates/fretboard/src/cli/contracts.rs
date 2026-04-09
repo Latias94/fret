@@ -3,6 +3,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use crate::assets::contracts::AssetsCommandArgs;
 use crate::config::contracts::ConfigCommandArgs;
 use crate::dev::contracts::DevCommandArgs;
+use crate::icons::contracts::IconsCommandArgs;
 use crate::scaffold::contracts::NewCommandArgs;
 
 #[derive(Debug, Parser)]
@@ -27,6 +28,8 @@ pub enum FretboardCommandContract {
     Diag(ForwardedSubcommandArgs),
     /// Run project-native and web app targets.
     Dev(DevCommandArgs),
+    /// Generate icon-pack crates from local icon sources.
+    Icons(IconsCommandArgs),
     /// Create a new app from a starter template.
     New(NewCommandArgs),
 }
@@ -116,6 +119,17 @@ mod tests {
     }
 
     #[test]
+    fn icons_help_lists_import_sources() {
+        let help = render_command_help_path(&["icons"]).expect("icons help should render");
+        assert!(help.contains("import"));
+
+        let import_help = render_command_help_path(&["icons", "import"])
+            .expect("icons import help should render");
+        assert!(import_help.contains("svg-dir"));
+        assert!(import_help.contains("iconify-collection"));
+    }
+
+    #[test]
     fn root_contract_parses_assets_subcommand() {
         let cli = try_parse_contract([
             "fretboard",
@@ -172,6 +186,44 @@ mod tests {
         assert_eq!(args.bin.as_deref(), Some("todo_demo"));
         assert!(args.watch);
         assert_eq!(args.passthrough, vec!["--help"]);
+    }
+
+    #[test]
+    fn root_contract_parses_icons_svg_dir_subcommand() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "icons",
+            "import",
+            "svg-dir",
+            "--source",
+            "./icons",
+            "--crate-name",
+            "demo-icons",
+            "--vendor-namespace",
+            "demo",
+        ])
+        .expect("icons svg-dir command should parse");
+
+        assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
+    }
+
+    #[test]
+    fn root_contract_parses_icons_iconify_collection_subcommand() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "icons",
+            "import",
+            "iconify-collection",
+            "--source",
+            "./lucide.json",
+            "--crate-name",
+            "lucide-icons",
+            "--vendor-namespace",
+            "lucide",
+        ])
+        .expect("icons iconify-collection command should parse");
+
+        assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
     }
 
     #[test]

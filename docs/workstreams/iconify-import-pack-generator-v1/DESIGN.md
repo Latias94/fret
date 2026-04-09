@@ -136,3 +136,11 @@ That audit is the current status read for M0:
 The next accepted decision after that baseline is:
 
 - `docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
+
+The first landed implementation/proof read after that freeze is:
+
+- `docs/workstreams/iconify-import-pack-generator-v1/M2_PROOF_SURFACE_2026-04-09.md`
+
+The current M4 source-expansion follow-on read after that is:
+
+- `docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`

@@ -52,17 +52,52 @@ Last updated: 2026-04-09
 
 ## M2 — Proof surface
 
-- [ ] IIPG-030 Land one smallest proof surface that exercises the chosen generator boundary.
-- [ ] IIPG-031 Prove that the generated output fits the current app/bootstrap install contract
+- [x] IIPG-030 Land one smallest proof surface that exercises the chosen generator boundary.
+  - Landed in `M2_PROOF_SURFACE_2026-04-09.md` with:
+    - `crates/fret-icons-generator`
+    - `fretboard icons import svg-dir`
+    - repo-local compile proof for the generated pack crate.
+- [x] IIPG-031 Prove that the generated output fits the current app/bootstrap install contract
   without manual cleanup steps.
-- [ ] IIPG-032 Keep the out-of-tree / third-party developer story explicit rather than relying on
+  - Recorded in `M2_PROOF_SURFACE_2026-04-09.md`.
+- [x] IIPG-032 Keep the out-of-tree / third-party developer story explicit rather than relying on
   monorepo-only assumptions.
+  - Recorded in `M2_PROOF_SURFACE_2026-04-09.md`.
 
 ## M3 — Gates and docs
 
-- [ ] IIPG-040 Add one deterministic regression gate for generated-pack output.
-- [ ] IIPG-041 Update user-facing docs once the generator contract is real.
-- [ ] IIPG-042 Leave one follow-on-safe evidence set for future pack-specific expansion.
+- [x] IIPG-040 Add one deterministic regression gate for generated-pack output.
+  - Current canonical proof gate:
+    - `cargo nextest run -p fret-icons-generator -p fretboard`
+- [x] IIPG-041 Update user-facing docs once the generator contract is real.
+  - Landed in:
+    - `docs/crate-usage-guide.md`
+    - `docs/examples/todo-app-golden-path.md`
+    - `ecosystem/fret/src/lib.rs` doc guards
+- [x] IIPG-042 Leave one follow-on-safe evidence set for future pack-specific expansion.
+  - Current evidence set:
+    - `M1_CONTRACT_FREEZE_2026-04-09.md`
+    - `M2_PROOF_SURFACE_2026-04-09.md`
+    - `EVIDENCE_AND_GATES.md`
+
+## M4 — Source expansion follow-ons
+
+- [x] IIPG-050 Add Iconify collection snapshot input support to the reusable generator library.
+  - Landed in:
+    - `crates/fret-icons-generator/src/iconify.rs`
+    - `crates/fret-icons-generator/src/lib.rs`
+    - `crates/fretboard/src/icons/mod.rs`
+    - `docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`
+- [ ] IIPG-051 Expose an explicit public config surface for semantic alias mappings.
+  - Still intentionally open:
+    - the generator contract already accepts explicit semantic aliases,
+    - but the public CLI does not expose that policy/config surface yet.
+- [x] IIPG-052 Add one follow-on regression gate that covers snapshot-based generation without
+  requiring live network fetch.
+  - Covered by the canonical proof gate:
+    - `cargo nextest run -p fret-icons-generator -p fretboard`
+  - Recorded in:
+    - `docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`
 
 ## Boundaries to protect
 

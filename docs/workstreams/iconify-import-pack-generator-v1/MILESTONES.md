@@ -67,9 +67,20 @@ Exit criteria:
 
 Primary gates:
 
-- `python3 tools/check_icons_generation.py --pack all`
+- `cargo nextest run -p fret-icons-generator -p fretboard`
+- `cargo check -p fretboard --quiet`
 - `cargo nextest run -p fret-icons -p fret-icons-lucide -p fret-icons-radix`
 - `cargo check -p fret-bootstrap --features "icons-lucide,icons-radix,icons-ui-semantic-lucide,icons-ui-semantic-radix"`
+
+Current status:
+
+- `M2_PROOF_SURFACE_2026-04-09.md` now records the first landed proof slice:
+  - reusable generator library crate,
+  - thin public `fretboard icons import svg-dir` entrypoint,
+  - repo-local generated-pack compile proof,
+  - explicit emitted provenance artifacts.
+- M2 exit criteria are satisfied.
+- The next active work is M3 docs and regression closure.
 
 ## M3 — Docs and regression closure
 
@@ -82,5 +93,43 @@ Exit criteria:
 
 Primary gates:
 
-- `python3 tools/check_icons_generation.py --pack all`
+- `cargo nextest run -p fret-icons-generator -p fretboard`
 - `cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface`
+
+Current status:
+
+- The current public generator entrypoints are now taught in:
+  - `docs/crate-usage-guide.md`
+  - `docs/examples/todo-app-golden-path.md`
+- `ecosystem/fret/src/lib.rs` doc guards now lock those user-facing references.
+- M3 exit criteria are satisfied for the current public proof surface.
+- The next active work is M4 source expansion follow-ons.
+
+## M4 — Source expansion follow-ons
+
+Exit criteria:
+
+- Iconify collection snapshot input support lands without changing the frozen producer contract.
+- Public semantic alias configuration becomes explicit.
+- A snapshot-based regression gate exists without relying on live network fetch.
+
+Primary evidence:
+
+- `docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
+- `docs/workstreams/iconify-import-pack-generator-v1/M2_PROOF_SURFACE_2026-04-09.md`
+- `docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`
+- `crates/fret-icons-generator/src/lib.rs`
+- `crates/fret-icons-generator/src/iconify.rs`
+- `crates/fretboard/src/icons/mod.rs`
+
+Current status:
+
+- `M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md` now records the landed snapshot follow-on:
+  - local Iconify collection snapshot import in the reusable generator library,
+  - explicit `fretboard icons import iconify-collection` public entrypoint,
+  - multicolor SVG-body preservation proof,
+  - and repo-local generated-pack compilation proof for the snapshot path.
+- `IIPG-050` and `IIPG-052` are now satisfied without widening the frozen producer contract.
+- `IIPG-051` remains the only active M4 follow-on.
+- The lane stays active for explicit public semantic alias configuration, not for another source or
+  runtime redesign.

@@ -17,6 +17,14 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/iconify-import-pack-generator-v1/M2_PROOF_SURFACE_2026-04-09.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/iconify-import-pack-generator-v1/BASELINE_AUDIT_2026-04-09.md"
     },
     {
@@ -37,18 +45,22 @@
     }
   ],
   "repro": {
-    "summary": "Open the predecessor closeout, the M1 contract freeze, and the current icon codegen toolchain, then rerun the existing generation / pack-contract gates before implementing the first external-developer proof surface.",
+    "summary": "Open the predecessor closeout, the M1 contract freeze, the landed M2/M4 proof notes, and the user-facing docs that now teach both local generator entrypoints, then rerun the generator + CLI proof gates together with the existing icon-pack contract checks.",
     "commands": [
-      "python3 tools/check_icons_generation.py --pack all",
+      "cargo nextest run -p fret-icons-generator -p fretboard",
+      "cargo check -p fretboard --quiet",
       "cargo nextest run -p fret-icons -p fret-icons-lucide -p fret-icons-radix",
-      "cargo check -p fret-bootstrap --features \"icons-lucide,icons-radix,icons-ui-semantic-lucide,icons-ui-semantic-radix\"",
-      "cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface"
+      "cargo check -p fret-bootstrap --features \"icons-lucide,icons-radix,icons-ui-semantic-lucide,icons-ui-semantic-radix\""
     ]
   },
   "gates": [
     {
-      "name": "icon-generation-consistency",
-      "command": "python3 tools/check_icons_generation.py --pack all"
+      "name": "icon-pack-generator-proof",
+      "command": "cargo nextest run -p fret-icons-generator -p fretboard"
+    },
+    {
+      "name": "fretboard-icons-cli",
+      "command": "cargo check -p fretboard --quiet"
     },
     {
       "name": "icon-pack-contract",
@@ -66,6 +78,8 @@
   "evidence": [
     "docs/workstreams/iconify-import-pack-generator-v1/DESIGN.md",
     "docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
+    "docs/workstreams/iconify-import-pack-generator-v1/M2_PROOF_SURFACE_2026-04-09.md",
+    "docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md",
     "docs/workstreams/iconify-import-pack-generator-v1/BASELINE_AUDIT_2026-04-09.md",
     "docs/workstreams/iconify-import-pack-generator-v1/TODO.md",
     "docs/workstreams/iconify-import-pack-generator-v1/MILESTONES.md",
@@ -74,6 +88,18 @@
     "docs/adr/0065-icon-system-and-asset-packaging.md",
     "docs/crate-usage-guide.md",
     "docs/examples/todo-app-golden-path.md",
+    "crates/fret-icons-generator/Cargo.toml",
+    "crates/fret-icons-generator/src/lib.rs",
+    "crates/fret-icons-generator/src/contracts.rs",
+    "crates/fret-icons-generator/src/fs.rs",
+    "crates/fret-icons-generator/src/iconify.rs",
+    "crates/fret-icons-generator/src/naming.rs",
+    "crates/fret-icons-generator/src/svg_dir.rs",
+    "crates/fret-icons-generator/src/templates.rs",
+    "crates/fretboard/src/icons/mod.rs",
+    "crates/fretboard/src/icons/contracts.rs",
+    "crates/fretboard/src/cli/contracts.rs",
+    "crates/fretboard/src/cli/help.rs",
     "tools/gen_icons.py",
     "tools/icon_codegen.py",
     "tools/sync_icons.py",
@@ -96,7 +122,7 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane while the proof surface, emitted crate shape, and external-developer packaging story are still unsettled in implementation. The M1 generator contract is now frozen; do not widen this lane into another icon runtime lane or a runtime network client."
+    "notes": "Continue this lane only for the still-open public semantic-alias config follow-on. The M1 generator contract is frozen, the M2 SVG-directory proof has landed, the M4 local Iconify collection snapshot proof has landed, and M3 docs/gates now teach both local generator entrypoints; do not widen this lane into another icon runtime lane or a runtime network client."
   },
   "follow_on_of": "icon-system-extension-v1"
 }

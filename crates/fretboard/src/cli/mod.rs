@@ -58,6 +58,9 @@ fn run() -> Result<(), CliError> {
                 crate::dev::run_web_contract(args).map_err(CliError::Message)
             }
         },
+        contracts::FretboardCommandContract::Icons(args) => {
+            crate::icons::run_public_icons_contract(args).map_err(CliError::Message)
+        }
         contracts::FretboardCommandContract::New(args) => {
             crate::scaffold::run_public_new_contract(args).map_err(CliError::Message)
         }

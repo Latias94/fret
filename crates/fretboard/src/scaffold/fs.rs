@@ -1,6 +1,6 @@
 use std::path::Path;
 
-pub(super) fn sanitize_package_name(raw: &str) -> Result<String, String> {
+pub(crate) fn sanitize_package_name(raw: &str) -> Result<String, String> {
     let raw = raw.trim();
     if raw.is_empty() {
         return Err("package name cannot be empty".to_string());
@@ -21,7 +21,7 @@ pub(super) fn sanitize_package_name(raw: &str) -> Result<String, String> {
     Ok(out)
 }
 
-pub(super) fn ensure_dir_is_new_or_empty(path: &Path) -> Result<(), String> {
+pub(crate) fn ensure_dir_is_new_or_empty(path: &Path) -> Result<(), String> {
     if path.exists() && !path.is_dir() {
         return Err(format!(
             "output path exists but is not a directory: {}",
@@ -65,7 +65,7 @@ pub(super) fn ensure_dir_is_new_or_empty(path: &Path) -> Result<(), String> {
     std::fs::create_dir_all(path).map_err(|e| e.to_string())
 }
 
-pub(super) fn write_new_file(path: &Path, contents: &str) -> Result<(), String> {
+pub(crate) fn write_new_file(path: &Path, contents: &str) -> Result<(), String> {
     if path.exists() {
         return Err(format!(
             "refusing to overwrite existing file: {}",
@@ -75,7 +75,7 @@ pub(super) fn write_new_file(path: &Path, contents: &str) -> Result<(), String> 
     std::fs::write(path, contents).map_err(|e| e.to_string())
 }
 
-pub(super) fn write_file_if_missing(path: &Path, contents: &str) -> Result<bool, String> {
+pub(crate) fn write_file_if_missing(path: &Path, contents: &str) -> Result<bool, String> {
     if path.exists() {
         if path.is_dir() {
             return Err(format!(
@@ -89,7 +89,7 @@ pub(super) fn write_file_if_missing(path: &Path, contents: &str) -> Result<bool,
     Ok(true)
 }
 
-pub(super) fn workspace_prefix_from_out_dir(
+pub(crate) fn workspace_prefix_from_out_dir(
     workspace_root: &Path,
     out_dir: &Path,
 ) -> Result<String, String> {

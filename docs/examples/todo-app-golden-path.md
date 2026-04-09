@@ -481,6 +481,22 @@ Recommended for apps:
 If you need a custom pack, expose the same app-facing seam from your own crate and call
 `.setup(my_icons::app::install)`.
 
+To bootstrap that custom crate from a local SVG directory, run
+`fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app`.
+
+The same command is shown below as a copy/paste block:
+
+```bash
+fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app
+```
+
+If your source already exists as a local Iconify collection snapshot, use
+`fretboard icons import iconify-collection --source ./iconify/lucide.json --crate-name lucide-icons --vendor-namespace lucide`
+instead of the SVG-directory command above.
+
+That generated crate already emits `PACK_METADATA`, `PACK` / `VENDOR_PACK`, and explicit
+`my_icons::app::install(...)` wiring.
+
 If you are on `fret_bootstrap` directly, prefer an explicit pack contract such as
 `.register_icon_pack_contract(my_icons::PACK)`.
 

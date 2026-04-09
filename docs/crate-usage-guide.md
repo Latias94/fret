@@ -548,6 +548,13 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   explicit pack through `FretApp::setup(fret_icons_lucide::app::install)` /
   `FretApp::setup(fret_icons_radix::app::install)`. For custom packs, publish the same shape on
   your own crate and call `FretApp::setup(my_icons::app::install)`.
+  When starting from a local SVG inventory, use
+  `fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app`.
+  When starting from a local Iconify collection snapshot, use
+  `fretboard icons import iconify-collection --source ./iconify/lucide.json --crate-name lucide-icons --vendor-namespace lucide`.
+  Both commands generate a repo-committable pack crate that already exports `PACK_METADATA`,
+  `PACK` / `VENDOR_PACK`, and explicit `app::install(...)` /
+  `advanced::install_with_ui_services(...)` seams.
   First-party and custom pack crates should also keep pack provenance explicit through
   `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic

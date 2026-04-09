@@ -3,6 +3,7 @@ pub mod cli;
 pub mod config;
 pub mod dev;
 pub mod diag;
+pub mod icons;
 pub mod scaffold;
 
 pub use cli::main;
