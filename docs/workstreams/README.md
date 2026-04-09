@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-09
+Catalog updated: 2026-04-10
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 215
+- Dedicated directories: 217
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -242,6 +242,7 @@ Rule:
 - `docs/workstreams/creative-recipes-v1/` — first 2026-02-10, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/current-color-inheritance-fearless-refactor-v1/` — first 2026-02-23, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/` — first n/a, latest n/a, 5 markdown docs
+- `docs/workstreams/default-app-productization-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-09, 7 markdown docs
 - `docs/workstreams/delinea-engine-contract-closure-v1/` — first 2026-02-09, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-ai-agent-debugging-v1/` — first 2026-02-21, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-06, 20 markdown docs
@@ -256,6 +257,7 @@ Rule:
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
 - `docs/workstreams/diag-perf-attribution-v1/` — first 2026-02-14, latest 2026-02-14, 4 markdown docs
 - `docs/workstreams/diag-perf-profiling-infra-v1/` — first 2026-02-15, latest 2026-02-16, 3 markdown docs
+- `docs/workstreams/diag-skill-evidence-owner-drift-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the narrow `fret-diag-workflow` evidence-owner correction between public `fretboard` and workspace-dev `fretboard-dev` diagnostics help surfaces)
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs
 - `docs/workstreams/diag-v2-hardening-and-switches-v1/` — first 2026-02-26, latest 2026-03-03, 10 markdown docs
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
@@ -280,6 +282,9 @@ Rule:
 - `docs/workstreams/font-mainline-fearless-refactor-v1/` — first 2026-03-14, latest 2026-03-14, 3 markdown docs
 - `docs/workstreams/framework-modularity-fearless-refactor-v1/` — first 2026-02-27, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/fretboard-cli-fearless-refactor-v1/` — first 2026-03-26, latest 2026-03-26, 4 markdown docs
+- `docs/workstreams/fretboard-public-app-author-surface-v1/` — first 2026-04-09, latest 2026-04-09, 10 markdown docs
+- `docs/workstreams/fretboard-public-dev-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 6 markdown docs
+- `docs/workstreams/fretboard-public-diag-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 5 markdown docs
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-12, 7 markdown docs
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 3 markdown docs
@@ -289,6 +294,7 @@ Rule:
 - `docs/workstreams/fret-node-style-skinning-v3/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
 - `docs/workstreams/genui-json-render-v1/` — first 2026-02-14, latest 2026-03-02, 3 markdown docs
 - `docs/workstreams/generated-icon-presentation-defaults-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for explicit versioned `OriginalColors` vs `Mask` defaults in generated/imported icon packs without reopening acquisition or runtime icon contracts)
+- `docs/workstreams/grid-track-and-slot-placement-parity-v1/` — first 2026-04-07, latest 2026-04-07, 4 markdown docs
 - `docs/workstreams/gesture-recognizers-v1/` — first 2026-02-11, latest 2026-02-11, 3 markdown docs
 - `docs/workstreams/gpui-parity-refactor/` — first 2026-01-15, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/headless-dnd-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 12 markdown docs
@@ -298,6 +304,7 @@ Rule:
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/icon-install-error-reporting-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for known icon-install failure reports plus diagnostics-aware panic-hook logging without changing setup/bootstrap return types)
 - `docs/workstreams/icon-install-health-hardening-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for fail-fast explicit icon-pack install semantics plus best-effort partial helper fallback without reopening the closed runtime icon contract)
+- `docs/workstreams/icon-system-extension-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs
 - `docs/workstreams/iconify-acquisition-prestep-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for subset-first explicit remote/pinned Iconify acquisition as a separate pre-step that writes local snapshot + provenance artifacts for the closed generator lane)
 - `docs/workstreams/iconify-import-pack-generator-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the v1 third-party icon-pack generator contract: reusable generator + public CLI, local SVG/Iconify snapshot inputs, explicit semantic alias config, and deterministic proof gates all landed)
 - `docs/workstreams/iconify-presentation-defaults-report-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for optional versioned review-report output from the thin presentation-defaults suggestion helper without changing import defaults)
@@ -345,6 +352,7 @@ Rule:
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-02, 4 markdown docs
 - `docs/workstreams/quad-border-styles-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/query-lifecycle-v1/` — first 2026-02-06, latest 2026-02-11, 2 markdown docs
+- `docs/workstreams/release-surface-fearless-refactor-v1/` — first 2026-03-31, latest 2026-04-02, 4 markdown docs
 - `docs/workstreams/renderer-clip-mask-closure-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-drop-shadow-effect-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-effect-backdrop-warp-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
@@ -371,10 +379,15 @@ Rule:
 - `docs/workstreams/shadcn-component-surface-audit-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/shadcn-extras/` — first 2026-02-09, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/shadcn-motion-parity-audit-v1/` — first 2026-03-03, latest 2026-03-04, 5 markdown docs
+- `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/` — first 2026-04-01, latest 2026-04-01, 3 markdown docs
 - `docs/workstreams/shadcn-part-surface-alignment-v1/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs
 - `docs/workstreams/shadcn-semantic-drift-sweep-v1/` — first 2026-02-24, latest 2026-02-26, 3 markdown docs
 - `docs/workstreams/shadcn-source-alignment-v1/` — first 2026-03-08, latest 2026-03-08, 3 markdown docs
 - `docs/workstreams/shadcn-web-goldens-v4/` — first 2026-01-31, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/shadow-portable-softness-fearless-refactor-v1/` — first 2026-04-01, latest 2026-04-01, 3 markdown docs
+- `docs/workstreams/shadow-renderer-primitive-fearless-refactor-v1/` — first 2026-04-01, latest 2026-04-02, 3 markdown docs
+- `docs/workstreams/shadow-surface-fearless-refactor-v1/` — first 2026-04-01, latest 2026-04-01, 3 markdown docs
+- `docs/workstreams/shell-composition-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-02, 4 markdown docs
 - `docs/workstreams/shimmer-text-style-source-fearless-refactor-v1/` — first 2026-03-07, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/state-management-v1/` — first 2026-02-05, latest 2026-03-12, 3 markdown docs
 - `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
