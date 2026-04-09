@@ -31,14 +31,19 @@ The only raw-model escape hatch is the explicit advanced import
 `use fret::advanced::AppUiRawModelExt;` plus `cx.raw_model::<T>()`; it is not part of the default
 ladder.
 
+Installed/public template spelling below uses `fretboard new ...`.
+In this repository, the public-surface equivalent is `cargo run -p fretboard -- new ...`.
+`cargo run -p fretboard-dev -- new ...` remains the repo-local maintainer variant and writes under
+`local/` by default.
+
 1. `hello` (template) — smallest runnable UI surface.
-   - Generate: `cargo run -p fretboard-dev -- new hello --name hello-world`
+   - Generate: `fretboard new hello --name hello-world`
 2. `simple-todo` (template) — view runtime + typed actions + keyed lists (no selectors/queries;
    the current default path is `LocalState<Vec<_>>` + payload row actions for view-owned lists).
-   - Generate: `cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo`
+   - Generate: `fretboard new simple-todo --name my-simple-todo`
 3. `todo` (template) — richer third rung once you need selectors + queries; generated as a
    product baseline with deletable selector/query slices, not as the default starter scaffold.
-   - Generate: `cargo run -p fretboard-dev -- new todo --name my-todo`
+   - Generate: `fretboard new todo --name my-todo`
    - Read: [docs/examples/todo-app-golden-path.md](./todo-app-golden-path.md)
    - Note: this template opts into `fret` feature `state` (selector/query helpers), and its
      generated README calls out the first deletable slices if you want to collapse back toward

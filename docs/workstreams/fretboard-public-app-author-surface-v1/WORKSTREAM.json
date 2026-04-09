@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "slug": "fretboard-public-app-author-surface-v1",
+  "title": "Fretboard Public App-Author Surface v1",
+  "status": "active",
+  "updated": "2026-04-09",
+  "scope_kind": "execution",
+  "problem": "Keep Fret's public CLI aligned with the real app-author workflow: publish and teach only project-agnostic commands on `fretboard`, keep repo-owned maintainer flows on `fretboard-dev`, and make future public `dev` / diagnostics work product-shaped instead of mono-repo-shaped.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/README.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Compare public vs repo-only help surfaces, confirm the public scaffold still works outside the mono-repo path model, and grep docs for repo-local command spellings before changing the contract.",
+    "commands": [
+      "cargo run -p fretboard -- --help",
+      "cargo run -p fretboard-dev -- --help",
+      "cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-public-hello --no-check",
+      "rg -n \"cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard-dev dev|fretboard-dev diag\" docs README.md apps -g '*.md'"
+    ]
+  },
+  "gates": [
+    {
+      "name": "public-help-surface",
+      "command": "cargo run -p fretboard -- --help"
+    },
+    {
+      "name": "repo-help-surface",
+      "command": "cargo run -p fretboard-dev -- --help"
+    },
+    {
+      "name": "shared-cli-tests",
+      "command": "cargo nextest run -p fretboard -p fretboard-dev"
+    },
+    {
+      "name": "public-package-preflight",
+      "command": "cargo publish --dry-run --allow-dirty -p fretboard"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fretboard-public-app-author-surface-v1/README.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md",
+    "crates/fretboard/Cargo.toml",
+    "crates/fretboard/src/cli/contracts.rs",
+    "crates/fretboard/src/cli/mod.rs",
+    "crates/fretboard/src/scaffold/mod.rs",
+    "apps/fretboard/src/cli/contracts.rs",
+    "apps/fretboard/src/cli/mod.rs",
+    "apps/fretboard/src/dev/native.rs",
+    "apps/fretboard/src/dev/web.rs",
+    "apps/fretboard/src/demos.rs",
+    "apps/fretboard/src/diag.rs",
+    "apps/fretboard/src/hotpatch/contracts.rs",
+    "apps/fretboard/src/theme.rs",
+    "docs/README.md",
+    "docs/setup.md",
+    "docs/first-hour.md",
+    "docs/examples/README.md",
+    "docs/examples/todo-app-golden-path.md",
+    "docs/ui-diagnostics-and-scripted-tests.md",
+    "docs/vscode-theme-import.md",
+    "docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md",
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md",
+    "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the public app-author command taxonomy is explicit and follow-on implementation work can target public `dev` and diagnostics without reopening the product-surface question."
+  },
+  "follow_on_of": "release-surface-fearless-refactor-v1"
+}

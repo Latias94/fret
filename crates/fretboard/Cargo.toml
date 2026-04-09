@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
-description = "Public CLI for Fret assets and project config workflows."
+description = "Public CLI for Fret app scaffolds, assets, and project config workflows."
 
 [dependencies]
 clap.workspace = true

@@ -61,7 +61,7 @@ Notes:
 
 - On Windows, `fretboard-dev dev native ...` defaults to `--profile dev-fast` for faster builds.
 - On other platforms (or if you want richer debug inspection), you can pass `--profile dev`.
-- The published `fretboard` CLI remains the public `assets` / `config` surface; repo-runner commands stay on `fretboard-dev`.
+- The published `fretboard` CLI remains the public `assets` / `config` / `new` surface; repo-runner commands stay on `fretboard-dev`.
 
 ### 2) Use the built-in aliases for the common path
 
