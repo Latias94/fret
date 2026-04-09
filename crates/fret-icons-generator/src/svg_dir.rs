@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::GeneratePackError;
-use crate::contracts::SvgDirectorySource;
+use crate::contracts::{PresentationRenderMode, SvgDirectorySource};
 use crate::fs::path_label;
 use crate::naming::normalize_svg_icon_name;
 
@@ -10,6 +10,7 @@ use crate::naming::normalize_svg_icon_name;
 pub(crate) struct CollectedSvg {
     pub icon_name: String,
     pub source_relative_path: String,
+    pub render_mode: PresentationRenderMode,
     #[serde(skip_serializing)]
     pub svg_bytes: Vec<u8>,
 }
@@ -56,6 +57,7 @@ pub(crate) fn collect_svg_directory(
         collected.push(CollectedSvg {
             icon_name,
             source_relative_path: relative_label,
+            render_mode: PresentationRenderMode::Mask,
             svg_bytes,
         });
     }

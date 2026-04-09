@@ -10,6 +10,7 @@ pub struct GeneratePackRequest {
     pub dependency_spec: DependencySpec,
     pub generator_label: String,
     pub semantic_aliases: Vec<SemanticAlias>,
+    pub presentation_defaults: PresentationDefaults,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,6 +50,27 @@ pub struct SemanticAlias {
     pub target_icon: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum PresentationRenderMode {
+    #[default]
+    Mask,
+    OriginalColors,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PresentationOverride {
+    pub icon_name: String,
+    pub render_mode: PresentationRenderMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize)]
+pub struct PresentationDefaults {
+    pub default_render_mode: Option<PresentationRenderMode>,
+    pub icon_overrides: Vec<PresentationOverride>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedPackReport {
     pub output_dir: PathBuf,
@@ -64,4 +86,14 @@ pub struct SemanticAliasConfigFileV1 {
     pub schema_version: u32,
     #[serde(default)]
     pub semantic_aliases: Vec<SemanticAlias>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PresentationDefaultsConfigFileV1 {
+    pub schema_version: u32,
+    #[serde(default)]
+    pub default_render_mode: Option<PresentationRenderMode>,
+    #[serde(default)]
+    pub icon_overrides: Vec<PresentationOverride>,
 }

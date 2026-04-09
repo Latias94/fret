@@ -786,6 +786,7 @@ mod tests {
                                 path: Some(output_dir.clone()),
                                 source_label: Some("mdi-acquired-subset".to_string()),
                                 semantic_aliases: None,
+                                presentation_defaults: None,
                                 no_check: false,
                             },
                         },

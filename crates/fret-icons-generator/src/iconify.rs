@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::GeneratePackError;
-use crate::contracts::IconifyCollectionSource;
+use crate::contracts::{IconifyCollectionSource, PresentationRenderMode};
 use crate::naming::normalize_icon_name;
 use crate::svg_dir::CollectedSvg;
 
@@ -135,6 +135,7 @@ fn collect_named_icon(
     Ok(CollectedSvg {
         icon_name: normalized_name,
         source_relative_path: format!("{source_group}/{icon_name}"),
+        render_mode: PresentationRenderMode::Mask,
         svg_bytes: svg.into_bytes(),
     })
 }

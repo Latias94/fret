@@ -1,5 +1,8 @@
 use crate::GeneratePackError;
-use crate::contracts::{DependencySpec, GeneratePackRequest, SemanticAlias};
+use crate::contracts::{
+    DependencySpec, GeneratePackRequest, PresentationDefaults, PresentationRenderMode,
+    SemanticAlias,
+};
 use crate::fs::crate_module_name;
 use crate::naming::{normalize_const_name, normalize_module_name};
 use crate::svg_dir::CollectedSvg;
@@ -83,8 +86,9 @@ pub(crate) fn render_generated_ids(
     lines.join("\n")
 }
 
-pub(crate) fn render_lib_rs(request: &GeneratePackRequest, _icons: &[CollectedSvg]) -> String {
+pub(crate) fn render_lib_rs(request: &GeneratePackRequest, icons: &[CollectedSvg]) -> String {
     let has_aliases = !request.semantic_aliases.is_empty();
+    let registration_lines = render_registration_lines(icons);
     let alias_pack_const = if has_aliases {
         format!(
             r#"
@@ -143,7 +147,8 @@ mod semantic_ui {{
 //! This crate registers vendored SVG icons into [`fret_icons::IconRegistry`].
 
 use fret_icons::{{
-    IconId, IconPackImportModel, IconPackMetadata, IconPackRegistration, IconRegistry,
+    IconId, IconPackImportModel, IconPackMetadata, IconPackRegistration, IconPresentation,
+    IconRegistry, IconRenderMode,
 }};
 use rust_embed::RustEmbed;
 use std::{{borrow::Cow, sync::Arc}};
@@ -181,18 +186,10 @@ pub mod advanced;
 pub mod app;
 
 fn register_generated_list(reg: &mut IconRegistry) {{
-    for line in include_str!("../icon-list.txt").lines() {{
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {{
-            continue;
-        }}
-
-        let icon_name = line.strip_suffix(".svg").unwrap_or(line);
-        register_vendor_icon(reg, icon_name);
-    }}
+{registration_lines}
 }}
 
-fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {{
+fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str, render_mode: IconRenderMode) {{
     let path = format!("icons/{{icon_name}}.svg");
     let Some(file) = Assets::get(&path) else {{
         return;
@@ -203,14 +200,16 @@ fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {{
         Cow::Owned(bytes) => Arc::from(bytes),
     }};
 
-    let _ = reg.register_svg_bytes(
+    let _ = reg.register_svg_bytes_with_presentation(
         IconId::new(format!("{vendor_namespace}.{{icon_name}}")),
         bytes,
+        IconPresentation {{ render_mode }},
     );
 }}
 {alias_module}"#,
         pack_id = request.pack_id,
         vendor_namespace = request.vendor_namespace,
+        registration_lines = registration_lines.trim_end(),
         alias_pack_const = alias_pack_const.trim_end(),
         alias_register_call = alias_register_call,
         alias_public_fn = alias_public_fn.trim_end(),
@@ -271,6 +270,11 @@ pub(crate) fn render_readme_md(request: &GeneratePackRequest, icons: &[Collected
             .join("\n")
             + "\n"
     };
+    let presentation_defaults = render_presentation_defaults_readme(
+        &request.presentation_defaults,
+        icons,
+        &request.vendor_namespace,
+    );
 
     format!(
         r#"This crate provides a generated {vendor_namespace} SVG icon pack embedded via `rust-embed`.
@@ -282,8 +286,8 @@ pub(crate) fn render_readme_md(request: &GeneratePackRequest, icons: &[Collected
 - Enable `app-integration` when you want explicit installer surfaces under
   `{module_name}::app::install(...)` and
   `{module_name}::advanced::install_with_ui_services(...)`.
-- `pack-provenance.json` records the imported source inventory and alias policy used to generate
-  this pack crate.
+- `pack-provenance.json` records the imported source inventory, alias policy, and presentation
+  defaults used to generate this pack crate.
 
 ## Source provenance
 
@@ -308,6 +312,10 @@ Generated vendor constants are exposed under `generated_ids::{module_name_genera
 
 {semantic_ids}
 
+## Presentation defaults
+
+{presentation_defaults}
+
 ## App integration examples
 
 - `FretApp::setup({module_name}::app::install)`
@@ -321,6 +329,7 @@ Generated vendor constants are exposed under `generated_ids::{module_name_genera
         pack_id = request.pack_id,
         module_name_generated = normalize_module_name(&request.vendor_namespace),
         semantic_ids = semantic_ids.trim_end(),
+        presentation_defaults = presentation_defaults.trim_end(),
     )
 }
 
@@ -343,11 +352,13 @@ pub(crate) fn render_provenance_json(
             label: source_label(request),
         },
         semantic_aliases: request.semantic_aliases.clone(),
+        presentation_defaults: request.presentation_defaults.clone(),
         icons: icons
             .iter()
             .map(|icon| ProvenanceIcon {
                 icon_name: icon.icon_name.clone(),
                 source_relative_path: icon.source_relative_path.clone(),
+                render_mode: icon.render_mode,
             })
             .collect(),
     };
@@ -370,6 +381,78 @@ fn render_alias_lines(vendor_namespace: &str, aliases: &[SemanticAlias]) -> Stri
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn render_registration_lines(icons: &[CollectedSvg]) -> String {
+    icons
+        .iter()
+        .map(|icon| {
+            format!(
+                "    register_vendor_icon(reg, \"{icon_name}\", IconRenderMode::{render_mode});",
+                icon_name = icon.icon_name,
+                render_mode = render_mode_ident(icon.render_mode),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn render_presentation_defaults_readme(
+    defaults: &PresentationDefaults,
+    icons: &[CollectedSvg],
+    vendor_namespace: &str,
+) -> String {
+    let default_render_mode = defaults
+        .default_render_mode
+        .unwrap_or(PresentationRenderMode::Mask);
+    let mut lines = vec![format!(
+        "- Pack default render mode: `{}`",
+        render_mode_code(default_render_mode)
+    )];
+
+    if defaults.icon_overrides.is_empty() {
+        lines.push("- Per-icon overrides: none".to_string());
+    } else {
+        lines.push("- Per-icon overrides:".to_string());
+        lines.extend(defaults.icon_overrides.iter().map(|override_entry| {
+            format!(
+                "  - `{}.{}` -> `{}`",
+                vendor_namespace,
+                override_entry.icon_name,
+                render_mode_code(override_entry.render_mode)
+            )
+        }));
+    }
+
+    let authored_icons = icons
+        .iter()
+        .filter(|icon| icon.render_mode == PresentationRenderMode::OriginalColors)
+        .map(|icon| format!("`{}.{}`", vendor_namespace, icon.icon_name))
+        .collect::<Vec<_>>();
+    if authored_icons.is_empty() {
+        lines.push("- Generated authored-color registrations: none".to_string());
+    } else {
+        lines.push(format!(
+            "- Generated authored-color registrations: {}",
+            authored_icons.join(", ")
+        ));
+    }
+
+    lines.join("\n")
+}
+
+fn render_mode_ident(render_mode: PresentationRenderMode) -> &'static str {
+    match render_mode {
+        PresentationRenderMode::Mask => "Mask",
+        PresentationRenderMode::OriginalColors => "OriginalColors",
+    }
+}
+
+fn render_mode_code(render_mode: PresentationRenderMode) -> &'static str {
+    match render_mode {
+        PresentationRenderMode::Mask => "mask",
+        PresentationRenderMode::OriginalColors => "original-colors",
+    }
 }
 
 fn source_label(request: &GeneratePackRequest) -> String {
@@ -428,6 +511,7 @@ struct ProvenanceDocument {
     pack: PackMetadata,
     source: SourceMetadata,
     semantic_aliases: Vec<SemanticAlias>,
+    presentation_defaults: PresentationDefaults,
     icons: Vec<ProvenanceIcon>,
 }
 
@@ -454,4 +538,5 @@ struct SourceMetadata {
 struct ProvenanceIcon {
     icon_name: String,
     source_relative_path: String,
+    render_mode: PresentationRenderMode,
 }

@@ -2,16 +2,20 @@ mod contracts;
 mod fs;
 mod iconify;
 mod naming;
+mod presentation_defaults;
 mod semantic_aliases;
 mod svg_dir;
 mod templates;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub use contracts::{
     DependencySpec, GeneratePackRequest, GeneratedPackReport, IconifyCollectionSource,
-    SemanticAlias, SemanticAliasConfigFileV1, SourceSpec, SvgDirectorySource,
+    PresentationDefaults, PresentationDefaultsConfigFileV1, PresentationOverride,
+    PresentationRenderMode, SemanticAlias, SemanticAliasConfigFileV1, SourceSpec,
+    SvgDirectorySource,
 };
+pub use presentation_defaults::load_presentation_defaults_json_file;
 pub use semantic_aliases::load_semantic_aliases_json_file;
 
 use fs::{
@@ -19,6 +23,7 @@ use fs::{
     validate_vendor_namespace, write_new_bytes, write_new_file,
 };
 use iconify::collect_iconify_collection;
+use presentation_defaults::sanitize_presentation_defaults;
 use semantic_aliases::sanitize_semantic_aliases;
 use svg_dir::collect_svg_directory;
 use templates::{
@@ -54,6 +59,14 @@ pub enum GeneratePackError {
     SemanticAliasConfigPathNotFile(String),
     #[error("unsupported semantic alias config schema version: expected {expected}, got {actual}")]
     UnsupportedSemanticAliasConfigSchemaVersion { expected: u32, actual: u32 },
+    #[error("missing presentation defaults config file: {0}")]
+    MissingPresentationDefaultsConfigFile(String),
+    #[error("presentation defaults config path is not a file: {0}")]
+    PresentationDefaultsConfigPathNotFile(String),
+    #[error(
+        "unsupported presentation defaults config schema version: expected {expected}, got {actual}"
+    )]
+    UnsupportedPresentationDefaultsConfigSchemaVersion { expected: u32, actual: u32 },
     #[error("no SVG icons found in {0}")]
     NoSvgIconsFound(String),
     #[error("iconify collection has no icons or aliases: {0}")]
@@ -76,6 +89,12 @@ pub enum GeneratePackError {
     MissingSemanticAliasTarget { target_icon: String },
     #[error("semantic alias id cannot be empty")]
     EmptySemanticAliasId,
+    #[error("duplicate presentation override for `{icon_name}`")]
+    DuplicatePresentationOverride { icon_name: String },
+    #[error("presentation override target `{icon_name}` does not exist in the generated icon list")]
+    MissingPresentationOverrideTarget { icon_name: String },
+    #[error("presentation override icon name cannot be empty")]
+    EmptyPresentationOverrideIconName,
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -94,15 +113,18 @@ pub fn generate_pack_crate(
         pack_id,
         vendor_namespace,
         semantic_aliases: sanitize_semantic_aliases(request.semantic_aliases)?,
+        presentation_defaults: sanitize_presentation_defaults(request.presentation_defaults)?,
         ..request
     };
 
     ensure_dir_is_new_or_empty(&request.output_dir)?;
-    let icons = match &request.source {
+    let mut icons = match &request.source {
         SourceSpec::SvgDirectory(source) => collect_svg_directory(source)?,
         SourceSpec::IconifyCollection(source) => collect_iconify_collection(source)?,
     };
     validate_semantic_aliases(&request.semantic_aliases, &icons)?;
+    validate_presentation_defaults(&request.presentation_defaults, &icons)?;
+    apply_presentation_defaults(&request.presentation_defaults, &mut icons);
 
     let src_dir = request.output_dir.join("src");
     let assets_icons_dir = request.output_dir.join("assets").join("icons");
@@ -175,9 +197,58 @@ fn validate_semantic_aliases(
     Ok(())
 }
 
+fn validate_presentation_defaults(
+    defaults: &PresentationDefaults,
+    icons: &[svg_dir::CollectedSvg],
+) -> Result<(), GeneratePackError> {
+    let icon_names = icons
+        .iter()
+        .map(|icon| icon.icon_name.as_str())
+        .collect::<BTreeSet<_>>();
+
+    for override_entry in &defaults.icon_overrides {
+        if !icon_names.contains(override_entry.icon_name.as_str()) {
+            return Err(GeneratePackError::MissingPresentationOverrideTarget {
+                icon_name: override_entry.icon_name.clone(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+fn apply_presentation_defaults(
+    defaults: &PresentationDefaults,
+    icons: &mut [svg_dir::CollectedSvg],
+) {
+    let default_render_mode = defaults
+        .default_render_mode
+        .unwrap_or(PresentationRenderMode::Mask);
+    let overrides = defaults
+        .icon_overrides
+        .iter()
+        .map(|override_entry| {
+            (
+                override_entry.icon_name.as_str(),
+                override_entry.render_mode,
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    for icon in icons {
+        icon.render_mode = overrides
+            .get(icon.icon_name.as_str())
+            .copied()
+            .unwrap_or(default_render_mode);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{DependencySpec, GeneratePackError, GeneratePackRequest, SemanticAlias};
+    use super::{
+        DependencySpec, GeneratePackError, GeneratePackRequest, PresentationDefaults,
+        PresentationOverride, PresentationRenderMode, SemanticAlias,
+    };
     use crate::{IconifyCollectionSource, SourceSpec, SvgDirectorySource};
     use serde_json::Value;
     use std::path::PathBuf;
@@ -233,6 +304,7 @@ mod tests {
                 semantic_id: "ui.search".to_string(),
                 target_icon: "actions-search".to_string(),
             }],
+            presentation_defaults: PresentationDefaults::default(),
         })
         .expect("pack generation should succeed");
 
@@ -268,6 +340,7 @@ mod tests {
         assert_eq!(provenance["pack"]["import_model"], "Generated");
         assert_eq!(provenance["source"]["label"], "demo-source");
         assert_eq!(provenance["icons"][0]["icon_name"], "actions-search");
+        assert_eq!(provenance["icons"][0]["render_mode"], "mask");
         assert_eq!(
             provenance["icons"][0]["source_relative_path"],
             "actions/search.svg"
@@ -300,6 +373,7 @@ mod tests {
                 semantic_id: "ui.search".to_string(),
                 target_icon: "missing".to_string(),
             }],
+            presentation_defaults: PresentationDefaults::default(),
         })
         .expect_err("missing alias target should fail");
 
@@ -335,6 +409,7 @@ mod tests {
                 semantic_id: "search".to_string(),
                 target_icon: "actions-search".to_string(),
             }],
+            presentation_defaults: PresentationDefaults::default(),
         })
         .expect_err("non-ui semantic alias should fail");
 
@@ -380,6 +455,7 @@ mod tests {
             },
             generator_label: "fretboard icons import iconify-collection".to_string(),
             semantic_aliases: Vec::new(),
+            presentation_defaults: PresentationDefaults::default(),
         })
         .expect("iconify pack generation should succeed");
 
@@ -394,5 +470,107 @@ mod tests {
         let provenance: Value = serde_json::from_str(&provenance).expect("valid provenance json");
         assert_eq!(provenance["source"]["kind"], "iconify-collection");
         assert_eq!(provenance["icons"][1]["icon_name"], "search-rotated");
+        assert_eq!(provenance["icons"][1]["render_mode"], "mask");
+    }
+
+    #[test]
+    fn presentation_defaults_must_target_existing_icons() {
+        let root = make_temp_dir("fret-icons-generator-presentation-target");
+        let source_dir = root.join("source");
+        let output_dir = root.join("generated-pack");
+        std::fs::create_dir_all(&source_dir).expect("create source dir");
+        write_demo_svgs(&source_dir);
+
+        let err = super::generate_pack_crate(GeneratePackRequest {
+            package_name: "demo-icons".to_string(),
+            pack_id: "demo-icons".to_string(),
+            vendor_namespace: "demo".to_string(),
+            output_dir,
+            source: SourceSpec::SvgDirectory(SvgDirectorySource {
+                dir: source_dir,
+                label: "demo-source".to_string(),
+            }),
+            dependency_spec: DependencySpec::Published {
+                fret_version: "0.1.0".to_string(),
+                rust_embed_version: "8.9.0".to_string(),
+            },
+            generator_label: "fretboard icons import svg-dir".to_string(),
+            semantic_aliases: Vec::new(),
+            presentation_defaults: PresentationDefaults {
+                default_render_mode: None,
+                icon_overrides: vec![PresentationOverride {
+                    icon_name: "missing".to_string(),
+                    render_mode: PresentationRenderMode::OriginalColors,
+                }],
+            },
+        })
+        .expect_err("missing presentation override target should fail");
+
+        assert!(matches!(
+            err,
+            GeneratePackError::MissingPresentationOverrideTarget { .. }
+        ));
+    }
+
+    #[test]
+    fn generation_emits_original_colors_registration_when_configured() {
+        let root = make_temp_dir("fret-icons-generator-presentation-proof");
+        let source_dir = root.join("source");
+        let output_dir = root.join("generated-pack");
+        std::fs::create_dir_all(&source_dir).expect("create source dir");
+        std::fs::write(
+            source_dir.join("brand-logo.svg"),
+            r##"<svg viewBox="0 0 24 24"><path fill="#ff0000" d="M0 0h24v24H0z"/></svg>"##,
+        )
+        .expect("write brand logo svg");
+        std::fs::write(
+            source_dir.join("close.svg"),
+            r#"<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/></svg>"#,
+        )
+        .expect("write close svg");
+
+        super::generate_pack_crate(GeneratePackRequest {
+            package_name: "demo-icons".to_string(),
+            pack_id: "demo-icons".to_string(),
+            vendor_namespace: "demo".to_string(),
+            output_dir: output_dir.clone(),
+            source: SourceSpec::SvgDirectory(SvgDirectorySource {
+                dir: source_dir,
+                label: "demo-source".to_string(),
+            }),
+            dependency_spec: DependencySpec::Published {
+                fret_version: "0.1.0".to_string(),
+                rust_embed_version: "8.9.0".to_string(),
+            },
+            generator_label: "fretboard icons import svg-dir".to_string(),
+            semantic_aliases: Vec::new(),
+            presentation_defaults: PresentationDefaults {
+                default_render_mode: Some(PresentationRenderMode::Mask),
+                icon_overrides: vec![PresentationOverride {
+                    icon_name: "brand-logo".to_string(),
+                    render_mode: PresentationRenderMode::OriginalColors,
+                }],
+            },
+        })
+        .expect("pack generation should succeed");
+
+        let lib_rs =
+            std::fs::read_to_string(output_dir.join("src/lib.rs")).expect("generated lib.rs");
+        assert!(lib_rs.contains("IconRenderMode::OriginalColors"));
+        assert!(lib_rs.contains("IconRenderMode::Mask"));
+
+        let provenance = std::fs::read_to_string(output_dir.join("pack-provenance.json"))
+            .expect("generated provenance json");
+        let provenance: Value = serde_json::from_str(&provenance).expect("valid provenance json");
+        assert_eq!(
+            provenance["presentation_defaults"]["default_render_mode"],
+            "mask"
+        );
+        assert_eq!(
+            provenance["presentation_defaults"]["icon_overrides"][0]["render_mode"],
+            "original-colors"
+        );
+        assert_eq!(provenance["icons"][0]["render_mode"], "original-colors");
+        assert_eq!(provenance["icons"][1]["render_mode"], "mask");
     }
 }

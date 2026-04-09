@@ -86,6 +86,12 @@ pub struct ImportCommonArgs {
     /// `{ "schema_version": 1, "semantic_aliases": [{ "semantic_id": "ui.search", "target_icon": "search" }] }`
     #[arg(long, value_name = "FILE")]
     pub semantic_aliases: Option<PathBuf>,
+    /// JSON file describing explicit presentation defaults for generated icons.
+    ///
+    /// Expected shape:
+    /// `{ "schema_version": 1, "default_render_mode": "mask", "icon_overrides": [{ "icon_name": "brand-logo", "render_mode": "original-colors" }] }`
+    #[arg(long, value_name = "FILE")]
+    pub presentation_defaults: Option<PathBuf>,
     /// Skip `cargo check --features app-integration` after generation.
     #[arg(long)]
     pub no_check: bool,
