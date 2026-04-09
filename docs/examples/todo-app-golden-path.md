@@ -508,6 +508,22 @@ If the pack should also publish semantic `ui.*` aliases, pass
 
 `target_icon` should match the generated icon name.
 
+If imported icons should keep authored colors by default, pass
+`--presentation-defaults ./presentation-defaults.json` with a committed JSON file:
+
+```json
+{
+  "schema_version": 1,
+  "default_render_mode": "mask",
+  "icon_overrides": [
+    { "icon_name": "brand-logo", "render_mode": "original-colors" }
+  ]
+}
+```
+
+`icon_name` should also match the generated icon name. Unlisted icons use `default_render_mode`;
+when it is omitted, generated packs default to `mask`.
+
 That generated crate already emits `PACK_METADATA`, `PACK` / `VENDOR_PACK`, and explicit
 `my_icons::app::install(...)` wiring.
 

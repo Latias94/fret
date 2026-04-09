@@ -568,6 +568,22 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   ```
 
   `target_icon` must use the generated icon name, not the original source path.
+  If imported icons should keep authored colors by default, pass
+  `--presentation-defaults ./presentation-defaults.json` with an explicit versioned JSON file
+  such as:
+
+  ```json
+  {
+    "schema_version": 1,
+    "default_render_mode": "mask",
+    "icon_overrides": [
+      { "icon_name": "brand-logo", "render_mode": "original-colors" }
+    ]
+  }
+  ```
+
+  `icon_name` must also use the generated icon name. Unlisted icons use `default_render_mode`;
+  when it is omitted, generated packs default to `mask`.
   First-party and custom pack crates should also keep pack provenance explicit through
   `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic
