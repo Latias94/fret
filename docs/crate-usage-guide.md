@@ -589,7 +589,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   explicit Iconify `palette` hint, you can scaffold a starter file with
   `fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json`.
   Treat that file as advisory and review it before passing it to `icons import ...`; the helper
-  does not change import defaults silently.
+  does not change import defaults silently. If you want that review to remain a committed artifact,
+  add
+  `--report-out ./iconify/presentation-defaults.report.json`; the optional versioned report records
+  the provenance evidence, suggested default, and current helper limitations without becoming a
+  new import contract.
   First-party and custom pack crates should also keep pack provenance explicit through
   `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic

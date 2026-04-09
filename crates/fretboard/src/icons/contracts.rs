@@ -77,6 +77,12 @@ pub struct SuggestPresentationDefaultsArgs {
     /// Output path for the emitted `presentation-defaults.json` suggestion.
     #[arg(long, value_name = "FILE")]
     pub out: PathBuf,
+    /// Optional output path for a versioned suggestion report JSON.
+    ///
+    /// This report is advisory and keeps the helper's derivation evidence reviewable without
+    /// changing the generator/import contract.
+    #[arg(long, value_name = "FILE")]
+    pub report_out: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Subcommand, PartialEq, Eq)]

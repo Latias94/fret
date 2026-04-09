@@ -116,6 +116,9 @@ fn run_suggest_contract(args: IconSuggestCommandArgs) -> Result<(), String> {
             let report = suggest::run_presentation_defaults_suggestion_contract(args)?;
             println!("Suggested presentation-defaults config:");
             println!("  output          : {}", report.out_path.display());
+            if let Some(report_path) = &report.report_path {
+                println!("  report          : {}", report_path.display());
+            }
             println!("  collection      : {}", report.collection);
             println!("  palette         : {}", report.palette);
             println!(
@@ -661,6 +664,7 @@ mod tests {
                         SuggestPresentationDefaultsArgs {
                             provenance: provenance_file,
                             out: suggestion_file.clone(),
+                            report_out: None,
                         },
                     ),
                 }),

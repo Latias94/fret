@@ -533,6 +533,10 @@ fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.pr
 ```
 
 Treat the emitted file as advisory and review it before passing it into `icons import ...`.
+If you want that review to stay as a committed artifact, add
+`--report-out ./iconify/presentation-defaults.report.json`; the optional versioned report keeps
+the provenance evidence, suggested default, and helper limitations visible without changing import
+behavior.
 
 That generated crate already emits `PACK_METADATA`, `PACK` / `VENDOR_PACK`, and explicit
 `my_icons::app::install(...)` wiring.

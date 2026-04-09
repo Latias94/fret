@@ -3080,6 +3080,10 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains(
             "`fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json`"
         ));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`--report-out ./iconify/presentation-defaults.report.json`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("\"schema_version\": 1"));
         assert!(CRATE_USAGE_GUIDE.contains("\"semantic_id\": \"ui.search\""));
         assert!(CRATE_USAGE_GUIDE.contains("\"default_render_mode\": \"mask\""));
@@ -3088,6 +3092,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`icon_name` must also use the generated icon name"));
         assert!(CRATE_USAGE_GUIDE.contains("Unlisted icons use `default_render_mode`;"));
         assert!(CRATE_USAGE_GUIDE.contains("Treat that file as advisory and review it"));
+        assert!(CRATE_USAGE_GUIDE.contains("optional versioned report records"));
         assert!(CRATE_USAGE_GUIDE.contains("`PACK_METADATA` and a data-first registration value"));
         assert!(
             CRATE_USAGE_GUIDE
@@ -3204,6 +3209,10 @@ mod authoring_surface_policy_tests {
         assert!(TODO_APP_GOLDEN_PATH.contains(
             "`fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json`"
         ));
+        assert!(
+            TODO_APP_GOLDEN_PATH
+                .contains("`--report-out ./iconify/presentation-defaults.report.json`")
+        );
         assert!(TODO_APP_GOLDEN_PATH.contains("\"schema_version\": 1"));
         assert!(TODO_APP_GOLDEN_PATH.contains("\"default_render_mode\": \"mask\""));
         assert!(TODO_APP_GOLDEN_PATH.contains("\"render_mode\": \"original-colors\""));
@@ -3217,6 +3226,7 @@ mod authoring_surface_policy_tests {
         assert!(TODO_APP_GOLDEN_PATH.contains(
             "Treat the emitted file as advisory and review it before passing it into `icons import ...`."
         ));
+        assert!(TODO_APP_GOLDEN_PATH.contains("optional versioned report keeps"));
         assert!(TODO_APP_GOLDEN_PATH.contains("`my_icons::app::install(...)`"));
         assert!(TODO_APP_GOLDEN_PATH.contains("`ui::single(cx, page(...))`"));
         assert!(TODO_APP_GOLDEN_PATH.contains("When observing tracked state in views:"));

@@ -154,6 +154,7 @@ mod tests {
                 .expect("icons suggest presentation-defaults help should render");
         assert!(suggest_presentation_help.contains("--provenance"));
         assert!(suggest_presentation_help.contains("--out"));
+        assert!(suggest_presentation_help.contains("--report-out"));
     }
 
     #[test]
@@ -283,6 +284,8 @@ mod tests {
             "./mdi.provenance.json",
             "--out",
             "./presentation-defaults.json",
+            "--report-out",
+            "./presentation-defaults.report.json",
         ])
         .expect("icons suggest presentation-defaults command should parse");
 

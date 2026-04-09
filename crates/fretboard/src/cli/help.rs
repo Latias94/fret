@@ -8,6 +8,7 @@ const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --
   fretboard dev web --manifest-path ./Cargo.toml --no-open
   fretboard icons acquire iconify-collection --collection mdi --icon home --out ./iconify/mdi-home.json
   fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json
+  fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json --report-out ./iconify/presentation-defaults.report.json
   fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app --presentation-defaults ./presentation-defaults.json
   fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app
   fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app --semantic-aliases ./semantic-aliases.json
