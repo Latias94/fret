@@ -2,7 +2,7 @@
 //!
 //! This crate is intentionally rendering-agnostic:
 //! - Components depend on semantic icon IDs (`IconId`).
-//! - Icon packs register assets as data (`IconSource`).
+//! - Icon packs register icon definitions (source + fallback + presentation).
 //! - Rendering (SVG raster caching, budgets, atlases) remains in the renderer layer.
 
 use std::{
@@ -82,6 +82,151 @@ pub enum IconSource {
     Alias(IconId),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IconRenderMode {
+    #[default]
+    Mask,
+    OriginalColors,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct IconPresentation {
+    pub render_mode: IconRenderMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IconGlyphFallback {
+    pub glyph: char,
+    pub font_family: Cow<'static, str>,
+}
+
+impl IconGlyphFallback {
+    pub fn new(glyph: char, font_family: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            glyph,
+            font_family: font_family.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IconFallback {
+    Glyph(IconGlyphFallback),
+}
+
+#[derive(Debug, Clone)]
+pub struct IconDefinition {
+    pub source: IconSource,
+    pub fallback: Option<IconFallback>,
+    pub presentation: IconPresentation,
+}
+
+impl IconDefinition {
+    pub fn new(source: IconSource) -> Self {
+        Self {
+            source,
+            fallback: None,
+            presentation: IconPresentation::default(),
+        }
+    }
+
+    pub fn svg_static(svg: &'static [u8]) -> Self {
+        Self::new(IconSource::SvgStatic(svg))
+    }
+
+    pub fn svg_bytes(svg: Arc<[u8]>) -> Self {
+        Self::new(IconSource::SvgBytes(svg))
+    }
+
+    pub fn alias(target: IconId) -> Self {
+        Self::new(IconSource::Alias(target))
+    }
+
+    pub fn with_presentation(mut self, presentation: IconPresentation) -> Self {
+        self.presentation = presentation;
+        self
+    }
+
+    pub fn with_render_mode(mut self, render_mode: IconRenderMode) -> Self {
+        self.presentation.render_mode = render_mode;
+        self
+    }
+
+    pub fn with_fallback(mut self, fallback: IconFallback) -> Self {
+        self.fallback = Some(fallback);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconPackImportModel {
+    Generated,
+    Vendored,
+    Manual,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IconPackMetadata {
+    pub pack_id: &'static str,
+    pub vendor_namespace: &'static str,
+    pub import_model: IconPackImportModel,
+}
+
+/// Data-first icon-pack registration contract.
+///
+/// This stays deliberately small: icon packs remain registry/data oriented rather than growing a
+/// shared trait surface. App/bootstrap layers may use this value to keep pack metadata/provenance
+/// explicit while still deferring actual install policy to the owning layer.
+#[derive(Debug, Clone, Copy)]
+pub struct IconPackRegistration {
+    pub metadata: IconPackMetadata,
+    pub register: fn(&mut IconRegistry),
+}
+
+impl IconPackRegistration {
+    pub const fn new(metadata: IconPackMetadata, register: fn(&mut IconRegistry)) -> Self {
+        Self { metadata, register }
+    }
+
+    pub fn register_into_registry(self, registry: &mut IconRegistry) {
+        (self.register)(registry);
+    }
+}
+
+/// App-owned record of installed icon packs and their provenance metadata.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct InstalledIconPacks {
+    packs: Vec<IconPackMetadata>,
+}
+
+impl InstalledIconPacks {
+    pub fn record(&mut self, metadata: IconPackMetadata) -> bool {
+        if let Some(existing) = self
+            .packs
+            .iter()
+            .find(|existing| existing.pack_id == metadata.pack_id)
+        {
+            debug_assert_eq!(
+                *existing, metadata,
+                "same pack_id should not resolve to conflicting metadata"
+            );
+            return false;
+        }
+        self.packs.push(metadata);
+        true
+    }
+
+    pub fn contains(&self, pack_id: &str) -> bool {
+        self.packs
+            .iter()
+            .any(|metadata| metadata.pack_id == pack_id)
+    }
+
+    pub fn entries(&self) -> &[IconPackMetadata] {
+        &self.packs
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegisterError {
     DuplicateId { id: IconId },
@@ -107,21 +252,38 @@ pub enum ResolveError {
 
 #[derive(Debug, Default)]
 pub struct IconRegistry {
-    icons: HashMap<IconId, IconSource>,
+    icons: HashMap<IconId, IconDefinition>,
 }
 
 impl IconRegistry {
     pub const MAX_ALIAS_DEPTH: usize = 64;
 
     pub fn register(&mut self, id: IconId, source: IconSource) -> Option<IconSource> {
-        self.icons.insert(id, source)
+        self.register_icon(id, IconDefinition::new(source))
+            .map(|existing| existing.source)
     }
 
     pub fn try_register(&mut self, id: IconId, source: IconSource) -> Result<(), RegisterError> {
+        self.try_register_icon(id, IconDefinition::new(source))
+    }
+
+    pub fn register_icon(
+        &mut self,
+        id: IconId,
+        definition: IconDefinition,
+    ) -> Option<IconDefinition> {
+        self.icons.insert(id, definition)
+    }
+
+    pub fn try_register_icon(
+        &mut self,
+        id: IconId,
+        definition: IconDefinition,
+    ) -> Result<(), RegisterError> {
         if self.icons.contains_key(&id) {
             return Err(RegisterError::DuplicateId { id });
         }
-        self.icons.insert(id, source);
+        self.icons.insert(id, definition);
         Ok(())
     }
 
@@ -131,6 +293,30 @@ impl IconRegistry {
 
     pub fn register_svg_bytes(&mut self, id: IconId, svg: Arc<[u8]>) -> Option<IconSource> {
         self.register(id, IconSource::SvgBytes(svg))
+    }
+
+    pub fn register_svg_static_with_presentation(
+        &mut self,
+        id: IconId,
+        svg: &'static [u8],
+        presentation: IconPresentation,
+    ) -> Option<IconDefinition> {
+        self.register_icon(
+            id,
+            IconDefinition::svg_static(svg).with_presentation(presentation),
+        )
+    }
+
+    pub fn register_svg_bytes_with_presentation(
+        &mut self,
+        id: IconId,
+        svg: Arc<[u8]>,
+        presentation: IconPresentation,
+    ) -> Option<IconDefinition> {
+        self.register_icon(
+            id,
+            IconDefinition::svg_bytes(svg).with_presentation(presentation),
+        )
     }
 
     pub fn alias(&mut self, id: IconId, target: IconId) -> Option<IconSource> {
@@ -149,7 +335,7 @@ impl IconRegistry {
         if self.icons.contains_key(&id) {
             return false;
         }
-        self.icons.insert(id, IconSource::Alias(target));
+        self.icons.insert(id, IconDefinition::alias(target));
         true
     }
 
@@ -169,45 +355,40 @@ impl IconRegistry {
         self.icons.keys()
     }
 
-    pub fn resolve(&self, id: &IconId) -> Result<ResolvedSvg<'_>, ResolveError> {
-        let mut current = id;
-        let mut chain = vec![id.clone()];
+    pub fn resolve_icon(&self, id: &IconId) -> Result<ResolvedIcon<'_>, ResolveError> {
+        let definition = self.resolve_definition(id)?;
+        let svg = match &definition.source {
+            IconSource::SvgStatic(bytes) => ResolvedSvg::Static(bytes),
+            IconSource::SvgBytes(bytes) => ResolvedSvg::Bytes(bytes),
+            IconSource::Alias(_) => unreachable!("alias chains must be resolved before returning"),
+        };
 
-        for _ in 0..Self::MAX_ALIAS_DEPTH {
-            let Some(source) = self.icons.get(current) else {
-                return Err(ResolveError::Missing {
-                    requested: id.clone(),
-                    missing: current.clone(),
-                    chain,
-                });
-            };
-
-            match source {
-                IconSource::SvgStatic(bytes) => return Ok(ResolvedSvg::Static(bytes)),
-                IconSource::SvgBytes(bytes) => return Ok(ResolvedSvg::Bytes(bytes)),
-                IconSource::Alias(next) => {
-                    if chain.iter().any(|seen| seen == next) {
-                        chain.push(next.clone());
-                        return Err(ResolveError::AliasLoop {
-                            requested: id.clone(),
-                            chain,
-                        });
-                    }
-                    chain.push(next.clone());
-                    current = next;
-                }
-            }
-        }
-
-        Err(ResolveError::AliasDepthExceeded {
-            requested: id.clone(),
-            chain,
-            max_depth: Self::MAX_ALIAS_DEPTH,
+        Ok(ResolvedIcon {
+            svg,
+            fallback: definition.fallback.as_ref(),
+            presentation: definition.presentation,
         })
+    }
+
+    pub fn resolve(&self, id: &IconId) -> Result<ResolvedSvg<'_>, ResolveError> {
+        self.resolve_icon(id).map(|resolved| resolved.svg)
+    }
+
+    pub fn resolve_icon_owned(&self, id: &IconId) -> Result<ResolvedIconOwned, ResolveError> {
+        self.resolve_icon(id).map(ResolvedIcon::into_owned)
     }
 
     pub fn resolve_owned(&self, id: &IconId) -> Result<ResolvedSvgOwned, ResolveError> {
         self.resolve(id).map(ResolvedSvg::into_owned)
+    }
+
+    pub fn resolve_icon_or_missing_owned(&self, id: &IconId) -> ResolvedIconOwned {
+        self.resolve_icon_owned(id)
+            .unwrap_or_else(|_| ResolvedIconOwned {
+                svg: ResolvedSvgOwned::Static(MISSING_ICON_SVG),
+                fallback: None,
+                presentation: IconPresentation::default(),
+            })
     }
 
     pub fn resolve_or_missing_owned(&self, id: &IconId) -> ResolvedSvgOwned {
@@ -227,6 +408,42 @@ impl IconRegistry {
                 FrozenIconRegistry::default()
             }
         }
+    }
+
+    fn resolve_definition(&self, id: &IconId) -> Result<&IconDefinition, ResolveError> {
+        let mut current = id;
+        let mut chain = vec![id.clone()];
+
+        for _ in 0..Self::MAX_ALIAS_DEPTH {
+            let Some(definition) = self.icons.get(current) else {
+                return Err(ResolveError::Missing {
+                    requested: id.clone(),
+                    missing: current.clone(),
+                    chain,
+                });
+            };
+
+            match &definition.source {
+                IconSource::Alias(next) => {
+                    if chain.iter().any(|seen| seen == next) {
+                        chain.push(next.clone());
+                        return Err(ResolveError::AliasLoop {
+                            requested: id.clone(),
+                            chain,
+                        });
+                    }
+                    chain.push(next.clone());
+                    current = next;
+                }
+                IconSource::SvgStatic(_) | IconSource::SvgBytes(_) => return Ok(definition),
+            }
+        }
+
+        Err(ResolveError::AliasDepthExceeded {
+            requested: id.clone(),
+            chain,
+            max_depth: Self::MAX_ALIAS_DEPTH,
+        })
     }
 }
 
@@ -272,6 +489,11 @@ impl IconRegistryBuilder {
         self
     }
 
+    pub fn register_icon(mut self, id: IconId, definition: IconDefinition) -> Self {
+        self.registry.register_icon(id, definition);
+        self
+    }
+
     pub fn register_svg_static(mut self, id: IconId, svg: &'static [u8]) -> Self {
         self.registry.register_svg_static(id, svg);
         self
@@ -302,7 +524,7 @@ impl IconRegistryBuilder {
 
 #[derive(Debug, Clone, Default)]
 pub struct FrozenIconRegistry {
-    icons: HashMap<IconId, ResolvedSvgOwned>,
+    icons: HashMap<IconId, ResolvedIconOwned>,
 }
 
 impl FrozenIconRegistry {
@@ -318,7 +540,7 @@ impl FrozenIconRegistry {
         let mut errors = Vec::new();
 
         for id in ids {
-            match registry.resolve_owned(&id) {
+            match registry.resolve_icon_owned(&id) {
                 Ok(resolved) => {
                     icons.insert(id, resolved);
                 }
@@ -337,15 +559,26 @@ impl FrozenIconRegistry {
         self.icons.keys()
     }
 
-    pub fn entries(&self) -> impl Iterator<Item = (&IconId, &ResolvedSvgOwned)> {
+    pub fn entries(&self) -> impl Iterator<Item = (&IconId, &ResolvedIconOwned)> {
         self.icons.iter()
     }
 
-    pub fn collect_owned(&self) -> Vec<(IconId, ResolvedSvgOwned)> {
+    pub fn collect_icons_owned(&self) -> Vec<(IconId, ResolvedIconOwned)> {
         let mut ids: Vec<IconId> = self.icon_ids().cloned().collect();
         ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
         ids.into_iter()
-            .filter_map(|id| self.resolve(&id).cloned().map(|resolved| (id, resolved)))
+            .filter_map(|id| {
+                self.resolve_icon(&id)
+                    .cloned()
+                    .map(|resolved| (id, resolved))
+            })
+            .collect()
+    }
+
+    pub fn collect_owned(&self) -> Vec<(IconId, ResolvedSvgOwned)> {
+        self.collect_icons_owned()
+            .into_iter()
+            .map(|(id, resolved)| (id, resolved.svg))
             .collect()
     }
 
@@ -357,14 +590,43 @@ impl FrozenIconRegistry {
         self.icons.is_empty()
     }
 
-    pub fn resolve(&self, id: &IconId) -> Option<&ResolvedSvgOwned> {
+    pub fn resolve_icon(&self, id: &IconId) -> Option<&ResolvedIconOwned> {
         self.icons.get(id)
+    }
+
+    pub fn resolve(&self, id: &IconId) -> Option<&ResolvedSvgOwned> {
+        self.icons.get(id).map(|resolved| &resolved.svg)
+    }
+
+    pub fn resolve_icon_or_missing_owned(&self, id: &IconId) -> ResolvedIconOwned {
+        self.resolve_icon(id).cloned().unwrap_or(ResolvedIconOwned {
+            svg: ResolvedSvgOwned::Static(MISSING_ICON_SVG),
+            fallback: None,
+            presentation: IconPresentation::default(),
+        })
     }
 
     pub fn resolve_or_missing_owned(&self, id: &IconId) -> ResolvedSvgOwned {
         self.resolve(id)
             .cloned()
             .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+    }
+}
+
+#[derive(Debug)]
+pub struct ResolvedIcon<'a> {
+    pub svg: ResolvedSvg<'a>,
+    pub fallback: Option<&'a IconFallback>,
+    pub presentation: IconPresentation,
+}
+
+impl ResolvedIcon<'_> {
+    pub fn into_owned(self) -> ResolvedIconOwned {
+        ResolvedIconOwned {
+            svg: self.svg.into_owned(),
+            fallback: self.fallback.cloned(),
+            presentation: self.presentation,
+        }
     }
 }
 
@@ -396,6 +658,13 @@ impl ResolvedSvgOwned {
             Self::Bytes(bytes) => bytes.as_ref(),
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct ResolvedIconOwned {
+    pub svg: ResolvedSvgOwned,
+    pub fallback: Option<IconFallback>,
+    pub presentation: IconPresentation,
 }
 
 pub const MISSING_ICON_SVG: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M16 8 8 16"/><path d="M8 8l8 8"/></svg>"#;
@@ -443,5 +712,73 @@ mod tests {
 
         let frozen = registry.freeze_or_default_with_context("test.freeze_or_default");
         assert!(frozen.is_empty());
+    }
+
+    #[test]
+    fn resolve_icon_preserves_presentation_and_fallback_through_aliases() {
+        let definition = IconDefinition::svg_static(b"<svg/>" as &[u8])
+            .with_render_mode(IconRenderMode::OriginalColors)
+            .with_fallback(IconFallback::Glyph(IconGlyphFallback::new(
+                '?',
+                "fallback-ui",
+            )));
+
+        let registry = IconRegistryBuilder::new()
+            .register_icon(IconId::new_static("base"), definition)
+            .alias(IconId::new_static("alias"), IconId::new_static("base"))
+            .build();
+
+        let resolved = registry
+            .resolve_icon_owned(&IconId::new_static("alias"))
+            .expect("alias must resolve to full icon definition");
+
+        assert_eq!(
+            resolved.presentation.render_mode,
+            IconRenderMode::OriginalColors
+        );
+        match resolved.fallback {
+            Some(IconFallback::Glyph(glyph)) => {
+                assert_eq!(glyph.glyph, '?');
+                assert_eq!(glyph.font_family.as_ref(), "fallback-ui");
+            }
+            other => panic!("unexpected fallback: {other:?}"),
+        }
+        assert_eq!(resolved.svg.as_bytes(), b"<svg/>");
+    }
+
+    #[test]
+    fn icon_pack_registration_registers_through_explicit_value_object() {
+        fn register_demo(registry: &mut IconRegistry) {
+            let _ = registry.register_svg_static(IconId::new_static("demo.icon"), b"<svg/>");
+        }
+
+        let pack = IconPackRegistration::new(
+            IconPackMetadata {
+                pack_id: "demo-pack",
+                vendor_namespace: "demo",
+                import_model: IconPackImportModel::Manual,
+            },
+            register_demo,
+        );
+
+        let mut registry = IconRegistry::default();
+        pack.register_into_registry(&mut registry);
+
+        assert!(registry.contains(&IconId::new_static("demo.icon")));
+    }
+
+    #[test]
+    fn installed_icon_packs_dedupes_same_pack_metadata() {
+        let metadata = IconPackMetadata {
+            pack_id: "demo-pack",
+            vendor_namespace: "demo",
+            import_model: IconPackImportModel::Generated,
+        };
+
+        let mut installed = InstalledIconPacks::default();
+        assert!(installed.record(metadata));
+        assert!(!installed.record(metadata));
+        assert!(installed.contains("demo-pack"));
+        assert_eq!(installed.entries(), &[metadata]);
     }
 }

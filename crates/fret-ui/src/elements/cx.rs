@@ -34,8 +34,9 @@ use crate::element::{
     InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps, OpacityProps,
     PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
     ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
-    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
+    StyledTextProps, SvgIconProps, SvgImageProps, TextAreaProps, TextInputProps, TextProps,
+    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
+    VisualTransformProps,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -3670,6 +3671,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.new_any_element(id, ElementKind::SvgIcon(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn svg_image(&mut self, svg: SvgSource) -> AnyElement {
+        self.svg_image_props(SvgImageProps::new(svg))
+    }
+
+    #[track_caller]
+    pub fn svg_image_props(&mut self, props: SvgImageProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.new_any_element(id, ElementKind::SvgImage(props), Vec::new())
         })
     }
 

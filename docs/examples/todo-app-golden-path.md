@@ -481,5 +481,8 @@ Recommended for apps:
 If you need a custom pack, expose the same app-facing seam from your own crate and call
 `.setup(my_icons::app::install)`.
 
+If you are on `fret_bootstrap` directly, prefer an explicit pack contract such as
+`.register_icon_pack_contract(my_icons::PACK)`.
+
 If you intentionally need raw registry control, drop to
 `fret_bootstrap::BootstrapBuilder::register_icon_pack(...)`.

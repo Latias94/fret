@@ -195,6 +195,7 @@ impl ElementHostWidget {
             | ElementInstance::Canvas(_)
             | ElementInstance::ViewportSurface(_)
             | ElementInstance::SvgIcon(_)
+            | ElementInstance::SvgImage(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Text(_)
             | ElementInstance::StyledText(_)
@@ -1569,6 +1570,9 @@ impl ElementHostWidget {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             ElementInstance::SvgIcon(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
+            ElementInstance::SvgImage(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             ElementInstance::Spinner(props) => {

@@ -76,7 +76,7 @@ use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, TextIntera
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
 #[cfg(not(target_arch = "wasm32"))]
-use fret_icons::IconRegistry;
+use fret_icons::{IconPackRegistration, IconRegistry, InstalledIconPacks};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
@@ -584,7 +584,29 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         builder
     }
 
+    /// Register an icon pack through the explicit pack contract.
+    ///
+    /// Prefer this when a pack crate exports `PACK` / `VENDOR_PACK` style registration values
+    /// together with explicit metadata/provenance.
+    pub fn register_icon_pack_contract(mut self, pack: IconPackRegistration) -> Self {
+        self.inner = self.inner.init_app(move |app| {
+            app.with_global_mut(IconRegistry::default, |icons, app| {
+                pack.register_into_registry(icons);
+                let frozen = icons
+                    .freeze_or_default_with_context("fret_bootstrap.register_icon_pack_contract");
+                app.set_global(frozen);
+            });
+            app.with_global_mut(InstalledIconPacks::default, |installed, _app| {
+                installed.record(pack.metadata);
+            });
+        });
+        self
+    }
+
     /// Register an icon pack (e.g. `fret_icons_lucide::register_icons`) into the global `IconRegistry`.
+    ///
+    /// This is the raw registry-only escape hatch. Prefer [`Self::register_icon_pack_contract`]
+    /// when a pack crate exports explicit pack metadata.
     pub fn register_icon_pack(mut self, register: fn(&mut IconRegistry)) -> Self {
         self.inner = self.inner.init_app(move |app| {
             app.with_global_mut(IconRegistry::default, |icons, app| {
@@ -602,10 +624,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Requires enabling the `fret-bootstrap/icons-lucide` feature.
     #[cfg(feature = "icons-lucide")]
     pub fn with_lucide_icons(self) -> Self {
-        let builder = self.register_icon_pack(fret_icons_lucide::register_vendor_icons);
+        let builder = self.register_icon_pack_contract(fret_icons_lucide::VENDOR_PACK);
 
         #[cfg(feature = "icons-ui-semantic-lucide")]
-        let builder = builder.register_icon_pack(fret_icons_lucide::register_ui_semantic_aliases);
+        let builder =
+            builder.register_icon_pack_contract(fret_icons_lucide::UI_SEMANTIC_ALIAS_PACK);
 
         builder
     }
@@ -615,7 +638,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Requires enabling the `fret-bootstrap/icons-radix` feature.
     #[cfg(feature = "icons-radix")]
     pub fn with_radix_icons(self) -> Self {
-        let builder = self.register_icon_pack(fret_icons_radix::register_vendor_icons);
+        let builder = self.register_icon_pack_contract(fret_icons_radix::VENDOR_PACK);
 
         // If both semantic providers are enabled, prefer Lucide's `ui.*` aliases to keep a stable
         // default (Lucide is the `fret` crate's default icon pack).
@@ -623,7 +646,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             feature = "icons-ui-semantic-radix",
             not(feature = "icons-ui-semantic-lucide")
         ))]
-        let builder = builder.register_icon_pack(fret_icons_radix::register_ui_semantic_aliases);
+        let builder = builder.register_icon_pack_contract(fret_icons_radix::UI_SEMANTIC_ALIAS_PACK);
 
         builder
     }
@@ -1062,6 +1085,16 @@ mod fn_driver_builder_tests {
         assert!(!lib_rs.contains(&bundle_entries_helper));
         assert!(!lib_rs.contains(&embedded_entries_helper));
         assert!(lib_rs.contains(&startup_helper));
+    }
+
+    #[test]
+    fn bootstrap_builder_keeps_contract_aware_icon_pack_registration_explicit() {
+        let lib_rs = include_str!("lib.rs");
+        assert!(lib_rs.contains("pub fn register_icon_pack_contract("));
+        assert!(lib_rs.contains("pub fn register_icon_pack("));
+        assert!(lib_rs.contains("raw registry-only escape hatch"));
+        assert!(lib_rs.contains("fret_icons_lucide::VENDOR_PACK"));
+        assert!(lib_rs.contains("fret_icons_radix::VENDOR_PACK"));
     }
 
     #[test]

@@ -67,15 +67,23 @@ Ergonomics:
 - Prefer using shared constants for common IDs (e.g. `fret_components_icons::ids::*`) to avoid typos and to make
   cross-crate refactors safer.
 
-### 2) Icon registry: source is data, not rendering
+### 2) Icon registry: definition is data, not rendering
 
-`fret-icons` also provides an `IconRegistry` mapping `IconId -> IconSource`.
+`fret-icons` also provides an `IconRegistry` mapping `IconId -> IconDefinition`.
 
-`IconSource` is renderer-agnostic and supports:
+`IconDefinition` is renderer-agnostic and groups:
 
-- SVG bytes (static/owned).
-- Glyph fallback (for bootstrap/minimal builds).
-- Aliases (for migration and compatibility).
+- `IconSource`
+  - SVG bytes (static/owned),
+  - aliases (for migration and compatibility),
+- optional fallback data (for example glyph fallback in bootstrap/minimal builds),
+- `IconPresentation`
+  - including the preferred render mode (`Mask` vs `OriginalColors`).
+
+Rule:
+
+- `IconSource` stays source data only; it must not become a rendering-policy bag.
+- Aliases resolve to the full target icon definition, not only to raw bytes.
 
 The registry supports layering (app overrides component defaults) and safe fallbacks:
 
@@ -86,8 +94,8 @@ The registry supports layering (app overrides component defaults) and safe fallb
   `IconRegistry::alias_if_missing(...)`, which makes the first successfully registered provider the
   stable default.
 - App/bootstrap code may intentionally override a semantic alias afterwards with
-  `IconRegistry::alias(...)` or `IconRegistry::register(...)`; this is the explicit escape hatch for
-  product-specific icon choices.
+  `IconRegistry::alias(...)`, `IconRegistry::register(...)`, or `IconRegistry::register_icon(...)`;
+  this is the explicit escape hatch for product-specific icon choices.
 
 ### 3) Asset packaging: icon sets are separate crates (and/or features)
 
@@ -118,6 +126,14 @@ App-facing convenience wrappers may exist above this low-level registration seam
 those wrappers explicit and grep-friendly rather than requiring app authors to manually replay
 internal icon/asset registration steps.
 
+Pack crates should also keep provenance explicit in code rather than only in README prose:
+
+- export `PACK_METADATA: IconPackMetadata`,
+- export one or more data-first registration values (`PACK`, `VENDOR_PACK`, and optional
+  semantic-alias registration values),
+- and let app/bootstrap layers record installed-pack metadata separately from the renderer-agnostic
+  `IconRegistry`.
+
 ### 3.5) Relationship to the general asset contract
 
 The framework currently uses a deliberate hybrid model:
@@ -140,10 +156,13 @@ Rules:
 ### Rendering contract (components layer)
 
 Component-layer helpers (e.g. `fret-ui-kit` `Icon` / `IconButton`) render an `IconId` by resolving
-`IconSource`:
+`ResolvedIcon`:
 
-- Preferred: SVG bytes -> `fret_ui::SvgSource` + declarative `SvgIcon` element (`ElementContext::svg_icon`), emitting `SceneOp::SvgMaskIcon`.
-- Optional: for multi-color assets -> render as an `ImageId` (renderer-owned rasterization/caching).
+- Themed icon path: SVG bytes + `IconRenderMode::Mask` ->
+  `fret_ui::SvgSource` + declarative `SvgIcon` element (`ElementContext::svg_icon`), emitting
+  `SceneOp::SvgMaskIcon`.
+- Original-color path: SVG bytes + `IconRenderMode::OriginalColors` ->
+  declarative `SvgImage` element (`ElementContext::svg_image`), emitting `SceneOp::SvgImage`.
 - Fallback: glyph -> existing text pipeline.
 
 No component code holds `ImageId` or manages raster caches directly.
@@ -157,8 +176,8 @@ In-tree helper:
 
 - `fret_ui_kit::declarative::icon::preload_icon_svgs(app, renderer_as_ui_services)` (feature `icons`)
 
-This stores `IconId -> SvgId` in an `IconSvgRegistry` global so `fret-ui-kit` icon helpers can
-emit `SvgSource::Id` directly.
+This stores `IconId -> (SvgId, IconPresentation)` in an `IconSvgRegistry` global so SVG-bearing
+icon helpers can emit `SvgSource::Id` directly while still preserving authored render mode.
 
 ## Consequences
 

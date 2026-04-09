@@ -283,6 +283,7 @@ pub enum ElementKind {
     /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0123).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),
+    SvgImage(SvgImageProps),
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
     /// An event-only wheel listener that updates an imperative scroll handle.
@@ -2286,6 +2287,25 @@ impl SvgIconProps {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SvgImageProps {
+    pub layout: LayoutStyle,
+    pub svg: SvgSource,
+    pub fit: SvgFit,
+    pub opacity: f32,
+}
+
+impl SvgImageProps {
+    pub fn new(svg: SvgSource) -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            svg,
+            fit: SvgFit::Contain,
+            opacity: 1.0,
+        }
+    }
+}
+
 /// A simple loading spinner primitive.
 ///
 /// This is intentionally low-opinionated and renderer-friendly: it paints a ring of small rounded
@@ -2988,6 +3008,12 @@ impl IntoElement for ViewportSurfaceProps {
 impl IntoElement for SvgIconProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::SvgIcon(self), Vec::new())
+    }
+}
+
+impl IntoElement for SvgImageProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::SvgImage(self), Vec::new())
     }
 }
 

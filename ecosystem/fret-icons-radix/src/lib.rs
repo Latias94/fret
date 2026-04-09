@@ -3,7 +3,9 @@
 //! This crate registers a curated subset of Radix Icons SVGs into [`fret_icons::IconRegistry`].
 //! Most users will use the higher-level install hooks exposed by the ecosystem `fret` crate.
 
-use fret_icons::{IconId, IconRegistry};
+use fret_icons::{
+    IconId, IconPackImportModel, IconPackMetadata, IconPackRegistration, IconRegistry,
+};
 
 #[cfg(feature = "semantic-ui")]
 use fret_icons::ids;
@@ -11,6 +13,21 @@ use rust_embed::RustEmbed;
 use std::{borrow::Cow, sync::Arc};
 
 pub mod generated_ids;
+
+pub const PACK_METADATA: IconPackMetadata = IconPackMetadata {
+    pack_id: "fret-icons-radix",
+    vendor_namespace: "radix",
+    import_model: IconPackImportModel::Vendored,
+};
+
+pub const VENDOR_PACK: IconPackRegistration =
+    IconPackRegistration::new(PACK_METADATA, register_vendor_icons);
+
+#[cfg(feature = "semantic-ui")]
+pub const UI_SEMANTIC_ALIAS_PACK: IconPackRegistration =
+    IconPackRegistration::new(PACK_METADATA, register_ui_semantic_aliases);
+
+pub const PACK: IconPackRegistration = IconPackRegistration::new(PACK_METADATA, register_icons);
 
 #[derive(RustEmbed)]
 #[folder = "assets"]
@@ -90,7 +107,7 @@ mod semantic_ui {
         // Prefer a reasonable fallback so semantic UI ids stay usable across packs.
         let _ = reg.alias_if_missing(ids::ui::CHEVRONS_UP_DOWN, IconId::new("radix.chevron-down"));
         let _ = reg.alias_if_missing(ids::ui::CLOSE, IconId::new("radix.cross-1"));
-        let _ = reg.alias_if_missing(ids::ui::LOADER, IconId::new("radix.update-icon"));
+        let _ = reg.alias_if_missing(ids::ui::LOADER, IconId::new("radix.update"));
         let _ = reg.alias_if_missing(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
         let _ = reg.alias_if_missing(ids::ui::RESET, IconId::new("radix.reset"));
         let _ = reg.alias_if_missing(ids::ui::SETTINGS, IconId::new("radix.gear"));
@@ -110,6 +127,9 @@ mod semantic_ui {
 
 #[cfg(test)]
 mod tests {
+    use crate::PACK_METADATA;
+    use fret_icons::IconPackImportModel;
+
     const LIB_RS: &str = include_str!("lib.rs");
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
@@ -120,10 +140,20 @@ mod tests {
     }
 
     #[test]
+    fn pack_metadata_stays_explicit_and_stable() {
+        assert_eq!(PACK_METADATA.pack_id, "fret-icons-radix");
+        assert_eq!(PACK_METADATA.vendor_namespace, "radix");
+        assert_eq!(PACK_METADATA.import_model, IconPackImportModel::Vendored);
+    }
+
+    #[test]
     fn app_integration_stays_under_explicit_app_module() {
         let public_surface = public_surface();
         assert!(public_surface.contains("pub mod app;"));
         assert!(public_surface.contains("pub mod advanced;"));
+        assert!(public_surface.contains("pub const PACK_METADATA: IconPackMetadata"));
+        assert!(public_surface.contains("pub const VENDOR_PACK: IconPackRegistration"));
+        assert!(public_surface.contains("pub const PACK: IconPackRegistration"));
         assert!(!public_surface.contains("pub use app::"));
         assert!(!public_surface.contains("pub use advanced::"));
         assert!(!public_surface.contains("pub fn install("));
@@ -136,6 +166,7 @@ mod tests {
     #[test]
     fn readme_keeps_app_installation_and_alias_policy_explicit() {
         assert!(README.contains("`register_vendor_icons(...)` / `register_icons(...)`"));
+        assert!(README.contains("`PACK_METADATA` / `PACK`"));
         assert!(README.contains("`fret_icons_radix::app::install(...)`"));
         assert!(README.contains("`fret_icons_radix::advanced::install_with_ui_services(...)`"));
         assert!(README.contains("semantic `IconId` / `ui.*` ids"));
@@ -143,5 +174,28 @@ mod tests {
         assert!(README.contains("without mutating `radix.*` vendor ids"));
         assert!(README.contains("one installer/bundle surface"));
         assert!(README.contains("`app-integration`"));
+    }
+
+    #[cfg(feature = "app-integration")]
+    #[test]
+    fn app_install_records_pack_metadata_and_freezes_registry() {
+        use crate::IconId;
+
+        let mut app = fret_app::App::new();
+        crate::app::install(&mut app);
+
+        let installed = app
+            .global::<fret_icons::InstalledIconPacks>()
+            .expect("expected installed icon pack metadata to be recorded");
+        assert!(installed.contains(PACK_METADATA.pack_id));
+
+        let frozen = app
+            .global::<fret_icons::FrozenIconRegistry>()
+            .expect("expected app install to refresh the frozen icon registry");
+        assert!(
+            frozen
+                .resolve(&IconId::new("radix.magnifying-glass"))
+                .is_some()
+        );
     }
 }

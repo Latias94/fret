@@ -522,6 +522,11 @@ impl ElementHostWidget {
                 props.layout,
                 cx.constraints,
             ),
+            ElementInstance::SvgImage(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
             ElementInstance::Scrollbar(props) => clamp_to_constraints_in_measure(
                 Size::new(Px(0.0), Px(0.0)),
                 props.layout,

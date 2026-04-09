@@ -3071,6 +3071,11 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(fret_icons_radix::app::install)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_lucide::app::install`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_radix::app::install`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`PACK_METADATA` and a data-first registration value"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`BootstrapBuilder::register_icon_pack_contract(my_icons::PACK)`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`"));
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(MyKitBundle)`"));
         assert!(
@@ -3086,6 +3091,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret_node::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::register_icon_pack(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::register_icon_pack_contract(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`FretApp::register_icon_pack(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::register_icon_pack(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_lucide_icons()`"));
@@ -3171,6 +3177,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("`.register_icon_pack_contract(my_icons::PACK)`"));
         assert!(TODO_APP_GOLDEN_PATH.contains("`ui::single(cx, page(...))`"));
         assert!(TODO_APP_GOLDEN_PATH.contains("When observing tracked state in views:"));
         assert!(

@@ -203,6 +203,7 @@ mod layout;
 mod layout_queries;
 mod selection_indices;
 mod semantics;
+mod svg_image;
 mod text_cache;
 mod text_style_inheritance;
 mod view_cache;

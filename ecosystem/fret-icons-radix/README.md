@@ -5,6 +5,9 @@ Radix Icons are designed on a 15×15 grid, which is expected to scale to the req
 ## Integration surface
 
 - `register_vendor_icons(...)` / `register_icons(...)` are the low-level registry hooks.
+- `PACK_METADATA` / `PACK` keep the pack's provenance and default registration shape explicit.
+  `VENDOR_PACK` is the vendor-only contract when bootstrap/manual assembly needs to separate
+  vendor ids from semantic alias policy.
 - Enable `app-integration` when you want explicit installer surfaces under
   `fret_icons_radix::app::install(...)` and
   `fret_icons_radix::advanced::install_with_ui_services(...)`.
@@ -38,6 +41,12 @@ The SVG assets in `assets/icons/*.svg` are derived from the upstream Radix Icons
 - `semantic-ui` (default): registers the semantic `ui.*` IDs for the icons listed above.
 - `app-integration`: enables `fret_icons_radix::app::install(...)` and
   `fret_icons_radix::advanced::install_with_ui_services(...)`.
+
+## Pack metadata
+
+- `PACK_METADATA.pack_id`: `fret-icons-radix`
+- `PACK_METADATA.vendor_namespace`: `radix`
+- `PACK_METADATA.import_model`: `Vendored`
 
 ## Vendor IDs
 

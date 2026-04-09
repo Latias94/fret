@@ -548,13 +548,17 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   explicit pack through `FretApp::setup(fret_icons_lucide::app::install)` /
   `FretApp::setup(fret_icons_radix::app::install)`. For custom packs, publish the same shape on
   your own crate and call `FretApp::setup(my_icons::app::install)`.
+  First-party and custom pack crates should also keep pack provenance explicit through
+  `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic
   `ui.*` ids as the reusable default for component crates. Today semantic alias registration is
   install-order-sensitive (`first installed pack wins`), so reusable crates should not assume more
   than one semantic provider unless they document that requirement.
 - **Apps using `fret-bootstrap` directly:** use `BootstrapBuilder::with_lucide_icons()` /
-  `BootstrapBuilder::with_radix_icons()`. For custom packs, call
-  `BootstrapBuilder::register_icon_pack(...)`.
+  `BootstrapBuilder::with_radix_icons()`. For custom packs, prefer
+  `BootstrapBuilder::register_icon_pack_contract(...)`, for example
+  `BootstrapBuilder::register_icon_pack_contract(my_icons::PACK)` and keep
+  `BootstrapBuilder::register_icon_pack(...)` as the raw registry-only escape hatch.
 - **Direct app wiring:** when you depend on a pack directly, use the explicit `crate::app` seam
   (`fret_icons_lucide::app::install`, `fret_icons_radix::app::install`) instead of root-level
   install helpers.

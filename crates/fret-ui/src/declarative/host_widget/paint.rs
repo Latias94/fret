@@ -1788,6 +1788,21 @@ impl ElementHostWidget {
                     opacity,
                 });
             }
+            ElementInstance::SvgImage(props) => {
+                let opacity = props.opacity.clamp(0.0, 1.0);
+                if opacity <= 0.0 {
+                    return;
+                }
+
+                let svg = self.resolve_svg_for_icon(cx.services, &props.svg);
+                cx.scene.push(SceneOp::SvgImage {
+                    order: DrawOrder(0),
+                    rect: cx.bounds,
+                    svg,
+                    fit: props.fit,
+                    opacity,
+                });
+            }
             ElementInstance::Spinner(props) => {
                 let inherited_fg = cx.paint_style.foreground;
                 let theme = cx.theme();

@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "slug": "icon-system-extension-v1",
+  "title": "Icon System Extension v1",
+  "status": "closed",
+  "updated": "2026-04-09",
+  "scope_kind": "closeout",
+  "problem": "This lane froze the v1 icon contract on semantic `IconId`, the explicit `SvgIcon` vs `SvgImage` runtime split, and explicit third-party pack metadata/install seams; it now exists to preserve the closeout evidence without reopening broader pack-specific scope by accident.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/icon-system-extension-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/icon-system-extension-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/icon-system-extension-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/icon-system-extension-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/icon-system-extension-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/icon-system-extension-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Historical closeout validation for the shipped icon contract, multicolor runtime split, and third-party pack protocol.",
+    "commands": [
+      "cargo nextest run -p fret-icons -p fret-icons-lucide -p fret-icons-radix",
+      "cargo test -p fret-icons-lucide --features app-integration app_install_records_pack_metadata_and_freezes_registry",
+      "cargo test -p fret-icons-radix --features app-integration app_install_records_pack_metadata_and_freezes_registry",
+      "cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface",
+      "cargo nextest run -p fret-ui svg_image_props_paint_to_svg_image_scene_op foreground_scope_late_binds_foreground_for_text_and_icons inherited_foreground_on_existing_root_late_binds_for_text_icon_and_spinner",
+      "cargo nextest run -p fret-ui-kit",
+      "cargo nextest run -p fret-bootstrap",
+      "python3 tools/check_layering.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "icon-packs",
+      "command": "cargo nextest run -p fret-icons -p fret-icons-lucide -p fret-icons-radix"
+    },
+    {
+      "name": "lucide-app-integration",
+      "command": "cargo test -p fret-icons-lucide --features app-integration app_install_records_pack_metadata_and_freezes_registry"
+    },
+    {
+      "name": "radix-app-integration",
+      "command": "cargo test -p fret-icons-radix --features app-integration app_install_records_pack_metadata_and_freezes_registry"
+    },
+    {
+      "name": "bootstrap-feature-matrix",
+      "command": "cargo check -p fret-bootstrap --features \"icons-lucide,icons-radix,icons-ui-semantic-lucide,icons-ui-semantic-radix\""
+    },
+    {
+      "name": "fret-doc-surfaces",
+      "command": "cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface"
+    },
+    {
+      "name": "fret-ui-svg-image",
+      "command": "cargo nextest run -p fret-ui svg_image_props_paint_to_svg_image_scene_op foreground_scope_late_binds_foreground_for_text_and_icons inherited_foreground_on_existing_root_late_binds_for_text_icon_and_spinner"
+    },
+    {
+      "name": "fret-ui-kit",
+      "command": "cargo nextest run -p fret-ui-kit"
+    },
+    {
+      "name": "fret-ui-material3",
+      "command": "cargo check -p fret-ui-material3"
+    },
+    {
+      "name": "fret-bootstrap",
+      "command": "cargo nextest run -p fret-bootstrap"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/crate-usage-guide.md",
+    "docs/examples/todo-app-golden-path.md",
+    "docs/workstreams/icon-system-extension-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/icon-system-extension-v1/DESIGN.md",
+    "docs/workstreams/icon-system-extension-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/icon-system-extension-v1/TODO.md",
+    "docs/workstreams/icon-system-extension-v1/MILESTONES.md",
+    "docs/workstreams/icon-system-extension-v1/EVIDENCE_AND_GATES.md",
+    "ecosystem/fret-icons/src/lib.rs",
+    "ecosystem/fret-icons-lucide/src/lib.rs",
+    "ecosystem/fret-icons-lucide/src/app.rs",
+    "ecosystem/fret-icons-lucide/tests/semantic_alias_conflicts.rs",
+    "ecosystem/fret-icons-radix/src/lib.rs",
+    "ecosystem/fret-icons-radix/src/app.rs",
+    "ecosystem/fret-ui-kit/src/declarative/icon.rs",
+    "ecosystem/fret-bootstrap/src/lib.rs",
+    "ecosystem/fret/src/lib.rs",
+    "crates/fret-ui/src/element.rs",
+    "crates/fret-ui/src/elements/cx.rs",
+    "crates/fret-ui/src/declarative/host_widget/paint.rs",
+    "crates/fret-ui/src/declarative/tests/svg_image.rs",
+    "crates/fret-core/src/scene/mod.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this lane from archived TODO rows. Start a narrower follow-on only if fresh evidence shows new pack-specific parity, diagnostics, or tooling pressure beyond the shipped v1 icon contract."
+  }
+}

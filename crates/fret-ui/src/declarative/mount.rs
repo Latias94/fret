@@ -1597,6 +1597,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::RetainedSubtree(p) => ElementInstance::RetainedSubtree(p),
         ElementKind::ViewportSurface(p) => ElementInstance::ViewportSurface(p),
         ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
+        ElementKind::SvgImage(p) => ElementInstance::SvgImage(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
         ElementKind::HoverRegion(p) => ElementInstance::HoverRegion(p),
         ElementKind::WheelRegion(p) => ElementInstance::WheelRegion(p),
