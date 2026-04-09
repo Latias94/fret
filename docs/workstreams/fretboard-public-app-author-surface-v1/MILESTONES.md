@@ -28,6 +28,13 @@ Exit criteria:
 - repo-only demo/cookbook shortcuts are explicitly separated,
 - and follow-on implementation work can start without re-opening the taxonomy question.
 
+Current state:
+
+- target interface frozen on 2026-04-09 in
+  `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+- repo convenience separation (`--demo`, chooser, gallery/cookbook shortcuts) is now an execution
+  item rather than an open taxonomy debate
+
 ## Milestone 3 — Public diagnostics core defined
 
 Exit criteria:

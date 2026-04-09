@@ -16,6 +16,10 @@
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md"
     },
     {
+      "role": "target",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md"
     },
@@ -62,6 +66,7 @@
   "evidence": [
     "docs/workstreams/fretboard-public-app-author-surface-v1/README.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md",

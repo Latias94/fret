@@ -16,6 +16,15 @@ It does **not** reopen parser-shell structure work. The typed split between `fre
 which commands belong to the public app-author story, and which commands remain repo-local
 maintainer tooling.
 
+Primary lane docs:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/README.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md`
+
 ## Current state snapshot (2026-04-09)
 
 - Public `fretboard` currently exposes:
@@ -126,3 +135,7 @@ If we do not make that taxonomy explicit, docs drift accumulates:
 - Keep top-level `hotpatch` repo-only unless and until it becomes a stable `dev` submode.
 - Defer the `theme import-vscode` decision until the first-wave public app-author contract is
   otherwise settled.
+
+Public `dev` target-state is frozen in:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`

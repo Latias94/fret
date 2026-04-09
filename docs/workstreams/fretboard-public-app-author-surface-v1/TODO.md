@@ -42,10 +42,15 @@ ID format:
 
 ## M2 — Define the public `dev` contract
 
-- [ ] FBPUB-dev-200 Write the target public `dev native` / `dev web` contract around project-local
+- [x] FBPUB-dev-200 Write the target public `dev native` / `dev web` contract around project-local
       inputs (`--manifest-path`, package/bin/example selection) instead of repo demo IDs.
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+    - `apps/fretboard/src/dev/contracts.rs`
+    - `apps/fretboard/src/dev/native.rs`
+    - `apps/fretboard/src/dev/web.rs`
 
-- [ ] FBPUB-dev-210 Separate repo convenience selection (`--demo`, cookbook/demo registries, gallery
+- [~] FBPUB-dev-210 Separate repo convenience selection (`--demo`, cookbook/demo registries, gallery
       shortcuts) from the future public `dev` contract.
 
 - [ ] FBPUB-dev-220 Decide the smallest publishable dependency posture for the public `dev` lane.

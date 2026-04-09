@@ -30,6 +30,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `crates/fretboard/src/cli/contracts.rs`
   - `crates/fretboard/src/cli/mod.rs`
   - `crates/fretboard/src/scaffold/mod.rs`
+- Public `dev` target state:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
 - Repo-only CLI command tree:
   - `apps/fretboard/src/cli/contracts.rs`
   - `apps/fretboard/src/cli/mod.rs`
@@ -61,6 +63,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `docs/workstreams/fretboard-public-app-author-surface-v1/README.md`
 - Public-vs-repo CLI contract design:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md`
+- Public `dev` contract freeze:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
 - Execution plan:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
