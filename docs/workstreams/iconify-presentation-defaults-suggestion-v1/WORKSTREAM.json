@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "slug": "iconify-presentation-defaults-suggestion-v1",
+  "title": "Iconify Presentation Defaults Suggestion v1",
+  "status": "closed",
+  "updated": "2026-04-09",
+  "scope_kind": "execution",
+  "problem": "Keep Fret's explicit generated-pack presentation-default contract while offering a thin helper that can suggest a starter `presentation-defaults.json` from explicit Iconify acquisition provenance, without turning collection metadata into a hidden import default.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/DESIGN.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/BASELINE_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/M1_CONTRACT_FREEZE_2026-04-09.md"
+    },
+    {
+      "role": "proof",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/M2_PROOF_SURFACE_2026-04-09.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/generated-icon-presentation-defaults-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/iconify-presentation-defaults-suggestion-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Open the predecessor closeouts, this lane's M1 freeze and M2 proof, then rerun the helper and docs gates before changing the suggestion surface.",
+    "commands": [
+      "cargo nextest run -p fretboard",
+      "cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface"
+    ]
+  },
+  "gates": [
+    {
+      "name": "suggestion-helper-proof",
+      "command": "cargo nextest run -p fretboard"
+    },
+    {
+      "name": "public-doc-surfaces",
+      "command": "cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/DESIGN.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/BASELINE_AUDIT_2026-04-09.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/M2_PROOF_SURFACE_2026-04-09.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/TODO.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/MILESTONES.md",
+    "docs/workstreams/iconify-presentation-defaults-suggestion-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/generated-icon-presentation-defaults-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/crate-usage-guide.md",
+    "docs/examples/todo-app-golden-path.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "crates/fretboard/src/icons/contracts.rs",
+    "crates/fretboard/src/icons/suggest.rs",
+    "crates/fretboard/src/icons/mod.rs",
+    "crates/fretboard/src/icons/acquire.rs",
+    "crates/fretboard/src/cli/contracts.rs",
+    "crates/fretboard/src/cli/help.rs",
+    "ecosystem/fret/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "follow_on",
+    "notes": "This lane is closed on a thin explicit provenance-driven suggestion helper. Do not reopen it for hidden import defaults, SVG heuristics, or mixed-pack inference; split a narrower follow-on instead."
+  },
+  "follow_on_of": "generated-icon-presentation-defaults-v1"
+}

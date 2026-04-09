@@ -524,6 +524,16 @@ If imported icons should keep authored colors by default, pass
 `icon_name` should also match the generated icon name. Unlisted icons use `default_render_mode`;
 when it is omitted, generated packs default to `mask`.
 
+If the source began as `fretboard icons acquire iconify-collection ...`, you can scaffold a
+starter config from the acquisition provenance with
+`fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json`:
+
+```bash
+fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json
+```
+
+Treat the emitted file as advisory and review it before passing it into `icons import ...`.
+
 That generated crate already emits `PACK_METADATA`, `PACK` / `VENDOR_PACK`, and explicit
 `my_icons::app::install(...)` wiring.
 

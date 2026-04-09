@@ -584,6 +584,12 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
   `icon_name` must also use the generated icon name. Unlisted icons use `default_render_mode`;
   when it is omitted, generated packs default to `mask`.
+  If the source began as
+  `fretboard icons acquire iconify-collection ...` and the acquisition provenance includes an
+  explicit Iconify `palette` hint, you can scaffold a starter file with
+  `fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json`.
+  Treat that file as advisory and review it before passing it to `icons import ...`; the helper
+  does not change import defaults silently.
   First-party and custom pack crates should also keep pack provenance explicit through
   `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic
