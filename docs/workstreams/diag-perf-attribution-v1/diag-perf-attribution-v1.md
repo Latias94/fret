@@ -8,7 +8,7 @@ Fret already has strong building blocks for performance work:
 
 - Scripted repros (`tools/diag-scripts/*.json`)
 - Evidence bundles (`bundle.json` + `triage.json`)
-- Perf gates (`fretboard diag perf`, `tools/perf/*_gate.py`)
+- Perf gates (`fretboard-dev diag perf`, `tools/perf/*_gate.py`)
 - Windows perf baselines (`docs/workstreams/perf-baselines/*.windows-rtx4090.*.json`)
 
 The current gap is not “missing metrics”, but **missing interpretation and comparison affordances**:
@@ -70,13 +70,13 @@ Shipped in this workstream (commit-addressable, additive changes):
 1. **M0**: layout observation visibility
    - Layout observation recording stats (time + item counts) flow into bundle snapshots and `diag stats`.
 2. **M1**: diff + budget view
-   - `fretboard diag stats --diff <a> <b>` and a standard JSON budget view (`avg.*`, `budget_pct.*`).
+   - `fretboard-dev diag stats --diff <a> <b>` and a standard JSON budget view (`avg.*`, `budget_pct.*`).
 3. **M2**: opt-in trace artifacts
-   - `fretboard diag perf ... --trace` writes `<out_dir>/<run_id>/trace.chrome.json` and indexes it in `manifest.json`.
-   - `fretboard diag trace <bundle>` produces a bundle-derived Chrome trace artifact.
+   - `fretboard-dev diag perf ... --trace` writes `<out_dir>/<run_id>/trace.chrome.json` and indexes it in `manifest.json`.
+   - `fretboard-dev diag trace <bundle>` produces a bundle-derived Chrome trace artifact.
 4. **M3**: explainability + optional gate
    - `triage.json` includes rule-based hints and unit-cost estimates.
-   - `fretboard diag perf ... --check-perf-hints` can turn selected hints into an explicit CI-style gate (`check.perf_hints.json`).
+   - `fretboard-dev diag perf ... --check-perf-hints` can turn selected hints into an explicit CI-style gate (`check.perf_hints.json`).
 
 Remaining gaps / follow-ups:
 
@@ -162,7 +162,7 @@ Goal: make layout-side observation recording cost visible in the same workflow a
 Steps:
 
 1. Produce a diagnostics bundle via an existing repro script (e.g. a resize stress script).
-2. Run `fretboard diag stats <bundle.json> --sort time --top 30`.
+2. Run `fretboard-dev diag stats <bundle.json> --sort time --top 30`.
 3. For each top frame, inspect:
    - `layout_obs_record.us(time)=... items(models/globals)=...`
    - The corresponding `time.us(total/layout/prepaint/paint)=...` line.
@@ -182,15 +182,15 @@ Phase 1 (M1): comparison UX
 1. Identify two bundle paths (directories or `bundle.json` files).
 2. Run:
 
-   - `fretboard diag stats --diff <bundle_a> <bundle_b> --top 20`
-   - JSON: `fretboard diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
+   - `fretboard-dev diag stats --diff <bundle_a> <bundle_b> --top 20`
+   - JSON: `fretboard-dev diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
 
 Interpretation:
 
 - The diff output is ranked by `|delta_us|` (largest absolute changes first).
 - `avg.*` deltas approximate “typical per-frame” impact for the captured run (coarse; not a percentile).
 - Use `max.*` deltas as a first-pass “tail regression” signal, then inspect the worst frames via
-  `fretboard diag stats <bundle> --sort time --top 30`.
+  `fretboard-dev diag stats <bundle> --sort time --top 30`.
 
 Phase 2 (M2): opt-in trace workflow
 
@@ -205,12 +205,12 @@ This produces a Chrome trace JSON derived from `bundle.json` stats (a synthetic,
 timeline; low overhead).
 
 - During perf runs:
-  - `fretboard diag perf ... --trace`
+  - `fretboard-dev diag perf ... --trace`
   - The trace is written under `<out_dir>/<run_id>/trace.chrome.json` and indexed in
     `<out_dir>/<run_id>/manifest.json`.
 
 - For an existing bundle:
-  - `fretboard diag trace <bundle_dir|bundle.json>`
+  - `fretboard-dev diag trace <bundle_dir|bundle.json>`
   - Optional output override: `--trace-out <path>`
 
 Open the resulting JSON in Chrome tracing UI (or compatible viewers) to correlate phases with

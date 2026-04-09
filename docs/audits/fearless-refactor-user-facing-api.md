@@ -129,7 +129,7 @@ Constraints:
 - Prefer additive APIs first (helpers, iterator-friendly constructors).
 - Deprecate only after templates/examples no longer teach the old way.
 - Provide a "compat adapter" layer for ecosystem code when a signature has to change.
-- Use `fretboard diag` scripts to lock behavior and prevent regressions during refactors.
+- Use `fretboard-dev diag` scripts to lock behavior and prevent regressions during refactors.
 
 ## When To Use a Worktree/Branch
 

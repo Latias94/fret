@@ -30,7 +30,7 @@ Related workstreams / anchors:
 - GPUI parity (experience + performance): `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor.md`
 - GPUI perf gap analysis: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
 - UI Gallery perf investigation (scroll/measure): `docs/workstreams/standalone/ui-gallery-perf-scroll-measure.md`
-- Diagnostics + perf gates: `apps/fretboard` (`fretboard diag perf`, `fretboard diag repro`, `fretboard diag stats`)
+- Diagnostics + perf gates: `apps/fretboard` (`fretboard-dev diag perf`, `fretboard-dev diag repro`, `fretboard-dev diag stats`)
 
 Tracking:
 
@@ -103,7 +103,7 @@ We explicitly distinguish:
 
 ### 0.1 Target budgets (initial)
 
-Budgets are expressed in the same terms as `fretboard diag perf` output:
+Budgets are expressed in the same terms as `fretboard-dev diag perf` output:
 `top.us(total/layout/solve/prepaint/paint)`.
 
 These are *targets* to guide refactors; they must be calibrated per machine and per page. We keep two tiers:
@@ -160,7 +160,7 @@ under `docs/workstreams/perf-baselines/`. Then run future perf probes with `--pe
 Example (steady-state suite baseline):
 
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady ^
   --dir target/fret-diag-perf/ui-gallery-steady.<machine-tag> ^
   --reuse-launch --repeat 7 --sort time --top 15 --json ^
   --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.<machine-tag>.v1.json ^
@@ -173,7 +173,7 @@ cargo run -p fretboard -- diag perf ui-gallery-steady ^
 Run a single script and get the worst frame (**cold-start gate**):
 
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/<script>.json ^
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/<script>.json ^
   --dir target/fret-diag-perf/<tag> ^
   --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
   --launch -- cargo run -p fret-ui-gallery --release
@@ -182,7 +182,7 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/<script>.json ^
 Run the steady-state suite (**steady-state gate**):
 
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady ^
   --dir target/fret-diag-perf/ui-gallery-steady ^
   --reuse-launch --repeat 7 --sort time --top 15 --json ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
@@ -201,14 +201,14 @@ Notes:
 - If you already have a running demo (or cannot use `--launch`), you can run the suite against it:
 
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag ^
   --repeat 7 --sort time --top 15 --json
 ```
 
 Run a pointer-move gate (dispatch / hit-test; “Zed feel” hot path):
 
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json ^
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json ^
   --dir target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate ^
   --timeout-ms 300000 --poll-ms 100 ^
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
@@ -224,7 +224,7 @@ Notes:
 
 - The thresholds above assume the bounds-tree index is enabled and cached-path hit testing is skipped under bounds-tree.
   Evidence lives in the perf log entry for commit `8bc15eda` (see `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`).
-- `fretboard diag perf` defaults `--timeout-ms 30000`. If `--launch -- cargo run ... --release` triggers a rebuild,
+- `fretboard-dev diag perf` defaults `--timeout-ms 30000`. If `--launch -- cargo run ... --release` triggers a rebuild,
   compilation alone can exceed 30s, so the suite can time out before the app even starts. Prefer passing an
   explicit `--timeout-ms` (e.g. 300000).
 - If you see timeouts or flakiness with `--launch -- cargo run -p fret-ui-gallery --release`, prebuild the demo once
@@ -235,7 +235,7 @@ Notes:
 Extract root cause from the worst bundle:
 
 ```powershell
-cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
+cargo run -p fretboard-dev -- diag stats <bundle.json> --sort time --top 30
 ```
 
 View-cache on/off comparison should be routine:
@@ -293,7 +293,7 @@ steady-state interaction cost.
 This is not necessarily wrong (cold-start matters), but we should explicitly decide:
 
 - keep `--launch` as a “cold-start gate”, and add a second “steady-state gate” suite, or
-- update `fretboard diag perf` to optionally reuse a single launched process across multiple scripts/steps,
+- update `fretboard-dev diag perf` to optionally reuse a single launched process across multiple scripts/steps,
   so interaction scripts measure the intended steady-state paths.
 
 Next action:
@@ -313,7 +313,7 @@ Update (2026-02-06):
 
 ### 1.4 Dispatch / hit-test visibility (known gap)
 
-The current `fretboard diag perf` suite focuses on **frame pipeline** costs (layout / prepaint / paint). This is
+The current `fretboard-dev diag perf` suite focuses on **frame pipeline** costs (layout / prepaint / paint). This is
 necessary, but it does **not** directly gate the CPU time spent in:
 
 - input dispatch,
@@ -324,20 +324,20 @@ For “Zed feel”, pointer-move and wheel responsiveness is often dominated by 
 layout/paint. We track this as a first-class follow-up:
 
 - add `dispatch_time_us` and/or `hit_test_time_us` to `UiDebugFrameStats`,
-- plumb the metrics into `fretboard diag perf` output,
+- plumb the metrics into `fretboard-dev diag perf` output,
 - add a pointer-move stress script gate that fails on dispatch-time regressions.
 
 See `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md` (M3) for the concrete TODO entry.
 
 Update (2026-02-03):
-- Dispatch + hit-test timings are now exported in `fretboard diag perf` (see log entries for commit `4b0be50e`).
+- Dispatch + hit-test timings are now exported in `fretboard-dev diag perf` (see log entries for commit `4b0be50e`).
 - Bounds-tree query outcomes are also exported for the top frame (commit `ad9d5091`) so we can distinguish “index
   disabled” vs “index hit/miss” when validating hit-test improvements.
 - A dedicated hit-test torture harness exists (`hit_test_torture`, commit `26de29bd`) and is used to validate the
   bounds-tree A/B after broadening overflow-visible support (commit `811101c3`).
 
 Update (2026-02-05):
-- Pointer-move regressions are now gated explicitly in `fretboard diag perf` via:
+- Pointer-move regressions are now gated explicitly in `fretboard-dev diag perf` via:
   - `--max-pointer-move-dispatch-us`
   - `--max-pointer-move-hit-test-us`
   - `--max-pointer-move-global-changes`

@@ -57,7 +57,7 @@ Definition of done:
 
 Definition of done:
 
-- At least 1 `fretboard diag` script per primitive for a multi-step scenario:
+- At least 1 `fretboard-dev diag` script per primitive for a multi-step scenario:
   - Select: open → pointer-up suppression → commit selection.
   - Combobox: type → navigate highlight → commit → close + focus restore.
 - When layout/style outcomes are sensitive, add/extend shadcn-web golden parity tests for the demo.

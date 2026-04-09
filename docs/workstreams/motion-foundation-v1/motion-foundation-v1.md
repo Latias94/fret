@@ -307,7 +307,7 @@ Motion must be testable and reproducible:
 
 - Support fixed `delta` in diag/harness (`--fixed-frame-delta-ms` and/or env) for stable scripted
   tests and screenshot captures.
-- Add `fretboard diag` scripts for motion-critical components (sidebar toggle, sheet, drawer):
+- Add `fretboard-dev diag` scripts for motion-critical components (sidebar toggle, sheet, drawer):
   validate invariants (open/close completes, geometry clamps, focus/dismiss behavior) under fixed
   delta.
 - Record enough evidence in bundles (frame ids + any motion debug summaries) to explain failures.
@@ -458,5 +458,5 @@ Diag gates:
 Refresh-rate sanity (local):
 
 - Run the same suite at 60Hz-ish and 120Hz-ish fixed deltas; wall-time completion should feel consistent:
-  - `cargo run -p fretboard -- diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 16 --launch -- cargo run -p fret-ui-gallery --release`
-  - `cargo run -p fretboard -- diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 8 --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 16 --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag suite ui-gallery-motion-pilot --fixed-frame-delta-ms 8 --launch -- cargo run -p fret-ui-gallery --release`

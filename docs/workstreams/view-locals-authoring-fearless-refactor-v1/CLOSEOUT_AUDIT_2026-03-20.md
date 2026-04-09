@@ -41,7 +41,7 @@ Validation run used for closeout:
 
 - `cargo nextest run -p fret-examples --lib todo_demo_prefers_default_app_surface simple_todo_demo_prefers_default_app_surface canonical_default_app_examples_stay_local_state_first`
 - `cargo nextest run -p fret-cookbook --lib onboarding_examples_use_the_new_app_surface migrated_basics_examples_use_the_new_app_surface`
-- `cargo nextest run -p fretboard todo_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector template_readmes_capture_authoring_guidance`
+- `cargo nextest run -p fretboard-dev todo_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector template_readmes_capture_authoring_guidance`
 - `git diff --check`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
 

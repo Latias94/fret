@@ -83,7 +83,7 @@ Definition of done:
 - Known hover-driven affordances are gated by pointer capability helpers (touch-first should not
   open hover-only UI).
 - Mobile-shell overlays (Drawer / Sheet) respect safe-area + occlusion insets by default.
-- At least one migration is gated by an automated test or `fretboard diag` script.
+- At least one migration is gated by an automated test or `fretboard-dev diag` script.
 
 “Done means done” checklist:
 

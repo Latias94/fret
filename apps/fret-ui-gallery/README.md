@@ -49,7 +49,7 @@ Optional:
 
 Lite mode smoke gate (first frame + basic navigation):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
 
 Text/IME/fallback harness pages are feature-gated:
 

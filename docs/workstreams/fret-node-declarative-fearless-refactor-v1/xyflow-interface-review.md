@@ -110,7 +110,7 @@ These are ordered by “risk reduced per line changed”.
 - `cargo nextest run -p fret-node`
 - `cargo check -p fret-node --features compat-retained-canvas --tests`
 - `python3 tools/check_layering.py` (when moving code across crates)
-- At least one `fretboard diag` script for portal/overlay anchoring (when touching measured geometry)
+- At least one `fretboard-dev diag` script for portal/overlay anchoring (when touching measured geometry)
 
 ## Evidence anchors (starting points)
 

@@ -77,7 +77,7 @@ Scripted pointer injection must keep the runner’s “mouse button down” stat
 
 ## Behavior gates (what we currently lock)
 
-All gates live in `tools/diag-scripts/` and are intended to be run via `fretboard diag run ... --launch -- docking_arbitration_demo.exe`.
+All gates live in `tools/diag-scripts/` and are intended to be run via `fretboard-dev diag run ... --launch -- docking_arbitration_demo.exe`.
 
 Key multi-window gates:
 
@@ -141,8 +141,8 @@ These gates assert, at minimum:
   - capture after auto-close/cleanup (right after `known_window_count_is` falls back to the expected value),
   - compare “drop vs after-close” to decide whether the bug lives in docking resolve/apply vs window close cleanup.
 - Bounded triage helpers:
-  - `fretboard diag dock-graph <bundle_dir|bundle.schema2.json>` (dock signature + fingerprint summary),
-  - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` (hover/drop routing contract for dock drags).
+  - `fretboard-dev diag dock-graph <bundle_dir|bundle.schema2.json>` (dock signature + fingerprint summary),
+  - `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` (hover/drop routing contract for dock drags).
 - Diagnostics input synthesis now preserves intentionally out-of-bounds drag coordinates (tear-off requires OOB routing),
   while still keeping in-bounds positions slightly inside window edges to avoid hit-testing misses:
   - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`

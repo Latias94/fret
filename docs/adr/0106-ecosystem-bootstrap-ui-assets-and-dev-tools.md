@@ -117,9 +117,9 @@ We define a developer tool entry point as a separate crate/binary:
 
 - Name: `fretboard` (CLI), distributed on crates.io as a binary tool.
 - Responsibilities:
-  - `fretboard dev native`: run a chosen demo/app with consistent flags and environment,
-  - `fretboard dev web`: run the wasm harness via a devserver (e.g. `trunk serve`),
-  - `fretboard dev native --hotpatch`: enable hotpatch mode by selecting the appropriate features/args (ADR 0105).
+  - `fretboard-dev dev native`: run a chosen demo/app with consistent flags and environment,
+  - `fretboard-dev dev web`: run the wasm harness via a devserver (e.g. `trunk serve`),
+  - `fretboard-dev dev native --hotpatch`: enable hotpatch mode by selecting the appropriate features/args (ADR 0105).
 - Non-responsibilities:
   - The CLI is not a runtime contract; framework crates must not depend on it.
   - The CLI does not define new UI behaviors; it orchestrates build/run workflows.
@@ -135,7 +135,7 @@ Implemented:
 - `ecosystem/fret-ui-assets` exists as the preferred UI render-asset surface (images/SVG caches and upload helpers).
 - `ecosystem/fret-bootstrap` exists as the ecosystem "golden path" startup layer (wrapper over `fret-launch`).
 - `apps/fretboard` exists as a dev-tools binary for running native/web demos with consistent flags.
-- `fretboard new todo` provides a starter template for new apps (see `docs/examples/todo-app-golden-path.md`).
+- `fretboard-dev new todo` provides a starter template for new apps (see `docs/examples/todo-app-golden-path.md`).
 
 In progress / next:
 
@@ -171,7 +171,7 @@ This ADR does not lock exact APIs, but recommends a minimal set of patterns to k
 
 - Default workflow: devserver rebuild + reload (not Subsecond) (ADR 0105).
 - Recommended (tooling-layer) integration:
-  - `fretboard dev web` runs a chosen `apps/*` wasm target via `trunk serve` (or equivalent),
+  - `fretboard-dev dev web` runs a chosen `apps/*` wasm target via `trunk serve` (or equivalent),
   - `fretboard` is responsible for flags, feature selection, and environment variable plumbing,
   - library crates do not depend on `trunk` or other external toolchain components.
 
@@ -216,7 +216,7 @@ breaking stable contracts.
 1) Add `ecosystem/fret-bootstrap` and update demos to use it (optional but recommended).
 2) Introduce `fret-ui-assets` as a re-export wrapper around `fret-asset-cache` (or rename directly if early enough).
 3) Add `fretboard` CLI once the bootstrap patterns stabilize.
-4) Add a starter template command (`fretboard new`) once the crate boundaries prove stable. (Implemented: `fretboard new todo`.)
+4) Add a starter template command (`fretboard-dev new`) once the crate boundaries prove stable. (Implemented: `fretboard-dev new todo`.)
 
 ## References
 

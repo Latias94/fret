@@ -175,7 +175,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
     - [x] composition lifecycle + shortcut routing (IME injection + `wait_shortcut_routing_trace`).
     - [x] caret/candidate geometry (cursor-area evidence + in-window bounds gates).
 - [ ] Make suites run `diag lint` automatically (and fail on error-level findings):
-  - [x] `fretboard diag suite` runs bundle lint by default (use `--no-lint` to disable).
+  - [x] `fretboard-dev diag suite` runs bundle lint by default (use `--no-lint` to disable).
 
 ## Scenario coverage (future-proofing)
 

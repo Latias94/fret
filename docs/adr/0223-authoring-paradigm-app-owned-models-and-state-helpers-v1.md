@@ -167,7 +167,7 @@ Tracking and adoption work is captured in:
   - Evidence: `docs/integrating-tokio-and-reqwest.md`
   - Evidence: `docs/integrating-sqlite-and-sqlx.md`
 - **Instrumentation:** a minimal tracing vocabulary for query lifecycle (start/finish/cancel, cache
-  hits, stale decisions) and a path to “devtools-like” introspection in `fretboard diag`.
+  hits, stale decisions) and a path to “devtools-like” introspection in `fretboard-dev diag`.
 
 ### Selector (derived state)
 

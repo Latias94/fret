@@ -28,7 +28,7 @@ For performance investigations, see `docs/workstreams/standalone/ui-gallery-perf
 
 1. Add/extend a `tools/diag-scripts/ui-gallery-*.json` repro.
 2. If the issue is hard to target, add minimal `test_id` anchors at the component layer (shadcn/ecosystem first).
-3. Capture a bundle + screenshot evidence via `fretboard diag run`.
+3. Capture a bundle + screenshot evidence via `fretboard-dev diag run`.
 4. Fix in the correct layer (mechanism vs policy).
 5. Add a regression gate (script + assertion, or a unit/integration test).
 
@@ -42,7 +42,7 @@ For performance investigations, see `docs/workstreams/standalone/ui-gallery-perf
 | VP-004 | P2 | Toggle | Knob appears slightly misaligned (right/down) relative to track. | Needs a new script | Open |
 | VP-005 | P1 | Combobox | Dropdown height/padding differs; disabled text baseline too tight. | Needs a new script | Open |
 | VP-006 | P1 | Tabs | Visual styling differs from upstream (indicator/spacing). | Needs a new script | Open |
-| VP-007 | P1 | UI Gallery perf | Clicking card feels delayed (~0.5s). | Use `fretboard diag perf` + targeted page start | Tracked in perf workstream |
+| VP-007 | P1 | UI Gallery perf | Clicking card feels delayed (~0.5s). | Use `fretboard-dev diag perf` + targeted page start | Tracked in perf workstream |
 | VP-008 | P1 | Select | Wheel-up from bottom can be “pulled back” (appears stuck) when a row is active/hovered. | `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json` (run with `--check-wheel-scroll ui-gallery-select-item-item-40`) | Fixed (commit `624692f`) |
 
 ## Recent Instrumentation (to enable repros)

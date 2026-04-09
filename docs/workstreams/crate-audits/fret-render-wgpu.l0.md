@@ -62,7 +62,7 @@ Evidence anchors:
 - Render-plan correctness and scissor/mask mapping logic
   - Failure mode: visual artifacts, incorrect clipping/masking, incorrect intermediate reuse.
   - Existing gates: unit tests in `renderer/render_plan.rs` (multiple `#[test]` cases).
-  - Missing gate to add: at least one end-to-end `fretboard diag` scene that snapshots a tricky mask/blur/scissor combo (if/when a demo exists).
+  - Missing gate to add: at least one end-to-end `fretboard-dev diag` scene that snapshots a tricky mask/blur/scissor combo (if/when a demo exists).
 - Text fallback policy embedded in renderer
   - Failure mode: cross-platform font selection changes; mixed-script text regressions; WASM behavior drift.
   - Existing gates: unit tests in `text/*` and `fret-fonts` bootstrap coverage.

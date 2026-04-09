@@ -45,7 +45,7 @@ ID format:
   - scripts,
   - maintainer notes,
   - CI or gate helpers.
-- [x] DCR-inventory-008 Inventory repo documents that contain `fretboard diag` command examples and will need command rewrites during the reset.
+- [x] DCR-inventory-008 Inventory repo documents that contain `fretboard-dev diag` command examples and will need command rewrites during the reset.
 - [x] DCR-policy-007 Write a concise migration rule for first-party callers:
   - delete old syntax,
   - update callers atomically,
@@ -58,7 +58,7 @@ ID format:
   - `crates/fret-diag`,
   - command-local modules,
   - shared arg-family modules.
-- [x] DCR-model-011 Draft the top-level typed `clap` command tree for `fretboard diag`.
+- [x] DCR-model-011 Draft the top-level typed `clap` command tree for `fretboard-dev diag`.
 - [x] DCR-model-012 Define shared structs for launch-related flags.
 - [x] DCR-model-013 Define shared structs for output/artifact flags.
 - [x] DCR-model-014 Define shared structs for diagnostics check flags.

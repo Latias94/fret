@@ -931,7 +931,7 @@ where
 
 /// Build a router link pressable and stamp a diagnostics `test_id`.
 ///
-/// Prefer this in demos and automated `fretboard diag` scripts.
+/// Prefer this in demos and automated `fretboard-dev diag` scripts.
 pub fn router_link_with_test_id<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,

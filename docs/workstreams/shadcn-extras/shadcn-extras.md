@@ -78,7 +78,7 @@ Every extras component must ship with at least one stable regression gate:
   `ecosystem/fret-ui-shadcn/tests/snapshots.rs` snapshots under
   `ecosystem/fret-ui-shadcn/tests/snapshots/*.json`.
 - **Scripted interaction test** (when behavior is stateful and hard to snapshot): add a
-  `fretboard diag` script and gate it in the appropriate suite (see
+  `fretboard-dev diag` script and gate it in the appropriate suite (see
   `docs/ui-diagnostics-and-scripted-tests.md`).
 
 Optional:
@@ -104,13 +104,13 @@ Recommended minimum gates for scheduling-heavy extras:
 - Add a deterministic Rust test that asserts:
   - the first frame emits `Effect::RequestAnimationFrame`, and
   - a visible scene op changes across `FrameId` (e.g. `SceneOp::PushTransform.tx`).
-- Add a short perf note (or a `fretboard diag perf` gate) when the animation is expected to be
+- Add a short perf note (or a `fretboard-dev diag perf` gate) when the animation is expected to be
   long-lived or scene-op heavy.
 
 ### Perf notes (current M3 components)
 
 These notes are intentionally qualitative (cheap to maintain). If/when we see regressions, add a
-`fretboard diag perf` gate to pin the numbers.
+`fretboard-dev diag perf` gate to pin the numbers.
 
 - `RelativeTime` (auto-updating):
   - Uses continuous frames only when uncontrolled (component-owned clock). Controlled clocks must
@@ -232,5 +232,5 @@ What extras may do later (optional, and only as a thin recipe):
 Regression gates (where they belong):
 
 - `fret-code-view`: keep unit/integration tests for wrapping/selection/scroll policies.
-- `fret-ui-ai`: gate expand/collapse and message-part behaviors via deterministic `fretboard diag`
+- `fret-ui-ai`: gate expand/collapse and message-part behaviors via deterministic `fretboard-dev diag`
   scripts (e.g. the existing UI gallery scripts referenced in the AI Elements workstream).

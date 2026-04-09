@@ -183,7 +183,7 @@ High-level intent:
 
 - **M3 — Regression gates**
   - `cargo nextest` unit tests for sanitize/gating/focus outcomes.
-  - `fretboard diag` scripts for keyboard-only navigation and submenu grace intent.
+  - `fretboard-dev diag` scripts for keyboard-only navigation and submenu grace intent.
 
 ---
 
@@ -285,7 +285,7 @@ MVP contract now in place:
 - Scope status: all `MENU-MVP0`..`MENU-MVP4` milestones in
   `docs/workstreams/menu-surfaces-alignment-v1/menu-surfaces-alignment-v1-todo.md` are complete.
 - Regression status: menu keyboard/pointer/semantics/dynamic-menu gates are covered by
-  nextest + `fretboard diag` scripts, including multi-window `Window > Windows`
+  nextest + `fretboard-dev diag` scripts, including multi-window `Window > Windows`
   mutual-exclusion checks.
 - Verification note: latest local closure run passed
   (`tools/diag-scripts/ui-gallery-menubar-windows-radio-mutual-exclusive.json`,

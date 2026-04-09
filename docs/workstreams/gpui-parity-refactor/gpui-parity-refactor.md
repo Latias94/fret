@@ -164,8 +164,8 @@ Even with dirty views + cache roots in place, “stable feel + stable perf” re
   key mismatch vs inspection mode, so “why didn’t this update?” questions have a single-run answer.
 - **Notify hotspot regression gates**: input-driven `notify()` hotspots should be attributable by callsite and
   budgeted in scripted harnesses, so “this got slower” regressions are caught automatically.
-  - Gate: `fretboard diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` (writes `check.notify_hotspots.json`).
-  - Default: `fretboard diag suite ui-gallery` applies a `pressable.rs=0` notify-hotspot budget for
+  - Gate: `fretboard-dev diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` (writes `check.notify_hotspots.json`).
+  - Default: `fretboard-dev diag suite ui-gallery` applies a `pressable.rs=0` notify-hotspot budget for
     `tools/diag-scripts/ui-gallery-virtual-list-torture.json` unless overridden via CLI.
   - Workstream tracker: `docs/workstreams/gpui-parity-refactor/gpui-parity-refactor-todo.md` (MVP5-perf-002).
 
@@ -195,7 +195,7 @@ Concrete ecosystem entry points (current state):
   - UI Gallery harness: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WINDOWED_ROWS_SURFACE_TORTURE`) and
     `apps/fret-ui-gallery/src/ui.rs` (`preview_windowed_rows_surface_torture`).
   - Scripted scroll capture: `tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json` (run via
-    `cargo run -p fretboard -- diag run ...`).
+    `cargo run -p fretboard-dev -- diag run ...`).
 
 ### 1.6.1 Retained vs. “Rebuilt Each Frame” (GPUI-style hybrid)
 
@@ -359,27 +359,27 @@ When using `diag perf`, inspect these exported debug surfaces to decide which pa
 Run a script without view cache (baseline):
 
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Run with view-cache enabled (no shell reuse):
 
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Run with view-cache enabled (shell reuse):
 
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Scroll regression harness (detect stale paint after scroll):
 
 ```sh
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 bundle_dir=$(cat target/fret-diag-sidebar-scroll/latest.txt)
-cargo run -p fretboard -- diag stats target/fret-diag-sidebar-scroll/$bundle_dir/bundle.json --check-stale-paint ui-gallery-nav-intro
+cargo run -p fretboard-dev -- diag stats target/fret-diag-sidebar-scroll/$bundle_dir/bundle.json --check-stale-paint ui-gallery-nav-intro
 ```
 
 Notes:

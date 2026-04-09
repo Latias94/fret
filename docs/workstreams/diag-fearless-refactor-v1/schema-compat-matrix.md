@@ -31,10 +31,10 @@ legacy/debt.
 
 | File | Kind | Schema | Producer | Primary consumers | Notes |
 |---|---|---:|---|---|---|
-| `bundle.index.json` | `bundle_index` | 1 | `fretboard diag index` | selectors, inventories | Should be treated as required for stable automation. |
-| `bundle.meta.json` | `bundle_meta` | 1 | `fretboard diag meta` | preflight / triage | Includes bundle-level metadata used by `diag doctor` and agents. |
-| `test_ids.index.json` | `test_ids_index` | 1 | `fretboard diag test-ids-index` | selector suggestions | Optional but recommended for debugging selector drift. |
-| `frames.index.json` | `frames_index` | 1 | `fretboard diag frames-index` | lite triage / hotspots | Optional but recommended; bounded by design for agentic use. |
+| `bundle.index.json` | `bundle_index` | 1 | `fretboard-dev diag index` | selectors, inventories | Should be treated as required for stable automation. |
+| `bundle.meta.json` | `bundle_meta` | 1 | `fretboard-dev diag meta` | preflight / triage | Includes bundle-level metadata used by `diag doctor` and agents. |
+| `test_ids.index.json` | `test_ids_index` | 1 | `fretboard-dev diag test-ids-index` | selector suggestions | Optional but recommended for debugging selector drift. |
+| `frames.index.json` | `frames_index` | 1 | `fretboard-dev diag frames-index` | lite triage / hotspots | Optional but recommended; bounded by design for agentic use. |
 
 ## Tool expectations / contracts
 

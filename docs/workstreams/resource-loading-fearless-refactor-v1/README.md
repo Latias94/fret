@@ -120,7 +120,7 @@ This workstream takes a fearless posture:
     - publishes `AssetReloadStatus` so diagnostics can see the configured backend, active backend,
       and watcher-install fallback reason without scraping logs,
     - exposes that asset-reload state through both typed `UiPredicateV1` script predicates and
-      `fretboard diag` post-run bundle checks, so suites can gate the effective backend/fallback
+      `fretboard-dev diag` post-run bundle checks, so suites can gate the effective backend/fallback
       without custom log parsing,
     - and requests redraws for each tracked native window.
   - `fret-ui-assets` now consumes that shared runtime-global epoch directly, and the old
@@ -131,7 +131,7 @@ This workstream takes a fearless posture:
   - `FretApp` now preserves asset registration call order across `asset_startup(...)`,
     `asset_entries(...)`, `bundle_asset_entries(...)`, and `embedded_asset_entries(...)`, so later
     builder calls override earlier ones consistently with the composable resolver stack.
-  - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold:
+  - `fretboard-dev new todo --ui-assets` / `fretboard-dev new simple-todo --ui-assets` now scaffold:
     - an `assets/` directory for app-owned files,
     - a checked-in `src/generated_assets.rs` stub for the portable compile-time lane,
     - `generated_assets::mount(builder)?` on the default `fret` builder path,

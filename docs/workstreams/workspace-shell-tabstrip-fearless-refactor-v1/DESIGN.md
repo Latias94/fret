@@ -58,7 +58,7 @@ We are not porting DOM/CSS behavior 1:1. We are aligning **outcomes** in Fret’
    - mechanism fixes in `crates/fret-ui` only when clearly generic (e.g. roving collection rules).
 4. **Regression gates**:
    - deterministic tests for the core state machine,
-   - `fretboard diag` scripts for drag/drop and overflow UX where appropriate,
+   - `fretboard-dev diag` scripts for drag/drop and overflow UX where appropriate,
    - stable `test_id` surfaces.
 
 ## Non-goals (v1)

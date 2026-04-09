@@ -85,7 +85,7 @@ Evidence anchors:
 
 1. Add a CI gate to compile this crate for `wasm32-unknown-unknown` — outcome: prevent accidental breakage in wasm-only modules — gate: `cargo check -p fret-runner-web --target wasm32-unknown-unknown`.
 2. Add fixture-driven tests for keyboard code parsing and modifier mapping — outcome: stabilize input contract across browsers — gate: wasm test runner (TBD).
-3. Add at least one `fretboard diag` scenario in a web demo for pointer/multi-click behavior — outcome: catch end-to-end regressions — gate: `fretboard diag` (web).
+3. Add at least one `fretboard-dev diag` scenario in a web demo for pointer/multi-click behavior — outcome: catch end-to-end regressions — gate: `fretboard-dev diag` (web).
 
 ## 8) Open questions / decisions needed
 

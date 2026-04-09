@@ -12,10 +12,10 @@ how to interpret them.
 
 ## Reading guide: typical vs tail
 
-- **Typical perf**: use percentiles (`p50`, `p95`) from `fretboard diag perf ... --repeat N` and/or
+- **Typical perf**: use percentiles (`p50`, `p95`) from `fretboard-dev diag perf ... --repeat N` and/or
   use `triage.json` → `stats.avg.*` (per-frame averages over the considered snapshots).
 - **Tail perf / spikes**: use `triage.json` → `stats.max.*` and the worst-frame hints, then drill
-  into the bundle with `fretboard diag stats <bundle> --sort time --top 30`.
+  into the bundle with `fretboard-dev diag stats <bundle> --sort time --top 30`.
 
 ## Where the fields come from
 

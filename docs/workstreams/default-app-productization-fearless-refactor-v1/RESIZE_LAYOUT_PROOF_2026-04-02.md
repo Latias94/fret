@@ -20,11 +20,11 @@ Goal:
 
 Immediate layout roundtrip:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json --dir target/diag/todo-resize-roundtrip-immediate-layout-m5d --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json --dir target/diag/todo-resize-roundtrip-immediate-layout-m5d --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
 
 Footer in-window roundtrip:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json --dir target/diag/todo-resize-roundtrip-footer-within-window-m5 --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json --dir target/diag/todo-resize-roundtrip-footer-within-window-m5 --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
 
 Focused regression checks:
 

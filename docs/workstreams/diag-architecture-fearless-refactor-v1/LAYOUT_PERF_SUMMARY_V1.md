@@ -38,11 +38,11 @@ The v1 viewer lives in:
 Usage:
 
 - Human summary (default):
-  - `fretboard diag layout-perf-summary <bundle_or_out_dir>`
+  - `fretboard-dev diag layout-perf-summary <bundle_or_out_dir>`
 - JSON (bounded) output:
-  - `fretboard diag layout-perf-summary <bundle_or_out_dir> --json`
+  - `fretboard-dev diag layout-perf-summary <bundle_or_out_dir> --json`
 - Write to a file:
-  - `fretboard diag layout-perf-summary <bundle_or_out_dir> --json --out exported.layout.perf.summary.v1.json`
+  - `fretboard-dev diag layout-perf-summary <bundle_or_out_dir> --json --out exported.layout.perf.summary.v1.json`
 
 Options:
 
@@ -53,7 +53,7 @@ Options:
 
 ## Produced by `diag perf`
 
-When running `fretboard diag perf ...`, tooling will best-effort materialize a worst-run summary:
+When running `fretboard-dev diag perf ...`, tooling will best-effort materialize a worst-run summary:
 
 - `layout.perf.summary.v1.json` under the perf `out_dir`
 

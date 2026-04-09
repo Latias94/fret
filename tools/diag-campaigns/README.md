@@ -1,6 +1,6 @@
 # Diagnostics campaign manifests
 
-This folder contains repo-owned campaign manifests consumed by `fretboard diag campaign`.
+This folder contains repo-owned campaign manifests consumed by `fretboard-dev diag campaign`.
 
 Current rules:
 
@@ -25,17 +25,17 @@ Run artifact layout:
 
 Example:
 
-- `cargo run -p fretboard -- diag campaign list --json`
-- `cargo run -p fretboard -- diag campaign list --lane smoke --tag ui-gallery --platform native`
-- `cargo run -p fretboard -- diag campaign validate`
-- `cargo run -p fretboard -- diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json --json`
-- `cargo run -p fretboard -- diag doctor campaigns --json`
-- `cargo run -p fretboard -- diag campaign show ui-gallery-smoke --json`
-- `cargo run -p fretboard -- diag campaign show ui-gallery-accordion-script-smoke --json`
-- `cargo run -p fretboard -- diag campaign run ui-gallery-smoke --launch -- <cmd...>`
-- `cargo run -p fretboard -- diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- <cmd...>`
-- `cargo run -p fretboard -- diag campaign share target/fret-diag/campaigns/ui-gallery-smoke/<run_id>`
-- `cargo run -p fretboard -- diag campaign share target/fret-diag/campaign-batches/<selection_slug>/<run_id> --json`
+- `cargo run -p fretboard-dev -- diag campaign list --json`
+- `cargo run -p fretboard-dev -- diag campaign list --lane smoke --tag ui-gallery --platform native`
+- `cargo run -p fretboard-dev -- diag campaign validate`
+- `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json --json`
+- `cargo run -p fretboard-dev -- diag doctor campaigns --json`
+- `cargo run -p fretboard-dev -- diag campaign show ui-gallery-smoke --json`
+- `cargo run -p fretboard-dev -- diag campaign show ui-gallery-accordion-script-smoke --json`
+- `cargo run -p fretboard-dev -- diag campaign run ui-gallery-smoke --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag campaign share target/fret-diag/campaigns/ui-gallery-smoke/<run_id>`
+- `cargo run -p fretboard-dev -- diag campaign share target/fret-diag/campaign-batches/<selection_slug>/<run_id> --json`
 
 `diag campaign validate` behavior:
 

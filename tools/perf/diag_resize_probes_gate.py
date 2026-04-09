@@ -72,7 +72,7 @@ def _failures_count(check_path: Path) -> int | None:
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=(
-            "Run a resize-focused `fretboard diag perf` suite and enforce perf baseline thresholds. "
+            "Run a resize-focused `fretboard-dev diag perf` suite and enforce perf baseline thresholds. "
             "Intended as a lightweight 'P0 resize must not regress' gate."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

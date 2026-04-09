@@ -173,7 +173,7 @@ Planned gate (SE-213):
   1) opens an anchored overlay and captures `overlay_placement_trace`,
   2) expands a doc code tab (content growth) and proves scroll can still reach a lower section,
   3) re-opens the overlay and asserts `bounds_within_window` for the overlay panel.
-- Tooling: `fretboard diag query overlay-placement-trace ...` prints/JSON-dumps the captured
+- Tooling: `fretboard-dev diag query overlay-placement-trace ...` prints/JSON-dumps the captured
   `script.result.json` evidence for offline triage (anchor rect, chosen side, final rect, shift
   delta, step/frame correlation).
 
@@ -181,7 +181,7 @@ Evidence anchors:
 
 - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
 - Query example:
-  - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
+  - `fretboard-dev diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
 
 #### SE-213c evidence (baseline vs post-layout gate)
 
@@ -198,7 +198,7 @@ Notes:
 
 - `overlay_placement_trace` for tooltips may have `content_test_id=null` (the tooltip root element
   is used as the content identity). Filter by `--anchor-test-id` when querying.
-- When using `--session-auto`, `fretboard diag query overlay-placement-trace <base_out_dir>`
+- When using `--session-auto`, `fretboard-dev diag query overlay-placement-trace <base_out_dir>`
   resolves to the nearest evidence-bearing `script.result.json` (session root), not bundle dump
   subdirectories.
 
@@ -211,15 +211,15 @@ class of regressions, and to ensure anchored overlays remain clamped after scrol
 
 Run (baseline):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-baseline --session-auto --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-baseline --session-auto --launch -- cargo run -p fret-ui-gallery`
 
 Current default:
 
-- `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir <out_dir> --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-scroll-extents-dom-parity --dir <out_dir> --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 
 Run (historical gate-on, before 2026-03-09):
 
-- Historical command: `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-post-layout --session-auto --env FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1 --launch -- cargo run -p fret-ui-gallery`
+- Historical command: `cargo run -p fretboard-dev -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-post-layout --session-auto --env FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1 --launch -- cargo run -p fret-ui-gallery`
 
 Evidence (2026-03-02, macOS aarch64, debug build):
 
@@ -249,7 +249,7 @@ Evidence (2026-03-02, macOS aarch64, debug build, after SE-112 overflow-context 
 
 Example (JSON):
 
-- `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
+- `fretboard-dev diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
 
 ### Inclusion / exclusion rules
 
@@ -445,7 +445,7 @@ Implementation status:
 - SE-114 (bounded-observation telemetry) is implemented. When wrapper peeling or bounded deep scan
   hits its budget, `UiDebugScrollNodeTelemetry` records an `overflow_observation` payload for the
   scroll node (and `FRET_DEBUG_SCROLL_EXTENT_PROBE=1` prints a budget-hit log line).
-  - Tooling: `fretboard diag query scroll-extents-observation <base_out_dir|session_out_dir|bundle_dir|bundle.schema2.json> --json`
+  - Tooling: `fretboard-dev diag query scroll-extents-observation <base_out_dir|session_out_dir|bundle_dir|bundle.schema2.json> --json`
     - The JSON output includes a best-effort `test_id` field (nearest ancestor semantics decoration),
       to make “budget hit” reports easier to triage in UI Gallery pages.
     - Filter modes:

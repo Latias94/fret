@@ -18,11 +18,11 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
 
 - Tooling helper:
   - Summarize multiple `--session-auto` samples under a base dir:
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady`
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
+    - `fretboard-dev diag memory-summary --dir target/fret-diag-mem-todo-steady`
+    - `fretboard-dev diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
     - Linear fit helper (least squares; outputs intercept + slope + suggested `slope_ppm`):
-      - `fretboard diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear macos_owned_unmapped_memory_dirty_bytes:renderer_gpu_images_bytes_estimate`
-      - `fretboard diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear wgpu_metal_current_allocated_size_bytes_max:renderer_gpu_images_bytes_estimate`
+      - `fretboard-dev diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear macos_owned_unmapped_memory_dirty_bytes:renderer_gpu_images_bytes_estimate`
+      - `fretboard-dev diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear wgpu_metal_current_allocated_size_bytes_max:renderer_gpu_images_bytes_estimate`
     - Renderer-side attribution fields (from `bundle_last_frame_stats`) are also surfaced, so you can sort/compare by:
       - `--sort-key renderer_gpu_images_bytes_estimate`
       - `--sort-key renderer_gpu_render_targets_bytes_estimate`
@@ -31,14 +31,14 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
       - `--sort-key render_text_blob_paint_palette_bytes_estimate_total`
       - `--sort-key render_text_blob_decorations_bytes_estimate_total`
   - Optional macOS-only hint for the largest `vmmap` buckets:
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
+    - `fretboard-dev diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
   - Aggregate macOS `vmmap -sortBySize` top-dirty regions across samples (helps attribute `owned unmapped memory`):
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-agg`
+    - `fretboard-dev diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-agg`
     - If pointing at a parent dir with multiple dated runs, recursion is enabled by default (bounded); disable via `--no-recursive`.
   - Break down the aggregated regions further by a normalized `detail` key (e.g. de-addressed malloc zones, IOSurface kind):
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-detail-agg`
+    - `fretboard-dev diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-detail-agg`
   - Aggregate Apple `footprint` categories (dirty bytes) across samples (macOS-only):
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --footprint-categories-agg`
+    - `fretboard-dev diag memory-summary --dir target/fret-diag-mem-todo-steady --footprint-categories-agg`
     - Useful for cross-checking whether the large `vmmap` buckets (e.g. `owned unmapped memory`) correspond to a stable
       `footprint` category (e.g. untagged VM allocations, page tables, GPU carveout reservations).
 
@@ -150,7 +150,7 @@ Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baselin
   - Physical footprint (peak): ~241 MiB
   - `owned unmapped memory` dirty: ~204 MiB
   - Default malloc zone: ~13.6 MiB allocated, ~4.0 MiB frag
-  - With `fretboard diag repro` (UI diagnostics enabled, plus tool-side `vmmap` capture):
+  - With `fretboard-dev diag repro` (UI diagnostics enabled, plus tool-side `vmmap` capture):
   - Repeat sample (N=5):
     - `macos_vmmap_steady.physical_footprint_peak_bytes`: 279,550,362 .. 282,591,232 (~266.6 .. 269.5 MiB)
     - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 213,594,931 (~203.7 MiB)
@@ -197,7 +197,7 @@ Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Me
 Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
 
 - Note: this page is behind `fret-ui-gallery`'s `gallery-dev` feature; launch with that enabled (or `gallery-full`) or the nav item will not exist.
-- Repeat sample (N=5; captured via `fretboard diag repro --launch`):
+- Repeat sample (N=5; captured via `fretboard-dev diag repro --launch`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 387,343,974 .. 390,804,275 (~369.4 .. 372.7 MiB)
   - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 236,349,030 .. 236,978,176 (~225.4 .. 226.0 MiB)
   - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 79,475,507 .. 83,745,178 (~75.8 .. 79.9 MiB)
@@ -256,7 +256,7 @@ Interpretation:
       - `registered_font_blobs_{count,total_bytes}` (injected memory-backed fonts)
       - `family_id_cache_entries`, `baseline_metrics_cache_entries` (shaper caches)
 
-Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
+Allocator A/B (empty idle, `--release`, `fretboard-dev diag repro`, same script):
 
 - System allocator:
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 284,164,096
@@ -465,11 +465,11 @@ Candidate gates:
 
 Repeat gates (distribution-aware; recommended for CI / flake-resistant baselines):
 
-- `fretboard diag repeat ... --check-memory-p90-max <key>:<bytes>`
+- `fretboard-dev diag repeat ... --check-memory-p90-max <key>:<bytes>`
   - Uses all `evidence.index.json` samples under the repeat output dir and fails if:
     - any sample is missing the requested `<key>`, or
     - the p90 value exceeds `<bytes>`.
-- `fretboard diag repeat ... --no-compare`
+- `fretboard-dev diag repeat ... --no-compare`
   - Skips bundle-to-baseline diffing so memory/distribution runs can pass even when payloads are intentionally non-deterministic across runs.
 
 Recommended local gate baselines (macOS, 2026-03-04):
@@ -536,7 +536,7 @@ Note: these numbers are intentionally conservative and should be revisited when:
 
 ### Repeat distributions (local 2026-03-06)
 
-These runs were captured via `fretboard diag repeat` and summarized with `fretboard diag memory-summary`.
+These runs were captured via `fretboard-dev diag repeat` and summarized with `fretboard-dev diag memory-summary`.
 
 Note:
 
@@ -649,7 +649,7 @@ Interpretation:
 
 ### UI Gallery card subtree attribution sweep (analysis-only; local 2026-03-06)
 
-A follow-up pass fixed one diagnostics correctness issue first: `fretboard diag repeat --launch` was not forwarding `script.meta.env_defaults` into the launch environment. That meant the earlier "card" runs could silently fall back to the diag default page (`overlay`) instead of the intended `FRET_UI_GALLERY_START_PAGE=card`. The repeat launcher now honors script env defaults.
+A follow-up pass fixed one diagnostics correctness issue first: `fretboard-dev diag repeat --launch` was not forwarding `script.meta.env_defaults` into the launch environment. That meant the earlier "card" runs could silently fall back to the diag default page (`overlay`) instead of the intended `FRET_UI_GALLERY_START_PAGE=card`. The repeat launcher now honors script env defaults.
 
 For subtree attribution we also need a different semantics export policy than the raw steady-memory gates. The analysis runs below used:
 
@@ -710,7 +710,7 @@ To keep digging into the corrected `card` path, the gallery content tree now exp
 - `ui-gallery-status-bar`
 - `ui-gallery-card-section-{demo,usage,size,card-content,meeting-notes,image,rtl,compositions,notes}`
 
-`fret-diag` / `fretboard diag memory-summary` now surface matching `*_semantics_subtree_nodes` keys, so the analysis runs can attribute the stable `card` shell without opening raw bundles. Re-running the corrected analysis recipe (N=3 each):
+`fret-diag` / `fretboard-dev diag memory-summary` now surface matching `*_semantics_subtree_nodes` keys, so the analysis runs can attribute the stable `card` shell without opening raw bundles. Re-running the corrected analysis recipe (N=3 each):
 
 - Full card shell (`target/diag/mem-ui-gallery-card-sections-empty-r3-20260306/`; all runs confirmed `selected_page=card`):
   - `MALLOC_SMALL` p50 ≈ **370.6 MiB**
@@ -995,12 +995,12 @@ These scripts bake in the analysis-only overrides directly:
 - `FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY=1`
 - `FRET_UI_GALLERY_NAV_QUERY=__none__`
 
-Important: use them as a **fresh-launch script list** (for example, one `fretboard diag repeat ... --launch` invocation per script). Do **not** treat `diag suite` as a cold-memory baseline runner here, because suite mode intentionally reuses the same app process across scripts.
+Important: use them as a **fresh-launch script list** (for example, one `fretboard-dev diag repeat ... --launch` invocation per script). Do **not** treat `diag suite` as a cold-memory baseline runner here, because suite mode intentionally reuses the same app process across scripts.
 
 Example:
 
-- `target/debug/fretboard diag repeat tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-retained-analysis.json --repeat 1 --dir target/diag/mem-ui-gallery-card-preview-only-retained-analysis --no-compare --launch -- target/release/fret-ui-gallery`
-- Then read the counters either from `bundle.schema2.json` or from `fretboard diag memory-summary --json <run_dir>` / `evidence.index.json -> resources.bundle_last_frame_stats`.
+- `target/debug/fretboard-dev diag repeat tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-retained-analysis.json --repeat 1 --dir target/diag/mem-ui-gallery-card-preview-only-retained-analysis --no-compare --launch -- target/release/fret-ui-gallery`
+- Then read the counters either from `bundle.schema2.json` or from `fretboard-dev diag memory-summary --json <run_dir>` / `evidence.index.json -> resources.bundle_last_frame_stats`.
 - The `capture_bundle` path now backfills `script.result.json.last_bundle_dir` / `last_bundle_artifact`, and `diag repeat` mirrors that into `repeat.summary.json.runs[*].last_bundle_dir`, so a single-script `diag repeat --repeat 1 --no-compare --launch` run leaves a stable bundle anchor for later automation.
 
 Release analysis reruns (N=1 each) used:

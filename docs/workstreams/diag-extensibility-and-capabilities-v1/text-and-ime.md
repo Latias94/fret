@@ -87,8 +87,8 @@ In-repo examples:
 
 Run the suite (native):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-code-editor --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag suite ui-gallery-text-ime --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-code-editor --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-text-ime --launch -- cargo run -p fret-ui-gallery --release`
 
 IME-specific behavior may remain runner-dependent; treat missing IME evidence as capability-gated
 (`diag.text_ime_trace`) rather than as an implicit timeout.

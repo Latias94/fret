@@ -28,7 +28,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] M3X-guard-002 Define the “always-run” gate set for Material3 work (fast inner-loop).
   - Candidate:
     - `cargo nextest run -p fret-ui-material3 -E <switch|textfield subset>`
-    - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-material3-*.json`
+    - `cargo run -p fretboard-dev -- diag script lint tools/diag-scripts/ui-gallery-material3-*.json`
 
 - [ ] M3X-guard-003 Decide how we version upstream references (Material Web token versions, Compose versions).
   - Goal: keep token source drift explainable (not “mystery numbers”).
@@ -49,7 +49,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Material Web: handle-container margin transition with overshoot bezier.
   - Compose: motion scheme + springy thumb offset/size.
   - Decision (v1): match Material Web’s handle-container overshoot for position; keep size/pressed behavior iterative.
-  - Gate: fixed-timestep timeline screenshots (`fretboard diag run --fixed-frame-delta-ms 16`).
+  - Gate: fixed-timestep timeline screenshots (`fretboard-dev diag run --fixed-frame-delta-ms 16`).
   - Evidence:
     - `ecosystem/fret-ui-material3/src/switch.rs`
     - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
@@ -94,7 +94,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [ ] M3X-overlay-001 Identify overlay policy ownership boundaries (dismiss rules, focus trap/restore).
   - Owner: `ecosystem/fret-ui-kit` (policy), `ecosystem/fret-ui-material3` (recipes).
-  - Gate: `fretboard diag` scripts for dismiss + focus restore invariants.
+  - Gate: `fretboard-dev diag` scripts for dismiss + focus restore invariants.
 
 - [ ] M3X-overlay-002 Material3 menu surface: anchor, offset, collision/flip, keyboard navigation.
 - [ ] M3X-overlay-003 Dialog: focus trap + escape/outside click policy + scroll locking (as applicable).

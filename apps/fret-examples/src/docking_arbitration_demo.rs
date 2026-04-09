@@ -3099,7 +3099,7 @@ fn render(
     if injected_any {
         // Let the runner apply effects (including commands) through the normal effect pipeline.
         // Synchronous command flushing can stall pointer-heavy scripted drags and cause
-        // `fretboard diag run` to time out waiting for script progress.
+        // `fretboard-dev diag run` to time out waiting for script progress.
         state.ui.request_semantics_snapshot();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);

@@ -14,7 +14,7 @@ refactor into a repo-wide rewrite.
 
 ### D1: Built-in suites are curated directory inputs
 
-Built-in `fretboard diag suite <name>` suites are defined by curated directory inputs under:
+Built-in `fretboard-dev diag suite <name>` suites are defined by curated directory inputs under:
 
 - `tools/diag-scripts/suites/<suite-name>/`
 
@@ -88,7 +88,7 @@ Tip (maintenance):
 3) Validate closures:
 
 - Tooling-side health check (bounded, read-only; no Python required):
-  - `cargo run -p fretboard -- diag doctor scripts`
+  - `cargo run -p fretboard-dev -- diag doctor scripts`
 
 - Taxonomy drift check (for already-migrated areas):
   - `python tools/diag-scripts/migrate-script-library.py --check-root`
@@ -96,17 +96,17 @@ Tip (maintenance):
     - `python tools/diag-scripts/migrate-script-library.py --check-root --include-prefix ui-gallery-`
 
 - Suites still run (redirect chains are supported):
-  - `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
 - Scriptgen closure still holds:
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
 - Registry stays in sync:
-  - `cargo run -p fretboard -- diag registry check`
+  - `cargo run -p fretboard-dev -- diag registry check`
 
 4) Normalize scripts (stable diffs):
 
-- `cargo run -p fretboard -- diag script normalize tools/diag-scripts/**.json --check`
+- `cargo run -p fretboard-dev -- diag script normalize tools/diag-scripts/**.json --check`
 - (optional) `--write` after reviewing diffs
 
 ## Non-goals (v1)
@@ -158,5 +158,5 @@ they exist):
 
 After adding/moving scripts, keep drift visible and bounded:
 
-- `cargo run -p fretboard -- diag doctor scripts`
+- `cargo run -p fretboard-dev -- diag doctor scripts`
 - `python tools/diag-scripts/migrate-script-library.py --check-root`

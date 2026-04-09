@@ -126,7 +126,7 @@ pub(crate) fn cmd_artifact(
 
     let Some(sub) = rest.first().map(|s| s.as_str()) else {
         return Err(
-            "missing artifact subcommand (try: fretboard diag artifact lint [<run_dir|out_dir>])"
+            "missing artifact subcommand (try: fretboard-dev diag artifact lint [<run_dir|out_dir>])"
                 .to_string(),
         );
     };

@@ -46,7 +46,7 @@ Status update (2026-03-02, later):
 
 Stability check (2026-03-02):
 
-- `fretboard diag repeat` passes 7x with:
+- `fretboard-dev diag repeat` passes 7x with:
   - `--env FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1`,
   - `--reuse-launch`,
   - `--compare-ignore-bounds --compare-ignore-scene-fingerprint` (expected to drift for multi-window demos).
@@ -55,10 +55,10 @@ Post-merge verification (2026-03-02):
 
 - Note: when iterating on in-app diagnostics logic, rebuild the launched demo binary (`docking_arbitration_demo.exe`);
   `fretboard` itself does not rebuild the demo when using `--launch -- target/debug/...exe`.
-- `fretboard diag run` is green with `--timeout-ms 60000`:
+- `fretboard-dev diag run` is green with `--timeout-ms 60000`:
   - out dir: `target/fret-diag-step35-fix3b`
   - run id: `1772462696715`
-- `fretboard diag repeat` is green 3x with:
+- `fretboard-dev diag repeat` is green 3x with:
   - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
   - out dir: `target/fret-diag-step35-fix3b-repeat2`
 
@@ -66,7 +66,7 @@ Post-merge verification (2026-03-02, after syncing `origin/main` into local `mai
 
 - Merge commit: `d3d97c321`.
 - Base out dir: `target/fret-diag-merge-smoke`.
-- `fretboard diag run` PASS with `--timeout-ms 60000`:
+- `fretboard-dev diag run` PASS with `--timeout-ms 60000`:
   - overlap z-order switch: run id `1772468892427` (session `1772468392070-85720`)
   - chained tear-off (two tabs): run id `1772468949607` (session `1772468946994-57504`)
 
@@ -76,9 +76,9 @@ Post-merge verification (2026-03-03):
   terminal (avoids Cargo build-lock contention during diagnostics authoring):
   - `target/debug/fretboard.exe ... --launch -- target/debug/docking_arbitration_demo.exe`
 - Chained tear-off (two tabs) is stable again:
-  - `fretboard diag run` PASS with `--timeout-ms 60000`:
+  - `fretboard-dev diag run` PASS with `--timeout-ms 60000`:
     - run id `1772522076604` (base out dir `target/fret-diag-chained4`, session `1772522070686-66016`)
-  - `fretboard diag repeat` is green 7x with:
+  - `fretboard-dev diag repeat` is green 7x with:
     - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
     - summary: `target/fret-diag-chained-repeat1/repeat.summary.json`
 - Dock tab titles no longer disappear after a short idle delay (~2s) during diagnostics runs:
@@ -145,7 +145,7 @@ Status update (2026-03-04):
   - Tooling: strict termination preflight treats trailing `wait_ms` like `wait_frames` for smoke/gate suites.
   - Guidance: prefer `wait_until` with `timeout_ms` for multi-window/occlusion resilience; use `wait_ms` only as a last resort.
 - Dock routing evidence is self-healing:
-  - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` prefers regenerating `dock.routing.json` from the adjacent
+  - `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` prefers regenerating `dock.routing.json` from the adjacent
     bundle artifact when available, so newly added bounded evidence keys do not require manual sidecar deletion.
   - The report surfaces window-local cursor evidence (`pos/start/grab/follow`) alongside `src/cur` and DPI fields
     (`sf_cur/sf_move`) to make mixed-DPI routing bugs actionable without opening `bundle.json`.

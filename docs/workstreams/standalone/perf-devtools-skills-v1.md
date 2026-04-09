@@ -12,12 +12,12 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; ADRs remain the source of truth)
 
 This workstream documents how we want contributors to **investigate, explain, and prevent** performance regressions
-in Fret, using repo-local Agent Skills and `fretboard diag` tooling.
+in Fret, using repo-local Agent Skills and `fretboard-dev diag` tooling.
 
 Goal: turn “perf feels off” into a repeatable, commit-addressable loop:
 
 1) reproduce via a stable `tools/diag-scripts/*.json` probe,
-2) quantify via `fretboard diag perf` + baselines/gates,
+2) quantify via `fretboard-dev diag perf` + baselines/gates,
 3) attribute via bundles (CPU phases + renderer churn signals, and optional external profilers),
 4) prevent regressions via gates + perf log entries.
 

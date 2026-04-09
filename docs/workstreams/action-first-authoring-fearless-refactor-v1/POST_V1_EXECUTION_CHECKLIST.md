@@ -140,9 +140,9 @@ When a batch changes the default authoring story, keep at least the following ve
 view:
 
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
-- `cargo test -p fretboard scaffold::templates::tests::todo_template_uses_default_authoring_dialect -- --exact`
-- `cargo test -p fretboard scaffold::templates::tests::simple_todo_template_has_low_adapter_noise_and_no_query_selector -- --exact`
-- `cargo test -p fretboard scaffold::templates::tests::template_readmes_capture_authoring_guidance -- --exact`
+- `cargo test -p fretboard-dev scaffold::templates::tests::todo_template_uses_default_authoring_dialect -- --exact`
+- `cargo test -p fretboard-dev scaffold::templates::tests::simple_todo_template_has_low_adapter_noise_and_no_query_selector -- --exact`
+- `cargo test -p fretboard-dev scaffold::templates::tests::template_readmes_capture_authoring_guidance -- --exact`
 
 Add narrower gates when a batch changes a specific component family or conversion seam.
 

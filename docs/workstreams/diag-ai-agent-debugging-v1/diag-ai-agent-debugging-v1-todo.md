@@ -6,8 +6,8 @@ Last updated: 2026-02-21
 
 - [ ] Inventory current bundle hot spots (largest fields by bytes) for v1/v2.
   - [x] v1 baseline measured (local samples; see `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`).
-  - [x] v2 baseline measured (tooling-side conversion via `fretboard diag bundle-v2`), and compared to v1.
-- [x] Add `fretboard diag hotspots` tooling to report approximate per-path JSON sizes.
+  - [x] v2 baseline measured (tooling-side conversion via `fretboard-dev diag bundle-v2`), and compared to v1.
+- [x] Add `fretboard-dev diag hotspots` tooling to report approximate per-path JSON sizes.
 - [x] Define size budgets for “AI packet” outputs (default + max) and enforce them in tooling.
   - Budget + clipping behavior: `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`.
   - Tooling writes `ai.packet.json` with budget + clip/drop summary.
@@ -16,7 +16,7 @@ Last updated: 2026-02-21
 ## M1: Index + minimal packet (Phase 1)
 
 - [x] Define `bundle.index.json` v1 schema (typed, bounded).
-- [x] Add a tooling writer + `fretboard diag index` for `bundle.index.json`.
+- [x] Add a tooling writer + `fretboard-dev diag index` for `bundle.index.json`.
 - [x] Ensure `diag pack --include-root-artifacts|--include-triage` includes `bundle.index.json`.
 - [x] Make `diag slice` validate `--frame-id|--snapshot-seq` against `bundle.index.json` (when present).
 - [x] Make `diag slice` attempt a bounded parse for explicit snapshot selection (avoid full-bundle `serde_json::Value` build).
@@ -30,7 +30,7 @@ Last updated: 2026-02-21
   - [x] Add a per-semantics-key test-id bloom index to avoid full semantics scans:
     - `bundle.index.json.semantics_blooms` stores bloom hints keyed by `(window, semantics_fingerprint, semantics_source)`.
     - `diag slice` and `diag query snapshots` use it when per-snapshot `test_id_bloom_hex` is absent.
-- [x] Add `fretboard diag ai-packet ...` that exports:
+- [x] Add `fretboard-dev diag ai-packet ...` that exports:
   - `bundle.meta.json`
   - `bundle.index.json`
   - stable slice outputs for a given `--test-id` or script failure anchor

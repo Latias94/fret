@@ -92,4 +92,4 @@ These invariants are treated as stable contracts for refactors:
 ## Validation
 
 - Desktop: `cargo run -p fret-demo --bin fret-demo -- chart_demo`
-- Web: `cargo run -p fretboard -- dev web --demo chart_demo`
+- Web: `cargo run -p fretboard-dev -- dev web --demo chart_demo`

@@ -27,7 +27,7 @@ This is a working checklist for the `fret-interaction` kernel workstream.
   - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (resize handles call `update_immediate_move`).
 - [ ] (Optional) Extract pointer capture/focus choreography into a kernel helper without importing `fret-ui`.
   - Goal: keep policy at call sites, but avoid subtly different capture/release flows across surfaces.
-- [ ] Add/extend `fretboard diag` gates:
+- [ ] Add/extend `fretboard-dev diag` gates:
   - [x] title bar drag screenshots + stale paint check
     - Evidence: `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json`
     - Evidence: `tools/diag_gate_interaction_kernel_v1.py` (runs with `--check-stale-paint imui-float-demo.a.activate`).

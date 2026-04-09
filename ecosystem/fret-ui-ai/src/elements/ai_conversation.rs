@@ -37,7 +37,7 @@ fn debug_assert_unique_message_ids(messages: &[AiMessage]) {
 ///   “new content arrived” (including streaming append to the last assistant message) so the
 ///   stick-to-bottom behavior can remain correct.
 /// - **Automation gates**: set `test_id_message_prefix` so per-message part selectors remain stable
-///   for `fretboard diag` scripts.
+///   for `fretboard-dev diag` scripts.
 #[derive(Clone)]
 pub struct AiConversationTranscript {
     messages: Arc<[AiMessage]>,

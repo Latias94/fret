@@ -11,7 +11,7 @@ can promote the key parts into an ADR.
 
 - The v2 work is still evolving (API shape and ergonomics are not stable).
 - The implementation lives in `ecosystem/*` and is expected to iterate quickly.
-- We already have regression protection via unit tests + `fretboard diag` scripted gates.
+- We already have regression protection via unit tests + `fretboard-dev diag` scripted gates.
 
 ## Layering (non-negotiable)
 

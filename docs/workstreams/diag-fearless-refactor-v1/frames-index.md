@@ -12,11 +12,11 @@ without reading or materializing large parts of the bundle artifact (`bundle.jso
 
 It is generated from bundle artifacts via:
 
-- `fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n>`
-- or indirectly via `fretboard diag doctor --fix-sidecars ...`
-- and is included in `fretboard diag ai-packet ...` (subject to packet budgets).
-- and is used by `fretboard diag triage --lite ...` to avoid loading full bundle artifacts into memory.
-- and is used by `fretboard diag hotspots --lite ...` to provide a “slow frames” report without materializing bundle artifacts.
+- `fretboard-dev diag frames-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n>`
+- or indirectly via `fretboard-dev diag doctor --fix-sidecars ...`
+- and is included in `fretboard-dev diag ai-packet ...` (subject to packet budgets).
+- and is used by `fretboard-dev diag triage --lite ...` to avoid loading full bundle artifacts into memory.
+- and is used by `fretboard-dev diag hotspots --lite ...` to provide a “slow frames” report without materializing bundle artifacts.
 
 ## What it contains
 

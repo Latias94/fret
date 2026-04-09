@@ -1,6 +1,6 @@
 # Docking TabBar Fearless Refactor v1 (Evidence and Gates)
 
-This workstream is gated primarily by `fretboard diag` scripted regressions and a small set of unit tests.
+This workstream is gated primarily by `fretboard-dev diag` scripted regressions and a small set of unit tests.
 
 ## Diagnostics scripts (docking)
 
@@ -22,7 +22,7 @@ These scripts use a semantic anchor (instead of pixel coordinates) to avoid DPI/
 
 Run as suite:
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard-dev -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 
@@ -41,7 +41,7 @@ Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 
 ## Script registry sanity check
 
-- `cargo run -p fretboard -- diag registry check`
+- `cargo run -p fretboard-dev -- diag registry check`
 
 ## Evidence bundles (fill in after running locally)
 

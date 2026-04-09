@@ -68,5 +68,5 @@ This audit compares Fret's shadcn-aligned `Calendar` against the upstream shadcn
 - `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month) | test(calendar_range_query_region_stays_intrinsic_for_single_month_and_fill_for_multi_month)' --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib -E 'test(calendar_day_button_supporting_text_renders_only_for_in_month_days) | test(calendar_range_day_button_supporting_text_renders_only_for_in_month_days)' --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --lib calendar_range_dropdown_caption_layout_renders_month_and_year_triggers --status-level fail`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-screenshot.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-screenshot.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-custom-cell-size-responsive.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`

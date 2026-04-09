@@ -36,10 +36,10 @@ Prefer the smallest stable unit that still reproduces the problem:
 
 Examples:
 
-- `cargo run -p fretboard -- diag run <script_id> --launch -- <cmd...>`
-- `cargo run -p fretboard -- diag suite <suite_id> --launch -- <cmd...>`
-- `cargo run -p fretboard -- diag campaign run <campaign_id> --launch -- <cmd...>`
-- `cargo run -p fretboard -- diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag run <script_id> --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag suite <suite_id> --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag campaign run <campaign_id> --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- <cmd...>`
 
 ### 2. Treat the aggregate root as the handoff surface
 
@@ -78,8 +78,8 @@ Recommended order:
 
 Examples:
 
-- `cargo run -p fretboard -- diag dashboard <campaign_or_batch_root>`
-- `cargo run -p fretboard -- diag summarize <campaign_or_batch_root> --json`
+- `cargo run -p fretboard-dev -- diag dashboard <campaign_or_batch_root>`
+- `cargo run -p fretboard-dev -- diag summarize <campaign_or_batch_root> --json`
 
 For policy-skipped slices, keep this distinction explicit:
 
@@ -100,8 +100,8 @@ bundle directories manually.
 
 Examples:
 
-- `cargo run -p fretboard -- diag campaign share <campaign_or_batch_root>`
-- `cargo run -p fretboard -- diag campaign share <campaign_or_batch_root> --json`
+- `cargo run -p fretboard-dev -- diag campaign share <campaign_or_batch_root>`
+- `cargo run -p fretboard-dev -- diag campaign share <campaign_or_batch_root> --json`
 
 Current behavior:
 

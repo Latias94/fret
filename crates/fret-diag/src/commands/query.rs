@@ -241,7 +241,7 @@ fn resolve_bundle_index_from_src(
         };
 
         return Err(format!(
-            "bundle.index.json {note} and no adjacent bundle artifact was found to regenerate it (tip: run `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`)\n  index: {}",
+            "bundle.index.json {note} and no adjacent bundle artifact was found to regenerate it (tip: run `fretboard-dev diag index <bundle_dir|bundle.json|bundle.schema2.json>`)\n  index: {}",
             src.display()
         ));
     }
@@ -268,7 +268,9 @@ pub(crate) fn cmd_query(
     }
 
     let Some(kind) = rest.first().map(|s| s.as_str()) else {
-        return Err("missing query kind (try: fretboard diag query test-id <pattern>)".to_string());
+        return Err(
+            "missing query kind (try: fretboard-dev diag query test-id <pattern>)".to_string(),
+        );
     };
 
     match kind {
@@ -1223,7 +1225,7 @@ fn cmd_query_snapshots(
                 || index_source != actual_source.unwrap_or("")
             {
                 warnings.push(format!(
-                    "bundle.index.json semantics mismatch for window={} frame_id={:?} snapshot_seq={:?} (warmup_frames={warmup_frames})\n  index: has_semantics={} semantics_source={}\n  bundle: has_semantics={} semantics_source={}\n  hint: regenerate sidecars via `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames {warmup_frames}`",
+                    "bundle.index.json semantics mismatch for window={} frame_id={:?} snapshot_seq={:?} (warmup_frames={warmup_frames})\n  index: has_semantics={} semantics_source={}\n  bundle: has_semantics={} semantics_source={}\n  hint: regenerate sidecars via `fretboard-dev diag index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames {warmup_frames}`",
                     r.window,
                     r.frame_id,
                     r.window_snapshot_seq,
@@ -1263,7 +1265,7 @@ fn cmd_query_snapshots(
         });
         let Some(step) = step else {
             return Err(format!(
-                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>` so it can see script.result.json)"
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard-dev diag index <out_dir>/<run_id>` so it can see script.result.json)"
             ));
         };
         let window = step.get("window").and_then(|v| v.as_u64()).ok_or_else(|| {
@@ -1527,7 +1529,9 @@ fn cmd_query_test_id(
     }
 
     if positionals.is_empty() {
-        return Err("missing pattern (try: fretboard diag query test-id <pattern>)".to_string());
+        return Err(
+            "missing pattern (try: fretboard-dev diag query test-id <pattern>)".to_string(),
+        );
     }
     if positionals.len() > 2 {
         return Err(format!(
@@ -1548,7 +1552,7 @@ fn cmd_query_test_id(
             let maybe_path = crate::resolve_path(workspace_root, PathBuf::from(pattern));
             if looks_like_path(pattern) && (maybe_path.is_file() || maybe_path.is_dir()) {
                 return Err(
-                    "missing pattern (try: fretboard diag query test-id <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
+                    "missing pattern (try: fretboard-dev diag query test-id <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
                         .to_string(),
                 );
             }

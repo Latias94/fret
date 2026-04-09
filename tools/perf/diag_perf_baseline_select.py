@@ -139,7 +139,7 @@ def _baseline_metrics(path: Path) -> BaselineMetrics:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Select a stable perf baseline from multiple `fretboard diag perf` candidates.",
+        description="Select a stable perf baseline from multiple `fretboard-dev diag perf` candidates.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument("--suite", default="ui-gallery-steady")
@@ -157,25 +157,25 @@ def main() -> int:
         "--prewarm-script",
         action="append",
         default=[],
-        help="Forwarded to `fretboard diag perf --prewarm-script <script.json>` (repeatable).",
+        help="Forwarded to `fretboard-dev diag perf --prewarm-script <script.json>` (repeatable).",
     )
     ap.add_argument(
         "--prelude-script",
         action="append",
         default=[],
-        help="Forwarded to `fretboard diag perf --prelude-script <script.json>` (repeatable).",
+        help="Forwarded to `fretboard-dev diag perf --prelude-script <script.json>` (repeatable).",
     )
     ap.add_argument(
         "--prelude-each-run",
         action="store_true",
         default=False,
-        help="Forwarded to `fretboard diag perf --prelude-each-run`.",
+        help="Forwarded to `fretboard-dev diag perf --prelude-each-run`.",
     )
     ap.add_argument(
         "--env",
         action="append",
         default=[],
-        help="Forwarded to `fretboard diag perf --env KEY=VALUE` (repeatable).",
+        help="Forwarded to `fretboard-dev diag perf --env KEY=VALUE` (repeatable).",
     )
 
     args = ap.parse_args()

@@ -49,18 +49,19 @@ Use any editor, but install `rust-analyzer` (VS Code, IntelliJ Rust, Zed, etc.).
 
 ## Fast iteration (recommended)
 
-### 1) Prefer `fretboard` for running demos
+### 1) Prefer `fretboard-dev` for running demos in this repo
 
 For a quick “is my environment working?” run:
 
 ```bash
-cargo run -p fretboard -- dev native --bin todo_demo
+cargo run -p fretboard-dev -- dev native --bin todo_demo
 ```
 
 Notes:
 
-- On Windows, `fretboard dev native ...` defaults to `--profile dev-fast` for faster builds.
+- On Windows, `fretboard-dev dev native ...` defaults to `--profile dev-fast` for faster builds.
 - On other platforms (or if you want richer debug inspection), you can pass `--profile dev`.
+- The published `fretboard` CLI remains the public `assets` / `config` surface; repo-runner commands stay on `fretboard-dev`.
 
 ### 2) Use the built-in aliases for the common path
 

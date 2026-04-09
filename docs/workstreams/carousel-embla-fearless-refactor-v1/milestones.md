@@ -70,7 +70,7 @@ surface.
 
 **Exit criteria**
 
-- `fretboard diag run ...ui-gallery-carousel-plugin-autoplay-pixels-changed.json --check-pixels-changed ui-gallery-carousel-plugin` passes.
+- `fretboard-dev diag run ...ui-gallery-carousel-plugin-autoplay-pixels-changed.json --check-pixels-changed ui-gallery-carousel-plugin` passes.
 
 ## M4 — Remaining drift + ergonomics (next)
 

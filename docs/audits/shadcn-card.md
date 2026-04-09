@@ -96,5 +96,5 @@ example implementations in `repo-ref/ui`.
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app card_rich_title_snippet_prefers_copyable_card_title_children_helper`
 - `CARGO_TARGET_DIR=/tmp/fret-codex-card-target cargo nextest run -p fret-ui-gallery --lib -E 'test(gallery_card_demo_header_action_stays_in_the_upstream_top_right_lane) or test(gallery_card_demo_keeps_docs_form_controls_visible_and_aligned)'`
 - `CARGO_TARGET_DIR=/tmp/fret-codex-card-target cargo nextest run -p fret-ui-gallery --test card_docs_surface -E 'test(card_page_documents_source_axes_and_children_api_decision) or test(card_docs_path_snippets_stay_copyable_and_docs_aligned) or test(card_docs_diag_script_covers_docs_path_and_fret_followups)'`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`

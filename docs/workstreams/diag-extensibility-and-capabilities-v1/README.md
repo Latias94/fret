@@ -73,7 +73,7 @@ Ecosystem authors should be able to:
 
 - add `test_id` (or semantics labels) in their UI,
 - write scripts as JSON (or generate JSON via typed helpers),
-- run them through `fretboard diag run` (native) or the devtools WS export path (web runner),
+- run them through `fretboard-dev diag run` (native) or the devtools WS export path (web runner),
 - ship repro zips (`diag repro` / `diag pack`) to maintainers.
 
 Typed helpers (Rust builders, script generators) are allowed, but MUST compile down to the same JSON schema.

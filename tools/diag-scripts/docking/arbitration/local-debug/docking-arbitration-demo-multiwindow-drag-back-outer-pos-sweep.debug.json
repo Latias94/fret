@@ -11,7 +11,7 @@
       "This is a local-debug variant of the multi-window drag-back flow.",
       "After tear-off creates a floating OS window and a cross-window dock drag is active, the script sweeps the floating window outer position far along +X and -X, capturing bundles after each move.",
       "Use this when validating mixed-DPI multi-monitor setups (e.g. 125% + 150%). One of the outer moves may cross the monitor boundary depending on monitor arrangement.",
-      "Evidence: use `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` to inspect `sf_cur/sf_move` and coordinate-space hints (`scr/scr_used/origin`).",
+      "Evidence: use `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` to inspect `sf_cur/sf_move` and coordinate-space hints (`scr/scr_used/origin`).",
       "Note: if the host only has a single monitor (or OS clamps window positions), the sweep still exercises large-coordinate paths and must remain stable."
     ]
   },

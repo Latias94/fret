@@ -1,6 +1,6 @@
 # Workspace TabStrip (Fearless Refactor v1) — Evidence and Gates
 
-This workstream is gated by a small set of unit tests and `fretboard diag` scripted regressions.
+This workstream is gated by a small set of unit tests and `fretboard-dev diag` scripted regressions.
 
 ## Unit tests
 
@@ -11,7 +11,7 @@ This workstream is gated by a small set of unit tests and `fretboard diag` scrip
 
 Suite:
 
-- `cargo run -p fretboard -- diag suite workspace-shell-demo --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+- `cargo run -p fretboard-dev -- diag suite workspace-shell-demo --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
 
 Gates (examples):
 

@@ -60,7 +60,7 @@ Definition of done:
 - [x] Implement capability discovery:
   - [x] filesystem-trigger transport (`capabilities.json`),
   - [x] devtools WS transport (session-advertised capabilities).
-- [x] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
+- [x] Make `fretboard-dev diag run/repro/suite` fail fast when required capabilities are missing:
   - [x] `diag run` (filesystem transport),
   - [x] `diag run` (devtools WS transport),
   - [x] `diag suite` (filesystem transport),
@@ -100,7 +100,7 @@ Definition of done:
 
 ### M5: Ecosystem-friendly script discovery and suites
 
-- [x] Allow `fretboard diag suite` to accept:
+- [x] Allow `fretboard-dev diag suite` to accept:
   - [x] `--script-dir <path>`,
   - [x] `--glob <pattern>`,
   - [ ] multiple directories (workspace + `.fret/diag/scripts` + external).

@@ -174,7 +174,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
                     if let Some(s) = window_snapshot_seq {
                         hint.push_str(&format!(" --snapshot-seq {s}"));
                     }
-                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`), args:{hint}")
+                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard-dev diag index <bundle_dir|bundle.json|bundle.schema2.json>`), args:{hint}")
                 })?;
         if !m.has_semantics {
             let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
@@ -834,7 +834,7 @@ pub(crate) fn cmd_slice(
     }
 
     let test_id = test_id.ok_or_else(|| {
-        "missing --test-id (try: fretboard diag slice --test-id <test_id>)".to_string()
+        "missing --test-id (try: fretboard-dev diag slice --test-id <test_id>)".to_string()
     })?;
 
     if step_index.is_some() && (frame_id.is_some() || window_snapshot_seq.is_some()) {
@@ -990,7 +990,7 @@ pub(crate) fn cmd_slice(
             resolve_step_selector_from_bundle_index(&idx, step_index)
         else {
             return Err(format!(
-                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>` so it can see script.result.json)"
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard-dev diag index <out_dir>/<run_id>` so it can see script.result.json)"
             ));
         };
         if let Some(req) = window_id

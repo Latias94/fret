@@ -67,8 +67,8 @@ pub(crate) enum QuerySubcommandArgs {
 
 #[derive(Debug, Args)]
 #[command(
-    override_usage = "fretboard diag query test-id [SOURCE] PATTERN [OPTIONS]",
-    after_help = "Examples:\n  fretboard diag query test-id ui-gallery\n  fretboard diag query test-id target/fret-diag/demo ui-gallery"
+    override_usage = "fretboard-dev diag query test-id [SOURCE] PATTERN [OPTIONS]",
+    after_help = "Examples:\n  fretboard-dev diag query test-id ui-gallery\n  fretboard-dev diag query test-id target/fret-diag/demo ui-gallery"
 )]
 pub(crate) struct QueryTestIdArgs {
     #[arg(value_name = "ARG", num_args = 1..=2, required = true)]
@@ -237,7 +237,7 @@ pub(crate) fn resolve_query_test_id_inputs(
             let maybe_path = crate::resolve_path(workspace_root, PathBuf::from(pattern));
             if looks_like_query_source(pattern) && (maybe_path.is_file() || maybe_path.is_dir()) {
                 return Err(
-                    "missing pattern (try: fretboard diag query test-id <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
+                    "missing pattern (try: fretboard-dev diag query test-id <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
                         .to_string(),
                 );
             }
@@ -250,6 +250,6 @@ pub(crate) fn resolve_query_test_id_inputs(
             source: Some(source.clone()),
             pattern: pattern.clone(),
         }),
-        _ => Err("missing pattern (try: fretboard diag query test-id <pattern>)".to_string()),
+        _ => Err("missing pattern (try: fretboard-dev diag query test-id <pattern>)".to_string()),
     }
 }

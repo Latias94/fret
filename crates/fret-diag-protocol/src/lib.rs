@@ -3,7 +3,7 @@
 //! The diagnostics pipeline intentionally uses explicit schema versions (e.g. `*V1`, `*V2`) so
 //! tooling can evolve without breaking older bundles/scripts.
 //!
-//! Most users interact with this crate indirectly via `fretboard diag` and the JSON artifacts in
+//! Most users interact with this crate indirectly via `fretboard-dev diag` and the JSON artifacts in
 //! `tools/diag-scripts/`.
 
 use serde::{Deserialize, Serialize};
@@ -108,7 +108,7 @@ pub enum UiImeEventV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Scripted UI interaction plan (schema v1).
 ///
-/// Used by `fretboard diag` to drive automated UI actions and assertions.
+/// Used by `fretboard-dev diag` to drive automated UI actions and assertions.
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1115,7 +1115,7 @@ pub enum UiActionStepV2 {
     /// copying the best selector JSON to the OS clipboard.
     ///
     /// This is intended to gate that the in-app inspector UX is still functional under
-    /// tool-launched scripted runs (`fretboard diag run/suite --launch`) without relying on
+    /// tool-launched scripted runs (`fretboard-dev diag run/suite --launch`) without relying on
     /// keyboard shortcut injection.
     ///
     /// Behavior notes:
@@ -1134,7 +1134,7 @@ pub enum UiActionStepV2 {
     /// clipboard.
     ///
     /// This is intended to gate that the help-mode tree browser remains functional under
-    /// tool-launched scripted runs (`fretboard diag run/suite --launch`) without relying on
+    /// tool-launched scripted runs (`fretboard-dev diag run/suite --launch`) without relying on
     /// keyboard shortcut injection.
     InspectHelpTreeLockBestMatchAndCopySelector {
         #[serde(default, skip_serializing_if = "Option::is_none")]

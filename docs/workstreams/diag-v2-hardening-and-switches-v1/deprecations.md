@@ -20,7 +20,7 @@ Prefer a config file (`FRET_DIAG_CONFIG_PATH`) plus a small set of explicit over
 - `FRET_DIAG_FIXED_FRAME_DELTA_MS`
 
 Other `FRET_DIAG_*` env vars remain supported as compatibility/escape hatches, but should not be
-required for the common `fretboard diag ... --launch` flows.
+required for the common `fretboard-dev diag ... --launch` flows.
 
 ## Tool-launched (`--launch`) env policy (recommended)
 

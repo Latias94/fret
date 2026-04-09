@@ -34,7 +34,7 @@ function Invoke-NormalizeScripts {
   $chunkSize = 40
   for ($i = 0; $i -lt $Scripts.Count; $i += $chunkSize) {
     $chunk = $Scripts[$i..([Math]::Min($Scripts.Count - 1, $i + $chunkSize - 1))]
-    & cargo run -p fretboard --quiet -- diag script normalize @chunk --write
+    & cargo run -p fretboard-dev --quiet -- diag script normalize @chunk --write
     if ($LASTEXITCODE -ne 0) {
       throw "diag script normalize failed"
     }
@@ -53,12 +53,12 @@ $scripts | ForEach-Object { Write-Host ("  - {0}" -f $_) }
 Invoke-NormalizeScripts -Scripts $scripts
 
 if (-not $NoIndex) {
-  & cargo run -p fretboard --quiet -- diag registry write
+  & cargo run -p fretboard-dev --quiet -- diag registry write
   if ($LASTEXITCODE -ne 0) {
     throw "diag registry write failed"
   }
 
-  & cargo run -p fretboard --quiet -- diag registry check
+  & cargo run -p fretboard-dev --quiet -- diag registry check
   if ($LASTEXITCODE -ne 0) {
     throw "diag registry check failed"
   }

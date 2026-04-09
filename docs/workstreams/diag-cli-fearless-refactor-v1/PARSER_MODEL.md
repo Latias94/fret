@@ -52,7 +52,7 @@ Rules:
 
 Practical grep rule for each migration batch:
 
-- grep the repo for `fretboard diag <command>` before the cutover,
+- grep the repo for `fretboard-dev diag <command>` before the cutover,
 - migrate repo-owned callers in the same window,
 - grep again after the cutover and remove the final residues of deleted syntax.
 
@@ -107,7 +107,7 @@ The contract scaffold is intentionally not the final execution wiring. It exists
 
 ## 4) Top-level command tree direction
 
-The top-level tree remains `fretboard diag <subcommand>`.
+The top-level tree remains `fretboard-dev diag <subcommand>`.
 
 Immediate first migration batch:
 

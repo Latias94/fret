@@ -44,7 +44,7 @@ reducing transitional stabilization in `ecosystem/fret-docking`).
 - Keep split trees shallow by enforcing a canonical simplified form (no nested same-axis splits).
 - Introduce a place to add editor-grade constraints (min sizes, drop masks, locked groups) without
   polluting `fret-ui` (policy stays in `ecosystem/fret-docking`).
-- Build regressions into gates using `fretboard diag` scripts and perf probes.
+- Build regressions into gates using `fretboard-dev diag` scripts and perf probes.
 
 ## Non-goals (v1)
 
@@ -409,7 +409,7 @@ Rationale:
 
 This workstream must be “fearless” in practice. Each milestone should add at least one gate.
 
-### Scripted correctness gates (`fretboard diag`)
+### Scripted correctness gates (`fretboard-dev diag`)
 
 Target: `docking_arbitration_demo` is the best integration harness because it already covers:
 
@@ -457,7 +457,7 @@ Plan:
   - frame time summary,
   - number of layout nodes visited,
   - and any debug counters exposed by docking.
-- Gate with `fretboard diag perf` or the existing resize probe gates:
+- Gate with `fretboard-dev diag perf` or the existing resize probe gates:
   - `tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3`
 
 ## Open questions (to lock down in the TODO/milestones docs)

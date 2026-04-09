@@ -74,4 +74,4 @@ Status legend:
     - [`tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json`](../../../tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json)
     - [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
     - [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
-- [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
+- [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard-dev list native-demos` stays intentionally small.

@@ -4,8 +4,8 @@ Status: Draft / in progress
 
 Current state (as of 2026-02-21):
 
-- Tooling can generate `bundle.index.json` (schema v1) via `fretboard diag index <bundle_dir|bundle.json>`.
-- Tooling can export a bounded “AI packet” directory via `fretboard diag ai-packet ...`.
+- Tooling can generate `bundle.index.json` (schema v1) via `fretboard-dev diag index <bundle_dir|bundle.json>`.
+- Tooling can export a bounded “AI packet” directory via `fretboard-dev diag ai-packet ...`.
 - Index and packet writers live in:
   - `crates/fret-diag/src/bundle_index.rs`
   - `crates/fret-diag/src/commands/index.rs`
@@ -87,12 +87,12 @@ What ships now (Phase 1 subset):
   - `test_ids.json` (human-facing; may be deprecated later)
   - `frames.index.json` (for `triage --lite` / `hotspots --lite` workflows)
 - The sidecars are usable on their own (no bundle artifact) for common “AI packet” loops:
-  - `fretboard diag meta <packet_dir|bundle.meta.json> --meta-report`
-  - `fretboard diag query test-id <packet_dir|test_ids.index.json> <pattern>`
-  - `fretboard diag query snapshots <packet_dir|bundle.index.json> [--test-id <id>]`
-  - `fretboard diag query snapshots <packet_dir|bundle.index.json> --step-index <n>`
-  - `fretboard diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
-  - `fretboard diag slice <packet_dir|bundle.json> --step-index <n> --test-id <id>` (selects the snapshot nearest step `n`)
+  - `fretboard-dev diag meta <packet_dir|bundle.meta.json> --meta-report`
+  - `fretboard-dev diag query test-id <packet_dir|test_ids.index.json> <pattern>`
+  - `fretboard-dev diag query snapshots <packet_dir|bundle.index.json> [--test-id <id>]`
+  - `fretboard-dev diag query snapshots <packet_dir|bundle.index.json> --step-index <n>`
+  - `fretboard-dev diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
+  - `fretboard-dev diag slice <packet_dir|bundle.json> --step-index <n> --test-id <id>` (selects the snapshot nearest step `n`)
 - For large bundles, `diag slice` attempts a bounded parse first when an explicit snapshot selector is provided
   (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
   - Supports both v1 inline semantics (`debug.semantics.nodes`) and v2 table semantics (`tables.semantics.entries`).
@@ -156,22 +156,22 @@ See:
 
 To measure where bytes go in representative bundles, use:
 
-- `fretboard diag hotspots <bundle_dir|bundle.json> --hotspots-top 30 --max-depth 7 --min-bytes 4096`
+- `fretboard-dev diag hotspots <bundle_dir|bundle.json> --hotspots-top 30 --max-depth 7 --min-bytes 4096`
 
 This produces an approximate, whitespace-free JSON size estimate per aggregated path (arrays use `[]` wildcards), which is good
 enough to identify the biggest subtrees (snapshots, semantics tables, logs, etc.) and to drive budget decisions.
 
 To generate a local schema-v2 baseline from an existing v1 bundle (for measurement and comparison), use:
 
-- `fretboard diag bundle-v2 <bundle_dir|bundle.json> --mode last --out <bundle.schema2.last.json>`
-- `fretboard diag bundle-v2 <bundle_dir|bundle.json> --mode changed --out <bundle.schema2.changed.json>`
+- `fretboard-dev diag bundle-v2 <bundle_dir|bundle.json> --mode last --out <bundle.schema2.last.json>`
+- `fretboard-dev diag bundle-v2 <bundle_dir|bundle.json> --mode changed --out <bundle.schema2.changed.json>`
 
 ### Hot spot inventory (local samples, 2026-02-21)
 
 These runs were measured on local `schema_version=1` bundles under `.fret/diag/`:
 
-- `fretboard diag hotspots .fret/diag/1770260419048-ui-gallery-avatar/bundle.json --hotspots-top 40 --max-depth 7 --min-bytes 4096`
-- `fretboard diag hotspots .fret/diag/1770260415986-script-step-0027-click/bundle.json --hotspots-top 40 --max-depth 7 --min-bytes 4096`
+- `fretboard-dev diag hotspots .fret/diag/1770260419048-ui-gallery-avatar/bundle.json --hotspots-top 40 --max-depth 7 --min-bytes 4096`
+- `fretboard-dev diag hotspots .fret/diag/1770260415986-script-step-0027-click/bundle.json --hotspots-top 40 --max-depth 7 --min-bytes 4096`
 
 Top contributors (approx minified bytes; sums are aggregated across all snapshots):
 
@@ -191,7 +191,7 @@ Implication for AI packets:
 
 ### Hot spot inventory (schema v2, converted samples, 2026-02-21)
 
-Converted the same v1 bundles with `fretboard diag bundle-v2` and re-ran hotspots.
+Converted the same v1 bundles with `fretboard-dev diag bundle-v2` and re-ran hotspots.
 
 Key observation: v2 moves the semantics payload to `tables.semantics.entries[].semantics.nodes` (dedup by `(window, semantics_fingerprint)`),
 so “table semantics” becomes the dominant hot spot when inline semantics are stripped.
@@ -215,7 +215,7 @@ Implication for schema v2:
 ### AI packet budgets (enforced by tooling)
 
 The intent is to keep the common case “small by default”, while allowing opt-in escalation.
-Tooling enforces these budgets during `fretboard diag ai-packet` by clipping or dropping optional files when necessary, and writes
+Tooling enforces these budgets during `fretboard-dev diag ai-packet` by clipping or dropping optional files when necessary, and writes
 an `ai.packet.json` report into the output directory (for auditability).
 When `script.result.json.stage=failed`, the report may also include a `failed_step_slices` section that summarizes which anchored
 `slice.failed_step.*.json` files were written (or why they were skipped).

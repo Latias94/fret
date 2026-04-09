@@ -15,7 +15,7 @@ Tracking format:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script/suite name
+- and/or a `fretboard-dev diag` script/suite name
 
 ## M0 — Plan + gates
 

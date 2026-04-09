@@ -2785,8 +2785,8 @@ fn parse_suite_command(
     if args.suite.is_none() && args.script_dirs.is_empty() && args.globs.is_empty() {
         return Err(
             "missing suite/script input (pass a suite name, script path, `--script-dir`, or `--glob`)\n\
-hint: try `fretboard diag suite ui-gallery`, `fretboard diag suite --script-dir tools/diag-scripts/ui-gallery/data_table`, or `fretboard diag suite --glob 'tools/diag-scripts/ui-gallery-select-*.json'`\n\
-hint: list suites via `fretboard diag list suites`"
+hint: try `fretboard-dev diag suite ui-gallery`, `fretboard-dev diag suite --script-dir tools/diag-scripts/ui-gallery/data_table`, or `fretboard-dev diag suite --glob 'tools/diag-scripts/ui-gallery-select-*.json'`\n\
+hint: list suites via `fretboard-dev diag list suites`"
                 .to_string(),
         );
     }
@@ -2853,7 +2853,7 @@ fn maybe_parse_migrated_command_with_workspace(
         return Some(Err(err));
     }
 
-    let argv = std::iter::once("fretboard diag".to_string())
+    let argv = std::iter::once("fretboard-dev diag".to_string())
         .chain(args.iter().cloned())
         .collect::<Vec<_>>();
     let parsed = match contracts::try_parse_contract(argv) {
@@ -2986,7 +2986,7 @@ fn maybe_parse_migrated_command_with_workspace(
 
 pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
     if args.is_empty() {
-        let err = contracts::try_parse_contract(["fretboard diag", "--help"])
+        let err = contracts::try_parse_contract(["fretboard-dev diag", "--help"])
             .expect_err("diag --help should render clap help");
         print!("{err}");
         return Ok(());
@@ -2996,7 +2996,7 @@ pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
         return Err(err);
     }
 
-    let argv = std::iter::once("fretboard diag".to_string())
+    let argv = std::iter::once("fretboard-dev diag".to_string())
         .chain(args.iter().cloned())
         .collect::<Vec<_>>();
     match contracts::try_parse_contract(argv) {
@@ -6305,7 +6305,7 @@ mod tests {
             Some(Ok(_)) => panic!("unsupported migrated windows flags should be rejected"),
             None => panic!("windows should stay on migrated parser"),
         };
-        assert!(windows_err.contains("Usage: fretboard diag windows"));
+        assert!(windows_err.contains("Usage: fretboard-dev diag windows"));
     }
 
     #[test]

@@ -59,5 +59,5 @@ base examples, and the current gallery/docs surface.
 
 - `cargo nextest run -p fret-ui-gallery toggle_group_`
 - `cargo nextest run -p fret-ui-shadcn toggle_group`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Existing chrome/layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_toggle_group_demo_chrome_matches`) and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs` (`toggle-group-*` height cases)

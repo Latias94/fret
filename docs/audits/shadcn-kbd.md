@@ -54,4 +54,4 @@ registry examples, and the in-repo layout/docs gates.
 
 - `cargo nextest run -p fret-ui-shadcn web_vs_fret_layout_kbd_heights_match_web_fixtures web_vs_fret_layout_kbd_tooltip_kbd_height_matches_web fret_layout_kbd_text_is_vertically_centered_ascii fret_layout_kbd_icon_only_height_matches_control_height fret_kbd_in_tooltip_content_overrides_bg_and_fg`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json --dir target/fret-diag-kbd-codex --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json --dir target/fret-diag-kbd-codex --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`

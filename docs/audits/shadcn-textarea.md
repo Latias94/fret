@@ -58,6 +58,6 @@ base examples, New York follow-up examples, and the in-repo textarea web gates.
 - `CARGO_TARGET_DIR=target-codex-textarea-check cargo check -p fret-ui-shadcn --lib --tests --message-format short`
 - Docs surface gate: `cargo nextest run -p fret-ui-gallery textarea_`
 - Focused unit gate: `cargo nextest run -p fret-ui-shadcn textarea_rows_raise_initial_min_height_without_lowering_defaults`
-- Docs-path diag gate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- Docs-path diag gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`textarea-demo`, `textarea-demo.invalid`, `textarea-demo.focus`, `textarea-demo.invalid-focus`)
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`textarea-demo`)

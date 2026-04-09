@@ -188,13 +188,13 @@ Anchors:
 
 Repro note (local evidence; do not check in the bundle):
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-dispersion-screenshot.json --dir target/fret-diag/lg-v3-dispersion --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
-- `cargo run -p fretboard -- diag latest --dir target/fret-diag/lg-v3-dispersion`
-- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/lg-v3-dispersion/triage.liquid-glass-lens-custom-v3-dispersion.json`
-- `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
-- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv2/triage.custom-effect-v2-non-filterable-input-fallback.json`
-- `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
-- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv3/triage.custom-effect-v3-non-filterable-user0-fallback.json`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-dispersion-screenshot.json --dir target/fret-diag/lg-v3-dispersion --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
+- `cargo run -p fretboard-dev -- diag latest --dir target/fret-diag/lg-v3-dispersion`
+- `cargo run -p fretboard-dev -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/lg-v3-dispersion/triage.liquid-glass-lens-custom-v3-dispersion.json`
+- `cargo run -p fretboard-dev -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+- `cargo run -p fretboard-dev -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv2/triage.custom-effect-v2-non-filterable-input-fallback.json`
+- `cargo run -p fretboard-dev -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+- `cargo run -p fretboard-dev -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv3/triage.custom-effect-v3-non-filterable-user0-fallback.json`
 
 Gate templates (local; PowerShell):
 
@@ -202,22 +202,22 @@ These are intended as “copy/paste regression checks” that avoid opening `bun
 output. They do not check in any artifacts under `target/fret-diag/`.
 
 - CustomV2 incompatible input → deterministic fallback hint present:
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/custom-effect-v2-non-filterable-input-fallback-screenshot.json --dir target/fret-diag/gates/customv2-fallback --session-auto --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
-  - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv2-fallback --warmup-frames 0 --json --out target/fret-diag/gates/customv2-fallback/triage.json | Out-Null`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/custom-effect-v2-non-filterable-input-fallback-screenshot.json --dir target/fret-diag/gates/customv2-fallback --session-auto --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+  - `cargo run -p fretboard-dev -- diag triage target/fret-diag/gates/customv2-fallback --warmup-frames 0 --json --out target/fret-diag/gates/customv2-fallback/triage.json | Out-Null`
   - `$t = Get-Content target/fret-diag/gates/customv2-fallback/triage.json | ConvertFrom-Json; if (($t.hints.code -notcontains 'renderer.custom_effect_v2_user_image_incompatible_fallbacks')) { throw 'missing expected triage hint' }`
 
 - CustomV3 incompatible user inputs → deterministic fallback hint present (user0 / user1 / user0+user1):
   - user0:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user0-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user0 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
-    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user0 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user0/triage.json | Out-Null`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user0-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user0 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard-dev -- diag triage target/fret-diag/gates/customv3-user0 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user0/triage.json | Out-Null`
     - `$t = Get-Content target/fret-diag/gates/customv3-user0/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if ($h.evidence.custom_effect_v3_user0_image_incompatible_fallbacks -ne 1) { throw 'expected user0 fallbacks=1' }`
   - user1:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user1-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user1 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
-    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user1 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user1/triage.json | Out-Null`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user1-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user1 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard-dev -- diag triage target/fret-diag/gates/customv3-user1 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user1/triage.json | Out-Null`
     - `$t = Get-Content target/fret-diag/gates/customv3-user1/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if ($h.evidence.custom_effect_v3_user1_image_incompatible_fallbacks -ne 1) { throw 'expected user1 fallbacks=1' }`
   - user0+user1:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user01-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user01 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
-    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user01 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user01/triage.json | Out-Null`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user01-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user01 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard-dev -- diag triage target/fret-diag/gates/customv3-user01 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user01/triage.json | Out-Null`
     - `$t = Get-Content target/fret-diag/gates/customv3-user01/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if (($h.evidence.custom_effect_v3_user0_image_incompatible_fallbacks -ne 1) -or ($h.evidence.custom_effect_v3_user1_image_incompatible_fallbacks -ne 1)) { throw 'expected user0+user1 fallbacks=1' }`
 
 ### Known gaps / intentional differences
@@ -298,7 +298,7 @@ Changes (landed):
 Gates:
 
 - `cargo check -p fret-render-wgpu -p fret-diag -p fret-bootstrap`
-- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3 --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
+- `cargo run -p fretboard-dev -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3 --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
 
 Rollback:
 
@@ -463,7 +463,7 @@ Changes:
 Gates:
 
 - `cargo test -p fret-render-wgpu --lib render_plan_dump`
-- (Optional) `cargo run -p fretboard -- diag suite liquid-glass-custom-v3 --dir target/fret-diag/liquid-glass-custom-v3 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --check-triage-hint-absent renderer.custom_effect_v3_raw_aliased_to_src --check-triage-hint-absent renderer.custom_effect_v3_pyramid_degraded_to_one --check-triage-hint-absent renderer.backdrop_source_groups_raw_degraded --check-triage-hint-absent renderer.backdrop_source_groups_pyramid_degraded --launch -- .\\target\\debug\\liquid_glass_demo.exe`
+- (Optional) `cargo run -p fretboard-dev -- diag suite liquid-glass-custom-v3 --dir target/fret-diag/liquid-glass-custom-v3 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --check-triage-hint-absent renderer.custom_effect_v3_raw_aliased_to_src --check-triage-hint-absent renderer.custom_effect_v3_pyramid_degraded_to_one --check-triage-hint-absent renderer.backdrop_source_groups_raw_degraded --check-triage-hint-absent renderer.backdrop_source_groups_pyramid_degraded --launch -- .\\target\\debug\\liquid_glass_demo.exe`
 
 Rollback:
 
@@ -494,7 +494,7 @@ Gates:
 - `cargo check -p fret-render-wgpu -p fret-diag -p fret-bootstrap`
 - `cargo test -p fret-render-wgpu --test effect_custom_v3_conformance`
 - (Optional) Add suite gates:
-  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag/<suite> --session-auto --check-triage-hint-absent renderer.custom_effect_v1_requested_but_skipped --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- <demo exe>`
+  - `cargo run -p fretboard-dev -- diag suite <suite> --dir target/fret-diag/<suite> --session-auto --check-triage-hint-absent renderer.custom_effect_v1_requested_but_skipped --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- <demo exe>`
 
 Rollback:
 

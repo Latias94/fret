@@ -13,7 +13,7 @@ This file tracks milestones and concrete tasks for:
 
 Conventions:
 
-- “Perf gate” items should land with a runnable `fretboard diag perf` command + a bundle path.
+- “Perf gate” items should land with a runnable `fretboard-dev diag perf` command + a bundle path.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
 ## Milestones
@@ -55,7 +55,7 @@ Conventions:
 - [ ] Add paint-phase micro timers for the remaining dominant candidates:
   - per-node traversal overhead on stable frames (excluding widget code),
   - observation merging/collapse costs beyond the already-timed “collapse observations” step.
-- [x] Update `fretboard diag stats` + `--json` output to include the initial paint micro timers.
+- [x] Update `fretboard-dev diag stats` + `--json` output to include the initial paint micro timers.
   - Evidence: `feat(diag): add paint micro-breakdown timers` (commit `b20a1280`).
 - [ ] Record at least 3 “stable but paint-heavy” evidence bundles (menubar, overlay torture, chrome torture) and
   summarize the dominant paint sub-slice for each.
@@ -77,7 +77,7 @@ Conventions:
 - [ ] Validate against `ui-gallery-steady` baseline (repeat=7) and record delta in the perf log.
 - [ ] Ensure view-cache correctness remains unchanged:
   - `cargo test -p fret-ui` (or nextest equivalent) remains green,
-  - targeted scripted probes still pass (`fretboard diag repro ...` smoke runs).
+  - targeted scripted probes still pass (`fretboard-dev diag repro ...` smoke runs).
 
 ### P2: GPUI-aligned caching surface (optional, contract-heavy)
 

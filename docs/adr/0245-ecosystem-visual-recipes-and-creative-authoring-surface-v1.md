@@ -218,7 +218,7 @@ Migration guidance:
 When a recipe degrades, ecosystems should be able to report it without wiring bespoke logging:
 
 - `fret-ui-kit` SHOULD provide a tiny sink API (or re-use an existing diagnostics sink) so recipes
-  can emit `RecipeDegraded { label, reason }` events that show up in `fretboard diag` bundles
+  can emit `RecipeDegraded { label, reason }` events that show up in `fretboard-dev diag` bundles
   (ADR 0159).
 
 This does not need to be perfect in v1, but the seam must exist before widespread ecosystem

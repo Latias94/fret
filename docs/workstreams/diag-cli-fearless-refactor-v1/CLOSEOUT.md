@@ -16,7 +16,7 @@ Related:
 
 ## 0) Summary
 
-This workstream landed the pre-release hard reset for `fretboard diag`.
+This workstream landed the pre-release hard reset for `fretboard-dev diag`.
 
 The repo no longer carries parser-v1, no longer keeps a legacy simple-dispatch helper, and no
 longer treats `clap` as a side scaffold. `clap` is now the single parser/help source of truth for
@@ -36,7 +36,7 @@ the diagnostics CLI contract.
 
 The final merged state for this lane is:
 
-- one parser tree for `fretboard diag`
+- one parser tree for `fretboard-dev diag`
 - one help surface generated from that tree
 - one parser-to-execution normalization layer
 - zero compatibility fallbacks retained only for historical spellings
@@ -48,17 +48,17 @@ contract directly instead of reopening parser-v1 compatibility behavior.
 
 Repro / smoke commands:
 
-- `target/debug/fretboard diag --help`
-- `target/debug/fretboard diag agent --help`
-- `target/debug/fretboard diag path --help`
-- `target/debug/fretboard diag poke --help`
-- `target/debug/fretboard diag latest --help`
-- `target/debug/fretboard diag agent target/fret-diag-ai-model-selector-focus-gate --json --out target/fret-diag-agent.plan.json`
+- `target/debug/fretboard-dev diag --help`
+- `target/debug/fretboard-dev diag agent --help`
+- `target/debug/fretboard-dev diag path --help`
+- `target/debug/fretboard-dev diag poke --help`
+- `target/debug/fretboard-dev diag latest --help`
+- `target/debug/fretboard-dev diag agent target/fret-diag-ai-model-selector-focus-gate --json --out target/fret-diag-agent.plan.json`
 
 Gate commands:
 
 - `cargo nextest run -p fret-diag cli::contracts::tests:: cli::cutover::tests::`
-- `cargo build -p fretboard --message-format short`
+- `cargo build -p fretboard-dev --message-format short`
 
 Evidence anchors:
 

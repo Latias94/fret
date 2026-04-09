@@ -33,7 +33,7 @@
 - [x] Baseline vs view-cache bundle pair (magic patterns torture, web):
   - Evidence (view-cache off): `.fret/diag/exports/1771845229222-bundle`
   - Evidence (view-cache on, shell-only): `.fret/diag/exports/1771842539046-bundle`
-  - Notes: `fretboard diag perf-baseline-from-bundles` baselines:
+  - Notes: `fretboard-dev diag perf-baseline-from-bundles` baselines:
     - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-no-view-cache.web-local.v1.json`
       (worst bundle: `.fret/diag/exports/1771845229222-bundle/bundle.json`, `top_total_time_us=7200`)
     - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-view-cache-shell.web-local.v1.json`
@@ -44,7 +44,7 @@
 - [x] Baseline vs view-cache bundle pair (code editor torture, web):
   - Evidence (view-cache off): `.fret/diag/exports/1771847658648-bundle`
   - Evidence (view-cache on, shell-only): `.fret/diag/exports/1771847993928-bundle`
-  - Notes: `fretboard diag perf-baseline-from-bundles` baselines:
+  - Notes: `fretboard-dev diag perf-baseline-from-bundles` baselines:
     - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-no-view-cache.web-local.v1.json`
       (worst bundle: `.fret/diag/exports/1771847658648-bundle/bundle.json`, `top_total_time_us=7900`)
     - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-view-cache-sidebar.web-local.v1.json`

@@ -13,7 +13,7 @@ Exit criteria:
 Current status (2026-02-21):
 
 - Hot spots measured for local `schema_version=1` bundles (see `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`).
-- Hot spots measured for a schema-v2 baseline via tooling-side conversion (`fretboard diag bundle-v2`; see `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`).
+- Hot spots measured for a schema-v2 baseline via tooling-side conversion (`fretboard-dev diag bundle-v2`; see `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md`).
 - AI packet budgets are documented and enforced by tooling (clipping + optional drops), with an `ai.packet.json` report.
 - Still pending: refine the `reason_code` taxonomy for budget overruns/clipping outcomes.
 
@@ -27,7 +27,7 @@ Exit criteria:
 
 Current status:
 
-- `bundle.index.json` v1 is produced by tooling (`fretboard diag index`).
+- `bundle.index.json` v1 is produced by tooling (`fretboard-dev diag index`).
 - `diag slice` uses `bundle.index.json` to pick a default snapshot for bounded parsing, and prefers bloom hints when a `--test-id` is provided.
 - `diag query snapshots` can use bloom hints to rank/annotate candidates when a `--test-id` is provided.
 
@@ -40,7 +40,7 @@ Exit criteria:
 
 Current status:
 
-- `fretboard diag ai-packet` exists (tooling-side) and exports a small directory for a bundle.
+- `fretboard-dev diag ai-packet` exists (tooling-side) and exports a small directory for a bundle.
 
 ## M3: Manifest-first bundles (optional)
 

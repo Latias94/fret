@@ -164,7 +164,7 @@ The stack should be described and refactored as one layered system:
    - post-run checks,
    - artifact packing, indexing, compare, triage.
 5. **Presentation surfaces**
-   - `fretboard diag` CLI,
+   - `fretboard-dev diag` CLI,
    - DevTools GUI,
    - offline bundle viewer,
    - MCP adapter.
@@ -234,17 +234,17 @@ The workstream already has a first end-to-end aggregate path in-tree:
 
 - `diag suite`, `diag repeat`, `diag perf`, and `diag matrix` now emit
   `regression.summary.json`.
-- `fretboard diag summarize` aggregates one or more summaries into:
+- `fretboard-dev diag summarize` aggregates one or more summaries into:
   - `regression.summary.json` as the canonical merged summary,
   - `regression.index.json` as a lighter consumer-oriented index.
-- `fretboard diag dashboard` is the first thin consumer over the aggregate index:
+- `fretboard-dev diag dashboard` is the first thin consumer over the aggregate index:
   - default output is a human-readable first-open summary,
   - `--json` keeps machine-readable access to the full index payload.
 - `apps/fret-devtools-mcp` now exposes the same aggregate artifacts as MCP resources when they
   exist in the active artifacts root:
   - `regression.summary.json`,
   - `regression.index.json`.
-- `fretboard diag stats` now keeps the resource-loading gate family usable in stats-lite mode:
+- `fretboard-dev diag stats` now keeps the resource-loading gate family usable in stats-lite mode:
   - frames-index-backed lanes still stay lightweight when possible,
   - resource-loading checks now fall back to streaming `debug.resource_loading` snapshots instead
     of materializing the full bundle JSON.

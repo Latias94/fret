@@ -41,7 +41,7 @@ Practical perf triage recipe we should keep tightening (especially for “resize
 
 - First, enable redraw hitch logging to split the frame into `prepare` / `render` / `record` / `present` and determine
   whether the hitch is CPU-side UI work or GPU/present/surface behavior (see `docs/debugging-playbook.md`).
-- If `render_ms` dominates, capture a bundle during the problematic interaction and use `fretboard diag stats --sort time`
+- If `render_ms` dominates, capture a bundle during the problematic interaction and use `fretboard-dev diag stats --sort time`
   to attribute the slowest snapshots to `layout` vs `paint` (and to `layout_engine_solve_time_us` when relevant).
 - If `layout_time_us` is large but `layout_engine_solve_time_us` is small, enable `FRET_LAYOUT_NODE_PROFILE=1` to
   attribute time to individual widget `layout()` calls (e.g. identify intrinsic-measure dominated nodes like scroll
@@ -59,7 +59,7 @@ Fret already has most of the primitives needed for a “test-engine-like” work
 - Portable bundle artifacts (`bundle.json` / `bundle.schema2.json`) + packing tooling:
   - `apps/fretboard/src/diag.rs` (wrapper), `crates/fret-diag/src/pack_zip.rs`
   - Offline viewer (legacy): `tools/fret-bundle-viewer`
-- Perf triage and matrix compare: `fretboard diag perf|stats|compare|matrix`, `tools/diag_matrix_ui_gallery.py`
+- Perf triage and matrix compare: `fretboard-dev diag perf|stats|compare|matrix`, `tools/diag_matrix_ui_gallery.py`
 - Tracy integration via `tracing`: `docs/tracy.md`
 - RenderDoc scriptable inspection: `docs/renderdoc-inspection.md`, `apps/fret-renderdoc`
 - “Stale paint” detection based on semantics bounds vs scene fingerprint: `crates/fret-diag/src/stats.rs` (`--check-stale-paint`)
@@ -71,7 +71,7 @@ This workstream should *not* replace those pieces; it should unify and extend th
 This section is a quick “what’s real today vs what we want in v1” checklist.
 
 - **`diag repro` is not yet the full unified runner.**
-  - `fretboard diag repro <script|suite>` exists as a convenience wrapper.
+  - `fretboard-dev diag repro <script|suite>` exists as a convenience wrapper.
   - It writes `FRET_DIAG_DIR/repro.summary.json` and packs `FRET_DIAG_DIR/repro.zip`.
   - It writes `FRET_DIAG_DIR/evidence.index.json` as a lightweight index of the key artifacts/checks/resources for AI/CI.
   - For suites, it packs **multiple** bundles under stable zip prefixes (and includes script sources under `_root/scripts/`).
@@ -145,7 +145,7 @@ This section is a quick “what’s real today vs what we want in v1” checklis
 
 Introduce a single “do the right thing” command (name TBD):
 
-- `fretboard diag repro <script|suite> --launch -- <cmd...>`
+- `fretboard-dev diag repro <script|suite> --launch -- <cmd...>`
 
 Output:
 
@@ -224,7 +224,7 @@ Standardize the perf surface so tools can query it uniformly:
 
 Tooling gates (CI/automation):
 
-- `fretboard diag perf` supports threshold gating on the per-run “top frame” timings:
+- `fretboard-dev diag perf` supports threshold gating on the per-run “top frame” timings:
   - `--max-top-total-us <n>`
   - `--max-top-layout-us <n>`
   - `--max-top-solve-us <n>` (layout-engine solve time)

@@ -168,7 +168,7 @@ Status note (2026-03-08): this tracker predates the in-tree action-first/view-ru
   - Evidence:
     - `tools/diag-scripts/embedded-viewport-demo-input-forwarding.json`
   - Run:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/embedded-viewport-demo-input-forwarding.json --check-viewport-input-min 1 --launch -- cargo run -p fret-demo --bin embedded_viewport_demo`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/embedded-viewport-demo-input-forwarding.json --check-viewport-input-min 1 --launch -- cargo run -p fret-demo --bin embedded_viewport_demo`
 
 ---
 
@@ -243,7 +243,7 @@ Status note (2026-03-08): this tracker predates the in-tree action-first/view-ru
 - [x] ONB-demo-060 Decide the canonical demo shells for native + wasm.
   - Proposed:
     - `apps/fret-demo` (native)
-    - `apps/fret-demo-web` (wasm; already used by `fretboard dev web`)
+    - `apps/fret-demo-web` (wasm; already used by `fretboard-dev dev web`)
   - Evidence:
     - `apps/fretboard/src/dev.rs` (web dev shells into `apps/fret-demo-web`)
     - `docs/workstreams/onboarding-ergonomics-v1/onboarding-ergonomics-v1.md` (Decisions)
@@ -256,8 +256,8 @@ Status note (2026-03-08): this tracker predates the in-tree action-first/view-ru
     - `apps/fret-examples/src/simple_todo_demo.rs` (cross-platform demo implementation)
     - `apps/fret-demo-web/src/wasm.rs` (web `?demo=simple-todo` selection)
     - `apps/fret-demo/src/main.rs` (native demo selection; includes `simple-todo` + `todo_demo`)
-    - `apps/fretboard/src/dev.rs` (`fretboard dev native --demo <demo>` parity with web)
-    - `apps/fretboard/src/demos.rs` (`fretboard dev web --demo simple-todo` validation list)
+    - `apps/fretboard/src/dev.rs` (`fretboard-dev dev native --demo <demo>` parity with web)
+    - `apps/fretboard/src/demos.rs` (`fretboard-dev dev web --demo simple-todo` validation list)
   - Note:
     - `todo_demo` remains desktop-first because the current example targets the native builder/view path; wasm onboarding should be tracked as its own view-runtime adoption task.
 

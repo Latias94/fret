@@ -62,7 +62,7 @@ Implemented on branch `ws/app-iteration-fast-restart-v1` (worktree); not merged 
 
 Recommended default (no Subsecond required):
 
-- `fretboard dev native --bin <app> --watch`
+- `fretboard-dev dev native --bin <app> --watch`
 
 Build note:
 
@@ -71,7 +71,7 @@ Build note:
 
 Optional (Subsecond + fallback ladder):
 
-- `fretboard dev native --bin <app> --hotpatch`
+- `fretboard-dev dev native --bin <app> --hotpatch`
 
 User expectation after a code change:
 
@@ -164,7 +164,7 @@ Notes:
 4. **Crash loops**
    - Supervisor should detect repeated crashes and offer an easy “start clean” escape hatch:
      - ignore dev-state for one run (e.g. `FRET_DEV_STATE_RESET=1`)
-     - or use `fretboard dev native --dev-state-reset` (clears the dev-state file).
+     - or use `fretboard-dev dev native --dev-state-reset` (clears the dev-state file).
 
 ## Deliverables
 

@@ -26,7 +26,7 @@ pub struct WgpuHubReportFrameSample {
 
 /// Best-effort store for the most recent wgpu hub report sample per window.
 ///
-/// This is intended for diagnostics bundles (`fretboard diag *`) and should not be used as a
+/// This is intended for diagnostics bundles (`fretboard-dev diag *`) and should not be used as a
 /// correctness signal.
 #[derive(Debug, Default)]
 pub struct WgpuHubReportFrameStore {
@@ -82,7 +82,7 @@ pub struct WgpuAllocatorReportFrameSample {
 
 /// Best-effort store for the most recent wgpu allocator report sample per window.
 ///
-/// This is intended for diagnostics bundles (`fretboard diag *`) and should not be used as a
+/// This is intended for diagnostics bundles (`fretboard-dev diag *`) and should not be used as a
 /// correctness signal.
 #[derive(Debug, Default)]
 pub struct WgpuAllocatorReportFrameStore {

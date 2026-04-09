@@ -23,9 +23,9 @@ Usage:
     [-WarmupFrames <n>]
 
 Notes:
-  - Runs the `drop-shadow-v1-steady` perf suite via `fretboard diag perf`.
+  - Runs the `drop-shadow-v1-steady` perf suite via `fretboard-dev diag perf`.
   - Baselines are machine-dependent; generate one via:
-      cargo run -p fretboard -- diag perf tools/diag-scripts/drop-shadow-v1-steady.json `
+      cargo run -p fretboard-dev -- diag perf tools/diag-scripts/drop-shadow-v1-steady.json `
         --repeat 7 --warmup-frames 5 `
         --perf-baseline-out docs/workstreams/perf-baselines/drop-shadow-v1-steady.<machine-tag>.v1.json `
         --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/drop-shadow-v1-steady.v1.json `

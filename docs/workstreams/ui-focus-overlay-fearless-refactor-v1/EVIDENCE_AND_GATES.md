@@ -12,7 +12,7 @@
 - Full suite (when practical): `cargo nextest run -p fret-ui`
 - `python3 tools/check_layering.py`
 - Perf probe (optional, Phase C guardrail):
-  - `cargo run -p fretboard -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Existing regression coverage (anchors)
 
@@ -46,7 +46,7 @@
 - Scripted gate (run under view-cache env):
 
 ```powershell
-cargo run -p fretboard -- diag run ui-gallery-hovercard-open `
+cargo run -p fretboard-dev -- diag run ui-gallery-hovercard-open `
   --env FRET_UI_GALLERY_VIEW_CACHE=1 `
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
   --launch -- cargo run -p fret-ui-gallery --release
@@ -58,7 +58,7 @@ cargo run -p fretboard -- diag run ui-gallery-hovercard-open `
   `BlockMouseExceptScroll` ergonomics):
 
 ```powershell
-cargo run -p fretboard -- diag run ui-gallery-context-menu-occlusion-wheel-pass-through `
+cargo run -p fretboard-dev -- diag run ui-gallery-context-menu-occlusion-wheel-pass-through `
   --check-pixels-changed ui-gallery-nav-scroll `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -66,7 +66,7 @@ cargo run -p fretboard -- diag run ui-gallery-context-menu-occlusion-wheel-pass-
 - Modal barriers MUST block wheel from reaching underlay scroll containers:
 
 ```powershell
-cargo run -p fretboard -- diag run ui-gallery-modal-barrier-wheel-block `
+cargo run -p fretboard-dev -- diag run ui-gallery-modal-barrier-wheel-block `
   --check-pixels-unchanged ui-gallery-nav-scroll `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -74,21 +74,21 @@ cargo run -p fretboard -- diag run ui-gallery-modal-barrier-wheel-block `
 - Modal dialogs MUST install barrier roots and restore focus on close (and underlay press MUST be blocked):
 
 ```powershell
-cargo run -p fretboard -- diag run ui-gallery-modal-barrier-focus-restore `
+cargo run -p fretboard-dev -- diag run ui-gallery-modal-barrier-focus-restore `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 - ContextMenu keyboard invocation MUST focus the first item and restore focus to the trigger on escape:
 
 ```powershell
-cargo run -p fretboard -- diag run ui-gallery-context-menu-keyboard-escape-focus-restore `
+cargo run -p fretboard-dev -- diag run ui-gallery-context-menu-keyboard-escape-focus-restore `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 - Non-modal menu overlays (click-through outside press) MUST NOT steal focus back to the trigger:
 
 ```powershell
-cargo run -p fretboard -- diag run ui-gallery-dropdown-nonmodal-outside-press-focus-underlay `
+cargo run -p fretboard-dev -- diag run ui-gallery-dropdown-nonmodal-outside-press-focus-underlay `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 

@@ -58,7 +58,7 @@ Diagnostics scripts:
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json`
   - Asserts semantics scroll max is finite and wheel moves offset for both axes.
   - Self-contained navigation via `ui-gallery-nav-search` -> `ui-gallery-nav-scroll-area`.
-  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/` (run: `cargo run -p fretboard -- diag suite ui-gallery-scroll-area --launch -- cargo run -p fret-ui-gallery --release`).
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/` (run: `cargo run -p fretboard-dev -- diag suite ui-gallery-scroll-area --launch -- cargo run -p fret-ui-gallery --release`).
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
   - Starts a scrollbar thumb drag, triggers content growth mid-drag, and asserts scrollbar semantics `y` stays stable.
   - Harness diagnostics module (keep `test_id`s stable): `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/drag_baseline.rs`.
@@ -198,7 +198,7 @@ Evidence gate:
 
 Perf entrypoint:
 
-- `fretboard diag perf perf-ui-gallery-scroll-area ...` resolves via `crates/fret-diag/src/perf_seed_policy.rs`.
+- `fretboard-dev diag perf perf-ui-gallery-scroll-area ...` resolves via `crates/fret-diag/src/perf_seed_policy.rs`.
 
 ### B) Scrollbar drag baseline lock (correctness/UX)
 

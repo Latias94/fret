@@ -25,7 +25,7 @@ Read first:
 3) Add a gate.
 
 - Prefer a Rust test for token seeding outcomes.
-- Add `fretboard diag` screenshot scripts for high-signal visual outcomes under zinc/dark.
+- Add `fretboard-dev diag` screenshot scripts for high-signal visual outcomes under zinc/dark.
 
 ## Useful scans (fast inventory)
 

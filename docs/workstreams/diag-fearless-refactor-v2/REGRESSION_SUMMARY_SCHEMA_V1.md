@@ -438,7 +438,7 @@ Recommended rules:
   "run": {
     "run_id": "20260306-001",
     "created_unix_ms": 1772760000000,
-    "tool": "fretboard diag campaign"
+    "tool": "fretboard-dev diag campaign"
   },
   "totals": {
     "items_total": 3,
@@ -515,8 +515,8 @@ Recommended rules:
     "by_lane": { "correctness": 24, "perf": 8 },
     "by_status": { "passed": 28, "failed_deterministic": 4 },
     "by_tool": {
-      "fretboard diag suite": 24,
-      "fretboard diag perf": 8
+      "fretboard-dev diag suite": 24,
+      "fretboard-dev diag perf": 8
     },
     "by_reason_code": {
       "script.assert.focus_restore.mismatch": 2,
@@ -532,7 +532,7 @@ Recommended rules:
       "path": "target/fret-diag-campaign/20260306-001/perf/regression.summary.json",
       "campaign_name": "perf",
       "lane": "perf",
-      "tool": "fretboard diag perf",
+      "tool": "fretboard-dev diag perf",
       "failures": 2,
       "items_total": 8
     }

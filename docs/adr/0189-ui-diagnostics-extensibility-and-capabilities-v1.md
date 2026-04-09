@@ -163,7 +163,7 @@ Coordinate fallback rules:
 
 As of 2026-02-10, the repo provides:
 
-- JSON scripts in `tools/diag-scripts/` executed via `fretboard diag`.
+- JSON scripts in `tools/diag-scripts/` executed via `fretboard-dev diag`.
 - Script schema v2 intent-level steps in `crates/fret-diag-protocol`.
 - Typed script authoring helpers (builder) and an internal script generator tool for ergonomic authoring.
 

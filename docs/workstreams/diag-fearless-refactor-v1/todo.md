@@ -177,7 +177,7 @@ Status note:
 - [x] Migrate remaining commands to the shared sidecar helpers (start with `crates/fret-diag/src/commands/slice.rs`).
 - [x] Add a small “doctor” command that reports missing/invalid sidecars and suggests the exact regen command.
   - Evidence: `crates/fret-diag/src/commands/doctor.rs`
-  - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
+  - Related: `fretboard-dev diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
   - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
   - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars (including `frames.index.json`).
   - Agent ergonomics: `diag doctor --fix-schema2` can write `bundle.schema2.json` from `bundle.json` (when present).
@@ -199,7 +199,7 @@ Status note:
 ## M3: Tooling + AI loop
 
 - [x] Define CLI “agent presets” (commands + env vars) for repeatable triage.
-  - `fretboard diag agent <bundle> --warmup-frames <n>`
+  - `fretboard-dev diag agent <bundle> --warmup-frames <n>`
 - [x] Document a recommended “agent loop” that prefers sidecars over large `bundle.json`.
   - `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`
 - [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).

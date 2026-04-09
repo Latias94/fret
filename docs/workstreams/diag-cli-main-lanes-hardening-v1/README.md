@@ -55,7 +55,7 @@ path:
 Gate commands:
 
 - `cargo nextest run -p fret-diag cli::contracts::tests:: cli::cutover::tests::`
-- `cargo build -p fretboard --message-format short`
+- `cargo build -p fretboard-dev --message-format short`
 
 Evidence anchors:
 

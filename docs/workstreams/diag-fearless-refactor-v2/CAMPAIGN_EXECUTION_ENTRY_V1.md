@@ -21,10 +21,10 @@ The first minimal implementation is now landed in `crates/fret-diag`.
 
 Current shipped surface:
 
-- `fretboard diag campaign list`
-- `fretboard diag campaign show <campaign_id>`
-- `fretboard diag campaign run <campaign_id>`
-- `fretboard diag campaign run --lane <lane> --tag <tag> --platform <platform>`
+- `fretboard-dev diag campaign list`
+- `fretboard-dev diag campaign show <campaign_id>`
+- `fretboard-dev diag campaign run <campaign_id>`
+- `fretboard-dev diag campaign run --lane <lane> --tag <tag> --platform <platform>`
 
 Vocabulary rule:
 
@@ -97,13 +97,13 @@ What is still missing is one command that answers all of these together:
 
 ## 2) Recommendation
 
-Recommendation: add a first-class campaign entry under `fretboard diag campaign`.
+Recommendation: add a first-class campaign entry under `fretboard-dev diag campaign`.
 
 Suggested initial command family:
 
-- `fretboard diag campaign run <campaign_id>`
-- `fretboard diag campaign list`
-- `fretboard diag campaign show <campaign_id>`
+- `fretboard-dev diag campaign run <campaign_id>`
+- `fretboard-dev diag campaign list`
+- `fretboard-dev diag campaign show <campaign_id>`
 
 Only `run` is required for the first landing slice.
 
@@ -160,7 +160,7 @@ The first slice should intentionally stay small.
 
 Recommended first command:
 
-- `fretboard diag campaign run <campaign_id> [--dir <dir>] [--lane <lane>] [--json] [--launch -- <cmd...>]`
+- `fretboard-dev diag campaign run <campaign_id> [--dir <dir>] [--lane <lane>] [--json] [--launch -- <cmd...>]`
 
 Behavior:
 
@@ -175,9 +175,9 @@ Behavior:
 
 Recommended but not required for slice 1:
 
-- `fretboard diag campaign list`
+- `fretboard-dev diag campaign list`
   - lists known campaign ids, lanes, and a short description.
-- `fretboard diag campaign show <campaign_id>`
+- `fretboard-dev diag campaign show <campaign_id>`
   - prints the expanded suites/scripts, expected lane, and default evidence profile.
 
 These commands reduce friction substantially and keep campaign definitions discoverable.

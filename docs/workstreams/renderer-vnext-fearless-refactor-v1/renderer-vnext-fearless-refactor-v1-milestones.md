@@ -891,7 +891,7 @@ Progress record (Sampling hints v1):
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
   - `python3 tools/check_layering.py`
   - `$env:CARGO_TARGET_DIR='F:\\ct'; cargo nextest run -p fret-render-wgpu --test image_sampling_hint_conformance --test mask_image_conformance`
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-image-sampling-hints-screenshots.json --env FRET_DIAG_GPU_SCREENSHOTS=1 --pack --include-all --include-triage --include-screenshots --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-image-sampling-hints-screenshots.json --env FRET_DIAG_GPU_SCREENSHOTS=1 --pack --include-all --include-triage --include-screenshots --launch -- cargo run -p fret-ui-gallery --release`
 
 Perf snapshot record (post M5 plumbing):
 
@@ -926,7 +926,7 @@ Progress record (Uniformity closure):
   - `cargo test -p fret-render-wgpu shaders_`
   - `cargo check -p fret-demo-web --target wasm32-unknown-unknown`
   - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
-  - `cargo run -p fretboard -- dev web --demo ui_gallery` (manual browser smoke)
+  - `cargo run -p fretboard-dev -- dev web --demo ui_gallery` (manual browser smoke)
 
 Progress record (Headless perf gate):
 

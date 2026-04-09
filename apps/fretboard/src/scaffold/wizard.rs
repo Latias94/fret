@@ -12,7 +12,7 @@ use super::{
 pub(super) fn new_wizard() -> Result<(), String> {
     if !std::io::stdin().is_terminal() {
         return Err(
-            "interactive wizard requires a TTY (try: `fretboard new todo --name my-todo`)"
+            "interactive wizard requires a TTY (try: `fretboard-dev new todo --name my-todo`)"
                 .to_string(),
         );
     }

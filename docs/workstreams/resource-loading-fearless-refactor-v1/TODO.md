@@ -258,7 +258,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - generated `--surface fret` modules now expose startup-policy helpers
       (`preferred_startup_plan()`, `preferred_startup_mode()`, `mount(builder)?`) in addition to
       the packaged-lane ingredients (`ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`),
-    - `fretboard new {simple-todo,todo} --ui-assets` now consumes that generated startup surface
+    - `fretboard-dev new {simple-todo,todo} --ui-assets` now consumes that generated startup surface
       directly, so the first-party scaffold owns the preferred mode choice without bespoke app
       code.
   - Remaining:
@@ -677,7 +677,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       string-only bucket.
     - `crates/fret-diag/src/stats/resource_loading.rs` plus
       `crates/fret-diag/src/registry/checks/builtin_post_run/resource_loading.rs` now add
-      post-run `fretboard diag` gates for:
+      post-run `fretboard-dev diag` gates for:
       - asset-load missing-bundle counter max,
       - asset-load stale-manifest counter max,
       - unsupported file/url counter max,

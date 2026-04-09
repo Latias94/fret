@@ -14,7 +14,7 @@ Deliverables:
   - `docs/workstreams/hotpatch-devloop-alignment-v1/hotpatch-devloop-alignment-v1.md`
   - `docs/workstreams/hotpatch-devloop-alignment-v1/hotpatch-devloop-alignment-v1-todo.md`
   - `docs/workstreams/hotpatch-devloop-alignment-v1/hotpatch-devloop-alignment-v1-milestones.md`
-- `fretboard dev native --hotpatch` is the recommended path and prints a stable startup summary.
+- `fretboard-dev dev native --hotpatch` is the recommended path and prints a stable startup summary.
 - Logs are easy to find and referenced in the summary.
 
 Exit criteria:
@@ -24,7 +24,7 @@ Exit criteria:
 Evidence anchors:
 
 - `apps/fretboard/src/dev.rs` (startup Hotpatch Summary)
-- `apps/fretboard/src/hotpatch.rs` (`fretboard hotpatch status`)
+- `apps/fretboard/src/hotpatch.rs` (`fretboard-dev hotpatch status`)
 - `.fret/hotpatch_runner.log`, `.fret/hotpatch_bootstrap.log` (stable log locations)
 
 ## M1 — Predictable fallback ladder (time-boxed)
@@ -50,7 +50,7 @@ Evidence anchors:
 Deliverables:
 
 - Theme reload contract + a minimal implementation for one demo.
-- A simple repro gate exists (manual instructions or a `fretboard diag` script).
+- A simple repro gate exists (manual instructions or a `fretboard-dev diag` script).
 
 Exit criteria:
 

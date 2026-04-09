@@ -251,5 +251,5 @@ Exit criteria:
 - [x] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
   - Evidence: `docs/workstreams/standalone/imui-shadcn-adapter-v1.md` (layering contract + migration checklist).
   - Evidence: `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` (minimal adapter demo).
-- [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+- [x] IMUIECO-test-046 Add one `fretboard-dev diag` script covering floating window drag/resize + overlay coexistence (regression gate).
   - Evidence: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`

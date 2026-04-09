@@ -111,7 +111,7 @@ Proposed split:
 
 Deliverable definition (M3 “done”):
 
-- We have at least one deterministic `fretboard diag` repro that exercises multi-window hover
+- We have at least one deterministic `fretboard-dev diag` repro that exercises multi-window hover
   arbitration while a drag is active.
 - The kernel provides a small, reusable helper surface that the docking runtime and at least one
   other subsystem can share without re-implementing the same choreography.
@@ -132,7 +132,7 @@ This workstream is considered successful when:
    regressions (including fractional DPI behavior).
 2. `fret-node` continues to use `fret-canvas` viewport math, and no duplicate viewport mapping math
    is re-introduced under a new type in `fret-interaction`.
-3. `fretboard diag` scripts exist to prevent regressions for:
+3. `fretboard-dev diag` scripts exist to prevent regressions for:
    - fractional DPI (150%) correctness,
    - stale paint checks during drags,
    - multi-window hover arbitration behaviors (docking parity track).

@@ -87,8 +87,8 @@ Embla-inspired authoring outcomes.
 - `cargo check -p fret-ui-gallery --message-format short`
 - `CARGO_TARGET_DIR=/tmp/fret-codex-carousel-check cargo nextest run -p fret-ui-gallery carousel_page_`
 - `CARGO_TARGET_DIR=/tmp/fret-codex-carousel-mini cargo nextest run -p fret-ui-shadcn --test carousel_a11y_semantics --test carousel_pointer_passthrough --test carousel_item_layout_breakpoints --test carousel_loop_downgrade_without_embla_engine --test web_vs_fret_carousel`
-- `target/debug/fretboard diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json --dir target/fret-diag-carousel-basic-single-20260327-2 --session-auto --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
-- `target/debug/fretboard diag suite ui-gallery-carousel-docs-parity --dir target/fret-diag-carousel-docs-parity-20260327-clean --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery`
+- `target/debug/fretboard-dev diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json --dir target/fret-diag-carousel-basic-single-20260327-2 --session-auto --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+- `target/debug/fretboard-dev diag suite ui-gallery-carousel-docs-parity --dir target/fret-diag-carousel-docs-parity-20260327-clean --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery`
 - Note: a previous `diag suite ... --reuse-launch` rerun timed out while waiting for
   `ui-gallery-nav-carousel`, but bounded timeout-bundle queries only showed
   `ui-gallery-nav-scroll` and `ui-gallery-nav-search`. Re-running the failing script in isolation

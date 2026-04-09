@@ -125,5 +125,5 @@ We consider the workstream successful when all of the following are true:
     hooks and tests, rather than expanding policy in the bridge.
 
 - Risk: performance regressions when moving from retained widget caches to declarative composition.
-  - Mitigation: add `fretboard diag` scripts and perf gates (window telemetry, cache-hit stats, invalidation
+  - Mitigation: add `fretboard-dev diag` scripts and perf gates (window telemetry, cache-hit stats, invalidation
     hotspots) for the migrated surfaces.

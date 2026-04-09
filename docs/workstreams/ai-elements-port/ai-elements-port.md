@@ -123,7 +123,7 @@ an interactive chat demo:
 - `SchemaDisplay`: AI Elements-aligned schema viewer surface (parameters + request/response property trees).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
-  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates:
+  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard-dev diag` gates:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
@@ -250,7 +250,7 @@ P2 (workflow + voice parity closure):
 
 3. **Gate behavior early**
    - Add stable `test_id` on roots and rows.
-   - Add `fretboard diag` scripts for interaction-heavy surfaces.
+   - Add `fretboard-dev diag` scripts for interaction-heavy surfaces.
    - Add unit tests for invariants and state machines (avoid renderer dependencies when possible).
 
 ### Running diag gates (recommended)
@@ -261,7 +261,7 @@ script startup is stable on slower machines:
 ```powershell
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag run tools/diag-scripts/<script>.json `
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/<script>.json `
   --dir target/fret-diag-<name> --timeout-ms 300000 --poll-ms 200 --pack --include-all `
   --launch -- target/release/fret-ui-gallery.exe
 ```
@@ -290,7 +290,7 @@ P0 (Chat usability + correctness):
     - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
 - Blocker: **clipboard file/image paste** needs a runtime/platform capability (Fret currently has clipboard text effects only).
 - **Regression gates**:
-  - add a `fretboard diag` script that covers the attachment keyboard behaviors (add → backspace remove → send).
+  - add a `fretboard-dev diag` script that covers the attachment keyboard behaviors (add → backspace remove → send).
   - keep stable selectors on the prompt textarea + attachment row.
 
 P1 (AI Elements “extras” surfaces):
@@ -411,7 +411,7 @@ Recommended loop (mirrors how `fret-ui-shadcn` work is kept honest):
 4. **Add gates immediately**:
    - stable `test_id` targets,
    - at least one unit/invariant test for the most fragile rule,
-   - a `fretboard diag` script if interaction/state machines are involved.
+   - a `fretboard-dev diag` script if interaction/state machines are involved.
 
 If the work involves aligning to shadcn/Radix behavior, follow the same rules used by shadcn work:
 
@@ -467,7 +467,7 @@ Every interactive/virtualized surface must expose stable selectors:
 - `test_id` on key actions (send/stop/collapse/copy),
 - semantics roles when applicable (list/listitem, button, textbox).
 
-This is required for `fretboard diag` scripts and for long-term refactors.
+This is required for `fretboard-dev diag` scripts and for long-term refactors.
 
 Convention (v0; subject to refinement):
 
@@ -820,12 +820,12 @@ Definition of done:
   - root element,
   - key interactive affordances (buttons/inputs),
   - any virtualized rows/items.
-- At least one `fretboard diag` script covers the long-transcript harness.
+- At least one `fretboard-dev diag` script covers the long-transcript harness.
 
 Evidence (expected):
 
 - `docs/workstreams/ai-elements-port/ai-elements-port-todo.md` M0 items marked `[x]`
-- `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json` (or equivalent) gated by `fretboard diag`
+- `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json` (or equivalent) gated by `fretboard-dev diag`
 
 ### M1 — Chat surfaces MVP
 

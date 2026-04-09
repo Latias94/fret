@@ -71,7 +71,7 @@ pub(crate) fn cmd_resolve(
     }
 
     let Some(kind) = rest.first().map(|s| s.as_str()) else {
-        return Err("missing resolve target (try: fretboard diag resolve latest)".to_string());
+        return Err("missing resolve target (try: fretboard-dev diag resolve latest)".to_string());
     };
 
     match kind {
@@ -419,7 +419,7 @@ fn resolve_existing_session_out_dir(
 fn no_sessions_found_error(base_out_dir: &Path) -> String {
     format!(
         "no sessions found under base_out_dir: {}\n\
-hint: list sessions via `fretboard diag list sessions --dir {}`",
+hint: list sessions via `fretboard-dev diag list sessions --dir {}`",
         base_out_dir.display(),
         base_out_dir.display()
     )
@@ -428,7 +428,7 @@ hint: list sessions via `fretboard diag list sessions --dir {}`",
 fn missing_session_out_dir_error(base_out_dir: &Path, out_dir: &Path) -> String {
     format!(
         "session directory does not exist: {}\n\
-hint: list sessions via `fretboard diag list sessions --dir {}`",
+hint: list sessions via `fretboard-dev diag list sessions --dir {}`",
         out_dir.display(),
         base_out_dir.display()
     )
@@ -822,7 +822,7 @@ mod tests {
             resolve_existing_session_out_dir(&base, "404-1").expect_err("missing session dir");
 
         assert!(err.contains("session directory does not exist"));
-        assert!(err.contains("fretboard diag list sessions"));
+        assert!(err.contains("fretboard-dev diag list sessions"));
     }
 
     #[test]

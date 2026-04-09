@@ -35,7 +35,7 @@ fn concurrency_warning_for_bundle_dir(bundle_dir: &Path) -> Option<serde_json::V
         "bundle_dir": bundle_dir.display().to_string(),
         "base_out_dir": base_out_dir.display().to_string(),
         "sessions_root": sessions_root.display().to_string(),
-        "hint": "prefer: fretboard diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
+        "hint": "prefer: fretboard-dev diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
     }))
 }
 

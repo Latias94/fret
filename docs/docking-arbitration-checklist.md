@@ -48,7 +48,7 @@ Notes:
 
 For scripted repros with `fretboard`:
 
-- `cargo run -p fretboard -- diag repro docking-arbitration --env FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
+- `cargo run -p fretboard-dev -- diag repro docking-arbitration --env FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
 
 ### Docking arbitration demo: synth pointer mode
 
@@ -235,4 +235,4 @@ Lightweight smoke (minimal assertions):
 
 Example invocation:
 
-- `FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
+- `FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`

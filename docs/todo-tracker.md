@@ -468,7 +468,7 @@ It complements (but does not replace) ADRs:
 - **Hotpatch "golden path" validation loop (dx + smoke demo)**
   - Goal: keep an always-working end-to-end Subsecond patch loop for native dev.
   - ADRs: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
-  - Tooling: `fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx`
+  - Tooling: `fretboard-dev dev native --bin hotpatch_smoke_demo --hotpatch-dx`
   - TODO: add a short checklist and expected log markers (devserver connect, patch applied, safe reload boundary).
   - Bug: after `dx` reports `Hot-patching: ...`, the demo may crash with `thread 'main' has overflowed its stack`.
   - Update: `subsecond::apply_patch` succeeds and the runner completes `hot_reload_all_windows`, but the next `ViewFn` call via `subsecond::HotFn` overflows the stack before returning.

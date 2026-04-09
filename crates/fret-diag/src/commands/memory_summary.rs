@@ -437,7 +437,7 @@ fn resolve_sample_dirs(
         if !out_dir.is_dir() {
             return Err(format!(
                 "session directory does not exist: {}\n\
-hint: list sessions via `fretboard diag list sessions --dir {}`",
+hint: list sessions via `fretboard-dev diag list sessions --dir {}`",
                 out_dir.display(),
                 src.display()
             ));

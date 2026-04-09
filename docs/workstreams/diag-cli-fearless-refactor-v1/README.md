@@ -24,7 +24,7 @@ Related context:
 
 ## 0) Why this workstream exists
 
-`fretboard diag` has outgrown the current hand-written parser shape.
+`fretboard-dev diag` has outgrown the current hand-written parser shape.
 
 Today the command surface is difficult to evolve safely because parsing, validation, defaults,
 cross-flag policy, help text, and command dispatch are still too tightly coupled.
@@ -64,7 +64,7 @@ Practical reading rule:
 
 ### In scope
 
-- the full `fretboard diag` command model,
+- the full `fretboard-dev diag` command model,
 - parser ownership and module boundaries,
 - shared argument groups (`launch`, `env`, `out`, `checks`, `sessions`, `pack`, `transport`),
 - subcommand validation rules and error messages,
@@ -83,8 +83,8 @@ Practical reading rule:
 
 The final shipped state should satisfy all of the following:
 
-1. `fretboard diag` has one typed command model and one source of truth for parsing.
-2. `clap` is the only parser/help source of truth for `fretboard diag`.
+1. `fretboard-dev diag` has one typed command model and one source of truth for parsing.
+2. `clap` is the only parser/help source of truth for `fretboard-dev diag`.
 3. Help text is generated from the command model rather than hand-maintained prose blobs.
 4. Shared flag families are declared once and reused structurally.
 5. Subcommand-local validation lives next to the subcommand model whenever possible.
@@ -95,7 +95,7 @@ The final shipped state should satisfy all of the following:
 
 ## 4) Locked technical direction
 
-This workstream now locks `clap` as the parser and help-generation framework for `fretboard diag`.
+This workstream now locks `clap` as the parser and help-generation framework for `fretboard-dev diag`.
 
 Reason:
 
@@ -201,7 +201,7 @@ Current design note:
   `diag` usage/help branches for migrated commands; help ownership is centralized in the `clap`
   contract surface.
 - `apps/fretboard/src/cli.rs` no longer mirrors the full `diag` usage surface in hand-maintained
-  prose; it now points callers at `fretboard diag --help`, which is generated from the executable
+  prose; it now points callers at `fretboard-dev diag --help`, which is generated from the executable
   contract.
 
 Closeout note:
@@ -212,150 +212,150 @@ Closeout note:
 
 Latest smoke evidence:
 
-- `target/debug/fretboard diag --help`
-- `target/debug/fretboard diag agent --help`
-- `target/debug/fretboard diag path --help`
-- `target/debug/fretboard diag poke --help`
-- `target/debug/fretboard diag latest --help`
-- `target/debug/fretboard diag campaign --help`
-- `target/debug/fretboard diag campaign list --help`
-- `target/debug/fretboard diag campaign run --help`
-- `target/debug/fretboard diag campaign list --lane smoke --json`
-- `target/debug/fretboard diag campaign show ui-gallery-smoke --json`
-- `target/debug/fretboard diag campaign validate --json`
-- `target/debug/fretboard diag campaign run ui-gallery-smoke --timeout-ms 1 --poll-ms 1`
-- `target/debug/fretboard diag campaign run --with tracy`
-- `target/debug/fretboard diag doctor --help`
-- `target/debug/fretboard diag doctor scripts --help`
-- `target/debug/fretboard diag doctor campaigns --help`
-- `target/debug/fretboard diag doctor campaigns --json`
-- `target/debug/fretboard diag doctor scripts --json`
-- `target/debug/fretboard diag doctor campaigns --fix`
-- `target/debug/fretboard diag doctor target/fret-diag/sessions/1774403458054-77810 --json`
-- `target/debug/fretboard diag list --help`
-- `target/debug/fretboard diag list scripts --help`
-- `target/debug/fretboard diag list scripts --contains ui-gallery --top 1 --json`
-- `target/debug/fretboard diag list suites --contains ui-gallery --top 2 --json`
-- `target/debug/fretboard diag list sessions --dir target/fret-diag --top 1 --json`
-- `target/debug/fretboard diag list scripts --dir target/fret-diag`
-- `target/debug/fretboard diag sessions --help`
-- `target/debug/fretboard diag sessions clean --help`
-- `target/debug/fretboard diag sessions clean --keep 1 --json`
-- `target/debug/fretboard diag path --dir target/fret-diag-clap-smoke`
-- `target/debug/fretboard diag poke --dir target/fret-diag-clap-smoke`
-- `target/debug/fretboard diag latest --dir target/fret-diag-clap-smoke`
-- `target/debug/fretboard diag script --help`
-- `target/debug/fretboard diag script normalize --help`
-- `target/debug/fretboard diag script upgrade --help`
-- `target/debug/fretboard diag script shrink --help`
-- `target/debug/fretboard diag script tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --dir target/fret-diag-script-smoke`
-- `target/debug/fretboard diag script validate tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --dir target/fret-diag-script-validate-smoke --json`
-- `target/debug/fretboard diag script lint tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --dir target/fret-diag-script-lint-smoke --json`
-- `target/debug/fretboard diag script shrink tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --reuse-launch` (expected parser rejection)
-- `target/debug/fretboard diag artifact lint --help`
-- `target/debug/fretboard diag pack --help`
-- `target/debug/fretboard diag triage --help`
-- `target/debug/fretboard diag lint --help`
-- `target/debug/fretboard diag ai-packet --help`
-- `target/debug/fretboard diag meta --help`
-- `target/debug/fretboard diag index --help`
-- `target/debug/fretboard diag test-ids --help`
-- `target/debug/fretboard diag test-ids-index --help`
-- `target/debug/fretboard diag frames-index --help`
-- `target/debug/fretboard diag windows --help`
-- `target/debug/fretboard diag dock-routing --help`
-- `target/debug/fretboard diag dock-graph --help`
-- `target/debug/fretboard diag screenshots --help`
-- `target/debug/fretboard diag hotspots --help`
-- `target/debug/fretboard diag bundle-v2 --help`
-- `target/debug/fretboard diag layout-sidecar --help`
-- `target/debug/fretboard diag extensions --help`
-- `target/debug/fretboard diag trace --help`
-- `target/debug/fretboard diag resolve --help`
-- `target/debug/fretboard diag resolve latest --help`
-- `target/debug/fretboard diag registry --help`
-- `target/debug/fretboard diag registry check --json`
-- `target/debug/fretboard diag config --help`
-- `target/debug/fretboard diag config doctor --help`
-- `target/debug/fretboard diag config doctor --mode manual --report-json`
-- `target/debug/fretboard diag query --help`
-- `target/debug/fretboard diag query snapshots --help`
-- `target/debug/fretboard diag slice --help`
-- `target/debug/fretboard diag perf-baseline-from-bundles --help`
-- `target/debug/fretboard diag matrix --help`
-- `target/debug/fretboard diag artifact lint target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/artifact.lint.json`
-- `target/debug/fretboard diag pack target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --pack-out target/fret-diag-clap-smoke/demo.zip`
-- `target/debug/fretboard diag triage target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --top 8 --sort time --json --out target/fret-diag-clap-smoke/triage.json`
-- `target/debug/fretboard diag triage target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --lite --metric total --json --out target/fret-diag-clap-smoke/triage.lite.json`
-- `target/debug/fretboard diag lint target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json --out target/fret-diag-clap-smoke/check.lint.json`
-- `target/debug/fretboard diag ai-packet target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --test-id ai-model-selector-root --packet-out target/fret-diag-clap-smoke/ai.packet`
-- `target/debug/fretboard diag meta target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/bundle.meta.json`
-- `target/debug/fretboard diag index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/bundle.index.json`
-- `target/debug/fretboard diag test-ids target/fret-diag-ai-model-selector-focus-gate/1774159915361 --max-test-ids 20 --out target/fret-diag-clap-smoke/test_ids.index.json`
-- `target/debug/fretboard diag test-ids-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
-- `target/debug/fretboard diag frames-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
-- `target/debug/fretboard diag compare --help`
-- `target/debug/fretboard diag dashboard --help`
-- `target/debug/fretboard diag stats --help`
-- `target/debug/fretboard diag summarize --help`
-- `target/debug/fretboard diag layout-perf-summary --help`
-- `target/debug/fretboard diag memory-summary --help`
-- `target/debug/fretboard diag inspect --help`
-- `target/debug/fretboard diag pick-arm --help`
-- `target/debug/fretboard diag pick --help`
-- `target/debug/fretboard diag pick-script --help`
-- `target/debug/fretboard diag pick-apply --help`
-- `target/debug/fretboard diag stats target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 5 --json`
-- `target/debug/fretboard diag stats --diff target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 5 --json`
-- `target/debug/fretboard diag stats --stats-lite-checks-json`
-- `target/debug/fretboard diag compare target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --json`
-- `target/debug/fretboard diag compare target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --footprint --json`
-- `target/debug/fretboard diag summarize target/fret-diag/campaigns/ui-gallery-smoke/1774499171270 --dir target/fret-diag-clap-smoke/summarize --json`
-- `target/debug/fretboard diag dashboard target/fret-diag/campaigns/ui-gallery-smoke/1774499171270/regression.index.json --top 3 --json`
-- `target/debug/fretboard diag layout-perf-summary target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 3 --json`
-- `target/debug/fretboard diag memory-summary target/fret-diag --top 3 --json`
-- `target/debug/fretboard diag inspect status`
-- `target/debug/fretboard diag inspect toggle --consume-clicks false`
-- `target/debug/fretboard diag pick-arm`
-- `target/debug/fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json target/fret-diag-ai-model-selector-focus-gate/1774159915361 --perf-baseline-out target/fret-diag-clap-smoke/perf.baseline.json --json`
-- `target/debug/fretboard diag matrix ui-gallery --dir target/fret-diag-matrix-smoke --timeout-ms 1 --poll-ms 1 --launch -- cargo run`
-- `target/debug/fretboard diag compare target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --compare-footprint` (expected parser rejection)
-- `target/debug/fretboard diag dashboard --warmup-frames 4` (expected parser rejection)
-- `target/debug/fretboard diag stats target/fret-diag-ai-model-selector-focus-gate/1774159915361 --check-prepaint-actions-min 1` (expected parser rejection)
-- `target/debug/fretboard diag summarize --top 7` (expected parser rejection)
-- `target/debug/fretboard diag layout_perf_summary --help` (expected retired-alias rejection)
-- `target/debug/fretboard diag memory_summary --help` (expected retired-alias rejection)
-- `target/debug/fretboard diag memory-summary --sort_key macos_physical_footprint_peak_bytes` (expected parser rejection)
-- `target/debug/fretboard diag pick-script --warmup-frames 4` (expected parser rejection)
-- `target/debug/fretboard diag matrix ui-gallery --launch-write-bundle-json --launch -- cargo run` (expected parser rejection)
-- `target/debug/fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json target/fret-diag --pack` (expected parser rejection)
-- `target/debug/fretboard diag windows target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
-- `target/debug/fretboard diag dock-routing target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
-- `target/debug/fretboard diag dock-graph target/fret-diag-ai-model-selector-focus-gate/1774159915361 --json`
-- `target/debug/fretboard diag screenshots target/fret-diag-prompt-input-docs-screenshot-fixed/screenshots/1774173600166-ui-gallery-ai-prompt-input-docs-tooltip-zinc-dark/manifest.json --json`
-- `target/debug/fretboard diag hotspots target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --lite --metric total --json --out target/fret-diag-clap-smoke/hotspots.lite.json`
-- `target/debug/fretboard diag bundle-v2 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --mode changed --pretty --json --out target/fret-diag-clap-smoke/bundle.schema2.changed.json`
-- `target/debug/fretboard diag layout-sidecar target/fret-diag/data-table-guide-header-zinc-light-rerun2/1774491032828-ui-gallery-data-table-guide-header-zinc-light --print --out target/fret-diag-clap-smoke/layout.taffy.v1.json`
-- `target/debug/fretboard diag extensions target/fret-diag-snippet-docs-smoke/1774399732191-ui-gallery-ai-snippet-docs-smoke/bundle.schema2.json --out target/fret-diag-clap-smoke/extensions.json --json`
-- `target/debug/fretboard diag trace target/fret-diag-ai-model-selector-focus-gate/1774159915361 --trace-out target/fret-diag-clap-smoke/trace.chrome.json`
-- `target/debug/fretboard diag resolve latest --dir target/fret-diag-ai-model-selector-focus-gate --json`
-- `target/debug/fretboard diag query test-id target/fret-diag-ai-model-selector-focus-gate/1774159915361 ai --out target/fret-diag-clap-smoke/query.test-id.json --json`
-- `target/debug/fretboard diag query snapshots target/fret-diag-ai-model-selector-focus-gate/1774159915361 --test-id ai-model-selector-root --top 5 --out target/fret-diag-clap-smoke/query.snapshots.json --json`
-- `target/debug/fretboard diag slice target/fret-diag-ai-model-selector-focus-gate/1774159915361 --test-id ai-model-selector-root --out target/fret-diag-clap-smoke/slice.test-id.json --json`
-- `target/debug/fretboard diag meta target/fret-diag-ai-model-selector-focus-gate/1774159915361 --dir target/fret-diag` (expected parser rejection)
-- `target/debug/fretboard diag artifacts lint` (expected retired-alias rejection)
-- `target/debug/fretboard diag layout_sidecar --help` (expected retired-alias rejection)
-- `target/debug/fretboard diag pack --schema2-only` (expected retired-flag rejection)
-- `target/debug/fretboard diag triage target/fret-diag-ai-model-selector-focus-gate/1774159915361 --frames-index` (expected retired-flag rejection)
-- `target/debug/fretboard diag ai-packet ai-model-selector-root` (expected positional test-id rejection)
-- `target/debug/fretboard diag test-ids-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/test_ids.index.json` (expected parser rejection)
-- `target/debug/fretboard diag frames-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/frames.index.json` (expected parser rejection)
-- `target/debug/fretboard diag windows target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/window.map.json` (expected parser rejection)
-- `target/debug/fretboard diag dock-graph target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4` (expected parser rejection)
-- `target/debug/fretboard diag screenshots target/fret-diag-prompt-input-docs-screenshot-fixed/screenshots/1774173600166-ui-gallery-ai-prompt-input-docs-tooltip-zinc-dark/manifest.json --warmup-frames 4` (expected parser rejection)
-- `target/debug/fretboard diag hotspots target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 9` (expected parser rejection)
-- `target/debug/fretboard diag bundle-v2 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4` (expected parser rejection)
-- `target/debug/fretboard diag query test_ids ai` (expected retired-alias rejection)
+- `target/debug/fretboard-dev diag --help`
+- `target/debug/fretboard-dev diag agent --help`
+- `target/debug/fretboard-dev diag path --help`
+- `target/debug/fretboard-dev diag poke --help`
+- `target/debug/fretboard-dev diag latest --help`
+- `target/debug/fretboard-dev diag campaign --help`
+- `target/debug/fretboard-dev diag campaign list --help`
+- `target/debug/fretboard-dev diag campaign run --help`
+- `target/debug/fretboard-dev diag campaign list --lane smoke --json`
+- `target/debug/fretboard-dev diag campaign show ui-gallery-smoke --json`
+- `target/debug/fretboard-dev diag campaign validate --json`
+- `target/debug/fretboard-dev diag campaign run ui-gallery-smoke --timeout-ms 1 --poll-ms 1`
+- `target/debug/fretboard-dev diag campaign run --with tracy`
+- `target/debug/fretboard-dev diag doctor --help`
+- `target/debug/fretboard-dev diag doctor scripts --help`
+- `target/debug/fretboard-dev diag doctor campaigns --help`
+- `target/debug/fretboard-dev diag doctor campaigns --json`
+- `target/debug/fretboard-dev diag doctor scripts --json`
+- `target/debug/fretboard-dev diag doctor campaigns --fix`
+- `target/debug/fretboard-dev diag doctor target/fret-diag/sessions/1774403458054-77810 --json`
+- `target/debug/fretboard-dev diag list --help`
+- `target/debug/fretboard-dev diag list scripts --help`
+- `target/debug/fretboard-dev diag list scripts --contains ui-gallery --top 1 --json`
+- `target/debug/fretboard-dev diag list suites --contains ui-gallery --top 2 --json`
+- `target/debug/fretboard-dev diag list sessions --dir target/fret-diag --top 1 --json`
+- `target/debug/fretboard-dev diag list scripts --dir target/fret-diag`
+- `target/debug/fretboard-dev diag sessions --help`
+- `target/debug/fretboard-dev diag sessions clean --help`
+- `target/debug/fretboard-dev diag sessions clean --keep 1 --json`
+- `target/debug/fretboard-dev diag path --dir target/fret-diag-clap-smoke`
+- `target/debug/fretboard-dev diag poke --dir target/fret-diag-clap-smoke`
+- `target/debug/fretboard-dev diag latest --dir target/fret-diag-clap-smoke`
+- `target/debug/fretboard-dev diag script --help`
+- `target/debug/fretboard-dev diag script normalize --help`
+- `target/debug/fretboard-dev diag script upgrade --help`
+- `target/debug/fretboard-dev diag script shrink --help`
+- `target/debug/fretboard-dev diag script tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --dir target/fret-diag-script-smoke`
+- `target/debug/fretboard-dev diag script validate tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --dir target/fret-diag-script-validate-smoke --json`
+- `target/debug/fretboard-dev diag script lint tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --dir target/fret-diag-script-lint-smoke --json`
+- `target/debug/fretboard-dev diag script shrink tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --reuse-launch` (expected parser rejection)
+- `target/debug/fretboard-dev diag artifact lint --help`
+- `target/debug/fretboard-dev diag pack --help`
+- `target/debug/fretboard-dev diag triage --help`
+- `target/debug/fretboard-dev diag lint --help`
+- `target/debug/fretboard-dev diag ai-packet --help`
+- `target/debug/fretboard-dev diag meta --help`
+- `target/debug/fretboard-dev diag index --help`
+- `target/debug/fretboard-dev diag test-ids --help`
+- `target/debug/fretboard-dev diag test-ids-index --help`
+- `target/debug/fretboard-dev diag frames-index --help`
+- `target/debug/fretboard-dev diag windows --help`
+- `target/debug/fretboard-dev diag dock-routing --help`
+- `target/debug/fretboard-dev diag dock-graph --help`
+- `target/debug/fretboard-dev diag screenshots --help`
+- `target/debug/fretboard-dev diag hotspots --help`
+- `target/debug/fretboard-dev diag bundle-v2 --help`
+- `target/debug/fretboard-dev diag layout-sidecar --help`
+- `target/debug/fretboard-dev diag extensions --help`
+- `target/debug/fretboard-dev diag trace --help`
+- `target/debug/fretboard-dev diag resolve --help`
+- `target/debug/fretboard-dev diag resolve latest --help`
+- `target/debug/fretboard-dev diag registry --help`
+- `target/debug/fretboard-dev diag registry check --json`
+- `target/debug/fretboard-dev diag config --help`
+- `target/debug/fretboard-dev diag config doctor --help`
+- `target/debug/fretboard-dev diag config doctor --mode manual --report-json`
+- `target/debug/fretboard-dev diag query --help`
+- `target/debug/fretboard-dev diag query snapshots --help`
+- `target/debug/fretboard-dev diag slice --help`
+- `target/debug/fretboard-dev diag perf-baseline-from-bundles --help`
+- `target/debug/fretboard-dev diag matrix --help`
+- `target/debug/fretboard-dev diag artifact lint target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/artifact.lint.json`
+- `target/debug/fretboard-dev diag pack target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --pack-out target/fret-diag-clap-smoke/demo.zip`
+- `target/debug/fretboard-dev diag triage target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --top 8 --sort time --json --out target/fret-diag-clap-smoke/triage.json`
+- `target/debug/fretboard-dev diag triage target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --lite --metric total --json --out target/fret-diag-clap-smoke/triage.lite.json`
+- `target/debug/fretboard-dev diag lint target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json --out target/fret-diag-clap-smoke/check.lint.json`
+- `target/debug/fretboard-dev diag ai-packet target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --test-id ai-model-selector-root --packet-out target/fret-diag-clap-smoke/ai.packet`
+- `target/debug/fretboard-dev diag meta target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/bundle.meta.json`
+- `target/debug/fretboard-dev diag index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/bundle.index.json`
+- `target/debug/fretboard-dev diag test-ids target/fret-diag-ai-model-selector-focus-gate/1774159915361 --max-test-ids 20 --out target/fret-diag-clap-smoke/test_ids.index.json`
+- `target/debug/fretboard-dev diag test-ids-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
+- `target/debug/fretboard-dev diag frames-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
+- `target/debug/fretboard-dev diag compare --help`
+- `target/debug/fretboard-dev diag dashboard --help`
+- `target/debug/fretboard-dev diag stats --help`
+- `target/debug/fretboard-dev diag summarize --help`
+- `target/debug/fretboard-dev diag layout-perf-summary --help`
+- `target/debug/fretboard-dev diag memory-summary --help`
+- `target/debug/fretboard-dev diag inspect --help`
+- `target/debug/fretboard-dev diag pick-arm --help`
+- `target/debug/fretboard-dev diag pick --help`
+- `target/debug/fretboard-dev diag pick-script --help`
+- `target/debug/fretboard-dev diag pick-apply --help`
+- `target/debug/fretboard-dev diag stats target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 5 --json`
+- `target/debug/fretboard-dev diag stats --diff target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 5 --json`
+- `target/debug/fretboard-dev diag stats --stats-lite-checks-json`
+- `target/debug/fretboard-dev diag compare target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --json`
+- `target/debug/fretboard-dev diag compare target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --footprint --json`
+- `target/debug/fretboard-dev diag summarize target/fret-diag/campaigns/ui-gallery-smoke/1774499171270 --dir target/fret-diag-clap-smoke/summarize --json`
+- `target/debug/fretboard-dev diag dashboard target/fret-diag/campaigns/ui-gallery-smoke/1774499171270/regression.index.json --top 3 --json`
+- `target/debug/fretboard-dev diag layout-perf-summary target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 3 --json`
+- `target/debug/fretboard-dev diag memory-summary target/fret-diag --top 3 --json`
+- `target/debug/fretboard-dev diag inspect status`
+- `target/debug/fretboard-dev diag inspect toggle --consume-clicks false`
+- `target/debug/fretboard-dev diag pick-arm`
+- `target/debug/fretboard-dev diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json target/fret-diag-ai-model-selector-focus-gate/1774159915361 --perf-baseline-out target/fret-diag-clap-smoke/perf.baseline.json --json`
+- `target/debug/fretboard-dev diag matrix ui-gallery --dir target/fret-diag-matrix-smoke --timeout-ms 1 --poll-ms 1 --launch -- cargo run`
+- `target/debug/fretboard-dev diag compare target/fret-diag-ai-model-selector-focus-gate/1774159915361 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --compare-footprint` (expected parser rejection)
+- `target/debug/fretboard-dev diag dashboard --warmup-frames 4` (expected parser rejection)
+- `target/debug/fretboard-dev diag stats target/fret-diag-ai-model-selector-focus-gate/1774159915361 --check-prepaint-actions-min 1` (expected parser rejection)
+- `target/debug/fretboard-dev diag summarize --top 7` (expected parser rejection)
+- `target/debug/fretboard-dev diag layout_perf_summary --help` (expected retired-alias rejection)
+- `target/debug/fretboard-dev diag memory_summary --help` (expected retired-alias rejection)
+- `target/debug/fretboard-dev diag memory-summary --sort_key macos_physical_footprint_peak_bytes` (expected parser rejection)
+- `target/debug/fretboard-dev diag pick-script --warmup-frames 4` (expected parser rejection)
+- `target/debug/fretboard-dev diag matrix ui-gallery --launch-write-bundle-json --launch -- cargo run` (expected parser rejection)
+- `target/debug/fretboard-dev diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json target/fret-diag --pack` (expected parser rejection)
+- `target/debug/fretboard-dev diag windows target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
+- `target/debug/fretboard-dev diag dock-routing target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --json`
+- `target/debug/fretboard-dev diag dock-graph target/fret-diag-ai-model-selector-focus-gate/1774159915361 --json`
+- `target/debug/fretboard-dev diag screenshots target/fret-diag-prompt-input-docs-screenshot-fixed/screenshots/1774173600166-ui-gallery-ai-prompt-input-docs-tooltip-zinc-dark/manifest.json --json`
+- `target/debug/fretboard-dev diag hotspots target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4 --lite --metric total --json --out target/fret-diag-clap-smoke/hotspots.lite.json`
+- `target/debug/fretboard-dev diag bundle-v2 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --mode changed --pretty --json --out target/fret-diag-clap-smoke/bundle.schema2.changed.json`
+- `target/debug/fretboard-dev diag layout-sidecar target/fret-diag/data-table-guide-header-zinc-light-rerun2/1774491032828-ui-gallery-data-table-guide-header-zinc-light --print --out target/fret-diag-clap-smoke/layout.taffy.v1.json`
+- `target/debug/fretboard-dev diag extensions target/fret-diag-snippet-docs-smoke/1774399732191-ui-gallery-ai-snippet-docs-smoke/bundle.schema2.json --out target/fret-diag-clap-smoke/extensions.json --json`
+- `target/debug/fretboard-dev diag trace target/fret-diag-ai-model-selector-focus-gate/1774159915361 --trace-out target/fret-diag-clap-smoke/trace.chrome.json`
+- `target/debug/fretboard-dev diag resolve latest --dir target/fret-diag-ai-model-selector-focus-gate --json`
+- `target/debug/fretboard-dev diag query test-id target/fret-diag-ai-model-selector-focus-gate/1774159915361 ai --out target/fret-diag-clap-smoke/query.test-id.json --json`
+- `target/debug/fretboard-dev diag query snapshots target/fret-diag-ai-model-selector-focus-gate/1774159915361 --test-id ai-model-selector-root --top 5 --out target/fret-diag-clap-smoke/query.snapshots.json --json`
+- `target/debug/fretboard-dev diag slice target/fret-diag-ai-model-selector-focus-gate/1774159915361 --test-id ai-model-selector-root --out target/fret-diag-clap-smoke/slice.test-id.json --json`
+- `target/debug/fretboard-dev diag meta target/fret-diag-ai-model-selector-focus-gate/1774159915361 --dir target/fret-diag` (expected parser rejection)
+- `target/debug/fretboard-dev diag artifacts lint` (expected retired-alias rejection)
+- `target/debug/fretboard-dev diag layout_sidecar --help` (expected retired-alias rejection)
+- `target/debug/fretboard-dev diag pack --schema2-only` (expected retired-flag rejection)
+- `target/debug/fretboard-dev diag triage target/fret-diag-ai-model-selector-focus-gate/1774159915361 --frames-index` (expected retired-flag rejection)
+- `target/debug/fretboard-dev diag ai-packet ai-model-selector-root` (expected positional test-id rejection)
+- `target/debug/fretboard-dev diag test-ids-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/test_ids.index.json` (expected parser rejection)
+- `target/debug/fretboard-dev diag frames-index target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/frames.index.json` (expected parser rejection)
+- `target/debug/fretboard-dev diag windows target/fret-diag-ai-model-selector-focus-gate/1774159915361 --out target/fret-diag-clap-smoke/window.map.json` (expected parser rejection)
+- `target/debug/fretboard-dev diag dock-graph target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4` (expected parser rejection)
+- `target/debug/fretboard-dev diag screenshots target/fret-diag-prompt-input-docs-screenshot-fixed/screenshots/1774173600166-ui-gallery-ai-prompt-input-docs-tooltip-zinc-dark/manifest.json --warmup-frames 4` (expected parser rejection)
+- `target/debug/fretboard-dev diag hotspots target/fret-diag-ai-model-selector-focus-gate/1774159915361 --top 9` (expected parser rejection)
+- `target/debug/fretboard-dev diag bundle-v2 target/fret-diag-ai-model-selector-focus-gate/1774159915361 --warmup-frames 4` (expected parser rejection)
+- `target/debug/fretboard-dev diag query test_ids ai` (expected retired-alias rejection)
 
 Smoke note:
 

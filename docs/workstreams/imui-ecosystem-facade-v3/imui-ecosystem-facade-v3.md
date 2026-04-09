@@ -279,7 +279,7 @@ M2 touchpoints (normative for v3 work):
   - Multi-window note: scripted tests may need to attach to a specific window; use the schema v2
     top-level `window: "focused"` policy for docking repros.
   - Scripted repro (multi-window overlap hover): `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`.
-  - Recommended `fretboard diag` gates for the repro:
+  - Recommended `fretboard-dev diag` gates for the repro:
     - `--check-dock-drop-resolve-min 1` (prove resolve diagnostics were emitted),
     - `--check-dock-drag-cross-window-max 0` (prove hover stayed in the topmost window).
 - **Arbitration seams (docking vs overlays vs viewports)**:

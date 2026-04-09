@@ -26,7 +26,7 @@ Exit criteria:
 
 Outcome:
 
-- The repo has one agreed structural command model for `fretboard diag`.
+- The repo has one agreed structural command model for `fretboard-dev diag`.
 
 Deliverables:
 
@@ -107,7 +107,7 @@ Current progress:
 - Migrated execution modules no longer ship their own duplicate usage/help branches; help ownership
   is centralized in the `clap` contract layer.
 - `apps/fretboard/src/cli.rs` no longer duplicates the full `diag` usage surface in prose; callers
-  are pointed to the generated `fretboard diag --help` contract instead.
+  are pointed to the generated `fretboard-dev diag --help` contract instead.
 
 Deliverables:
 
@@ -128,7 +128,7 @@ Outcome:
 Deliverables:
 
 - Updated first-party docs, examples, scripts, and maintainer notes.
-- Updated repo command snippets for any documents that teach `fretboard diag` usage.
+- Updated repo command snippets for any documents that teach `fretboard-dev diag` usage.
 - Parser regression tests for representative valid and invalid invocations.
 - Help snapshots or equivalent output guards for user-facing usage text.
 
@@ -153,5 +153,5 @@ Deliverables:
 
 Exit criteria:
 
-- `fretboard diag` is on the new model only.
+- `fretboard-dev diag` is on the new model only.
 - This lane has explicit closeout, ownership, and follow-up handoff docs.

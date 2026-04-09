@@ -99,7 +99,7 @@ Does not replace crate-level profiling or renderer-specific tuning.
 
 3) Interaction regression gate (scripted)
 
-- `cargo run -p fretboard -- diag run --script tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
+- `cargo run -p fretboard-dev -- diag run --script tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
 
 4) Demo sanity gate (manual)
 
@@ -115,7 +115,7 @@ window promotion), require all of the following:
 
 - a clear ownership decision (runtime vs ui-kit policy),
 - at least one nextest regression gate,
-- one `fretboard diag` scripted path when interaction choreography is non-trivial,
+- one `fretboard-dev diag` scripted path when interaction choreography is non-trivial,
 - explicit fallback behavior for non-native/missing capability targets.
 
 ---

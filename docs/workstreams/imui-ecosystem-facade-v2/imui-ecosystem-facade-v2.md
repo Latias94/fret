@@ -112,7 +112,7 @@ Main goals:
 - M3 popup/select and floating coexistence polish is normative in `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`.
 - Improve popup/select/window interaction choreography where thin adapters are currently minimal.
 - Keep focus/restore and dismiss behavior aligned with overlay contracts.
-- Gate changes with `fretboard diag` scripts for drag/resize/menu coexistence.
+- Gate changes with `fretboard-dev diag` scripts for drag/resize/menu coexistence.
 
 ### M4 - Perf hardening from guidance to gates
 

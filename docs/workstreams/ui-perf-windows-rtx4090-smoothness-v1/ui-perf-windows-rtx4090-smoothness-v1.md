@@ -30,7 +30,7 @@ Seed policy (how thresholds were derived):
 
 Prebuild (once):
 
-- `cargo build -p fretboard -p fret-ui-gallery --release`
+- `cargo build -p fretboard-dev -p fret-ui-gallery --release`
 
 Recommended env (avoid extra I/O + keep cached rendering on):
 
@@ -211,7 +211,7 @@ Tail (spikes) is “max / worst frame”. Typical perf should use **percentiles*
 
 Preferred workflow:
 
-- Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
+- Use `fretboard-dev diag perf ... --json` and review `p50`/`p95` for the top metrics.
 - Use `diag stats --json` for within-bundle `p50` / `p95` (typical), `avg.*`, and `budget_pct.*`.
 - If you want a **typical-perf gate**, create a dedicated baseline seeded from percentiles and then
   gate using `--perf-threshold-agg p95`.
@@ -305,7 +305,7 @@ Observed:
 Attribution (worst bundle example):
 
 - Bundle: `target/fret-diag/1771077490429-ui-gallery-material3-tabs-switch-perf-steady/bundle.json`
-- Summary: `fretboard diag stats <bundle.json> --sort time`
+- Summary: `fretboard-dev diag stats <bundle.json> --sort time`
   - In the worst frame, `layout_request_build_roots_time_us` dominates `layout_time_us` (solve is small).
 - Trace: `target/fret-diag/1771077490429-ui-gallery-material3-tabs-switch-perf-steady/trace.chrome.json`
   - Inspect `layout.request_build_roots` events for the slow frames.

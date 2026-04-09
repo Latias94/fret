@@ -29,7 +29,7 @@ In-tree surfaces (current baseline):
 
 Verification (native, 2026-03-02):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release` PASS
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release` PASS
 
 Non-goals (v2):
 
@@ -288,7 +288,7 @@ Not implemented / not applicable (expected gaps for native retained UI):
     - Evidence: `ecosystem/fret-ui-headless/src/embla/engine.rs` (`loop_normalization_*` tests)
   - [x] slidesInView thresholds + margins
     - Evidence: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs` (`higher_threshold_requires_visible_fraction`, `margin_expands_viewport`)
-- [x] CAR2-520 Add `fretboard diag` scripts for:
+- [x] CAR2-520 Add `fretboard-dev diag` scripts for:
   - [x] inertial swipe (mouse)
     - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
   - [x] inertial swipe (touch)

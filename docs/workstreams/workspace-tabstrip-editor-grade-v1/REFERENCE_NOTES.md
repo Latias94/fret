@@ -71,5 +71,5 @@ These are useful as “behavior checklists” even if we do not vendor the sourc
 We should treat these as outcome references and encode the outcomes as:
 
 - unit-tested invariants (kernel),
-- `fretboard diag` scripts (full-stack integration),
+- `fretboard-dev diag` scripts (full-stack integration),
 - and only then visual polish.

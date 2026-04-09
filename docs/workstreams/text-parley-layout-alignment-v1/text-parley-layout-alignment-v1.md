@@ -81,7 +81,7 @@ See:
 
 Optional (when a behavior is user-visible):
 
-- Add a `fretboard diag` scripted repro capturing:
+- Add a `fretboard-dev diag` scripted repro capturing:
   - bidi selection/caret
   - span backgrounds
   - fixed-height/centered text hit-testing

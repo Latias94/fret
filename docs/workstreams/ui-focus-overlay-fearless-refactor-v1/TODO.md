@@ -39,7 +39,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 
 ## Nice-to-haves (separate workstreams if they expand)
 
-- [x] `fretboard diag` scripted repro covering overlay focus trap + hover/cursor outcomes.
+- [x] `fretboard-dev diag` scripted repro covering overlay focus trap + hover/cursor outcomes.
   - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`
 - [x] Minimal hovercard-open scripted gate under view-cache reuse (hover edge should rerender the
   relevant cache root).

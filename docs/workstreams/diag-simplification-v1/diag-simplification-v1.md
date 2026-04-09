@@ -31,9 +31,9 @@ Current state (as of 2026-02-21):
   - `bundle.meta.json` (bounded summary)
   - `bundle.index.json` (per-snapshot jump table; schema v1)
   - `test_ids.index.json` (bounded test-id search index)
-- Tooling can export a bounded directory for AI-assisted triage via `fretboard diag ai-packet ...` (meta/index/test-ids + slices).
+- Tooling can export a bounded directory for AI-assisted triage via `fretboard-dev diag ai-packet ...` (meta/index/test-ids + slices).
 - `diag slice` has an index-assisted bounded-parse fast path for large bundles (streaming reads avoid building the full `serde_json::Value`).
-- `fretboard diag hotspots` can estimate approximate JSON byte hot spots per path to guide retention and packaging budgets.
+- `fretboard-dev diag hotspots` can estimate approximate JSON byte hot spots per path to guide retention and packaging budgets.
 
 ## Context
 
@@ -279,7 +279,7 @@ Phase 3: artifact format v2
 
 ## Success criteria
 
-- A single `fretboard diag run` command can run against native or web and always produces:
+- A single `fretboard-dev diag run` command can run against native or web and always produces:
   - `script.result.json`
   - a local bundle directory containing `bundle.json` (and optional screenshots)
   - a packable artifact (zip) via the same command path

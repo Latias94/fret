@@ -64,7 +64,7 @@ baseline for validating interaction semantics and span limits on both native and
 ### Web (wasm)
 
 - Option A (recommended): use `fretboard` (wraps Trunk):
-  - `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
+  - `cargo run -p fretboard-dev -- dev web --demo chart_multi_axis_demo`
 - Option B: run Trunk directly:
   - `cd apps/fret-demo-web`
   - `trunk serve`
@@ -111,7 +111,7 @@ single “at a glance” view of:
 - ADR(s): `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/0200-delinea-datazoom-component-composition-and-span-policy.md`
 - Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures), `ecosystem/fret-chart/src/echarts/mod.rs` (option adapter window seeding via `dataZoom.startValue/endValue` -> value-window actions, `dataZoom.start/end` -> `Action::SetAxisWindowPercent`)
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
-- Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
+- Validation (wasm): `cargo run -p fretboard-dev -- dev web --demo chart_multi_axis_demo`
 - What to validate (P0):
   - Wheel on bottom X axis band zooms X only; span limits clamp zoom-in/out writes.
   - Drag on bottom X axis band pans X only.
@@ -177,7 +177,7 @@ single “at a glance” view of:
 - ADR(s): `docs/adr/0195-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/0209-delinea-tooltip-formatting-contract.md`
 - Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test/mod.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs`
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_demo`
-- Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_demo`
+- Validation (wasm): `cargo run -p fretboard-dev -- dev web --demo chart_demo`
 - Notes:
   - This is a *chart tooltip* (axisPointer-driven, data-derived, per-frame), not a generic UI tooltip primitive.
     It intentionally lives inside `fret-chart` rather than reusing the Radix/Shadcn tooltip surface.

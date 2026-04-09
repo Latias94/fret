@@ -88,7 +88,7 @@ Validation anchors:
 
 - `cargo nextest run -p fret-ui`
 - `cargo nextest run -p fret-ui-shadcn` (Radix/shadcn state gates)
-- `cargo run -p fretboard -- diag suite ui-gallery` (cached+uncached matrix recommended)
+- `cargo run -p fretboard-dev -- diag suite ui-gallery` (cached+uncached matrix recommended)
 
 ### M2 — View-cache + notify + prepaint closure (fearless refactor safety net)
 
@@ -113,7 +113,7 @@ Exit criteria (summary):
 
 Validation anchors:
 
-- `cargo run -p fretboard -- diag matrix ui-gallery`
+- `cargo run -p fretboard-dev -- diag matrix ui-gallery`
 - `cargo nextest run -p fret-ui`
 
 ### M3 — Text system v2 closure (UI authoring + quality baseline)

@@ -12,7 +12,7 @@ The goal is to make direction-related refactors **fearless** by leaving behind:
 
 - a small set of invariants (“what must always be true”),
 - a component parity matrix,
-- and regression gates (unit tests + `fretboard diag` scripts) for the failure-prone cases.
+- and regression gates (unit tests + `fretboard-dev diag` scripts) for the failure-prone cases.
 
 ## Scope / layering
 

@@ -36,7 +36,7 @@ GPU-first UI runtime.
 - Docs-aligned UI gallery presentation for carousel (shadcn docs layout and examples).
 - Regression gates:
   - Unit/integration tests for “drag from descendant pressable suppresses activation”.
-  - A `fretboard diag` script that exercises the same scenario on UI gallery.
+  - A `fretboard-dev diag` script that exercises the same scenario on UI gallery.
 
 ### Out of scope (v1)
 

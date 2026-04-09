@@ -162,7 +162,7 @@ Upstream exports a thin wrapper around `vaul`:
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 - `cargo nextest run -p fret-ui-shadcn drawer_snap_point_model_initializes_to_controlled_index_on_open drawer_snap_points_settle_to_nearest_point_on_release drawer_close_resets_snap_point_model_to_default_index drawer_snap_to_sequential_points_advances_one_step_per_drag`
 - `cargo nextest run -p fret-ui-shadcn drawer_nested_open_blocks_parent_drag_start drawer_nested_open_updates_parent_frontmost_height drawer_nested_close_restores_parent_drag_start`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-responsive-dialog-smoke.json --dir <unique-dir> --session-auto --pack --ai-packet --include-screenshots --launch cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-responsive-dialog-smoke.json --dir <unique-dir> --session-auto --pack --ai-packet --include-screenshots --launch cargo run -p fret-ui-gallery`
 
 ## Authoring note: `children([...])` and `compose()`
 

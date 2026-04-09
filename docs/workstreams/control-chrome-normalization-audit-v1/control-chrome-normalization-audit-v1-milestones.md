@@ -71,7 +71,7 @@ Exit criteria:
 
 Deliverables:
 
-- A small `fretboard diag` script (or equivalent) with:
+- A small `fretboard-dev diag` script (or equivalent) with:
   - screenshot evidence and/or bounds assertions
   - stable `test_id` anchors
 

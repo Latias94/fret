@@ -56,7 +56,7 @@ Rules:
 
 Every official example must have at least one gate:
 
-- a `fretboard diag run ...` script that:
+- a `fretboard-dev diag run ...` script that:
   - performs 1–3 high-signal actions,
   - captures at least one screenshot or asserts a simple invariant, or
 - a small Rust test asserting a contract outcome, or

@@ -53,7 +53,7 @@ Deliverables:
 
 Exit criteria:
 
-- A `fretboard diag` suite (or equivalent scripted repro) demonstrates:
+- A `fretboard-dev diag` suite (or equivalent scripted repro) demonstrates:
   - stable caret height/position during IME composition
   - stable selection rect segmentation under wrapping
 

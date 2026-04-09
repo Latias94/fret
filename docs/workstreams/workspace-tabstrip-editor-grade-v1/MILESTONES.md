@@ -26,9 +26,9 @@ Outcomes:
     - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
 
 Acceptance:
-- `cargo run -p fretboard -- diag registry check` passes.
-- `cargo run -p fretboard -- diag run ... --launch -- <workspace shell demo>` passes reliably.
-- `cargo run -p fretboard -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release` stays green.
+- `cargo run -p fretboard-dev -- diag registry check` passes.
+- `cargo run -p fretboard-dev -- diag run ... --launch -- <workspace shell demo>` passes reliably.
+- `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release` stays green.
 
 ## M2 — Editor-grade behaviors (Zed-style expectations)
 

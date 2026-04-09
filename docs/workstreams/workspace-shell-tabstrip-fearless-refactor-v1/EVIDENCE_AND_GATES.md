@@ -67,7 +67,7 @@ Prefer nextest tests for “hard” behaviors that do not require real rendering
 
 ## Diag gates (interaction-heavy)
 
-For drag/drop and overflow UX, scripted `fretboard diag` gates are preferred:
+For drag/drop and overflow UX, scripted `fretboard-dev diag` gates are preferred:
 
 ### Script gates (current)
 
@@ -98,7 +98,7 @@ For each milestone PR, include 1–3 anchors:
 
 - key functions (kernel ops / adapter wiring)
 - tests / diag script IDs
-- demo surface (UI Gallery page and/or `fretboard dev` command)
+- demo surface (UI Gallery page and/or `fretboard-dev dev` command)
 
 Current anchors:
 

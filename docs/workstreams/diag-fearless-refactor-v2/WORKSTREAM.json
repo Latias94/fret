@@ -31,18 +31,18 @@
   "repro": {
     "summary": "Resume this lane from the shared campaign and diagnostics authoring surfaces before touching deeper internals.",
     "commands": [
-      "cargo run -p fretboard -- diag doctor campaigns",
-      "cargo run -p fretboard -- diag campaign list"
+      "cargo run -p fretboard-dev -- diag doctor campaigns",
+      "cargo run -p fretboard-dev -- diag campaign list"
     ]
   },
   "gates": [
     {
       "name": "campaign-doctor",
-      "command": "cargo run -p fretboard -- diag doctor campaigns"
+      "command": "cargo run -p fretboard-dev -- diag doctor campaigns"
     },
     {
       "name": "campaign-manifest-validate",
-      "command": "cargo run -p fretboard -- diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json"
+      "command": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/ui-gallery-smoke.json"
     }
   ],
   "evidence": [

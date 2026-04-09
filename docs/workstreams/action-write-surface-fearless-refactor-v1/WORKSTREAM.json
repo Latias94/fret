@@ -31,13 +31,13 @@
   "repro": {
     "summary": "Historical closeout validation for the frozen write budget.",
     "commands": [
-      "CARGO_TARGET_DIR=target-codex-verify cargo nextest run -p fretboard template"
+      "CARGO_TARGET_DIR=target-codex-verify cargo nextest run -p fretboard-dev template"
     ]
   },
   "gates": [
     {
       "name": "template-closeout",
-      "command": "CARGO_TARGET_DIR=target-codex-verify cargo nextest run -p fretboard template"
+      "command": "CARGO_TARGET_DIR=target-codex-verify cargo nextest run -p fretboard-dev template"
     }
   ],
   "evidence": [

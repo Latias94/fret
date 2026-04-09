@@ -217,7 +217,7 @@ pub(crate) fn scripts_for_perf_suite_name(
     if out.is_empty() {
         return Err(format!(
             "perf suite resolved to no scripts in promoted registry: suite={name:?} membership={membership:?}\n\
-hint: ensure tools/diag-scripts/suites/{membership}/*.json exists and regenerate tools/diag-scripts/index.json via `cargo run -p fretboard -- diag registry write`"
+hint: ensure tools/diag-scripts/suites/{membership}/*.json exists and regenerate tools/diag-scripts/index.json via `cargo run -p fretboard-dev -- diag registry write`"
         ));
     }
     Ok(Some(out))

@@ -35,7 +35,7 @@ We consider a component family “ported” when:
 1. **Outcomes match upstream** for the documented behaviors (not API/props).
 2. **Stable selectors** exist for automation (`test_id` on roots/rows/actions).
 3. At least one **regression gate** exists:
-   - a `fretboard diag` script for interactive/stateful surfaces, and/or
+   - a `fretboard-dev diag` script for interactive/stateful surfaces, and/or
    - a targeted Rust invariant test for non-interactive geometry/contract rules.
 4. The surface lives in the **correct layer** (mechanisms vs shadcn recipes vs AI policy).
 

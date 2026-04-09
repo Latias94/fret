@@ -67,7 +67,7 @@ Evidence anchors:
 - Runner event loop ordering / determinism (desktop)
   - Failure mode: missed redraw/effect drains, duplicated frames, non-deterministic “settle” behavior for overlays.
   - Existing gates: web-golden conformance in `ecosystem/fret-ui-shadcn/tests/*` (indirect coverage).
-  - Missing gate to add: a minimal “runner frame loop invariants” test harness for `fret-launch` (or a `fretboard diag` suite) that asserts redraw scheduling invariants.
+  - Missing gate to add: a minimal “runner frame loop invariants” test harness for `fret-launch` (or a `fretboard-dev diag` suite) that asserts redraw scheduling invariants.
 - Cross-platform compilation drift (cfg explosion)
   - Failure mode: native-only code accidentally used under wasm32 (or vice versa); CI-only failures.
   - Existing gates: native `cargo check -p fret-launch`; wasm verification is still blocked by an

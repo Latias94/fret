@@ -104,7 +104,7 @@ These are optional and should only be tackled once drift is eliminated.
 - Better diagnostics integration:
   - stable `test_id` surfaces for key interactive examples,
   - focused label-association gates for the main form/trigger controls,
-  - optional `fretboard diag` scripts for high-risk overlay families.
+  - optional `fretboard-dev diag` scripts for high-risk overlay families.
 - Internal teaching surfaces under `src/ui/previews/**` converge on `UiCx` before we delete the
   remaining legacy preview helpers.
 - Reduce gallery-internal dead code (`doc_layout` helpers, orphan snippet assets, legacy Material 3

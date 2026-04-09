@@ -136,7 +136,7 @@ Local sample (for quick orientation; do not treat as canonical baseline evidence
 Tail note:
 - A representative `drag-jitter` outlier that breaks the baseline threshold tends to be “paint text prepare (width)”.
   - Example bundle: `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
-  - `fretboard diag stats ... --sort time` shows `paint_text_prepare.reasons=width` dominating the worst frame.
+  - `fretboard-dev diag stats ... --sort time` shows `paint_text_prepare.reasons=width` dominating the worst frame.
 
 ### Finding (2026-02-17): viewport-size branching can defeat ViewCache reuse during resize
 
@@ -181,10 +181,10 @@ This specific case was fixed by making the UI-gallery header wrap-friendly and r
 
 Tooling / guardrails:
 
-- Use `fretboard diag stats <bundle.json> --sort time --top 30` and inspect `top_cache_roots`:
+- Use `fretboard-dev diag stats <bundle.json> --sort time --top 30` and inspect `top_cache_roots`:
   - `reuse_reason=cache_key_mismatch` during resize is often a sign that a cache boundary depends on rapidly-changing
     “external” deps (viewport environment, layout queries).
-- `fretboard diag triage <bundle.json> --json` includes perf hints. A new hint code:
+- `fretboard-dev diag triage <bundle.json> --json` includes perf hints. A new hint code:
   - `view_cache.cache_key_mismatch` (warn): emitted when the worst frame contains view-cache roots that missed reuse
     due to cache key mismatches.
 - Turn this into an enforceable suite contract by adding:
@@ -204,7 +204,7 @@ Local repro command (release):
 
 - Update (2026-02-19): the macOS M4 baseline was refreshed to `ui-gallery-steady.macos-m4.v26.json` and the
   steady-suite command now includes the view-cache flags so the measurement surface matches the baseline.
-- `target/release/fretboard diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v26.json --dir target/fret-diag-perf-local/20260219-ui-gallery-steady --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+- `target/release/fretboard-dev diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v26.json --dir target/fret-diag-perf-local/20260219-ui-gallery-steady --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
 
 ### Finding (2026-02-18): macOS M4 resize-stress worst frames are paint-dominated
 
@@ -215,7 +215,7 @@ element-bounds walk), with `layout.engine_solve` staying around ~1.1ms.
 Evidence (single-script perf run, repeat=3):
 
 - Bundle: `target/fret-diag/1771410780171-ui-gallery-window-resize-stress-steady/bundle.json`
-- `fretboard diag stats ... --sort time --top 1` (same bundle) reports:
+- `fretboard-dev diag stats ... --sort time --top 1` (same bundle) reports:
   - worst frame total ≈ `8.9ms`
   - `layout.solve_us ≈ 1159us`
   - `paint.elem_bounds_calls ≈ 2172`
@@ -268,7 +268,7 @@ Evidence (macOS M4, release, repeat=3; same suite prewarm + prelude + view-cache
 
 - Before: `target/fret-diag-perf-local/20260219-virtual-list-torture-steady-v1/1771469957738-ui-gallery-virtual-list-bottom-steady/bundle.json`
 - After: `target/fret-diag-perf-local/20260219-observed-deps-opt-v1/1771472979963-ui-gallery-virtual-list-bottom-steady/bundle.json`
-- Diff summary (`fretboard diag stats --diff ... --sort time --top 15`):
+- Diff summary (`fretboard-dev diag stats --diff ... --sort time --top 15`):
   - `max.total_time_us`: `6670us -> 6147us` (`-7.8%`)
   - `max.paint_time_us`: `2976us -> 2719us` (`-8.6%`)
   - `max.layout_time_us`: `3639us -> 3421us` (`-6.0%`)
@@ -383,7 +383,7 @@ On macOS M4 this showed up as tail spikes in `ui-gallery-steady` overlay scripts
 
 Diagnostics improvement:
 
-- `UiInvalidationWalkV1` now includes `root_element_path` so `fretboard diag stats` can map invalidation walks
+- `UiInvalidationWalkV1` now includes `root_element_path` so `fretboard-dev diag stats` can map invalidation walks
   back to stable debug paths (element identity chain).
 
 Concrete attribution (dropdown open/select steady):
@@ -436,7 +436,7 @@ Evidence bundles:
 
 Attribution notes:
 
-- `fretboard diag stats <bundle.json> --sort time --top 60` shows `top_layout_engine_solves` dominated by overlay
+- `fretboard-dev diag stats <bundle.json> --sort time --top 60` shows `top_layout_engine_solves` dominated by overlay
   roots (e.g. `DismissibleLayer` / popover content). This is consistent with the “multi-root solves” model, but the
   *sum* of solves for a single frame still exceeds the baseline threshold.
 - `top_walks` frequently includes `detail=scroll_deferred_probe` in overlay-heavy scripts, indicating the scroll
@@ -452,7 +452,7 @@ Next step (directional, not yet implemented):
 Node-level attribution snapshot (2026-02-18, macOS M4):
 
 - Repro (single script; note this is for attribution, not baseline numbers):
-  - `target/release/fretboard diag perf tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json --repeat 1 --warmup-frames 5 --reuse-launch --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=200 --env FRET_MEASURE_NODE_PROFILE=1 --env FRET_MEASURE_NODE_PROFILE_TOP=20 --env FRET_MEASURE_NODE_PROFILE_MIN_US=200 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+  - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json --repeat 1 --warmup-frames 5 --reuse-launch --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=200 --env FRET_MEASURE_NODE_PROFILE=1 --env FRET_MEASURE_NODE_PROFILE_TOP=20 --env FRET_MEASURE_NODE_PROFILE_MIN_US=200 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
 - In the worst frame for the script (frame id `124` in this run), `layout_node profile` points at the popover menu
   scroll subtree (dropdown menu content) as the top self-time layout node, consistent with the “overlay roots dominate
   solve time” model. Evidence: `target/fret-diag-layout-node-profile2-1771399625/fretboard.stdout.json`.

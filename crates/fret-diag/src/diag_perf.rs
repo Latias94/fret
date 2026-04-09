@@ -305,7 +305,7 @@ fn write_regression_summary_for_perf(
             duration_ms: None,
             workspace_root: Some(workspace_root.display().to_string()),
             out_dir: Some(resolved_out_dir.display().to_string()),
-            tool: "fretboard diag perf".to_string(),
+            tool: "fretboard-dev diag perf".to_string(),
             tool_version: None,
             git_commit: None,
             git_branch: None,
@@ -483,8 +483,8 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     if rest.is_empty() {
         return Err(
-            "missing suite name or script paths (try: fretboard diag perf ui-gallery)\n\
-hint: list perf suites via `fretboard diag list suites --contains perf-`"
+            "missing suite name or script paths (try: fretboard-dev diag perf ui-gallery)\n\
+hint: list perf suites via `fretboard-dev diag list suites --contains perf-`"
                 .to_string(),
         );
     }
@@ -506,8 +506,8 @@ hint: list perf suites via `fretboard diag list suites --contains perf-`"
                 if looks_like_suite_name {
                     return Err(format!(
                         "unknown perf suite or script path: {name:?}\n\
-hint: list perf suites via `fretboard diag list suites --contains perf-`\n\
-hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+hint: list perf suites via `fretboard-dev diag list suites --contains perf-`\n\
+hint: list promoted scripts via `fretboard-dev diag list scripts --contains {name}`"
                     ));
                 }
                 return Err(format!(

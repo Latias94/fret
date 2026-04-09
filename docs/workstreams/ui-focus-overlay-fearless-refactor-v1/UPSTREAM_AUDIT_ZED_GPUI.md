@@ -111,7 +111,7 @@ These are the UI-framework "classic" traps that the upstream architecture tends 
 ## Actionable follow-ups for this workstream
 
 1. Phase C perf probe: measure dispatch snapshot build cost and worst-frame impact in UI gallery
-   overlay scenarios; gate regressions with `fretboard diag perf`.
+   overlay scenarios; gate regressions with `fretboard-dev diag perf`.
 2. Clarify barrier scroll semantics:
    - Decide mechanism contract: whether scroll is blocked by default, allowed by default, or
      allowed only with an explicit policy knob.

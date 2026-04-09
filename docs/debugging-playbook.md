@@ -30,19 +30,19 @@ $env:FRET_DIAG_DIR=".fret\\diag"
 $env:FRET_DIAG_GPU_SCREENSHOTS=1
 
 # Run a deterministic scripted repro and auto-pack a shareable zip.
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
   --launch -- cargo run -p fret-ui-gallery --release
 
 # Equivalent (lower-level) form:
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
   --pack --include-all `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Notes:
 
-- `fretboard diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
-- `fretboard diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
+- `fretboard-dev diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
+- `fretboard-dev diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
 - `diag repro` writes `repro.zip` and `repro.summary.json` into `FRET_DIAG_DIR` (useful as a single “attach this” artifact).
   - When running a suite, `repro.zip` includes multiple bundles under stable prefixes, plus script sources under `_root/scripts/`.
 
@@ -60,13 +60,13 @@ Framework consistency checks (automation-friendly):
 Example:
 
 ```powershell
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json `
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json `
   --check-stale-paint ui-gallery-nav-intro `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 ```powershell
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json `
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json `
   --check-stale-scene <test_id> `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -74,7 +74,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-code-view-scrol
 Screenshot-backed example (requires `capture_screenshot` steps):
 
 ```powershell
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json `
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json `
   --check-pixels-changed ui-gallery-code-view-root `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -82,7 +82,7 @@ cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-view-scr
 Perf regression gate example (writes `check.perf_thresholds.json` to `FRET_DIAG_DIR`):
 
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery `
+cargo run -p fretboard-dev -- diag perf ui-gallery `
   --repeat 5 `
   --warmup-frames 5 `
   --max-top-total-us 25000 `
@@ -94,7 +94,7 @@ cargo run -p fretboard -- diag perf ui-gallery `
 Resource footprint gate example (writes `check.resource_footprint.json` to `FRET_DIAG_DIR`):
 
 ```powershell
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle.json `
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-intro-idle.json `
   --max-working-set-bytes 1200000000 `
   --max-peak-working-set-bytes 1600000000 `
   --max-cpu-avg-percent-total-cores 250 `
@@ -104,7 +104,7 @@ cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle.js
 Redraw hitch gate example (writes `check.redraw_hitches.json` and includes `redraw_hitches.log` in `repro.zip`):
 
 ```powershell
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-window-resize-stress.json `
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-window-resize-stress.json `
   --check-redraw-hitches-max-total-ms 120 `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -121,7 +121,7 @@ $env:FRET_LAYOUT_NODE_PROFILE=1
 $env:FRET_LAYOUT_NODE_PROFILE_TOP=20
 $env:FRET_LAYOUT_NODE_PROFILE_MIN_US=500
 
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json `
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json `
   --env FRET_UI_GALLERY_VIEW_CACHE=1 `
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
   --launch -- cargo run -p fret-ui-gallery --release
@@ -150,7 +150,7 @@ Baseline workflow (write once, then gate from the baseline file):
 
 ```powershell
 # Write a baseline (adds headroom to measured maxima).
-cargo run -p fretboard -- diag perf ui-gallery `
+cargo run -p fretboard-dev -- diag perf ui-gallery `
   --repeat 5 `
   --warmup-frames 5 `
   --perf-baseline-out .fret/perf.baseline.json `
@@ -158,7 +158,7 @@ cargo run -p fretboard -- diag perf ui-gallery `
   --launch -- cargo run -p fret-ui-gallery --release
 
 # Gate against the baseline.
-cargo run -p fretboard -- diag perf ui-gallery `
+cargo run -p fretboard-dev -- diag perf ui-gallery `
   --repeat 5 `
   --warmup-frames 5 `
   --perf-baseline .fret/perf.baseline.json `
@@ -575,7 +575,7 @@ Notes:
 
 - This is currently a **native-only** workflow (not `wasm32`).
 - Tracy complements (not replaces) diagnostics bundles:
-  - use `fretboard diag perf` / `diag stats --sort time` to find the slowest frames,
+  - use `fretboard-dev diag perf` / `diag stats --sort time` to find the slowest frames,
   - use Tracy to inspect **what ran** during those frames.
 
 #### 4.1.1 Enable Tracy

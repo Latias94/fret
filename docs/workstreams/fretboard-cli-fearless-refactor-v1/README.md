@@ -53,7 +53,7 @@ Decision:
 
 Clarification:
 
-- `fretboard diag` remains user-facing through the same binary, but its canonical parser/help
+- `fretboard-dev diag` remains user-facing through the same binary, but its canonical parser/help
   contract lives in `crates/fret-diag`; this lane should not duplicate that tree in
   `apps/fretboard`.
 
@@ -126,9 +126,9 @@ Current merged progress:
 
 ## 6) Current smoke evidence
 
-- `cargo nextest run -p fretboard cli::contracts::tests:: config::tests:: theme::tests::`
-- `cargo nextest run -p fretboard cli::contracts::tests:: cli::help::tests:: scaffold::tests::`
+- `cargo nextest run -p fretboard-dev cli::contracts::tests:: config::tests:: theme::tests::`
+- `cargo nextest run -p fretboard-dev cli::contracts::tests:: cli::help::tests:: scaffold::tests::`
 - `target/debug/fretboard --help`
-- `target/debug/fretboard new --help`
-- `target/debug/fretboard new hello --help`
+- `target/debug/fretboard-dev new --help`
+- `target/debug/fretboard-dev new hello --help`
 - `target/debug/fretboard init todo` (expected rejection)

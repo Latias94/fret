@@ -150,7 +150,7 @@ This taxonomy is intentionally operational: it tells us what to do when a `bundl
 
 #### Post-run gate taxonomy keys (non-normative; must remain aligned)
 
-`fretboard diag stats --check-gc-sweep-liveness` writes `check.gc_sweep_liveness.json` next to the bundle and classifies offenders using stable keys.
+`fretboard-dev diag stats --check-gc-sweep-liveness` writes `check.gc_sweep_liveness.json` next to the bundle and classifies offenders using stable keys.
 These keys are designed to align with the categories above and speed up triage:
 
 - `swept_while_reachable`: category (2) “swept while still reachable”.
@@ -369,7 +369,7 @@ This is intentionally satisfied today via existing bounded diagnostics:
 - `debug.element_runtime.view_cache_reuse_root_element_samples`
 - `debug.element_runtime.node_entry_root_overwrites`
 
-Post-run gates (e.g. `fretboard diag stats --check-gc-sweep-liveness`) SHOULD fail fast and write an evidence JSON payload whenever these required fields are missing or inconsistent.
+Post-run gates (e.g. `fretboard-dev diag stats --check-gc-sweep-liveness`) SHOULD fail fast and write an evidence JSON payload whenever these required fields are missing or inconsistent.
 
 For cache-005 triage, the gate evidence JSON (`check.gc_sweep_liveness.json`) SHOULD include:
 

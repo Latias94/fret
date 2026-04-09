@@ -39,5 +39,5 @@ cargo run -p fret-demo --bin components_gallery
 Recommended: use `fretboard` so the runner flags and profiles are consistent:
 
 ```bash
-cargo run -p fretboard -- dev native --bin todo_demo
+cargo run -p fretboard-dev -- dev native --bin todo_demo
 ```

@@ -12,7 +12,7 @@ pub struct RendererPerfFrameSample {
 
 /// Best-effort store for the most recent per-frame renderer perf sample per window.
 ///
-/// This is intended for diagnostics bundles (`fretboard diag *`) and should not be used as a
+/// This is intended for diagnostics bundles (`fretboard-dev diag *`) and should not be used as a
 /// correctness signal.
 #[derive(Debug, Default, Clone)]
 pub struct RendererPerfFrameStore {

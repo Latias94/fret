@@ -3,7 +3,7 @@
 This workstream is gated by a combination of:
 
 - unit tests (pure headless + adapter-level)
-- `fretboard diag` scripts (interaction outcomes)
+- `fretboard-dev diag` scripts (interaction outcomes)
 
 ## Unit tests
 
@@ -28,7 +28,7 @@ Pinned/preview editor semantics:
 
 Run (workspace shell demo):
 
-- `cargo run -p fretboard -- diag suite workspace-shell-tabstrip --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+- `cargo run -p fretboard-dev -- diag suite workspace-shell-tabstrip --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
 
 ## Diagnostics scripts (docking)
 
@@ -40,7 +40,7 @@ Overflow menu correctness + close arbitration:
 
 Run (docking arbitration demo):
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard-dev -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ## Evidence bundles (local)
 

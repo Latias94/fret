@@ -65,7 +65,7 @@ Status legend:
   - Evidence: `ecosystem/fret-query/src/lib.rs`
   - Bundle integration: `UiDiagnosticsSnapshotV1.query_snapshot` includes query snapshot metadata for `bundle.json` exports.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- `[x]` Surface query snapshot aggregates in `fretboard diag stats` reports.
+- `[x]` Surface query snapshot aggregates in `fretboard-dev diag stats` reports.
   - Added human/json metrics: `frames_with_query_snapshot`, `query_entries_*`, `query_namespace_hotspots`.
   - Evidence: `crates/fret-diag/src/stats.rs`
   - Regression coverage: `bundle_stats_aggregates_query_snapshot_entries` in `crates/fret-diag/src/lib.rs`.

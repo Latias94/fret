@@ -52,7 +52,7 @@ Notes:
 1. **Policy / state machine tests (unit-level)**
    - test the interaction policy (dismiss, roving, typeahead, hover intent, timers),
    - use deterministic time/frames when possible.
-2. **Scripted end-to-end tests (`fretboard diag`)**
+2. **Scripted end-to-end tests (`fretboard-dev diag`)**
    - validate routing + focus + overlay placement + virtualization,
    - assert against semantics and structured evidence, not pixels by default.
 3. **Visual / feel probes (optional, targeted)**
@@ -89,12 +89,12 @@ Declare `meta.required_capabilities` for non-trivial evidence requirements (scre
 
 Run (native):
 
-- `cargo run -p fretboard -- diag run <script.json> --launch -- <cmd...>`
+- `cargo run -p fretboard-dev -- diag run <script.json> --launch -- <cmd...>`
 
 Then:
 
-- `fretboard diag lint <bundle_dir|bundle.json>` (sanity checks, emits `check.lint.json`)
-- `fretboard diag triage <bundle_dir|bundle.json> --json` (small summary)
+- `fretboard-dev diag lint <bundle_dir|bundle.json>` (sanity checks, emits `check.lint.json`)
+- `fretboard-dev diag triage <bundle_dir|bundle.json> --json` (small summary)
 
 Use `diag compare` for before/after regressions when the semantics contract is expected to stay compatible.
 

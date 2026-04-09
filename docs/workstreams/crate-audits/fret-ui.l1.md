@@ -36,7 +36,7 @@ and cache/invalidation behavior. This crate must remain policy-free (ADR 0066).
 
 ## Recommended next steps
 
-1. Turn one overlay-focused `fretboard diag` script into an “always-run” suite candidate (dialog escape + focus restore),
+1. Turn one overlay-focused `fretboard-dev diag` script into an “always-run” suite candidate (dialog escape + focus restore),
    and map it into the workstream guardrails.
 2. Continue splitting `crates/fret-ui/src/tree/mod.rs` by responsibility only after gates exist for the hazard list.
 

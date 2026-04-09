@@ -62,7 +62,7 @@ frame.
 Preferred evidence loop (commit-addressable):
 
 1. Run a probe/gate (`tools/perf/*`) and capture the worst bundle(s).
-2. Use `fretboard diag stats <bundle.json> --sort time --top N` to attribute the worst frame.
+2. Use `fretboard-dev diag stats <bundle.json> --sort time --top N` to attribute the worst frame.
 3. If the hotspot is inside a Canvas/paint path, add phase attribution or cache/reset counters to
    `app_snapshot` to confirm the underlying cause.
 

@@ -24,8 +24,8 @@ When opened on GitHub, the repo currently feels “large and demo-heavy”:
 
 - Make the “what do I run first?” answer obvious in < 60 seconds.
 - Prefer **few, boring, repeatable** entry points:
-  - templates ladder (`cargo run -p fretboard -- new ...`),
-  - cookbook lessons (`cargo run -p fretboard -- dev native --example ...`),
+  - templates ladder (`cargo run -p fretboard-dev -- new ...`),
+  - cookbook lessons (`cargo run -p fretboard-dev -- dev native --example ...`),
   - gallery (component catalog) as an optional deep dive.
 - Reduce cold-start friction:
   - fewer heavy defaults for day-1 examples,
@@ -52,7 +52,7 @@ Policy:
 - If a demo is a single concept that fits in one file and is copy/paste-friendly, it belongs in:
   - `apps/fret-cookbook/examples/`.
 - If a demo is a stress harness, deep interop boundary, or regression harness, it stays in:
-  - `apps/fret-demo` (hidden by default in `cargo run -p fretboard -- list native-demos`).
+  - `apps/fret-demo` (hidden by default in `cargo run -p fretboard-dev -- list native-demos`).
 
 Expected outcomes:
 

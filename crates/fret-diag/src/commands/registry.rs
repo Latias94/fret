@@ -93,7 +93,7 @@ pub(crate) fn cmd_registry(
             if !path.is_file() {
                 return Err(format!(
                     "promoted scripts registry is missing: {}\n\
-hint: generate it via `cargo run -p fretboard -- diag registry write`",
+hint: generate it via `cargo run -p fretboard-dev -- diag registry write`",
                     path.display()
                 ));
             }
@@ -123,7 +123,7 @@ hint: generate it via `cargo run -p fretboard -- diag registry write`",
                 return Err(format!(
                     "diag script registry is out of date:\n\
 - file: {}\n\
-hint: run `cargo run -p fretboard -- diag registry write`",
+hint: run `cargo run -p fretboard-dev -- diag registry write`",
                     path.display()
                 ));
             }

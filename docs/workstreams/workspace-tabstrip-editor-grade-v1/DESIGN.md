@@ -20,7 +20,7 @@ we iterate on visuals.
 
 1. **Modular, testable tab strip kernel** in the correct layer.
 2. **Deterministic interaction outcomes** (drop index, focus restore, scroll-to-active).
-3. **Scriptable + gateable** surface (stable `test_id` anchors + `fretboard diag` scripts).
+3. **Scriptable + gateable** surface (stable `test_id` anchors + `fretboard-dev diag` scripts).
 4. **One behavior kernel, multiple adapters** (workspace shell + docking).
 
 ## Non-goals (v1)
@@ -82,6 +82,6 @@ Keep the implementation modular even if it starts in a single crate:
 ## Regression gates (required for refactors)
 
 - At least one unit test per kernel-level invariant (drop target, index mapping, pinned boundary).
-- At least one promoted `fretboard diag` script per interaction class (reorder, split-drop preview,
+- At least one promoted `fretboard-dev diag` script per interaction class (reorder, split-drop preview,
   overflow activate, close behaviors).
 

@@ -6,11 +6,11 @@
 - [x] Parse `MALLOC ZONE` allocated + frag into structured JSON when present.
 - [x] Capture a bounded `vmmap -sortBySize -wide -interleaved -noCoalesce` region list to break down large buckets like `owned unmapped memory`.
 - [x] Add `vmmap` parsing fields to `resource.footprint.json` schema (best-effort; macOS-only).
-- [x] Add a `fretboard diag compare --footprint` view that prints deltas for the structured fields.
-- [x] Add `fretboard diag memory-summary` to summarize distributions across multiple `--session-auto` samples.
-- [x] Ensure `fretboard diag repeat` materializes per-run `evidence.index.json` so `memory-summary` can aggregate repeat outputs.
+- [x] Add a `fretboard-dev diag compare --footprint` view that prints deltas for the structured fields.
+- [x] Add `fretboard-dev diag memory-summary` to summarize distributions across multiple `--session-auto` samples.
+- [x] Ensure `fretboard-dev diag repeat` materializes per-run `evidence.index.json` so `memory-summary` can aggregate repeat outputs.
 - [x] Capture Apple `/usr/bin/footprint --json` output in bundles (macOS-only) and surface a summary under `macos_footprint_tool_steady`.
-- [x] Add `fretboard diag memory-summary --footprint-categories-agg` to aggregate `footprint` category dirty bytes across samples.
+- [x] Add `fretboard-dev diag memory-summary --footprint-categories-agg` to aggregate `footprint` category dirty bytes across samples.
 - [x] Surface renderer attribution fields in `memory-summary` (`renderer_gpu_images_bytes_estimate`, `renderer_gpu_render_targets_bytes_estimate`, `renderer_intermediate_peak_in_use_bytes`).
 - [x] Add `tools/sample_external_process_memory.py` for external macOS GUI-process sampling (`footprint -j` + `vmmap -summary`).
   - Supports `--sample-at-secs 2,6,12` timeline capture in a single process.
@@ -94,7 +94,7 @@
   - `ca-client-present-request` / `metal-application-encoders-list` still show high-frequency activity for the compare demo, but they now conflict with the app-side `render_count=2` evidence and should be treated as **CA/compositor/present activity signals** until we close their Apple-side semantics.
 - [x] Expose continuous-frame lease / animation-frame-request counts through diag bundle evidence and `diag memory-summary`, and teach `memory-summary` to resolve nested bundle evidence under session roots.
 - Observed (diag tooling validation; local 2026-03-06):
-  - `target/diag/test-hello-world-compare-repeat-20260306-r2/` now works with `target/debug/fretboard diag memory-summary ...` even though the session root itself has no `evidence.index.json`; the tool resolves nested sample bundles automatically.
+  - `target/diag/test-hello-world-compare-repeat-20260306-r2/` now works with `target/debug/fretboard-dev diag memory-summary ...` even though the session root itself has no `evidence.index.json`; the tool resolves nested sample bundles automatically.
   - The resulting summary shows `ui_element_runtime_continuous_frame_lease_owners_count=0`, `ui_element_runtime_continuous_frame_lease_count_total=0`, `ui_element_runtime_continuous_frame_lease_count_max=0`, and `ui_element_runtime_animation_frame_request_roots_count=0` for the minimal compare idle capture, which matches the app-side cadence story.
 - [x] Add a same-backend control baseline (plain `wgpu` hello world or another tiny `wgpu` UI stack) so the GPUI Blade/Metal comparison is no longer the only external baseline.
 - Observed (same-backend control; local 2026-03-06):
@@ -154,8 +154,8 @@
   - Exploratory script/suite: `tools/diag-scripts/tooling/hello-world/hello-world-compare-idle-present-gate.json`, `tools/diag-scripts/suites/hello-world-compare-idle-present/suite.json`, redirect `tools/diag-scripts/hello-world-compare-idle-present-gate.json`.
   - Direct validation on current head: a no-diag run stays flat at `runner_present.total_present_count=4` across `2s/3s/4s` (`target/manual-hello-world-compare-idle/hello_world_compare.internal_gpu.json`).
 - [x] Finish an apples-to-apples idle-present regression gate path for `diag run` and `diag suite`.
-  - `fretboard diag run tools/diag-scripts/tooling/hello-world/hello-world-compare-idle-present-gate.json --launch -- cargo run -p fret-demo --bin hello_world_compare_demo` now takes an external / no-diagnostics launch path, writes `hello_world_compare.internal_gpu.json` via `FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH`, and evaluates `check.hello_world_compare_idle_present.json` after the demo self-exits.
-  - `fretboard diag suite hello-world-compare-idle-present --launch -- cargo run -p fret-demo --bin hello_world_compare_demo` now uses the same external / no-diagnostics post-run path and writes a passing `suite.summary.json` instead of relying on the in-band diagnostics frame loop.
+  - `fretboard-dev diag run tools/diag-scripts/tooling/hello-world/hello-world-compare-idle-present-gate.json --launch -- cargo run -p fret-demo --bin hello_world_compare_demo` now takes an external / no-diagnostics launch path, writes `hello_world_compare.internal_gpu.json` via `FRET_HELLO_WORLD_COMPARE_INTERNAL_REPORT_PATH`, and evaluates `check.hello_world_compare_idle_present.json` after the demo self-exits.
+  - `fretboard-dev diag suite hello-world-compare-idle-present --launch -- cargo run -p fret-demo --bin hello_world_compare_demo` now uses the same external / no-diagnostics post-run path and writes a passing `suite.summary.json` instead of relying on the in-band diagnostics frame loop.
   - Verified closure artifacts: `target/fret-diag-hello-world-compare-idle-gate-r2/` (`diag run`) and `target/fret-diag-hello-world-compare-idle-suite-r3/` (`diag suite`) both record `diag_env_enabled_guess=false`, flat `runner_present.total_present_count`, and `present_delta=0`.
 
 - [x] Add a cadence-matched active continuous-present baseline and remove the desktop RAF self-spin from the compare path.
@@ -323,7 +323,7 @@
 - Observed (empty idle, sample):
   - System vs `mimalloc`: default malloc zone allocated drops ~23.9 MB → ~7.8 MB; `owned unmapped memory` dirty unchanged (~213.6 MB).
   - System vs `jemalloc`: default malloc zone allocated drops ~23.9 MB → ~7.8 MB; `owned unmapped memory` dirty remains the headline (~216.3 MB).
-- [ ] Decide whether to keep allocator selection as a dev-only feature (A/B), and whether to surface it in `fretboard dev` presets.
+- [ ] Decide whether to keep allocator selection as a dev-only feature (A/B), and whether to surface it in `fretboard-dev dev` presets.
 - [ ] Identify top heap offenders via structured `vmmap` summary and pick one bounded optimization.
 - [x] Reduce baseline text atlas allocations by lazily allocating the mask atlas pages (avoid preallocating `TEXT_ATLAS_MAX_PAGES`).
 
@@ -340,12 +340,12 @@
   - `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images`
   - `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images`
 - [x] Add repeat-only distribution gates for memory keys:
-  - `fretboard diag repeat ... --check-memory-p90-max <key>:<bytes>` (fails on missing keys or p90 drift)
+  - `fretboard-dev diag repeat ... --check-memory-p90-max <key>:<bytes>` (fails on missing keys or p90 drift)
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).
-- [x] Add a memory-only repeat mode (`fretboard diag repeat --no-compare`) so editor-grade workloads do not fail solely because bundle contents differ across runs.
+- [x] Add a memory-only repeat mode (`fretboard-dev diag repeat --no-compare`) so editor-grade workloads do not fail solely because bundle contents differ across runs.
 - [x] Add a first-pass `app_snapshot.shell` snapshot for the shared `ui-gallery` shell path (workspace tabs / queries / command registry/page spec metadata counts).
 - [x] Add a cold-start nav sweep path (`FRET_UI_GALLERY_NAV_QUERY` + `app_snapshot.shell.nav_visible_*`) and record the first visible-item deltas on the `card` page.
-- [x] Fix `fretboard diag repeat --launch` so script `meta.env_defaults` reach the launched app (prevents `ui-gallery` page-targeted memory scripts from silently falling back to `overlay`).
+- [x] Fix `fretboard-dev diag repeat --launch` so script `meta.env_defaults` reach the launched app (prevents `ui-gallery` page-targeted memory scripts from silently falling back to `overlay`).
 - [x] Backfill `script.result.json.last_bundle_dir` / `last_bundle_artifact` after async `capture_bundle`, and teach `diag repeat` to recover the run dir from `bundle_artifact` when needed, so retained-analysis repeat runs stay self-describing.
 - [x] Validate an analysis-only subtree recipe for `ui-gallery` memory attribution:
   - `FRET_DIAG_DEBUG_SNAPSHOT=1`

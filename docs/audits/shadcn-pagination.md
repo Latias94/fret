@@ -91,4 +91,4 @@ Current source axes:
 - `cargo build -p fret-ui-gallery`
 - `cargo test -p fret-ui-gallery --test pagination_docs_surface -- --nocapture`
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout pagination_demo`
-- `./target/debug/fretboard diag run tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json --dir /tmp/fret-pagination-diag --session-auto --launch -- ./target/debug/fret-ui-gallery`
+- `./target/debug/fretboard-dev diag run tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json --dir /tmp/fret-pagination-diag --session-auto --launch -- ./target/debug/fret-ui-gallery`

@@ -619,7 +619,7 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
 fn resolve_campaign_subcommand(rest: &[String]) -> Result<CampaignSubcommand, String> {
     let Some(sub) = rest.first().map(|value| value.as_str()) else {
         return Err(
-            "missing campaign subcommand (try: fretboard diag campaign list | show <id> | validate [<manifest.json>...] | run <id>)".to_string(),
+            "missing campaign subcommand (try: fretboard-dev diag campaign list | show <id> | validate [<manifest.json>...] | run <id>)".to_string(),
         );
     };
 
@@ -1786,7 +1786,7 @@ fn write_campaign_capability_preflight_summary(
             duration_ms: None,
             workspace_root: Some(workspace_root.display().to_string()),
             out_dir: Some(preflight_summary_dir.display().to_string()),
-            tool: "fretboard diag campaign".to_string(),
+            tool: "fretboard-dev diag campaign".to_string(),
             tool_version: None,
             git_commit: None,
             git_branch: None,
@@ -3155,7 +3155,7 @@ fn campaign_run_record_json(
     }
     run.insert(
         "tool".to_string(),
-        serde_json::json!("fretboard diag campaign"),
+        serde_json::json!("fretboard-dev diag campaign"),
     );
     run.insert(
         "workspace_root".to_string(),
@@ -3839,7 +3839,7 @@ mod tests {
             },
             RegressionRunSummaryV1 {
                 run_id: "1234".to_string(),
-                tool: "fretboard diag campaign".to_string(),
+                tool: "fretboard-dev diag campaign".to_string(),
                 created_unix_ms: crate::util::now_unix_ms(),
                 duration_ms: None,
                 workspace_root: None,
@@ -7159,7 +7159,7 @@ mod tests {
             },
             RegressionRunSummaryV1 {
                 run_id: "1234".to_string(),
-                tool: "fretboard diag campaign".to_string(),
+                tool: "fretboard-dev diag campaign".to_string(),
                 created_unix_ms: crate::util::now_unix_ms(),
                 duration_ms: None,
                 workspace_root: Some(root.display().to_string()),

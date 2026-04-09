@@ -60,6 +60,6 @@ geometry/chrome gates.
 
 - `cargo nextest run -p fret-ui-shadcn --lib separator_defaults_match_shadcn_constraints vertical_separator_matches_shadcn_self_stretch vertical_separator_fill_height_lane_is_explicit_opt_out semantic_vertical_separator_is_opt_in --status-level fail`
 - `cargo nextest run -p fret-ui-gallery --test separator_docs_surface --status-level fail`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-docs-smoke.json --dir target/fret-diag-separator --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-docs-smoke.json --dir target/fret-diag-separator --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 - Existing chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_separator_demo_geometry_matches`)
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/separator.rs` (`web_vs_fret_layout_separator_demo_geometry`)

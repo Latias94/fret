@@ -71,7 +71,7 @@ Preferred behavior order:
 1. Regenerate sidecars from the bundle artifact (best-effort).
 2. If regeneration is not possible or too expensive, fail fast with guidance:
    - which file is missing,
-   - which command regenerates it (e.g. `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`),
+   - which command regenerates it (e.g. `fretboard-dev diag index <bundle_dir|bundle.json|bundle.schema2.json>`),
    - and what capability/env setting enables sidecar writing during dumps.
 
 ## Current sidecars (v1)

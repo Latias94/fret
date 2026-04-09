@@ -30,7 +30,7 @@ pub struct DockSpaceImUiOptions {
     pub test_id: Option<&'static str>,
     /// Optional semantics-only drag anchor placed on the dock space tab bar.
     ///
-    /// This is intended for scripted diagnostics runs (`fretboard diag`) so scripts can start a
+    /// This is intended for scripted diagnostics runs (`fretboard-dev diag`) so scripts can start a
     /// deterministic dock drag without relying on brittle role/label selectors for tabs.
     pub tab_drag_anchor_test_id: Option<&'static str>,
 }
@@ -171,7 +171,7 @@ impl<H: UiHost + 'static> Widget<H> for DockHostRoot<H> {
             const SIZE_H_PX: f32 = 20.0;
             const TAB_BAR_H_PX: f32 = 28.0;
 
-            // The anchor is semantics-only and is used by `fretboard diag` scripts to pick a
+            // The anchor is semantics-only and is used by `fretboard-dev diag` scripts to pick a
             // deterministic start point for dock drags. Keep it biased towards the left side of
             // the tab bar so the picked point is likely to land on a real tab hit target.
             const LEFT_PAD_PX: f32 = 8.0;

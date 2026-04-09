@@ -43,7 +43,7 @@ Related docs:
    - Ownership: should live in `fret-ui-kit` / app overlay, not `fret-ui`.
     - Status:
       - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
-      - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
+      - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard-dev diag inspect ...`).
       - In-app toggle/help implemented (diagnostics-only): `Ctrl/Cmd+Alt+I` toggles inspect, `Ctrl/Cmd+Alt+H` shows shortcut help.
       - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
       - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
@@ -113,8 +113,8 @@ Related docs:
    - Support “patch by match” (find first step where selector matches old value).
 
 3. **Sharing**
-   - Bundle compression option (zip) with stable naming. (done: `fretboard diag pack`, plus `--include-triage`)
-   - Optional screenshot packaging for visual overlay debugging. (done: `FRET_DIAG_GPU_SCREENSHOTS=1` writes `target/fret-diag/screenshots/<bundle>/...` + `manifest.json`; `fretboard diag pack --include-screenshots` packs them; viewer can auto-select by manifest and render as an overlay background; scripts can also `capture_screenshot` and wait on `screenshots.result.json`)
+   - Bundle compression option (zip) with stable naming. (done: `fretboard-dev diag pack`, plus `--include-triage`)
+   - Optional screenshot packaging for visual overlay debugging. (done: `FRET_DIAG_GPU_SCREENSHOTS=1` writes `target/fret-diag/screenshots/<bundle>/...` + `manifest.json`; `fretboard-dev diag pack --include-screenshots` packs them; viewer can auto-select by manifest and render as an overlay background; scripts can also `capture_screenshot` and wait on `screenshots.result.json`)
    - Simple bug template: attach `bundle.json` + optional `script.json`.
    - Offline bundle viewer: `tools/fret-bundle-viewer` (supports semantics tree, perf panels, `triage.json` export, and `.zip`/paste import).
 

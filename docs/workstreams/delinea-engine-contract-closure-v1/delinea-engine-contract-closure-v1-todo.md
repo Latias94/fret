@@ -108,14 +108,14 @@ Regression gates:
 - [x] DEL-ENG4-gates-002 Add a “filter mode torture” headless snapshot (WeakFilter + Empty + Y indices cap edge cases).
   - Evidence: `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (`golden_filter_mode_weakfilter_x_and_empty_y`, `golden_filter_mode_y_indices_skips_when_view_len_exceeds_cap`)
   - Goldens: `goldens/echarts-headless/v1/filtermode-weakfilter-x-empty-y.json`, `goldens/echarts-headless/v1/filtermode-y-indices-view-len-cap.json`
-- [x] DEL-ENG4-gates-003 Add one `fretboard diag` script for multi-grid + linking (optional).
+- [x] DEL-ENG4-gates-003 Add one `fretboard-dev diag` script for multi-grid + linking (optional).
   - Script: `tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`
   - Gate: verifies that a domain-window change in the top chart propagates to the bottom chart.
-  - Run (example): `cargo run -p fretboard -- diag run tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json --check-pixels-changed chart-multi-axis-top --check-pixels-changed chart-multi-axis-bottom --env FRET_DIAG_GPU_SCREENSHOTS=1 --launch -- cargo run -p fret-demo --bin chart_multi_axis_demo --release`
+  - Run (example): `cargo run -p fretboard-dev -- diag run tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json --check-pixels-changed chart-multi-axis-top --check-pixels-changed chart-multi-axis-bottom --env FRET_DIAG_GPU_SCREENSHOTS=1 --launch -- cargo run -p fret-demo --bin chart_multi_axis_demo --release`
   - Notes:
     - If `cargo run ... --release` fails with `failed to remove file ... chart_multi_axis_demo.exe (os error 5)`, ensure no `chart_multi_axis_demo.exe` process is still running.
     - For local reproducibility, prefer a unique output dir: `--dir target/fret-diag/ws-linking-domain-window-...`.
-  - Evidence: `fretboard diag run` passed (2026-02-10) with `--dir target/fret-diag/ws-linking-domain-window-20260210-211143`.
+  - Evidence: `fretboard-dev diag run` passed (2026-02-10) with `--dir target/fret-diag/ws-linking-domain-window-20260210-211143`.
 
 - [x] DEL-ENG4-gates-010 Document a “fast” local/CI nextest subset for chart semantics regressions (keep refactors safe without running the full workspace).
   - Script (preferred): `pwsh -NoProfile -File tools/gates_delinea_fast.ps1`

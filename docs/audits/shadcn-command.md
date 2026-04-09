@@ -103,16 +103,16 @@ Key upstream semantics:
 - Reason mapping test: `command_dialog_open_change_reason_maps_dismiss_reasons`
 - Reason behavior test: `command_dialog_open_change_with_reason_reports_item_press_when_close_on_select`
 - Curated stable subset suite entry (docs screenshots + keybindings + RTL):
-  - `cargo run -p fretboard -- diag suite ui-gallery-command --dir target/fret-diag-suite-ui-gallery-command --session-auto --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag suite ui-gallery-command --dir target/fret-diag-suite-ui-gallery-command --session-auto --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
 - UI Gallery docs-surface screenshot scripts (existing gate; keep navigation on `click_stable` so the run lands on the `Command` page deterministically):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots.json --dir target/fret-diag-command-docs-icons-light --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json --dir target/fret-diag-command-docs-icons-dark --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots.json --dir target/fret-diag-command-docs-shortcuts-light --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json --dir target/fret-diag-command-docs-shortcuts-dark --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots.json --dir target/fret-diag-command-docs-icons-light --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json --dir target/fret-diag-command-docs-icons-dark --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots.json --dir target/fret-diag-command-docs-shortcuts-light --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json --dir target/fret-diag-command-docs-shortcuts-dark --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
 - UI Gallery behavior/diagnostics scripts:
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json --dir target/fret-diag-command-scrollable --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json --dir target/fret-diag-command-force-mount --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json --dir target/fret-diag-command-separator --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json --dir target/fret-diag-command-scrollable --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json --dir target/fret-diag-command-force-mount --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json --dir target/fret-diag-command-separator --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
 - shadcn-web golden + gates:
   - Golden: `goldens/shadcn-web/v4/new-york-v4/command-demo.json`
   - Layout gates:

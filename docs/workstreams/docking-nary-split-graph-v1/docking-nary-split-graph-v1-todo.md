@@ -135,7 +135,7 @@ Each TODO is labeled:
     - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1::DockDropPreviewKindIs`)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + bundle export)
 
-## P1 — Diagnostics (`fretboard diag`) gates
+## P1 — Diagnostics (`fretboard-dev diag`) gates
 
 - [x] DN-P1-diag-001 Add a diag suite for N-ary split docking invariants.
   - Scripts target: `docking_arbitration_demo`.

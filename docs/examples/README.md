@@ -32,13 +32,13 @@ The only raw-model escape hatch is the explicit advanced import
 ladder.
 
 1. `hello` (template) — smallest runnable UI surface.
-   - Generate: `cargo run -p fretboard -- new hello --name hello-world`
+   - Generate: `cargo run -p fretboard-dev -- new hello --name hello-world`
 2. `simple-todo` (template) — view runtime + typed actions + keyed lists (no selectors/queries;
    the current default path is `LocalState<Vec<_>>` + payload row actions for view-owned lists).
-   - Generate: `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
+   - Generate: `cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo`
 3. `todo` (template) — richer third rung once you need selectors + queries; generated as a
    product baseline with deletable selector/query slices, not as the default starter scaffold.
-   - Generate: `cargo run -p fretboard -- new todo --name my-todo`
+   - Generate: `cargo run -p fretboard-dev -- new todo --name my-todo`
    - Read: [docs/examples/todo-app-golden-path.md](./todo-app-golden-path.md)
    - Note: this template opts into `fret` feature `state` (selector/query helpers), and its
      generated README calls out the first deletable slices if you want to collapse back toward
@@ -85,7 +85,7 @@ Shell note:
 Run one via the tooling runner (recommended):
 
 ```bash
-cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard-dev -- dev native --example simple_todo
 ```
 
 Note: you can also run cookbook examples directly via Cargo, but some higher-ceiling examples are
@@ -109,10 +109,10 @@ Lab / higher-ceiling examples (feature-gated; opt-in):
 Tip: feature-gated examples and their `--features ...` hints are discoverable via:
 
 ```bash
-cargo run -p fretboard -- list cookbook-examples --all
+cargo run -p fretboard-dev -- list cookbook-examples --all
 ```
 
-Tip: when running cookbook examples via `fretboard dev native --example <name>`, `fretboard` will
+Tip: when running cookbook examples via `fretboard-dev dev native --example <name>`, `fretboard-dev` will
 auto-enable required cookbook features for known Lab examples and print what it enabled.
 
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
@@ -161,8 +161,8 @@ Do not use it as the first place to learn the authoring model.
 - Full catalog: `cargo run -p fret-ui-gallery --features gallery-full`
 - Dev/unfinished pages (opt-in): `cargo run -p fret-ui-gallery --features gallery-dev`
 - Material 3 (in progress, opt-in): `cargo run -p fret-ui-gallery --features gallery-material3`
-- Web: `cargo run -p fretboard -- dev web --demo ui_gallery`
-- Diagnostics (lite smoke): `cargo run -p fretboard -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
+- Web: `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
+- Diagnostics (lite smoke): `cargo run -p fretboard-dev -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
 - Details: [apps/fret-ui-gallery/README.md](../../apps/fret-ui-gallery/README.md)
 
 ## 3) Labs / maintainer harnesses

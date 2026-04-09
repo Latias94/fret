@@ -7,7 +7,7 @@ use crate::{CommandId, CommandScope, TickId};
 
 /// Best-effort classification of where a command dispatch originated.
 ///
-/// This is diagnostics-only metadata intended to improve explainability in `fretboard diag`.
+/// This is diagnostics-only metadata intended to improve explainability in `fretboard-dev diag`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandDispatchSourceKindV1 {
     Pointer,
@@ -182,7 +182,7 @@ impl WindowPendingCommandDispatchSourceService {
         // flushing, or when a UI interaction schedules work for a subsequent frame).
         //
         // Keep a small TTL window so pointer/keyboard-triggered dispatch remains explainable in
-        // `fretboard diag` without changing the `Effect::Command` schema.
+        // `fretboard-dev diag` without changing the `Effect::Command` schema.
         let min_tick = TickId(tick_id.0.saturating_sub(Self::PENDING_SOURCE_TTL_TICKS));
         entries.retain(|e| e.tick_id.0 >= min_tick.0 && e.tick_id.0 <= tick_id.0);
 

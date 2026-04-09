@@ -29,7 +29,7 @@ Primary code anchors:
 
 Primary tool anchors:
 
-- diagnostics/perf harness: `apps/fretboard` (`fretboard diag perf`, `fretboard diag stats`)
+- diagnostics/perf harness: `apps/fretboard` (`fretboard-dev diag perf`, `fretboard-dev diag stats`)
 - scripted repros: `tools/diag-scripts/ui-gallery-virtual-list-torture.json`
 - scripted repros (interaction latency): `tools/diag-scripts/ui-gallery-nav-card-click-latency.json`
 
@@ -38,7 +38,7 @@ Primary tool anchors:
 Baseline workflow:
 
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json `
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json `
   --sort time --top 1 --json `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -46,7 +46,7 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-t
 To isolate initial-mount costs for the target page, start directly on it:
 
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json `
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json `
   --env FRET_UI_GALLERY_START_PAGE=virtual_list_torture `
   --warmup-frames 0 --sort time --top 1 --json `
   --launch -- cargo run -p fret-ui-gallery --release
@@ -55,7 +55,7 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-t
 Then inspect the slow bundle:
 
 ```powershell
-cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 1 --json
+cargo run -p fretboard-dev -- diag stats <bundle.json> --sort time --top 1 --json
 ```
 
 ### 1.1 Repro: Sidebar nav “Card” click latency
@@ -69,7 +69,7 @@ Script:
 Run (debug build, easiest to see):
 
 ```powershell
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-nav-card-click-latency.json `
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-nav-card-click-latency.json `
   --env FRET_UI_GALLERY_START_PAGE=button `
   --launch -- cargo run -p fret-ui-gallery
 ```
@@ -77,7 +77,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-nav-card-click-
 Then inspect the “second click” bundle and check `dt_ms` (frame delta) plus layout/measure hotspots:
 
 ```powershell
-cargo run -p fretboard -- diag stats target/fret-diag/<dir>/bundle.json --sort time --top 1
+cargo run -p fretboard-dev -- diag stats target/fret-diag/<dir>/bundle.json --sort time --top 1
 ```
 
 Finding (2026-02-01, debug build):
@@ -125,7 +125,7 @@ Notes:
 
 ### 2.1 Bundle-based triage (default)
 
-Use `fretboard diag perf` + `diag stats` to:
+Use `fretboard-dev diag perf` + `diag stats` to:
 
 - locate the worst frames deterministically,
 - see `debug.layout_engine_solves[].top_measures[]` (including nested `top_children` attribution),
@@ -300,7 +300,7 @@ The gallery exposes:
 - `FRET_UI_GALLERY_VIEW_CACHE_SHELL`
 - `FRET_UI_GALLERY_VIEW_CACHE_INNER`
 
-Use `fretboard diag perf ... --env ...` to build cached/uncached comparisons.
+Use `fretboard-dev diag perf ... --env ...` to build cached/uncached comparisons.
 
 Initial data point (VirtualList torture, commit `3fa3bba`, repeat=3, warmup=0):
 

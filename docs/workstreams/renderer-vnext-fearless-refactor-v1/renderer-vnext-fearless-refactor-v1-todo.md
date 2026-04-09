@@ -15,7 +15,7 @@ Tracking format:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script/suite name
+- and/or a `fretboard-dev diag` script/suite name
 
 ## M0 — Design baseline
 
@@ -194,8 +194,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     not gradient tile modes (which are sanitized/degraded today).
   - Decision rule (do not do this without evidence):
     - Only proceed if material work is measurably hot in at least one reproducible bundle:
-      - `fretboard diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
-      - Use `top_renderer_material_*` counters from `fretboard diag perf --json` (added in `REN-VNEXT-diag-001`) to keep this quantitative.
+      - `fretboard-dev diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
+      - Use `top_renderer_material_*` counters from `fretboard-dev diag perf --json` (added in `REN-VNEXT-diag-001`) to keep this quantitative.
     - Evidence script (native + web export friendly):
       - Native: `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady.json`
       - Web (devtools-ws + trunk): `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady-web.json`
@@ -209,7 +209,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     (see `docs/workstreams/renderer-vnext-fearless-refactor-v1/renderer-vnext-fearless-refactor-v1-milestones.md`). Keep this item pending until a WebGPU-specific bundle/profiler
     shows `material_eval` dominates and the existing bounded variants are insufficient.
   - Status note (2026-02-23): exported a Web runner bundle for `magic_patterns_torture` and triaged it:
-    - `fretboard diag stats` shows p95 total ≈ 9.9ms with `paint` dominating (≈ 5.4ms) and `layout` next (≈ 4.1ms).
+    - `fretboard-dev diag stats` shows p95 total ≈ 9.9ms with `paint` dominating (≈ 5.4ms) and `layout` next (≈ 4.1ms).
     - `renderer_encode_scene_us` p95 ≈ 1.3ms (not a top hotspot in this workload).
     - View-cache reuse was off (`cache_roots=0`, `cache_roots_reused=0`), and paint cache misses were high (`paint_cache_misses≈1150`).
     Keep `REN-VNEXT-webgpu-004` pending until a bundle/profiler shows quad fragment material eval dominates (or we otherwise eliminate paint-side costs first).
@@ -221,14 +221,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       page is otherwise idle.
   - Status note (2026-02-23): re-exported `magic_patterns_torture` under web view-cache flags (shell-only caching, animation preserved):
     - Bundle: `.fret/diag/exports/1771842539046-bundle`
-    - `fretboard diag stats`: avg total ≈ 4.9ms, p95 total ≈ 5.2ms; `paint` still dominates but shell reuse is active (`cache_roots=1`, `cache_roots_reused=1`).
+    - `fretboard-dev diag stats`: avg total ≈ 4.9ms, p95 total ≈ 5.2ms; `paint` still dominates but shell reuse is active (`cache_roots=1`, `cache_roots_reused=1`).
     - Perf baselines:
       - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-no-view-cache.web-local.v1.json`
       - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-view-cache-shell.web-local.v1.json`
   - Status note (2026-02-23): exported `code_editor_torture` under the same web harness:
     - Bundle (view-cache off): `.fret/diag/exports/1771847658648-bundle`
     - Bundle (view-cache on, shell-only): `.fret/diag/exports/1771847993928-bundle`
-    - `fretboard diag triage` indicates steady-state is still dominated by `paint` and `layout`; shell-only caching does not materially reduce code editor cost.
+    - `fretboard-dev diag triage` indicates steady-state is still dominated by `paint` and `layout`; shell-only caching does not materially reduce code editor cost.
     - Perf baselines:
       - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-no-view-cache.web-local.v1.json`
       - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-view-cache-sidebar.web-local.v1.json`

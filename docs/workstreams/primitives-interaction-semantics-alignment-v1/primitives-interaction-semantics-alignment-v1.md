@@ -238,7 +238,7 @@ Per the `fret-shadcn-source-alignment` workflow, protect semantics with:
 1. **Targeted Rust unit tests** in `ecosystem/fret-ui-kit/src/primitives/{select,combobox}.rs`
    for state-machine invariants (fast and stable).
 2. **shadcn-web goldens** when the mismatch is a style/layout outcome.
-3. **`fretboard diag` scripts** for multi-step interactive timelines (state machines).
+3. **`fretboard-dev diag` scripts** for multi-step interactive timelines (state machines).
    - Ensure stable `test_id` targets in shadcn recipes.
 
 ---

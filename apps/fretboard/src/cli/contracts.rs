@@ -9,7 +9,7 @@ use crate::theme::contracts::ThemeCommandArgs;
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "fretboard",
+    name = "fretboard-dev",
     about = "Dev tooling for the Fret workspace.",
     disable_help_subcommand = true,
     subcommand_required = true
@@ -123,9 +123,9 @@ pub(crate) fn render_command_help_path(path: &[&str]) -> Result<String, String> 
 
 fn full_bin_name(path: &[&str]) -> String {
     if path.is_empty() {
-        "fretboard".to_string()
+        "fretboard-dev".to_string()
     } else {
-        format!("fretboard {}", path.join(" "))
+        format!("fretboard-dev {}", path.join(" "))
     }
 }
 
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn diag_contract_forwards_help_flags_to_fret_diag() {
-        let cli = try_parse_contract(["fretboard", "diag", "--help"])
+        let cli = try_parse_contract(["fretboard-dev", "diag", "--help"])
             .expect("diag --help should forward to fret-diag");
 
         let FretboardCommandContract::Diag(args) = cli.command else {
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn dev_native_contract_captures_selection_and_passthrough_args() {
         let cli = try_parse_contract([
-            "fretboard",
+            "fretboard-dev",
             "dev",
             "native",
             "--bin",
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn dev_web_contract_captures_targeting_args() {
         let cli = try_parse_contract([
-            "fretboard",
+            "fretboard-dev",
             "dev",
             "web",
             "--port",
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn list_native_demos_contract_captures_all_flag() {
-        let cli = try_parse_contract(["fretboard", "list", "native-demos", "--all"])
+        let cli = try_parse_contract(["fretboard-dev", "list", "native-demos", "--all"])
             .expect("list native-demos --all should parse");
 
         let FretboardCommandContract::List(list) = cli.command else {
@@ -224,8 +224,8 @@ mod tests {
 
     #[test]
     fn list_contract_requires_a_target() {
-        let err =
-            try_parse_contract(["fretboard", "list"]).expect_err("list should require a target");
+        let err = try_parse_contract(["fretboard-dev", "list"])
+            .expect_err("list should require a target");
         assert_eq!(
             err.kind(),
             ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn assets_manifest_write_contract_captures_bundle_selector() {
         let cli = try_parse_contract([
-            "fretboard",
+            "fretboard-dev",
             "assets",
             "manifest",
             "write",
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn new_contract_without_template_parses_as_wizard_entry() {
-        let cli = try_parse_contract(["fretboard", "new"]).expect("new should parse");
+        let cli = try_parse_contract(["fretboard-dev", "new"]).expect("new should parse");
 
         let FretboardCommandContract::New(args) = cli.command else {
             panic!("expected new command");
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn new_todo_contract_captures_scaffold_flags() {
         let cli = try_parse_contract([
-            "fretboard",
+            "fretboard-dev",
             "new",
             "todo",
             "--name",
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn deleted_init_alias_is_rejected() {
-        let err = try_parse_contract(["fretboard", "init", "todo"])
+        let err = try_parse_contract(["fretboard-dev", "init", "todo"])
             .expect_err("init should be rejected as a deleted alias");
         assert_eq!(err.kind(), ErrorKind::InvalidSubcommand);
     }
@@ -356,7 +356,7 @@ mod tests {
     #[test]
     fn theme_import_vscode_contract_captures_positional_input_and_sets() {
         let cli = try_parse_contract([
-            "fretboard",
+            "fretboard-dev",
             "theme",
             "import-vscode",
             "theme.json",

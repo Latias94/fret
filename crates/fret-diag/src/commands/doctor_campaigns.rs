@@ -160,7 +160,7 @@ fn build_doctor_campaigns_payload(
             repairs.push(json!({
                 "code": "diag-campaigns.validate",
                 "note": "Inspect repo-owned campaign manifests with the validation command.",
-                "command": "cargo run -p fretboard -- diag campaign validate --json",
+                "command": "cargo run -p fretboard-dev -- diag campaign validate --json",
             }));
         }
 

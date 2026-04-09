@@ -224,7 +224,7 @@ Recent baseline work clarified the next bottleneck:
   in the same session reach `passed` while still emitting reviewable overview / typing / validation
   artifacts,
 - and the remaining proof/gate gap is now narrow and explicit:
-  make `fretboard diag run --session-auto --launch` exit promptly after a successful run and reduce
+  make `fretboard-dev diag run --session-auto --launch` exit promptly after a successful run and reduce
   the repeated `global access while leased` warnings during typed-mode interactions.
 
 ### Foundation-first rule

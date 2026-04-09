@@ -297,7 +297,7 @@ fn aggregate_regression_summaries(
             duration_ms: None,
             workspace_root: Some(workspace_root.display().to_string()),
             out_dir: Some(resolved_out_dir.display().to_string()),
-            tool: "fretboard diag summarize".to_string(),
+            tool: "fretboard-dev diag summarize".to_string(),
             tool_version: None,
             git_commit: None,
             git_branch: None,
@@ -495,7 +495,7 @@ mod tests {
                 duration_ms: None,
                 workspace_root: None,
                 out_dir: None,
-                tool: "fretboard diag suite".to_string(),
+                tool: "fretboard-dev diag suite".to_string(),
                 tool_version: None,
                 git_commit: None,
                 git_branch: None,
@@ -536,7 +536,7 @@ mod tests {
         suite.items[0].reason_code = Some("assert.focus_restore.mismatch".to_string());
 
         let mut perf = sample_summary("perf", RegressionLaneV1::Perf, "case-b");
-        perf.run.tool = "fretboard diag perf".to_string();
+        perf.run.tool = "fretboard-dev diag perf".to_string();
         perf.items[0].status = crate::regression_summary::RegressionStatusV1::FailedDeterministic;
         perf.items[0].reason_code = Some("diag.perf.threshold_failed".to_string());
 
@@ -573,13 +573,13 @@ mod tests {
         );
         assert_eq!(
             index
-                .pointer("/counters/by_tool/fretboard diag suite")
+                .pointer("/counters/by_tool/fretboard-dev diag suite")
                 .and_then(|v| v.as_u64()),
             Some(1)
         );
         assert_eq!(
             index
-                .pointer("/counters/by_tool/fretboard diag perf")
+                .pointer("/counters/by_tool/fretboard-dev diag perf")
                 .and_then(|v| v.as_u64()),
             Some(1)
         );

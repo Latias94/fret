@@ -24,9 +24,9 @@ Conventions:
   - `FRET_DIAG_GPU_SCREENSHOTS=1` (PNG + manifest + request/result protocol).
 - [x] Add a “known gaps” section listing current mismatches (doc vs implementation).
 
-### M1: One-command repro packaging (`fretboard diag repro`)
+### M1: One-command repro packaging (`fretboard-dev diag repro`)
 
-- [x] Add `fretboard diag repro <script|suite>` that:
+- [x] Add `fretboard-dev diag repro <script|suite>` that:
   - runs the script/suite,
   - runs post-checks,
   - emits `repro.summary.json`,

@@ -28,13 +28,13 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
 
     let Some(a_src) = rest.first().cloned() else {
         return Err(
-            "missing bundle A path (try: fretboard diag compare <base_or_session_out_dir|bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <base_or_session_out_dir|bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
+            "missing bundle A path (try: fretboard-dev diag compare <base_or_session_out_dir|bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <base_or_session_out_dir|bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
                 .to_string(),
         );
     };
     let Some(b_src) = rest.get(1).cloned() else {
         return Err(
-            "missing bundle B path (try: fretboard diag compare <base_or_session_out_dir|bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <base_or_session_out_dir|bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
+            "missing bundle B path (try: fretboard-dev diag compare <base_or_session_out_dir|bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <base_or_session_out_dir|bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
                 .to_string(),
         );
     };
@@ -123,14 +123,14 @@ fn cmd_compare_resource_footprint(a_src: &Path, b_src: &Path, json: bool) -> Res
     if !a_fp_path.is_file() {
         return Err(format!(
             "missing resource footprint: {}\n\
-hint: run via `fretboard diag repro ... --session-auto --launch -- <cmd>` so the session root includes `resource.footprint.json`",
+hint: run via `fretboard-dev diag repro ... --session-auto --launch -- <cmd>` so the session root includes `resource.footprint.json`",
             a_fp_path.display()
         ));
     }
     if !b_fp_path.is_file() {
         return Err(format!(
             "missing resource footprint: {}\n\
-hint: run via `fretboard diag repro ... --session-auto --launch -- <cmd>` so the session root includes `resource.footprint.json`",
+hint: run via `fretboard-dev diag repro ... --session-auto --launch -- <cmd>` so the session root includes `resource.footprint.json`",
             b_fp_path.display()
         ));
     }

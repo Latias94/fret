@@ -36,11 +36,11 @@ jumping into the gallery/reference surfaces.
 Start with these cookbook lessons before jumping into the UI Gallery:
 
 ```bash
-cargo run -p fretboard -- dev native --example hello
-cargo run -p fretboard -- dev native --example simple_todo
-cargo run -p fretboard -- dev native --example overlay_basics
-cargo run -p fretboard -- dev native --example text_input_basics
-cargo run -p fretboard -- dev native --example commands_keymap_basics
+cargo run -p fretboard-dev -- dev native --example hello
+cargo run -p fretboard-dev -- dev native --example simple_todo
+cargo run -p fretboard-dev -- dev native --example overlay_basics
+cargo run -p fretboard-dev -- dev native --example text_input_basics
+cargo run -p fretboard-dev -- dev native --example commands_keymap_basics
 ```
 
 If you need the richer third rung after that ladder, read:
@@ -51,7 +51,7 @@ Then pick a topic:
 
 Comparison target (reference-only; not part of the boring ladder):
 
-- `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
+- `cargo run -p fretboard-dev -- dev native --example simple_todo_v2_target`
   - keeps a tiny keyed todo list on the same `LocalState<Vec<_>>` + `.action_payload(...)` + `payload_local_update_if::<A>(...)` path now used by `simple_todo`, `todo_demo`, and the simple-todo scaffold, so its role is to stay as a denser comparison surface for row-handler placement rather than a missing-default-path preview
 
 - Default follow-up topics: `hello_counter`, `form_basics`, `virtual_list_basics`
@@ -66,20 +66,20 @@ Comparison target (reference-only; not part of the boring ladder):
 ## Run (native)
 
 ```bash
-cargo run -p fretboard -- dev native --example hello
-cargo run -p fretboard -- dev native --example simple_todo
-cargo run -p fretboard -- dev native --example hello_counter
-cargo run -p fretboard -- dev native --example overlay_basics
-cargo run -p fretboard -- dev native --example commands_keymap_basics
-cargo run -p fretboard -- dev native --example text_input_basics
-cargo run -p fretboard -- dev native --example effects_layer_basics
-cargo run -p fretboard -- dev native --example theme_switching_basics
+cargo run -p fretboard-dev -- dev native --example hello
+cargo run -p fretboard-dev -- dev native --example simple_todo
+cargo run -p fretboard-dev -- dev native --example hello_counter
+cargo run -p fretboard-dev -- dev native --example overlay_basics
+cargo run -p fretboard-dev -- dev native --example commands_keymap_basics
+cargo run -p fretboard-dev -- dev native --example text_input_basics
+cargo run -p fretboard-dev -- dev native --example effects_layer_basics
+cargo run -p fretboard-dev -- dev native --example theme_switching_basics
 ```
 
 ## Optional feature-gated examples
 
 Some examples are kept behind Cargo features to reduce cold compile time.
-Tip: if you run examples via `fretboard dev native --example <name>`, `fretboard` will auto-enable
+Tip: if you run examples via `fretboard-dev dev native --example <name>`, `fretboard-dev` will auto-enable
 required cookbook features for known Lab examples and print what it enabled.
 
 - Official (keep it boring):
@@ -134,13 +134,13 @@ Notes:
 
 ## Diagnostics (optional)
 
-Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard diag`).
+Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard-dev diag`).
 If you are new to it, start with the `hello` example because it already exposes stable `test_id`s.
 
 Run a small script that clicks the button and asserts the count label updates:
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json \
+FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json \
   --launch -- cargo run -p fret-cookbook --features cookbook-diag --example hello
 ```
 
@@ -155,7 +155,7 @@ How it works (mental model):
 Next step (still boring): run the `simple_todo` smoke script (includes a screenshot + bundle):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json \
+FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json \
   --launch -- cargo run -p fret-cookbook --features cookbook-diag --example simple_todo
 ```
 

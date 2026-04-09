@@ -68,6 +68,6 @@ This audit records why Fret keeps typography as a docs/helper surface rather tha
 - `cargo nextest run -p fret-ui-shadcn --lib typography::tests::`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app typography_`
 - `cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_typography_interactive_links_activation`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`

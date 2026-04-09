@@ -124,7 +124,7 @@ Each TODO is labeled:
     - Five-way hint sweep (inner pad): `tools/diag-scripts/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json`
     - Peek-behind routing for tabs-group drags: `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
   - Acceptance:
-    - On Windows (at minimum), `fretboard diag run <script> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
+    - On Windows (at minimum), `fretboard-dev diag run <script> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
       passes for an explicitly documented subset.
     - Verified subset (Windows, 2026-03-04):
       - `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
@@ -160,7 +160,7 @@ Each TODO is labeled:
     - Start with a manual checklist + bundle captures (pre/post boundary crossing) in the docking arbitration demo.
     - Promote to an automated diag script only if we can reliably detect a mixed-DPI environment (or explicitly mark the
       script as “requires mixed-dpi” and skip otherwise).
-    - Tip: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` records:
+    - Tip: `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` records:
       - `pos/start/grab/follow` (window-local cursor position + cursor grab anchor),
       - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
       - `*_scale_factor_x1000` fields when present (mixed-DPI evidence),

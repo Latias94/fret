@@ -42,7 +42,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
         "Radix Primitives and Base UI agree on the relevant semantics axis here: modal dialog, outside press dismisses by default, dismissal can be intercepted, and focus restores to the trigger on close. Those outcomes are already handled in `fret-ui-kit` / `fret-ui-shadcn`, so this page is now mainly a docs/public-surface alignment task rather than a `fret-ui` mechanism bug.",
         "`Detached Trigger` is now the focused Base UI-style follow-up for opener/content split ownership; it stays outside the default shadcn/base docs path and does not change the typed `DialogPart` default lane.",
-        "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
+        "Each scenario has stable test IDs to support fretboard-dev diag scripts and regression screenshots.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
@@ -54,7 +54,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Focused follow-ups that stay outside the upstream docs path.");
     let notes = DocSection::build(cx, "Notes", notes)
         .description(
-            "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",
+            "Keep test IDs stable so fretboard-dev diag scripts and regression screenshots remain reusable.",
         )
         .test_id_prefix("ui-gallery-dialog-notes");
     let demo = DocSection::build(cx, "Demo", demo)

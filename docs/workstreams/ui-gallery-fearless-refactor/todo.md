@@ -190,7 +190,7 @@ Columns:
 - **Gallery Page**: where the component is showcased (initially “TBD” until we normalize page taxonomy).
 - **Snippet-backed**: `No | Partial | Yes` (preview + code tab share a single compiled snippet file).
 - **Status**: `Not started | In progress | Done`
-- **Gates**: optional regression hooks (`test_id`, `fretboard diag` scripts, conformance fixtures).
+- **Gates**: optional regression hooks (`test_id`, `fretboard-dev diag` scripts, conformance fixtures).
 - **Notes**: drift risks, known gaps, migration hints, or doc-variant notes.
 
 Source list: upstream shadcn v4 Base/Radix doc trees:

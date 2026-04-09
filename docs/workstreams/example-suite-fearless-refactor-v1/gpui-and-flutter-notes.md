@@ -41,7 +41,7 @@ Fret has additional constraints:
 
 Therefore, a good Fret example strategy is:
 
-1) **Templates** (boring ladder): `cargo run -p fretboard -- new hello|simple-todo|todo`
+1) **Templates** (boring ladder): `cargo run -p fretboard-dev -- new hello|simple-todo|todo`
 2) **Cookbook examples** (GPUI-like): small Cargo `examples/` (App/Interop/Renderer tracks)
 3) **Gallery app** (catalog + conformance): `fret-ui-gallery`
 4) **Reference apps** (Zed-like): 2–3 app-scale shells (workbench/viz-studio/shader-lab)

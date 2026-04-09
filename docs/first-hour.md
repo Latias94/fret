@@ -26,14 +26,14 @@ Non-goals:
 In this repository:
 
 ```bash
-cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo
 cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
 If you prefer an in-tree example (no local scaffold), run the cookbook version:
 
 ```bash
-cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard-dev -- dev native --example simple_todo
 ```
 
 Why `simple-todo`?
@@ -240,7 +240,7 @@ If you are unsure, start with `Layout` and tighten later.
 
 ## 4) Next steps (progressive disclosure ladder)
 
-1) **Hello UI** (minimal): `cargo run -p fretboard -- new hello --name hello-world`
+1) **Hello UI** (minimal): `cargo run -p fretboard-dev -- new hello --name hello-world`
 2) **Simple baseline**: `simple-todo` (this guide)
 3) **Richer third rung**: `todo` (product baseline with deletable selector/query seams, once you need derived/async state)
    - See: `docs/examples/todo-app-golden-path.md`
@@ -258,6 +258,6 @@ If you are unsure, start with `Layout` and tighten later.
 
 | Template | Generate | Teaches | Avoids |
 | --- | --- | --- | --- |
-| `hello` | `cargo run -p fretboard -- new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
-| `simple-todo` | `cargo run -p fretboard -- new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
-| `todo` | `cargo run -p fretboard -- new todo` | richer third rung product baseline: selector/query seams + LocalState transactions | being the minimal starter |
+| `hello` | `cargo run -p fretboard-dev -- new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
+| `simple-todo` | `cargo run -p fretboard-dev -- new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
+| `todo` | `cargo run -p fretboard-dev -- new todo` | richer third rung product baseline: selector/query seams + LocalState transactions | being the minimal starter |

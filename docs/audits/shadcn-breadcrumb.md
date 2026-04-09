@@ -69,7 +69,7 @@ these sources instead:
 - Gallery authoring-surface gate: `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_import_policies breadcrumb`
   - Verifies the copyable `Usage` snippet stays on the curated facade lane while advanced docs-parity examples keep the explicit raw breadcrumb escape hatch.
 
-- Gallery live-preview gate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json --launch -- cargo run -p fret-ui-gallery --release`
+- Gallery live-preview gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json --launch -- cargo run -p fret-ui-gallery --release`
   - Verifies the docs `Usage` section keeps `Home` as a semantic link while routing activation through `ui_gallery.app.open` (`ui-gallery-status-last-action` contains `cmd.open`) instead of opening `/` in the system browser.
 
 - Web layout gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`

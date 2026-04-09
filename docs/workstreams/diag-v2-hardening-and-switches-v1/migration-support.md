@@ -16,9 +16,9 @@ Do not `rg` a run artifact like `bundle.json` (or search under `target/fret-diag
 
 Prefer bounded tooling:
 
-- `fretboard diag meta ...`
-- `fretboard diag query ...`
-- `fretboard diag slice ...`
+- `fretboard-dev diag meta ...`
+- `fretboard-dev diag query ...`
+- `fretboard-dev diag slice ...`
 
 For repository-wide search, prefer `tools/rg-safe.ps1` (excludes diag artifact directories).
 
@@ -34,15 +34,15 @@ Runbook:
 
 1) Find v1 scripts (promoted/canonical only):
 
-- `cargo run -p fretboard -- diag doctor scripts`
+- `cargo run -p fretboard-dev -- diag doctor scripts`
 
 2) Upgrade in-place (review diffs):
 
-- `cargo run -p fretboard -- diag script upgrade --write tools/diag-scripts/**.json`
+- `cargo run -p fretboard-dev -- diag script upgrade --write tools/diag-scripts/**.json`
 
 3) Normalize to keep diffs stable:
 
-- `cargo run -p fretboard -- diag script normalize --write tools/diag-scripts/**.json`
+- `cargo run -p fretboard-dev -- diag script normalize --write tools/diag-scripts/**.json`
 
 ## Script library taxonomy moves
 
@@ -60,8 +60,8 @@ The canonical script library is taxonomy-based (product area + intent). Use redi
 
 3) Validate suite closure + registry drift:
 
-- `cargo run -p fretboard -- diag doctor scripts`
-- `cargo run -p fretboard -- diag registry check`
+- `cargo run -p fretboard-dev -- diag doctor scripts`
+- `cargo run -p fretboard-dev -- diag registry check`
 
 ## Suites
 
@@ -72,8 +72,8 @@ Suites are curated directory inputs:
 
 Discoverability:
 
-- `cargo run -p fretboard -- diag list suites`
-- `cargo run -p fretboard -- diag list scripts --contains <needle>`
+- `cargo run -p fretboard-dev -- diag list suites`
+- `cargo run -p fretboard-dev -- diag list scripts --contains <needle>`
 
 ## Screenshots (PNG)
 
@@ -91,6 +91,6 @@ For small-by-default artifacts (recommended for automation / AI loops), prefer:
 - `write_bundle_json=false` (omit the large raw `bundle.json`)
 - `write_bundle_schema2=true` (write `bundle.schema2.json` + sidecars)
 
-Tool-launched runs (`fretboard diag ... --launch`) typically write these defaults via `diag.config.json`.
+Tool-launched runs (`fretboard-dev diag ... --launch`) typically write these defaults via `diag.config.json`.
 If `diag.config.json` cannot be written (permissions / invalid `--dir`), treat it as a tooling/launch error rather than
 silently falling back to runtime defaults.

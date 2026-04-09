@@ -213,7 +213,7 @@ If we introduce a closure-based variant, it must be:
 - The builder chain is now the recommended author-facing app entry on `fret`.
 - When app authors need lower-level ownership, docs should teach dropping down to
   `fret-bootstrap` / `fret-framework` rather than reviving parallel `fret` helpers.
-- Templates (`fretboard new hello/simple-todo/todo`) and golden-path docs should stay on the
+- Templates (`fretboard-dev new hello/simple-todo/todo`) and golden-path docs should stay on the
   builder chain.
 - Keep docs showing both:
   - “recommended builder chain”

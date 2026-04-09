@@ -152,8 +152,8 @@ Base UI combobox lifecycle semantics.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app combobox_page_uses_typed_doc_sections_for_app_facing_snippets selected_combobox_input_group_snippet_prefers_typed_input_addons selected_combobox_snippet_helpers_prefer_into_ui_element_over_anyelement selected_combobox_state_rows_prefer_into_ui_element_over_anyelement`
 - `cargo nextest run -p fret-ui-gallery --test combobox_docs_surface`
 - `cargo nextest run -p fret-ui-gallery combobox_visible_section_contents_do_not_overlap_while_scrolling`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-20260327-2 --launch -- cargo run -p fret-ui-gallery`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-docs-smoke.json --dir target/fret-diag-combobox-docs-20260329-1 --launch -- cargo run -p fret-ui-gallery`
-- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-label-click-focus.json --dir target/fret-diag-combobox-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-combobox cargo run -p fret-ui-gallery`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-custom-items-detail-filter-react.json --dir target/fret-diag-combobox-custom-items-20260327-1 --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json --dir target/fret-diag-combobox-popup-20260327-2 --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-combobox-docs-smoke.json --dir target/fret-diag-combobox-docs-20260329-1 --launch -- cargo run -p fret-ui-gallery`
+- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-label-click-focus.json --dir target/fret-diag-combobox-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-combobox cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-custom-items-detail-filter-react.json --dir target/fret-diag-combobox-custom-items-20260327-1 --launch -- cargo run -p fret-ui-gallery`
 - `cargo check -p fret-ui-gallery --message-format short`

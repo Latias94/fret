@@ -912,7 +912,7 @@ Goal: ensure we are "not weaker than TanStack" by explicitly tracking upstream p
     - Regression: `ecosystem/fret-ui-kit/src/declarative/table.rs`
       (`table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width`)
 - [x] HTP-ui-table-010 Add a UI-level alignment regression gate for the UI gallery table demo.
-  - Done: `fretboard diag` scripts assert header/body column alignment via semantics bounds checks.
+  - Done: `fretboard-dev diag` scripts assert header/body column alignment via semantics bounds checks.
     - Retained table torture: `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
     - Data table torture: `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
 
@@ -949,7 +949,7 @@ Next UI parity targets (capability, not exact DOM behavior):
 - [~] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
   - Guiding principle (UI): focus on capability parity (not pixel-identical behavior). Prefer
     small, script-gated affordances that exercise the headless engine’s contract surface.
-  - Sub-milestones (keep each gateable via `fretboard diag`):
+  - Sub-milestones (keep each gateable via `fretboard-dev diag`):
     - [x] HTP-ui-dt-011 Multi-sort input semantics: Shift-click appends/toggles sort specs (TanStack default).
       - Gate: one script Shift-clicks 2 headers and asserts a deterministic sorting status row.
       - Evidence:

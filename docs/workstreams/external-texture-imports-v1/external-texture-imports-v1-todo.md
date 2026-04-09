@@ -6,7 +6,7 @@ Tracking format:
 - ID: `EXT-{area}-{nnn}`
 
 Leave 1–3 evidence anchors when completing an item (paths + key functions/tests), and prefer
-`fretboard diag` scripts/bundles where applicable.
+`fretboard-dev diag` scripts/bundles where applicable.
 
 ## Open items (v1 follow-ups)
 
@@ -86,12 +86,12 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
   - Notes:
     - Direct perf gate (devtools-ws):
-      - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+      - `cargo run -p fretboard-dev -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
     - Export bundles (devtools-ws):
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-diag-export -- --list-sessions`
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-diag-export -- --script tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --session-id <id> --out-dir target/fret-diag-web-copy/exports`
     - Generate baseline:
-      - `cargo run -p fretboard -- diag perf-baseline-from-bundles tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json target/fret-diag-web-copy/exports/<export1> target/fret-diag-web-copy/exports/<export2> --perf-baseline-headroom-pct 20 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+      - `cargo run -p fretboard-dev -- diag perf-baseline-from-bundles tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json target/fret-diag-web-copy/exports/<export1> target/fret-diag-web-copy/exports/<export2> --perf-baseline-headroom-pct 20 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
   - Baseline record:
     - Date: 2026-02-15
     - Exports:

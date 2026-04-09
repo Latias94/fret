@@ -9,7 +9,7 @@
     },
     "target_hints": [
       "Debug script: identical to the gate variant, but captures a bundle immediately after the cross-window drop is routed.",
-      "Use `fretboard diag dock-routing` + `bundle.schema2.json` docking signatures to see whether the drop was applied to the main window."
+      "Use `fretboard-dev diag dock-routing` + `bundle.schema2.json` docking signatures to see whether the drop was applied to the main window."
     ]
   },
   "steps": [

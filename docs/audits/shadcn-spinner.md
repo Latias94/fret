@@ -64,6 +64,6 @@ new-york spinner source, example compositions, and the existing spinner unit/lay
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib spinner`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-gallery --test spinner_docs_surface`
 - `cargo nextest run -p fret-ui-gallery spinner_`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/spinner/ui-gallery-spinner-docs-screenshots.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/spinner/ui-gallery-spinner-docs-screenshots.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - `python3 tools/check_diag_scripts_registry.py --write`
 - Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`

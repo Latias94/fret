@@ -99,7 +99,7 @@ Base UI `Tabs.Root` behavior.
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_event_details_can_cancel_model_update`
 - `cargo nextest run -p fret-ui-gallery tabs_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `cargo nextest run -p fret-ui-gallery tabs_demo_snippet_keeps_upstream_demo_width_lane_and_intrinsic_list`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Web layout gates remain covered in `web_vs_fret_layout` tabs assertions.

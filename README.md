@@ -53,7 +53,7 @@ components repository.
   `LocalState`, typed actions, and shadcn-based components.
 - **Mechanism/policy separation**: kernel/runtime crates stay policy-light; higher-level
   interaction defaults live in ecosystem crates.
-- **Diagnostics and perf tooling**: `fretboard diag` and the in-tree evidence workflow are part of
+- **Diagnostics and perf tooling**: `fretboard-dev diag` and the in-tree evidence workflow are part of
   the normal development loop, not an afterthought.
 - **Modular consumption**: portable core, pluggable platform/runner/render crates, and an explicit
   WebGPU/wasm path.
@@ -81,6 +81,12 @@ Want the shortest onboarding path? Read [docs/first-hour.md](./docs/first-hour.m
 
 Need help choosing the right example entry point (templates vs cookbook vs gallery vs labs)? See [docs/examples/README.md](./docs/examples/README.md).
 
+Repo CLI split:
+
+- In this workspace, maintainer commands such as `new`, `dev`, `list`, `diag`, `hotpatch`, and `theme`
+  run through `cargo run -p fretboard-dev -- ...`.
+- The published `fretboard` CLI keeps the public `assets` and `config` workflows.
+
 Use the onboarding ladder on purpose:
 
 - **Default**: `hello` → `simple-todo` → `todo`
@@ -95,8 +101,8 @@ selector/query or maintainer-only surfaces. See
 ### 1) Run a lightweight cookbook example (recommended)
 
 ```bash
-cargo run -p fretboard -- dev native --example hello
-cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard-dev -- dev native --example hello
+cargo run -p fretboard-dev -- dev native --example simple_todo
 ```
 
 ### 2) Generate a new native app scaffold
@@ -104,14 +110,14 @@ cargo run -p fretboard -- dev native --example simple_todo
 Start with `simple-todo` (minimal baseline):
 
 ```bash
-cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo
 cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
 Then try the best-practice baseline (`todo`, includes selectors + queries):
 
 ```bash
-cargo run -p fretboard -- new todo --name my-todo
+cargo run -p fretboard-dev -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
@@ -120,9 +126,9 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Discover runnable targets:
 
 ```bash
-cargo run -p fretboard -- list cookbook-examples
-cargo run -p fretboard -- list native-demos --all
-cargo run -p fretboard -- list web-demos
+cargo run -p fretboard-dev -- list cookbook-examples
+cargo run -p fretboard-dev -- list native-demos --all
+cargo run -p fretboard-dev -- list web-demos
 ```
 
 Run the UI gallery (optional; heavier than cookbook):
@@ -134,12 +140,12 @@ cargo run -p fret-ui-gallery
 Run a web demo (optional):
 
 ```bash
-cargo run -p fretboard -- dev web --demo ui_gallery
+cargo run -p fretboard-dev -- dev web --demo ui_gallery
 ```
 
 ### 4) Optional: diagnostics walkthrough (advanced)
 
-Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard diag`).
+Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard-dev diag`).
 If you are new to it, start with the cookbook walkthrough:
 
 - [apps/fret-cookbook/README.md#diagnostics-optional](./apps/fret-cookbook/README.md#diagnostics-optional)

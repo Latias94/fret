@@ -108,10 +108,10 @@ headless references used to validate semantics and mechanism choices.
 - Contract test: `hover_card_open_change_events_complete_without_animation`
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
 - UI Gallery docs smoke gate:
-  `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+  `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - UI Gallery interaction gates:
-  `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-click-leave-closes.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
-  `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+  `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-click-leave-closes.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+  `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   hover card panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via

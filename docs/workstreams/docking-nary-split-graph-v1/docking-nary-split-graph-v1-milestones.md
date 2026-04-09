@@ -25,7 +25,7 @@ Deliverables:
 Gates:
 
 - None new required, but record how to reproduce:
-  - `cargo run -p fretboard -- dev native --bin docking_arbitration_demo`
+  - `cargo run -p fretboard-dev -- dev native --bin docking_arbitration_demo`
 
 ## M1 — Core: N-ary safe mutations + simplification pipeline
 
@@ -118,7 +118,7 @@ Gates:
 - Existing docking tests remain green.
 - Geometry tests exist for edge-insert preview rects.
 
-## M4 — Diagnostics: scripted correctness gates (`fretboard diag`)
+## M4 — Diagnostics: scripted correctness gates (`fretboard-dev diag`)
 
 Outcome:
 
@@ -141,9 +141,9 @@ Recommended invariants (bundle-based, not pixels):
 Gates:
 
 - Prefer running via `--launch` so environment is applied consistently:
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; cargo run -p fretboard -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; cargo run -p fretboard-dev -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
 - If any script uses screenshots:
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_GPU_SCREENSHOTS=1; cargo run -p fretboard -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_GPU_SCREENSHOTS=1; cargo run -p fretboard-dev -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
 
 ## M5 — Performance: probe and gate “editor worst-cases”
 

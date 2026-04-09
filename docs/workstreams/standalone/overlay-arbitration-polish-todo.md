@@ -28,10 +28,10 @@ Each TODO is labeled:
 ## Baseline (Existing Harnesses)
 
 - Scripted UI regressions: `crates/fret-diag/src/lib.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
-- Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `crates/fret-diag/src/lib.rs`)
+- Default suite entrypoint: `cargo run -p fretboard-dev -- diag suite ui-gallery` (script list lives in `crates/fret-diag/src/lib.rs`)
 - View-cache reuse gating: `--check-view-cache-reuse-min <n>`
-- Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
-- Matrix runner: `fretboard diag matrix ui-gallery` (runs cached+uncached variants and compares per-script bundles)
+- Bundle comparison: `fretboard-dev diag compare <a> <b> ...` (semantics + optional scene fingerprint)
+- Matrix runner: `fretboard-dev diag matrix ui-gallery` (runs cached+uncached variants and compares per-script bundles)
 
 ## P0 — Lifecycle + Arbitration Correctness
 
@@ -82,7 +82,7 @@ Each TODO is labeled:
 - [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
   - Mechanism: record cached+uncached bundles and enforce a per-script compare (semantics + optional scene fingerprint).
   - Evidence:
-    - `fretboard diag matrix ui-gallery` runs cached+uncached variants and compares each script via `diag compare`:
+    - `fretboard-dev diag matrix ui-gallery` runs cached+uncached variants and compares each script via `diag compare`:
       `apps/fretboard/src/cli.rs`, `apps/fretboard/src/diag.rs`, `docs/ui-diagnostics-and-scripted-tests.md`.
 
 ## P0 — Diagnostics (Synthesis Observability)

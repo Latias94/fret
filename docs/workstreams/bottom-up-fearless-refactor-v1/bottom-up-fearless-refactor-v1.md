@@ -54,8 +54,8 @@ These are the “hard seams” that make refactors safe:
    - If a refactor changes a contract, update or add an ADR first (or explicitly mark a decision gate as proposed).
 
 4. **Demos remain runnable**
-   - `fretboard dev native` and at least one “editor-grade” demo stay usable during the program.
-   - When behavior changes, add a scripted repro (`fretboard diag`) or a unit/integration test.
+   - `fretboard-dev dev native` and at least one “editor-grade” demo stay usable during the program.
+   - When behavior changes, add a scripted repro (`fretboard-dev diag`) or a unit/integration test.
 
 5. **No “one big rewrite”**
    - Refactors land in small, behavior-preserving steps, each with a measurable outcome (tests, perf gates, or deletion of unstable surface).
@@ -103,7 +103,7 @@ Use the same loop for any subsystem (core/ui/render/ecosystem):
 
 3. **Add a regression gate**
    - Prefer unit/integration tests for contracts.
-   - Prefer scripted diagnostics (`fretboard diag`) for interaction/perf drift that is hard to unit test.
+   - Prefer scripted diagnostics (`fretboard-dev diag`) for interaction/perf drift that is hard to unit test.
 
 4. **Refactor in small steps**
    - Each step should either:
@@ -445,7 +445,7 @@ If a change touches a hot path (dispatch/layout/paint) or interaction semantics,
 | --- | --- | --- |
 | L0 | `python tools/audit_crate.py --crate <crate>` | 3–10 hazards + a short next-steps list |
 | L1 | L0 + `python tools/check_layering.py` + `cargo fmt` + `cargo nextest run -p <crate>` | at least one new regression gate, plus 3–8 landable refactor steps |
-| L2 | L1 + `cargo clippy --workspace --all-targets -- -D warnings` + at least one `fretboard diag` suite or perf gate (as applicable) | contract closure notes, portability review, and ADR alignment updates if touched |
+| L2 | L1 + `cargo clippy --workspace --all-targets -- -D warnings` + at least one `fretboard-dev diag` suite or perf gate (as applicable) | contract closure notes, portability review, and ADR alignment updates if touched |
 
 ### What “Rust best practices” means in this repo (non-normative)
 
@@ -502,7 +502,7 @@ Recommended default gates (adjust per workstream):
 - Format: `cargo fmt`
 - Lint (when affordable): `cargo clippy --workspace --all-targets -- -D warnings`
 - Tests (subset, then expand): `cargo nextest run -p fret-ui` and `cargo nextest run -p fret-ui-shadcn`
-- Diag (interaction subset): `pwsh -NoProfile -Command "$env:FRET_DIAG='1'; cargo run -p fretboard -- diag suite ui-gallery-overlay-steady --launch -- cargo run -p fret-ui-gallery --release"`
+- Diag (interaction subset): `pwsh -NoProfile -Command "$env:FRET_DIAG='1'; cargo run -p fretboard-dev -- diag suite ui-gallery-overlay-steady --launch -- cargo run -p fret-ui-gallery --release"`
 
 Gate tiers (suggested; tune to your machine/CI budgets):
 
@@ -523,7 +523,7 @@ When doing work under this workstream, prefer using the following skills as “p
 
 - `fret-boundary-checks`: layering + largest-files drift + quick crate snapshots.
 - `fret-crate-audits`: L0/L1/L2 audit workflow and artifact expectations.
-- `fret-diag-workflow`: turn regressions into reproducible `fretboard diag` gates.
+- `fret-diag-workflow`: turn regressions into reproducible `fretboard-dev diag` gates.
 - `fret-app-architecture-and-effects`: async/effects boundaries; avoid UI-thread blocking.
 - UI-focused skills as needed (`fret-overlays-and-focus`, `fret-text-input-and-ime`, `fret-layout-and-style`, `fret-scroll-and-virtualization`).
 

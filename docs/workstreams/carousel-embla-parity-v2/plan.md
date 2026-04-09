@@ -57,7 +57,7 @@ Optional suite (recommended for Embla engine regressions):
 - `ui-gallery-carousel-embla-engine` runs the screenshot-based, engine-enabled Carousel gates.
   - Note: Embla engine is enabled by default; set `FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0` to force-disable.
   - Run:
-    - `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard-dev -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Step 3 — Events + API handle (3–6 days)
 

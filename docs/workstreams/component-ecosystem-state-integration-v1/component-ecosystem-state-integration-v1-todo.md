@@ -124,7 +124,7 @@ Exit criteria:
 - [x] CSTATE-gate-050 Add a lightweight check preventing direct selector/query coupling in primitive contracts (allowlist for adapter modules).
   - Evidence: `tools/check_component_state_coupling.py`
 - [ ] CSTATE-gate-051 Add nextest coverage for one selector adapter and one query adapter path.
-- [ ] CSTATE-gate-052 Add one `fretboard diag` script for async-state + command routing interaction regression.
+- [ ] CSTATE-gate-052 Add one `fretboard-dev diag` script for async-state + command routing interaction regression.
 - [ ] CSTATE-docs-053 Add a migration note for ecosystem maintainers adopting optional state adapters.
 - [x] CSTATE-docs-054 Add ecosystem-by-ecosystem selector/query recommendation matrix.
   - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md` ("Ecosystem-by-ecosystem state recommendation matrix")

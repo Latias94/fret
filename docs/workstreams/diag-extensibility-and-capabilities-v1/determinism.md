@@ -51,7 +51,7 @@ Outputs:
 
 Command (native, filesystem-trigger transport):
 
-- `cargo run -p fretboard -- diag repeat <script.json> --repeat <n> [--launch -- <cmd...>]`
+- `cargo run -p fretboard-dev -- diag repeat <script.json> --repeat <n> [--launch -- <cmd...>]`
 
 Behavior:
 

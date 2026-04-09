@@ -61,7 +61,7 @@ Fret v2 MVP intentionally mirrors Embla's *fixed-step* integration model:
 Gates should avoid relying on real-time; prefer:
 
 - unit tests that assert invariants in a bounded number of ticks, and/or
-- `fretboard diag run --fixed-frame-delta-ms 16` when screenshot/pixel gates are needed.
+- `fretboard-dev diag run --fixed-frame-delta-ms 16` when screenshot/pixel gates are needed.
 
 ### Fret mapping (v2 decision)
 

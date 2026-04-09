@@ -94,7 +94,7 @@ Planned outcomes:
   - [x] Export a bounded `window.map.json` sidecar in bundle export dirs (window ids + last bounds + hover detection).
   - [x] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window):
     - runtime sidecar: `dock.routing.json` (bounded; max 512 entries),
-    - tooling: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json> [--json]` (bounded report).
+    - tooling: `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json> [--json]` (bounded report).
 - [x] Add bounded queries to avoid opening large artifacts:
   - `diag windows <bundle_dir|bundle.schema2.json>`
   - `diag dock-routing <bundle_dir|bundle.schema2.json>`
@@ -143,19 +143,19 @@ Planned outcomes:
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
   - [x] file: `tools/diag-scripts/index.json`
-  - [x] generator/check: `cargo run -p fretboard -- diag registry <check|write>` (legacy: `python tools/check_diag_scripts_registry.py [--write]`)
+  - [x] generator/check: `cargo run -p fretboard-dev -- diag registry <check|write>` (legacy: `python tools/check_diag_scripts_registry.py [--write]`)
   - [x] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
 - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
 - [x] Allow `diag run` to accept a promoted `script_id` from `tools/diag-scripts/index.json` (in addition to explicit paths),
   and print suggestions when the id is unknown.
 - [x] Add a small discoverability helper to list promoted scripts:
-  - [x] `fretboard diag list scripts` (reads `tools/diag-scripts/index.json` and prints `id -> path`)
+  - [x] `fretboard-dev diag list scripts` (reads `tools/diag-scripts/index.json` and prints `id -> path`)
 - [x] Add a small discoverability helper to list known suites:
-  - [x] `fretboard diag list suites` (reads `tools/diag-scripts/index.json` and prints `suite_memberships` counts)
+  - [x] `fretboard-dev diag list suites` (reads `tools/diag-scripts/index.json` and prints `suite_memberships` counts)
 - [x] Improve “unknown suite / missing script path” errors to suggest bounded discovery helpers:
   - `diag list suites`, `diag list scripts` (avoid grepping the repo or artifacts).
 - [x] Ensure promoted canonical scripts are schema v2 (keep `script_redirect` stubs as schema v1):
-  - [x] `fretboard diag doctor scripts` reports and suggests upgrades for promoted schema v1 scripts.
+  - [x] `fretboard-dev diag doctor scripts` reports and suggests upgrades for promoted schema v1 scripts.
   - [x] Upgrade the remaining promoted schema v1 scripts via `diag script upgrade --write`.
 - [x] Prefer `--prelude-script` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
@@ -168,7 +168,7 @@ Planned outcomes:
 - [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
 - [x] Add a guardrail so the taxonomy stays stable:
   - [x] `tools/diag-scripts/migrate-script-library.py --check-root` detects “root scripts” (supports optional filters like `--include-prefix ui-gallery-`).
-  - [x] Promote the check into tooling (`fretboard diag doctor scripts`) so drift is visible without relying on Python or ad-hoc greps.
+  - [x] Promote the check into tooling (`fretboard-dev diag doctor scripts`) so drift is visible without relying on Python or ad-hoc greps.
   - [x] document the expected target folders for common categories (ui-gallery, docking, tooling).
 - [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
   - [x] `ui-gallery/select` (17 scripts)
@@ -224,7 +224,7 @@ Planned outcomes:
   - [ ] updates `crates/fret-diag/src/diag_suite_scripts.rs` (or replaces it with a registry reader),
   - [ ] updates any other hard-coded references under `crates/fret-diag/src` (search for `tools/diag-scripts/`),
   - [ ] updates any docs that reference old paths,
-  - [ ] optional: runs `fretboard diag script normalize --write` on moved scripts.
+  - [ ] optional: runs `fretboard-dev diag script normalize --write` on moved scripts.
 
 ## P1: Manifest-first artifacts (transport-neutral)
 

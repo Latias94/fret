@@ -26,7 +26,7 @@ ADRs and protocol types.
    - Suite runs already force bounded bundle dumps to make downstream tooling deterministic.
 
 4. **Practical ergonomics for authoring**
-   - `fretboard diag` provides a single surface for run/suite/lint/pack/perf workflows.
+   - `fretboard-dev diag` provides a single surface for run/suite/lint/pack/perf workflows.
    - “Pack/AI packet” flows reduce friction when iterating with external tools.
 
 ## Current architectural weaknesses (why it churns)
@@ -61,7 +61,7 @@ ADRs and protocol types.
       without touching central wiring in `crates/fret-diag` and `fret-bootstrap`.
    - Progress:
      - runtime snapshots expose a bounded `debug.extensions` seam (ADR 0310),
-     - tooling has a CLI viewer (`fretboard diag extensions ...`) to browse/print extension payloads.
+     - tooling has a CLI viewer (`fretboard-dev diag extensions ...`) to browse/print extension payloads.
    - Next: promote a single “how to author diagnostics” guide as the default path for ecosystem PRs
      (register writer → capture bundle → view evidence → add a gate).
 
@@ -130,6 +130,6 @@ This workstream tracks a staged plan for this under `TODO.md` (M3/M4).
 - Expand the layout correctness suite (more scenarios + stable reason codes) and add a bounded layout
   perf summary (M4).
 - Consolidate the ecosystem authoring story into one short guide with an end-to-end example:
-  - register writer → capture bundle → `fretboard diag extensions --key ... --print` → add a gate.
+  - register writer → capture bundle → `fretboard-dev diag extensions --key ... --print` → add a gate.
 - Add one targeted “key-specific viewer” to validate the path (e.g. render a dock graph summary as a
   small table rather than raw JSON), then mirror it in DevTools GUI later (M5).

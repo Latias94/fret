@@ -52,7 +52,7 @@ Related ADRs: `docs/adr/0257-font-selection-fallback-and-variable-font-instances
 
 Exit criteria:
 
-- A `fretboard diag` script reproduces a mixed-script text case (Latin + CJK + emoji + RTL) in `fret-ui-gallery`.
+- A `fretboard-dev diag` script reproduces a mixed-script text case (Latin + CJK + emoji + RTL) in `fret-ui-gallery`.
 - A gate asserts the fallback policy key is stable and that “missing glyphs/tofu” does not regress.
 
 Evidence anchors:

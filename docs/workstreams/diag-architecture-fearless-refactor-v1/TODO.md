@@ -44,7 +44,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Add a script-level “layout sidecar request” concept (design first, then implement).
 - [x] Tie a Taffy dump into bundle directories as a sidecar (native only, best-effort).
 - [x] Add a viewer affordance to load/render the sidecar (ok to start as raw JSON view).
-  - CLI: `fretboard diag layout-sidecar ...` (prints path by default; `--print` and `--json` supported)
+  - CLI: `fretboard-dev diag layout-sidecar ...` (prints path by default; `--print` and `--json` supported)
 - [x] Add one deterministic layout gate script in `tools/diag-scripts/` that uses semantics bounds.
   - `tools/diag-scripts/ui-gallery/layout/ui-gallery-empty-outline-layout-sidecar.json`
 
@@ -52,7 +52,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 - [x] Standardize perf suite tags for layout-heavy scenarios (UI gallery sweep subset).
 - [x] Add a bounded “layout perf summary” viewer (top frame solves + hotspots).
-  - CLI: `fretboard diag layout-perf-summary ...`
+  - CLI: `fretboard-dev diag layout-perf-summary ...`
 - [x] Attach a worst-run layout perf summary to perf gate evidence outputs (bounded).
   - Files: `layout.perf.summary.v1.json`, `check.perf_thresholds.json`, `check.perf_hints.json`
 - [x] Add one CI-friendly perf gate preset (doc + example command).
@@ -71,4 +71,4 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Document merge-friendly script authoring practices (normalize/lint + suite composition).
 - [x] Add a low-noise alternative for suite membership (single-file suite manifest) for low-churn suites.
 - [x] Add a minimal “ecosystem diagnostics authoring guide” with one end-to-end example.
-  - `docs/workstreams/diag-architecture-fearless-refactor-v1/MIGRATION_GUIDE.md` (includes `fretboard diag extensions ...`).
+  - `docs/workstreams/diag-architecture-fearless-refactor-v1/MIGRATION_GUIDE.md` (includes `fretboard-dev diag extensions ...`).

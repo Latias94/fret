@@ -53,5 +53,5 @@ base examples, and the existing item layout gates.
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/item/ui-gallery-item-docs-smoke.json --dir target/fret-diag-item-docs --session-auto --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/item/ui-gallery-item-docs-smoke.json --dir target/fret-diag-item-docs --session-auto --launch -- cargo run -p fret-ui-gallery`
 - Existing layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/item.rs` (`web_vs_fret_layout_item_avatar_geometry`, `web_vs_fret_layout_item_demo_item_rects_match_web`, `web_vs_fret_layout_item_size_item_rects_match_web`, `web_vs_fret_layout_item_link_item_rects_match_web`)

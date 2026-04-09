@@ -156,7 +156,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
 
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag stats <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard-dev diag stats <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -231,9 +231,9 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
   bundle: {}\n\
 {}\n\
   hint: regenerate schema2 + sidecars, then re-run the check:\n\
-    - fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames {warmup_frames}\n\
-    - fretboard diag index <bundle_dir> --warmup-frames {warmup_frames}\n\
-    - fretboard diag stats <bundle_dir> --warmup-frames {warmup_frames} --{check_name} ...",
+    - fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames {warmup_frames}\n\
+    - fretboard-dev diag index <bundle_dir> --warmup-frames {warmup_frames}\n\
+    - fretboard-dev diag stats <bundle_dir> --warmup-frames {warmup_frames} --{check_name} ...",
             bundle_path.display(),
             stats_lite_supported_checks_table(),
         ))

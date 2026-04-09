@@ -1,7 +1,7 @@
 # Workspace TabStrip (editor-grade) v1 — Evidence & Gates
 
 Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit tests and
-`fretboard diag` scripts (bounded artifacts, invariants-first).
+`fretboard-dev diag` scripts (bounded artifacts, invariants-first).
 
 ## Evidence anchors (current)
 
@@ -94,6 +94,6 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 
 ## Tooling checklist
 
-- `cargo run -p fretboard -- diag registry check` passes after script registration/promotions.
-- `cargo run -p fretboard -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release` stays green.
+- `cargo run -p fretboard-dev -- diag registry check` passes after script registration/promotions.
+- `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release` stays green.
 - Avoid raw `bundle.json` by default; prefer schema2 + sidecars and `diag query/slice`.

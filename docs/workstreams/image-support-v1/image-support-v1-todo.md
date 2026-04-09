@@ -12,7 +12,7 @@ Tracking format:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script/suite name
+- and/or a `fretboard-dev diag` script/suite name
 
 ## M0 — Lock decisions (no more “implicit stretch”)
 
@@ -106,7 +106,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/policies/ui-gallery-image-object-fit.v1.json`
     - Command:
-      - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --repeat 5 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json --perf-baseline-headroom-pct 20 --dir target/fret-diag-perf/ui-gallery-image-object-fit.windows-local.v1 --launch -- cargo run -p fret-ui-gallery --release`
+      - `cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --repeat 5 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json --perf-baseline-headroom-pct 20 --dir target/fret-diag-perf/ui-gallery-image-object-fit.windows-local.v1 --launch -- cargo run -p fret-ui-gallery --release`
   - WASM (web-local):
     - Export bundles:
       - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
@@ -118,7 +118,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - Web build compiles: `cargo build -p fret-ui-gallery-web --target wasm32-unknown-unknown`
       - Evidence: `crates/fret-platform-web/src/wasm/ime.rs` (visibility fixes for `WebImeBridge` / debug state; `Effect::OpenUrl { url, .. }` pattern)
     - Baseline workflow (web runner): run the script via `apps/fret-devtools` (or any workflow that produces exported bundles under `.fret/diag/exports/`), then generate a baseline from bundle paths:
-      - `cargo run -p fretboard -- diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/<exported_unix_ms> --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json`
+      - `cargo run -p fretboard-dev -- diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/<exported_unix_ms> --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json`
   - Evidence anchors (desktop):
     - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
     - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`

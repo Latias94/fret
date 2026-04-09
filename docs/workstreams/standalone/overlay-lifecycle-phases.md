@@ -128,7 +128,7 @@ The lifecycle contract is enforced by tests at two layers:
 
 The scripted harness (UI Gallery) is intended to validate lifecycle invariants under:
 
-- cached vs uncached runs (`fretboard diag matrix ui-gallery`)
+- cached vs uncached runs (`fretboard-dev diag matrix ui-gallery`)
 - portal placement + window clamping (`bounds_within_window` predicate)
 
 Synthesis observability:

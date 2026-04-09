@@ -288,7 +288,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
       Tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md` (`DW-P0-dpi-006`, `DW-P1-win-002`).
   - Diagnostics (bounded):
-    - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` surfaces:
+    - `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` surfaces:
       - `pos/start/grab/follow` (window-local cursor position + grab anchor),
       - `scr/scr_used/origin` (screen cursor + client origin evidence),
       - `sf_cur/sf_move` (mixed-DPI evidence),

@@ -125,7 +125,7 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Evidence:
   - perf entrypoint: `crates/fret-diag/src/diag_perf.rs`
   - suite membership resolver: `crates/fret-diag/src/perf_seed_policy.rs`
-  - promoted registry: `tools/diag-scripts/index.json`, `fretboard diag registry` (`crates/fret-diag/src/commands/registry.rs`)
+  - promoted registry: `tools/diag-scripts/index.json`, `fretboard-dev diag registry` (`crates/fret-diag/src/commands/registry.rs`)
   - suites: `tools/diag-scripts/suites/perf-*/`
 
 8) Pointer kind (“mouse/touch/pen”) is supported, but needs a single canonical doc section
@@ -219,10 +219,10 @@ Make configuration predictable:
     "incoming open" injection (surfaces an `IncomingOpenRequest` event without depending on OS file dialogs / drag-drop).
   - Convenience (2026-02-28): a tiny smoke suite exists at `tools/diag-scripts/suites/diag-hardening-smoke/` for quick
     post-merge verification:
-    - `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
   - Convenience (2026-02-28): a docking-focused smoke suite exists at
     `tools/diag-scripts/suites/diag-hardening-smoke-docking/`:
-    - Recommended (smoke): `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+    - Recommended (smoke): `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ### G3: Box compatibility logic behind seams
 
@@ -425,7 +425,7 @@ Notes:
 
 `tools/diag-scripts/index.json` is generated (do not edit by hand) via:
 
-- `cargo run -p fretboard -- diag registry write`
+- `cargo run -p fretboard-dev -- diag registry write`
 
 Design constraints (v1):
 
@@ -513,10 +513,10 @@ python tools/diag-scripts/migrate-script-library.py --apply --write-redirects --
 
 3) Validate scripts and suites
 
-- Validate scripts: `cargo run -p fretboard -- diag script validate tools/diag-scripts`
-- Normalize scripts (optional, to stabilize diffs): `cargo run -p fretboard -- diag script normalize tools/diag-scripts --write`
+- Validate scripts: `cargo run -p fretboard-dev -- diag script validate tools/diag-scripts`
+- Normalize scripts (optional, to stabilize diffs): `cargo run -p fretboard-dev -- diag script normalize tools/diag-scripts --write`
 - Run suites using directory inputs as a transition step:
-  - `cargo run -p fretboard -- diag suite --script-dir tools/diag-scripts/ui-gallery`
+  - `cargo run -p fretboard-dev -- diag suite --script-dir tools/diag-scripts/ui-gallery`
 
 4) Optional: rewrite references (not recommended if redirects are in use)
 

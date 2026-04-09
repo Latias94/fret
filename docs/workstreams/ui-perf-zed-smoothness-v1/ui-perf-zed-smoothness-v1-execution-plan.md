@@ -71,7 +71,7 @@ We treat perf as **system-level**, not script-local.
 Every perf-affecting change must:
 
 1. **Not regress the steady suite** under the canonical protocol and baseline:
-   - `fretboard diag perf ui-gallery-steady ... --perf-baseline <baseline>`
+   - `fretboard-dev diag perf ui-gallery-steady ... --perf-baseline <baseline>`
 2. **Not regress P0 resize probes** (even if the change targets another area):
    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
    - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`

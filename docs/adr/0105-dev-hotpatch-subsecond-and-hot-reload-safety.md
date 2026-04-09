@@ -234,13 +234,13 @@ instead of baking values into Rust code that must be hotpatched).
 This repository ships a small dev helper CLI (`apps/fretboard`) that can run demos with hotpatch enabled.
 
 - File trigger (no external devserver required):
-  - Start: `fretboard dev native --bin todo_demo --hotpatch`
-  - Trigger reload: `fretboard hotpatch poke` (updates `.fret/hotpatch.touch`)
-  - Auto trigger: `fretboard hotpatch watch` (polls workspace sources and pokes on change)
+  - Start: `fretboard-dev dev native --bin todo_demo --hotpatch`
+  - Trigger reload: `fretboard-dev hotpatch poke` (updates `.fret/hotpatch.touch`)
+  - Auto trigger: `fretboard-dev hotpatch watch` (polls workspace sources and pokes on change)
 - Devserver websocket (Dioxus-style):
-  - Start: `fretboard dev native --bin todo_demo --hotpatch-devserver ws://127.0.0.1:8080/_dioxus`
-  - Start (recommended, end-to-end patches via dioxus-cli): `fretboard dev native --bin hotpatch_smoke_demo --hotpatch`
-  - Start (explicit dioxus-cli wrapper): `fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx`
+  - Start: `fretboard-dev dev native --bin todo_demo --hotpatch-devserver ws://127.0.0.1:8080/_dioxus`
+  - Start (recommended, end-to-end patches via dioxus-cli): `fretboard-dev dev native --bin hotpatch_smoke_demo --hotpatch`
+  - Start (explicit dioxus-cli wrapper): `fretboard-dev dev native --bin hotpatch_smoke_demo --hotpatch-dx`
 
 Important:
 

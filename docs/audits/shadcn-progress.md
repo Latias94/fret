@@ -96,5 +96,5 @@ Current source axes:
 - `cargo nextest run -p fret-ui-shadcn progress::tests::progress_from_value_stamps_numeric_value_and_default_value_text progress::tests::progress_mirror_in_rtl_flips_translate_fraction progress::tests::progress_opt_none_matches_shadcn_value_or_zero_and_stamps_semantics snapshot_progress_numeric_semantics web_vs_fret_progress_demo_control_chrome_matches progress::web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light progress::web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark --status-level fail`
 - `cargo build -p fret-ui-gallery`
 - `cargo test -p fret-ui-gallery --test progress_docs_surface -- --nocapture`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json --dir /tmp/fret-progress-docs-smoke --session-auto --launch -- cargo run -p fret-ui-gallery`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json --dir /tmp/fret-progress-semantics --session-auto --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json --dir /tmp/fret-progress-docs-smoke --session-auto --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json --dir /tmp/fret-progress-semantics --session-auto --launch -- cargo run -p fret-ui-gallery`

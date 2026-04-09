@@ -115,7 +115,7 @@ diagnostics, not perfect CSS parity.
   - [x] `BorderBeam`
   - [x] `Marquee`
   - [x] `Dock`
-- [x] Add UI gallery entries + `fretboard diag` scripts for each seed component:
+- [x] Add UI gallery entries + `fretboard-dev diag` scripts for each seed component:
   - [x] `Marquee`
   - [x] `Lens`
   - [x] `MagicCard`
@@ -129,7 +129,7 @@ diagnostics, not perfect CSS parity.
     - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
     - `tools/diag-scripts/ui-gallery-magic-sparkles-text-fixed-frame-delta.json`
   - Recommended invocation (example):
-    - `FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --include-screenshots --launch -- cargo run -p fret-ui-gallery`
+    - `FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --include-screenshots --launch -- cargo run -p fret-ui-gallery`
 
 ## P1 — External texture imports (v1)
 
@@ -147,11 +147,11 @@ to `fret-ui` (ADR 0234).
     - [x] fit coverage (contain/cover/stretch panels)
     - [x] lifecycle coverage (toggle unregister/register via `V`)
   - [x] Diagnostics evidence (script v2 + screenshots):
-    - [x] `fretboard diag run` works in `--launch` mode. Recommended build: `--features devtools-ws`.
+    - [x] `fretboard-dev diag run` works in `--launch` mode. Recommended build: `--features devtools-ws`.
     - [x] Script is verified to produce bundles + screenshots:
       - `tools/diag-scripts/external-texture-imports-contract-path.json`
   - [x] Perf evidence (steady-state baseline):
-    - [x] `fretboard diag perf` steady-state script:
+    - [x] `fretboard-dev diag perf` steady-state script:
       - `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
     - [x] Seed policy preset is committed:
       - `docs/workstreams/perf-baselines/policies/external-texture-imports-contract-path.v1.json`

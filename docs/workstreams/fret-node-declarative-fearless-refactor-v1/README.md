@@ -639,7 +639,7 @@ This workstream is complete only when it leaves behind:
 
 Canonical runnable targets:
 
-- default declarative demo: `cargo run -p fretboard -- dev native --bin node_graph_demo`
+- default declarative demo: `cargo run -p fretboard-dev -- dev native --bin node_graph_demo`
 - compatibility harness: `cargo run -p fret-demo --features node-graph-demos-legacy --bin node_graph_legacy_demo`
 
 ### Compact gate matrix
@@ -648,7 +648,7 @@ Canonical runnable targets:
 | --- | --- | --- |
 | declarative + compat conformance | `cargo nextest run -p fret-node --features compat-retained-canvas` | keeps declarative reducers and retained compatibility closure from drifting apart while deprecation is still blocked |
 | example wiring smoke | `cargo check -p fret-examples` | keeps `node_graph_demo` and the legacy compatibility harness compiling against the current public teaching surface |
-| paint-only diagnostics | `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos` | protects cache, portal-bounds, hover-anchor, and paint-only scripted regressions |
+| paint-only diagnostics | `cargo run -p fretboard-dev -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos` | protects cache, portal-bounds, hover-anchor, and paint-only scripted regressions |
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 
 The TODO tracker defines the next gate additions still required for full transaction-safe declarative parity.

@@ -58,7 +58,7 @@ Evidence anchors:
 
 - IME correctness and lifecycle (composition start/update/end)
   - Failure mode: missing text events, cursor rect drift, focus/blur edge cases.
-  - Existing gates: none in this crate on non-wasm; recommend adding a `fretboard diag` or browser automation suite once infrastructure is ready.
+  - Existing gates: none in this crate on non-wasm; recommend adding a `fretboard-dev diag` or browser automation suite once infrastructure is ready.
 - Re-entrancy and ordering with `Rc<RefCell<...>>` queues
   - Failure mode: missed wakeups, stale queued events, timer ordering drift.
   - Existing gates: minimal non-wasm test ensuring actionable error; wasm gates still needed.
@@ -83,7 +83,7 @@ Evidence anchors:
 
 1. Add a CI gate to compile this crate for `wasm32-unknown-unknown` — outcome: prevent accidental breakage in wasm-only code paths — gate: `cargo check -p fret-platform-web --target wasm32-unknown-unknown`.
 2. Add a fixture-driven test harness for timers/queued events logic that can run in wasm test environments — outcome: stabilize ordering assumptions — gate: wasm test runner (TBD).
-3. Keep IME behavior aligned with the ADR (0195) and add at least one scripted diag in a web demo — outcome: prevent regressions in composition — gate: `fretboard diag` (web).
+3. Keep IME behavior aligned with the ADR (0195) and add at least one scripted diag in a web demo — outcome: prevent regressions in composition — gate: `fretboard-dev diag` (web).
 
 ## 8) Open questions / decisions needed
 

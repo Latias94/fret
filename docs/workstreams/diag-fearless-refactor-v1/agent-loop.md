@@ -20,13 +20,13 @@ The goal is to avoid “open a huge bundle artifact” (especially `bundle.json`
 Run doctor first. It is safe to run repeatedly.
 
 - (Optional) Generate a plan file:
-  - `fretboard diag agent <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n>`
+  - `fretboard-dev diag agent <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n>`
 
-- `fretboard diag doctor --check <bundle_dir> --warmup-frames <n>`
+- `fretboard-dev diag doctor --check <bundle_dir> --warmup-frames <n>`
 - If missing/invalid artifacts are reported:
-  - `fretboard diag doctor --fix <bundle_dir> --warmup-frames <n>`
+  - `fretboard-dev diag doctor --fix <bundle_dir> --warmup-frames <n>`
   - If `bundle.json` is large and you want a compact view for tooling/agents:
-    - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+    - `fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 
 Note:
 
@@ -37,17 +37,17 @@ Note:
 If you want to share a repro bundle, prefer bounded zips:
 
 - Ensure schema2 exists (or let `--bundle-doctor fix` handle it when possible):
-  - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+  - `fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - Preferred (AI-first, bounded; does not ship full bundle artifacts):
-  - `fretboard diag pack <bundle_dir> --ai-only --warmup-frames <n>`
+  - `fretboard-dev diag pack <bundle_dir> --ai-only --warmup-frames <n>`
 - Compat (offline viewer-friendly; includes bundle artifact):
-  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only --warmup-frames <n>`
+  - `fretboard-dev diag pack <bundle_dir> --include-all --pack-schema2-only --warmup-frames <n>`
 
 ## Step 1: First-pass perf triage (no full bundle materialization)
 
 Use `triage --lite` (frames-index based) to identify the worst frames quickly:
 
-- `fretboard diag triage --lite <bundle_dir> --warmup-frames <n> --metric total`
+- `fretboard-dev diag triage --lite <bundle_dir> --warmup-frames <n> --metric total`
 - Optional:
   - `--metric layout`
   - `--metric paint`
@@ -60,14 +60,14 @@ flags is supported.
 - Supported checks are enforced by a code allowlist:
   - `crates/fret-diag/src/diag_stats/check_support.rs`
 - For a machine-readable view (agent/tooling friendly):
-  - `fretboard diag stats --stats-lite-checks-json`
+  - `fretboard-dev diag stats --stats-lite-checks-json`
 - Unsupported checks will fail fast and print a “stats-lite supported checks” table with suggested remediation commands.
 
 ## Step 2: Perf “hotspots” fallback (slow frames report)
 
 When the bundle artifact is too large to run JSON-size hotspots, use:
 
-- `fretboard diag hotspots --lite <bundle_dir> --warmup-frames <n> --metric total`
+- `fretboard-dev diag hotspots --lite <bundle_dir> --warmup-frames <n> --metric total`
 
 Notes:
 
@@ -78,17 +78,17 @@ Notes:
 
 Once you have a candidate frame/window, slice only the relevant snapshot(s):
 
-- `fretboard diag slice <bundle_dir> --test-id <test_id> --window <id> --frame-id <fid> --warmup-frames <n>`
+- `fretboard-dev diag slice <bundle_dir> --test-id <test_id> --window <id> --frame-id <fid> --warmup-frames <n>`
 - Or, if you have snapshot sequence instead:
-  - `fretboard diag slice <bundle_dir> --test-id <test_id> --window <id> --snapshot-seq <seq> --warmup-frames <n>`
+  - `fretboard-dev diag slice <bundle_dir> --test-id <test_id> --window <id> --snapshot-seq <seq> --warmup-frames <n>`
 
 ## Step 4: Generate an AI packet (bounded)
 
 To hand off to an AI agent, generate a compact packet directory:
 
-- `fretboard diag ai-packet <bundle_dir> --warmup-frames <n>`
+- `fretboard-dev diag ai-packet <bundle_dir> --warmup-frames <n>`
 - Optional (if you already know a test_id):
-  - `fretboard diag ai-packet <bundle_dir> --test-id <test_id> --warmup-frames <n>`
+  - `fretboard-dev diag ai-packet <bundle_dir> --test-id <test_id> --warmup-frames <n>`
 
 Expected contents include:
 

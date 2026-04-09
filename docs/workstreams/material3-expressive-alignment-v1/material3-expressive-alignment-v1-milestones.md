@@ -30,7 +30,7 @@ We consider a component “aligned (v1)” when:
 1. Token mapping is explicit and stable (`md.comp.*` keys + clear fallback chain).
 2. Interaction policy lives in the correct layer (no policy leakage into `crates/*`).
 3. Motion outcomes are deterministic under fixed timestep when gated.
-4. At least one regression gate exists (unit test and/or `fretboard diag` script).
+4. At least one regression gate exists (unit test and/or `fretboard-dev diag` script).
 
 ## Milestones
 

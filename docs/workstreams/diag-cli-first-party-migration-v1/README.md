@@ -48,7 +48,7 @@ Gate commands:
 
 - `python3 tools/perf/diag_perf_baseline_select.py --help`
 - `cargo nextest run -p fret-diag cli::contracts::tests:: cli::cutover::tests::`
-- `cargo build -p fretboard --message-format short`
+- `cargo build -p fretboard-dev --message-format short`
 
 Evidence anchors:
 

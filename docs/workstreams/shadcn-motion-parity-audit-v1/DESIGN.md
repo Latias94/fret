@@ -73,7 +73,7 @@ Animation inspiration (not a spec):
   - Use `RenderTransform` when hit-testing should move with visuals.
   - Use `VisualTransform` for paint-only motion.
 - Lock motion-sensitive changes with a deterministic gate:
-  - `fretboard diag run ... --fixed-frame-delta-ms 16` and a screenshot or pixel-delta check, and/or
+  - `fretboard-dev diag run ... --fixed-frame-delta-ms 16` and a screenshot or pixel-delta check, and/or
   - a focused unit test that checks monotonic progression + reduced motion settling.
 
 ## Deliverables

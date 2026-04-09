@@ -16,7 +16,7 @@ This matches editor/engine workflows: viewports, video panels, node graphs, code
 Recommended (cookbook example):
 
 ```bash
-cargo run -p fretboard -- dev native --example embedded_viewport_basics
+cargo run -p fretboard-dev -- dev native --example embedded_viewport_basics
 ```
 
 Maintainer harness (legacy demo):

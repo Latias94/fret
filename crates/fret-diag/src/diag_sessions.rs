@@ -18,7 +18,7 @@ pub(crate) fn cmd_sessions(
 ) -> Result<(), String> {
     let Some(action) = rest.first().map(|s| s.as_str()) else {
         return Err(
-            "missing sessions subcommand (try: fretboard diag sessions clean --keep 50)"
+            "missing sessions subcommand (try: fretboard-dev diag sessions clean --keep 50)"
                 .to_string(),
         );
     };

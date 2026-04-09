@@ -50,7 +50,7 @@ Mitigation / gates:
 
 - keep snapshot capture bounded and incremental,
 - clip large payloads and report clipping,
-- add perf gates for diagnostics-enabled scenarios (`fretboard diag perf ...`).
+- add perf gates for diagnostics-enabled scenarios (`fretboard-dev diag perf ...`).
 
 ---
 

@@ -112,7 +112,7 @@ Exit criteria:
     `floating_layer_popover_outside_press_allows_underlay_activation_when_click_through`).
 - [~] IMUIECO3-test-013 Add nextest gates for window flag semantics (close/collapse/resize/move).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (tests covering `activate_on_click`, `inputs_enabled`, `closable`, `movable`, `resizable`, `collapsible`).
-- [x] IMUIECO3-test-014 Add/extend `fretboard diag` script(s) for floating + popup + drag/resize.
+- [x] IMUIECO3-test-014 Add/extend `fretboard-dev diag` script(s) for floating + popup + drag/resize.
   - Evidence: `tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json`
   - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
   - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
@@ -220,7 +220,7 @@ Exit criteria:
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v3/imui-ecosystem-facade-v3.md` (M2 touchpoints).
   - Evidence: `ecosystem/fret-docking/src/imui.rs`, `ecosystem/fret-docking/src/facade.rs`.
   - Evidence (diagnostics + scripted repro): `debug.docking_interaction.dock_drop_resolve` in bundles,
-    `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json` + `fretboard diag`
+    `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json` + `fretboard-dev diag`
     gates `--check-dock-drop-resolve-min` / `--check-dock-drag-cross-window-max`.
 
 ---

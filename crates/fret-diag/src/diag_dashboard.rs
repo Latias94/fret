@@ -94,7 +94,7 @@ fn resolve_dashboard_index_path(
     let summary_hint = summary_hint_path.join("regression.summary.json");
     if summary_hint.is_file() {
         return Err(format!(
-            "dashboard index is missing: {}\nhint: run `fretboard diag summarize --dir {}` first",
+            "dashboard index is missing: {}\nhint: run `fretboard-dev diag summarize --dir {}` first",
             index_path.display(),
             summary_hint_path.display()
         ));
@@ -387,7 +387,7 @@ mod tests {
             "counters": {
                 "by_status": { "failed_deterministic": 2 },
                 "by_lane": { "smoke": 2 },
-                "by_tool": { "fretboard diag suite": 2 }
+                "by_tool": { "fretboard-dev diag suite": 2 }
             },
             "top_reason_codes": [
                 { "reason_code": "assert.focus_restore.mismatch", "count": 2 }
@@ -424,7 +424,7 @@ mod tests {
             "counters": {
                 "by_status": { "failed_deterministic": 2 },
                 "by_lane": { "smoke": 2 },
-                "by_tool": { "fretboard diag suite": 2 }
+                "by_tool": { "fretboard-dev diag suite": 2 }
             },
             "top_reason_codes": [
                 { "reason_code": "assert.focus_restore.mismatch", "count": 2 }

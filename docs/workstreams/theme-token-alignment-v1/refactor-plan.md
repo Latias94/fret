@@ -39,7 +39,7 @@ Avoid per-component ad-hoc `alpha(accent, 0.5)` unless upstream is explicitly do
 4) **Evidence-first gates**
 
 - Prefer Rust tests for preset seeding outcomes (string keys -> resolved tokens exist).
-- Use `fretboard diag` screenshot scripts for the “visual-risk” points (contrast, scrims, hover).
+- Use `fretboard-dev diag` screenshot scripts for the “visual-risk” points (contrast, scrims, hover).
 - Avoid grepping large diag artifacts (`bundle.json`); use `diag query/slice`.
 
 ## Shared interactive state tokens (recommended baseline set)

@@ -21,7 +21,7 @@ pub(crate) fn cmd_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard-dev diag index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };

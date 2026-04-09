@@ -10,7 +10,7 @@ Each later wave assumes all earlier waves are already visible on crates.io.
 - fret-icons
 - fret-render-core
 
-## Wave 2 (10 crates)
+## Wave 2 (11 crates)
 - delinea
 - fret-a11y-accesskit
 - fret-diag-protocol
@@ -21,6 +21,7 @@ Each later wave assumes all earlier waves are already visible on crates.io.
 - fret-platform
 - fret-ui-headless
 - fret-viewport-tooling
+- fretboard
 
 ## Wave 3 (6 crates)
 - fret-diag-ws

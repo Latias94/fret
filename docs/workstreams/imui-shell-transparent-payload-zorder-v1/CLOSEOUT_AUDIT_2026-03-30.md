@@ -35,12 +35,12 @@ Validation runs used for closeout:
 
 - `cargo check -p fret-runtime -p fret-launch -p fret-bootstrap -p fret-examples -p fret-ui-gallery`
 - `cargo build -p fret-demo --bin docking_arbitration_demo`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-large-transparent-payload-single-move-probe.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --timeout-ms 120000 --env FRET_DIAG_SCRIPT_MIGRATION_TRACE=1 --launch target/debug/docking_arbitration_demo.exe`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 240000 --env FRET_DIAG_SCRIPT_MIGRATION_TRACE=1 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-large-transparent-payload-single-move-probe.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --timeout-ms 120000 --env FRET_DIAG_SCRIPT_MIGRATION_TRACE=1 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 240000 --env FRET_DIAG_SCRIPT_MIGRATION_TRACE=1 --launch target/debug/docking_arbitration_demo.exe`
 
 Supporting failure-localization read retained during closeout:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 240000 --env FRET_DIAG_SCRIPT_MIGRATION_TRACE=1 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 240000 --env FRET_DIAG_SCRIPT_MIGRATION_TRACE=1 --launch target/debug/docking_arbitration_demo.exe`
   before the signature update, producing
   `target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774874407316-38304`.
 

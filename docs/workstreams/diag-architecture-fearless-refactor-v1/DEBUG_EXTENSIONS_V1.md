@@ -93,4 +93,4 @@ Writers MUST:
 - Registry + budgets: `ecosystem/fret-bootstrap/src/ui_diagnostics/extensions.rs`
 - Snapshot field: `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs`
 - Capture hook: `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
-- Tooling viewer (CLI): `crates/fret-diag/src/commands/extensions.rs` (`fretboard diag extensions ...`)
+- Tooling viewer (CLI): `crates/fret-diag/src/commands/extensions.rs` (`fretboard-dev diag extensions ...`)

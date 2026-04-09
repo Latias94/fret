@@ -825,7 +825,7 @@ impl CommitCopyButton {
 
     /// Optional marker that only exists while the button is in the "copied" state.
     ///
-    /// This is intended for `fretboard diag` scripts.
+    /// This is intended for `fretboard-dev diag` scripts.
     pub fn copied_marker_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.copied_marker_test_id = Some(id.into());
         self

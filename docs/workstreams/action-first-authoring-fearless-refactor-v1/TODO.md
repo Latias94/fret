@@ -389,11 +389,11 @@ This workstream is now closed for the v1 action/view migration and default-path 
 - [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
   - Status (as of 2026-03-05):
-    - `cargo run -p fretboard -- new hello` uses View runtime + typed unit actions:
+    - `cargo run -p fretboard-dev -- new hello` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
-    - `cargo run -p fretboard -- new todo` uses View runtime + typed unit actions + selector/query hooks:
+    - `cargo run -p fretboard-dev -- new todo` uses View runtime + typed unit actions + selector/query hooks:
       `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
-    - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
+    - `cargo run -p fretboard-dev -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
     - All templates demonstrate “late `into_element(cx)` + `ui::children![cx; ...]`” (low adapter noise),
       with unit tests guarding against `into_element(cx)` regression:
@@ -977,7 +977,7 @@ Current sequencing note (as of 2026-03-09):
   - Guardrail: any curated recipe must keep `TableState`, `output_model`, row-key strategy, and action/command boundaries visible rather than hiding them behind a macro or opaque helper.
   - Status (as of 2026-03-09): decision made. The repo keeps a docs-first `DataTable` default recipe in `DATA_TABLE_GOLDEN_PATH.md`, treating `DataTable` as a medium/advanced business-table surface rather than a first-contact example, and defers helper/macro expansion until that curated recipe still proves insufficient in real demos.
   - Evidence update (as of 2026-03-09): `apps/fret-ui-gallery/src/ui/snippets/data_table/default_demo.rs` and `apps/fret-ui-gallery/src/ui/pages/data_table.rs` now provide the first curated default-recipe gallery slice aligned with that note.
-  - Gate update (as of 2026-03-09): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json --dir target/fret-diag/ui-gallery-data-table-default-recipe --timeout-ms 240000 --pack --ai-packet --launch -- cargo run -p fret-ui-gallery` passes locally and emits bounded artifacts for the curated recipe slice.
+  - Gate update (as of 2026-03-09): `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-data-table-default-recipe-smoke.json --dir target/fret-diag/ui-gallery-data-table-default-recipe --timeout-ms 240000 --pack --ai-packet --launch -- cargo run -p fret-ui-gallery` passes locally and emits bounded artifacts for the curated recipe slice.
 
 - [x] AFA-postv1-024 Write a “current best practice vs v2 target” note.
   - Goal: make the repo’s current recommended writing style explicit, and separate real remaining ergonomics gaps from already-closed migration tracks.

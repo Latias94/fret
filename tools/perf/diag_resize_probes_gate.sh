@@ -15,7 +15,7 @@ Usage:
     [--warmup-frames <n>]
 
 Notes:
-  - Runs a resize-focused perf suite via `fretboard diag perf` (defaults to `ui-resize-probes`).
+  - Runs a resize-focused perf suite via `fretboard-dev diag perf` (defaults to `ui-resize-probes`).
   - Intended to be a lightweight "P0 resize must not regress" gate.
   - `--attempts` reruns the suite to reduce flakiness from rare tail outliers.
     The gate passes if a strict majority of attempts pass.

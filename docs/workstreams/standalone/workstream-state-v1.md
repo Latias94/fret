@@ -191,13 +191,13 @@ the markdown authority wins and `WORKSTREAM.json` should be updated.
   "repro": {
     "summary": "Smallest first-open command for this lane.",
     "commands": [
-      "cargo run -p fretboard -- diag doctor campaigns"
+      "cargo run -p fretboard-dev -- diag doctor campaigns"
     ]
   },
   "gates": [
     {
       "name": "campaign-doctor",
-      "command": "cargo run -p fretboard -- diag doctor campaigns"
+      "command": "cargo run -p fretboard-dev -- diag doctor campaigns"
     }
   ],
   "evidence": [

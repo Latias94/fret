@@ -15,7 +15,7 @@ Tracking format:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script/suite name
+- and/or a `fretboard-dev diag` script/suite name
 
 ## M0 — Guardrails first
 
@@ -25,13 +25,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `tools/gates_full.py`
     - `docs/workstreams/bottom-up-fearless-refactor-v1/bottom-up-fearless-refactor-v1.md` (section “Always-run gates”)
 
-- [ ] BU-FR-guard-002 Add a short “how to add a regression gate” appendix to this workstream (unit test vs `fretboard diag`).
+- [ ] BU-FR-guard-002 Add a short “how to add a regression gate” appendix to this workstream (unit test vs `fretboard-dev diag`).
   - Link: `docs/ui-diagnostics-and-scripted-tests.md`
 
 - [~] BU-FR-guard-003 Inventory the current scripted diagnostics suites and map them to program milestones.
   - Start from: `docs/ui-diagnostics-and-scripted-tests.md` and `tools/diag-scripts/`
   - Early evidence:
-    - `fretboard diag suite ui-gallery-overlay-steady` (overlay/focus interaction subset)
+    - `fretboard-dev diag suite ui-gallery-overlay-steady` (overlay/focus interaction subset)
     - `crates/fret-diag/src/lib.rs` (suite definitions)
 
 - [ ] BU-FR-guard-004 Convert “huge Rust conformance sources” into data-driven harnesses where possible.

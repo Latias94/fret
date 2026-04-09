@@ -39,7 +39,7 @@ only after a stable contract exists.
 3. **Determinism**
    - Cache keys must be explicit (font stack revision, shaping-affecting attributes, quality knobs).
 4. **Gates before deletion**
-   - Add a unit test or `fretboard diag` script before removing a fallback/hack.
+   - Add a unit test or `fretboard-dev diag` script before removing a fallback/hack.
 5. **Small landable steps**
    - Prefer narrowly scoped PR-sized changes with measurable outcomes.
 

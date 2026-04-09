@@ -1499,7 +1499,7 @@ fn push_output_risk_warnings(
 pub(crate) fn cmd_config(ctx: ConfigCmdContext) -> Result<(), String> {
     let Some(sub) = ctx.rest.first().map(|s| s.as_str()) else {
         return Err(
-            "missing diag config subcommand (try: fretboard diag config doctor)".to_string(),
+            "missing diag config subcommand (try: fretboard-dev diag config doctor)".to_string(),
         );
     };
     let rest: Vec<String> = ctx.rest.iter().skip(1).cloned().collect();
@@ -1522,7 +1522,7 @@ fn launch_dir_sessions_concurrency_warning(out_dir: &Path) -> Option<serde_json:
         "message": "the chosen diagnostics out_dir contains a `sessions/` folder; tool-launched runs should prefer --session-auto/--session to avoid writing control-plane files at the base root (concurrency footgun)",
         "base_out_dir": out_dir.display().to_string(),
         "sessions_root": sessions_root.display().to_string(),
-        "hint": "prefer: fretboard diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
+        "hint": "prefer: fretboard-dev diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
     }))
 }
 

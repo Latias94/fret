@@ -5,9 +5,9 @@ pub(crate) mod shared;
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "fretboard diag",
+    name = "fretboard-dev diag",
     about = "Diagnostics tooling for the Fret workspace.",
-    after_help = "Examples:\n  fretboard diag poke\n  fretboard diag latest\n  fretboard diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard diag campaign list --lane smoke --tag ui-gallery",
+    after_help = "Examples:\n  fretboard-dev diag poke\n  fretboard-dev diag latest\n  fretboard-dev diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag campaign list --lane smoke --tag ui-gallery",
     disable_help_subcommand = true,
     arg_required_else_help = true
 )]
@@ -105,9 +105,9 @@ fn render_command_help_path(path: &[&str]) -> Result<String, String> {
 
 fn full_diag_bin_name(path: &[&str]) -> String {
     if path.is_empty() {
-        "fretboard diag".to_string()
+        "fretboard-dev diag".to_string()
     } else {
-        format!("fretboard diag {}", path.join(" "))
+        format!("fretboard-dev diag {}", path.join(" "))
     }
 }
 
@@ -2475,7 +2475,7 @@ mod tests {
         assert!(index_help.contains("--warmup-frames"));
         assert!(inspect_help.contains("toggle"));
         assert!(inspect_help.contains("--consume-clicks"));
-        assert!(diag_help.contains("Usage: fretboard diag"));
+        assert!(diag_help.contains("Usage: fretboard-dev diag"));
         assert!(diag_help.contains("agent"));
         assert!(diag_help.contains("path"));
         assert!(diag_help.contains("poke"));
@@ -2508,7 +2508,7 @@ mod tests {
         assert!(pick_help.contains("--timeout-ms"));
         assert!(pick_apply_help.contains("--ptr"));
         assert!(pick_apply_help.contains("--timeout-ms"));
-        assert!(pick_arm_help.contains("Usage: fretboard diag pick-arm"));
+        assert!(pick_arm_help.contains("Usage: fretboard-dev diag pick-arm"));
         assert!(pick_script_help.contains("--pick-script-out"));
         assert!(pick_script_help.contains("--poll-ms"));
         assert!(poke_help.contains("--request-id"));
@@ -2520,7 +2520,7 @@ mod tests {
         assert!(resolve_help.contains("latest"));
         assert!(resolve_latest_help.contains("--within-session"));
         assert!(resolve_latest_help.contains("--dir"));
-        assert!(resolve_latest_help.contains("Usage: fretboard diag resolve latest"));
+        assert!(resolve_latest_help.contains("Usage: fretboard-dev diag resolve latest"));
         assert!(help.contains("run"));
         assert!(repeat_help.contains("--no-compare"));
         assert!(repro_help.contains("--ai-only"));
@@ -2555,7 +2555,7 @@ mod tests {
         assert!(triage_help.contains("--lite"));
         assert!(triage_help.contains("--metric"));
         assert!(windows_help.contains("--warmup-frames"));
-        assert!(windows_help.contains("Usage: fretboard diag windows"));
+        assert!(windows_help.contains("Usage: fretboard-dev diag windows"));
     }
 
     #[test]
@@ -2569,35 +2569,35 @@ mod tests {
             render_command_help_path(&["campaign", "run"]).expect("campaign run help");
 
         assert!(diag_help.contains(
-            "fretboard diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release"
+            "fretboard-dev diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release"
         ));
         assert!(diag_help.contains(
-            "fretboard diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release"
+            "fretboard-dev diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release"
         ));
 
-        assert!(run_help.contains("Usage: fretboard diag run"));
+        assert!(run_help.contains("Usage: fretboard-dev diag run"));
         assert!(run_help.contains("--launch"));
         assert!(run_help.contains("--reuse-launch"));
         assert!(run_help.contains("--devtools-ws-url"));
         assert!(run_help.contains("--exit-after-run"));
 
-        assert!(suite_help.contains("Usage: fretboard diag suite"));
+        assert!(suite_help.contains("Usage: fretboard-dev diag suite"));
         assert!(suite_help.contains("--script-dir"));
         assert!(suite_help.contains("--glob"));
         assert!(suite_help.contains("--reuse-launch"));
         assert!(suite_help.contains("--launch"));
 
-        assert!(repro_help.contains("Usage: fretboard diag repro"));
+        assert!(repro_help.contains("Usage: fretboard-dev diag repro"));
         assert!(repro_help.contains("--pack-out"));
         assert!(repro_help.contains("--ai-only"));
         assert!(repro_help.contains("--trace-chrome"));
 
-        assert!(perf_help.contains("Usage: fretboard diag perf"));
+        assert!(perf_help.contains("Usage: fretboard-dev diag perf"));
         assert!(perf_help.contains("--prewarm-script"));
         assert!(perf_help.contains("--perf-threshold-agg"));
         assert!(perf_help.contains("--reuse-launch"));
 
-        assert!(campaign_run_help.contains("Usage: fretboard diag campaign run"));
+        assert!(campaign_run_help.contains("Usage: fretboard-dev diag campaign run"));
         assert!(campaign_run_help.contains("--lane"));
         assert!(campaign_run_help.contains("--platform"));
         assert!(campaign_run_help.contains("--launch"));

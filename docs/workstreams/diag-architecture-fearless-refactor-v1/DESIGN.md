@@ -18,7 +18,7 @@ Diag already provides a lot of power:
 
 - bundles (`bundle.schema2.json`) as portable repro artifacts,
 - scripted actions + assertions (selectors/predicates),
-- `fretboard diag` tooling (triage/lint/hotspots/perf/pack),
+- `fretboard-dev diag` tooling (triage/lint/hotspots/perf/pack),
 - early DevTools GUI + WS transport direction.
 
 The main problems are architectural and long-term:
@@ -143,7 +143,7 @@ We should start with Option A for speed, then graduate to Option B if it reduces
 Tooling should treat extensions as optional:
 
 - never hard-fail parsing unknown extensions,
-- provide `fretboard diag query extension <key>` (eventually) and viewer rendering hooks,
+- provide `fretboard-dev diag query extension <key>` (eventually) and viewer rendering hooks,
 - allow lints/gates to depend on extensions only when the script declares the capability.
 
 ## Layout debugging: correctness + performance (staged)
@@ -238,7 +238,7 @@ For any landable refactor step:
 - `cargo nextest run -p fret-diag` (and other touched crates)
 - `python3 tools/check_layering.py` when crate boundaries move
 - At least one regression artifact when behavior changes:
-  - unit/integration test and/or `tools/diag-scripts/*.json` + `fretboard diag run/suite`
+  - unit/integration test and/or `tools/diag-scripts/*.json` + `fretboard-dev diag run/suite`
 
 ## Open questions
 

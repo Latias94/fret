@@ -26,14 +26,14 @@ def _run_git(args: List[str]) -> Optional[str]:
 
 
 def _extract_perf_json_from_stdout(text: str) -> Dict[str, Any]:
-    # `fretboard diag perf ... --json` prints a single JSON object at the end of stdout, but the
+    # `fretboard-dev diag perf ... --json` prints a single JSON object at the end of stdout, but the
     # key order is not stable (serde_json may emit maps with sorted keys). We therefore look for
     # the last JSON object that starts at the beginning of a line and validates as a perf payload.
     starts = [m.start() for m in re.finditer(r"(?m)^\{", text)]
     if not starts:
         raise RuntimeError(
             "Failed to locate perf JSON in stdout (no '{' at beginning-of-line found). "
-            "Ensure `fretboard diag perf ... --json` output was captured."
+            "Ensure `fretboard-dev diag perf ... --json` output was captured."
         )
 
     for idx in reversed(starts):
@@ -653,11 +653,11 @@ def append_cmd(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Append `fretboard diag perf --json` results to a Markdown log.")
+    parser = argparse.ArgumentParser(description="Append `fretboard-dev diag perf --json` results to a Markdown log.")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     append = sub.add_parser("append", help="Append a new perf entry by parsing a captured stdout file.")
-    append.add_argument("--stdout", required=True, help="Path to captured stdout from `fretboard diag perf ... --json`.")
+    append.add_argument("--stdout", required=True, help="Path to captured stdout from `fretboard-dev diag perf ... --json`.")
     append.add_argument("--log", required=True, help="Markdown log file to append to.")
     append.add_argument("--suite", default="", help="Suite name (e.g. ui-gallery).")
     append.add_argument("--command", default="", help="Exact command used to capture the stdout.")

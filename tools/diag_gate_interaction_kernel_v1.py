@@ -98,7 +98,7 @@ def main(argv: list[str]) -> int:
     fretboard_build = ["cargo", "build", "-j", "1", "-p", "fretboard"]
     if args.release:
         fretboard_build.append("--release")
-    _run_checked("cargo build -p fretboard", fretboard_build, cwd=repo_root)
+    _run_checked("cargo build -p fretboard-dev", fretboard_build, cwd=repo_root)
 
     demo_build = ["cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "imui_floating_windows_demo"]
     if args.release:
@@ -156,7 +156,7 @@ def main(argv: list[str]) -> int:
             "--",
             str(demo_exe),
         ]
-        _run_checked(f"fretboard diag run {script_name}", argv_run, cwd=repo_root)
+        _run_checked(f"fretboard-dev diag run {script_name}", argv_run, cwd=repo_root)
 
     editor_build = ["cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "imui_editor_proof_demo"]
     if args.release:
@@ -172,7 +172,7 @@ def main(argv: list[str]) -> int:
         m3_extra += ["--check-dock-drag-current-windows-min", "2"]
 
     _run_checked(
-        "fretboard diag run imui-editor-proof-multiwindow-overlap-topmost-hover",
+        "fretboard-dev diag run imui-editor-proof-multiwindow-overlap-topmost-hover",
         [
             str(fretboard_exe),
             "diag",

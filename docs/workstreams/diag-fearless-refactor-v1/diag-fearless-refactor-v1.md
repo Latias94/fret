@@ -62,12 +62,12 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
     - policy: tool-launched runs (`--launch`) are small-by-default via per-run `diag.config.json` (manual runs keep compat defaults unless configured).
 - Older bundles may still be schema v1 (inline-only semantics, no tables); tooling remains compatible.
 - Tooling can:
-  - convert bundles (`fretboard diag bundle-v2`) for measurement/compat,
+  - convert bundles (`fretboard-dev diag bundle-v2`) for measurement/compat,
   - build bounded sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`),
-  - export bounded “AI packets” (`fretboard diag ai-packet`),
-  - slice bundles without grepping `bundle.json` (`fretboard diag slice`).
+  - export bounded “AI packets” (`fretboard-dev diag ai-packet`),
+  - slice bundles without grepping `bundle.json` (`fretboard-dev diag slice`).
 - Tooling treats `bundle.schema2.json` as a first-class **bundle artifact** input (alongside `bundle.json`), and can
-  “heal” older bundle dirs via `cargo run -p fretboard -- diag doctor --fix-schema2 --fix-sidecars <bundle_dir> --warmup-frames <n>`
+  “heal” older bundle dirs via `cargo run -p fretboard-dev -- diag doctor --fix-schema2 --fix-sidecars <bundle_dir> --warmup-frames <n>`
   (or by using `--bundle-doctor fix` in `diag run|suite|repro`).
 - Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots to make
   `diag query snapshots --test-id ...` fast without loading the full bundle.
@@ -119,7 +119,7 @@ Proposed phases:
    - Tooling continues to read v1/v2 bundles.
 2. **Remove v1 emission** (after Plan 1 closure is proven in daily use):
    - Runtime no longer emits schema v1 bundles; only v2 is produced.
-   - Tooling keeps reading v1 and can upgrade bundles when needed (`fretboard diag bundle-v2`).
+   - Tooling keeps reading v1 and can upgrade bundles when needed (`fretboard-dev diag bundle-v2`).
 
 Exit criteria (what “proven” means) before flipping defaults:
 

@@ -131,7 +131,7 @@ Usage:
 
 Notes:
   - The default output path is `.fret/diag/scripts/<template>.json` under the workspace root.
-  - These scripts are compatible with `fretboard diag run <script.json>`.
+  - These scripts are compatible with `fretboard-dev diag run <script.json>`.
 "#
     );
     Ok(())

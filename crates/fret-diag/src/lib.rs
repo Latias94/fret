@@ -315,7 +315,7 @@ fn run_bundle_doctor_for_bundle_path(
         BundleDoctorMode::CheckRequired => {
             if !required_ok {
                 return Err(format!(
-                    "bundle-doctor check-required failed (tip: fretboard diag doctor --fix-sidecars {} --warmup-frames {})",
+                    "bundle-doctor check-required failed (tip: fretboard-dev diag doctor --fix-sidecars {} --warmup-frames {})",
                     run.bundle_dir.display(),
                     warmup_frames
                 ));
@@ -324,7 +324,7 @@ fn run_bundle_doctor_for_bundle_path(
         BundleDoctorMode::CheckAll => {
             if !ok {
                 return Err(format!(
-                    "bundle-doctor check-all failed (tip: fretboard diag doctor --fix-sidecars {} --warmup-frames {})",
+                    "bundle-doctor check-all failed (tip: fretboard-dev diag doctor --fix-sidecars {} --warmup-frames {})",
                     run.bundle_dir.display(),
                     warmup_frames
                 ));
@@ -333,7 +333,7 @@ fn run_bundle_doctor_for_bundle_path(
         BundleDoctorMode::Fix => {
             if !required_ok {
                 return Err(format!(
-                    "bundle-doctor fix did not reach required_ok (tip: fretboard diag doctor {} --warmup-frames {})",
+                    "bundle-doctor fix did not reach required_ok (tip: fretboard-dev diag doctor {} --warmup-frames {})",
                     run.bundle_dir.display(),
                     warmup_frames
                 ));

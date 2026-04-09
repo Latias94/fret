@@ -12,7 +12,7 @@ JSON so code views/editors can reuse the same palette.
 Merge VS Code syntax colors into an existing Fret theme:
 
 ```sh
-cargo run -p fretboard -- theme import-vscode path/to/vscode-theme.json `
+cargo run -p fretboard-dev -- theme import-vscode path/to/vscode-theme.json `
   --all-tags `
   --base themes/fret-default-dark.json `
   --out themes/fret-default-dark+vscode.json `
@@ -26,7 +26,7 @@ cargo run -p fretboard -- theme import-vscode path/to/vscode-theme.json `
 To generate a patch-only theme (syntax colors only):
 
 ```sh
-cargo run -p fretboard -- theme import-vscode path/to/vscode-theme.json --all-tags --out themes/vscode-syntax.json
+cargo run -p fretboard-dev -- theme import-vscode path/to/vscode-theme.json --all-tags --out themes/vscode-syntax.json
 ```
 
 ## Why there is a mapping layer
@@ -78,7 +78,7 @@ Example `mapping.json`:
 Run:
 
 ```sh
-cargo run -p fretboard -- theme import-vscode path/to/vscode-theme.json --all-tags --map mapping.json --out themes/out.json
+cargo run -p fretboard-dev -- theme import-vscode path/to/vscode-theme.json --all-tags --map mapping.json --out themes/out.json
 ```
 
 ### 2) One-off overrides (`--set`)
@@ -91,7 +91,7 @@ cargo run -p fretboard -- theme import-vscode path/to/vscode-theme.json --all-ta
 Examples:
 
 ```sh
-cargo run -p fretboard -- theme import-vscode path/to/vscode-theme.json --all-tags `
+cargo run -p fretboard-dev -- theme import-vscode path/to/vscode-theme.json --all-tags `
   --set color.syntax.comment=#7c7c7c `
   --set keyword.operator=#ff8000 `
   --out themes/out.json

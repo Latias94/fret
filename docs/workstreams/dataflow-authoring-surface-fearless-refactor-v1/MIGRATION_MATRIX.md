@@ -148,7 +148,7 @@ Execute the lane in this order unless a concrete cross-surface proof forces revi
 Run this bundle before changing a row from `In progress` to `Migrated` or `Delete-ready`:
 
 - `cargo nextest run -p fret --lib --no-fail-fast`
-- `cargo test -p fretboard scaffold --lib`
+- `cargo test -p fretboard-dev scaffold --lib`
 - `cargo check -p fret-examples --all-targets`
 
 ## Completion Rule

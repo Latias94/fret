@@ -25,7 +25,7 @@ Notes:
   - `write_bundle_json`
   - `write_bundle_schema2`
 - Tool-launched escape hatch: if you explicitly need raw `bundle.json` for a `--launch` run, use
-  `fretboard diag ... --launch-write-bundle-json --launch -- <cmd>` (tooling writes a per-run config with
+  `fretboard-dev diag ... --launch-write-bundle-json --launch -- <cmd>` (tooling writes a per-run config with
   `write_bundle_json=true`).
 - Most `paths.*` values are resolved relative to the effective `out_dir` when the config value is not absolute.
 - Some numeric fields are clamped by the runtime for safety/bundle size control.
@@ -78,7 +78,7 @@ Notes:
   - Env override: `FRET_DIAG_BUNDLE_SCREENSHOT`.
 - `redact_text`:
   - Runtime: `c.redact_text` (fallback default `true`).
-  - Tool-launched default: `fretboard diag ... --launch` sets `FRET_DIAG_REDACT_TEXT=0` unless overridden.
+  - Tool-launched default: `fretboard-dev diag ... --launch` sets `FRET_DIAG_REDACT_TEXT=0` unless overridden.
   - Env override: `FRET_DIAG_REDACT_TEXT`.
 - `max_debug_string_bytes`:
   - Runtime: `c.max_debug_string_bytes` (fallback default `4096`), clamped to `[0, 256KiB]`.

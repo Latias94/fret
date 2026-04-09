@@ -119,7 +119,7 @@ Two compatible request modes:
      - writes `layout.taffy.v1.json` into that bundle dir (best-effort).
 
 2. **Tooling flag** (escape hatch)
-   - `fretboard diag run --dump-layout-sidecar` (name TBD).
+   - `fretboard-dev diag run --dump-layout-sidecar` (name TBD).
    - Tooling forwards the request via env/runtime config to enable the dump.
 
 In both cases:
@@ -140,7 +140,7 @@ locate and open the sidecar path.
 
 CLI affordance (v1):
 
-- `fretboard diag layout-sidecar <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--print] [--json] [--out <path>]`
+- `fretboard-dev diag layout-sidecar <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--print] [--json] [--out <path>]`
 
 ## Next steps
 
@@ -148,5 +148,5 @@ CLI affordance (v1):
    - asserts semantics bounds,
    - on failure, points to the sidecar file as additional evidence.
 2. Add a minimal viewer affordance (raw JSON ok) in tooling.
-   - Done (v1): `fretboard diag layout-sidecar ...`
+   - Done (v1): `fretboard-dev diag layout-sidecar ...`
 3. Add clipping/budget controls (`max_nodes`/`max_bytes`) once we have real-world size data.

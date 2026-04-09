@@ -37,7 +37,7 @@ pub(crate) fn cmd_windows(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard-dev diag windows <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };

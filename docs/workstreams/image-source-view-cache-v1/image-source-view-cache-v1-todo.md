@@ -20,7 +20,7 @@ ID convention:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script name
+- and/or a `fretboard-dev diag` script name
 
 ## Phase 0 — Decide naming + dependency boundaries
 

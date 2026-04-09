@@ -15,7 +15,7 @@ even when:
 - view-cache roots are reused, and
 - paint-cache hits replay prior ops.
 
-The goal is to make the paint pass explainable (and therefore optimizable) using `fretboard diag perf` bundles.
+The goal is to make the paint pass explainable (and therefore optimizable) using `fretboard-dev diag perf` bundles.
 
 Related:
 
@@ -35,7 +35,7 @@ Probe:
 - Command (steady; repeat=7):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -49,7 +49,7 @@ Worst bundle (example run dir used during investigation):
 
 - `target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a.1770300800/1770285619385-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Key observation from `fretboard diag stats --sort time` on the worst frame:
+Key observation from `fretboard-dev diag stats --sort time` on the worst frame:
 
 - `paint_time_us` is still ~2.6ms.
 - `paint_cache_replay_time_us` is single-digit microseconds (replaying ~450 ops).
@@ -75,7 +75,7 @@ Probe:
 - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -89,7 +89,7 @@ Worst bundle:
 
 - `target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305/1770287306932-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 
 - `paint_time_us=2693`
 - `paint_cache_replay_time_us=6` (`paint_cache_replayed_ops=453`)
@@ -119,7 +119,7 @@ Probe:
 - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -133,7 +133,7 @@ Worst bundle:
 
 - `target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882/1770289882739-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 
 - `paint_time_us=2655`
 - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2555/11`
@@ -158,7 +158,7 @@ Probe:
 - Worst bundle:
   - `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/1770292982106-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 
 - `paint_time_us=2592`
 - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2487/12`
@@ -184,7 +184,7 @@ Follow-up instrumentation:
 - Commit: `188d7da1` (`feat(diag): add host-widget paint sub-timers`)
 - Evidence bundle:
   - `target/fret-diag/1770297604582-ui-gallery-menubar-file-escape-steady/bundle.json`
-- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
   - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2452/12`
   - `paint_host_widget.us(models/globals/instance)=16/10/16 items=14/1 calls=153`
 
@@ -227,7 +227,7 @@ Add paint-phase sub-timers to diagnostics so the worst frame is explainable with
 
 Acceptance:
 
-- `fretboard diag stats` top-frame print includes these sub-timers (microseconds).
+- `fretboard-dev diag stats` top-frame print includes these sub-timers (microseconds).
 - We can explain “paint ~2.5ms” by identifying 1–2 dominant sub-slices.
 
 ---

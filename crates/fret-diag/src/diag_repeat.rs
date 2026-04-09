@@ -205,7 +205,7 @@ fn write_regression_summary_for_repeat(
             duration_ms: None,
             workspace_root: Some(workspace_root.display().to_string()),
             out_dir: Some(resolved_out_dir.display().to_string()),
-            tool: "fretboard diag repeat".to_string(),
+            tool: "fretboard-dev diag repeat".to_string(),
             tool_version: None,
             git_commit: None,
             git_branch: None,
@@ -325,7 +325,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing script path (try: fretboard diag repeat ./script.json --repeat 7)".to_string(),
+            "missing script path (try: fretboard-dev diag repeat ./script.json --repeat 7)"
+                .to_string(),
         );
     };
     if rest.len() != 1 {

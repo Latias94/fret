@@ -6,7 +6,7 @@ including in-window floating title-bar drag behaviors.
 Recommended run (native):
 
 ```sh
-cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release
+cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-docking --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release
 ```
 
 Notes:

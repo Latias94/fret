@@ -460,7 +460,7 @@ Tier 3 (not allowed in v1): parallel policy implementation for complex widgets
 - Eligibility gate for future generalized promotion:
   - native-capability check (`PlatformCapabilities`) with explicit fallback,
   - docking + multi-viewport arbitration parity proven on native platforms,
-  - regression coverage in nextest + `fretboard diag` for move/resize/focus handoff.
+  - regression coverage in nextest + `fretboard-dev diag` for move/resize/focus handoff.
 - Rationale: avoid splitting runner/window lifecycle ownership before docking parity workstream exits
   sustained stabilization.
 

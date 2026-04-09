@@ -136,17 +136,17 @@ Follow-ups that are *out of scope* for this workstream should be tracked in thei
   - `cargo nextest run -p fret-ui -E "test(spacing_fraction_only_resolve_under_definite_available_space_in_measurement)"`
 - Targeted diag scripts (UI gallery):
   - Carousel basic screenshot gate:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
   - Sheet escape + focus-restore gate:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
   - Drawer docs smoke gate:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-drawer-docs-smoke.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-drawer-docs-smoke.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
 
 ### Optional: view-cache reuse sanity gate
 
 If you want a “did we actually reuse cached subtrees?” check, run:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json --warmup-frames 5 --check-view-cache-reuse-min 1 --timeout-ms 240000 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json --warmup-frames 5 --check-view-cache-reuse-min 1 --timeout-ms 240000 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
 
 Notes:
 

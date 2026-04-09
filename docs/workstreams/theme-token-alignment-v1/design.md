@@ -15,7 +15,7 @@ under specific presets (e.g. zinc/dark).
   `dark:*`).
 - Keep the compatibility surface minimal and strongly typed (avoid importing a full Tailwind
   palette into the theme contract).
-- Add lightweight regression gates (tests and/or `fretboard diag` scripts) for high-signal visual
+- Add lightweight regression gates (tests and/or `fretboard-dev diag` scripts) for high-signal visual
   outcomes.
 
 ## Non-goals
@@ -70,7 +70,7 @@ Implementation checklist:
 - Prefer `Theme::named_color(ThemeNamedColorKey::...)` / `ColorRef::Named(...)` at call sites.
 - Add at least one gate:
   - a Rust test asserting the default named color resolves as expected, and/or
-  - a `fretboard diag` screenshot scenario for the upstream parity surface that required the literal.
+  - a `fretboard-dev diag` screenshot scenario for the upstream parity surface that required the literal.
 
 ### 3) Component-derived tokens (component-scoped overrides)
 

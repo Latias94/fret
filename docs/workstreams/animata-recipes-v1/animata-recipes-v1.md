@@ -36,7 +36,7 @@ align to *outcomes*:
    - motion channels (opacity/scale/translate/clip/blur/layout),
    - which motion primitive(s) we expect to use (tween/spring/inertia/transition timeline),
    - optional theme token keys,
-   - and at least one deterministic `fretboard diag` gate (fixed frame delta).
+   - and at least one deterministic `fretboard-dev diag` gate (fixed frame delta).
 
 Non-goals:
 

@@ -63,7 +63,7 @@ Extend `SemanticsDecoration` to support:
 ## Consequences
 
 - `attach_semantics` becomes viable for more a11y + diagnostics use cases without layout wrappers.
-- UI automation scripts (`fretboard diag`) can rely on stable `test_id` plus state/relations where
+- UI automation scripts (`fretboard-dev diag`) can rely on stable `test_id` plus state/relations where
   needed, without authors accidentally changing sizing behavior.
 - The semantics surface remains intentionally small, and stays aligned with Fret's typed layering
   rules.

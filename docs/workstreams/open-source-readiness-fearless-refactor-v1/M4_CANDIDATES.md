@@ -128,4 +128,4 @@ Suggested new gates (only if needed):
   - `tools/diag-scripts/cookbook/<example>/...`
 - Add (or extend) a suite manifest under:
   - `tools/diag-scripts/suites/cookbook-<example>/suite.json`
-- Remove migrated demos from the **default** `fretboard list native-demos` surface (keep behind `--all`).
+- Remove migrated demos from the **default** `fretboard-dev list native-demos` surface (keep behind `--all`).

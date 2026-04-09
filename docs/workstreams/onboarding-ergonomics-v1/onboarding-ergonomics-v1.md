@@ -164,12 +164,12 @@ We should treat Tier A as **the default recommendation** and invest in:
 
 Introduce template variants that map to the onboarding ladder:
 
-- `fretboard new hello` (already minimal) → ensure it uses the most ergonomic primitives.
-- `fretboard new simple-todo`:
+- `fretboard-dev new hello` (already minimal) → ensure it uses the most ergonomic primitives.
+- `fretboard-dev new simple-todo`:
   - `LocalState<T>` + typed actions + shadcn components,
   - no selectors, no queries,
   - focuses on identity (`cx.keyed`) and basic layout.
-- `fretboard new todo` (current golden baseline):
+- `fretboard-dev new todo` (current golden baseline):
   - includes selector + query integration as the “official best practice baseline”.
 
 ### B) Onboarding docs: explicit “first hour” path
@@ -205,7 +205,7 @@ However, “examples vs demos vs gallery” can still feel redundant for a new c
 v1 direction:
 
 - Treat `apps/fret-demo` (native) and `apps/fret-demo-web` (wasm) as the **canonical demo shells**.
-  - `fretboard dev web` already shells into `apps/fret-demo-web`.
+  - `fretboard-dev dev web` already shells into `apps/fret-demo-web`.
 - Treat `apps/fret-examples` as the **canonical demo implementation crate** (build app + driver per demo).
 - Keep larger apps (e.g. UI gallery) as independent crates, but make them runnable through the same shells where practical
   (especially on wasm).
@@ -428,7 +428,7 @@ We should measure onboarding improvements with concrete artifacts:
 
 - templates compile and run on the golden path (native).
 - `fret-ui-gallery` / `todo_demo` remain intact (no regressions).
-- interop demo has at least one `fretboard diag` scripted repro (screenshot / input trace).
+- interop demo has at least one `fretboard-dev diag` scripted repro (screenshot / input trace).
 - docs include a small “rule-of-thumb” section for invalidation and identity.
 
 ---
@@ -466,7 +466,7 @@ They should be approached as refactors with explicit acceptance criteria and evi
 
 2) “One shell” story for UI gallery (native + wasm)
    - Make `ui_gallery` selectable via `apps/fret-demo` as well (mirrors existing wasm path).
-   - Goal: new users always run the same thing: `fretboard dev native ...` / `fretboard dev web ...`.
+   - Goal: new users always run the same thing: `fretboard-dev dev native ...` / `fretboard-dev dev web ...`.
 
 3) Split `apps/fret-examples` into a small wasm-friendly core + optional heavy feature bundles
    - Today, `fret-examples` is a large dependency surface; it is useful for the repo, but it is intimidating for onboarding.

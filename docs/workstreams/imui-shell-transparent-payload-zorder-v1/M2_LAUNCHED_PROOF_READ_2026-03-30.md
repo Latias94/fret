@@ -15,24 +15,24 @@ Goal:
 
 Baseline transparent-payload overlap:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
 
 Large preset transparent-payload overlap:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
 
 Failure-localization rerun:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 360000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=1 --launch target/debug/docking_arbitration_demo.exe`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.debug-late-phase.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 240000 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 360000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=1 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.debug-late-phase.json --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1 --session-auto --pack --ai-packet --timeout-ms 240000 --launch target/debug/docking_arbitration_demo.exe`
 
 Bounded evidence reads:
 
-- `cargo run -p fretboard -- diag resolve latest --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774861703998-19664`
-- `cargo run -p fretboard -- diag dock-routing target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774861703998-19664/1774861713034-docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch/bundle.schema2.json --json`
-- `cargo run -p fretboard -- diag resolve latest --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774861703143-49836`
-- `cargo run -p fretboard -- diag dock-routing target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774862148351-10948/1774862154236-script-step-0019-pointer_move/bundle.schema2.json --json`
-- `cargo run -p fretboard -- diag dock-routing target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774862695071-65560/1774862700901-debug.after-under-moving-window-switch/bundle.schema2.json --json`
+- `cargo run -p fretboard-dev -- diag resolve latest --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774861703998-19664`
+- `cargo run -p fretboard-dev -- diag dock-routing target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774861703998-19664/1774861713034-docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch/bundle.schema2.json --json`
+- `cargo run -p fretboard-dev -- diag resolve latest --dir target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774861703143-49836`
+- `cargo run -p fretboard-dev -- diag dock-routing target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774862148351-10948/1774862154236-script-step-0019-pointer_move/bundle.schema2.json --json`
+- `cargo run -p fretboard-dev -- diag dock-routing target/fret-diag/imui-shell-transparent-payload-zorder-v1/sessions/1774862695071-65560/1774862700901-debug.after-under-moving-window-switch/bundle.schema2.json --json`
 
 ## Result summary
 

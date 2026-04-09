@@ -118,4 +118,4 @@ current registry implementation in `repo-ref/ui`.
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app selected_table_snippet_helpers_prefer_into_ui_element_over_anyelement`
 - `cargo test -p fret-ui-gallery --test table_docs_surface`
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout 'table::web_vs_fret_layout_data_table_demo_checkbox_column_padding_and_action_button_size' -- --exact`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json --dir /tmp/fret-diag-table-docs-2 --session-auto --timeout-ms 900000 --poll-ms 200 --launch -- env CARGO_TARGET_DIR=/tmp/fret-table-diag-target-2 CARGO_NET_OFFLINE=true cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json --dir /tmp/fret-diag-table-docs-2 --session-auto --timeout-ms 900000 --poll-ms 200 --launch -- env CARGO_TARGET_DIR=/tmp/fret-table-diag-target-2 CARGO_NET_OFFLINE=true cargo run -p fret-ui-gallery --release`

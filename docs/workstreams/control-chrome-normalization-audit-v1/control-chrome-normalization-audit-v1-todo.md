@@ -33,7 +33,7 @@ Workstream overview:
 
 ### Diagnostics gates (M3)
 
-- [ ] Add `fretboard diag` scenarios that exercise stretch-sensitive chrome:
+- [ ] Add `fretboard-dev diag` scenarios that exercise stretch-sensitive chrome:
   - [x] Flex-1 Buttons (control chrome fill): `tools/diag-scripts/ui-gallery-control-chrome-flex1-button-fill.json`
   - [x] Dialog trigger in a stretched row: `tools/diag-scripts/ui-gallery-control-chrome-flex1-dialog-trigger-fill.json`
   - [x] Centered fixed chrome in a stretched row (center aligned): `tools/diag-scripts/ui-gallery-centered-fixed-chrome-flex1-center-aligned.json`

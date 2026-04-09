@@ -261,8 +261,8 @@ Verification snapshot on 2026-03-13:
 
 - `CARGO_TARGET_DIR=target/codex-assets-reload cargo test -p fret-cookbook --lib`
 - `CARGO_TARGET_DIR=target/codex-fret-examples cargo test -p fret-examples --lib`
-- `CARGO_TARGET_DIR=target/codex-fretboard cargo test -p fretboard scaffold::templates::tests::todo_template_uses_default_authoring_dialect -- --exact`
-- `CARGO_TARGET_DIR=target/codex-fretboard cargo test -p fretboard scaffold::templates::tests::simple_todo_template_has_low_adapter_noise_and_no_query_selector -- --exact`
+- `CARGO_TARGET_DIR=target/codex-fretboard cargo test -p fretboard-dev scaffold::templates::tests::todo_template_uses_default_authoring_dialect -- --exact`
+- `CARGO_TARGET_DIR=target/codex-fretboard cargo test -p fretboard-dev scaffold::templates::tests::simple_todo_template_has_low_adapter_noise_and_no_query_selector -- --exact`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app accordion_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app tabs_ -- --nocapture`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_ -- --nocapture`

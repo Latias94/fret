@@ -198,11 +198,11 @@ Exit criteria:
 
 Exit criteria:
 
-- Core invariants are covered by unit tests and at least one `fretboard diag` script.
+- Core invariants are covered by unit tests and at least one `fretboard-dev diag` script.
 
 - [x] MENU-MVP4-test-050 Add nextest coverage for menu normalization (shared helper, if implemented).
   - Evidence: `crates/fret-runtime/src/menu.rs` (tests `normalize_*`)
-- [x] MENU-MVP4-test-051 Add a `fretboard diag` script for keyboard-only menubar navigation:
+- [x] MENU-MVP4-test-051 Add a `fretboard-dev diag` script for keyboard-only menubar navigation:
   - Focus menubar (F10)
   - Open menu (Enter/ArrowDown)
   - Rove items + open submenu + close with Escape

@@ -106,7 +106,7 @@ experience (nodes as element subtrees, marquee selection, input filtering), trac
 - [x] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (elements + model).
 - [x] AIEL-MVP0-foundation-002 Add crate-level docs and a small “usage” section for each exported surface.
 - [x] AIEL-MVP0-foundation-003 Add baseline `test_id` conventions (roots/rows/actions) for diag automation.
-- [x] AIEL-MVP0-foundation-004 Add at least one `fretboard diag` script that targets the transcript torture page (`ai_transcript_torture`).
+- [x] AIEL-MVP0-foundation-004 Add at least one `fretboard-dev diag` script that targets the transcript torture page (`ai_transcript_torture`).
 - [x] AIEL-MVP0-foundation-005 Define the `fret-ui-ai` data model v0 (message parts, tool calls, sources, citations).
 - [x] AIEL-MVP0-foundation-006 Define the `fret.ai.*` theme token v0 list (keep small; document defaults + usage rules).
 
@@ -559,9 +559,9 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 - [x] AIEL-MVP2-tooling-010 Align `Sources` to upstream Collapsible behavior (`Used N sources` trigger, hidden-by-default content).
 - [x] AIEL-MVP2-tooling-011 Align `InlineCitation` to upstream HoverCard behavior (delay 0, pager with prev/next + `current/count`).
-- [x] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard diag` (open hover card, next/prev).
+- [x] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard-dev diag` (open hover card, next/prev).
   - Script: `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
-- [x] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard diag` (open, verify rows).
+- [x] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard-dev diag` (open, verify rows).
   - Script: `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
 - [x] AIEL-MVP2-tooling-014 Fix/mitigate pointer targeting issues for these gates.
   - Implemented: diagnostics `scroll_into_view` container selection prefers an ancestor container with the largest bounds (avoids selecting tiny semantics wrappers).

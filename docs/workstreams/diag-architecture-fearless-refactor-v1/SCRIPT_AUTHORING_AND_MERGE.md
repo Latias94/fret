@@ -35,11 +35,11 @@ Mitigations:
 Formatting churn causes conflicts even when semantics did not change. Use the built-in tooling formatter:
 
 - Normalize + rewrite:
-  - `cargo run -p fretboard -- diag script normalize tools/diag-scripts/ui-gallery/perf/foo.json --write`
+  - `cargo run -p fretboard-dev -- diag script normalize tools/diag-scripts/ui-gallery/perf/foo.json --write`
 - Or normalize all changed scripts in your working tree (and refresh `index.json`):
   - `powershell -ExecutionPolicy Bypass -File tools/diag_scripts_refresh.ps1`
 - Normalize + check (CI-friendly for a local gate):
-  - `cargo run -p fretboard -- diag script normalize tools/diag-scripts/ui-gallery/perf/foo.json --check`
+  - `cargo run -p fretboard-dev -- diag script normalize tools/diag-scripts/ui-gallery/perf/foo.json --check`
 
 Notes:
 
@@ -50,15 +50,15 @@ Notes:
 
 Schema validation (parse-only):
 
-- `cargo run -p fretboard -- diag script validate tools/diag-scripts`
+- `cargo run -p fretboard-dev -- diag script validate tools/diag-scripts`
 
 Lint (capability inference + hygiene; encourages consistent `meta.required_capabilities`):
 
-- `cargo run -p fretboard -- diag script lint tools/diag-scripts`
+- `cargo run -p fretboard-dev -- diag script lint tools/diag-scripts`
 
 If you still have legacy scripts:
 
-- `cargo run -p fretboard -- diag script upgrade <script.json> --write`
+- `cargo run -p fretboard-dev -- diag script upgrade <script.json> --write`
 
 ## 4) Avoid hand-merging generated artifacts
 
@@ -69,11 +69,11 @@ Some files are derived and should not be manually merged:
 If it conflicts:
 
 - resolve by rerunning:
-  - `cargo run -p fretboard -- diag registry write`
+  - `cargo run -p fretboard-dev -- diag registry write`
 
 Then re-run:
 
-- `cargo run -p fretboard -- diag registry check`
+- `cargo run -p fretboard-dev -- diag registry check`
 
 ## 5) For large matrices, generate scripts (do not edit by hand)
 

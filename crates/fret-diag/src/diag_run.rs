@@ -264,7 +264,7 @@ fn resolve_run_script_source(workspace_root: &Path, raw: &str) -> Result<PathBuf
     if raw.starts_with('-') {
         return Err(format!(
             "missing script path or script id (first argument must be a script; got `{raw}`)\n\
-hint: try `fretboard diag run <script.json|script_id> ...`"
+hint: try `fretboard-dev diag run <script.json|script_id> ...`"
         ));
     }
 
@@ -283,7 +283,7 @@ hint: if you meant a promoted script id, pass the id without any path separators
         return Err(format!(
             "script file not found: {}\n\
 and promoted scripts registry is missing: {}\n\
-hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (run `cargo run -p fretboard -- diag registry write`)",
+hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (run `cargo run -p fretboard-dev -- diag registry write`)",
             candidate.display(),
             registry_path.display()
         ));
@@ -300,7 +300,7 @@ hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (r
         return Err(format!(
             "promoted script id resolved to a missing path: {query}\n\
 path: {}\n\
-hint: regenerate tools/diag-scripts/index.json (cargo run -p fretboard -- diag registry write)",
+hint: regenerate tools/diag-scripts/index.json (cargo run -p fretboard-dev -- diag registry write)",
             resolved.display()
         ));
     }
@@ -1083,7 +1083,7 @@ fn prepare_cmd_run_setup(
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(request.rest)?;
     let Some(src_raw) = rest.first().cloned() else {
         return Err(
-            "missing script path or script id (try: fretboard diag run <script.json|script_id>)"
+            "missing script path or script id (try: fretboard-dev diag run <script.json|script_id>)"
                 .to_string(),
         );
     };

@@ -265,8 +265,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
       raw JSON text holders rather than artifact-path contract drift, so they are deferred by
       default unless those modules are already being changed for another reason.
 - [x] Decide whether to introduce a first-class “campaign” orchestration layer.
-  - [x] Land a minimal aggregation/index consumer first via `fretboard diag summarize`.
-  - [x] Land a first `fretboard diag campaign` surface that composes existing `suite` + `summarize` flows.
+  - [x] Land a minimal aggregation/index consumer first via `fretboard-dev diag summarize`.
+  - [x] Land a first `fretboard-dev diag campaign` surface that composes existing `suite` + `summarize` flows.
   - [x] Decide when campaign definitions should move from built-in Rust registry to external manifests.
     - evidence: `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_DEFINITION_EXTERNALIZATION_DECISION_V1.md`
     - implementation: repo-owned JSON manifests under `tools/diag-campaigns/` are now treated as
@@ -357,7 +357,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
 - [x] Define the first campaign/suite execution slice over existing diag scripts:
   - [x] Drafted command-surface and output-layout proposal in `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_EXECUTION_ENTRY_V1.md`.
-  - [x] Chose the CLI entry shape: `fretboard diag campaign`.
+  - [x] Chose the CLI entry shape: `fretboard-dev diag campaign`.
   - [x] Landed a minimal built-in campaign registry with `list` / `show` / `run`.
   - [x] Landed the minimum stable output layout for campaign runs:
     - `campaigns/<campaign_id>/<run_id>/campaign.manifest.json`
@@ -415,7 +415,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] top reason codes,
   - [x] failing summaries ranking.
 - [x] Land one thin consumer over the aggregate index:
-  - [x] `fretboard diag dashboard` reads `regression.index.json`,
+  - [x] `fretboard-dev diag dashboard` reads `regression.index.json`,
   - [x] default output gives a first-open human summary,
   - [x] `--json` preserves machine-readable access to the full index.
 - [x] Add a short maintainer checklist for new diagnostics features:

@@ -72,7 +72,7 @@ pub(crate) fn load_script_json_for_execution(
     let schema_version = crate::compat::script::script_schema_version_from_value(&resolved.value);
     if schema_version == 1 && policy.tool_launched {
         let msg = format!(
-            "script schema_version=1 is disabled for tool-launched runs (--launch/--reuse-launch); upgrade to schema_version=2 (tip: fretboard diag script upgrade --write {})",
+            "script schema_version=1 is disabled for tool-launched runs (--launch/--reuse-launch); upgrade to schema_version=2 (tip: fretboard-dev diag script upgrade --write {})",
             src.display()
         );
         (policy.write_failure)(

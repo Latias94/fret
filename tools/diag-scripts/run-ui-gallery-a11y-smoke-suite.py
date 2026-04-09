@@ -8,7 +8,7 @@ This intentionally focuses on:
   - Focus restore on dismiss (Escape)
 
 It wraps multiple invocations of:
-  `cargo run -p fretboard -- diag run <script> --env FRET_DIAG_REDACT_TEXT=0 ...`
+  `cargo run -p fretboard-dev -- diag run <script> --env FRET_DIAG_REDACT_TEXT=0 ...`
 """
 
 from __future__ import annotations

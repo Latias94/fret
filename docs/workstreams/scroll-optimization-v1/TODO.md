@@ -389,7 +389,7 @@ Frame-boundary buffering rerun (repeat=11, warmup=10) (2026-03-03):
 
 ## Perf harness plumbing
 
-- [x] Allow `fretboard diag perf perf-ui-gallery-scroll-area` to resolve via the promoted scripts registry:
+- [x] Allow `fretboard-dev diag perf perf-ui-gallery-scroll-area` to resolve via the promoted scripts registry:
   - `crates/fret-diag/src/perf_seed_policy.rs`
 
 ## Scrollbar drag stability

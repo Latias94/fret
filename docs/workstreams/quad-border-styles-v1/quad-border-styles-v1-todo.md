@@ -70,7 +70,7 @@ Each TODO is labeled:
   - Prefer a small “dashed outline control” panel (rect + rounded rect).
   - Ensure stable `test_id` anchors exist for automation.
 - [x] QBST-MVP1-gates-120 Add a regression gate:
-  - If we can reliably script a stable capture: a `fretboard diag` script.
+  - If we can reliably script a stable capture: a `fretboard-dev diag` script.
   - Otherwise: a targeted renderer test that validates output pixels changed (dashed vs solid).
   - Evidence:
     - `crates/fret-render-wgpu/tests/dashed_border_conformance.rs`

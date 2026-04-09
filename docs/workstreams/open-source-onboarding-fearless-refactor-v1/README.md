@@ -21,7 +21,7 @@ Non-goals:
 - **UI gallery**: keep as a comprehensive catalog, but default to a lite surface and hide dev/material3
   behind features.
   - See: [apps/fret-ui-gallery/README.md](../../../apps/fret-ui-gallery/README.md)
-- **Diagnostics (`fretboard diag`)**: optional. Teach via cookbook with a single “hello” script instead
+- **Diagnostics (`fretboard-dev diag`)**: optional. Teach via cookbook with a single “hello” script instead
   of introducing “gate lists” up front.
   - See: [apps/fret-cookbook/README.md#diagnostics-optional](../../../apps/fret-cookbook/README.md#diagnostics-optional)
 

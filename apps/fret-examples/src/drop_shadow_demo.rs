@@ -3,7 +3,7 @@
 //! This is intended as a renderer semantics validation surface:
 //! - bounded multi-pass behavior (scissored computation),
 //! - deterministic degradation under budgets,
-//! - and a stable target for `fretboard diag` perf baselines.
+//! - and a stable target for `fretboard-dev diag` perf baselines.
 
 #![cfg(not(target_arch = "wasm32"))]
 

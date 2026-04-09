@@ -7,7 +7,7 @@
 //! - `fret-ui-shadcn` crate root must not glob re-export these items; keep autocomplete aligned with
 //!   the v4 surface.
 //! - Extras should not require expanding `crates/fret-ui` public contracts (ADR 0066).
-//! - Prefer deterministic regression gates: snapshots first, scripted `fretboard diag` for
+//! - Prefer deterministic regression gates: snapshots first, scripted `fretboard-dev diag` for
 //!   interaction-heavy blocks.
 
 pub mod announcement;

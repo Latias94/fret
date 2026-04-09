@@ -14,13 +14,13 @@ Terminology:
 
 - **Raw bundle artifact**: `bundle.json` (may be large; historically the only on-disk artifact name).
 - **Schema2 bundle artifact**: `bundle.schema2.json` (portable, compact, and preferred for AI/sidecar-first loops).
-  - Today, this is typically **tooling-derived** via `fretboard diag doctor --fix-schema2` (mode=`last`).
+  - Today, this is typically **tooling-derived** via `fretboard-dev diag doctor --fix-schema2` (mode=`last`).
 
 ## Current behavior (as of 2026-02-24)
 
 - The runtime writes a JSON bundle artifact named `bundle.json` (schema_version=2; semantics are table-capable).
 - Tooling can generate `bundle.schema2.json` from `bundle.json`:
-  - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+  - `fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
   - This conversion applies a semantics mode (currently `last`) and prunes the semantics table to referenced entries.
 - Most day-to-day triage can avoid materializing raw `bundle.json` by using sidecars and AI packets:
   - `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`, `ai.packet/`, `--ai-only` zips.
@@ -39,7 +39,7 @@ Terminology:
 This section is the **current recommended policy** for in-repo workflows (2026-02-28). It is intentionally conservative:
 it makes tool-launched runs small-by-default without forcing a breaking change on manual/ad-hoc dumps.
 
-### Tool-launched runs (`fretboard diag ... --launch`)
+### Tool-launched runs (`fretboard-dev diag ... --launch`)
 
 - Tooling MUST write a per-run `diag.config.json` under `--dir` and set `FRET_DIAG_CONFIG_PATH` to it.
 - If tooling cannot write `diag.config.json`, treat it as a launch failure (avoid silently falling back to runtime defaults).

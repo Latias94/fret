@@ -18,7 +18,7 @@ pub(crate) fn cmd_list(
     top_override: Option<usize>,
 ) -> Result<(), String> {
     let Some(kind) = rest.first().map(|s| s.as_str()) else {
-        return Err("missing list target (try: fretboard diag list scripts)".to_string());
+        return Err("missing list target (try: fretboard-dev diag list scripts)".to_string());
     };
 
     match kind {
@@ -41,7 +41,7 @@ fn cmd_list_scripts(
     if !registry_path.is_file() {
         return Err(format!(
             "promoted scripts registry is missing: {}\n\
-hint: generate it via `cargo run -p fretboard -- diag registry write`",
+hint: generate it via `cargo run -p fretboard-dev -- diag registry write`",
             registry_path.display()
         ));
     }

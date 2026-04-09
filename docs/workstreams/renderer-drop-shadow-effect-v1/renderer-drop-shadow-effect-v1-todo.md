@@ -8,7 +8,7 @@ Tracking format:
 - ID: `DSHADOW-{area}-{nnn}`
 
 When completing an item, leave 1–3 evidence anchors (paths + key functions/tests), and prefer
-`fretboard diag` scripts/bundles where applicable.
+`fretboard-dev diag` scripts/bundles where applicable.
 
 ## Design lock
 

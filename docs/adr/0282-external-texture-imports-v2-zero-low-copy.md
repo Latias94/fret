@@ -247,7 +247,7 @@ Prerequisites checklist:
 
 For each landed v2 strategy, add:
 
-1. A deterministic steady-state `fretboard diag perf` script (or reuse an existing one).
+1. A deterministic steady-state `fretboard-dev diag perf` script (or reuse an existing one).
 2. A committed baseline JSON under `docs/workstreams/perf-baselines/`.
 3. A rule for whether ingest fallbacks are expected on the target (and how they are asserted).
 

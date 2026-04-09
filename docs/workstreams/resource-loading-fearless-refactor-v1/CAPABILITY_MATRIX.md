@@ -122,7 +122,7 @@ escape hatches.
   - first-party diagnostics can now gate that state in two ways:
     - live/scripted assertions through typed `UiPredicateV1` predicates on
       `debug.resource_loading.asset_reload`,
-    - post-run bundle checks through `fretboard diag stats --check-asset-reload-*`,
+    - post-run bundle checks through `fretboard-dev diag stats --check-asset-reload-*`,
   - supported desktop hosts now prefer a native watcher backend and fall back to metadata polling
     if the watcher backend or current watch roots cannot be installed,
   - wasm/mobile still have no first-party automatic reload lane,

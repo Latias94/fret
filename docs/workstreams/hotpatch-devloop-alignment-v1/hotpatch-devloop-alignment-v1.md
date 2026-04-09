@@ -59,7 +59,7 @@ This workstream aligns Fret’s inner loop with a Dioxus-style posture:
 
 Users should default to:
 
-`fretboard dev native --bin <demo> --hotpatch`
+`fretboard-dev dev native --bin <demo> --hotpatch`
 
 Policy:
 
@@ -103,7 +103,7 @@ Deliverables:
 - A stable location for logs:
   - `.fret/hotpatch_runner.log`
   - `.fret/hotpatch_bootstrap.log`
-- Optional (later): a small `fretboard hotpatch status` command that summarizes last-known state by reading those logs
+- Optional (later): a small `fretboard-dev hotpatch status` command that summarizes last-known state by reading those logs
   or a simple `.fret/hotpatch.status.json` file written by the runner.
 
 ### 4.2) No-compile hot reload channels (RSX-like)
@@ -188,8 +188,8 @@ We want a small, stable validation loop:
 
 Potential gates:
 
-- `fretboard dev native --bin hotpatch_smoke_demo --hotpatch` (manual smoke)
-- future: a `fretboard diag` script that drives the smoke demo and checks a log or screenshot delta.
+- `fretboard-dev dev native --bin hotpatch_smoke_demo --hotpatch` (manual smoke)
+- future: a `fretboard-dev diag` script that drives the smoke demo and checks a log or screenshot delta.
 
 ## 6) References
 

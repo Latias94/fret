@@ -13,7 +13,7 @@ Usage:
     [--warmup-frames <n>]
 
 Notes:
-  - Runs the `extras-marquee-steady` perf suite via `fretboard diag perf`.
+  - Runs the `extras-marquee-steady` perf suite via `fretboard-dev diag perf`.
   - Baselines are machine-dependent; generate one via:
       tools/perf/diag_perf_baseline_select.sh \
         --suite extras-marquee-steady \

@@ -46,7 +46,7 @@ Fill in / update when the machine profile changes.
 
 ## How We Record Results
 
-We record suite runs via `fretboard diag perf` and store:
+We record suite runs via `fretboard-dev diag perf` and store:
 
 - the exact command line,
 - the resulting perf JSON summary (p50/p95/max),
@@ -57,7 +57,7 @@ Recommended workflow:
 1) Run the suite and capture output to a file:
 
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery ^
+cargo run -p fretboard-dev -- diag perf ui-gallery ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 ^
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
   --warmup-frames 5 --repeat 7 --sort time --json ^
@@ -115,7 +115,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -146,7 +146,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -169,7 +169,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -192,7 +192,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -224,7 +224,7 @@ Suite:
 Command:
 ```powershell
 # Preferred (single command; reuses a single launched process):
-cargo run -p fretboard -- diag perf ui-gallery-steady ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady ^
   --reuse-launch --repeat 7 --sort time --top 15 --json ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
   --launch -- cargo run -p fret-ui-gallery --release
@@ -238,7 +238,7 @@ set FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
 cargo run -p fret-ui-gallery --release
 
 # 2) Terminal B:
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-steady ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-steady ^
   --repeat 7 --sort time --top 15 --json
 ```
 
@@ -271,7 +271,7 @@ Suite:
 Command:
 ```powershell
 # Preferred:
-cargo run -p fretboard -- diag perf ui-gallery-steady ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady ^
   --reuse-launch --repeat 7 --sort time --top 15 --json ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
   --launch -- cargo run -p fret-ui-gallery --release
@@ -283,7 +283,7 @@ set FRET_UI_GALLERY_VIEW_CACHE=1
 set FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
 cargo run -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-steady2 ^
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-steady2 ^
   --repeat 7 --sort time --top 15 --json
 ```
 
@@ -319,7 +319,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -342,7 +342,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -373,7 +373,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-inv-stamp --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-inv-stamp --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -404,7 +404,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-inv-stamp.v2 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-inv-stamp.v2 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -444,7 +444,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v1 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json --perf-baseline-headroom-pct 20 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v1 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json --perf-baseline-headroom-pct 20 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -494,7 +494,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v2 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v2.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v2 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v2.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -525,7 +525,7 @@ Suite:
 
 Command:
 ```powershell
-(in detached worktree @448c34ad) cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.448c34ad.rerun --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+(in detached worktree @448c34ad) cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.448c34ad.rerun --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -562,7 +562,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-windowframe-children-skip.r7 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-windowframe-children-skip.r7 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -600,7 +600,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-mount-avoid-children-clone.r7 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-mount-avoid-children-clone.r7 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -635,7 +635,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v3 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v3.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v3 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v3.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -667,7 +667,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v4 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v4.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v4 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v4.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -699,7 +699,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-layout-engine-solved-stamp.autodump-off --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-layout-engine-solved-stamp.autodump-off --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -738,7 +738,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v5.check --reuse-launch --repeat 3 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v5.check --reuse-launch --repeat 3 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -770,7 +770,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-layout-measure-scratch --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-layout-measure-scratch --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -802,7 +802,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag-perf/resize-steady.after-layout-measure-scratch --reuse-launch --repeat 11 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag-perf/resize-steady.after-layout-measure-scratch --reuse-launch --repeat 11 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -825,7 +825,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-bounds-tree.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-bounds-tree.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -863,10 +863,10 @@ Suite:
 Commands (A/B):
 ```powershell
 # Bounds tree ON:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json --dir target/fret-diag-perf/drag-hit-test.metrics.bounds-tree-on.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json --dir target/fret-diag-perf/drag-hit-test.metrics.bounds-tree-on.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 
 # Bounds tree OFF:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json --dir target/fret-diag-perf/drag-hit-test.metrics.bounds-tree-off.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json --dir target/fret-diag-perf/drag-hit-test.metrics.bounds-tree-off.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -894,12 +894,12 @@ Scripts:
 Commands (A/B):
 ```powershell
 # Bounds tree ON:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json --dir target/fret-diag-perf/move-hit-test.metrics.bounds-tree-on.r7 --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --dir target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-on.r7d --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json --dir target/fret-diag-perf/move-hit-test.metrics.bounds-tree-on.r7 --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --dir target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-on.r7d --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 
 # Bounds tree OFF:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json --dir target/fret-diag-perf/move-hit-test.metrics.bounds-tree-off.r7 --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --dir target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-off.r7d --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json --dir target/fret-diag-perf/move-hit-test.metrics.bounds-tree-off.r7 --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --dir target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-off.r7d --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -943,7 +943,7 @@ Change:
 
 Adds:
 - `UiDebugFrameStats` counters for bounds-tree query outcomes (queries / disabled / miss / hit / candidate_rejected).
-- `fretboard diag perf` JSON fields for the top frame:
+- `fretboard-dev diag perf` JSON fields for the top frame:
   - `top_hit_test_bounds_tree_queries`
   - `top_hit_test_bounds_tree_disabled`
   - `top_hit_test_bounds_tree_misses`
@@ -965,10 +965,10 @@ Context:
 Commands (A/B; noise=20k; harness-only):
 ```powershell
 # Bounds tree ON:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-on.noise20k.after-overflow-visible-support.r7 --repeat 7 --timeout-ms 600000 --sort hit_test --top 5 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-on.noise20k.after-overflow-visible-support.r7 --repeat 7 --timeout-ms 600000 --sort hit_test --top 5 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
 
 # Bounds tree OFF:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-off.noise20k.after-overflow-visible-support.r7 --repeat 7 --timeout-ms 600000 --sort hit_test --top 5 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-off.noise20k.after-overflow-visible-support.r7 --repeat 7 --timeout-ms 600000 --sort hit_test --top 5 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us):
@@ -1000,16 +1000,16 @@ Run shape:
 Commands (A/B; harness-only; mini script; bounds tree forced on by `FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0`):
 ```powershell
 # noise=50k, bounds tree ON:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise50k.r5 --repeat 5 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=50000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise50k.r5 --repeat 5 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=50000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
 
 # noise=50k, bounds tree OFF:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise50k.r5 --repeat 5 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=50000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise50k.r5 --repeat 5 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=50000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
 
 # noise=100k, bounds tree ON:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise100k.r3 --repeat 3 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=100000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise100k.r3 --repeat 3 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=100000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
 
 # noise=100k, bounds tree OFF:
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise100k.r3 --repeat 3 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=100000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise100k.r3 --repeat 3 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=100000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort hit_test`):
@@ -1053,7 +1053,7 @@ Outcome:
 ## 2026-02-03 16:20:00 (commit `21ceabc3`)
 
 Change:
-- `fretboard diag stats --json` now includes bounds-tree hit-test counters in `top[]` rows:
+- `fretboard-dev diag stats --json` now includes bounds-tree hit-test counters in `top[]` rows:
   - `hit_test_bounds_tree_queries`
   - `hit_test_bounds_tree_disabled`
   - `hit_test_bounds_tree_misses`
@@ -1074,7 +1074,7 @@ Script:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json --dir target/fret-diag-perf-hover/hover-layout-torture.steady.baseline.r7 --repeat 7 --timeout-ms 240000 --sort dispatch --top 10 --json --reuse-launch --check-hover-layout --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json --dir target/fret-diag-perf-hover/hover-layout-torture.steady.baseline.r7 --repeat 7 --timeout-ms 240000 --sort dispatch --top 10 --json --reuse-launch --check-hover-layout --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort dispatch`):
@@ -1096,7 +1096,7 @@ Notes:
 ## 2026-02-03 16:44:00 (commit `c579fce4`)
 
 Change:
-- `fretboard diag perf` now falls back to `latest.txt` (or scanning export dirs) when a script run completes without
+- `fretboard-dev diag perf` now falls back to `latest.txt` (or scanning export dirs) when a script run completes without
   a `last_bundle_dir` in `script.result.json`.
 
 Why:
@@ -1115,7 +1115,7 @@ Script:
 
 Command (cached; steady; repeat=7):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json --dir target/fret-diag-perf-editor/code-view-scroll-refresh.baseline.cached.steady.r7 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json --dir target/fret-diag-perf-editor/code-view-scroll-refresh.baseline.cached.steady.r7 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1136,7 +1136,7 @@ Script:
 
 Command (release; steady; repeat=5):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.pre-81159325.bd709f88.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.pre-81159325.bd709f88.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1162,7 +1162,7 @@ Script:
 
 Command (release; steady; repeat=5):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.rich-row-cache.on.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.rich-row-cache.on.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1185,7 +1185,7 @@ Notes:
 ## 2026-02-03 20:40:00 (commit `43f9c73e`)
 
 Change:
-- Export view-cache reuse “miss reasons” as first-class per-frame counters and include them in `fretboard diag perf`
+- Export view-cache reuse “miss reasons” as first-class per-frame counters and include them in `fretboard-dev diag perf`
   JSON output.
 
 Why:
@@ -1216,7 +1216,7 @@ Script:
 
 Command (release; steady; repeat=5):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.framescratch.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.framescratch.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1248,7 +1248,7 @@ Script:
 
 Command (release; steady; repeat=5):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.r7 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.r7 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1285,7 +1285,7 @@ Script:
 
 Command (release; steady; repeat=9; scratch enabled):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-default.r8 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-default.r8 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1298,7 +1298,7 @@ Worst bundle:
 
 Command (release; steady; repeat=9; scratch disabled):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-disabled.r8 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-disabled.r8 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1323,7 +1323,7 @@ Change:
 
 Command (release; steady; repeat=7; scratch enabled):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-default.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-default.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1343,7 +1343,7 @@ Worst bundle:
 
 Command (release; steady; repeat=7; scratch disabled):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-disabled.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-disabled.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1372,7 +1372,7 @@ Goal:
 
 Command (dev; steady script; renderer perf enabled):
 ```powershell
-FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json --dir target/fret-diag-churn-verify2 --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json --dir target/fret-diag-churn-verify2 --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
 ```
 
 Evidence bundle:
@@ -1386,7 +1386,7 @@ Observed churn (sum/max over snapshots in that bundle):
 
 Command (dev; screenshots enabled because the script requests them):
 ```powershell
-FRET_DIAG_RENDERER_PERF=1 FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-modals-visible.json --dir target/fret-diag-churn-verify5b --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+FRET_DIAG_RENDERER_PERF=1 FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-overlay-modals-visible.json --dir target/fret-diag-churn-verify5b --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
 ```
 
 Evidence bundle:
@@ -1404,7 +1404,7 @@ Note:
 
 Command (release; steady; `--reuse-launch`; repeat=3; warmup=5):
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf-churn2 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf-churn2 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Summary (repeat=3; `--sort time`; p95 total):
@@ -1426,7 +1426,7 @@ Commits:
 
 Command (dev; harness-only; renderer perf enabled):
 ```powershell
-FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json --dir target/fret-diag-effects-blur --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json --dir target/fret-diag-effects-blur --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
 ```
 
 Evidence bundle:
@@ -1446,7 +1446,7 @@ Purpose:
 
 Command (dev; harness-only; 1080p; reduced pool budget; renderer perf enabled):
 ```powershell
-FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --dir target/fret-diag-effects-blur-thrash-b20 --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --dir target/fret-diag-effects-blur-thrash-b20 --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
 ```
 
 Evidence bundle:
@@ -1470,7 +1470,7 @@ Commits:
 Verification (macOS; wgpu Metal; short script):
 
 ```bash
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-context-menu-right-click.json \
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-context-menu-right-click.json \
   --dir target/fret-diag-verify-renderer-perf.v2 \
   --timeout-ms 240000 \
   --launch -- cargo run -p fret-ui-gallery --release
@@ -1483,7 +1483,7 @@ Evidence bundle:
 Sanity check (sort by renderer text prep time):
 
 ```bash
-cargo run -p fretboard -- diag stats \
+cargo run -p fretboard-dev -- diag stats \
   target/fret-diag-verify-renderer-perf.v2/1770168912611-ui-gallery-context-action/bundle.json \
   --sort prepare_text \
   --top 5
@@ -1492,7 +1492,7 @@ cargo run -p fretboard -- diag stats \
 `diag perf --json` output now includes `top_renderer_*` fields:
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-context-menu-right-click.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-context-menu-right-click.json \
   --dir target/fret-diag-verify-renderer-perf-perf.v4 \
   --repeat 1 \
   --timeout-ms 240000 \
@@ -1516,7 +1516,7 @@ Commit: `54e4c587` (includes `0e4928fe` + `cf8975ca`).
 Command (release; relaunch-per-repeat; repeat=7):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --dir target/fret-diag-perf-editor/renderer-metrics.r1 \
   --repeat 7 \
   --timeout-ms 240000 \
@@ -1556,7 +1556,7 @@ Worst bundle:
 Command (release; relaunch-per-repeat; repeat=7):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-chrome-torture-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-chrome-torture-steady.json \
   --dir target/fret-diag-perf-chrome/renderer-metrics.r1 \
   --repeat 7 \
   --timeout-ms 240000 \
@@ -1596,7 +1596,7 @@ Worst bundle:
 
 Command (release; steady; repeat=9; relaunch-per-repeat):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.element-vec-pool.r9 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.element-vec-pool.r9 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1623,7 +1623,7 @@ Notes:
 
 Command (release; steady; repeat=7; relaunch-per-repeat):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-chrome-torture-steady.json --dir target/fret-diag-perf-chrome/chrome-torture.steady.element-vec-pool.r7 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-chrome-torture-steady.json --dir target/fret-diag-perf-chrome/chrome-torture.steady.element-vec-pool.r7 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1657,7 +1657,7 @@ Enable:
 
 Usage (scripted steady workload; can be paired with `diag repro --with tracy` or `--with renderdoc`):
 ```bash
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --env FRET_UI_GALLERY_RENDERER_PERF=1 \
   --env FRET_RENDERER_PERF_PIPELINES=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -1679,7 +1679,7 @@ Run (code editor autoscroll steady; renderer perf enabled):
 
 Command:
 ```bash
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --dir target/fret-diag-repro-renderer-perf/editor-autoscroll.r2 \
   --timeout-ms 240000 --poll-ms 50 \
   --env FRET_UI_GALLERY_RENDERER_PERF=1 \
@@ -1726,7 +1726,7 @@ Commits:
 
 Command (release; steady; repeat=7; relaunch-per-repeat):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.frame-arena.r5.match-log.no-reuse-launch --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.frame-arena.r5.match-log.no-reuse-launch --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1760,7 +1760,7 @@ Commit:
 
 Command (release; steady; repeat=7; relaunch-per-repeat):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.callsite-smallvec.r6 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.callsite-smallvec.r6 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1783,7 +1783,7 @@ Commits:
 
 Command (release; steady; repeat=7; relaunch-per-repeat):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.children-vec-pool.pop.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.children-vec-pool.pop.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1806,7 +1806,7 @@ Notes:
 
 Command (release; steady; repeat=7; scratch enabled):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-default.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-default.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1826,7 +1826,7 @@ Worst bundle:
 
 Command (release; steady; repeat=7; scratch disabled):
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-disabled.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-disabled.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Results (us; `--sort time`):
@@ -1850,7 +1850,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 3 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 3 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -1878,7 +1878,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json --repeat 3 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_upload_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json --repeat 3 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_upload_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -1906,7 +1906,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json --repeat 5 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_upload_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json --repeat 5 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_upload_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -1934,7 +1934,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json --repeat 5 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_scroll_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json --repeat 5 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_scroll_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (us):
@@ -1962,7 +1962,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 5 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 5 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -1998,7 +1998,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 5 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 5 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2034,7 +2034,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --repeat 5 --warmup-frames 5 --sort hit_test --timeout-ms 180000 --reuse-launch --json --env FRET_DIAG_RENDERER_PERF=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --repeat 5 --warmup-frames 5 --sort hit_test --timeout-ms 180000 --reuse-launch --json --env FRET_DIAG_RENDERER_PERF=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2070,7 +2070,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json --repeat 5 --warmup-frames 5 --sort hit_test --timeout-ms 180000 --reuse-launch --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=5000 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json --repeat 5 --warmup-frames 5 --sort hit_test --timeout-ms 180000 --reuse-launch --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=5000 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2106,7 +2106,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.1770195466 --repeat 7 --sort time --top 15 --timeout-ms 180000 --reuse-launch --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.1770195466 --repeat 7 --sort time --top 15 --timeout-ms 180000 --reuse-launch --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2169,7 +2169,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.norenderperf.1770195597 --repeat 7 --sort time --top 15 --timeout-ms 180000 --reuse-launch --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.norenderperf.1770195597 --repeat 7 --sort time --top 15 --timeout-ms 180000 --reuse-launch --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2256,7 +2256,7 @@ Probe:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json `
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json `
   --dir target/fret-diag-perf/stripes-sweep-semanticgate.470708b2 `
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json `
   --timeout-ms 300000 --poll-ms 200 `
@@ -2307,7 +2307,7 @@ Probe:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json `
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json `
   --dir target/fret-diag-perf/stripes-sweep-prepaintreuse.6cca2cf1 `
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json `
   --timeout-ms 300000 --poll-ms 200 `
@@ -2342,7 +2342,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-hit-test-stripes-move-sweep-1a9c1238-r1 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-hit-test-stripes-move-sweep-1a9c1238-r1 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2392,7 +2392,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-global-churn-gate --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-global-churn-gate --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2441,7 +2441,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-pointer-move-gate-6da92d3d-r1 --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-pointer-move-gate-6da92d3d-r1 --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Stdout:
@@ -2485,7 +2485,7 @@ Suite:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-dispatch-top --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-dispatch-top --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (pointer-move frames; derived; per-run **max** over frames where `dispatch_events > 0`; us):
@@ -2513,7 +2513,7 @@ Suite:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-model-churn-release-after --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-model-churn-release-after --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (pointer-move frames; derived; per-run **max** over frames where `dispatch_events > 0`; us):
@@ -2537,7 +2537,7 @@ Suite:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-dispatch-invalidation-dedup-bcb329e6 --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-dispatch-invalidation-dedup-bcb329e6 --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Results (pointer-move frames; derived; per-run **max** over frames where `dispatch_events > 0`; us):
@@ -2566,7 +2566,7 @@ Suite:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate-scratch-r3 \
   --timeout-ms 300000 --poll-ms 100 \
   --reuse-launch --warmup-frames 5 --repeat 3 --sort time --top 15 --json \
@@ -2603,7 +2603,7 @@ Suite:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc \
   --timeout-ms 300000 --poll-ms 100 \
   --reuse-launch --warmup-frames 5 --repeat 3 --sort time --top 15 --json \
@@ -2635,7 +2635,7 @@ Suite:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc-r7 \
   --timeout-ms 300000 --poll-ms 100 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -2678,7 +2678,7 @@ Why:
 
 Notes:
 
-- `fretboard diag triage --json` now includes:
+- `fretboard-dev diag triage --json` now includes:
   - `stats.pointer_move.max_dispatch_at.{window,tick_id,frame_id}`
   - `stats.pointer_move.max_hit_test_at.{window,tick_id,frame_id}`
 - On the run 0 bundle above, the outlier snapshot was:
@@ -2711,7 +2711,7 @@ Notes:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-run/2026-02-05-pointer-move-bounds-tree-query-stats \
   --timeout-ms 300000 --poll-ms 100 \
   --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
@@ -2734,7 +2734,7 @@ Why:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-bounds-tree-work \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
   --timeout-ms 300000 --poll-ms 200 \
@@ -2786,7 +2786,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-path-cache-stats-55dd923d \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
   --timeout-ms 300000 --poll-ms 200 \
@@ -2835,7 +2835,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-hit-test-breakdown-763bf8e7 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
   --timeout-ms 300000 --poll-ms 200 \
@@ -2875,7 +2875,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-cached-path-8bc15eda \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
   --timeout-ms 300000 --poll-ms 200 \
@@ -2914,7 +2914,7 @@ Why:
 
 Command:
 ```sh
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r3-bounds-tree-disabled-8bc15eda \
   --reuse-launch --warmup-frames 5 --repeat 3 --sort time --top 15 --json \
   --timeout-ms 300000 --poll-ms 200 \
@@ -2955,7 +2955,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-dispatch-breakdown-7fa76fd5 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3012,7 +3012,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-synth-observer-timer-95806541 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3045,7 +3045,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-pointer-move-observers-timer-72e24f51-v2 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3078,7 +3078,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-post-dispatch-snapshot-timers-51ad7cc9 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3114,7 +3114,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3140,7 +3140,7 @@ Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
 
 Key attribution example (worst pointer-move dispatch frame in the worst run):
 ```sh
-cargo run -p fretboard -- diag stats \
+cargo run -p fretboard-dev -- diag stats \
   target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71/1770264315951-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json \
   --sort dispatch --top 50 --json \
   | jq '. as $r | ($r.pointer_move.max_dispatch_at + {max_dispatch_time_us: $r.pointer_move.max_dispatch_time_us}) as $m | {pointer_move_max: $m, row: ($r.top[] | select(.frame_id==$m.frame_id and .tick_id==$m.tick_id and .window==$m.window) | {dispatch_time_us, dispatch_events, dispatch_pointer_events, dispatch_timer_events, dispatch_pointer_event_time_us, dispatch_timer_event_time_us})}'
@@ -3168,7 +3168,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-timer-broadcast-5690e068 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3206,7 +3206,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-target-only-7c40fcd3 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3248,7 +3248,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-route-breakdown-dirty-21c14e33 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3296,7 +3296,7 @@ Command:
 ```sh
 cargo build -p fret-ui-gallery --release
 
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-harness-skip-config-watcher-dirty-21c14e33 \
   --timeout-ms 300000 --poll-ms 200 \
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
@@ -3340,7 +3340,7 @@ Commands (macOS Apple M4, repeat=7, `sort=dispatch`):
 cargo build -p fret-ui-gallery --release
 
 # Baseline: harness-only hit-test torture, config watcher suppressed by default.
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-config-watcher-off \
   --timeout-ms 180000 --repeat 7 --sort dispatch --top 15 --json \
   --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
@@ -3350,7 +3350,7 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-tortu
   --launch -- target/release/fret-ui-gallery
 
 # Forced: enable the config watcher poller even in harness-only mode.
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
   --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-config-watcher-on \
   --timeout-ms 180000 --repeat 7 --sort dispatch --top 15 --json \
   --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
@@ -3423,7 +3423,7 @@ Gate check (v6 baseline; repeat=3):
 ## 2026-02-05 18:00:00 (commit `f2bee87a`)
 
 Change:
-- Export paint-pass breakdown metrics into diagnostics bundles and `fretboard diag stats`:
+- Export paint-pass breakdown metrics into diagnostics bundles and `fretboard-dev diag stats`:
   - `paint_cache_replay_time_us`
   - `paint_cache_bounds_translate_time_us` / `paint_cache_bounds_translated_nodes`
   - `paint_record_visual_bounds_time_us` / `paint_record_visual_bounds_calls`
@@ -3438,7 +3438,7 @@ Probe:
 - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a.1770300800 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -3452,7 +3452,7 @@ Results (us; `--sort time`):
 - `top_total_time_us`: p50 ~3504, p95 ~3740, max 3740
 - Worst bundle:
   - `target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a.1770300800/1770285619385-ui-gallery-menubar-file-escape-steady/bundle.json`
-- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
   - `paint_time_us=2669`
   - `paint_cache_replayed_ops=453`
   - `paint_cache_replay_time_us=6`
@@ -3468,7 +3468,7 @@ Takeaway:
 ## 2026-02-05 18:28:00 (commit `b20a1280`)
 
 Change:
-- Add initial paint micro-breakdown timers (paint-all plumbing) and export them into bundles + `fretboard diag stats`:
+- Add initial paint micro-breakdown timers (paint-all plumbing) and export them into bundles + `fretboard-dev diag stats`:
   - `paint_input_context_time_us`
   - `paint_scroll_handle_invalidation_time_us`
   - `paint_collect_roots_time_us`
@@ -3485,7 +3485,7 @@ Probe:
 - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -3499,7 +3499,7 @@ Results (us; `--sort time`):
 - `top_total_time_us`: p50 ~3386, p95 ~3776, max 3776
 - Worst bundle:
   - `target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305/1770287306932-ui-gallery-menubar-file-escape-steady/bundle.json`
-- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
   - `paint_time_us=2693`
   - `paint_cache_replayed_ops=453`
   - `paint_cache_replay_time_us=6`
@@ -3515,7 +3515,7 @@ Takeaway:
 ## 2026-02-05 19:11:00 (commit `c512be81`)
 
 Change:
-- Add paint node breakdown timers and export them into bundles + `fretboard diag stats`:
+- Add paint node breakdown timers and export them into bundles + `fretboard-dev diag stats`:
   - `paint_cache_key_time_us`
   - `paint_cache_hit_check_time_us`
   - `paint_widget_time_us` (exclusive; pauses while painting children)
@@ -3531,7 +3531,7 @@ Probe:
 - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -3545,7 +3545,7 @@ Results (us; `--sort time`):
 - `top_total_time_us`: p50 ~3568, p95 ~3734, max 3734
 - Worst bundle:
   - `target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882/1770289882739-ui-gallery-menubar-file-escape-steady/bundle.json`
-- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
   - `paint_time_us=2655`
   - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2555/11`
   - `paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot/collapse)=0/0/0/0/43`
@@ -3573,7 +3573,7 @@ Probe (A/B):
   - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-relax-paint-cache.1770290717 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -3603,7 +3603,7 @@ Takeaway:
 ## 2026-02-05 20:03:00 (commit `e1132c95`)
 
 Change:
-- Export paint widget hotspots into diag bundles and surface them in `fretboard diag stats`:
+- Export paint widget hotspots into diag bundles and surface them in `fretboard-dev diag stats`:
   - `debug.paint_widget_hotspots[]` (top-N by exclusive widget paint time)
   - Includes `widget_type`, `exclusive_time_us`, `inclusive_time_us`, and `scene_ops_delta` (exclusive + inclusive)
 
@@ -3617,7 +3617,7 @@ Probe:
 - Command (repeat=7; `sort=time`):
 
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --dir target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980 \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -3627,7 +3627,7 @@ target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-
   --launch -- target/release/fret-ui-gallery
 ```
 
-Results (worst frame; `fretboard diag stats --sort time --top 1`):
+Results (worst frame; `fretboard-dev diag stats --sort time --top 1`):
 - Worst bundle:
   - `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/1770292982106-ui-gallery-menubar-file-escape-steady/bundle.json`
 - Worst-frame paint breakdown:
@@ -3720,7 +3720,7 @@ Probe:
 
 Command:
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
@@ -3732,7 +3732,7 @@ target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-
 Results (us; repeat=7):
 - `total_time_us`: p50=3303 p95=3552 max=3552
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 - `paint_time_us=2551`
 - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2452/12`
 - `paint_host_widget.us(models/globals/instance)=16/10/16 items=14/1 calls=153`
@@ -3758,7 +3758,7 @@ Probe:
 - Worst bundle:
   - `target/fret-diag/1770298314770-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2727/13`
 - `paint_widget_hotspots` (top 3):
   - `us=1205 kind=Text type=ElementHostWidget ops(excl/incl)=1/1`
@@ -3781,7 +3781,7 @@ Probe:
 - Worst bundle:
   - `target/fret-diag/1770298930506-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2617/13`
 - `paint_text_prepare.us(time/calls)=2543/3`
 - `paint_widget_hotspots` (top 3) remain `kind=Text` and sum to ~2.44ms.
@@ -3805,7 +3805,7 @@ Probe:
 - Worst bundle:
   - `target/fret-diag/1770300835921-ui-gallery-menubar-file-escape-steady/bundle.json`
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2517/14`
 - `paint_text_prepare.us(time/calls)=2447/3`
 - `paint_text_prepare.reasons(blob/scale/text/rich/style/wrap/overflow/width/font)=3/3/0/0/0/0/0/3/0`
@@ -3831,7 +3831,7 @@ Probe:
 
 Command:
 ```bash
-target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/codex-perf/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --warmup-frames 10 --repeat 5 --reuse-launch --sort time --json \
@@ -3842,7 +3842,7 @@ target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menuba
 Results (us; repeat=5):
 - `total_time_us`: min=3500 p50=3711 p95=3886 max=3886
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 - `time.us(total/layout/prepaint/paint)=3886/1220/29/2637`
 - `paint_text_prepare.us(time/calls)=2439/3`
 - `paint_text_prepare.reasons(blob/scale/text/rich/style/wrap/overflow/width/font)=3/3/0/0/0/0/0/3/0`
@@ -3854,7 +3854,7 @@ Takeaway:
 ## 2026-02-05 15:15:57 (commit `77979100`)
 
 Change:
-- Export `paint_text_prepare_hotspots` (top-N per frame) into diagnostics bundles and surface it in `fretboard diag stats`.
+- Export `paint_text_prepare_hotspots` (top-N per frame) into diagnostics bundles and surface it in `fretboard-dev diag stats`.
 
 Probe:
 - Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
@@ -3863,7 +3863,7 @@ Probe:
 
 Command:
 ```bash
-target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+target/codex-perf/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --warmup-frames 10 --repeat 1 --reuse-launch --sort time --json \
@@ -3871,7 +3871,7 @@ target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menuba
   --launch -- target/codex-perf/release/fret-ui-gallery
 ```
 
-Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+Worst-frame paint breakdown (from `fretboard-dev diag stats --sort time --top 1`):
 - `paint_text_prepare.us(time/calls)=2365/3`
 - `paint_text_prepare_hotspots` (top 3):
   - `us=1085 node=12884902507 kind=Text len=652 max_width=494.0 wrap=word overflow=clip reasons=blob|scale|width element=3279273990770790565`
@@ -3895,7 +3895,7 @@ Suite:
 
 Command:
 ```bash
-target/codex-perf/debug/fretboard diag perf ui-gallery-steady \
+target/codex-perf/debug/fretboard-dev diag perf ui-gallery-steady \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --warmup-frames 10 --repeat 3 --reuse-launch --sort time --json \
@@ -3925,7 +3925,7 @@ Probe:
 
 Command:
 ```bash
-target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json \
+target/codex-perf/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --warmup-frames 5 --repeat 1 --reuse-launch --sort time --json \
@@ -3950,7 +3950,7 @@ Probe:
 
 Command:
 ```bash
-target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json \
+target/codex-perf/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --warmup-frames 5 --repeat 1 --reuse-launch --sort time --json \
@@ -3986,7 +3986,7 @@ Probe:
 - Bundle:
   - `target/fret-diag-codex-codeeditor/1770306238481-script-step-0011-press_key/bundle.json`
 
-Worst frame (from `fretboard diag stats --sort time --top 1`):
+Worst frame (from `fretboard-dev diag stats --sort time --top 1`):
 - `time.us(total/layout/prepaint/paint)=6340/902/26/5412`
 - `paint_widget_hotspots` dominated by `kind=Canvas`:
   - `us=5126 ops=581/581 node=4294968005 test_id=ui-gallery-code-editor-torture-root`
@@ -4145,7 +4145,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v9 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v9 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Perf baseline snapshot:
@@ -4170,7 +4170,7 @@ Probe:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-codex-after-origin-main-87de73754/editor-autoscroll.perf.r1 --repeat 1 --warmup-frames 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-codex-after-origin-main-87de73754/editor-autoscroll.perf.r1 --repeat 1 --warmup-frames 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Artifacts:
@@ -4193,7 +4193,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v10 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v10 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Perf baseline snapshot:
@@ -4215,7 +4215,7 @@ Probe:
 
 Command (repro; renderer perf snapshots recorded by the runner):
 ```bash
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --dir target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2 \
   --timeout-ms 240000 --poll-ms 50 \
   --env FRET_DIAG_RENDERER_PERF=1 \
@@ -4256,7 +4256,7 @@ Suite:
 
 Command:
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v11 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+cargo run -p fretboard-dev -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v11 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
 ```
 
 Perf baseline snapshot:
@@ -4285,7 +4285,7 @@ Context:
 
 Baseline command:
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v12b \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --sort time --top 5 \
@@ -4305,7 +4305,7 @@ Perf baseline snapshot:
 
 Validation command:
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v12-validate \
   --timeout-ms 300000 \
   --reuse-launch --repeat 3 --sort time --top 3 \
@@ -4342,7 +4342,7 @@ Probe (single script):
 
 Command:
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
   --dir target/fret-diag-codex-perf-resize-coalesce-v2 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --sort time --top 5 --json \
@@ -4393,7 +4393,7 @@ Probe (single script):
 
 Command:
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
   --dir target/fret-diag-codex-perf-resize-scroll-defer-v3 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
@@ -4427,7 +4427,7 @@ Change:
 - Add per-frame scroll telemetry in UI diagnostics bundles (`debug.scroll_nodes[]`):
   - `node`, `element`, `axis`, `offset_{x,y}`, `viewport_{w,h}`, `content_{w,h}`.
 - Add a post-run diagnostics gate to ensure scroll offsets remain stable across a script run:
-  - `fretboard diag run ... --check-scroll-offset-stable <test_id>`
+  - `fretboard-dev diag run ... --check-scroll-offset-stable <test_id>`
 - Add a dedicated correctness repro script that scrolls the view-cache page, then performs the
   resize stress sequence:
   - `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
@@ -4444,7 +4444,7 @@ Probe (single script; gate pass):
 
 Command:
 ```bash
-target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json \
+target/debug/fretboard-dev diag run tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json \
   --dir target/fret-diag-codex-scroll-offset-stable-v1b \
   --timeout-ms 300000 --poll-ms 50 \
   --check-scroll-offset-stable ui-gallery-content-viewport \
@@ -4467,7 +4467,7 @@ Change:
   - `node`, `element`, `axis`, `scroll_target`, `offset_{x,y}`, `viewport_{w,h}`, `content_{w,h}`,
     `track`, `thumb`, `hovered`, `dragging`.
 - Add a post-run diagnostics gate to ensure scrollbar thumb geometry remains valid:
-  - `fretboard diag run ... --check-scrollbar-thumb-valid all`
+  - `fretboard-dev diag run ... --check-scrollbar-thumb-valid all`
 - Add a dedicated correctness repro script covering the resize stress sequence:
   - `tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json`
 
@@ -4483,7 +4483,7 @@ Probe (single script; gate pass):
 
 Command:
 ```bash
-target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json \
+target/debug/fretboard-dev diag run tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json \
   --dir target/fret-diag-codex-scrollbar-thumb-valid-v1b \
   --timeout-ms 300000 --poll-ms 50 \
   --check-scrollbar-thumb-valid all \
@@ -4511,7 +4511,7 @@ Probe (single script):
 
 Command (default):
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
   --dir target/fret-diag-codex-perf-resize-recheck-default-v1 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
@@ -4524,7 +4524,7 @@ target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-str
 
 Command (defer probe):
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
   --dir target/fret-diag-codex-perf-resize-recheck-defer-v1 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
@@ -4594,7 +4594,7 @@ Why:
 
 Command (A/B template):
 ```bash
-target/debug/fretboard diag perf <script.json> \
+target/debug/fretboard-dev diag perf <script.json> \
   --dir <out-dir> \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
@@ -4652,7 +4652,7 @@ Change:
 - Wire counters through diagnostics and perf summaries:
   - `fret-ui` frame stats
   - `fret-bootstrap` bundle export
-  - `fretboard diag` bundle parser + `--json` top metrics
+  - `fretboard-dev diag` bundle parser + `--json` top metrics
 - Add targeted unit assertions for both counter paths:
   - replay-allowed case
   - key-mismatch rejection case
@@ -4666,7 +4666,7 @@ Probe A: hit-test move sweep (counter visibility check)
 
 Command (gate off):
 ```bash
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
   --dir target/fret-diag-codex-paint-hit-test-counter-off-v3 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
@@ -4679,7 +4679,7 @@ target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-s
 
 Command (gate on):
 ```bash
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
   --dir target/fret-diag-codex-paint-hit-test-counter-on-v3 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
@@ -4759,7 +4759,7 @@ Probe A (single-run JSON shape):
 - Script: `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json`
 - Command:
 ```bash
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json \
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json \
   --dir target/fret-diag-codex-hit-test-counter-scan/ui-gallery-hit-test-drag-sweep-steady-v3 \
   --timeout-ms 180000 \
   --repeat 1 --warmup-frames 1 --sort time --json \
@@ -4779,7 +4779,7 @@ Probe B (multi-run summary JSON shape):
 - Script: `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
 - Command:
 ```bash
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
   --dir target/fret-diag-codex-hit-test-counter-scan/ui-gallery-hit-test-move-sweep-v4 \
   --timeout-ms 240000 \
   --repeat 3 --warmup-frames 3 --sort time --json \
@@ -4816,7 +4816,7 @@ Validation:
 
 A/B probe command (repeat 5):
 ```bash
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
   --dir target/fret-diag-codex-hit-test-only-probe-off-v4 \
   --timeout-ms 240000 --repeat 5 --warmup-frames 5 --sort time --json \
   --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
@@ -4826,7 +4826,7 @@ target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-p
   --env FRET_DIAG_SEMANTICS=0 \
   --launch -- target/release/fret-ui-gallery
 
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
   --dir target/fret-diag-codex-hit-test-only-probe-on-v4 \
   --timeout-ms 240000 --repeat 5 --warmup-frames 5 --sort time --json \
   --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
@@ -4887,7 +4887,7 @@ Change:
 Validation:
 - `cargo fmt`
 - `cargo check -q -p fretboard`
-- `target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target/fret-diag-codex-hit-test-only-probe-json-surface-v6c-r2-debug --repeat 2 --warmup-frames 1 --sort time --json --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe --env FRET_UI_GALLERY_VIEW_CACHE=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 --launch -- target/release/fret-ui-gallery`
+- `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target/fret-diag-codex-hit-test-only-probe-json-surface-v6c-r2-debug --repeat 2 --warmup-frames 1 --sort time --json --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe --env FRET_UI_GALLERY_VIEW_CACHE=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 --launch -- target/release/fret-ui-gallery`
 
 Results:
 - Run-level evidence (`rows[0].runs`):
@@ -4921,12 +4921,12 @@ Change:
 Validation:
 - `cargo fmt`
 - `cargo check -q -p fretboard`
-- `cargo nextest run -p fretboard perf_threshold_scan`
-- `cargo nextest run -p fretboard perf_baseline_parse_reads_script_thresholds`
+- `cargo nextest run -p fretboard-dev perf_threshold_scan`
+- `cargo nextest run -p fretboard-dev perf_baseline_parse_reads_script_thresholds`
 
 Probe A (threshold gate wired):
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
   --dir target/fret-diag-codex-hit-test-only-probe-threshold-v1-r1-debug \
   --repeat 1 --warmup-frames 1 --sort time --json \
   --min-run-paint-cache-hit-test-only-replay-allowed-max 10 \
@@ -4951,7 +4951,7 @@ Result highlights:
 
 Probe B (baseline export wired):
 ```bash
-target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
   --dir target/fret-diag-codex-hit-test-only-probe-baseline-v1-r1-debug \
   --repeat 1 --warmup-frames 1 --sort time --json \
   --perf-baseline-out target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-baseline.json \
@@ -4992,7 +4992,7 @@ Change:
 
 Baseline command (final v14):
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v14h20c \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
@@ -5007,7 +5007,7 @@ target/debug/fretboard diag perf ui-gallery-steady \
 
 Validation command:
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v14-validate2 \
   --timeout-ms 300000 \
   --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
@@ -5066,11 +5066,11 @@ Change:
 Validation:
 - `cargo fmt`
 - `cargo check -q -p fretboard`
-- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+- `cargo nextest run -p fretboard-dev baseline_threshold_seed_policy_for_resize_script perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
 
 Baseline command (v15):
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v15h20p95i \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
@@ -5085,7 +5085,7 @@ target/debug/fretboard diag perf ui-gallery-steady \
 
 Validation command:
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v15-validate-p95i \
   --timeout-ms 300000 \
   --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
@@ -5136,11 +5136,11 @@ Change:
 Validation:
 - `cargo fmt`
 - `cargo check -q -p fretboard`
-- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+- `cargo nextest run -p fretboard-dev baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
 
 Baseline command (v15 refresh with policy header):
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v15h20seed \
   --timeout-ms 300000 \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
@@ -5155,7 +5155,7 @@ target/debug/fretboard diag perf ui-gallery-steady \
 
 Validation command:
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --dir target/fret-diag-codex-perf-v15-validate-seed \
   --timeout-ms 300000 \
   --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
@@ -5186,7 +5186,7 @@ Results:
   - script: `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`
   - observed `2170` vs threshold `2552` (margin `382` us)
 - CLI override smoke check (`--perf-baseline-seed`):
-  - command: `target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --repeat 1 --perf-baseline-out target/fret-diag-codex-summaries/perf-seed-flag-smoke-baseline.json --perf-baseline-seed tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90 ...`
+  - command: `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --repeat 1 --perf-baseline-out target/fret-diag-codex-summaries/perf-seed-flag-smoke-baseline.json --perf-baseline-seed tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90 ...`
   - baseline header adds a `source="cli"` rule for the override.
   - row seed source reports `threshold_seed_source.top_total_time_us = "p90"`.
 
@@ -5211,7 +5211,7 @@ Change:
 Validation:
 - `cargo fmt`
 - `cargo check -q -p fretboard`
-- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+- `cargo nextest run -p fretboard-dev baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
 
 Result highlights:
 - New suite/template scopes are verified by unit tests in `apps/fretboard/src/diag/mod.rs`.
@@ -5239,7 +5239,7 @@ Change:
 Validation:
 - `cargo fmt`
 - `cargo check -q -p fretboard`
-- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite baseline_threshold_seed_policy_supports_preset_file baseline_threshold_seed_policy_rejects_bad_preset_schema baseline_threshold_seed_policy_cli_overrides_preset_rule baseline_threshold_seed_policy_preset_can_override_default_seed perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+- `cargo nextest run -p fretboard-dev baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite baseline_threshold_seed_policy_supports_preset_file baseline_threshold_seed_policy_rejects_bad_preset_schema baseline_threshold_seed_policy_cli_overrides_preset_rule baseline_threshold_seed_policy_preset_can_override_default_seed perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
 
 Result highlights:
 - Nextest summary: `14 passed, 0 failed` for the targeted policy/perf-threshold test set.
@@ -5737,7 +5737,7 @@ Suite:
 
 Command:
 ```powershell
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag-perf/resize-stress-steady.20260207-102407 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag-perf/resize-stress-steady.20260207-102407 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
 ```
 
 Stdout:
@@ -5781,7 +5781,7 @@ Suite:
 
 Command:
 ```powershell
-target/release/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json --dir target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json --dir target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
 ```
 
 Stdout:
@@ -5946,7 +5946,7 @@ Interpretation:
   tree/build/apply overhead and minimizing avoidable invalidations, rather than GPU-side tuning (for these scripts).
 
 Change (commit `366efd769`):
-- Make `layout_roots_time_us` visible in `fretboard diag stats` snapshot rows and in `fretboard diag perf --json`
+- Make `layout_roots_time_us` visible in `fretboard-dev diag stats` snapshot rows and in `fretboard-dev diag perf --json`
   run payloads (alongside `layout_request_build_roots_time_us`), so resize traces can be split into:
   “request/build” vs “roots/layout traversal”.
 
@@ -5972,7 +5972,7 @@ Change:
 - Improve resize layout attribution by:
   - exporting `layout_engine_child_rect_{queries,time_us}` to quantify layout-engine rect query overhead,
   - enriching `layout_hotspots[]` with `element_kind` and (when available) `element_path`,
-  - extending `fretboard diag perf --json` rows with `top_layout_engine_child_rect_*`,
+  - extending `fretboard-dev diag perf --json` rows with `top_layout_engine_child_rect_*`,
   - fixing a diagnostics-only build issue in paint hotspot debug-path lookup.
 
 Build note:
@@ -6194,7 +6194,7 @@ Change (commit `c7ea64bb5`):
 
 Verification:
 ```bash
-cargo test -p fretboard
+cargo test -p fretboard-dev
 ```
 
 ## 2026-02-07 09:15 — perf(fret-launch): dedupe scale-factor change events (resize plumbing)
@@ -6394,7 +6394,7 @@ Notes:
 
 Problem:
 - Local branch was in a `git pull` merge-conflict state (blocked on `apps/fretboard/src/diag/mod.rs`).
-- `fretboard diag perf --json` emitted a `stats` payload that referenced per-run vectors that were never collected
+- `fretboard-dev diag perf --json` emitted a `stats` payload that referenced per-run vectors that were never collected
   (build break).
 - Perf baseline generation had a merge conflict between a “minimal thresholds only” baseline row schema and the richer
   schema that includes pointer-move + paint-cache gates and seed-policy evidence.
@@ -7020,7 +7020,7 @@ Notes:
   layout + solve under width jitter. Prefer fixing the underlying tail hitches (text-wrap reuse / layout solve
   budgeting) over loosening baselines.
 - Triage helper:
-  - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+  - `cargo run -p fretboard-dev -- diag stats <bundle.json> --sort time --top 30`
 
 ## 2026-02-08 08:05:33 (commit `a3283a92f`)
 
@@ -7107,7 +7107,7 @@ Notes:
   - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
   - Worst dispatch bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510565303-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - Worst hit-test bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510565303-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
-- Worst-frame triage (from `fretboard diag stats ... --sort time --top 20`):
+- Worst-frame triage (from `fretboard-dev diag stats ... --sort time --top 20`):
   - bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510591981-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - `paint_node.widget_us` dominates (~46.9ms on the worst frame), with:
     - `paint_widget_hotspots`: a `Canvas` element (~31.3ms, `ops=581`) + a few `Text` prepares.
@@ -8894,7 +8894,7 @@ Notes:
 - This is a churn/noise reduction change; it is not expected to materially move p95 totals by itself.
 - A representative tail failure mode for `drag-jitter` remains “paint text prepare (width)”; see:
   - `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
-  - `fretboard diag stats ... --sort time` attributes the worst frame to `paint_text_prepare.reasons=width`.
+  - `fretboard-dev diag stats ... --sort time` attributes the worst frame to `paint_text_prepare.reasons=width`.
 
 ## 2026-02-09 21:14:30 (commit `e337b4299`)
 

@@ -117,7 +117,7 @@ pub struct AnchoredPanelLayout {
 
 /// Debug-only trace capturing key decisions made by the anchored panel placement solver.
 ///
-/// This is intended for diagnostics evidence (e.g. `fretboard diag`) so scripted repros can report
+/// This is intended for diagnostics evidence (e.g. `fretboard-dev diag`) so scripted repros can report
 /// why a popover/menu was flipped/clamped/shifted without relying on screenshots.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AnchoredPanelLayoutTrace {

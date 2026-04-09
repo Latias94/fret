@@ -956,8 +956,8 @@ pub(super) fn try_build_test_id_slice_payload_streaming_table(
 (window={} semantics_fingerprint={expected_fp}).\n\
   bundle: {}\n\
   hint: try regenerating schema2 and sidecars:\n\
-    - fretboard diag doctor --fix-schema2 {} --warmup-frames {warmup_frames}\n\
-    - fretboard diag index {} --warmup-frames {warmup_frames}\n\
+    - fretboard-dev diag doctor --fix-schema2 {} --warmup-frames {warmup_frames}\n\
+    - fretboard-dev diag index {} --warmup-frames {warmup_frames}\n\
   if this came from a share zip, re-extract/re-capture to ensure the schema2 bundle includes tables.semantics.entries.",
             found_snapshot.window,
             bundle_path.display(),

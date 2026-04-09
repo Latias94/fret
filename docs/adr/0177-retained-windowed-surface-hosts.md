@@ -146,7 +146,7 @@ The host MUST expose debug-only signals sufficient to answer:
 - “How many items were attached/detached this frame?”
 - “Did we reuse off-window items, or recreate them?”
 
-Scripted harnesses (fretboard diag bundles) SHOULD include:
+Scripted harnesses (fretboard-dev diag bundles) SHOULD include:
 
 - window telemetry,
 - attach/detach counts,

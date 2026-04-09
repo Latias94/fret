@@ -5,7 +5,7 @@ This appendix proposes how we prevent drift between:
 - docs tables,
 - native demo binaries,
 - web demo selection,
-- `fretboard list ...` discovery surfaces.
+- `fretboard-dev list ...` discovery surfaces.
 
 ## Problem: duplicated registries drift
 
@@ -20,7 +20,7 @@ This makes it easy to:
 
 We want a single catalog that can drive:
 
-- CLI discovery (`fretboard list ...`, `--choose`)
+- CLI discovery (`fretboard-dev list ...`, `--choose`)
 - docs tables (or at least a single authoritative mapping doc)
 - optional CI lint (duplicate IDs, missing owner, missing gates)
 
@@ -30,7 +30,7 @@ We want a single catalog that can drive:
 
 Source(s):
 
-- native: scan `apps/fret-demo/src/bin/*.rs` (already done for `fretboard list native-demos`)
+- native: scan `apps/fret-demo/src/bin/*.rs` (already done for `fretboard-dev list native-demos`)
 - cookbook: scan `<cookbook-crate>/examples/*.rs`
 - suites: scan `tools/diag-scripts/suites/` to infer “gated + curated” scripts
 - web: keep a curated list in one place (temporary)

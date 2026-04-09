@@ -64,7 +64,7 @@
 **Validation**
 
 - `cargo nextest run -p fret-examples todo_demo_prefers_default_app_surface simple_todo_demo_prefers_default_app_surface selected_view_runtime_examples_prefer_grouped_state_actions_and_effects`
-- `cargo nextest run -p fretboard todo_template_uses_default_authoring_dialect hello_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
+- `cargo nextest run -p fretboard-dev todo_template_uses_default_authoring_dialect hello_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
 - `rustfmt --check apps/fret-examples/src/lib.rs apps/fret-examples/src/simple_todo_demo.rs apps/fret-examples/src/todo_demo.rs apps/fretboard/src/scaffold/templates.rs --edition 2024`
 
 ## M2 — Rich-template productization
@@ -99,9 +99,9 @@
 
 **Validation**
 
-- `cargo nextest run -p fretboard todo_template_uses_default_authoring_dialect template_readmes_capture_authoring_guidance todo_template_mounts_generated_assets_when_ui_assets_are_enabled hello_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
+- `cargo nextest run -p fretboard-dev todo_template_uses_default_authoring_dialect template_readmes_capture_authoring_guidance todo_template_mounts_generated_assets_when_ui_assets_are_enabled hello_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
 - `rustfmt --check apps/fretboard/src/scaffold/templates.rs --edition 2024`
-- `cargo run -p fretboard -- new todo --path target/fretboard-scaffold-smoke.<tmp> --name codex-todo-m2-smoke`
+- `cargo run -p fretboard-dev -- new todo --path target/fretboard-scaffold-smoke.<tmp> --name codex-todo-m2-smoke`
 
 ## M3 — Recipe promotion decision
 
@@ -167,7 +167,7 @@
 **Validation**
 
 - `git diff --check -- docs/README.md docs/examples/README.md docs/examples/todo-app-golden-path.md docs/first-hour.md docs/crate-usage-guide.md ecosystem/fret/README.md`
-- `cargo nextest run -p fretboard template_readmes_capture_authoring_guidance`
+- `cargo nextest run -p fretboard-dev template_readmes_capture_authoring_guidance`
 
 ## M5 — Gates and evidence
 
@@ -201,9 +201,9 @@
 
 **Validation**
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json --dir target/diag/todo-resize-roundtrip-immediate-layout-m5d --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json --dir target/diag/todo-resize-roundtrip-footer-within-window-m5 --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json --dir target/diag/todo-resize-roundtrip-immediate-layout-m5d --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json --dir target/diag/todo-resize-roundtrip-footer-within-window-m5 --include-screenshots --exit-after-run --launch -- cargo run -p fret-demo --bin todo_demo`
 - `cargo nextest run -p fret-examples todo_demo_prefers_default_app_surface simple_todo_demo_prefers_default_app_surface selected_view_runtime_examples_prefer_grouped_state_actions_and_effects todo_demo_registers_vendor_icons_used_by_layout todo_demo_responsive_layout_prefers_compact_footer_and_inline_actions_on_narrow_width todo_demo_responsive_layout_gives_roomy_shells_more_vertical_headroom todo_demo_responsive_layout_centers_card_once_viewport_is_large_enough todo_demo_responsive_layout_keeps_inline_row_actions_for_non_hover_pointers`
-- `cargo nextest run -p fretboard todo_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
+- `cargo nextest run -p fretboard-dev todo_template_uses_default_authoring_dialect simple_todo_template_has_low_adapter_noise_and_no_query_selector`
 - `rustfmt --check apps/fret-examples/src/lib.rs apps/fretboard/src/scaffold/templates.rs ecosystem/fret/src/view.rs --edition 2024`
 - `git diff --check -- apps/fret-examples/src/lib.rs apps/fretboard/src/scaffold/templates.rs apps/fret-examples/src/todo_demo.rs ecosystem/fret/src/view.rs docs/first-hour.md tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json docs/README.md docs/workstreams/default-app-productization-fearless-refactor-v1`

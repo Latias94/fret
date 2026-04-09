@@ -8,7 +8,7 @@ Last updated: **2026-03-02**.
 
 - [ ] Write a short repro note (UI Gallery page + section + expected behavior).
 - [x] Ensure there is at least one unit test that fails without the fix and passes with it.
-- [x] Add a `fretboard diag` script for the UI Gallery repro (optional but preferred).
+- [x] Add a `fretboard-dev diag` script for the UI Gallery repro (optional but preferred).
       - Example: `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json`
 
 ## Phase B — Data structure + bookkeeping

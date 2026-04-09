@@ -167,7 +167,7 @@ Evidence:
 ## Docs / closure
 
 - [x] Ensure newly-added conformance scripts are wired into the built-in diag suites
-  (so `fretboard diag suite ui-gallery-shadcn-conformance` runs them):
+  (so `fretboard-dev diag suite ui-gallery-shadcn-conformance` runs them):
   - `crates/fret-diag/src/diag_suite_scripts.rs`
 - [x] Update the shadcn conformance matrix rows for the components touched by this sweep:
   - `docs/shadcn-conformance-matrix.md`

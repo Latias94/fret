@@ -15,7 +15,7 @@ Tracking format:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script/suite name
+- and/or a `fretboard-dev diag` script/suite name
 
 ## M0 — Baseline UX + status
 
@@ -31,7 +31,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Bootstrap/view log: `.fret/hotpatch_bootstrap.log`
   - Evidence: `crates/fret-launch/.../hotpatch.rs`, `ecosystem/fret-bootstrap/.../ui_app_driver.rs`
 
-- [x] HP-DL-obs-002 Add an optional `fretboard hotpatch status` command (read-only).
+- [x] HP-DL-obs-002 Add an optional `fretboard-dev hotpatch status` command (read-only).
   - Minimal version: print paths + tail last N lines if present.
   - Evidence: `apps/fretboard/src/hotpatch.rs`
 

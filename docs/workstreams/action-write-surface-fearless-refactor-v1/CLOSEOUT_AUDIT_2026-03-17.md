@@ -52,7 +52,7 @@ Implementation / gate anchors:
 Validation run used for closeout:
 
 - `git diff --check -- docs/README.md docs/first-hour.md docs/crate-usage-guide.md docs/examples/todo-app-golden-path.md docs/examples/README.md docs/fearless-refactoring.md docs/authoring-golden-path-v2.md docs/ui-ergonomics-and-interop.md ecosystem/fret/README.md apps/fretboard/src/scaffold/templates.rs docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md docs/workstreams/action-write-surface-fearless-refactor-v1/PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md docs/workstreams/action-write-surface-fearless-refactor-v1/ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
-- `CARGO_TARGET_DIR=target-codex-verify cargo test -p fretboard template`
+- `CARGO_TARGET_DIR=target-codex-verify cargo test -p fretboard-dev template`
 
 ## Findings
 

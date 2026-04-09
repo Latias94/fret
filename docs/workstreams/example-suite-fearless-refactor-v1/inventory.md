@@ -20,10 +20,10 @@ Legend:
 
 | ID | State | Current anchors | Run (today) | Notes |
 |---|---|---|---|---|
-| hello | Keep | `apps/fretboard/src/scaffold/templates.rs` | `fretboard new hello --name hello-world` | Template-generated; should stay boring/stable. |
-| simple-todo | Keep | `apps/fretboard/src/scaffold/templates.rs` | `fretboard new simple-todo --name my-simple-todo` | Template-generated; “no selector/query” baseline. |
-| todo | Keep | `apps/fretboard/src/scaffold/templates.rs`, `docs/examples/todo-app-golden-path.md` | `fretboard new todo --name my-todo` | Best-practice baseline (selectors + queries). |
-| components_gallery | Replace | `apps/fret-examples/src/components_gallery.rs`, `apps/fret-demo/src/bin/components_gallery.rs` | `fretboard dev native --bin components_gallery` | Keep behavior, but the registry/discovery story should unify. |
+| hello | Keep | `apps/fretboard/src/scaffold/templates.rs` | `fretboard-dev new hello --name hello-world` | Template-generated; should stay boring/stable. |
+| simple-todo | Keep | `apps/fretboard/src/scaffold/templates.rs` | `fretboard-dev new simple-todo --name my-simple-todo` | Template-generated; “no selector/query” baseline. |
+| todo | Keep | `apps/fretboard/src/scaffold/templates.rs`, `docs/examples/todo-app-golden-path.md` | `fretboard-dev new todo --name my-todo` | Best-practice baseline (selectors + queries). |
+| components_gallery | Replace | `apps/fret-examples/src/components_gallery.rs`, `apps/fret-demo/src/bin/components_gallery.rs` | `fretboard-dev dev native --bin components_gallery` | Keep behavior, but the registry/discovery story should unify. |
 | ui_gallery | Keep | `apps/fret-ui-gallery/src/*`, `apps/fret-demo/src/bin/ui_gallery.rs` | `cargo run -p fret-ui-gallery` | Treat as component catalog + conformance harness. |
 
 ## Reference apps (planned)
@@ -107,10 +107,10 @@ Cleanup note:
 
 | ID | State | Current anchors | Run (today) | Notes |
 |---|---|---|---|---|
-| docking_arbitration | Maint | `apps/fret-examples/src/docking_arbitration_demo.rs`, `apps/fret-demo/src/bin/docking_arbitration_demo.rs` | `fretboard dev native --bin docking_arbitration_demo` | Editor-grade regression harness; keep out of onboarding. |
+| docking_arbitration | Maint | `apps/fret-examples/src/docking_arbitration_demo.rs`, `apps/fret-demo/src/bin/docking_arbitration_demo.rs` | `fretboard-dev dev native --bin docking_arbitration_demo` | Editor-grade regression harness; keep out of onboarding. |
 | embedded_viewport | Keep | `apps/fret-cookbook/examples/embedded_viewport_basics.rs` (cookbook), ref: `apps/fret-examples/src/embedded_viewport_demo.rs` | `cargo run -p fret-cookbook --example embedded_viewport_basics` | Cookbook is the canonical entry; keep the larger demo as a maintainer-grade reference. |
-| external_texture_import | Keep | native cookbook: `apps/fret-cookbook/examples/external_texture_import_basics.rs`; reference demos: `apps/fret-examples/src/external_texture_imports_demo.rs` + web `apps/fret-examples/src/external_texture_imports_web_demo.rs` | native: `cargo run -p fret-cookbook --example external_texture_import_basics`; web: `fretboard dev web --demo external_texture_imports_web_demo` | Cookbook is the canonical entry; keep the larger demos as maintainer-grade references (and web coverage). |
-| liquid_glass | Maint | `apps/fret-examples/src/liquid_glass_demo.rs`, `apps/fret-demo/src/bin/liquid_glass_demo.rs` | `fretboard dev native --bin liquid_glass_demo` | Renderer lab; likely stays native-first initially. |
+| external_texture_import | Keep | native cookbook: `apps/fret-cookbook/examples/external_texture_import_basics.rs`; reference demos: `apps/fret-examples/src/external_texture_imports_demo.rs` + web `apps/fret-examples/src/external_texture_imports_web_demo.rs` | native: `cargo run -p fret-cookbook --example external_texture_import_basics`; web: `fretboard-dev dev web --demo external_texture_imports_web_demo` | Cookbook is the canonical entry; keep the larger demos as maintainer-grade references (and web coverage). |
+| liquid_glass | Maint | `apps/fret-examples/src/liquid_glass_demo.rs`, `apps/fret-demo/src/bin/liquid_glass_demo.rs` | `fretboard-dev dev native --bin liquid_glass_demo` | Renderer lab; likely stays native-first initially. |
 | custom_effect_v1/v2/v3 | Maint | `apps/fret-examples/src/custom_effect_*`, `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/*` | native/web demos exist (see `apps/fret-demo-web/src/wasm.rs`) | Keep as “Labs”; gate by capabilities + budgets. |
 
 ## Web demo selection (current)

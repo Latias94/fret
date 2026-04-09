@@ -9,7 +9,7 @@ on the semantics tree for:
 
 - platform accessibility (ADR 0033),
 - deterministic UI automation and diagnostics selectors (ADR 0159),
-- stable `test_id` anchors for `fretboard diag` scripts and regression gates.
+- stable `test_id` anchors for `fretboard-dev diag` scripts and regression gates.
 
 Today, the primary “generic” surface for stamping semantics is the `Semantics` element:
 
@@ -87,7 +87,7 @@ layers.
 
 - Typed Fret UI can achieve DOM-like “attach a11y/test props to an arbitrary child” outcomes without
   a generic slot system.
-- `fretboard diag` scripts become more stable because `test_id` can be attached to real layout
+- `fretboard-dev diag` scripts become more stable because `test_id` can be attached to real layout
   nodes instead of wrapper nodes that accidentally change sizing behavior.
 - The existing `Semantics` element remains valid, but authors must treat it as a layout wrapper.
 

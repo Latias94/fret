@@ -40,7 +40,7 @@ Related plan:
 
 - [ ] Identify the minimal declarative primitives missing for docking (if any).
 - [ ] Replace retained subtree hosting in docking with declarative composition where feasible.
-- [ ] Add/upgrade `fretboard diag` scripts to lock in docking drag + tear-off correctness.
+- [ ] Add/upgrade `fretboard-dev diag` scripts to lock in docking drag + tear-off correctness.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-docking` dependencies.
 
 ### M2 — Node graph migration

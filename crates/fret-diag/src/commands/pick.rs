@@ -78,7 +78,7 @@ pub(crate) fn cmd_pick_apply(
 ) -> Result<(), String> {
     let Some(script) = rest.first().cloned() else {
         return Err(
-            "missing script path (try: fretboard diag pick-apply ./script.json --ptr /steps/0/target)".to_string(),
+            "missing script path (try: fretboard-dev diag pick-apply ./script.json --ptr /steps/0/target)".to_string(),
         );
     };
     if rest.len() != 1 {

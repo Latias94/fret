@@ -10,7 +10,7 @@ small, fearless refactors.
   - [x] `reason_code` naming and backward-compat rules
   - [x] `capabilities` naming (namespaced strings) and ownership
 - [ ] Measure representative bundle size hot spots (approx bytes per JSON path) to guide retention and packaging budgets.
-  - Use: `fretboard diag hotspots <bundle_dir|bundle.json> --hotspots-top 30 --max-depth 7 --min-bytes 4096`
+  - Use: `fretboard-dev diag hotspots <bundle_dir|bundle.json> --hotspots-top 30 --max-depth 7 --min-bytes 4096`
   - See also: `docs/workstreams/diag-ai-agent-debugging-v1/diag-ai-agent-debugging-v1.md` (M0 budgets)
 - [x] Add/confirm a small nextest gate set for diag tooling:
   - [x] `cargo nextest run -p fret-diag-protocol`

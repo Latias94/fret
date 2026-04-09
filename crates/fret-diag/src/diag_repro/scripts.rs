@@ -80,8 +80,8 @@ fn resolve_explicit_repro_paths(
             if looks_like_suite_name {
                 return Err(format!(
                     "unknown suite or script path: {name:?}\n\
-hint: list suites via `fretboard diag list suites --contains {name}`\n\
-hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+hint: list suites via `fretboard-dev diag list suites --contains {name}`\n\
+hint: list promoted scripts via `fretboard-dev diag list scripts --contains {name}`"
                 ));
             }
             return Err(format!(

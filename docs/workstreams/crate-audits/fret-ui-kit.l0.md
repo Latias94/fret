@@ -64,7 +64,7 @@ Evidence anchors:
 - Overlay lifecycle + focus restoration correctness
   - Failure mode: focus lost/incorrect restore; dismissal semantics drift; pointer occlusion ordering drift.
   - Existing gates: extensive unit tests under `window_overlays` and `overlay_controller`.
-  - Missing gate to add: a minimal `fretboard diag` suite that exercises a `fret-ui-kit` overlay flow end-to-end in a demo app (to catch runner/host integration drift).
+  - Missing gate to add: a minimal `fretboard-dev diag` suite that exercises a `fret-ui-kit` overlay flow end-to-end in a demo app (to catch runner/host integration drift).
 - “God test file” brittleness in `window_overlays/tests.rs`
   - Failure mode: slow review, accidental duplication, hard-to-read intent; high merge-conflict rate; fixture drift hidden in code.
   - Existing gates: `cargo nextest run -p fret-ui-kit` covers it, but the file itself is a maintenance hazard.

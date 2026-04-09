@@ -65,7 +65,7 @@ Expected:
 Run (native):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-settings-change.json \
+FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-settings-change.json \
   --check-ui-gallery-text-fallback-policy-key-bumps-on-settings-change \
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -104,7 +104,7 @@ Expected:
 Run (native):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/text/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json \
+FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/text/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json \
   --check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change \
   --launch -- cargo run -p fret-ui-gallery --release --features gallery-web-ime-harness
 ```
@@ -122,7 +122,7 @@ Expected:
 Run (native):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json \
+FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json \
   --check-ui-gallery-text-rescan-system-fonts-font-stack-key-bumps \
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -148,7 +148,7 @@ Expected:
 Run (native, deterministic):
 
 ```bash
-FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-text-mixed-script-bundled-fallback-conformance.json \
+FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-text-mixed-script-bundled-fallback-conformance.json \
   --env FRET_TEXT_SYSTEM_FONTS=0 \
   --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
   --check-ui-gallery-text-mixed-script-bundled-fallback-conformance \

@@ -98,7 +98,7 @@ Current default bias:
 Example command (steady suite + preset + local override):
 
 ```bash
-target/debug/fretboard diag perf ui-gallery-steady \
+target/debug/fretboard-dev diag perf ui-gallery-steady \
   --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
   --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
   --perf-baseline-headroom-pct 20 \

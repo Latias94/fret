@@ -327,8 +327,8 @@ pub(crate) fn generate_ai_packet_dir(
                         "message": "Failed to generate triage.json; falling back to triage.lite.json.",
                         "error": err,
                         "suggestions": [
-                            format!("fretboard diag triage {} --warmup-frames {}", bundle_path.display(), warmup_frames),
-                            format!("fretboard diag triage --lite {} --warmup-frames {}", bundle_path.display(), warmup_frames),
+                            format!("fretboard-dev diag triage {} --warmup-frames {}", bundle_path.display(), warmup_frames),
+                            format!("fretboard-dev diag triage --lite {} --warmup-frames {}", bundle_path.display(), warmup_frames),
                         ],
                     }),
                 )?;
@@ -562,8 +562,8 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
             "warmup_frames": warmup_frames,
             "message": "`--include-triage` requires reading the bundle artifact; it is skipped under `--sidecars-only`. Use triage.lite.json instead.",
             "suggestions": [
-                format!("fretboard diag triage {} --warmup-frames {}", bundle_path.unwrap_or(bundle_dir).display(), warmup_frames),
-                format!("fretboard diag ai-packet {} --include-triage --warmup-frames {}", bundle_path.unwrap_or(bundle_dir).display(), warmup_frames),
+                format!("fretboard-dev diag triage {} --warmup-frames {}", bundle_path.unwrap_or(bundle_dir).display(), warmup_frames),
+                format!("fretboard-dev diag ai-packet {} --include-triage --warmup-frames {}", bundle_path.unwrap_or(bundle_dir).display(), warmup_frames),
             ],
         });
         budget::write_json_compact(&packet_dir.join("triage.error.json"), &payload)?;
@@ -594,8 +594,8 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
         "warmup_frames": warmup_frames,
         "message": "Sidecars-only mode: skipped reading the bundle artifact; packet uses existing sidecars only.",
         "suggestions": [
-            format!("fretboard diag doctor --fix-sidecars {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
-            format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+            format!("fretboard-dev diag doctor --fix-sidecars {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+            format!("fretboard-dev diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
         ],
     });
     budget::write_json_compact(&packet_dir.join("doctor.json"), &payload)?;

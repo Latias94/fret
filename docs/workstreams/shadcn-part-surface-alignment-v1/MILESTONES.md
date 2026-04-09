@@ -46,7 +46,7 @@ then tighten behavior and add gates.
 **Acceptance criteria**
 
 - UI Gallery (or a small demo) can be written in the upstream part-based shape without workarounds.
-- `fretboard diag run <script>` passes for each migrated component.
+- `fretboard-dev diag run <script>` passes for each migrated component.
 
 ## Milestone 3 — Menu family part surface parity
 

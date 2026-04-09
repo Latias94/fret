@@ -56,7 +56,7 @@ For a framework-owned bundle capture under deliberate activity:
 Suggested runner:
 
 ```bash
-cargo run -p fretboard -- diag run \
+cargo run -p fretboard-dev -- diag run \
   tools/diag-scripts/tooling/hello-world/hello-world-compare-active-memory-steady.json \
   --launch -- cargo run -p fret-demo --bin hello_world_compare_demo
 ```

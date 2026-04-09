@@ -48,6 +48,6 @@ base examples, and the existing radio-group gates.
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `./target/debug/fretboard diag run tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-choice-card-and-rtl.json --dir target/fret-diag-radio-group-audit-fixed --session-auto --pack --ai-packet --exit-after-run --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-radio cargo run -p fret-ui-gallery`
+- `./target/debug/fretboard-dev diag run tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-choice-card-and-rtl.json --dir target/fret-diag-radio-group-audit-fixed --session-auto --pack --ai-packet --exit-after-run --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-radio cargo run -p fret-ui-gallery`
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/radio_group.rs` (`radio_group::web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures`)
 - Existing focus gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_radio_group_demo_focus_ring_matches`)

@@ -1,7 +1,7 @@
 //! Diagnostics-only semantics anchors for node graph UIs.
 //!
 //! These widgets are intentionally paint-free and hit-test-free. They exist to provide stable
-//! `test_id` selectors for `fretboard diag` scripts that need to drive pointer interactions
+//! `test_id` selectors for `fretboard-dev diag` scripts that need to drive pointer interactions
 //! without relying on pixel coordinates.
 
 use std::sync::Arc;

@@ -3,7 +3,7 @@
 Run the built-in `ui-gallery` diag suite.
 
 Cross-platform helper that wraps:
-  `cargo run -p fretboard -- diag suite ui-gallery`
+  `cargo run -p fretboard-dev -- diag suite ui-gallery`
 
 If you pass `--launch`, this script uses fretboard's `--launch` support so the suite can
 control the child process' environment consistently.
@@ -24,7 +24,7 @@ def _repo_root() -> Path:
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(
-        description="Run `fretboard diag suite ui-gallery` (optionally launching UI Gallery).",
+        description="Run `fretboard-dev diag suite ui-gallery` (optionally launching UI Gallery).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument("--dir", default="target/fret-diag", help="Diagnostics output directory.")

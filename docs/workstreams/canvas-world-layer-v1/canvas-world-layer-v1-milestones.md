@@ -16,7 +16,7 @@ Source of truth TODOs: `docs/workstreams/canvas-world-layer-v1/canvas-world-laye
 We consider v1 usable when:
 
 1. A UI Gallery demo proves composition and hit-testing correctness under pan/zoom.
-2. There is at least one `fretboard diag` regression gate.
+2. There is at least one `fretboard-dev diag` regression gate.
 3. The layer boundary is clean (no policy leaks into `crates/fret-ui`).
 
 ## Milestones

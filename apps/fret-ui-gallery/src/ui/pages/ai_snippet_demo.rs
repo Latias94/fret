@@ -134,7 +134,7 @@ fn snippet_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "test_id / copied_marker_test_id",
                 "impl Into<Arc<str>>",
                 "None",
-                "Stable diagnostics selectors for root, button, and copied-state gating in `fretboard diag` scripts.",
+                "Stable diagnostics selectors for root, button, and copied-state gating in `fretboard-dev diag` scripts.",
             ],
         ],
         true,

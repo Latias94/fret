@@ -11,7 +11,7 @@ This document defines the **canonical per-run directory layout** under the diagn
 (by default `target/fret-diag/`). The goal is a stable, transport-neutral layout that tooling can
 rely on for packing, linting, and automation.
 
-This is intentionally scoped to **tooling-side artifacts** (what `fretboard diag ...` produces and
+This is intentionally scoped to **tooling-side artifacts** (what `fretboard-dev diag ...` produces and
 consumes), and is compatible with both:
 
 - filesystem transport (native runner writes bundle exports to disk), and
@@ -146,11 +146,11 @@ bundles.
 Examples:
 
 - Validate the latest run id directory (uses the current `script.result.json` to resolve run id):
-  - `cargo run -p fretboard -- diag artifact lint`
+  - `cargo run -p fretboard-dev -- diag artifact lint`
 - Validate a specific per-run dir:
-  - `cargo run -p fretboard -- diag artifact lint target/fret-diag/42`
+  - `cargo run -p fretboard-dev -- diag artifact lint target/fret-diag/42`
 - Validate an out dir root (will resolve the latest run id from `<out_dir>/script.result.json`):
-  - `cargo run -p fretboard -- diag artifact lint target/fret-diag`
+  - `cargo run -p fretboard-dev -- diag artifact lint target/fret-diag`
 
 What it validates (v1):
 
@@ -166,11 +166,11 @@ What it validates (v1):
 
 If `manifest.json` indicates complete bundle chunks but `bundle.json` is missing:
 
-- `cargo run -p fretboard -- diag doctor --fix-bundle-json <bundle_dir_or_out_dir> --warmup-frames <n>`
+- `cargo run -p fretboard-dev -- diag doctor --fix-bundle-json <bundle_dir_or_out_dir> --warmup-frames <n>`
 
 If sidecars are missing/stale:
 
-- `cargo run -p fretboard -- diag doctor --fix-sidecars <bundle_dir_or_out_dir> --warmup-frames <n>`
+- `cargo run -p fretboard-dev -- diag doctor --fix-sidecars <bundle_dir_or_out_dir> --warmup-frames <n>`
 
 Note: `doctor` operates primarily on **bundle directories** (the ones containing `bundle.json` /
 `bundle.schema2.json`). Per-run sidecars are best-effort today.

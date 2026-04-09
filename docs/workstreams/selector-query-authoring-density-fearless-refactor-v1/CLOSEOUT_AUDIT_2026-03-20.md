@@ -37,7 +37,7 @@ Validation run used for closeout:
 
 - `cargo nextest run -p fret-query query_status_projection_helpers_report_expected_values query_state_projection_helpers_detect_refreshing_and_error_presence`
 - `cargo nextest run -p fret-examples --lib selected_view_runtime_examples_prefer_grouped_state_actions_and_effects`
-- `cargo nextest run -p fretboard todo_template_uses_default_authoring_dialect template_readmes_capture_authoring_guidance`
+- `cargo nextest run -p fretboard-dev todo_template_uses_default_authoring_dialect template_readmes_capture_authoring_guidance`
 - `git diff --check -- apps/fretboard/src/scaffold/templates.rs docs/README.md docs/authoring-golden-path-v2.md docs/examples/todo-app-golden-path.md docs/roadmap.md docs/workstreams/README.md docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/DESIGN.md docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TARGET_INTERFACE_STATE.md docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/MILESTONES.md docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TODO.md docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
 

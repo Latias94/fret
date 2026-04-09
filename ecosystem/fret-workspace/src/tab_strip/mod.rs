@@ -2700,7 +2700,7 @@ impl WorkspaceTabStrip {
                     });
 
                     // Best-effort diagnostics hook: publish interaction state into the window-level
-                    // diagnostics store so `fretboard diag` can gate editor-grade invariants
+                    // diagnostics store so `fretboard-dev diag` can gate editor-grade invariants
                     // without relying on pixels.
                     {
                         let frame_id = cx.app.frame_id();

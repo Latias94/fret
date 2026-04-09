@@ -9,7 +9,7 @@
 
 - `vmmap -summary` is parsed into structured fields in `resource.footprint.json`.
 - Top contributors (region types + malloc zone stats where available) are visible without manual parsing.
-- Multiple `--session-auto` samples can be summarized via `fretboard diag memory-summary`.
+- Multiple `--session-auto` samples can be summarized via `fretboard-dev diag memory-summary`.
 - Apple `/usr/bin/footprint --json` category summaries are captured on macOS to cross-check large `vmmap` buckets.
 
 ## M2 — Minimal scenario matrix (done)

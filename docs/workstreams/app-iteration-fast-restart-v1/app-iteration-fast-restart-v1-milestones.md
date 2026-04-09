@@ -27,7 +27,7 @@ Definition of done:
 
 - Workstream docs exist (design + TODO + milestones).
 - A single recommended default command is documented:
-  - `fretboard dev native --bin <app> --watch`
+  - `fretboard-dev dev native --bin <app> --watch`
 - The dev-state file location and versioning rules are explicit.
 
 ## M1 — Window geometry restore (baseline)

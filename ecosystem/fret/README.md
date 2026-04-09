@@ -36,13 +36,13 @@ If you are learning the repo's default path, follow this ladder in order:
 
 - Index: `docs/examples/README.md`
 - The generated template READMEs repeat the same ladder and explain where each rung fits.
-- Use `fretboard new todo` when you want the richer third-rung product baseline with explicit
+- Use `fretboard-dev new todo` when you want the richer third-rung product baseline with explicit
   selector/query seams, not as a replacement for the first two rungs.
 
 Generate a runnable starter (minimal baseline first):
 
 ```bash
-cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo
 cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
@@ -50,7 +50,7 @@ Then move to the richer third rung when you actually want selectors + queries on
 baseline:
 
 ```bash
-cargo run -p fretboard -- new todo --name my-todo
+cargo run -p fretboard-dev -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
@@ -235,7 +235,7 @@ those crates into the `fret` publish closure.
 ```bash
 rustup target add wasm32-unknown-unknown
 cargo install trunk
-cargo run -p fretboard -- dev web --demo ui_gallery
+cargo run -p fretboard-dev -- dev web --demo ui_gallery
 ```
 
 This runs `apps/fret-demo-web` via `trunk serve`.

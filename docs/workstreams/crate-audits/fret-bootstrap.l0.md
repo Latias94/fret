@@ -99,7 +99,7 @@ Evidence anchors:
 1. Split the largest UI diagnostics entrypoint file for reviewability (e.g. `ui_diagnostics.rs` → `ui_diagnostics/mod.rs` + focused submodules) — gate: `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics`.
 2. Keep inspector read/write surfaces centralized:
    - Reads via `InspectOverlayModel` snapshot; mutations via `InspectController` APIs — gate: existing inspector scripted suites.
-3. Add one additional “multi-window script migration” diag suite (small, deterministic) — gate: `fretboard diag run ...` and keep it in a stable suite.
+3. Add one additional “multi-window script migration” diag suite (small, deterministic) — gate: `fretboard-dev diag run ...` and keep it in a stable suite.
 
 ## 8) Open questions / decisions needed
 

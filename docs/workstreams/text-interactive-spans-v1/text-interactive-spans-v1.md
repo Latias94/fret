@@ -76,7 +76,7 @@ Implemented (2026-02-19):
 - `SelectableText` supports interactive span tags (pointer + keyboard activation).
 - Markdown rich paragraphs render links as underlined runs and use `TextWrap::WordBreak` so long
   URLs/paths can wrap without tokenization.
-- Regression evidence exists as a `fretboard diag` suite and targeted unit tests.
+- Regression evidence exists as a `fretboard-dev diag` suite and targeted unit tests.
 
 Remaining v1 gaps:
 

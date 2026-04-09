@@ -31,7 +31,7 @@ This workstream focuses on making web perf captures *stable and interpretable* b
   - `tools/diag-scripts/ui-gallery-view-cache-harness-perf-steady-web-on.json`
 - Exported bundle (baseline, view-cache disabled): `.fret/diag/exports/1771829809968-bundle`
 - Exported bundle (early attempt, view-cache enabled but no roots): `.fret/diag/exports/1771832191642-bundle`
-- Metrics: `fretboard diag stats` + `fretboard diag triage --json`
+- Metrics: `fretboard-dev diag stats` + `fretboard-dev diag triage --json`
 - Tracked perf baselines (derived from exported bundles; worst bundles are local evidence):
   - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-no-view-cache.web-local.v1.json`
   - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-view-cache-shell.web-local.v1.json`

@@ -64,7 +64,7 @@ Exit criteria:
   - CLI tools accept `<bundle_dir|bundle.json|bundle.schema2.json>`,
   - the offline viewer accepts `bundle.schema2.json` as a primary artifact.
 - A lightweight per-frame index exists for agentic triage:
-  - `frames.index.json` (generated via `fretboard diag frames-index` and included in `diag doctor --fix-sidecars` / `diag ai-packet`).
+  - `frames.index.json` (generated via `fretboard-dev diag frames-index` and included in `diag doctor --fix-sidecars` / `diag ai-packet`).
 
 ## Milestone 3: Agent-friendly triage loop
 
@@ -72,9 +72,9 @@ Exit criteria:
 
 - A maintainer can run a scripted repro, collect evidence, and generate a small “triage bundle” quickly.
 - Huge-bundle first-pass triage does not require loading `bundle.json` into memory:
-  - `fretboard diag triage --lite ...` works from `frames.index.json`.
-  - `fretboard diag hotspots --lite ...` reports slow frames from `frames.index.json`.
-- `fretboard diag ai-packet ...` includes lite reports (`triage.lite.json`, `hotspots.lite.json`) for agent-first workflows.
+  - `fretboard-dev diag triage --lite ...` works from `frames.index.json`.
+  - `fretboard-dev diag hotspots --lite ...` reports slow frames from `frames.index.json`.
+- `fretboard-dev diag ai-packet ...` includes lite reports (`triage.lite.json`, `hotspots.lite.json`) for agent-first workflows.
 - A documented migration plan exists and stays in sync with implementation:
   - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Evidence anchors in docs stay in sync with the implementation.

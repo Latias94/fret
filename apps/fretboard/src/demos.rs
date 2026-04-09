@@ -23,7 +23,7 @@ pub(crate) fn list_native_demos(args: Vec<String>) -> Result<(), String> {
         }
     } else if !maintainer.is_empty() {
         eprintln!(
-            "note: {} maintainer/stress demos hidden (use: fretboard list native-demos --all)",
+            "note: {} maintainer/stress demos hidden (use: fretboard-dev list native-demos --all)",
             maintainer.len()
         );
     }
@@ -61,7 +61,7 @@ pub(crate) fn list_cookbook_examples(args: Vec<String>) -> Result<(), String> {
         }
     } else if !lab.is_empty() {
         eprintln!(
-            "note: {} lab examples hidden (use: fretboard list cookbook-examples --all)",
+            "note: {} lab examples hidden (use: fretboard-dev list cookbook-examples --all)",
             lab.len()
         );
     }
@@ -185,7 +185,7 @@ fn web_demos() -> &'static [&'static str] {
     &[
         // Full UI Gallery app (pages: `?page=...`).
         "ui_gallery",
-        // Simple onboarding baseline (matches `fretboard new simple-todo`).
+        // Simple onboarding baseline (matches `fretboard-dev new simple-todo`).
         "simple-todo",
         // Lightweight examples gallery (separate app from `fret-ui-gallery`).
         "components_gallery",
@@ -226,7 +226,7 @@ pub(crate) fn validate_web_demo(name: &str) -> Result<(), String> {
         return Ok(());
     }
     Err(format!(
-        "unknown web demo `{name}`\n  try: fretboard list web-demos"
+        "unknown web demo `{name}`\n  try: fretboard-dev list web-demos"
     ))
 }
 
@@ -254,7 +254,7 @@ pub(crate) fn validate_cookbook_example(examples: &[String], name: &str) -> Resu
     }
 
     Err(format!(
-        "unknown cookbook example `{name}`{hint}\n  try: fretboard list cookbook-examples"
+        "unknown cookbook example `{name}`{hint}\n  try: fretboard-dev list cookbook-examples"
     ))
 }
 
@@ -281,7 +281,7 @@ pub(crate) fn validate_native_demo(demos: &[String], name: &str) -> Result<(), S
     }
 
     Err(format!(
-        "unknown native demo `{name}`{hint}\n  try: fretboard list native-demos"
+        "unknown native demo `{name}`{hint}\n  try: fretboard-dev list native-demos"
     ))
 }
 

@@ -351,9 +351,9 @@ Recommended v1 non-goals:
 
 Possible future surface:
 
-- `fretboard diag campaign smoke`
-- `fretboard diag campaign correctness --filter overlay`
-- `fretboard diag campaign nightly --json`
+- `fretboard-dev diag campaign smoke`
+- `fretboard-dev diag campaign correctness --filter overlay`
+- `fretboard-dev diag campaign nightly --json`
 
 This surface is intentionally future-facing. The design should remain valid even if the final command name ends up
 being `campaign`, `regression`, or another near-synonym.

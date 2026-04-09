@@ -211,7 +211,7 @@ Goal:
 
 Current status:
 
-- A first minimal `fretboard diag campaign` surface is now landed.
+- A first minimal `fretboard-dev diag campaign` surface is now landed.
 - The new entry currently provides `list`, `show`, and `run` over a small built-in registry.
 - Campaign definitions are now routed through `crates/fret-diag/src/registry/campaigns.rs` so the command layer no longer owns built-in campaign data directly.
 - The first external resolver path now reads `tools/diag-campaigns/*.json` and lets repo-owned manifests override same-id built-in fallbacks.
@@ -350,7 +350,7 @@ Goal:
 
 Current status:
 
-- A first thin consumer now exists via `fretboard diag dashboard`, which reads
+- A first thin consumer now exists via `fretboard-dev diag dashboard`, which reads
   `regression.index.json` for human-oriented inspection.
 - The next step in this phase is no longer “whether a consumer is useful? but how GUI/MCP
   should reuse the same index/summary contracts without forking semantics.
@@ -371,7 +371,7 @@ Recommended PR slices:
 1. [done] expose summary artifact paths/resources,
 2. [in progress] add campaign-aware run triggers in MCP or GUI,
    - `apps/fret-devtools-mcp` now provides a thin `fret_diag_regression_summarize` bridge over
-     `fretboard diag summarize`, including session-scoped MCP resource update notifications,
+     `fretboard-dev diag summarize`, including session-scoped MCP resource update notifications,
    - `apps/fret-devtools-mcp` now also provides `fret_diag_regression_dashboard` as a thin
      consumer over `regression.index.json`,
 3. [in progress] add summary browsing panels,
@@ -379,7 +379,7 @@ Recommended PR slices:
    - the tab now supports failing-summary drill-down and bundle-dir path copying without introducing a new campaign model,
    - selected summaries now expose a direct `Copy first bundle dir` action for faster evidence handoff into external triage/viewer flows,
    - selected summaries can now start the existing pack flow directly from the first failing bundle dir,
-   - the tab now also provides a thin `Summarize` trigger that runs `fretboard diag summarize` semantics from the current artifacts root and refreshes the shared aggregate artifacts on completion,
+   - the tab now also provides a thin `Summarize` trigger that runs `fretboard-dev diag summarize` semantics from the current artifacts root and refreshes the shared aggregate artifacts on completion,
 4. [in progress] add flake/evidence drill-down UX.
 
 Important rule:

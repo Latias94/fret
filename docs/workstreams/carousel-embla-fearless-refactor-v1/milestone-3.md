@@ -30,7 +30,7 @@ diagnostics/scripts to catch regressions.
 ## Acceptance Criteria
 
 - Targeted diags are green (native):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
 - No crate boundary violations (run layering checks if any new deps were introduced).
 - Workstream TODO (`TODO.md`) updated with checked items + evidence links (paths/test names).
 

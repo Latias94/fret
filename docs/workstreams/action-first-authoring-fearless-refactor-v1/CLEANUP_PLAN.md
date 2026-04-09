@@ -16,7 +16,7 @@ This workstream is only “done” if we leave a **clean architecture** behind.
 The repo is converging on the golden path (**View runtime + typed actions**) but cleanup/deletion is
 not complete yet:
 
-- Templates: `fretboard new` scaffolds prefer View + typed actions.
+- Templates: `fretboard-dev new` scaffolds prefer View + typed actions.
 - Cookbook/examples: migrations are ongoing; keep teaching surfaces consistent and regression-gated.
 - MVU: removed in-tree; only historical/external migration docs remain.
   - Guardrails: `tools/gate_no_mvu_in_tree.py` and `tools/gate_no_mvu_in_cookbook.py`.

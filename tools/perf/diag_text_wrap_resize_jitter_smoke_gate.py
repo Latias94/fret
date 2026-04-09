@@ -58,7 +58,7 @@ def _write_json(path: Path, v: object) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=(
-            "Run a text-wrap focused `fretboard diag perf` scenario and enforce coarse time caps. "
+            "Run a text-wrap focused `fretboard-dev diag perf` scenario and enforce coarse time caps. "
             "Intended as a catastrophic regression guard for resize jitter + wrapping."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

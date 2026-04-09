@@ -15,7 +15,7 @@ Use W0 for examples that:
 
 Expectations:
 
-- runnable via `fretboard dev web --demo <id>`,
+- runnable via `fretboard-dev dev web --demo <id>`,
 - stable `test_id`s,
 - at least one scripted diag scenario.
 

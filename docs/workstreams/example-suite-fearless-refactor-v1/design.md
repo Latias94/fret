@@ -29,7 +29,7 @@ We want examples to be *intentional teaching artifacts* and *regression evidence
 - Make renderer/effects capability obvious:
   - built-in effect steps and the custom effect tracks (CustomV1/V2/V3 + pass/plan semantics).
 - Attach **gates** to examples:
-  - stable `test_id`s, `fretboard diag` scripts/suites, and (where practical) small Rust tests.
+  - stable `test_id`s, `fretboard-dev diag` scripts/suites, and (where practical) small Rust tests.
 - Reduce long-term maintenance cost by consolidating “demo registry” and avoiding duplicated lists.
 
 ## Non-goals
@@ -49,11 +49,11 @@ We want examples to be *intentional teaching artifacts* and *regression evidence
 
 We explicitly mirror the high-level learning story many people expect:
 
-- **Templates** (“create an app”): `fretboard new ...`
+- **Templates** (“create an app”): `fretboard-dev new ...`
 - **Cookbook** (“how do I do X?”): small, focused runnable examples
 - **Gallery** (“what components exist and how do they behave?”): `fret-ui-gallery`
 - **Labs** (“cool/experimental, optional”): renderer effects, advanced visuals, experimental components
-- **Diagnostics** (“debug + regressions”): `fretboard diag` scripts/suites anchored to stable `test_id`s
+- **Diagnostics** (“debug + regressions”): `fretboard-dev diag` scripts/suites anchored to stable `test_id`s
 
 ### Cookbook vs UI Gallery (positioning)
 
@@ -77,15 +77,15 @@ concept.
 Canonical discovery + run commands:
 
 ```bash
-cargo run -p fretboard -- list cookbook-examples
-cargo run -p fretboard -- dev native --example overlay_basics
+cargo run -p fretboard-dev -- list cookbook-examples
+cargo run -p fretboard-dev -- dev native --example overlay_basics
 ```
 
 Notes:
 
 - Cookbook Cargo `examples/` are currently native-only. Some scenarios may also be hosted as web demos;
   web coverage is tracked separately (see `web-support-tiers.md`).
-- `fretboard dev native` only supports one selector at a time: `--demo`, `--bin`, or `--example`.
+- `fretboard-dev dev native` only supports one selector at a time: `--demo`, `--bin`, or `--example`.
 
 Supporting appendices for making this plan executable (and preventing drift):
 
@@ -103,10 +103,10 @@ We keep the existing reality (many apps/harnesses), but we reframe and reorganiz
 
 | Stage | Name | Form | Primary crates | Teaches | Run |
 |---|---|---|---|---|---|
-| 0 | hello | template | `fret` + `fret-ui-shadcn` | minimal UI + layout | `fretboard new hello ...` |
-| 1 | simple-todo | template | `fret` + `fret-ui-shadcn` | View runtime + typed actions + keyed lists (`LocalState<Vec<_>>` default path) | `fretboard new simple-todo ...` |
-| 2 | todo (golden path) | template + doc | + `fret-selector`, `fret-query` | derived/async state baseline | `fretboard new todo ...` |
-| 3 | components gallery | demo (cookbook-ish) | shadcn + overlays | “what exists” + overlay behaviors | `fretboard dev native --bin components_gallery` |
+| 0 | hello | template | `fret` + `fret-ui-shadcn` | minimal UI + layout | `fretboard-dev new hello ...` |
+| 1 | simple-todo | template | `fret` + `fret-ui-shadcn` | View runtime + typed actions + keyed lists (`LocalState<Vec<_>>` default path) | `fretboard-dev new simple-todo ...` |
+| 2 | todo (golden path) | template + doc | + `fret-selector`, `fret-query` | derived/async state baseline | `fretboard-dev new todo ...` |
+| 3 | components gallery | demo (cookbook-ish) | shadcn + overlays | “what exists” + overlay behaviors | `fretboard-dev dev native --bin components_gallery` |
 | 4 | ui gallery | app (catalog) | `fret-ui-gallery` | per-component pages + conformance | `cargo run -p fret-ui-gallery` |
 
 Rule: stages 0–2 must stay **boring and stable**.
@@ -191,7 +191,7 @@ Legend:
 - **Level**: 0 (first run) → 4 (editor-grade)
 - **Form**: Template / Example / Gallery Page / Lab / Harness
 - **Catalog**:
-  - `Official`: user-facing by default (linked from onboarding docs; shown in `fretboard list ...`).
+  - `Official`: user-facing by default (linked from onboarding docs; shown in `fretboard-dev list ...`).
   - `Lab`: user-facing but opt-in (higher ceiling; must be capability/budget bounded).
   - `Maintainer`: stress/regression harness (hidden by default; exposed via `--all`).
 
@@ -240,12 +240,12 @@ recipes”, but they are still `Official` entry points.
 | node-graph-basics | 3 | Lab | App | canvas | Example | ✅ | ⛔ | node graph navigation + selection | screenshot gate |
 | multi-window-tearoff | 4 | Maintainer | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
 | docking-arbitration | 4 | Maintainer | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
-| inspector-and-diag | 3 | Maintainer | Maint | diagnostics | Harness | ✅ | ✅ | inspector + bundle export | `fretboard diag` docs gate |
+| inspector-and-diag | 3 | Maintainer | Maint | diagnostics | Harness | ✅ | ✅ | inspector + bundle export | `fretboard-dev diag` docs gate |
 
 Notes:
 
 - “Web” support is intentionally selective: we should keep a small, high-signal subset running in
-  `fretboard dev web --demo ...`, and treat the rest as native-first until contracts mature.
+  `fretboard-dev dev web --demo ...`, and treat the rest as native-first until contracts mature.
 - Some rows map to existing demos/pages today; v1 is about making the catalog stable and discoverable.
 
 ## How GPUI does examples (useful reference pattern)
@@ -268,8 +268,8 @@ For Fret, this suggests a healthy split:
 
 We want one “catalog” to drive:
 
-- `fretboard list ...` (native/web/examples)
-- `fretboard dev native --...` and `fretboard dev web --...` selection UX
+- `fretboard-dev list ...` (native/web/examples)
+- `fretboard-dev dev native --...` and `fretboard-dev dev web --...` selection UX
 - docs tables (generated or manually kept in sync)
 
 Implementation options (to decide in TODO):
@@ -287,8 +287,8 @@ Recommended direction: start with (1) to reduce duplication, then migrate to (2)
 small “official” list surfaced by default:
 
 ```bash
-cargo run -p fretboard -- list native-demos
-cargo run -p fretboard -- list native-demos --all
+cargo run -p fretboard-dev -- list native-demos
+cargo run -p fretboard-dev -- list native-demos --all
 ```
 
 ## Quality bars (what makes an example “official”)
@@ -299,7 +299,7 @@ An “official” example must have:
 - a short **purpose statement** and “what to edit” notes,
 - stable `test_id`s for the primary interactive controls,
 - at least one **gate**:
-  - `fretboard diag run ...` script, and/or
+  - `fretboard-dev diag run ...` script, and/or
   - a small Rust test asserting a contract outcome, and/or
   - a perf baseline (for perf-sensitive examples).
 

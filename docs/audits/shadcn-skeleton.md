@@ -71,4 +71,4 @@ base examples, the current gallery/docs surface, and the absence of any dedicate
 - `CARGO_TARGET_DIR=target-codex-skeleton cargo test -p fret-ui-shadcn --lib skeleton`
 - `CARGO_TARGET_DIR=target-codex-skeleton cargo test -p fret-ui-shadcn --test web_vs_fret_layout skeleton`
 - `CARGO_TARGET_DIR=target-codex-skeleton cargo test -p fret-ui-gallery --test skeleton_docs_surface`
-- `target/debug/fretboard diag run tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-docs-smoke.json --warmup-frames 5 --exit-after-run --launch -- env CARGO_TARGET_DIR=target-codex-skeleton cargo run -p fret-ui-gallery --release`
+- `target/debug/fretboard-dev diag run tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-docs-smoke.json --warmup-frames 5 --exit-after-run --launch -- env CARGO_TARGET_DIR=target-codex-skeleton cargo run -p fret-ui-gallery --release`

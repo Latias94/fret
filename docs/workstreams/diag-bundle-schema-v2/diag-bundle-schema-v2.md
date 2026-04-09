@@ -71,14 +71,14 @@ Additional size knobs (dump-time policies):
 Schema note:
 
 - The runtime now always emits schema v2 bundles.
-- Older schema v1 bundles remain readable by tooling; upgrade via `fretboard diag bundle-v2 <bundle_dir|bundle.json> ...` when needed.
+- Older schema v1 bundles remain readable by tooling; upgrade via `fretboard-dev diag bundle-v2 <bundle_dir|bundle.json> ...` when needed.
   - The converter writes `bundle.schema2.json` and directory-based tooling prefers it when present.
 
 ## Compatibility expectations
 
 - v1 tools keep working for v1 bundles.
 - Updated tools:
-  - `fretboard diag meta/query/slice/stats/compare` resolve semantics from either inline `debug.semantics` or `tables.semantics`.
+  - `fretboard-dev diag meta/query/slice/stats/compare` resolve semantics from either inline `debug.semantics` or `tables.semantics`.
   - `tools/fret-bundle-viewer` resolves semantics similarly.
 
 ## Risks / tradeoffs
@@ -97,4 +97,4 @@ See:
 Operational notes:
 
 - `bundle.meta.json` now includes semantics table metrics (inline vs table-resolved counts, table entries, unique keys).
-- Use `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report` to print a compact human summary.
+- Use `cargo run -p fretboard-dev -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report` to print a compact human summary.

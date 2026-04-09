@@ -15,7 +15,7 @@ For performance investigations, see `docs/workstreams/standalone/ui-gallery-perf
 
 ## 0.1 Milestones (This Workstream)
 
-- M0 (done): Gate the most severe P0 layout regressions in `fretboard diag suite ui-gallery-layout`.
+- M0 (done): Gate the most severe P0 layout regressions in `fretboard-dev diag suite ui-gallery-layout`.
 - M1 (done): Expand correctness coverage with a small number of additional “high-risk” gates (prefer page roots + 1–3 critical controls).
 - M2 (later): Build a separate track for **visual (non-layout)** artifacts (stale paint / cache invalidation / scissor) with screenshot-based evidence and targeted checks.
 
@@ -47,7 +47,7 @@ Notes:
 
 ### 2.1 Capture a deterministic diagnostics bundle (recommended)
 
-- Use `fretboard diag run` with an existing script, or add a new `tools/diag-scripts/ui-gallery-*.json`.
+- Use `fretboard-dev diag run` with an existing script, or add a new `tools/diag-scripts/ui-gallery-*.json`.
 - If the bug is visual, capture pixels too:
   - `FRET_DIAG_BUNDLE_SCREENSHOT=1`: enable screenshot readback and write `frame.bmp` into the most recent bundle dir when a script requests it (via `capture_screenshot`) or when dumping bundles (writes `screenshot.request`).
 - If you need to inspect `SemanticsProps.test_id` / `label` in exported `bundle.json`, disable text redaction:
@@ -71,7 +71,7 @@ Notes:
 
 ### 2.3 Compare two bundles (regressions / “only happens with toggle X”)
 
-Use `fretboard diag compare`:
+Use `fretboard-dev diag compare`:
 
 - If you want correctness only (ignoring bounds), add: `--compare-ignore-bounds`.
 - If the bug is bounds-related, keep bounds enabled and set a strict epsilon: `--compare-eps-px <px>`.
@@ -113,17 +113,17 @@ Use `fretboard diag compare`:
 - Pick the top P0 issue and add a dedicated `tools/diag-scripts/ui-gallery-...json` repro.
 - Add `SemanticsProps.test_id` / labels to make the hot region and broken bounds discoverable in bundles and dumps.
 - Convert the repro into a `crates/fret-ui/src/declarative/tests/*` test when possible.
-- Keep a small layout-only suite runnable via `fretboard diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`.
+- Keep a small layout-only suite runnable via `fretboard-dev diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`.
 - Add a small-window sweep run (catches overflow earlier):
 
 ```powershell
 $env:FRET_UI_GALLERY_MAIN_WINDOW_SIZE="800x600"
-cargo run -p fretboard -- diag suite ui-gallery-layout --env FRET_DIAG_BUNDLE_SCREENSHOT=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag suite ui-gallery-layout --env FRET_DIAG_BUNDLE_SCREENSHOT=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 ### 4.1 Latest Size Matrix Runs
 
-- 2026-01-31: `fretboard diag suite ui-gallery-layout` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
+- 2026-01-31: `fretboard-dev diag suite ui-gallery-layout` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
 - 2026-01-31: `ui-gallery-layout-sweep-extended.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
 - 2026-01-31: `ui-gallery-layout-sweep-extended-chrome.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
 - 2026-01-31: `ui-gallery-layout-sweep-torture.json` passes at `800x600`, `960x540` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
@@ -140,7 +140,7 @@ This workstream is intentionally **demo-driven** and **contract-aware**:
 
 | Milestone | Outcome | Exit Criteria |
 |---|---|---|
-| M0 | A repeatable layout regression harness | `fretboard diag suite ui-gallery-layout` passes locally and produces bundles + `frame.bmp` on demand. |
+| M0 | A repeatable layout regression harness | `fretboard-dev diag suite ui-gallery-layout` passes locally and produces bundles + `frame.bmp` on demand. |
 | M1 | High-risk layout invariants audited (shadcn ecosystem) | A short list of “layout invariants” is codified (see 5.2) and every relevant container component is checked for defaults. |
 | M2 | P0 issues converted into repro scripts | Every P0 issue has: (1) script, (2) hot-region anchors, (3) before/after evidence bundle dirs recorded in this doc. |
 | M3 | Regression prevention | Each fixed P0 has either a unit test (preferred) or a dedicated script in `ui-gallery-layout` suite (acceptable fallback). |
@@ -248,6 +248,6 @@ Definition of “safe-by-default” here:
 
 ### 5.4 TODO (Mid-term)
 
-- [ ] Expand `fretboard diag suite ui-gallery-layout` as P0 issues grow (keep it small; no perf tortures here).
+- [ ] Expand `fretboard-dev diag suite ui-gallery-layout` as P0 issues grow (keep it small; no perf tortures here).
 - [ ] Convert script-only regressions into unit tests where feasible (pure layout / semantics assertions).
 - [ ] Document “known safe defaults” per container component (one paragraph each) to prevent future drift.

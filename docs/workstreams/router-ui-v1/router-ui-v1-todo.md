@@ -66,7 +66,7 @@ Status legend:
 - `[x]` Adopt in one desktop app:
   - show match-driven outlet rendering
   - show typed navigation via `navigate_to_*` + typed search helpers
-- `[x]` Add `fretboard diag` scripts for basic navigation flows:
+- `[x]` Add `fretboard-dev diag` scripts for basic navigation flows:
   - `tools/diag-scripts/router-query-demo-basic-nav.json`
   - `tools/diag-scripts/router-query-demo-back-forward.json`
 - `[x]` Register recommended router commands (optional):

@@ -149,7 +149,7 @@ Virtual-surface explainability requirement (v2; normative for windowed surfaces)
 Post-run gate (v2; normative for retained-host suites):
 
 - If a surface is expected to be Track A (retained-host windowing), scripted diagnostics SHOULD gate on:
-  - `fretboard diag stats <bundle> --check-vlist-window-shifts-non-retained-max 0`
+  - `fretboard-dev diag stats <bundle> --check-vlist-window-shifts-non-retained-max 0`
   so regressions where a retained-host window shift falls back to `non_retained_rerender` are caught automatically.
 
 ### 5) Addendum (v2): staged prefetch and window-shift budgets

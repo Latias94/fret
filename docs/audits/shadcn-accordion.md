@@ -74,7 +74,7 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 - shadcn web golden (geometry-first): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   - Gates: `web_vs_fret_layout_accordion_demo_geometry_light` / `web_vs_fret_layout_accordion_demo_geometry_dark`
 - Diag hover gate (screenshot-backed, use with pixels-changed check):
-  - `cargo run -p fretboard -- diag run ui-gallery-accordion-trigger-hover-underline-pixels-changed --check-pixels-changed ui-gallery-accordion-demo-shipping-trigger --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag run ui-gallery-accordion-trigger-hover-underline-pixels-changed --check-pixels-changed ui-gallery-accordion-demo-shipping-trigger --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Follow-ups (recommended)
 

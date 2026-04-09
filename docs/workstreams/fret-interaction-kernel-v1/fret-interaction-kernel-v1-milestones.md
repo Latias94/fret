@@ -30,7 +30,7 @@ Deliverables:
 Exit criteria:
 
 - `cargo nextest run -p fret-ui-kit` passes.
-- `fretboard diag run` gates are added/updated for the floating windows demo.
+- `fretboard-dev diag run` gates are added/updated for the floating windows demo.
 
 ## M2 — `fret-node` viewport helpers (2–4 days)
 

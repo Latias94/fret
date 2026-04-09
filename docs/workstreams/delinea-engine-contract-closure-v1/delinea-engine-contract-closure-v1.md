@@ -109,7 +109,7 @@ In scope:
 
 - Engine contracts for multi-grid, transforms/lineage, participation/output, and incremental data updates.
 - Small adapter changes that are strictly required by engine contract closure (routing and wiring).
-- Regression gates (Rust tests + headless goldens; optionally `fretboard diag` scripts for interactive semantics).
+- Regression gates (Rust tests + headless goldens; optionally `fretboard-dev diag` scripts for interactive semantics).
 
 Out of scope (for v1):
 
@@ -133,7 +133,7 @@ Current posture highlight:
 
 - M3 append-only behavior under `WorkBudget` is now regression-gated (multi-series, unfinished-step continuity).
 - M3 update semantics are explicit (no silent column mutation) via `DataTable` update APIs and an engine-level invalidation gate.
-- M4 interactive domain-window linking is gated via `fretboard diag` pixels-changed checks (`tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`).
+- M4 interactive domain-window linking is gated via `fretboard-dev diag` pixels-changed checks (`tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`).
 
 ## 5) Reference posture (what we borrow, not what we copy)
 
@@ -158,5 +158,5 @@ We consider this workstream “done” when:
    - Evidence: see the “Main sync” section in the TODO tracker.
 2. Finish M4 conformance harness closure:
    - ensure headless goldens remain stable after refactors,
-   - keep at least one interactive/scripted linking gate runnable (`fretboard diag`),
+   - keep at least one interactive/scripted linking gate runnable (`fretboard-dev diag`),
    - document a minimal “fast” nextest suite for local + CI use.

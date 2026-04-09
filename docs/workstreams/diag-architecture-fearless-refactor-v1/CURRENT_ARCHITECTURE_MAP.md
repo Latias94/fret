@@ -5,7 +5,7 @@ Status: Draft (evidence note)
 This is a “where is what?” map for the diagnostics stack as it exists today. It is intentionally
 evidence-first (clickable anchors) so refactors can stay grounded.
 
-## 1) CLI entrypoints (how `fretboard diag` reaches the engine)
+## 1) CLI entrypoints (how `fretboard-dev diag` reaches the engine)
 
 - `apps/fretboard/src/cli.rs` (top-level CLI dispatch)
 - `apps/fretboard/src/diag.rs` (thin shim)

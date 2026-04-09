@@ -86,7 +86,7 @@ Rule of thumb:
 
 - A small set of recipe wrappers exist in `fret-ui-kit` (or `fret-ui-magic`) that can reproduce the
   target parity list with stable fallbacks.
-- `fretboard diag` scripts exist for each target parity demo and record:
+- `fretboard-dev diag` scripts exist for each target parity demo and record:
   - screenshots (native + web when possible),
   - perf baselines for steady-state pointer-move and idle.
 - Renderer conformance tests exist for:

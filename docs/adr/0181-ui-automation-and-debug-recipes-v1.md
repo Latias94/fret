@@ -141,7 +141,7 @@ Tooling MAY provide regression gates based on these fields.
 This ADR is partially implemented in a way that preserves the intended crate boundaries:
 
 - **Repro orchestration + packaging (`fretboard`)**
-  - `fretboard diag repro` runs a script or a suite, applies post-run checks, writes a machine summary, and packs a zip.
+  - `fretboard-dev diag repro` runs a script or a suite, applies post-run checks, writes a machine summary, and packs a zip.
   - It also writes an `evidence.index.json` file that lists the key artifacts/checks/resources to simplify AI/CI discovery.
   - Suite repros are packed as multi-bundle zips with stable prefixes and script sources included under `_root/scripts/`.
   - Best-effort capture wiring is available via `--with renderdoc` and `--with tracy`:

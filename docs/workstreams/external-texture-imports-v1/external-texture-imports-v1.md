@@ -21,7 +21,7 @@ It is the practical “runs end-to-end in-repo” companion to:
    - start with copy-based paths (GPU copy / CPU upload),
    - track web zero-copy (`ExternalTexture`) explicitly as blocked until the backend supports it.
 4. Leave a diagnostics/perf closure:
-   - a `fretboard diag run` script that produces screenshots,
+   - a `fretboard-dev diag run` script that produces screenshots,
    - and a committed steady-state perf baseline + policy preset.
 
 ## Non-goals (v1)

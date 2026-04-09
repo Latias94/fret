@@ -55,7 +55,7 @@ ADR anchor:
     - Demo: `cargo run -p fret-demo --bin container_queries_docking_demo --release`
     - Gate run (prebuild + launch the exe to avoid Windows file-lock rebuild issues):
       - `cargo build -p fret-demo --bin container_queries_docking_demo --release`
-      - `cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --warmup-frames 5 --check-pixels-changed cq-dock-demo-mode --timeout-ms 600000 --launch -- .\\target\\release\\container_queries_docking_demo.exe`
+      - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --warmup-frames 5 --check-pixels-changed cq-dock-demo-mode --timeout-ms 600000 --launch -- .\\target\\release\\container_queries_docking_demo.exe`
 
 ## Remaining approximations (audit list)
 

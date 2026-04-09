@@ -32,7 +32,7 @@ Bottom-up profiling answers:
 
 Use the smallest tool that answers the question.
 
-### 2.1 Coarse budget: `fretboard diag perf`
+### 2.1 Coarse budget: `fretboard-dev diag perf`
 
 Use this to decide which slice dominates the frame:
 
@@ -77,7 +77,7 @@ For steady scripted workloads, prefer exporting renderer perf into the diagnosti
 
 How it works:
 
-- `fretboard diag run/repro/perf/suite/matrix` best-effort enables `FRET_DIAG_RENDERER_PERF=1`.
+- `fretboard-dev diag run/repro/perf/suite/matrix` best-effort enables `FRET_DIAG_RENDERER_PERF=1`.
 - The desktop runner enables renderer perf and records a “last frame” `RenderPerfSnapshot`.
 - The snapshot is exported into `bundle.json` under `.windows[].snapshots[].debug.stats.renderer_*`.
 
@@ -104,11 +104,11 @@ This is the fastest way to answer:
 
 Workflow:
 
-1) Capture a bundle via `fretboard diag perf` (or `diag repro`).
+1) Capture a bundle via `fretboard-dev diag perf` (or `diag repro`).
 2) Inspect the worst frame:
 
 ```bash
-fretboard diag stats <bundle.json> --sort time --top 1
+fretboard-dev diag stats <bundle.json> --sort time --top 1
 ```
 
 3) Use the `paint_text_prepare_hotspots` line to identify the **exact** element ids that prepared and correlate them
@@ -139,7 +139,7 @@ Use RenderDoc when:
 Run a steady scripted workload (example: code editor autoscroll) and enable renderer perf logging:
 
 ```bash
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --env FRET_UI_GALLERY_RENDERER_PERF=1 \
   --env FRET_RENDERER_PERF_PIPELINES=1 \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 \
@@ -178,7 +178,7 @@ An invalidation-driven variant also exists (preferred for “realistic scroll”
 ### 3.2 Same workload, but with Tracy capture
 
 ```bash
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --with tracy \
   --env FRET_TRACY=1 \
   --env FRET_UI_GALLERY_RENDERER_PERF=1 \
@@ -195,7 +195,7 @@ Notes:
 ### 3.3 GPU capture with RenderDoc (frame-level)
 
 ```bash
-cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+cargo run -p fretboard-dev -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
   --with renderdoc \
   --renderdoc-after-frames 120 \
   --renderdoc-marker fret.runner.render_scene \

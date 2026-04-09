@@ -67,7 +67,7 @@ Layout deep debug escape hatch (Taffy dump):
 
 ## 3) Artifact invariants (non-negotiable)
 
-These are invariants for `fretboard diag run/suite/repro/perf`:
+These are invariants for `fretboard-dev diag run/suite/repro/perf`:
 
 1. Every run writes a **stable script result** (`script.result.json`) even on tooling failures.
 2. Every bundle dump yields a **local shareable directory** with a primary artifact:
@@ -112,14 +112,14 @@ We require at least one “golden” gate suite that:
 
 Recommended starting suites (native):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag suite ui-gallery-shadcn-conformance --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-shadcn-conformance --launch -- cargo run -p fret-ui-gallery --release`
 
 Recommended perf gates (native):
 
-- `cargo run -p fretboard -- diag perf ui-gallery --repeat 5 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag perf ui-gallery --repeat 5 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
 - Layout-heavy preset:
-  - `cargo run -p fretboard -- diag perf ui-gallery-layout-steady --repeat 7 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag perf ui-gallery-layout-steady --repeat 7 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 ### 4.5 Layout correctness gates (semantics-first)
 
@@ -139,7 +139,7 @@ Optional “explainability sidecar”:
 When iterating on tooling/diagnostics, keep artifacts isolated per task:
 
 - Prefer a dedicated out dir:
-  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-issue-1234 --session-auto --launch -- <cmd...>`
+  - `cargo run -p fretboard-dev -- diag run <script> --dir target/fret-diag-issue-1234 --session-auto --launch -- <cmd...>`
 
 To keep bundles small for AI/CLI loops (see details in `docs/ui-diagnostics-and-scripted-tests.md`):
 

@@ -50,13 +50,13 @@ Implementation pointers (where the code lives today):
 
 3. Trigger a dump:
 
-   - `cargo run -p fretboard -- diag poke`
+   - `cargo run -p fretboard-dev -- diag poke`
 
 4. Locate the most recent bundle directory:
 
-   - `cargo run -p fretboard -- diag latest` (session-aware when `<dir>/sessions/*` exists)
+   - `cargo run -p fretboard-dev -- diag latest` (session-aware when `<dir>/sessions/*` exists)
    - If you are using sessions (`--session-auto`) or you have a base dir with multiple session dirs:
-     - `cargo run -p fretboard -- diag resolve latest --dir <base_or_session_dir>`
+     - `cargo run -p fretboard-dev -- diag resolve latest --dir <base_or_session_dir>`
      - Optional: `--within-session <id|latest>` to pin a specific session under `<base_dir>/sessions/`.
    - The primary bundle artifact is `bundle.schema2.json` (preferred) or `bundle.json` under that directory.
 
@@ -68,11 +68,11 @@ Concurrency note (important for automation / AI agents):
   `script.result.json`, `trigger.touch`, `latest.txt`, etc). **Do not** point multiple concurrent runs (multiple
   terminals, multiple agents, or multiple demos) at the same `FRET_DIAG_DIR`.
 - Recommendation: treat `--dir` as a session boundary and always pass a unique out dir per agent/task:
-  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --launch -- <cmd...>`
-  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-issue-1234 --launch -- <cmd...>`
+  - `cargo run -p fretboard-dev -- diag run <script> --dir target/fret-diag-agent-a --launch -- <cmd...>`
+  - `cargo run -p fretboard-dev -- diag suite <suite> --dir target/fret-diag-issue-1234 --launch -- <cmd...>`
 - If you are using `--launch`, prefer `--session-auto` so tooling allocates an isolated session dir automatically:
-  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
-  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+  - `cargo run -p fretboard-dev -- diag run <script> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+  - `cargo run -p fretboard-dev -- diag suite <suite> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
 - Tip: most bounded inspection commands accept a base/session out dir directly (not just bundle dirs) and will resolve it
   to the latest bundle under the latest session automatically. When in doubt, use `diag resolve latest` to see what would
   be selected.
@@ -89,10 +89,10 @@ Artifact note:
 Legacy note:
 
 - Older bundles may still be schema v1 (inline-only semantics, no tables).
-- Tooling remains compatible: `fretboard diag meta/query/slice/stats/compare` resolve semantics from either inline
+- Tooling remains compatible: `fretboard-dev diag meta/query/slice/stats/compare` resolve semantics from either inline
   semantics or the schema-v2 semantics table.
 - If you want to “upgrade” a schema v1 bundle (or write a compact schema2 view for a large schema v2 bundle), run
-  `cargo run -p fretboard -- diag bundle-v2 <bundle_dir> --mode <all|changed|last|off>` (writes
+  `cargo run -p fretboard-dev -- diag bundle-v2 <bundle_dir> --mode <all|changed|last|off>` (writes
   `bundle.schema2.json`, and directory-based tooling will prefer it when present).
 
 Defaults:
@@ -170,10 +170,10 @@ Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
   - Prefer bounded tooling commands that use sidecars and/or schema2 views:
-  - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
-  - `fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n> --json`
-  - `fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
-  - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
+  - `fretboard-dev diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - `fretboard-dev diag windows <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n> --json`
+  - `fretboard-dev diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
+  - `fretboard-dev diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
     - Note: when an adjacent bundle artifact is available, `dock-routing` may regenerate/overwrite `dock.routing.json`
       to keep bounded evidence keys up to date (no manual deletion needed).
     - The report is intentionally compact; it is typically enough to debug multi-window docking routing issues without
@@ -183,11 +183,11 @@ Footgun / recommendation:
       - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
       - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
       - `under` (hover selection source: platform vs heuristic).
-  - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
-  - `fretboard diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
-  - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
-  - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n>`
-  - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+  - `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
+  - `fretboard-dev diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
+  - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
+  - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n>`
+  - `fretboard-dev diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
 - When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (it excludes `target/fret-diag/**` and `.fret/diag/**` by default).
 
 To disable sidecar writing (native-only):
@@ -238,15 +238,15 @@ $env:FRET_DIAG_REDACT_TEXT=0
 When a bundle artifact is too large to share or inspect directly, prefer a bounded artifact set:
 
 1. Get quick context:
-   - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
+   - `cargo run -p fretboard-dev -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
 2. Find a stable selector (usually `test_id`):
-   - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
+   - `cargo run -p fretboard-dev -- diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
    - Optional: find the best snapshot quickly:
-     - `cargo run -p fretboard -- diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
-     - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
-     - If you already know the failing script step: `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n>`
+     - `cargo run -p fretboard-dev -- diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
+     - `cargo run -p fretboard-dev -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
+     - If you already know the failing script step: `cargo run -p fretboard-dev -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n>`
 3. Export a compact packet for AI / code review:
-   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
+   - `cargo run -p fretboard-dev -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 
 ## Optional: dump a frame screenshot alongside the bundle
 
@@ -282,25 +282,25 @@ Workflow tip:
 
 - Drag `bundle.json` (or `bundle.schema2.json`) from `target/fret-diag/.../` into the viewer (or use the file picker).
 - You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
-- To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
-- To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
-- To validate a per-run artifact directory (manifest + chunks + sidecars + run_id/timestamps): `cargo run -p fretboard -- diag artifact lint <run_dir|out_dir>`
+- To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard-dev -- diag pack`
+- To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard-dev -- diag pack --include-all`
+- To validate a per-run artifact directory (manifest + chunks + sidecars + run_id/timestamps): `cargo run -p fretboard-dev -- diag artifact lint <run_dir|out_dir>`
 - Prefer viewer-friendly zips when schema2 exists (keeps artifacts smaller than raw `bundle.json`):
-  - `cargo run -p fretboard -- diag pack --include-all --pack-schema2-only --warmup-frames <n>`
-  - If needed: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+  - `cargo run -p fretboard-dev -- diag pack --include-all --pack-schema2-only --warmup-frames <n>`
+  - If needed: `cargo run -p fretboard-dev -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - For AI-first sharing, prefer `diag pack --ai-only` (see “AI-first sharing” below).
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
-- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json|bundle.schema2.json>`
-- To generate a smaller frames-index-backed triage summary: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json|bundle.schema2.json> --lite --metric <total|layout|paint>`
-- To generate a frames-index-backed hotspot summary without loading the full bundle JSON: `cargo run -p fretboard -- diag hotspots <bundle_dir|bundle.json|bundle.schema2.json> --lite --metric <total|layout|paint> --warmup-frames <n> --json`
-- To estimate large JSON subtrees for retention/packaging triage: `cargo run -p fretboard -- diag hotspots <bundle_dir|bundle.json|bundle.schema2.json> --hotspots-top <n> --max-depth <n> --min-bytes <n> [--force] --json`
-- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
-- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
-- To generate (or refresh) a cached `test_ids.index.json` sidecar without opening the viewer: `cargo run -p fretboard -- diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n> --json`
-- To generate (or refresh) a cached `frames.index.json` sidecar used by lite triage: `cargo run -p fretboard -- diag frames-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n> --json`
-- To inspect screenshot manifests or aggregated screenshot directories: `cargo run -p fretboard -- diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json> --json`
-- To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
-- To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
+- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard-dev -- diag triage <bundle_dir|bundle.json|bundle.schema2.json>`
+- To generate a smaller frames-index-backed triage summary: `cargo run -p fretboard-dev -- diag triage <bundle_dir|bundle.json|bundle.schema2.json> --lite --metric <total|layout|paint>`
+- To generate a frames-index-backed hotspot summary without loading the full bundle JSON: `cargo run -p fretboard-dev -- diag hotspots <bundle_dir|bundle.json|bundle.schema2.json> --lite --metric <total|layout|paint> --warmup-frames <n> --json`
+- To estimate large JSON subtrees for retention/packaging triage: `cargo run -p fretboard-dev -- diag hotspots <bundle_dir|bundle.json|bundle.schema2.json> --hotspots-top <n> --max-depth <n> --min-bytes <n> [--force] --json`
+- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard-dev -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard-dev -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
+- To generate (or refresh) a cached `test_ids.index.json` sidecar without opening the viewer: `cargo run -p fretboard-dev -- diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n> --json`
+- To generate (or refresh) a cached `frames.index.json` sidecar used by lite triage: `cargo run -p fretboard-dev -- diag frames-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n> --json`
+- To inspect screenshot manifests or aggregated screenshot directories: `cargo run -p fretboard-dev -- diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json> --json`
+- To include `triage.json` in a share zip: `cargo run -p fretboard-dev -- diag pack --include-triage`
+- To include screenshots in a share zip: `cargo run -p fretboard-dev -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` / `bundle.schema2.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 
@@ -316,31 +316,31 @@ Canonical surface note:
 - Use `diag resolve latest` when you need the exact bundle/session resolution that bounded inspection commands will follow.
 
 - Generate an “AI packet” directory (includes `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and a budget report):
-  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+  - `cargo run -p fretboard-dev -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
   - If you already have sidecars but cannot read the bundle artifact (too large / unavailable), you can build a packet
     without reading the bundle:
-    - `cargo run -p fretboard -- diag ai-packet <bundle_dir> --sidecars-only --packet-out <dir>`
+    - `cargo run -p fretboard-dev -- diag ai-packet <bundle_dir> --sidecars-only --packet-out <dir>`
     - Requires the sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) to already exist.
   - If `bundle.schema2.json` is present, the packet may also include it (within the packet budget).
-    - To generate it: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+    - To generate it: `cargo run -p fretboard-dev -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - Convenience: generate `ai.packet/` next to a bundle dir during common workflows:
-  - After a scripted run: `cargo run -p fretboard -- diag run <script.json> --ai-packet`
-  - Before packing a share zip: `cargo run -p fretboard -- diag pack <bundle_dir> --ai-packet`
+  - After a scripted run: `cargo run -p fretboard-dev -- diag run <script.json> --ai-packet`
+  - Before packing a share zip: `cargo run -p fretboard-dev -- diag pack <bundle_dir> --ai-packet`
   - Pack a bounded “AI-only” zip (packs `ai.packet/` + nearby script sources, but does not include the full bundle artifact):
-    - `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
+    - `cargo run -p fretboard-dev -- diag pack <bundle_dir> --ai-only`
     - If the bundle dir has sidecars but no readable bundle artifact, `diag pack --ai-only` can still succeed by generating
       `ai.packet/` from sidecars (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
   - For a multi-script repro run, pack a bounded `repro.ai.zip`:
-    - `cargo run -p fretboard -- diag repro <suite|script.json...> --ai-only`
+    - `cargo run -p fretboard-dev -- diag repro <suite|script.json...> --ai-only`
     - If any repro item bundle artifacts are missing/unreadable but sidecars exist, this may still succeed by generating
       `ai.packet/` from sidecars for each item (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
   - Agent plan JSON (includes recommended bounded commands like `diag pack --ai-only`):
-    - `cargo run -p fretboard -- diag agent <bundle_dir|bundle.json|bundle.schema2.json>`
+    - `cargo run -p fretboard-dev -- diag agent <bundle_dir|bundle.json|bundle.schema2.json>`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
-  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
+  - `cargo run -p fretboard-dev -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 - If you only need a semantics-focused subset, slice directly:
-  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --out <path>`
-  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n> --out <path>`
+  - `cargo run -p fretboard-dev -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --out <path>`
+  - `cargo run -p fretboard-dev -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n> --out <path>`
 
 ## DevTools GUI (preview)
 
@@ -373,7 +373,7 @@ Notes:
    - `FRET_DIAG=1`
 
    Note:
-   - When using `fretboard diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
+   - When using `fretboard-dev diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
      like `FRET_DIAG`/`FRET_DIAG_DIR`/`FRET_DIAG_*_PATH`. Use CLI flags (e.g. `--dir`, `--*-path`),
      a config file (`FRET_DIAG_CONFIG_PATH`), or non-reserved `--env` overrides instead.
    - Tool-launched runs also scrub inherited diagnostics env vars from the parent shell; do not rely on
@@ -417,7 +417,7 @@ cargo run -p fret-diag-scriptgen -- write todo-baseline-v2
 This writes a JSON file under `.fret/diag/scripts/` by default and prints the path. You can then run it via:
 
 ```bash
-cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --launch -- cargo run -p fret-demo --bin todo_demo
+cargo run -p fretboard-dev -- diag run .fret/diag/scripts/todo-baseline-v2.json --launch -- cargo run -p fret-demo --bin todo_demo
 ```
 
 Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
@@ -425,24 +425,24 @@ Implementation note: templates are built using the `fret_diag_protocol::builder`
 Script tooling (no app required):
 
 - Normalize formatting (stable diffs):
-  - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
-  - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+  - `cargo run -p fretboard-dev -- diag script normalize .\\script.json --write`
+  - `cargo run -p fretboard-dev -- diag script normalize .\\script.json --check`
 - Upgrade legacy schema v1 → v2 (schema-only; does not rewrite v2 scripts):
-  - `cargo run -p fretboard -- diag script upgrade .\\script.json --write`
-  - `cargo run -p fretboard -- diag script upgrade .\\script.json --check`
+  - `cargo run -p fretboard-dev -- diag script upgrade .\\script.json --write`
+  - `cargo run -p fretboard-dev -- diag script upgrade .\\script.json --check`
   - Note: tool-launched runs (`--launch`) reject `schema_version=1` scripts by default; upgrade first.
 - PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
-  - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
-  - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
+  - `cargo run -p fretboard-dev -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
+  - `cargo run -p fretboard-dev -- diag script validate tools/diag-scripts`
 - Validate schema/parse (writes `check.script_schema.json` under `--dir`, or `--check-out`):
-  - `cargo run -p fretboard -- diag script validate .\\script.json`
+  - `cargo run -p fretboard-dev -- diag script validate .\\script.json`
 - Lint scripts (capability inference + hygiene; writes `check.script_lint.json`):
-  - `cargo run -p fretboard -- diag script lint .\\script.json`
+  - `cargo run -p fretboard-dev -- diag script lint .\\script.json`
 
 Repeat-run triage (flake hunting):
 
 - Run the same script N times and write `repeat.summary.json` under `--dir` (includes `highlights` aggregates for quick scanning):
-  - `cargo run -p fretboard -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
+  - `cargo run -p fretboard-dev -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
 
 Script shrinking (automated minimal repro):
 
@@ -452,29 +452,29 @@ Script shrinking (automated minimal repro):
   - Place tool flags such as `--json`, `--session-auto`, and `--shrink-out` before `--launch -- <cmd...>`.
   - Writes a minimized script to `--shrink-out` (default: `target/fret-diag/shrink/script.min.json`) and a summary to `target/fret-diag/shrink/shrink.summary.json`.
   - Example:
-    - `cargo run -p fretboard -- diag script shrink .\\script.json --json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard-dev -- diag script shrink .\\script.json --json --launch -- cargo run -p fret-ui-gallery --release`
 
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
-   - `cargo run -p fretboard -- diag script .\\script.json`
+   - `cargo run -p fretboard-dev -- diag script .\\script.json`
 
    Or run it and wait for a pass/fail result (CI-friendly):
 
-   - `cargo run -p fretboard -- diag run .\\script.json`
-   - To also pack a bounded shareable `.zip` for AI triage (does not ship the full bundle artifact): `cargo run -p fretboard -- diag run .\\script.json --bundle-doctor fix --pack --ai-only`
-   - If you need an offline viewer-friendly zip (includes the bundle artifact): `cargo run -p fretboard -- diag run .\\script.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
+   - `cargo run -p fretboard-dev -- diag run .\\script.json`
+   - To also pack a bounded shareable `.zip` for AI triage (does not ship the full bundle artifact): `cargo run -p fretboard-dev -- diag run .\\script.json --bundle-doctor fix --pack --ai-only`
+   - If you need an offline viewer-friendly zip (includes the bundle artifact): `cargo run -p fretboard-dev -- diag run .\\script.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
 
    Or run a pre-defined suite (the app must be running):
 
-   - `cargo run -p fretboard -- diag suite ui-gallery`
+   - `cargo run -p fretboard-dev -- diag suite ui-gallery`
 
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
-   Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
+   Use `cargo run -p fretboard-dev -- diag latest` to grab the newest bundle.
 
 Deterministic termination note (especially for multi-window docking scripts):
 
 - Prefer ending a script with `capture_bundle` as the final step.
-- Tool-launched filesystem runs (`fretboard diag run --launch`) now reuse the bundle referenced by the
+- Tool-launched filesystem runs (`fretboard-dev diag run --launch`) now reuse the bundle referenced by the
   final `script.result.json` when `--pack` / `--ai-packet` needs a post-run artifact, instead of
   forcing a second dump after `stage=passed`.
 - For promoted `test_id` / role-only proof scripts, the runner now avoids leasing `ElementRuntime`
@@ -503,26 +503,26 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
 
     - Reuse an already-running app:
 
-      - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+      - `cargo run -p fretboard-dev -- diag perf ui-gallery --sort time`
 
       - Machine-readable JSON:
 
-        - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
+        - `cargo run -p fretboard-dev -- diag perf ui-gallery --sort time --json`
 
       - Repeatable perf summary (helps reduce noise; nearest-rank p50/p95 across N runs):
 
-        - `cargo run -p fretboard -- diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json`
+        - `cargo run -p fretboard-dev -- diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json`
 
     - Or launch a fresh process per script (clean state, slower):
 
-      - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+      - `cargo run -p fretboard-dev -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 Web runner note:
 
 - `diag perf` uses the filesystem-trigger transport, so for web runner workflows you typically:
   1) run the script via `apps/fret-devtools` (or any devtools-ws-capable driver) to export bundles under `.fret/diag/exports/`, then
   2) compute a baseline from those bundle paths:
-     - `cargo run -p fretboard -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
+     - `cargo run -p fretboard-dev -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
 
 ### Web runner: exporting bundles headlessly (Trunk + devtools-ws)
 
@@ -552,10 +552,10 @@ The command prints the export directory path, and writes:
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
-   - Tail (worst wall-time frames): `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`
+   - Tail (worst wall-time frames): `cargo run -p fretboard-dev -- diag stats <bundle_dir> --sort time --top 20`
    - "Real work" vs preemption (UI thread CPU deltas):
-     - Windows (best signal): `cargo run -p fretboard -- diag stats <bundle_dir> --sort cpu_cycles --top 20`
-     - Cross-platform fallback: `cargo run -p fretboard -- diag stats <bundle_dir> --sort cpu_time --top 20`
+     - Windows (best signal): `cargo run -p fretboard-dev -- diag stats <bundle_dir> --sort cpu_cycles --top 20`
+     - Cross-platform fallback: `cargo run -p fretboard-dev -- diag stats <bundle_dir> --sort cpu_time --top 20`
 
    Notes:
    - If a frame is high in `--sort time` but near-zero in `cpu_time` / `cpu_cycles`, it's often OS scheduling noise
@@ -565,23 +565,23 @@ The command prints the export directory path, and writes:
 
 4. Compare two bundles (diff by impact):
 
-   - `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 20`
-   - JSON: `cargo run -p fretboard -- diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
-   - Stats-lite support matrix: `cargo run -p fretboard -- diag stats --stats-lite-checks-json`
+   - `cargo run -p fretboard-dev -- diag stats --diff <bundle_a> <bundle_b> --top 20`
+   - JSON: `cargo run -p fretboard-dev -- diag stats --diff <bundle_a> <bundle_b> --top 50 --json`
+   - Stats-lite support matrix: `cargo run -p fretboard-dev -- diag stats --stats-lite-checks-json`
 
 5. Optional: inspect focused summaries without loading the full bundle by hand:
 
-   - Single-bundle layout hotspot summary: `cargo run -p fretboard -- diag layout-perf-summary <bundle_dir> --top 10 --json`
-   - Aggregate footprint summary across captured samples: `cargo run -p fretboard -- diag memory-summary target/fret-diag --top 10 --json`
+   - Single-bundle layout hotspot summary: `cargo run -p fretboard-dev -- diag layout-perf-summary <bundle_dir> --top 10 --json`
+   - Aggregate footprint summary across captured samples: `cargo run -p fretboard-dev -- diag memory-summary target/fret-diag --top 10 --json`
 
 6. Optional: emit a Chrome trace JSON derived from the bundle:
 
-   - During perf runs: `cargo run -p fretboard -- diag perf ui-gallery --trace --launch -- cargo run -p fret-ui-gallery --release`
-   - For an existing bundle: `cargo run -p fretboard -- diag trace <bundle_dir|bundle.json> [--trace-out <path>]`
+   - During perf runs: `cargo run -p fretboard-dev -- diag perf ui-gallery --trace --launch -- cargo run -p fret-ui-gallery --release`
+   - For an existing bundle: `cargo run -p fretboard-dev -- diag trace <bundle_dir|bundle.json> [--trace-out <path>]`
 
 7. Optional: turn on the perf hints gate (heuristic, explainable warnings):
 
-   - `cargo run -p fretboard -- diag perf ui-gallery --check-perf-hints --launch -- cargo run -p fret-ui-gallery --release`
+   - `cargo run -p fretboard-dev -- diag perf ui-gallery --check-perf-hints --launch -- cargo run -p fret-ui-gallery --release`
    - Output evidence: `<out_dir>/check.perf_hints.json` (also indexed in `evidence.index.json` and included in `repro.zip` when present)
    - Defaults:
      - `--check-perf-hints` denies *all* hint codes and fails on `warn`/`error` severities.
@@ -592,10 +592,10 @@ Notes:
 - When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help
   identify "cache misses" vs "we are repainting anyway".
 - For a CPU timeline view of these same frames, see: `docs/tracy.md`.
-- For overall process resource footprint (especially "idle CPU" and memory regressions), use `fretboard diag repro`
+- For overall process resource footprint (especially "idle CPU" and memory regressions), use `fretboard-dev diag repro`
   to run a script and capture a `resource.footprint.json` summary (CPU + working set / pagefile on Windows).
   This is designed for CI/automation gates:
-  - `cargo run -p fretboard -- diag repro <script.json> --max-cpu-avg-percent-total-cores 2.0 --max-peak-working-set-bytes 800000000 --launch -- <cmd...>`
+  - `cargo run -p fretboard-dev -- diag repro <script.json> --max-cpu-avg-percent-total-cores 2.0 --max-peak-working-set-bytes 800000000 --launch -- <cmd...>`
   - `avg_cpu_percent_total_cores` is normalized to *all* logical cores (e.g. ~3% on a 32-core machine is ~1 full core).
 
 ## Quick Start (picking / "inspect target")
@@ -608,7 +608,7 @@ This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
 
 2. Arm a one-shot pick (this waits for the next click and prints a selector JSON on success):
 
-   - `cargo run -p fretboard -- diag pick`
+   - `cargo run -p fretboard-dev -- diag pick`
 
 3. Click the UI element you want to target.
 
@@ -629,19 +629,19 @@ This is closer to Zed/GPUI’s inspector workflow: keep an inspect overlay activ
 
 2. Enable inspect mode (writes `inspect.json` and touches `inspect.touch`):
 
-   - `cargo run -p fretboard -- diag inspect on`
+   - `cargo run -p fretboard-dev -- diag inspect on`
 
    Optional: allow clicks to keep reaching the app UI while still producing pick results:
 
-   - `cargo run -p fretboard -- diag inspect on --consume-clicks false`
+   - `cargo run -p fretboard-dev -- diag inspect on --consume-clicks false`
 
 3. Hover to see the candidate node; click to write `pick.result.json` (each click updates `run_id`).
 
 4. Disable or toggle:
 
-   - `cargo run -p fretboard -- diag inspect off`
-   - `cargo run -p fretboard -- diag inspect toggle`
-   - `cargo run -p fretboard -- diag inspect status` (prints a 1-line JSON payload)
+   - `cargo run -p fretboard-dev -- diag inspect off`
+   - `cargo run -p fretboard-dev -- diag inspect toggle`
+   - `cargo run -p fretboard-dev -- diag inspect status` (prints a 1-line JSON payload)
 
 In-app shortcuts while inspect mode is active:
 
@@ -656,20 +656,20 @@ In-app shortcuts while inspect mode is active:
 
 To reduce "pick → first repro script" friction, `fretboard` can generate a minimal script skeleton:
 
-- `cargo run -p fretboard -- diag pick-script`
+- `cargo run -p fretboard-dev -- diag pick-script`
 
 This writes `target/fret-diag/picked.script.json` (override with `--pick-script-out`), which you can then run via:
 
-- `cargo run -p fretboard -- diag run target/fret-diag/picked.script.json`
+- `cargo run -p fretboard-dev -- diag run target/fret-diag/picked.script.json`
 
 ### Patch an existing script using a pick (JSON Pointer)
 
 When UI structure or labels change, use pick to update a script step's selector in-place:
 
 - Update a click step:
-  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/0/target`
+  - `cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/0/target`
 - Update a predicate target (e.g. `wait_until` / `assert`):
-  - `cargo run -p fretboard -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/1/predicate/target`
+  - `cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --ptr /steps/1/predicate/target`
 
 By default this overwrites the script file; use `--out <path>` to write to a new file.
 
@@ -714,7 +714,7 @@ Core:
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed raw `bundle.json` (when enabled; default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
-  - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
+  - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard-dev diag run/suite/repro --launch`.
   - For most fields, an env var overrides the config file (compat-first manual escape hatch). A few size-control knobs
     are intentionally config-only for tool-launched determinism (see `tools/diag-configs/README.md`).
   - In `--launch` mode, the config file is expected to be writable. Tooling treats a failure to write `diag.config.json`
@@ -736,8 +736,8 @@ Core:
     - Tool-launched escape hatch: pass `--launch-write-bundle-json` (must appear before `--launch`) to make tooling
       write a per-run config with `write_bundle_json=true` for that launched run.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
-    - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
-    - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
+    - `cargo run -p fretboard-dev -- diag config doctor --mode launch --dir .fret/diag`
+    - `cargo run -p fretboard-dev -- diag config doctor --mode manual --report-json` (manual apps)
   - The doctor also emits warnings for common “output explosion” risk factors (e.g. large snapshot caps, semantics on every
     snapshot, pretty-printed `bundle.json`).
 
@@ -762,7 +762,7 @@ Config resolution order (runtime):
 
 ### Tool-launched (`--launch`) env policy
 
-`fretboard diag ... --launch` aims to be deterministic and small-by-default. To reduce drift and accidental output
+`fretboard-dev diag ... --launch` aims to be deterministic and small-by-default. To reduce drift and accidental output
 explosions:
 
 - **Reserved (tooling-owned) keys:** `--env KEY=VALUE` cannot override them (use `--dir` / `--*-path` flags instead).
@@ -775,16 +775,16 @@ explosions:
 - `diag config doctor --mode launch` surfaces the scrubbed/reserved key lists (via `--report-json`) and reports which
   inherited keys were actually scrubbed for the current shell env.
   - To simulate one-off `--env` overrides for a tool-launched run, pass them to the doctor as well:
-    `cargo run -p fretboard -- diag config doctor --mode launch --env FRET_DIAG_MAX_SNAPSHOTS=50`.
+    `cargo run -p fretboard-dev -- diag config doctor --mode launch --env FRET_DIAG_MAX_SNAPSHOTS=50`.
   - For a quick human-readable list (no JSON), use:
-    `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`.
+    `cargo run -p fretboard-dev -- diag config doctor --mode launch --print-launch-policy`.
 
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
-    (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
+    (e.g. unix ms) to trigger a dump; `fretboard-dev diag poke` does this for you.
   - Tooling convenience:
-    - `fretboard diag poke --wait` waits for `latest.txt` to update and prints the dump directory.
-    - `fretboard diag poke --wait --record-run` writes a tooling-owned per-run manifest directory and chunked bundle copy under `<dir>/<run_id>/`.
+    - `fretboard-dev diag poke --wait` waits for `latest.txt` to update and prints the dump directory.
+    - `fretboard-dev diag poke --wait --record-run` writes a tooling-owned per-run manifest directory and chunked bundle copy under `<dir>/<run_id>/`.
   - Optional (filesystem transport): write `<dir>/dump.request.json` (schema v1) before touching the trigger to
     provide dump metadata:
     - `label` (string): appended to the export directory name (`<timestamp>-<label>`),
@@ -808,7 +808,7 @@ Semantics export:
 
 Privacy / size:
 
-- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (runtime default enabled; tool-launched runs via `fretboard diag ... --launch` default to disabled).
+- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (runtime default enabled; tool-launched runs via `fretboard-dev diag ... --launch` default to disabled).
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
 - `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
 
@@ -1017,7 +1017,7 @@ Schema v2 scripts may include a top-level `meta` object. Supported fields:
 - `meta.required_capabilities: string[]` (gated by `capabilities.json` / DevTools session capabilities)
 - `meta.env_defaults: { [key: string]: string | number | boolean } | string[]`
   - A script-authored set of environment defaults applied only when the harness launches a fresh process
-    (`fretboard diag run --launch` / `fretboard diag suite --launch`).
+    (`fretboard-dev diag run --launch` / `fretboard-dev diag suite --launch`).
   - Command-line `--env KEY=VALUE` always wins over script defaults.
   - Suites fail early if scripts disagree on a default value for the same key.
 
@@ -1303,12 +1303,12 @@ Recommended workflow:
 3. Encode a script and run it repeatedly.
 4. Attach the script + the last failing bundle to an issue.
 
-When you use `fretboard diag run`, the running app writes a small status file:
+When you use `fretboard-dev diag run`, the running app writes a small status file:
 
 - `script.result.json`: `{run_id, stage, reason, last_bundle_dir, ...}`
 - `script.result.touch`: touched whenever the result is updated (useful for external watchers)
 
-`fretboard diag suite` runs multiple scripts sequentially using the same mechanism.
+`fretboard-dev diag suite` runs multiple scripts sequentially using the same mechanism.
 
 After a suite run, the CLI writes `suite.summary.json` under the diagnostics output dir (default: `.fret/diag/`).
 This file is intended as the “open first” overview (stage/reason-code aggregates, plus small evidence
@@ -1319,7 +1319,7 @@ highlights) before you start opening individual bundles.
 The `tools/diag-scripts/` directory contains curated scripts intended to become a baseline suite.
 For the UI gallery, run:
 
-- `cargo run -p fretboard -- diag suite ui-gallery`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery`
 
 ### Liquid glass / CustomV3 degradation suites
 
@@ -1345,8 +1345,8 @@ Suites:
 
 Run example (native, launch-managed):
 
-- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3 --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
-- `cargo run -p fretboard -- diag triage target/fret-diag/lg-v3/sessions/<session_id> --warmup-frames 0`
+- `cargo run -p fretboard-dev -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3 --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
+- `cargo run -p fretboard-dev -- diag triage target/fret-diag/lg-v3/sessions/<session_id> --warmup-frames 0`
 
 Notes:
 
@@ -1370,8 +1370,8 @@ Suite:
 
 Run example:
 
-- `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
-- `cargo run -p fretboard -- diag triage target/fret-diag/customv2/sessions/<session_id> --warmup-frames 0`
+- `cargo run -p fretboard-dev -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+- `cargo run -p fretboard-dev -- diag triage target/fret-diag/customv2/sessions/<session_id> --warmup-frames 0`
 
 ### CustomV3 user-image compatibility suite
 
@@ -1390,18 +1390,18 @@ Suite:
 
 Run example:
 
-- `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
-- `cargo run -p fretboard -- diag triage target/fret-diag/customv3/sessions/<session_id> --warmup-frames 0`
+- `cargo run -p fretboard-dev -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+- `cargo run -p fretboard-dev -- diag triage target/fret-diag/customv3/sessions/<session_id> --warmup-frames 0`
 
 Note:
 
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
   (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
-  `cargo run -p fretboard -- diag registry write`).
-  `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry.
-  For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
-  Use `fretboard diag list suites` to print known suites (derived from promoted registry `suite_memberships`).
-  To detect taxonomy/registry drift without grepping, use `fretboard diag doctor scripts` (read-only;
+  `cargo run -p fretboard-dev -- diag registry write`).
+  `fretboard-dev diag run` accepts either an explicit path or a promoted `script_id` from this registry.
+  For discoverability, use `fretboard-dev diag list scripts` to print `script_id -> path` mappings.
+  Use `fretboard-dev diag list suites` to print known suites (derived from promoted registry `suite_memberships`).
+  To detect taxonomy/registry drift without grepping, use `fretboard-dev diag doctor scripts` (read-only;
   suggests repair commands like `migrate-script-library.py --apply --write-redirects` and
   `diag registry write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
@@ -1420,13 +1420,13 @@ Note:
 
 For component-focused conformance scripts (built-in suites), run:
 
-- `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 
 For Embla-engine-dependent Carousel gates, run:
 
-- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
 
 To force-disable the Embla engine (debug), set `FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0`.
 
@@ -1456,7 +1456,7 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 
 You can run them as a built-in suite:
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard-dev -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
 
@@ -1467,7 +1467,7 @@ There are also multi-window (tear-off) docking scripts (require `diag.multi_wind
 
 Example (run one script against the demo, launching a fresh process):
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 Local debugging note:
 
@@ -1484,7 +1484,7 @@ you can enforce a minimum number of cache-root reuse events observed in the expo
 
 Example (UI gallery):
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release`
 
 Notes:
 
@@ -1513,7 +1513,7 @@ you can gate on forwarded viewport input events exported in `bundle.json`:
 
 To automate the “view-cache is behavior preserving” check across the UI gallery suite, run the matrix:
 
-- `cargo run -p fretboard -- diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release`
 
 Notes:
 
@@ -1529,15 +1529,15 @@ Recommended (CI/automation):
 ### Bundle comparison (cached vs uncached)
 
 To build confidence that view-cache is "behavior preserving", compare two captured bundles.
-`fretboard diag compare` focuses on stable `debug.semantics.nodes[].test_id` anchors and can also compare
+`fretboard-dev diag compare` focuses on stable `debug.semantics.nodes[].test_id` anchors and can also compare
 `scene_fingerprint` (paint output fingerprint) for the selected snapshots. For session-level memory drift,
 the canonical resource mode is `--footprint`, which reads `resource.footprint.json` from the resolved
 session roots instead of the bundle body.
 
 Example:
 
-- `cargo run -p fretboard -- diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json`
-- `cargo run -p fretboard -- diag compare <session_a> <session_b> --footprint --json`
+- `cargo run -p fretboard-dev -- diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json`
+- `cargo run -p fretboard-dev -- diag compare <session_a> <session_b> --footprint --json`
 
 Notes:
 
@@ -1549,7 +1549,7 @@ Notes:
 
 **Tooling `--launch` fails**
 
-- `fretboard diag ... --launch` writes a per-run `diag.config.json` into `--dir` and expects it to be writable.
+- `fretboard-dev diag ... --launch` writes a per-run `diag.config.json` into `--dir` and expects it to be writable.
 - On launch failures, tooling writes a best-effort `script.result.json` with `reason_code=tooling.launch.failed` so triage
   stays bounded and machine-readable.
 
@@ -1557,7 +1557,7 @@ Notes:
 
 - confirm `FRET_DIAG=1`,
 - confirm the app uses `fret-bootstrap` `UiAppDriver`,
-- run `cargo run -p fretboard -- diag path` and ensure the trigger file is being touched.
+- run `cargo run -p fretboard-dev -- diag path` and ensure the trigger file is being touched.
 
 **A scripted click never resolves**
 

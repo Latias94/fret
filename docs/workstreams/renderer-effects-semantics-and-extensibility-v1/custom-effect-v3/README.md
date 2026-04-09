@@ -59,7 +59,7 @@ Work bounding:
 ## Demos + diag scripts (apps only)
 
 - Demo (web): `custom_effect_v3_web_demo` (two lenses inside one backdrop source group).
-  - Run: `cargo run -p fretboard -- dev web --open --demo custom_effect_v3_web_demo`
+  - Run: `cargo run -p fretboard-dev -- dev web --open --demo custom_effect_v3_web_demo`
 - Diag script (schema v2): `tools/diag-scripts/tooling/custom-effect-v3-backdrop-source-group-roi-baseline.json`
   - Native launcher is not applicable (this demo is WASM-only); run it over DevTools WS transport.
   - Recommended workflow: follow the Web/WASM instructions in `docs/ui-diagnostics-and-scripted-tests.md` and the

@@ -156,7 +156,7 @@ Use `rg` to find patterns:
 If a change impacts authoring ergonomics, we try to update at least one of:
 
 - `apps/fret-examples/src/todo_demo.rs` (golden path)
-- `fretboard new ...` templates (`apps/fretboard/src/scaffold/templates.rs`)
+- `fretboard-dev new ...` templates (`apps/fretboard/src/scaffold/templates.rs`)
 
 ## What counts as a “small change” vs a “fearless refactor”
 

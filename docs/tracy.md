@@ -80,7 +80,7 @@ Recommended workflow:
 1. Use scripted UI actions to reproduce and locate the slow path:
 
 ```powershell
-cargo run -p fretboard -- diag perf ui-gallery `
+cargo run -p fretboard-dev -- diag perf ui-gallery `
   --launch -- cargo run -p fret-ui-gallery --release --features fret-bootstrap/tracy
 ```
 
@@ -93,7 +93,7 @@ cargo run -p fretboard -- diag perf ui-gallery `
 Tip: after identifying the bundle, you can also inspect the slowest snapshots directly:
 
 ```powershell
-cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20
+cargo run -p fretboard-dev -- diag stats <bundle_dir> --sort time --top 20
 ```
 
 ## Instrumentation overhead (what happens when it's "off")

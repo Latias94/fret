@@ -31,14 +31,14 @@ Prefer an explicit ladder instead of starting with the full baseline on minute 1
 Templates (in this repository):
 
 ```bash
-cargo run -p fretboard -- new hello --name hello-world
-cargo run -p fretboard -- new simple-todo --name my-simple-todo
-cargo run -p fretboard -- new todo --name my-todo
+cargo run -p fretboard-dev -- new hello --name hello-world
+cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo
+cargo run -p fretboard-dev -- new todo --name my-todo
 ```
 
 Maintainer comparison target (not the onboarding default):
 
-- `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
+- `cargo run -p fretboard-dev -- dev native --example simple_todo_v2_target`
 - It remains useful as the smallest side-by-side comparison surface, but the same keyed-list
   direction now also ships in `apps/fret-examples/src/simple_todo_demo.rs`,
   `apps/fret-examples/src/todo_demo.rs`, and the `fretboard` simple-todo scaffold. Its value is
@@ -70,14 +70,14 @@ keep the extra selector/query seams only when they help the app you are actually
 If you are working inside this repository, you can generate a runnable todo template:
 
 ```bash
-cargo run -p fretboard -- new todo --name my-todo
+cargo run -p fretboard-dev -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
 To enable UI render asset caches (images/SVG), add `--ui-assets`:
 
 ```bash
-cargo run -p fretboard -- new todo --name my-todo --ui-assets
+cargo run -p fretboard-dev -- new todo --name my-todo --ui-assets
 ```
 
 That scaffold now also creates an `assets/` directory and mounts it through
@@ -210,7 +210,7 @@ struct TodoView;
 
 ## Three-layer state split (recommended)
 
-This section describes the richer third rung (`todo`) and the `cargo run -p fretboard -- new todo`
+This section describes the richer third rung (`todo`) and the `cargo run -p fretboard-dev -- new todo`
 scaffold template.
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
@@ -301,7 +301,7 @@ use fret::advanced::AppUiRawModelExt;
 let raw_model = cx.raw_model::<T>();
 ```
 
-For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
+For the full runnable baseline, see the `cargo run -p fretboard-dev -- new todo` scaffold template.
 
 ## Derived state (selectors)
 
@@ -440,7 +440,7 @@ See ADR 0110 for rationale and constraints.
 
 If you want UI render asset conveniences (not an editor/project asset pipeline):
 
-- Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard -- new todo --ui-assets`) so the golden-path
+- Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard-dev -- new todo --ui-assets`) so the golden-path
   driver wires caches + budgets.
 - Prefer generated `src/generated_assets.rs` modules plus `generated_assets::mount(builder)` for
   the default portable packaged lane; if startup needs one explicit development-vs-packaged

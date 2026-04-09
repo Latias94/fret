@@ -32,7 +32,7 @@ Key constraints:
   - headless policy primitives + motion drivers: `ecosystem/fret-ui-kit`
 - Diagnostics is the enforcement tool:
   - scripts: `tools/diag-scripts/*.json`
-  - evidence packs: `fretboard diag run --pack`
+  - evidence packs: `fretboard-dev diag run --pack`
 
 Milestone board (one-screen): `docs/workstreams/material3-expressive-alignment-v1/material3-expressive-alignment-v1-milestones.md`.
 TODO board (detailed): `docs/workstreams/material3-expressive-alignment-v1/material3-expressive-alignment-v1-todo.md`.
@@ -48,7 +48,7 @@ For each component we consider aligned when we have:
 2. The implementation lives in the correct layer (mechanism vs policy vs recipe).
 3. A regression gate:
    - unit test for deterministic geometry/state invariants, and/or
-   - `fretboard diag` script with stable `test_id` selectors (+ fixed timestep when motion matters).
+   - `fretboard-dev diag` script with stable `test_id` selectors (+ fixed timestep when motion matters).
 4. 1–3 evidence anchors: upstream file(s), in-tree owner symbol(s), and gate(s).
 
 ## Repo mapping (where changes should land)

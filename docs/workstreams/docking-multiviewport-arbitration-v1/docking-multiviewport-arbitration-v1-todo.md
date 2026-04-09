@@ -77,7 +77,7 @@ Each TODO is labeled:
 ## P1 — Scripted Regressions (Diagnostics Harness)
 
 - [x] DMV1-reg-030 Add a scripted diag test for “split viewports” (docking arbitration demo).
-  - Target: ensure the table stakes work via `fretboard diag` (no manual repro).
+  - Target: ensure the table stakes work via `fretboard-dev diag` (no manual repro).
   - Evidence:
     - script: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
     - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-viewport-left`, `dock-arb-viewport-right`)
@@ -93,7 +93,7 @@ Each TODO is labeled:
       `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-chained-tearoff-after-first-tearoff-bundle.json`
 
 - [x] DMV1-reg-032 Add a built-in diag suite for docking arbitration scripts.
-  - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
+  - Target: a single `fretboard-dev diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
   - Evidence:
     - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
     - runner: `crates/fret-diag/src/lib.rs` (`diag suite docking-arbitration`; `apps/fretboard/src/diag.rs` is a thin wrapper)

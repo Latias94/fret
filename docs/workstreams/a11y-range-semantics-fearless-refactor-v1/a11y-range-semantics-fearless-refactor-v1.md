@@ -141,7 +141,7 @@ spinbutton-like) to avoid drifting back into string-only semantics.
 - [ ] Add at least one stable gate for each new production path:
   - unit/integration test asserting semantics snapshot fields, or
   - shadcn semantics snapshot JSON gate, or
-  - a `fretboard diag` script that asserts numeric metadata.
+  - a `fretboard-dev diag` script that asserts numeric metadata.
 
 Evidence anchors (examples of “done right”):
 

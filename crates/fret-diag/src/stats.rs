@@ -562,9 +562,9 @@ pub(super) fn bundle_stats_from_path(
                     "{err}\n\
   bundle: {} ({} MiB)\n\
   hint: prefer schema2 + sidecars + lite triage:\n\
-    - fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames {}\n\
-    - fretboard diag index <bundle_dir> --warmup-frames {}\n\
-    - fretboard diag triage --lite <bundle_dir> --warmup-frames {}",
+    - fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames {}\n\
+    - fretboard-dev diag index <bundle_dir> --warmup-frames {}\n\
+    - fretboard-dev diag triage --lite <bundle_dir> --warmup-frames {}",
                     bundle_path.display(),
                     file_len / (1024 * 1024),
                     opts.warmup_frames,

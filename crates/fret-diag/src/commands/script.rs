@@ -41,7 +41,7 @@ pub(crate) fn cmd_script(
         return Err("--pack is only supported with `diag run`".to_string());
     }
     let Some(op) = rest.first().map(|s| s.as_str()) else {
-        return Err("missing script subcommand or script path (try: fretboard diag script ./script.json | fretboard diag script normalize ./script.json)".to_string());
+        return Err("missing script subcommand or script path (try: fretboard-dev diag script ./script.json | fretboard-dev diag script normalize ./script.json)".to_string());
     };
 
     let shrink_flags_used = shrink_out.is_some()
@@ -66,7 +66,7 @@ pub(crate) fn cmd_script(
             let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
-                    "missing script path (try: fretboard diag script normalize ./script.json)"
+                    "missing script path (try: fretboard-dev diag script normalize ./script.json)"
                         .to_string(),
                 );
             }
@@ -148,7 +148,7 @@ pub(crate) fn cmd_script(
             let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
-                    "missing script path (try: fretboard diag script upgrade ./script.json)"
+                    "missing script path (try: fretboard-dev diag script upgrade ./script.json)"
                         .to_string(),
                 );
             }
@@ -245,7 +245,7 @@ pub(crate) fn cmd_script(
             let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
-                    "missing script path (try: fretboard diag script validate ./script.json)"
+                    "missing script path (try: fretboard-dev diag script validate ./script.json)"
                         .to_string(),
                 );
             }
@@ -285,7 +285,7 @@ pub(crate) fn cmd_script(
             let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
-                    "missing script path (try: fretboard diag script lint ./script.json)"
+                    "missing script path (try: fretboard-dev diag script lint ./script.json)"
                         .to_string(),
                 );
             }
@@ -327,7 +327,7 @@ pub(crate) fn cmd_script(
             let inputs: Vec<String> = rest[1..].to_vec();
             if inputs.is_empty() {
                 return Err(
-                    "missing script path (try: fretboard diag script shrink ./script.json)"
+                    "missing script path (try: fretboard-dev diag script shrink ./script.json)"
                         .to_string(),
                 );
             }
@@ -658,7 +658,8 @@ pub(crate) fn cmd_script(
         _ => {
             let Some(src) = rest.first().cloned() else {
                 return Err(
-                    "missing script path (try: fretboard diag script ./script.json)".to_string(),
+                    "missing script path (try: fretboard-dev diag script ./script.json)"
+                        .to_string(),
                 );
             };
             if rest.len() != 1 {

@@ -12,7 +12,7 @@ Tracking format:
 When completing an item, prefer leaving 1–3 evidence anchors:
 
 - file paths + key functions/tests
-- and/or a `fretboard diag` script/suite name
+- and/or a `fretboard-dev diag` script/suite name
 
 ## P0 — High impact, low risk (default path)
 
@@ -45,7 +45,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] FR-escape-001 Add a “start clean” escape hatch.
   - Both supported:
-    - CLI: `fretboard dev native ... --dev-state-reset`
+    - CLI: `fretboard-dev dev native ... --dev-state-reset`
     - Env: `FRET_DEV_STATE_RESET=1`
   - Evidence:
     - `apps/fretboard/src/dev.rs`

@@ -181,7 +181,7 @@ fn write_regression_summary_for_matrix(
             duration_ms: None,
             workspace_root: Some(workspace_root.display().to_string()),
             out_dir: Some(resolved_out_dir.display().to_string()),
-            tool: "fretboard diag matrix".to_string(),
+            tool: "fretboard-dev diag matrix".to_string(),
             tool_version: None,
             git_commit: None,
             git_branch: None,
@@ -254,7 +254,9 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
     } = ctx;
 
     let Some(target) = rest.first().cloned() else {
-        return Err("missing matrix target (try: fretboard diag matrix ui-gallery)".to_string());
+        return Err(
+            "missing matrix target (try: fretboard-dev diag matrix ui-gallery)".to_string(),
+        );
     };
     if rest.len() != 1 {
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));

@@ -6,101 +6,49 @@
 04. fret-icons
 05. fret-render-core
 06. fret-fonts
-07. delinea
-08. fret-a11y-accesskit
-09. fret-diag-protocol
-10. fret-dnd
-11. fret-perf
-12. fret-platform
-13. fret-ui-headless
-14. fret-viewport-tooling
-15. fret-i18n-fluent
-16. fret-fonts-cjk
-17. fret-fonts-emoji
-18. fret-runtime
-19. fret-runner-winit
-20. fret-diag-ws
-21. fret-platform-native
-22. fret-render-text
-23. fret-app
-24. fret-executor
-25. fret-interaction
-26. fret-platform-web
-27. fret-text-nav
-28. fret-webview
-29. fret-window-style-profiles
-30. fret-render-wgpu
-31. fret-icons-radix
-32. fret-runner-web
-33. fret-ui
-34. fret-webview-wry
-35. fret-render
-36. fret-icons-lucide
-37. fret-canvas
-38. fret-query
-39. fret-selector
-40. fret-ui-app
-41. fret-launch
-42. fret-router
-43. fret-authoring
-44. fret-framework
-45. fret-ui-kit
-46. fret-chart
-47. fret-router-ui
-48. fret-ui-assets
-49. fret-ui-shadcn
-50. fret-bootstrap
-51. fret
-
-# Commands
-cargo publish -p fret-assets
-cargo publish -p fret-core
-cargo publish -p fret-i18n
-cargo publish -p fret-icons
-cargo publish -p fret-render-core
-cargo publish -p fret-fonts
-cargo publish -p delinea
-cargo publish -p fret-a11y-accesskit
-cargo publish -p fret-diag-protocol
-cargo publish -p fret-dnd
-cargo publish -p fret-perf
-cargo publish -p fret-platform
-cargo publish -p fret-ui-headless
-cargo publish -p fret-viewport-tooling
-cargo publish -p fret-i18n-fluent
-cargo publish -p fret-fonts-cjk
-cargo publish -p fret-fonts-emoji
-cargo publish -p fret-runtime
-cargo publish -p fret-runner-winit
-cargo publish -p fret-diag-ws
-cargo publish -p fret-platform-native
-cargo publish -p fret-render-text
-cargo publish -p fret-app
-cargo publish -p fret-executor
-cargo publish -p fret-interaction
-cargo publish -p fret-platform-web
-cargo publish -p fret-text-nav
-cargo publish -p fret-webview
-cargo publish -p fret-window-style-profiles
-cargo publish -p fret-render-wgpu
-cargo publish -p fret-icons-radix
-cargo publish -p fret-runner-web
-cargo publish -p fret-ui
-cargo publish -p fret-webview-wry
-cargo publish -p fret-render
-cargo publish -p fret-icons-lucide
-cargo publish -p fret-canvas
-cargo publish -p fret-query
-cargo publish -p fret-selector
-cargo publish -p fret-ui-app
-cargo publish -p fret-launch
-cargo publish -p fret-router
-cargo publish -p fret-authoring
-cargo publish -p fret-framework
-cargo publish -p fret-ui-kit
-cargo publish -p fret-chart
-cargo publish -p fret-router-ui
-cargo publish -p fret-ui-assets
-cargo publish -p fret-ui-shadcn
-cargo publish -p fret-bootstrap
-cargo publish -p fret
+07. fretboard
+08. delinea
+09. fret-a11y-accesskit
+10. fret-diag-protocol
+11. fret-dnd
+12. fret-perf
+13. fret-platform
+14. fret-ui-headless
+15. fret-viewport-tooling
+16. fret-i18n-fluent
+17. fret-fonts-cjk
+18. fret-fonts-emoji
+19. fret-runtime
+20. fret-runner-winit
+21. fret-diag-ws
+22. fret-platform-native
+23. fret-render-text
+24. fret-app
+25. fret-executor
+26. fret-interaction
+27. fret-platform-web
+28. fret-text-nav
+29. fret-webview
+30. fret-window-style-profiles
+31. fret-render-wgpu
+32. fret-icons-radix
+33. fret-runner-web
+34. fret-ui
+35. fret-webview-wry
+36. fret-render
+37. fret-icons-lucide
+38. fret-canvas
+39. fret-query
+40. fret-selector
+41. fret-ui-app
+42. fret-launch
+43. fret-router
+44. fret-authoring
+45. fret-framework
+46. fret-ui-kit
+47. fret-chart
+48. fret-router-ui
+49. fret-ui-assets
+50. fret-ui-shadcn
+51. fret-bootstrap
+52. fret

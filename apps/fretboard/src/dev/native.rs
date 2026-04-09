@@ -145,7 +145,7 @@ fn print_hotpatch_summary(
     eprintln!("  logs:");
     eprintln!("    runner: .fret/hotpatch_runner.log");
     eprintln!("    view:   .fret/hotpatch_bootstrap.log");
-    eprintln!("  status: fretboard hotpatch status --tail 40");
+    eprintln!("  status: fretboard-dev hotpatch status --tail 40");
 }
 
 fn append_subsecond_main_export_rustflags(cmd: &mut Command) {
@@ -330,7 +330,7 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
     if demo_needs_bin {
         let demo_id = demo.as_deref().unwrap_or_default();
         return Err(format!(
-            "cannot combine `--demo {demo_id}` with --hotpatch/--watch because it does not map to a native demo binary.\n  hint: try `fretboard list native-demos` and use `--bin <name>`.\n  hint: if you only want to run the demo shell, omit --hotpatch/--watch."
+            "cannot combine `--demo {demo_id}` with --hotpatch/--watch because it does not map to a native demo binary.\n  hint: try `fretboard-dev list native-demos` and use `--bin <name>`.\n  hint: if you only want to run the demo shell, omit --hotpatch/--watch."
         ));
     }
 
@@ -546,7 +546,7 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
             "Hotpatch(file-trigger): enabled (note: this only triggers a runner reload boundary; it does not rebuild/apply patches)"
         );
         eprintln!("  trigger: {}", trigger_path.display());
-        eprintln!("  poke:    fretboard hotpatch poke");
+        eprintln!("  poke:    fretboard-dev hotpatch poke");
 
         cmd.env("FRET_HOTPATCH_TRIGGER_PATH", &trigger_path);
         if let Some(ms) = hotpatch_poll_ms {
@@ -1013,18 +1013,21 @@ fn run_with_restart_supervisor(
 
 fn print_repeated_crash_guidance(opts: &RestartSupervisorOptions, reason: &str) {
     eprintln!("warning: {reason} (bin={})", opts.bin);
-    eprintln!("  status: fretboard hotpatch status --tail 80");
+    eprintln!("  status: fretboard-dev hotpatch status --tail 80");
     eprintln!("  logs:");
     eprintln!("    runner: .fret/hotpatch_runner.log");
     eprintln!("    view:   .fret/hotpatch_bootstrap.log");
 
     if opts.dx_available && opts.demo_hotpatch_ready {
-        eprintln!("  try: fretboard dev native --bin {} --hotpatch", opts.bin);
+        eprintln!(
+            "  try: fretboard-dev dev native --bin {} --hotpatch",
+            opts.bin
+        );
     }
 
     if opts.hotpatch_enabled {
         eprintln!(
-            "  try: fretboard dev native --bin {} --hotpatch-reload (disable Subsecond; reload boundary only)",
+            "  try: fretboard-dev dev native --bin {} --hotpatch-reload (disable Subsecond; reload boundary only)",
             opts.bin
         );
     }

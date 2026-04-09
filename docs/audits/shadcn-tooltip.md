@@ -81,6 +81,6 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - `cargo nextest run -p fret-ui-shadcn tooltip_open_change_reason_mapping_covers_dismiss_reasons`
 - `cargo nextest run -p fret-ui-shadcn tooltip_open_change_reason_for_transition_uses_trigger_and_close_reason`
 - `cargo test -p fret-ui-gallery --test tooltip_docs_surface`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-tooltip-docs-smoke.json --dir target/fret-diag --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-tooltip-docs-smoke.json --dir target/fret-diag --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
 - Overlay layout and chrome parity continue to be validated in
   `web_vs_fret_overlay_placement` / `web_vs_fret_overlay_chrome` tooltip gates.

@@ -398,7 +398,7 @@ pub trait UiActionHost {
     /// Record best-effort diagnostics metadata for an upcoming command dispatch.
     ///
     /// This is a mechanism-only hook intended to help explain pointer-triggered `Effect::Command`
-    /// dispatches in `fretboard diag` without changing the effect schema.
+    /// dispatches in `fretboard-dev diag` without changing the effect schema.
     ///
     /// Hosts that do not support diagnostics can leave this as a no-op.
     fn record_pending_command_dispatch_source(

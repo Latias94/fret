@@ -101,7 +101,7 @@ pub(super) fn preview_combobox(
         );
     let conformance_demo = DocSection::build(cx, "Conformance Demo", conformance_demo)
         .description(
-            "Small deterministic surface for `fretboard diag suite ui-gallery-combobox` scripts.",
+            "Small deterministic surface for `fretboard-dev diag suite ui-gallery-combobox` scripts.",
         )
         .no_shell()
         .code_rust_from_file_region(snippets::conformance_demo::SOURCE, "example");

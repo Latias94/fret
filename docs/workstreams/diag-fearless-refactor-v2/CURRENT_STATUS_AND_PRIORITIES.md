@@ -25,11 +25,11 @@ polish while the highest-value seams are still under-documented or too monolithi
 
 The repo now has a usable campaign surface:
 
-- `fretboard diag campaign list`
-- `fretboard diag campaign show <campaign_id>`
-- `fretboard diag campaign run <campaign_id>`
+- `fretboard-dev diag campaign list`
+- `fretboard-dev diag campaign show <campaign_id>`
+- `fretboard-dev diag campaign run <campaign_id>`
 - filtered batch execution via `--lane`, `--tier`, `--tag`, and `--platform`
-- `fretboard diag campaign share <campaign_or_batch_root>`
+- `fretboard-dev diag campaign share <campaign_or_batch_root>`
 
 This is enough to treat campaign execution as a real maintainer and CI entry rather than only a
 design note.

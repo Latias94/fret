@@ -13,7 +13,7 @@ Cross-reference:
 
 ## Immediate TODOs (next)
 
-- Re-run `fretboard diag suite docking-arbitration` after the 2026-03-03 fixes below and record the new first failure
+- Re-run `fretboard-dev diag suite docking-arbitration` after the 2026-03-03 fixes below and record the new first failure
   (if any) in this workstream.
 - Prioritize “timebase decoupling” so docking scripts cannot hang on occlusion/idle (root cause class):
   - Workstream: `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
@@ -65,7 +65,7 @@ Cross-reference:
 - Runner: isolate scripted cursor overrides from physical mouse movement.
 - Window counting: `known_window_count_*` predicates use a runner-owned source-of-truth.
 - Cached `test_id` predicate evaluation is freshness-bounded and emits evidence when used.
-- `fretboard diag repeat --reuse-launch` clears `script.result.json` between runs to avoid stale `run_id` timeouts.
+- `fretboard-dev diag repeat --reuse-launch` clears `script.result.json` between runs to avoid stale `run_id` timeouts.
 - Script migration: avoid `pointer_down` ping-pong for relative window targets (wake the active script window instead of
   migrating).
 - Multi-window overlap z-order gate unblocked:

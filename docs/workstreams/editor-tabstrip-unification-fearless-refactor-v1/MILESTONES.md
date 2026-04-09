@@ -26,7 +26,7 @@ Status (implemented):
 
 Gates:
 - `cargo nextest run -p fret-docking -p fret-workspace`
-- Add a `fretboard diag` script that opens overflow dropdown, selects a tab, and records evidence.
+- Add a `fretboard-dev diag` script that opens overflow dropdown, selects a tab, and records evidence.
   - Workspace: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`
   - Workspace (close parity): `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
   - Docking (select row activates + active becomes visible):

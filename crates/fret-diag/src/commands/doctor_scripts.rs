@@ -509,7 +509,7 @@ pub(crate) fn cmd_doctor_scripts(
         repairs.push(json!({
             "code": "diag-scripts.registry-write",
             "note": "Regenerate tools/diag-scripts/index.json",
-            "command": "cargo run -p fretboard -- diag registry write",
+            "command": "cargo run -p fretboard-dev -- diag registry write",
         }));
     } else {
         let registry = PromotedScriptRegistry::load_from_path(&index_path);
@@ -597,7 +597,7 @@ pub(crate) fn cmd_doctor_scripts(
                     }
 
                     let mut cmd =
-                        String::from("cargo run -p fretboard -- diag script upgrade --write");
+                        String::from("cargo run -p fretboard-dev -- diag script upgrade --write");
                     for p in &schema_v1_paths {
                         cmd.push(' ');
                         cmd.push_str(p);
@@ -614,7 +614,7 @@ pub(crate) fn cmd_doctor_scripts(
                 repairs.push(json!({
                     "code": "diag-scripts.registry-write",
                     "note": "Regenerate tools/diag-scripts/index.json",
-                    "command": "cargo run -p fretboard -- diag registry write",
+                    "command": "cargo run -p fretboard-dev -- diag registry write",
                 }));
             }
         }
@@ -634,7 +634,7 @@ pub(crate) fn cmd_doctor_scripts(
         repairs.push(json!({
             "code": "diag-scripts.registry-write",
             "note": "Regenerate tools/diag-scripts/index.json",
-            "command": "cargo run -p fretboard -- diag registry write",
+            "command": "cargo run -p fretboard-dev -- diag registry write",
         }));
     }
     if counts.registry_path_outside_library_total > 0 {

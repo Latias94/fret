@@ -51,7 +51,7 @@ base examples, and the in-repo web goldens that currently gate input chrome.
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-fieldlabel-lib cargo test -p fret-ui-shadcn --lib field_label_click -- --nocapture`
-- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-label-click-focus.json --dir target/fret-diag-input-label-focus-20260320-2 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo run -p fret-ui-gallery`
+- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-label-click-focus.json --dir target/fret-diag-input-label-focus-20260320-2 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo check -p fret-ui-gallery --message-format short`
 - `cargo test -p fret-ui-gallery --lib gallery_input_core_examples_keep_upstream_aligned_targets_present`
 - `cargo test -p fret-ui-gallery --lib notes_sections_keep_stable_height_while_scrolling_into_view`

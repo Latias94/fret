@@ -24,7 +24,7 @@ pub(crate) fn layout_perf_summary_v1_from_bundle_path_strict(
         .unwrap_or(false)
     {
         return Err(format!(
-            "layout perf summary requires full bundle stats, but this bundle is too large and stats were derived from frames.index.json.\n  bundle_artifact: {}\n  hint: ensure a compact `bundle.schema2.json` is available (try: fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames {warmup_frames})",
+            "layout perf summary requires full bundle stats, but this bundle is too large and stats were derived from frames.index.json.\n  bundle_artifact: {}\n  hint: ensure a compact `bundle.schema2.json` is available (try: fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames {warmup_frames})",
             bundle_path.display()
         ));
     }

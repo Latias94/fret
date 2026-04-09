@@ -45,7 +45,7 @@ Outcome:
 
 Deliverables:
 
-- `fretboard list ...` and `--choose` reflect the catalog (official first, maintainer hidden by default).
+- `fretboard-dev list ...` and `--choose` reflect the catalog (official first, maintainer hidden by default).
 - Reduced duplication between:
   - native demo bins,
   - cookbook `examples/`,

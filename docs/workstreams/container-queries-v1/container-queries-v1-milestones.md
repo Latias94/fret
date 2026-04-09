@@ -105,13 +105,13 @@ Definition of done:
 
 Evidence:
 
-- A `fretboard diag` script (or a minimal harness test) that exercises panel resize and captures a
+- A `fretboard-dev diag` script (or a minimal harness test) that exercises panel resize and captures a
   stable outcome across DPIs.
   - Script: `tools/diag-scripts/container-queries-docking-panel-resize.json`
   - Demo: `cargo run -p fret-demo --bin container_queries_docking_demo --release`
   - Recommended gate run (prebuild + launch the exe to avoid Windows file-lock rebuild issues):
     - `cargo build -p fret-demo --bin container_queries_docking_demo --release`
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --warmup-frames 5 --check-pixels-changed cq-dock-demo-mode --timeout-ms 600000 --launch -- .\\target\\release\\container_queries_docking_demo.exe`
+    - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --warmup-frames 5 --check-pixels-changed cq-dock-demo-mode --timeout-ms 600000 --launch -- .\\target\\release\\container_queries_docking_demo.exe`
 
 ## M6 — Ecosystem adoption sweep (incremental, not "big bang")
 

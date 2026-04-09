@@ -62,6 +62,6 @@ docs, registry examples, and the current label layout/interaction gates.
 - `cargo test -p fret-ui-shadcn label_children_for_control_keeps_control_registry_labelled_by_link -- --nocapture`
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`web_vs_fret_layout_label_demo_geometry`)
 - Existing targeted marker gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-docs-smoke.json --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-children-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-docs-smoke.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-children-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`

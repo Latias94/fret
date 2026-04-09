@@ -34,20 +34,20 @@ Notes:
 
 Given a bundle directory (or a bundle artifact path), open the sidecar viewer:
 
-- `cargo run -p fretboard -- diag layout-sidecar <bundle_dir>`
+- `cargo run -p fretboard-dev -- diag layout-sidecar <bundle_dir>`
 
 If you only need the resolved sidecar path:
 
-- `cargo run -p fretboard -- diag layout-sidecar <bundle_dir> --print-path`
+- `cargo run -p fretboard-dev -- diag layout-sidecar <bundle_dir> --print-path`
 
 ## 4) When it is perf, not correctness
 
 If the issue is "layout got slower" rather than "layout is wrong":
 
 1. Run a perf suite that is layout-heavy:
-   - `cargo run -p fretboard -- diag perf ui-gallery-layout-steady --repeat 7 --warmup-frames 5 --sort time --json`
+   - `cargo run -p fretboard-dev -- diag perf ui-gallery-layout-steady --repeat 7 --warmup-frames 5 --sort time --json`
 2. For the worst bundle, generate a layout perf summary:
-   - `cargo run -p fretboard -- diag layout-perf-summary <bundle_dir>`
+   - `cargo run -p fretboard-dev -- diag layout-perf-summary <bundle_dir>`
 
 The perf harness also best-effort attaches a bounded layout perf summary to:
 

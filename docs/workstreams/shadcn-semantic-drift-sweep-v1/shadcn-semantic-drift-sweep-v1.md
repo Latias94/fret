@@ -221,7 +221,7 @@ recipe should follow viewport queries (device shell) or container queries (panel
 - 2026-02-25: Re-validated the token-read sweep after the merge and removed remaining
   `Theme::global(&app).clone()` usages from module-local tests in `ecosystem/fret-ui-shadcn/src/`.
 - 2026-02-26: Wired the new responsive semantics conformance scripts into the built-in diag suites
-  (`fretboard diag suite ui-gallery-shadcn-conformance`) to keep the drift gates executable.
+  (`fretboard-dev diag suite ui-gallery-shadcn-conformance`) to keep the drift gates executable.
 - 2026-02-26: Updated `docs/shadcn-conformance-matrix.md` with the new responsive semantics gates
   for Calendar/DataTable/Field/Empty/Drawer/NavigationMenu/Sidebar.
 - 2026-02-26: Added a regression guard to prevent reintroducing theme-name heuristics

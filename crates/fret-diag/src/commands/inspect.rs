@@ -48,7 +48,8 @@ pub(crate) fn cmd_inspect(
 ) -> Result<(), String> {
     let Some(action) = rest.first().cloned() else {
         return Err(
-            "missing inspect action (try: fretboard diag inspect on|off|toggle|status)".to_string(),
+            "missing inspect action (try: fretboard-dev diag inspect on|off|toggle|status)"
+                .to_string(),
         );
     };
     if rest.len() != 1 {

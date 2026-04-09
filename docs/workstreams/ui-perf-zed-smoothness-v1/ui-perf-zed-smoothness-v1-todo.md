@@ -24,7 +24,7 @@ This file tracks milestones and concrete tasks for:
 Conventions:
 
 - “Contract” items should land with an ADR (or an update to an existing ADR).
-- “Perf gate” items should land with a runnable `fretboard diag perf` command and a baseline/threshold update.
+- “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
 ## Current priorities (updated 2026-02-08)
@@ -244,7 +244,7 @@ Conventions:
       - invalidation keys include font stack, scale factor, wrap width bucket, theme/style, and selection/preedit
         geometry dependencies.
       - replayed ops preserve hit-testing / selection rect correctness (or explicitly opt-out).
-    - [ ] Add a “canvas replay hit rate” counter to `fretboard diag perf --json` output for the editor probes.
+    - [ ] Add a “canvas replay hit rate” counter to `fretboard-dev diag perf --json` output for the editor probes.
     - [ ] Tighten the `ui-code-editor-resize-probes` baseline once replay is real and stable.
   - Acceptance (initial):
     - `ui-code-editor-resize-probes` stays PASS (no regressions in P0 `ui-resize-probes`).
@@ -267,7 +267,7 @@ Execution plan:
   - `ui-gallery-steady` + `--reuse-launch` + `--launch`: steady-state gate (post-mount interactions).
 - [ ] Finalize the acceptance suite list (see `ui-perf-zed-smoothness-v1.md`) and keep it small.
   - Ensure it includes at least one editor-grade text surface (`ui-gallery-code-editor-torture-autoscroll-steady.json`).
-- [x] Record initial baselines (one per machine profile) using `fretboard diag perf --perf-baseline-out`.
+- [x] Record initial baselines (one per machine profile) using `fretboard-dev diag perf --perf-baseline-out`.
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json` (commit `50bfcc54`).
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v2.json` (see perf log entry).
     - v1 was slightly flaky on `ui-gallery-window-resize-stress-steady` `max_top_solve_us` when checked with repeat=3.
@@ -326,7 +326,7 @@ Execution plan:
   - Implemented by `feat(perf): include churn signals in perf_log` (commit `76d2dfd6`).
 - [x] Record an initial suite run in the log (repeat=7).
 - [x] Add a steady-state suite and reuse-launched-process support:
-  - `fretboard diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
+  - `fretboard-dev diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
 - [ ] Keep the canonical steady baseline up to date when diagnostics instrumentation changes (avoid "false regressions").
@@ -350,8 +350,8 @@ Execution plan:
     `layout_pending_barrier_relayouts_time_us`, `layout_repair_view_cache_bounds_time_us`,
     `layout_contained_view_cache_roots_time_us`, `layout_collapse_layout_observations_time_us`,
     `layout_prepaint_after_layout_time_us`, `layout_skipped_engine_frame`.
-  - Follow-up: include `layout_roots_time_us` in `fretboard diag stats` / `diag perf --json` payloads (commit `366efd769`).
-  - Wire into: `fretboard diag stats --json` so a worst bundle can be inspected without manual JSON digging.
+  - Follow-up: include `layout_roots_time_us` in `fretboard-dev diag stats` / `diag perf --json` payloads (commit `366efd769`).
+  - Wire into: `fretboard-dev diag stats --json` so a worst bundle can be inspected without manual JSON digging.
   - Implemented by `feat(diag): export layout phase breakdown` (commit `b02744a8`).
 - [x] Export initial paint-pass breakdown metrics (to disprove/confirm “paint-cache replay is the hotspot”).
   - Adds: `paint_cache_replay_time_us`, `paint_cache_bounds_translate_time_us`,
@@ -459,7 +459,7 @@ Correctness acceptance:
 
 - [x] Existing `cargo nextest run -p fret-ui` remains green.
   - Evidence: passed locally after `perf(fret-ui): skip layout-engine rebuild on stable frames` (commit `1905de1e`).
-- [ ] `fretboard diag repro ui-gallery` smoke suite passes.
+- [ ] `fretboard-dev diag repro ui-gallery` smoke suite passes.
 
 ### M3: Hit testing (bounds tree / spatial index)
 
@@ -499,12 +499,12 @@ Correctness acceptance:
     (or a “set-if-changed” model update discipline similar to the global churn fix).
 - [x] Add a dispatch/hit-test time metric to diagnostics so we can gate pointer-move cost explicitly.
   - Implemented by `perf(diag): expose dispatch and hit-test timing` (commit `4b0be50e`).
-  - Adds new `fretboard diag perf --sort dispatch|hit_test` modes and exports:
+  - Adds new `fretboard-dev diag perf --sort dispatch|hit_test` modes and exports:
     - `top_dispatch_time_us`, `top_hit_test_time_us`
     - `top_dispatch_events`, `top_hit_test_queries`
 - [x] Add a dedicated hit-test drag stress script (high pointer event density).
   - Script: `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json`
-  - Use with: `fretboard diag perf ... --sort hit_test`
+  - Use with: `fretboard-dev diag perf ... --sort hit_test`
 - [x] Add a multi-frame pointer-move sweep step for realistic hover/hit-test measurements.
   - Implemented by `perf(diag): add move_pointer_sweep script step` (commit `4941baa1`).
   - Scripts:
@@ -572,7 +572,7 @@ Correctness acceptance:
       - `dispatch_widget_bubble_time_us`
       - `dispatch_cursor_query_time_us`
       - `dispatch_pointer_move_layer_observers_time_us`
-    - Wired into: `fretboard diag stats --json` (so a worst bundle can be inspected without manual JSON digging).
+    - Wired into: `fretboard-dev diag stats --json` (so a worst bundle can be inspected without manual JSON digging).
     - Implemented by `feat(diag): break down dispatch timing` (commit `7fa76fd5`).
     - Evidence: perf log entry for commit `7fa76fd5`.
   - [x] Attribute dispatch time by dispatched event class (pointer vs timer vs other).
@@ -580,7 +580,7 @@ Correctness acceptance:
       - `dispatch_pointer_events`, `dispatch_pointer_event_time_us`
       - `dispatch_timer_events`, `dispatch_timer_event_time_us`
       - `dispatch_other_events`, `dispatch_other_event_time_us`
-    - Wired into: `fretboard diag stats --json` (bundle triage without manual JSON digging).
+    - Wired into: `fretboard-dev diag stats --json` (bundle triage without manual JSON digging).
     - Implemented by `feat(diag): attribute dispatch time by event class` (commit `5ab4ba71`).
     - Evidence: perf log entry for commit `5ab4ba71`.
   - [x] Reduce timer-driven dispatch work during pointer-move workloads.
@@ -613,7 +613,7 @@ Perf acceptance:
   - `tools/perf/perf_log.py` now emits a derived “Pointer-move frames” section by scanning the run bundles and
     summarizing per-run maxima over frames where `dispatch_events > 0`.
 - [x] Eliminate changed-but-unobserved global churn in hover-only pointer-move probes.
-  - Current hotspots reported by `fretboard diag stats`: `WindowInputContextService`,
+  - Current hotspots reported by `fretboard-dev diag stats`: `WindowInputContextService`,
     `WindowCommandActionAvailabilityService` (often changed but unobserved).
   - Goal: reduce pointer-move dispatch tails by making these globals “notify only on actual value change”
     (or avoid publishing them every frame unless explicitly needed).
@@ -631,7 +631,7 @@ Perf acceptance:
   - `docs/workstreams/standalone/ui-perf-renderer-profiling-v1.md` (commit `22671e06`)
 - [x] Export renderer perf snapshots into diagnostics bundles for perf log correlation.
   - Data lands in `bundle.json` under `.windows[].snapshots[].debug.stats.renderer_*` (commit `0e4928fe`).
-  - `fretboard diag stats/perf` supports sorting by renderer metrics (commit `cf8975ca`).
+  - `fretboard-dev diag stats/perf` supports sorting by renderer metrics (commit `cf8975ca`).
 - [x] Export renderer churn metrics (text atlas + intermediate pool) into bundles and wire them into `fretboard`.
   - Commits: `feat(render): add text atlas + intermediate churn perf stats` (`d10cac5a`) +
     `feat(fretboard): add renderer churn sort modes` (`c9a8b168`).

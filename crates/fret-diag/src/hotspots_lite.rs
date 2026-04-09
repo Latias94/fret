@@ -150,7 +150,7 @@ pub(crate) fn hotspots_lite_json_from_frames_index(
             let mut suggestions: Vec<String> = Vec::new();
             if let Some(fid) = e.frame_id {
                 suggestions.push(format!(
-                    "fretboard diag slice {} --test-id <test_id> --window {} --frame-id {} --warmup-frames {}",
+                    "fretboard-dev diag slice {} --test-id <test_id> --window {} --frame-id {} --warmup-frames {}",
                     bundle_path.display(),
                     e.window,
                     fid,
@@ -158,7 +158,7 @@ pub(crate) fn hotspots_lite_json_from_frames_index(
                 ));
             } else if let Some(seq) = e.window_snapshot_seq {
                 suggestions.push(format!(
-                    "fretboard diag slice {} --test-id <test_id> --window {} --snapshot-seq {} --warmup-frames {}",
+                    "fretboard-dev diag slice {} --test-id <test_id> --window {} --snapshot-seq {} --warmup-frames {}",
                     bundle_path.display(),
                     e.window,
                     seq,

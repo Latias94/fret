@@ -36,7 +36,7 @@ Recommendation:
 - Mechanism: a headless helper that computes “required scroll delta to make rect visible”.
 - Policy: when to call it (on active change, on dropdown selection, after drop).
 - Diagnostics/gates: treat “active tab is visible” as a first-class invariant for editor-grade UX
-  and lock it with a `fretboard diag` gate (non-pixel, no semantics required).
+  and lock it with a `fretboard-dev diag` gate (non-pixel, no semantics required).
   - Current docking gate: `dock_tab_strip_active_visible_is visible=true` after selecting from
     the overflow dropdown.
   - Current workspace gate: `workspace_tab_strip_active_visible_is visible=true pane_id="pane-a"`

@@ -96,4 +96,4 @@ deciding whether any missing runtime mechanism work exists.
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout --test web_vs_fret_control_chrome -E 'test(web_vs_fret_layout_alert_demo_alerts_are_w_full_like_web) or test(web_vs_fret_alert_demo_chrome_matches) or test(web_vs_fret_alert_demo_icon_geometry_matches) or test(web_vs_fret_alert_destructive_chrome_matches)'`
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/alert.rs`
 - Existing diag gate: `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json`
-- New docs smoke gate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- New docs smoke gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`

@@ -44,13 +44,13 @@ Validation run used for closeout:
 
 Launched diag proof used for closeout:
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json --dir target/fret-diag/imui-shell-ghost-choreography-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json --dir target/fret-diag/imui-shell-ghost-choreography-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json --dir target/fret-diag/imui-shell-ghost-choreography-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json --dir target/fret-diag/imui-shell-ghost-choreography-v1 --session-auto --pack --ai-packet --timeout-ms 300000 --launch target/debug/docking_arbitration_demo.exe`
 - bounded evidence queries:
-  - `cargo run -p fretboard -- diag resolve latest --dir target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861155182-40004`
-  - `cargo run -p fretboard -- diag resolve latest --dir target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861194369-24632`
-  - `cargo run -p fretboard -- diag dock-routing target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861155182-40004/1774861172700-docking-arbitration-demo-tab-reorder-two-tabs/bundle.schema2.json --json`
-  - `cargo run -p fretboard -- diag dock-routing target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861194369-24632/1774861201903-diag-run/bundle.schema2.json --json`
+  - `cargo run -p fretboard-dev -- diag resolve latest --dir target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861155182-40004`
+  - `cargo run -p fretboard-dev -- diag resolve latest --dir target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861194369-24632`
+  - `cargo run -p fretboard-dev -- diag dock-routing target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861155182-40004/1774861172700-docking-arbitration-demo-tab-reorder-two-tabs/bundle.schema2.json --json`
+  - `cargo run -p fretboard-dev -- diag dock-routing target/fret-diag/imui-shell-ghost-choreography-v1/sessions/1774861194369-24632/1774861201903-diag-run/bundle.schema2.json --json`
 
 Audit artifacts retained under:
 

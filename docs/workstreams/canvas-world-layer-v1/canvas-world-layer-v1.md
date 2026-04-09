@@ -182,7 +182,7 @@ Reference implementations:
 Minimum:
 
 - UI Gallery spike page demonstrating nodes-as-elements under pan/zoom.
-- At least one `fretboard diag` gate verifying:
+- At least one `fretboard-dev diag` gate verifying:
   - pan/zoom moves the node subtrees predictably,
   - overlay exemption regions still prevent wheel-pan where expected.
 

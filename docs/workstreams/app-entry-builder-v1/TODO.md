@@ -25,9 +25,9 @@
 
 ## Onboarding convergence
 
-- [x] `fretboard new hello` uses the builder chain.
-- [x] `fretboard new simple-todo` uses the builder chain.
-- [x] `fretboard new todo` uses the builder chain.
+- [x] `fretboard-dev new hello` uses the builder chain.
+- [x] `fretboard-dev new simple-todo` uses the builder chain.
+- [x] `fretboard-dev new todo` uses the builder chain.
 - [x] `docs/examples/todo-app-golden-path.md` uses the builder chain.
 - [x] Representative `apps/fret-examples` demos use the builder chain for the recommended path.
 - [x] `ecosystem/fret/README.md` teaches the builder chain as the primary entry story.

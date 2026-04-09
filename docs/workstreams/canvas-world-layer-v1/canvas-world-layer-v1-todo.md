@@ -31,7 +31,7 @@ See also:
   - allow wheel zoom + pan drag,
   - show overlay chrome above the world layer.
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
-- [x] CWL-M0-003 Add a `fretboard diag` script capturing the spike page bundle.
+- [x] CWL-M0-003 Add a `fretboard-dev diag` script capturing the spike page bundle.
   - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
 
 ## M1 — Correctness (hit-testing + scaling modes)

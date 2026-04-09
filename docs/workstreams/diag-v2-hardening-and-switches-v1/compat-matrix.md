@@ -12,7 +12,7 @@ It exists to make removals safe: when we delete a compat path, we update this ma
 
 ## Terms
 
-- **Tooling**: `fretboard diag ...` (crate: `crates/fret-diag`, app: `apps/fretboard`).
+- **Tooling**: `fretboard-dev diag ...` (crate: `crates/fret-diag`, app: `apps/fretboard`).
 - **Runtime**: in-app diagnostics service (typically `ecosystem/fret-bootstrap/src/ui_diagnostics/*`).
 - **FS transport**: filesystem triggers under `.fret/diag/` (native-first).
 - **WS transport**: DevTools WebSocket transport (web/wasm and remote scenarios).

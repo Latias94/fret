@@ -23,9 +23,9 @@ Usage:
     [-WarmupFrames <n>]
 
 Notes:
-  - Runs the `extras-marquee-steady` perf suite via `fretboard diag perf`.
+  - Runs the `extras-marquee-steady` perf suite via `fretboard-dev diag perf`.
   - Baselines are machine-dependent; generate one via:
-      cargo run -p fretboard -- diag perf extras-marquee-steady `
+      cargo run -p fretboard-dev -- diag perf extras-marquee-steady `
         --repeat 7 --warmup-frames 5 `
         --perf-baseline-out docs/workstreams/perf-baselines/extras-marquee-steady.<machine-tag>.v1.json `
         --perf-baseline-headroom-pct 20 `

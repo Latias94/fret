@@ -1194,7 +1194,7 @@ impl NavigationMenu {
 
     /// Attaches a stable `test_id` to the viewport panel surface when it is mounted.
     ///
-    /// This is intended for deterministic diagnostics (`fretboard diag`) and should not be relied
+    /// This is intended for deterministic diagnostics (`fretboard-dev diag`) and should not be relied
     /// on by production UX.
     pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.viewport_test_id = Some(test_id.into());

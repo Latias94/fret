@@ -15,7 +15,7 @@ This document tracks **shadcn/ui (New York v4)** alignment work in Fret, and pro
 record:
 
 - What we consider “done” for a component (fonts/layout/behavior/hit-testing).
-- What tests exist today (unit/integration + `fretboard diag` scripts).
+- What tests exist today (unit/integration + `fretboard-dev diag` scripts).
 - What’s still missing (gaps + next actions).
 
 ## Sources of truth (pinned references)
@@ -30,7 +30,7 @@ record:
    - Prefer small unit tests close to the component/policy layer in `ecosystem/fret-ui-shadcn`.
 2. **Web-vs-Fret alignment tests** (geometry/placement matrices)
    - Existing example: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
-3. **End-to-end `fretboard diag` scripts** (routing/focus/click-through/geometry under the real runner)
+3. **End-to-end `fretboard-dev diag` scripts** (routing/focus/click-through/geometry under the real runner)
    - Scripts live in `tools/diag-scripts/*.json`.
    - Prefer `test_id` selectors and geometry predicates (avoid pixel-only assertions unless needed).
 
@@ -39,7 +39,7 @@ record:
 Run the curated shadcn-focused suite (recommended):
 
 ```bash
-cargo run -p fretboard -- diag suite ui-gallery-shadcn-conformance --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag suite ui-gallery-shadcn-conformance --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 Notes:
@@ -51,7 +51,7 @@ Notes:
 For a smaller runner-backed proof set focused on recent scroll/click/runtime parity fixes, run:
 
 ```bash
-cargo run -p fretboard -- diag suite ui-gallery-shadcn-runtime-evidence --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard-dev -- diag suite ui-gallery-shadcn-runtime-evidence --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 This targeted suite keeps only four representative scripts:
@@ -83,7 +83,7 @@ Optional (advanced):
 
 Legend:
 
-- **Diag Scripts**: primary `fretboard diag` coverage for the component (useful repros + gates).
+- **Diag Scripts**: primary `fretboard-dev diag` coverage for the component (useful repros + gates).
 - **Rust Tests**: unit/integration tests in `ecosystem/fret-ui-shadcn` (or related crates).
 - **Coverage (Fonts/Hit/Layout)**: what the current tests actually exercise.
 - **Status**: `TODO` / `In progress` / `Aligned` / `Aligned (with gaps)`.
@@ -136,7 +136,7 @@ Legend:
 | Radio Group | `radio_group` | TODO | TODO | TODO | TODO | |
 | Resizable | `resizable` | TODO | TODO | TODO | TODO | |
 | Scroll Area | `scroll_area` | TODO | TODO | TODO | TODO | |
-| Select | `select` | `fretboard diag suite ui-gallery-select`, `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json` | TODO | Open/close, commit, disabled, bounds, selected-label update after content-scroll positioning | In progress | The targeted runtime-evidence suite keeps the commit + label-update path as the smallest runner-backed proof for the scroll guard fix. |
+| Select | `select` | `fretboard-dev diag suite ui-gallery-select`, `tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json` | TODO | Open/close, commit, disabled, bounds, selected-label update after content-scroll positioning | In progress | The targeted runtime-evidence suite keeps the commit + label-update path as the smallest runner-backed proof for the scroll guard fix. |
 | Separator | `separator` | TODO | TODO | TODO | TODO | |
 | Sheet | `sheet` | TODO | TODO | TODO | TODO | |
 | Sidebar | `sidebar` | `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json`, `tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json`, `tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | Focus + layout (mobile vs desktop routing) | In progress | Add viewport breakpoint + docking/panel interaction gates if needed. |

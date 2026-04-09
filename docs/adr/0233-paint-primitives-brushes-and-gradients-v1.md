@@ -130,7 +130,7 @@ To keep the scene contract resilient and deterministic:
   - `Repeat/Mirror` behave as `Clamp`,
   - `Oklab` behaves as `Srgb`.
 
-Sanitization must be deterministic across platforms to keep `fretboard diag` parity and scene
+Sanitization must be deterministic across platforms to keep `fretboard-dev diag` parity and scene
 fingerprints meaningful.
 
 ## Non-goals (v1)

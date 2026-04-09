@@ -6,7 +6,7 @@ use super::super::shared::{OutputArgs, SessionArgs, TimingArgs};
 
 #[derive(Debug, Args)]
 #[command(
-    after_help = "Direct execution:\n  fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]"
+    after_help = "Direct execution:\n  fretboard-dev diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]"
 )]
 pub(crate) struct ScriptCommandArgs {
     #[command(subcommand)]

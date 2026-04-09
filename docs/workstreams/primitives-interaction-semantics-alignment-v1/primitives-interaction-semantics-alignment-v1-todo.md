@@ -65,7 +65,7 @@ See also:
 
 - [ ] Ensure any delays are configured as `Duration` at the primitives layer.
 - [ ] Add stable `test_id` anchors needed for scripted timeline repros.
-- [ ] Add at least one `tools/diag-scripts/*.json` script per primitive and gate it via `fretboard diag run`.
+- [ ] Add at least one `tools/diag-scripts/*.json` script per primitive and gate it via `fretboard-dev diag run`.
 
 ---
 

@@ -49,7 +49,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] `hello`
   - [x] `simple-todo`
   - [x] `todo` stays template-only (not a cookbook example); keep the golden path obvious via:
-    - `cargo run -p fretboard -- new todo --name my-todo`
+    - `cargo run -p fretboard-dev -- new todo --name my-todo`
     - [`docs/examples/todo-app-golden-path.md`](../../examples/todo-app-golden-path.md)
 - [x] Add 6–12 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
@@ -77,18 +77,18 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
 Gates:
 
 - [x] Each example stamps stable `test_id`s for primary controls.
-- [x] Add at least one `fretboard diag run` script per example (or a shared suite).
+- [x] Add at least one `fretboard-dev diag run` script per example (or a shared suite).
 
 ## M2 — Consolidate the demo registry (reduce duplication)
 
 Goal: avoid duplicated demo lists across native/web/tooling.
 
-- [x] Make `fretboard list native-demos` and `--choose` show:
+- [x] Make `fretboard-dev list native-demos` and `--choose` show:
   - [x] “Official (user-facing)” first
   - [x] “Maintainer/Stress” behind `--all`
 - [x] Add cookbook discovery + runner commands:
-  - [x] `fretboard list cookbook-examples`
-  - [x] `fretboard dev native --example <name>`
+  - [x] `fretboard-dev list cookbook-examples`
+  - [x] `fretboard-dev dev native --example <name>`
 - [x] Clarify the repository-shape decision:
   - [x] borrow Bevy-style discoverability via `examples/README.md`
   - [x] keep the workspace root out of the Cargo `examples/` execution path

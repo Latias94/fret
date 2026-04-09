@@ -101,7 +101,7 @@ Every new or modified wrapper should pass all items below before merge.
 ### 4.3 Test and regression evidence
 
 - Add at least one targeted `cargo nextest` behavior test for the wrapper change.
-- For multi-step choreography (drag/resize/focus/popup), add or update one `fretboard diag` script.
+- For multi-step choreography (drag/resize/focus/popup), add or update one `fretboard-dev diag` script.
 - Preserve wasm compile smoke for facade surfaces when shared contracts are touched.
 
 ### 4.4 Documentation and tracking

@@ -55,5 +55,5 @@ base examples, and the existing toggle web gates.
 - `cargo nextest run -p fret-ui-shadcn web_vs_fret_toggle toggle_children_accept_prebuilt_landed_content`
 - `cargo nextest run -p fret-ui-gallery --test toggle_docs_surface`
 - `cargo nextest run -p fret-ui-gallery toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface selected_toggle_snippets_prefer_builder_preserving_helpers toggle_children_snippet_prefers_explicit_root_children_followup toggle_page_uses_typed_doc_sections_for_app_facing_snippets`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`, `toggle-demo.focus`)

@@ -29,9 +29,12 @@ Default app-author surface to keep in your head:
 Unless a document says otherwise:
 
 - Run commands from the repository root.
-- Prefer the workspace runner: `cargo run -p fretboard -- ...`
-  - Example (cookbook): `cargo run -p fretboard -- dev native --example simple_todo`
-  - Example (native demo bin): `cargo run -p fretboard -- dev native --bin todo_demo`
+- For repo-maintainer commands (`new`, `dev`, `list`, `diag`, `hotpatch`, `theme`), prefer
+  `cargo run -p fretboard-dev -- ...`
+  - Example (cookbook): `cargo run -p fretboard-dev -- dev native --example simple_todo`
+  - Example (native demo bin): `cargo run -p fretboard-dev -- dev native --bin todo_demo`
+- For the published public CLI surface (`assets`, `config`), use `cargo run -p fretboard -- ...`
+  or an installed `fretboard` binary.
 - Some maintainer/labs docs reference the broad harness app directly:
   - `cargo run -p fret-demo --bin <name>`
   - This is not the first-hour onboarding path; start from [docs/first-hour.md](./first-hour.md) and
@@ -119,11 +122,14 @@ these are the only crate names we treat as stable entry points; internal crates 
 - `fret-ui-shadcn`: default component surface (shadcn/ui-aligned taxonomy + recipes).
 - `fret-ui-kit`: component authoring glue (policies + headless primitives + declarative helpers).
 - `fret-framework`: framework facade for advanced/manual assembly and integrations.
-- `fretboard`: dev tooling (templates + native/web demo runner).
+- `fretboard`: public CLI for asset manifests and project-local config helpers.
+
+Repo maintainers use the non-published `fretboard-dev` package for templates, demo runners,
+diagnostics, hotpatch, and other workspace-only flows.
 
 Web/wasm runs through tooling (not through `fret`):
 
-- `cargo run -p fretboard -- dev web --demo ui_gallery`
+- `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
 
 ## Consumption profiles (modularity)
 
@@ -150,7 +156,7 @@ now taught as `LocalState` + view runtime + typed actions.
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
-  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
+  - Template entry points: `cargo run -p fretboard-dev -- new hello`, `cargo run -p fretboard-dev -- new simple-todo`, `cargo run -p fretboard-dev -- new todo`
 - Dataflow authoring surface follow-on (closed selector/query closeout lane):
   - Workstream: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
   - Target state: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -248,18 +254,18 @@ now taught as `LocalState` + view runtime + typed actions.
 ## Code Entry Points (After You Read The Docs)
 
 - End-to-end demo wiring (effects → runner → render): [apps/fret-examples/src/components_gallery.rs](../apps/fret-examples/src/components_gallery.rs)
-  - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
+  - Run: `cargo run -p fretboard-dev -- dev native --bin components_gallery`
 - Starter todo public proof surface (default app lane, no selector/query): [apps/fret-examples/src/simple_todo_demo.rs](../apps/fret-examples/src/simple_todo_demo.rs)
-  - Run: `cargo run -p fretboard -- dev native --bin simple_todo_demo`
+  - Run: `cargo run -p fretboard-dev -- dev native --bin simple_todo_demo`
 - Todo app “golden path” (richer third-rung product baseline; shadcn + bootstrap + selector/query seams): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
-  - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
-- Default starter template generator (second rung, no selector/query): `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
+  - Run: `cargo run -p fretboard-dev -- dev native --bin todo_demo`
+- Default starter template generator (second rung, no selector/query): `cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo`
   - Guide: [docs/first-hour.md](./first-hour.md)
-- Richer todo template generator (third-rung product baseline with deletable selector/query slices): `cargo run -p fretboard -- new todo --name my-todo`
+- Richer todo template generator (third-rung product baseline with deletable selector/query slices): `cargo run -p fretboard-dev -- new todo --name my-todo`
   - Guide: [docs/examples/todo-app-golden-path.md](./examples/todo-app-golden-path.md)
-- Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows).
+- Windows build speed note: prefer `fretboard-dev dev native ...` (defaults to `--profile dev-fast` on Windows).
 - Docking + viewport + overlays conformance harness (ADR 0072): [apps/fret-examples/src/docking_arbitration_demo.rs](../apps/fret-examples/src/docking_arbitration_demo.rs)
-  - Run: `cargo run -p fretboard -- dev native --bin docking_arbitration_demo`
+  - Run: `cargo run -p fretboard-dev -- dev native --bin docking_arbitration_demo`
   - Checklist: [docs/docking-arbitration-checklist.md](./docking-arbitration-checklist.md)
 - Plot demos (2D): [apps/fret-examples/src/plot_demo.rs](../apps/fret-examples/src/plot_demo.rs)
 - Plot stress harness (desktop-only): [apps/fret-examples/src/plot_stress_demo.rs](../apps/fret-examples/src/plot_stress_demo.rs)

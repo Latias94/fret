@@ -174,7 +174,7 @@ pub(crate) fn resolve_diag_cli_paths(
   out_dir: {}\n\
   hint: prefer `--session-auto` (or `--session <id>`) to isolate concurrent runs under `{}`\n\
   example:\n\
-    cargo run -p fretboard -- diag {} --dir {} --session-auto --launch -- <cmd...>",
+    cargo run -p fretboard-dev -- diag {} --dir {} --session-auto --launch -- <cmd...>",
                 resolved_base_out_dir.display(),
                 resolved_out_dir.display(),
                 sessions_root.display(),

@@ -118,7 +118,7 @@ Evidence anchors:
 3. Collapse `NodeGraphSurfaceProps` to one canonical runtime binding input:
    - (Done) `NodeGraphSurfaceBinding` is now the single declarative surface input (avoid `graph + view_state + controller` triplets and the old `controller + store` ambiguity) - gate: `cargo nextest run -p fret-node`.
 4. Add at least one diagnostics-driven gate for portal/overlay anchoring:
-   - capture a minimal scripted scenario to lock the cross-frame bounds/portal throttling behavior — gate: `fretboard diag` (plus existing unit tests).
+   - capture a minimal scripted scenario to lock the cross-frame bounds/portal throttling behavior — gate: `fretboard-dev diag` (plus existing unit tests).
 
 ## 8) Open questions / decisions needed
 

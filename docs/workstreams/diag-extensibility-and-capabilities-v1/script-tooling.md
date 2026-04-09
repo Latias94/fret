@@ -20,7 +20,7 @@ Parse a script JSON (v1/v2) and re-emit pretty JSON with stable formatting.
 
 Command:
 
-- `fretboard diag script normalize <script.json> [--write|--check]`
+- `fretboard-dev diag script normalize <script.json> [--write|--check]`
 
 Behavior:
 
@@ -48,7 +48,7 @@ Validate:
 
 Command:
 
-- `fretboard diag script validate <script.json>... [--check-out <path>] [--json]`
+- `fretboard-dev diag script validate <script.json>... [--check-out <path>] [--json]`
 
 Outputs:
 
@@ -69,7 +69,7 @@ Script-only lint (no app required):
 
 Command:
 
-- `fretboard diag script lint <script.json>... [--check-out <path>] [--json]`
+- `fretboard-dev diag script lint <script.json>... [--check-out <path>] [--json]`
 
 Outputs:
 
@@ -90,7 +90,7 @@ Perform a bounded search to produce a smaller script that still reproduces the f
 
 Command:
 
-- `fretboard diag script shrink <script.json> [--shrink-out <path>] [--shrink-any-fail] [--shrink-match-reason-code <code>] [--shrink-match-reason <reason>] [--shrink-min-steps <n>] [--shrink-max-iters <n>] [--reuse-launch] [--launch -- <cmd...>]`
+- `fretboard-dev diag script shrink <script.json> [--shrink-out <path>] [--shrink-any-fail] [--shrink-match-reason-code <code>] [--shrink-match-reason <reason>] [--shrink-min-steps <n>] [--shrink-max-iters <n>] [--reuse-launch] [--launch -- <cmd...>]`
 
 Behavior:
 
@@ -135,7 +135,7 @@ Bundle lint is intentionally separate from script-only lint: it validates the *c
 
 Command:
 
-- `fretboard diag lint <bundle_dir|bundle.json>`
+- `fretboard-dev diag lint <bundle_dir|bundle.json>`
 
 Behavior:
 
@@ -152,7 +152,7 @@ Initial checks (expand over time, but keep codes stable):
 
 ## Suite summary (batch runs)
 
-When running a suite (`fretboard diag suite ...`), the CLI writes a one-file overview:
+When running a suite (`fretboard-dev diag suite ...`), the CLI writes a one-file overview:
 
 - `suite.summary.json` (under the diagnostics output dir, e.g. `.fret/diag/`)
 

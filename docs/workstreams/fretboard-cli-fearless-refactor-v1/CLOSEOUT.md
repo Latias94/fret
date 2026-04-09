@@ -26,7 +26,7 @@ This lane is closed.
 - Deleted the compatibility-only `init` alias from the top-level shell.
 - Replaced the hand-maintained root usage blob with contract-generated root help plus curated
   examples.
-- Updated first-party ADR/alignment references from `fretboard init todo` to `fretboard new todo`.
+- Updated first-party ADR/alignment references from `fretboard init todo` to `fretboard-dev new todo`.
 - Added parser/help tests for `new`, root help, `config`, and `theme`.
 - Re-ran scaffold generation smoke and compile tests after the contract cutover.
 
@@ -40,8 +40,8 @@ This lane is closed.
 
 ## Smoke commands
 
-- `cargo nextest run -p fretboard cli::contracts::tests:: cli::help::tests:: scaffold::tests::`
+- `cargo nextest run -p fretboard-dev cli::contracts::tests:: cli::help::tests:: scaffold::tests::`
 - `target/debug/fretboard --help`
-- `target/debug/fretboard new --help`
-- `target/debug/fretboard new hello --help`
+- `target/debug/fretboard-dev new --help`
+- `target/debug/fretboard-dev new hello --help`
 - `target/debug/fretboard init todo` (expected rejection)

@@ -159,7 +159,7 @@ Evidence:
 
 - Land `ecosystem/fret-ui-magic` as a MagicUI-aligned wrapper crate.
 - Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
-- Add UI gallery entries and `fretboard diag` scripts for each seed component.
+- Add UI gallery entries and `fretboard-dev diag` scripts for each seed component.
 
 Status: Landed
 
@@ -220,7 +220,7 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1/creative-recipes-v1-
 
 ## M8a — MagicUI perf baselines (optional)
 
-Extend perf coverage for the MagicUI parity pages so regressions show up early under `fretboard diag perf`.
+Extend perf coverage for the MagicUI parity pages so regressions show up early under `fretboard-dev diag perf`.
 
 - Add perf scripts:
   - `tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json`
@@ -287,7 +287,7 @@ Acceptance criteria (v1):
   - object-fit semantics (contain/cover/stretch),
   - a lifecycle toggle (unregister/register) to validate ID stability and cleanup.
 - Diagnostics closure:
-  - `fretboard diag run` can launch the demo and execute a script v2 end-to-end, producing bundles and
+  - `fretboard-dev diag run` can launch the demo and execute a script v2 end-to-end, producing bundles and
     PNG screenshots (requires `FRET_DIAG_GPU_SCREENSHOTS=1`).
 - Perf closure:
   - a steady-state perf baseline is committed under `docs/workstreams/perf-baselines/` with a matching

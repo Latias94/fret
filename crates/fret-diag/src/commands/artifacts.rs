@@ -278,7 +278,7 @@ fn prepare_cmd_pack(request: PackCommandRequest<'_>) -> Result<PreparedPackComma
         resolve::resolve_bundle_input_or_latest(&source, request.out_dir).map_err(|error| {
             if request.rest.is_empty() {
                 format!(
-                    "{} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                    "{} (try: fretboard-dev diag pack ./target/fret-diag/<timestamp>)",
                     error
                 )
             } else {
@@ -404,7 +404,7 @@ fn require_ai_packet_dir_for_pack_ai_only(bundle_dir: &Path) -> Result<PathBuf, 
         Ok(packet_dir)
     } else {
         Err(format!(
-            "--ai-only requires ai.packet under the bundle dir (tip: fretboard diag ai-packet {} --packet-out {})",
+            "--ai-only requires ai.packet under the bundle dir (tip: fretboard-dev diag ai-packet {} --packet-out {})",
             bundle_dir.display(),
             packet_dir.display()
         ))
@@ -2539,7 +2539,7 @@ fn parse_triage_request(
 
     let Some(source) = positionals.first() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag triage <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard-dev diag triage <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -2623,7 +2623,7 @@ fn resolve_triage_frames_index(
     }
     let frames_index = frames_index.ok_or_else(|| {
         format!(
-            "frames.index.json is missing or invalid (tip: fretboard diag frames-index {} --warmup-frames {})",
+            "frames.index.json is missing or invalid (tip: fretboard-dev diag frames-index {} --warmup-frames {})",
             bundle_path.display(),
             warmup_frames
         )
@@ -2718,7 +2718,7 @@ fn parse_meta_request(
     let display_mode = resolve_artifact_display_mode(stats_json, meta_report)?;
     let Some(source) = rest.first() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard-dev diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -2909,7 +2909,7 @@ fn prepare_cmd_lint(request: LintCommandRequest<'_>) -> Result<PreparedLintComma
         prepare_required_bundle_artifact_output(RequiredBundleArtifactOutputRequest {
             rest: request.rest,
             workspace_root: request.workspace_root,
-            missing_hint: "missing bundle artifact path (try: fretboard diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            missing_hint: "missing bundle artifact path (try: fretboard-dev diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
             custom_out: request.lint_out,
             default_out: crate::default_lint_out_path,
         })?;
@@ -2940,7 +2940,7 @@ fn prepare_cmd_test_ids(
         prepare_required_bundle_artifact_output(RequiredBundleArtifactOutputRequest {
             rest: request.rest,
             workspace_root: request.workspace_root,
-            missing_hint: "missing bundle artifact path (try: fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            missing_hint: "missing bundle artifact path (try: fretboard-dev diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
             custom_out: request.test_ids_out,
             default_out: crate::default_test_ids_out_path,
         })?;
@@ -3167,7 +3167,7 @@ pub(crate) fn cmd_test_ids_index(
         EnsuredBundleArtifactCommandRequest {
             rest,
             workspace_root,
-            missing_hint: "missing bundle artifact path (try: fretboard diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            missing_hint: "missing bundle artifact path (try: fretboard-dev diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
             warmup_frames,
             stats_json,
         },
@@ -3192,7 +3192,7 @@ pub(crate) fn cmd_frames_index(
         EnsuredBundleArtifactCommandRequest {
             rest,
             workspace_root,
-            missing_hint: "missing bundle artifact path (try: fretboard diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
+            missing_hint: "missing bundle artifact path (try: fretboard-dev diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)",
             warmup_frames,
             stats_json,
         },

@@ -84,7 +84,7 @@ We standardize “what happened” and “where to look”:
 - Stable log files:
   - `.fret/hotpatch_runner.log`
   - `.fret/hotpatch_bootstrap.log`
-- Status command: `fretboard hotpatch status --tail N`
+- Status command: `fretboard-dev hotpatch status --tail N`
 
 Evidence anchors:
 

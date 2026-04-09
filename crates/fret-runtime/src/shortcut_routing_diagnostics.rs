@@ -7,7 +7,7 @@ use crate::CommandId;
 
 /// Diagnostics-only trace entries that explain how keydown shortcuts were routed.
 ///
-/// This store is intended to support structured explainability in `fretboard diag` without
+/// This store is intended to support structured explainability in `fretboard-dev diag` without
 /// relying on ad-hoc logs or screenshots.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShortcutRoutingPhase {

@@ -67,7 +67,7 @@ Status update (2026-03-02):
 
 Status update (2026-03-02, later):
 
-- Fixed a class of “`step_index` stuck (no progress) while `fretboard diag run` waits for `script.result.json`” failures:
+- Fixed a class of “`step_index` stuck (no progress) while `fretboard-dev diag run` waits for `script.result.json`” failures:
   - Root cause: window-targeted `wait_until/assert` steps (e.g. `exists` by `test_id`) could force script migration to
     an occluded window, stalling timeouts and leaving the script permanently `running`.
   - Fix: allow `exists/not_exists` for `test_id` selectors to be evaluated against cached per-window `test_id_bounds`

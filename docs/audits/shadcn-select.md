@@ -114,8 +114,8 @@ examples in `repo-ref/ui`.
 
 - `cargo test -p fret-ui-shadcn --lib select`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app select_page_uses_typed_doc_sections_for_app_facing_snippets --status-level fail`
-- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json --dir target/fret-diag-select-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-select cargo run -p fret-ui-gallery`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-docs-screenshots.json --dir target/fret-diag-select-docs-rich-items --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery`
+- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json --dir target/fret-diag-select-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-select cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-docs-screenshots.json --dir target/fret-diag-select-docs-rich-items --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery`
 - Contract test: `select_disabled_hides_content_even_when_open_model_true`
 - Contract test: `select_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `select_open_change_events_complete_without_animation`

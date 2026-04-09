@@ -19,7 +19,7 @@ pub(crate) fn pack_ai_packet_dir_to_zip(
     let packet_dir = bundle_dir.join("ai.packet");
     if !packet_dir.is_dir() {
         return Err(format!(
-            "bundle_dir does not contain ai.packet (tip: fretboard diag ai-packet {} --packet-out {})",
+            "bundle_dir does not contain ai.packet (tip: fretboard-dev diag ai-packet {} --packet-out {})",
             bundle_dir.display(),
             packet_dir.display()
         ));
@@ -136,7 +136,7 @@ pub(crate) fn pack_repro_ai_zip_multi(
         let packet_dir = bundle_dir.join("ai.packet");
         if !packet_dir.is_dir() {
             return Err(format!(
-                "missing ai.packet for repro item {} (tip: fretboard diag ai-packet {} --packet-out {})",
+                "missing ai.packet for repro item {} (tip: fretboard-dev diag ai-packet {} --packet-out {})",
                 item.prefix,
                 bundle_dir.display(),
                 packet_dir.display()
@@ -192,7 +192,7 @@ pub(crate) fn pack_bundle_dir_to_zip(
         && crate::resolve_bundle_schema2_artifact_path_no_materialize(bundle_dir).is_none()
     {
         return Err(format!(
-            "--pack-schema2-only requires bundle.schema2.json (tip: fretboard diag doctor --fix-schema2 {} --warmup-frames {})",
+            "--pack-schema2-only requires bundle.schema2.json (tip: fretboard-dev diag doctor --fix-schema2 {} --warmup-frames {})",
             bundle_dir.display(),
             warmup_frames
         ));
@@ -466,7 +466,7 @@ pub(crate) fn pack_repro_zip_multi(
             && crate::resolve_bundle_schema2_artifact_path_no_materialize(&bundle_dir).is_none()
         {
             return Err(format!(
-                "--pack-schema2-only requires bundle.schema2.json (tip: fretboard diag doctor --fix-schema2 {} --warmup-frames {})",
+                "--pack-schema2-only requires bundle.schema2.json (tip: fretboard-dev diag doctor --fix-schema2 {} --warmup-frames {})",
                 bundle_dir.display(),
                 warmup_frames
             ));

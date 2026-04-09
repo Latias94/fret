@@ -42,10 +42,10 @@ def _stream_checked_with_timeout_retry(
         attempt += 1
         timeout_for_attempt = timeout_ms_primary if attempt == 1 else timeout_ms_retry
         if attempt == 1:
-            print(f"[diag-gate-afa-v1] fretboard diag run {gate_name}")
+            print(f"[diag-gate-afa-v1] fretboard-dev diag run {gate_name}")
         else:
             print(
-                "[diag-gate-afa-v1] fretboard diag run "
+                "[diag-gate-afa-v1] fretboard-dev diag run "
                 f"{gate_name} (retry {attempt}, timeout_ms={timeout_for_attempt})"
             )
 
@@ -83,7 +83,7 @@ def _stream_checked_with_timeout_retry(
             continue
 
         raise SystemExit(
-            f"Step failed: fretboard diag run {gate_name} (exit code: {proc.returncode})"
+            f"Step failed: fretboard-dev diag run {gate_name} (exit code: {proc.returncode})"
         )
 
 
@@ -105,7 +105,7 @@ def main(argv: list[str]) -> int:
     fretboard_build = ["cargo", "build", "-j", "1", "-p", "fretboard"]
     if args.release:
         fretboard_build.append("--release")
-    _run_checked("cargo build -p fretboard", fretboard_build, cwd=repo_root)
+    _run_checked("cargo build -p fretboard-dev", fretboard_build, cwd=repo_root)
 
     fretboard_exe = repo_root / "target" / profile_dir / _exe_name("fretboard")
     if not fretboard_exe.exists():

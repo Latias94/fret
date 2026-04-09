@@ -71,7 +71,7 @@ Evidence anchors:
 - IME lifecycle correctness and cursor-area deduplication
   - Failure mode: cursor rect updates missed or spammed; enable/disable ordering issues; scale-factor change regressions.
   - Existing gates: unit tests for quantization/dedupe logic.
-  - Missing gate to add: an end-to-end IME regression script in a demo (`fretboard diag`) once available.
+  - Missing gate to add: an end-to-end IME regression script in a demo (`fretboard-dev diag`) once available.
 - Accessibility integration boundary
   - Failure mode: stale semantics tree, focus mismatch, incorrect node ids.
   - Existing gates: not audited at L0.
@@ -101,7 +101,7 @@ Evidence anchors:
 1. Wire `mapping/` + `state/` into the crate module tree and remove duplicated implementations from `lib.rs` — outcome: one source of truth — gate: `cargo nextest run -p fret-runner-winit`.
    - Status: landed.
 2. Keep mapping helpers pure and unit-tested (no window handles) — outcome: easy regression gates — gate: unit tests + `nextest`.
-3. Add one deterministic `fretboard diag` for an IME + text-input flow on Windows once runner-level diag is available — outcome: catch end-to-end regressions — gate: diag suite (future).
+3. Add one deterministic `fretboard-dev diag` for an IME + text-input flow on Windows once runner-level diag is available — outcome: catch end-to-end regressions — gate: diag suite (future).
 
 ## 8) Open questions / decisions needed
 

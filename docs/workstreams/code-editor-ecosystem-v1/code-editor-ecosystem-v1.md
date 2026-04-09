@@ -18,7 +18,7 @@ Recent changes (2026-02-09):
 - Diagnostics: add toggle-stability gates for Markdown editor fold/inlay fixtures to ensure UI decoration toggles cannot mutate the buffer revision/length or move the caret (ADR 0185).
 - Diagnostics: add a folds clamp-selection regression gate for the Markdown source editor fixture (caret inside a folded span clamps to the fold start once the placeholder is visible; buffer revision/length remain unchanged) (ADR 0185).
 - UI Gallery: expose the fold fixture span in `app_snapshot` and add a deterministic “Caret: in fold” fixture control for diag scripts.
-- Diagnostics (web): allow `fretboard diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0180).
+- Diagnostics (web): allow `fretboard-dev diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0180).
 - Diagnostics: gate “no stale lines” scroll stability by asserting windowed row window changes repaint (scene fingerprint updates when `visible_start` changes).
 - Code editor: allow folds/inlays to remain visible under inline preedit when soft wrap is off (unwrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0188 staging).
 - Code editor: add an opt-in to allow folds/inlays to remain visible under inline preedit when soft wrap is on (wrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0188 staging).
@@ -34,7 +34,7 @@ Recent changes (2026-02-07):
 - Diagnostics: add a strict (0-allowed) soft-wrap geometry fallback gate for the code editor torture harness, covering pointer hit-testing, caret rects, and vertical caret moves.
 - Editor paint: when caret stops are unavailable, prefer renderer-provided `TextService::caret_x` over the monospace `cell_w` heuristic (keeps caret X pixel-aligned with shaped glyph runs).
 - Editor perf/correctness: shift the per-row geometry cache across single-line edits in soft-wrap mode (reduces “first paint” geometry churn and avoids unnecessary fallback spikes).
-- Display map: start scaffolding fold placeholder materialization in the unwrapped baseline and add a UI Gallery + fretboard diag gate to keep buffer↔display mapping regression-testable.
+- Display map: start scaffolding fold placeholder materialization in the unwrapped baseline and add a UI Gallery + fretboard-dev diag gate to keep buffer↔display mapping regression-testable.
 - Display map: add an unwrapped inlay fixture + gate so “injected display fragments” can evolve without silently breaking caret/selection/hit-test mapping.
 
 Recent changes (2026-02-04):
@@ -84,11 +84,11 @@ Next up (priority order):
 
 Verification quickstart:
 
-- Web (UI Gallery): `cargo run -p fretboard -- dev web --demo ui_gallery`
+- Web (UI Gallery): `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
   - `http://127.0.0.1:8080/?demo=ui_gallery&page=code_editor_mvp`
   - `http://127.0.0.1:8080/?demo=ui_gallery&page=code_editor_torture`
   - `http://127.0.0.1:8080/?demo=ui_gallery&page=web_ime_harness` (deferred; use for repro only)
-- Native (optional): `cargo run -p fretboard -- dev native --bin components_gallery`
+- Native (optional): `cargo run -p fretboard-dev -- dev native --bin components_gallery`
 - Debug logs: set `FRET_WINDOWED_ROWS_POINTER_DEBUG=1` to print pointer/row mapping for windowed row surfaces.
 
 Recent changes (2026-02-01):
@@ -339,7 +339,7 @@ Diagnostics gates (baseline set; add more as needed):
 
 Exit criteria:
 
-- The Markdown source editor v0 contract is continuously regression-tested via `fretboard diag` gates.
+- The Markdown source editor v0 contract is continuously regression-tested via `fretboard-dev diag` gates.
 - Each “hard-to-change” behavior claimed by this milestone has:
   - an ADR reference (normative),
   - a diagnostic script (repro),

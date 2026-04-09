@@ -17,7 +17,7 @@ This document captures a concrete, code-linked list of **performance gaps** betw
 - the **GPUI** substrate as used by Zed (reference: `repo-ref/zed/crates/gpui`).
 
 The goal is not to copy GPUI, but to identify the *mechanisms* that matter for “Zed feel” and make them measurable
-via `fretboard diag perf` scripts and perf logs.
+via `fretboard-dev diag perf` scripts and perf logs.
 
 Related:
 
@@ -34,7 +34,7 @@ This workstream uses a strict “numbers or it didn’t happen” contract.
 
 Protocol:
 
-- Every gap item must map to at least one **probe** that can be run via `fretboard diag perf`.
+- Every gap item must map to at least one **probe** that can be run via `fretboard-dev diag perf`.
 - Every milestone must be guarded by a **gate** (baseline + thresholds) and recorded in the perf log with:
   - exact command line,
   - suite/baseline version,
@@ -134,13 +134,13 @@ To close the gap responsibly, treat perf as a contract and work from the “lowe
    - Reference: `docs/workstreams/standalone/ui-perf-setter-idempotency-v1.md`.
 1) **Pick a single hot-path probe** (pointer move, wheel, resize, scroll) and gate it.
    - Pointer move gate: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
-   - Gate flags: `fretboard diag perf --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us/--max-pointer-move-global-changes`
+   - Gate flags: `fretboard-dev diag perf --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us/--max-pointer-move-global-changes`
    - Extract derived pointer-move stats from a captured bundle via:
-     `fretboard diag triage <bundle.json> --json` (`stats.pointer_move.*`)
+     `fretboard-dev diag triage <bundle.json> --json` (`stats.pointer_move.*`)
 2) **Explain tail latency** with bundles, not averages.
-   - Use `fretboard diag stats <bundle.json> --sort time --top 30` to find the heaviest frame and why it was heavy.
+   - Use `fretboard-dev diag stats <bundle.json> --sort time --top 30` to find the heaviest frame and why it was heavy.
 3) **Separate CPU vs GPU** early.
-   - Use `fretboard diag repro ... --with tracy` / `--with renderdoc` (best-effort) to confirm whether a hitch is CPU
+   - Use `fretboard-dev diag repro ... --with tracy` / `--with renderdoc` (best-effort) to confirm whether a hitch is CPU
      dispatch/layout/prepaint vs GPU encoding/upload/pipeline churn.
 4) **Focus on allocation discipline** as a first-order knob.
    - If pointer move is not “paint-only”, treat it as a bug: eliminate model/global churn and per-event allocations
@@ -239,7 +239,7 @@ Baseline fact (quick reference):
 Current “Zed feel” probe:
 
 - Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
-- Gate: `fretboard diag perf ... --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us`
+- Gate: `fretboard-dev diag perf ... --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us`
 
 Findings (macOS Apple M4; repeat=7):
 
@@ -607,7 +607,7 @@ worst frame shows a characteristic signature:
 Evidence (macOS Apple M4; `ui-gallery-steady` baseline v11 era):
 
 - Worst bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`
-- `fretboard diag stats --sort time --top 1` (selected lines from the worst frame):
+- `fretboard-dev diag stats --sort time --top 1` (selected lines from the worst frame):
   - `time.us(total/layout/prepaint/paint)=16136/11331/98/4707`
   - `paint_text_prepare.us(time/calls)=3656/18`
   - `paint_text_prepare.reasons(.../width/...)=.../18/...`
@@ -730,7 +730,7 @@ Proposal:
     `encode_scene_us`, `prepare_text_us`, `prepare_svg_us`, `draw_calls`,
     `pipeline_switches`, `bind_group_switches`, `scissor_sets`,
     uniform/instance/vertex byte counts, and scene encoding cache hit/miss counts.
-  - `fretboard diag stats` and `fretboard diag perf --json` can now sort/report by these renderer metrics.
+  - `fretboard-dev diag stats` and `fretboard-dev diag perf --json` can now sort/report by these renderer metrics.
   - Commits: `0e4928fe` + `cf8975ca`. Evidence runs are logged in
     `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.
   - Renderer churn signals are now exported (best-effort) for tail-hitch correlation:
@@ -844,7 +844,7 @@ Fret:
 - This suggests a “we publish every frame” pattern that adds dispatch bookkeeping and tail latency even when the UI does
   not actually observe the values for the current interaction.
 - Evidence:
-  - `fretboard diag stats <bundle> --sort dispatch --json` for the hit-test torture sweep bundles (see perf log entry
+  - `fretboard-dev diag stats <bundle> --sort dispatch --json` for the hit-test torture sweep bundles (see perf log entry
     for commit `1a9c1238`).
 
 Impact:
@@ -865,7 +865,7 @@ Progress:
 - Implemented a first cut that avoids publishing these globals on hover-only pointer moves (commit `d4adf37f`),
   collapsing `snapshots_with_global_changes` to 0 and reducing pointer-move dispatch tails in the stripes sweep
   (see the perf log entry for `d4adf37f`).
-- Implemented a dedicated pointer-move gate in `fretboard diag perf`:
+- Implemented a dedicated pointer-move gate in `fretboard-dev diag perf`:
   - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, `--max-pointer-move-global-changes`
   - plus derived pointer-move stats in `tools/perf/perf_log.py`
   - Evidence: perf log entry for commit `6da92d3d`.

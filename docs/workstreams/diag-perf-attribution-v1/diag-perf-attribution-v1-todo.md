@@ -12,7 +12,7 @@
 
 ## P1 (M1): diff + budget view
 
-- [x] Add `fretboard diag stats --diff <a> <b>`:
+- [x] Add `fretboard-dev diag stats --diff <a> <b>`:
   - [x] stable ordering (largest delta first),
   - [x] `--json` output,
   - [x] human output.

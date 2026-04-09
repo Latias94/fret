@@ -74,7 +74,7 @@ Evidence anchors:
 - `unstable-retained-bridge` coupling to `fret-ui`
   - Failure mode: changes in retained bridge invalidate docking assumptions; regressions only show up in apps.
   - Existing gates: none obvious at L0.
-  - Missing gate to add: a minimal `fretboard diag` suite that exercises drag/split/tab activation across a couple of representative layouts.
+  - Missing gate to add: a minimal `fretboard-dev diag` suite that exercises drag/split/tab activation across a couple of representative layouts.
 
 ## 6) Code quality findings (Rust best practices)
 
@@ -94,7 +94,7 @@ Evidence anchors:
 
 1. Convert `ecosystem/fret-docking/src/dock/tests.rs` into a fixture-driven harness — outcome: stable, reviewable matrices — gate: `cargo nextest run -p fret-docking`.
 2. Split `ecosystem/fret-docking/src/dock/space.rs` into submodules by responsibility (layout, hit-testing, drag ops, tab bar, viewport overlay integration) — outcome: fewer merge conflicts and clearer ownership — gate: docking fixture tests + `python tools/check_layering.py`.
-3. Add a minimal docking interaction diag suite — outcome: catch regressions that unit tests miss — gate: `fretboard diag` suite (name TBD).
+3. Add a minimal docking interaction diag suite — outcome: catch regressions that unit tests miss — gate: `fretboard-dev diag` suite (name TBD).
 
 ## 8) Open questions / decisions needed
 

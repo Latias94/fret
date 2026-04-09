@@ -1751,7 +1751,7 @@ fn write_regression_summary_for_suite(
             duration_ms: None,
             workspace_root: Some(workspace_root.display().to_string()),
             out_dir: Some(resolved_out_dir.display().to_string()),
-            tool: "fretboard diag suite".to_string(),
+            tool: "fretboard-dev diag suite".to_string(),
             tool_version: None,
             git_commit: None,
             git_branch: None,
@@ -2267,9 +2267,9 @@ hint: smoke/gate suites require deterministic termination; avoid trailing wait_f
             return Err(format!(
                 "unknown suite or script path: {name:?}
 \
-hint: list suites via `fretboard diag list suites --contains {name}`
+hint: list suites via `fretboard-dev diag list suites --contains {name}`
 \
-hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+hint: list promoted scripts via `fretboard-dev diag list scripts --contains {name}`"
             ));
         }
         return Err(format!(
@@ -3184,8 +3184,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     if rest.is_empty() && suite_script_inputs.is_empty() {
         return Err(
             "missing suite/script input (pass a suite name, script path, `--script-dir`, or `--glob`)\n\
-hint: try `fretboard diag suite ui-gallery`, `fretboard diag suite --script-dir tools/diag-scripts/ui-gallery/data_table`, or `fretboard diag suite --glob 'tools/diag-scripts/ui-gallery-select-*.json'`\n\
-hint: list suites via `fretboard diag list suites`"
+hint: try `fretboard-dev diag suite ui-gallery`, `fretboard-dev diag suite --script-dir tools/diag-scripts/ui-gallery/data_table`, or `fretboard-dev diag suite --glob 'tools/diag-scripts/ui-gallery-select-*.json'`\n\
+hint: list suites via `fretboard-dev diag list suites`"
                 .to_string(),
         );
     }

@@ -136,4 +136,4 @@ about instead of polling.
 
 If updates do not arrive, trigger a fresh dump via the tool `fret_diag_bundle_dump` and then read the
 resource again. For aggregate regression resources, ensure the artifacts root also contains
-`regression.summary.json` / `regression.index.json` (for example via `fretboard diag summarize`).
+`regression.summary.json` / `regression.index.json` (for example via `fretboard-dev diag summarize`).

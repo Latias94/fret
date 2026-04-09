@@ -15,7 +15,7 @@ pub(crate) fn cmd_dock_graph(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard-dev diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };

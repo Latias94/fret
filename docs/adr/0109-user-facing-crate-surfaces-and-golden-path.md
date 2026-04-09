@@ -117,7 +117,7 @@ We provide an **ecosystem-level meta crate** (`fret`) for desktop-first quick st
 
 ### B) Web (wasm32)
 
-- Use `fretboard dev web` (tooling) to run the wasm harness via `trunk`.
+- Use `fretboard-dev dev web` (tooling) to run the wasm harness via `trunk`.
 - Library crates do not embed `trunk`, file servers, or websocket dev tooling.
 
 ## Alternatives Considered

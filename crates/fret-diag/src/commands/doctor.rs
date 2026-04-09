@@ -620,7 +620,7 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
         "bundle.index.json",
         warmup_frames,
         format!(
-            "fretboard diag index {} --warmup-frames {}",
+            "fretboard-dev diag index {} --warmup-frames {}",
             bundle_dir.display(),
             warmup_frames
         ),
@@ -632,7 +632,7 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
         "bundle.meta.json",
         warmup_frames,
         format!(
-            "fretboard diag meta {} --warmup-frames {}",
+            "fretboard-dev diag meta {} --warmup-frames {}",
             bundle_dir.display(),
             warmup_frames
         ),
@@ -644,7 +644,7 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
         "window.map.json",
         warmup_frames,
         format!(
-            "fretboard diag windows {} --warmup-frames {}",
+            "fretboard-dev diag windows {} --warmup-frames {}",
             bundle_dir.display(),
             warmup_frames
         ),
@@ -656,7 +656,7 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
         "dock.routing.json",
         warmup_frames,
         format!(
-            "fretboard diag dock-routing {} --warmup-frames {}",
+            "fretboard-dev diag dock-routing {} --warmup-frames {}",
             bundle_dir.display(),
             warmup_frames
         ),
@@ -668,7 +668,7 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
         "test_ids.index.json",
         warmup_frames,
         format!(
-            "fretboard diag test-ids-index {} --warmup-frames {}",
+            "fretboard-dev diag test-ids-index {} --warmup-frames {}",
             bundle_dir.display(),
             warmup_frames
         ),
@@ -680,7 +680,7 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
         "frames.index.json",
         warmup_frames,
         format!(
-            "fretboard diag frames-index {} --warmup-frames {}",
+            "fretboard-dev diag frames-index {} --warmup-frames {}",
             bundle_dir.display(),
             warmup_frames
         ),
@@ -867,7 +867,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         repairs.push(json!({
             "code": "fix_sidecars",
             "note": "regenerate common sidecars in one step",
-            "command": format!("fretboard diag doctor --fix-sidecars {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+            "command": format!("fretboard-dev diag doctor --fix-sidecars {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
         }));
     }
     for it in &items {
@@ -914,7 +914,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 repairs.push(json!({
                         "code": "suggest_bundle_v2",
                         "note": "convert to schema v2 (writes bundle.schema2.json)",
-                        "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                        "command": format!("fretboard-dev diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                     }));
             }
         }
@@ -932,7 +932,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 repairs.push(json!({
                         "code": "suggest_bundle_schema2",
                         "note": "write a compact schema2 bundle (writes bundle.schema2.json)",
-                        "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                        "command": format!("fretboard-dev diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                     }));
             }
         }
@@ -967,7 +967,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 repairs.push(json!({
                     "code": "materialize_bundle_json",
                     "note": "bundle artifact is missing; manifest chunks look complete, so materialize raw bundle.json from chunks",
-                    "command": format!("fretboard diag doctor --fix-bundle-json {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                    "command": format!("fretboard-dev diag doctor --fix-bundle-json {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                 }));
             } else {
                 repairs.push(json!({
@@ -994,7 +994,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 "code": "bundle_json_too_large",
                 "note": "bundle is very large; prefer generating a small ai-packet for agentic triage",
                 "bundle_json_bytes": bundle_json_bytes,
-                "command": format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "command": format!("fretboard-dev diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
             }));
         }
     }

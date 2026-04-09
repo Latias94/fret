@@ -23,7 +23,7 @@ Scope note:
 
 2. Enable continuous inspect:
 
-   - `cargo run -p fretboard -- diag inspect on`
+   - `cargo run -p fretboard-dev -- diag inspect on`
 
 3. Hover + click in the app window:
 
@@ -32,11 +32,11 @@ Scope note:
 
 4. Run the baseline scripted suite:
 
-   - `cargo run -p fretboard -- diag suite ui-gallery`
+   - `cargo run -p fretboard-dev -- diag suite ui-gallery`
 
 5. (Perf triage) run the perf harness and print the slowest frames:
 
-   - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+   - `cargo run -p fretboard-dev -- diag perf ui-gallery --sort time`
 
 ## Inspect workflow (GPUI/Zed-style)
 
@@ -135,13 +135,13 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 ### Running scripts
 
 - Run one script:
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`
 - Run one script and auto-pack a bounded shareable zip for AI triage (does not ship full bundle artifacts):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --bundle-doctor fix --pack --ai-only`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --bundle-doctor fix --pack --ai-only`
 - If you need an offline viewer-friendly zip (includes the bundle artifact):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
 - Run the baseline suite:
-  - `cargo run -p fretboard -- diag suite ui-gallery`
+  - `cargo run -p fretboard-dev -- diag suite ui-gallery`
 
 ### Keeping scripts robust
 
@@ -153,7 +153,7 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
   - `focused_descendant_is(scope, target)` for focus-trap / focus-restore checks
 - Use `value_equals` only when `FRET_DIAG_REDACT_TEXT=0` (tool-launched `diag run`/`diag suite --launch` defaults to redacted text).
 - When UI structure changes, update selectors using:
-  - `cargo run -p fretboard -- diag pick-apply <script> --ptr <json-pointer>`
+  - `cargo run -p fretboard-dev -- diag pick-apply <script> --ptr <json-pointer>`
 
 ### Generating scripts (when JSON is too limiting)
 

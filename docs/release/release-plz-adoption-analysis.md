@@ -8,7 +8,7 @@ This note follows the official `release-plz` setup flow and maps it to the curre
   - `https://release-plz.dev/docs/github/quickstart`
   - `https://release-plz.dev/docs/config`
 
-Date audited: 2026-03-31.
+Date audited: 2026-04-09.
 
 ## Workspace facts
 
@@ -34,13 +34,15 @@ User-facing entry set:
 - `fret-ui-shadcn`
 - `fret-selector`
 - `fret-query`
+- `fretboard`
 
 Actual publish closure:
 
 - use `release-plz.toml` as the source of truth,
 - keep `docs/release/v0.1.0-publish-order.txt` synced from
   `python3 tools/release_closure_check.py --config release-plz.toml --write-order ...`,
-- the current closure is `49` crates as of `2026-03-31`,
+- the current closure is `52` crates as of `2026-04-09`,
+- the public `fretboard` CLI lands in **Wave 2** because it only closes over `fret-assets`,
 - expect the closure to include lower-level runtime/render/platform crates plus explicit optional
   support crates such as:
   - `fret-assets`
@@ -58,7 +60,12 @@ Reason: app harnesses, tooling, or ecosystem surfaces that are still intentional
 first public teaching story.
 
 - `apps/*` crates (already mostly `publish = false`):
-  - `fret-demo`, `fret-demo-web`, `fret-editor`, `fret-examples`, `fretboard`, `fret-ui-gallery`, `fret-ui-gallery-web`, `fret-svg-atlas-stress`
+  - `fret-demo`, `fret-demo-web`, `fret-editor`, `fret-examples`, `fretboard-dev`, `fret-ui-gallery`, `fret-ui-gallery-web`, `fret-svg-atlas-stress`
+
+Note:
+
+- The publishable public CLI now lives in `crates/fretboard` (`fretboard` on crates.io).
+- The repo-owned maintainer command surface remains in `apps/fretboard` as package `fretboard-dev`.
 - Deferred ecosystem/editor/design-system crates:
   - `fret-docking`
   - `fret-code-editor*`
@@ -80,7 +87,7 @@ from the first public teaching surface until the owning story is stable enough t
 Current release closure is now mechanically closed:
 
 - `python3 tools/release_closure_check.py --config release-plz.toml` reports
-  `release scope: 49 crates`
+  `release scope: 52 crates`
 - `python3 tools/release_closure_check.py --config release-plz.toml` reports
   `internal dependency issues: 0`
 - `metadata warnings: 0`

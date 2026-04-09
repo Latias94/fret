@@ -70,7 +70,7 @@ Definition of done:
   - [x] Add a convenience `--ai-packet` flag for `diag run` and `diag pack` to generate `ai.packet/` next to a bundle dir.
   - [x] Add a bounded “AI-only” share zip mode (`diag pack --ai-only`) that avoids shipping full bundle artifacts by default.
 - [x] Expose the stats-lite `diag stats --check-*` compat matrix as machine-readable JSON (agent/tooling friendly):
-  - `fretboard diag stats --stats-lite-checks-json`
+  - `fretboard-dev diag stats --stats-lite-checks-json`
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are consistently available
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.

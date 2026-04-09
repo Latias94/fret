@@ -52,7 +52,7 @@ Evidence:
 Definition of done:
 
 - At least one shadcn-aligned recipe respects reduced transparency via `fret-ui-kit` helper
-  defaults and has a regression gate (unit test or `fretboard diag` script).
+  defaults and has a regression gate (unit test or `fretboard-dev diag` script).
 
 Evidence:
 

@@ -107,7 +107,7 @@ pub(crate) fn cmd_poke(
         println!("{}", bundle_dir.display());
         if out_dir.join(crate::session::SESSIONS_DIRNAME).is_dir() {
             eprintln!(
-                "hint: if `{}` is a base dir with multiple sessions, prefer `fretboard diag resolve latest --dir {}` to avoid relying on base-level latest.txt",
+                "hint: if `{}` is a base dir with multiple sessions, prefer `fretboard-dev diag resolve latest --dir {}` to avoid relying on base-level latest.txt",
                 out_dir.display(),
                 out_dir.display()
             );

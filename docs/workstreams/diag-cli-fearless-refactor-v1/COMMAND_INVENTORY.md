@@ -14,7 +14,7 @@ Related:
 
 ## 0) Purpose
 
-This note is the baseline inventory for the `fretboard diag` CLI reset.
+This note is the baseline inventory for the `fretboard-dev diag` CLI reset.
 
 It serves three jobs:
 
@@ -228,7 +228,7 @@ Current nested subcommand surfaces:
   - `overlay-placement-trace`
   - `scroll-extents-observation`
 - `script`
-  - direct script push/run helper (`fretboard diag script <script.json>`)
+  - direct script push/run helper (`fretboard-dev diag script <script.json>`)
   - `normalize`
   - `upgrade`
   - `validate`
@@ -433,7 +433,7 @@ Notes:
 
 ## 5) Repo-owned command-example migration surface
 
-Current inventory snapshot from repo search for `fretboard diag `:
+Current inventory snapshot from repo search for `fretboard-dev diag `:
 
 - `docs/`: 134 files
 - `.agents/`: 8 files

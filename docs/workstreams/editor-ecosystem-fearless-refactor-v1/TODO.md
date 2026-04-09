@@ -168,7 +168,7 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,
       and the latest review-only capture covers overview / typing / validation states on the editor
       inspector surface. The script is rerun-safe inside one session, and the launched
-      `fretboard diag run --session-auto --launch --pack --ai-packet --include-screenshots`
+      `fretboard-dev diag run --session-auto --launch --pack --ai-packet --include-screenshots`
       workflow now exits cleanly after success instead of waiting for a redundant post-pass dump.
 - [x] `EER-BASE-119` Make editor-owned baseline theming resilient to host/theme resets:
       `fret-ui-editor::theme` now exposes a shared "host sync first, editor preset replay second"
@@ -427,7 +427,7 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`,
       which now proves inline-rename cancel-on-blur plus multiline preserve-draft, explicit
       `Ctrl/Cmd+Enter` commit, and Escape cancel against the promoted proof readouts. That
-      launched `fretboard diag run --session-auto --pack --ai-packet --launch` path was rerun on
+      launched `fretboard-dev diag run --session-auto --pack --ai-packet --launch` path was rerun on
       2026-03-15 against `fret-demo --bin imui_editor_proof_demo` and passed end-to-end. Composite
       numeric coverage now also exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`, which

@@ -110,12 +110,12 @@ This is purely for human/agent discoverability and does not affect runtime behav
 
 Tooling can list known sessions under a base dir:
 
-- `cargo run -p fretboard -- diag list sessions --dir target/fret-diag-agent-a`
+- `cargo run -p fretboard-dev -- diag list sessions --dir target/fret-diag-agent-a`
 
 Tooling can also clean older sessions (dry-run by default; pass `--apply` to delete):
 
-- `cargo run -p fretboard -- diag sessions clean --dir target/fret-diag-agent-a --keep 50`
-- `cargo run -p fretboard -- diag sessions clean --dir target/fret-diag-agent-a --keep 50 --apply`
+- `cargo run -p fretboard-dev -- diag sessions clean --dir target/fret-diag-agent-a --keep 50`
+- `cargo run -p fretboard-dev -- diag sessions clean --dir target/fret-diag-agent-a --keep 50 --apply`
 
 ## CLI surface (proposed)
 

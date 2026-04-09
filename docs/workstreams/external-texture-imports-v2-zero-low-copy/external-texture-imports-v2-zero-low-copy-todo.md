@@ -8,7 +8,7 @@ Tracking format:
 - ID: `EXTV2-{area}-{nnn}`
 
 When completing an item, leave 1–3 evidence anchors (paths + key functions/tests), and prefer
-`fretboard diag` scripts/bundles where applicable.
+`fretboard-dev diag` scripts/bundles where applicable.
 
 ## Design lock
 
@@ -179,7 +179,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --list-sessions --token <token>`
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --script tools/diag-scripts/external-video-imports-avf-cpu-upload-correctness.json --token <token> --session-id <id> --out-dir target/fret-diag-avf/exports`
     - Inspect perf in the exported bundle:
-      - `cargo run -p fretboard -- diag stats target/fret-diag-avf/exports/<ts>-bundle --sort time --top 20`
+      - `cargo run -p fretboard-dev -- diag stats target/fret-diag-avf/exports/<ts>-bundle --sort time --top 20`
   - Remaining:
     - iOS: the adapter still returns `Unsupported` (TODO: enable AVFoundation + CPU upload on iOS behind the same shape).
 
@@ -265,7 +265,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
     - Evidence (2026-02-16): web DevTools WS perf gate run is runnable end-to-end again:
       - `fix(web): wake redraw on DevTools WS inbox`
-      - `fretboard diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json ... --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+      - `fretboard-dev diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json ... --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
     - Note: this is still DevTools-WS-attached (not `--launch`) because it requires the browser.
   - Launch-transport perf gate driver (no DevTools WS required):
     - `tools/perf/diag_external_texture_imports_gate.py`

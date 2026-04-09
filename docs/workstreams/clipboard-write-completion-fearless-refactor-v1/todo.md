@@ -110,4 +110,4 @@ Workstream entry:
 - [ ] Run layering and correctness gates before closeout:
   - `python3 tools/check_layering.py`
   - targeted `cargo nextest run ...`
-  - relevant `fretboard diag` scripts
+  - relevant `fretboard-dev diag` scripts

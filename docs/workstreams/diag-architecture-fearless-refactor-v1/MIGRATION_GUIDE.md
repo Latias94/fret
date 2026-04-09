@@ -71,11 +71,11 @@ If a script depends on your extension:
 Once you have a bundle (from a script run or suite run), use the CLI viewer:
 
 - list available keys:
-  - `fretboard diag extensions <bundle_or_out_dir>`
+  - `fretboard-dev diag extensions <bundle_or_out_dir>`
 - print a specific key:
-  - `fretboard diag extensions <bundle_or_out_dir> --key dock.graph.v1 --print`
+  - `fretboard-dev diag extensions <bundle_or_out_dir> --key dock.graph.v1 --print`
 - emit structured JSON (useful for CI artifacts):
-  - `fretboard diag extensions <bundle_or_out_dir> --key dock.graph.v1 --json --out exported.dock.graph.v1.json`
+  - `fretboard-dev diag extensions <bundle_or_out_dir> --key dock.graph.v1 --json --out exported.dock.graph.v1.json`
 
 Notes:
 
@@ -101,7 +101,7 @@ This is the “golden path” example shipped in-tree:
 
 3) Inspect the extension
 
-- `fretboard diag extensions <bundle_or_out_dir> --key dock.graph.v1 --print`
+- `fretboard-dev diag extensions <bundle_or_out_dir> --key dock.graph.v1 --print`
 
 ---
 
@@ -127,7 +127,7 @@ If the scripts form a group:
 
 At minimum:
 
-- `cargo run -p fretboard -- diag run <script> --launch -- <demo cmd>`
+- `cargo run -p fretboard-dev -- diag run <script> --launch -- <demo cmd>`
 
 For layout-heavy changes:
 

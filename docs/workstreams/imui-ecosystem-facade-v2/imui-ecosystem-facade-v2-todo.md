@@ -120,7 +120,7 @@ Exit criteria:
 - [x] IMUIECO2-float-031 Verify focus restore + dismiss consistency after polish.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v2/imui-ecosystem-facade-v2-m3-popup-floating-polish.md` (section 2).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`select_popup_escape_closes_and_restores_trigger_focus`).
-- [x] IMUIECO2-test-032 Add/extend `fretboard diag` coverage for floating/popup coexistence.
+- [x] IMUIECO2-test-032 Add/extend `fretboard-dev diag` coverage for floating/popup coexistence.
   - Evidence: `tools/diag-scripts/imui-float-window-select-popup-coexistence.json`
   - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
 

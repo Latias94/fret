@@ -5,7 +5,7 @@
 Done when:
 
 - `tools/fret-bundle-viewer` can open v2 bundles and render semantics.
-- `fretboard diag meta/query/slice/stats/compare` work on v1 and v2 bundles.
+- `fretboard-dev diag meta/query/slice/stats/compare` work on v1 and v2 bundles.
 
 ## M1 (runtime export)
 
@@ -30,6 +30,6 @@ Done when:
 Done when:
 
 - `bundle.meta.json` includes semantics table metrics (inline vs table, entries, unique keys).
-- `fretboard diag meta --meta-report` surfaces the key size/semantics indicators in a human-readable way.
+- `fretboard-dev diag meta --meta-report` surfaces the key size/semantics indicators in a human-readable way.
 - CI gate(s) exist to ensure v2 bundles remain parseable and bounded.
 - Docs are updated and stable.

@@ -2,7 +2,7 @@
 
 Legend:
 
-- ✅ implemented + gated (unit tests and/or `fretboard diag` scripts)
+- ✅ implemented + gated (unit tests and/or `fretboard-dev diag` scripts)
 - 🟡 implemented but gaps / not gated
 - ❌ missing
 
