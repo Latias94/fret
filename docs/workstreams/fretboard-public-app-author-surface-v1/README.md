@@ -22,6 +22,7 @@ Primary lane docs:
 - `docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md`
@@ -47,6 +48,9 @@ Primary lane docs:
   - `apps/fretboard/src/scaffold.rs`
 - Future public `diag` target state is now frozen separately from the repo-only tree:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+- Public hotpatch posture is now frozen separately from both public `dev` v1 and repo-only helper
+  commands:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 
 ## Problem statement
 
@@ -135,7 +139,8 @@ If we do not make that taxonomy explicit, docs drift accumulates:
 - Freeze a future public diagnostics **core** around user-supplied app commands and artifacts, not
   repo script catalogs or campaign presets.
 - Keep `list` repo-only.
-- Keep top-level `hotpatch` repo-only unless and until it becomes a stable `dev` submode.
+- Keep top-level `hotpatch` repo-only and reserve any future public hotpatch story for
+  `dev native --hotpatch` only.
 - Defer the `theme import-vscode` decision until the first-wave public app-author contract is
   otherwise settled.
 
@@ -146,3 +151,7 @@ Public `dev` target-state is frozen in:
 Public `diag` target-state is frozen in:
 
 - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+
+Public hotpatch posture is frozen in:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`

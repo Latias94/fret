@@ -170,7 +170,8 @@ This target-state document does **not** decide:
 
 - the exact implementation crate split for public `dev`,
 - whether Trunk remains the long-term web runner,
-- whether hotpatch later becomes `fretboard dev native --hotpatch`,
+- the hotpatch follow-on posture beyond public `dev` v1 exclusions
+  (see `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`),
 - or whether public diagnostics should live under `fretboard` directly or a separately published
   diagnostics package.
 

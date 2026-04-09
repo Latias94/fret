@@ -89,8 +89,16 @@ ID format:
 
 ## M4 — Resolve deferred surfaces
 
-- [ ] FBPUB-hotpatch-400 Decide whether public hotpatch exists only as `fretboard dev ... --hotpatch`
+- [x] FBPUB-hotpatch-400 Decide whether public hotpatch exists only as `fretboard dev ... --hotpatch`
       or stays entirely repo-only for v1.
+  - Decision:
+    - public `fretboard` v1 keeps hotpatch entirely repo-only
+    - any future public hotpatch follow-on is limited to `fretboard dev native --hotpatch`
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
+    - `apps/fretboard/src/hotpatch/contracts.rs`
+    - `apps/fretboard/src/dev/native.rs`
+    - `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 
 - [ ] FBPUB-theme-410 Decide whether `theme import-vscode` belongs in the public CLI, remains on
       `fretboard-dev`, or moves to a future dedicated package.

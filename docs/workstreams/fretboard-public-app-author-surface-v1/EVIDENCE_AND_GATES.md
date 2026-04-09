@@ -13,6 +13,8 @@ cargo run -p fretboard-dev -- diag run --help
 cargo run -p fretboard-dev -- diag perf --help
 cargo run -p fretboard-dev -- diag suite --help
 cargo run -p fretboard-dev -- diag registry --help
+cargo run -p fretboard-dev -- hotpatch --help
+cargo run -p fretboard-dev -- dev native --help
 cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-public-hello --no-check
 rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard-dev dev|fretboard-dev diag" docs README.md apps -g '*.md'
 ```
@@ -26,6 +28,9 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `cargo run -p fretboard-dev -- diag --help`
   - `cargo run -p fretboard-dev -- diag run --help`
   - `cargo run -p fretboard-dev -- diag suite --help`
+- Hotpatch surface sanity:
+  - `cargo run -p fretboard-dev -- hotpatch --help`
+  - `cargo run -p fretboard-dev -- dev native --help`
 - Shared CLI regression coverage:
   - `cargo nextest run -p fretboard -p fretboard-dev`
 - Public package preflight:
@@ -45,6 +50,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
 - Public `diag` target state:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+- Public hotpatch posture:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 - Repo-only CLI command tree:
   - `apps/fretboard/src/cli/contracts.rs`
   - `apps/fretboard/src/cli/mod.rs`
@@ -81,6 +88,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
 - Public `diag` contract freeze:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+- Public hotpatch posture freeze:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 - Execution plan:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`

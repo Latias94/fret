@@ -229,12 +229,35 @@ Authoritative target-state:
 
 ### `hotpatch`
 
-Status: keep repo-only for now.
+Status: public posture is now decided; keep repo-only for v1 and only consider a later
+`dev native --hotpatch` follow-on.
 
 Reason:
 
-- the public value, if any, is as an optional mode of `dev`,
-- not as a separate top-level workflow before the public run loop is stable.
+- the public value, if any, is as an optional mode of `dev native`,
+- the top-level `hotpatch` command exposes transport/debug mechanics rather than the smallest
+  stable app-author promise,
+- and the only reasonable future public contract is capability-oriented ("accelerate the dev loop")
+  with safe fallback, not transport-oriented (`dx`, touch files, or explicit devserver plumbing).
+
+Frozen posture:
+
+- public `fretboard` v1 does not expose hotpatch,
+- top-level `fretboard hotpatch ...` remains repo-only,
+- future public follow-on, if any:
+  - `fretboard dev native --hotpatch`
+- all current advanced hotpatch flags remain repo-only:
+  - `--hotpatch-reload`
+  - `--hotpatch-trigger-path`
+  - `--hotpatch-poll-ms`
+  - `--hotpatch-devserver`
+  - `--hotpatch-dx`
+  - `--hotpatch-dx-ws`
+  - `--hotpatch-build-id`
+
+Authoritative target-state:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 
 ### `list`
 

@@ -24,6 +24,10 @@
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md"
     },
     {
+      "role": "target",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md"
     },
@@ -46,6 +50,8 @@
       "cargo run -p fretboard-dev -- diag perf --help",
       "cargo run -p fretboard-dev -- diag suite --help",
       "cargo run -p fretboard-dev -- diag registry --help",
+      "cargo run -p fretboard-dev -- hotpatch --help",
+      "cargo run -p fretboard-dev -- dev native --help",
       "cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-public-hello --no-check",
       "rg -n \"cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard-dev dev|fretboard-dev diag\" docs README.md apps -g '*.md'"
     ]
@@ -72,6 +78,14 @@
       "command": "cargo run -p fretboard-dev -- diag suite --help"
     },
     {
+      "name": "hotpatch-help-surface",
+      "command": "cargo run -p fretboard-dev -- hotpatch --help"
+    },
+    {
+      "name": "dev-native-help-surface",
+      "command": "cargo run -p fretboard-dev -- dev native --help"
+    },
+    {
       "name": "shared-cli-tests",
       "command": "cargo nextest run -p fretboard -p fretboard-dev"
     },
@@ -93,6 +107,7 @@
     "docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md",

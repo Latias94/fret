@@ -70,6 +70,13 @@ Exit criteria:
 - `theme import-vscode` has an explicit public posture,
 - and ADR/doc updates can present one coherent public CLI story.
 
+Current state:
+
+- hotpatch posture was resolved on 2026-04-09 in
+  `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
+- remaining blocker:
+  - `theme import-vscode` still needs an explicit public/private/package posture
+
 ## Done condition
 
 This lane is done when:
