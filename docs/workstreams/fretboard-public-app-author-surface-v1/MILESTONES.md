@@ -20,6 +20,15 @@ Exit criteria:
 - repo-maintainer docs explicitly keep `cargo run -p fretboard-dev -- ...`,
 - and command examples no longer blur repo-local convenience with installed public product shape.
 
+Current state:
+
+- reached on 2026-04-09 through the first-contact docs sweep in:
+  - `docs/README.md`
+  - `docs/setup.md`
+  - `docs/first-hour.md`
+  - `docs/examples/README.md`
+  - `docs/examples/todo-app-golden-path.md`
+
 ## Milestone 2 — Public `dev` contract defined
 
 Exit criteria:
@@ -43,6 +52,15 @@ Exit criteria:
 - the publish/dependency decision for that core is explicit,
 - and docs can name the first-wave public diagnostics story without pointing at repo script
   catalogs.
+
+Current state:
+
+- reached on 2026-04-09 with the diagnostics target-state freeze in
+  `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+- public diagnostics remain a `fretboard diag` product surface,
+  while `crates/fret-diag` may still need publication as an implementation prerequisite
+- repo-only diagnostics ownership is now explicit for suite/registry/campaign and related
+  mono-repo inventory helpers
 
 ## Milestone 4 — Deferred surfaces resolved
 

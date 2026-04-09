@@ -29,16 +29,24 @@ ID format:
 
 ## M1 — Fix external-onboarding doc drift
 
-- [ ] FBPUB-docs-100 Audit first-contact docs that still teach `fretboard-dev new` where the
+- [x] FBPUB-docs-100 Audit first-contact docs that still teach `fretboard-dev new` where the
       installed public CLI should be the product spelling.
   - Primary targets:
     - `docs/first-hour.md`
     - `docs/examples/README.md`
     - `docs/examples/todo-app-golden-path.md`
+  - Evidence:
+    - `docs/first-hour.md`
+    - `docs/examples/README.md`
+    - `docs/examples/todo-app-golden-path.md`
 
-- [ ] FBPUB-docs-110 Establish a consistent docs rule for command spelling:
+- [x] FBPUB-docs-110 Establish a consistent docs rule for command spelling:
   - installed/external product wording: `fretboard ...`
   - in-repo maintainer wording: `cargo run -p fretboard-dev -- ...`
+  - Evidence:
+    - `docs/README.md`
+    - `docs/setup.md`
+    - `docs/first-hour.md`
 
 ## M2 — Define the public `dev` contract
 
@@ -57,14 +65,27 @@ ID format:
 
 ## M3 — Define a public diagnostics core
 
-- [ ] FBPUB-diag-300 Partition the current `diag` tree into:
+- [x] FBPUB-diag-300 Partition the current `diag` tree into:
   - public app-author diagnostics core
   - repo maintainer extensions
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+    - `apps/fretboard/src/diag.rs`
+    - `docs/ui-diagnostics-and-scripted-tests.md`
 
-- [ ] FBPUB-diag-310 Decide whether the public diagnostics core stays in `fretboard` or requires a
-      separately published `fret-diag` crate first.
+- [x] FBPUB-diag-310 Freeze the delivery rule for the public diagnostics core:
+  - user-facing product surface remains `fretboard diag`
+  - publishing `fret-diag` is allowed as an implementation prerequisite, not a second public CLI
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+    - `crates/fretboard/Cargo.toml`
+    - `crates/fret-diag/Cargo.toml`
+    - `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
 
-- [ ] FBPUB-diag-320 List the exact first-wave public diagnostics verbs we are willing to teach.
+- [x] FBPUB-diag-320 List the exact first-wave public diagnostics verbs we are willing to teach.
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
+    - `docs/ui-diagnostics-and-scripted-tests.md`
 
 ## M4 — Resolve deferred surfaces
 

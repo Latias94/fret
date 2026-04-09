@@ -20,6 +20,10 @@
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md"
     },
     {
+      "role": "target",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md"
     },
@@ -33,10 +37,15 @@
     }
   ],
   "repro": {
-    "summary": "Compare public vs repo-only help surfaces, confirm the public scaffold still works outside the mono-repo path model, and grep docs for repo-local command spellings before changing the contract.",
+    "summary": "Compare public vs repo-only help surfaces, classify the current diagnostics tree into public-core vs repo-only families, confirm the public scaffold still works outside the mono-repo path model, and grep docs for repo-local command spellings before changing the contract.",
     "commands": [
       "cargo run -p fretboard -- --help",
       "cargo run -p fretboard-dev -- --help",
+      "cargo run -p fretboard-dev -- diag --help",
+      "cargo run -p fretboard-dev -- diag run --help",
+      "cargo run -p fretboard-dev -- diag perf --help",
+      "cargo run -p fretboard-dev -- diag suite --help",
+      "cargo run -p fretboard-dev -- diag registry --help",
       "cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-public-hello --no-check",
       "rg -n \"cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard-dev dev|fretboard-dev diag\" docs README.md apps -g '*.md'"
     ]
@@ -51,12 +60,28 @@
       "command": "cargo run -p fretboard-dev -- --help"
     },
     {
+      "name": "diag-help-surface",
+      "command": "cargo run -p fretboard-dev -- diag --help"
+    },
+    {
+      "name": "diag-run-help-surface",
+      "command": "cargo run -p fretboard-dev -- diag run --help"
+    },
+    {
+      "name": "diag-suite-help-surface",
+      "command": "cargo run -p fretboard-dev -- diag suite --help"
+    },
+    {
       "name": "shared-cli-tests",
       "command": "cargo nextest run -p fretboard -p fretboard-dev"
     },
     {
       "name": "public-package-preflight",
       "command": "cargo publish --dry-run --allow-dirty -p fretboard"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "jq . docs/workstreams/fretboard-public-app-author-surface-v1/WORKSTREAM.json >/dev/null"
     },
     {
       "name": "diff-check",
@@ -67,6 +92,7 @@
     "docs/workstreams/fretboard-public-app-author-surface-v1/README.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md",
@@ -88,6 +114,7 @@
     "docs/examples/README.md",
     "docs/examples/todo-app-golden-path.md",
     "docs/ui-diagnostics-and-scripted-tests.md",
+    "docs/debugging-ui-with-inspector-and-scripts.md",
     "docs/vscode-theme-import.md",
     "docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md",
     "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md"

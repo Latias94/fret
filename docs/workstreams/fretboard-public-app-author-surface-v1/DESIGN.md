@@ -172,7 +172,8 @@ other in-tree shortcuts.
 
 ### `diag`
 
-Status: should likely gain a public core, but not as a 1:1 copy of the current tree.
+Status: public target is now defined at the command-family level, but not as a 1:1 copy of the
+current tree.
 
 Current blockers:
 
@@ -180,11 +181,51 @@ Current blockers:
 - first-party examples and docs still assume repo-local script catalogs,
 - many subcommands are maintainer-oriented rather than app-author-oriented.
 
-Public target shape:
+Public target rule:
 
-- user-supplied app launch command or bundle path,
-- bounded artifact operations,
-- no dependency on `tools/diag-scripts/*` or repo campaign presets for the baseline story.
+- external users should learn `fretboard diag ...` as part of the same installed CLI product,
+- if implementation requires publishing `fret-diag` first, treat that as dependency closure work
+  rather than a second CLI product,
+- the public core accepts user-supplied launch commands, script paths, and bundle paths,
+- and the baseline story may not depend on `tools/diag-scripts/*`, promoted script ids, or repo
+  campaign presets.
+
+Frozen public-core target:
+
+- capture/perf:
+  - `run`
+  - `perf`
+- artifact/share helpers:
+  - `latest`
+  - `resolve`
+  - `meta`
+  - `pack`
+  - `screenshots`
+  - `windows`
+  - `ai-packet`
+- bounded inspection:
+  - `query`
+  - `slice`
+  - `stats`
+  - `compare`
+
+Repo-only retained:
+
+- `suite`
+- `campaign`
+- `registry`
+- `list`
+- repo dashboards, promoted script catalogs, and other mono-repo diagnostics inventory helpers
+
+Deferred:
+
+- `inspect`
+- `script normalize|upgrade|validate|lint|shrink`
+- `repro`
+
+Authoritative target-state:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 
 ### `hotpatch`
 

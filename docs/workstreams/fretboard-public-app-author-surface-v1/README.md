@@ -21,6 +21,7 @@ Primary lane docs:
 - `docs/workstreams/fretboard-public-app-author-surface-v1/README.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md`
@@ -44,6 +45,8 @@ Primary lane docs:
   - `apps/fretboard/src/assets.rs`
   - `apps/fretboard/src/config.rs`
   - `apps/fretboard/src/scaffold.rs`
+- Future public `diag` target state is now frozen separately from the repo-only tree:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 
 ## Problem statement
 
@@ -129,7 +132,7 @@ If we do not make that taxonomy explicit, docs drift accumulates:
 - Keep `new`, `assets`, and `config` on `fretboard`.
 - Design a future public `dev` lane around project-local inputs (`--manifest-path`, package/bin/example
   selection), not repo demo IDs.
-- Design a future public diagnostics **core** around user-supplied app commands and artifacts, not
+- Freeze a future public diagnostics **core** around user-supplied app commands and artifacts, not
   repo script catalogs or campaign presets.
 - Keep `list` repo-only.
 - Keep top-level `hotpatch` repo-only unless and until it becomes a stable `dev` submode.
@@ -139,3 +142,7 @@ If we do not make that taxonomy explicit, docs drift accumulates:
 Public `dev` target-state is frozen in:
 
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+
+Public `diag` target-state is frozen in:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`

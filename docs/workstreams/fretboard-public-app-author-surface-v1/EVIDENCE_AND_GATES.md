@@ -8,6 +8,11 @@ still teach repo-local command spellings:
 ```bash
 cargo run -p fretboard -- --help
 cargo run -p fretboard-dev -- --help
+cargo run -p fretboard-dev -- diag --help
+cargo run -p fretboard-dev -- diag run --help
+cargo run -p fretboard-dev -- diag perf --help
+cargo run -p fretboard-dev -- diag suite --help
+cargo run -p fretboard-dev -- diag registry --help
 cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-public-hello --no-check
 rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard-dev dev|fretboard-dev diag" docs README.md apps -g '*.md'
 ```
@@ -17,10 +22,16 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
 - Surface sanity:
   - `cargo run -p fretboard -- --help`
   - `cargo run -p fretboard-dev -- --help`
+- Diagnostics surface sanity:
+  - `cargo run -p fretboard-dev -- diag --help`
+  - `cargo run -p fretboard-dev -- diag run --help`
+  - `cargo run -p fretboard-dev -- diag suite --help`
 - Shared CLI regression coverage:
   - `cargo nextest run -p fretboard -p fretboard-dev`
 - Public package preflight:
   - `cargo publish --dry-run --allow-dirty -p fretboard`
+- Lane state integrity:
+  - `jq . docs/workstreams/fretboard-public-app-author-surface-v1/WORKSTREAM.json >/dev/null`
 - Diff hygiene:
   - `git diff --check`
 
@@ -32,6 +43,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `crates/fretboard/src/scaffold/mod.rs`
 - Public `dev` target state:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+- Public `diag` target state:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 - Repo-only CLI command tree:
   - `apps/fretboard/src/cli/contracts.rs`
   - `apps/fretboard/src/cli/mod.rs`
@@ -44,6 +57,7 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `apps/fretboard/src/diag.rs`
   - `crates/fret-diag/Cargo.toml`
   - `docs/ui-diagnostics-and-scripted-tests.md`
+  - `docs/debugging-ui-with-inspector-and-scripts.md`
 - Hotpatch posture:
   - `apps/fretboard/src/hotpatch/contracts.rs`
   - `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
@@ -65,6 +79,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `docs/workstreams/fretboard-public-app-author-surface-v1/DESIGN.md`
 - Public `dev` contract freeze:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
+- Public `diag` contract freeze:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 - Execution plan:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
