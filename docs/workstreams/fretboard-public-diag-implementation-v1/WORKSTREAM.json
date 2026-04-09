@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "slug": "fretboard-public-diag-implementation-v1",
+  "title": "Fretboard Public Diag Implementation v1",
+  "status": "active",
+  "updated": "2026-04-09",
+  "scope_kind": "execution",
+  "problem": "Implement the first shipped public `fretboard diag` surface as a project-facing diagnostics core without leaking repo suite/campaign/registry taxonomy, repo-only branding, or unpublished implementation assumptions into the public CLI contract.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/fretboard-public-diag-implementation-v1/README.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/fretboard-public-diag-implementation-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-diag-implementation-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-diag-implementation-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-diag-implementation-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md"
+    }
+  ],
+  "repro": {
+    "summary": "Show the public diagnostics entrypoint, the release-closure fix, and the remaining crates.io sequencing requirement.",
+    "commands": [
+      "cargo run -p fretboard -- diag --help",
+      "python3 tools/release_closure_check.py --config release-plz.toml --print-publish-commands",
+      "cargo publish --dry-run --allow-dirty -p fret-diag",
+      "cargo run -p fretboard -- diag suite ui-gallery",
+      "cargo publish --dry-run --allow-dirty -p fretboard"
+    ]
+  },
+  "gates": [
+    {
+      "name": "public-diag-root-help",
+      "command": "cargo test -p fret-diag public_mode_root_help_uses_public_branding_and_examples"
+    },
+    {
+      "name": "public-diag-query-script-help",
+      "command": "cargo test -p fret-diag public_mode_query_help_uses_public_branding"
+    },
+    {
+      "name": "public-diag-reject-repo-only-top-level",
+      "command": "cargo test -p fret-diag public_mode_rejects_repo_only_top_level_commands"
+    },
+    {
+      "name": "repo-diag-high-risk-help",
+      "command": "cargo test -p fret-diag high_risk_main_lane_help_has_drift_guards"
+    },
+    {
+      "name": "repo-diag-help-smoke",
+      "command": "cargo run -p fretboard-dev -- diag --help"
+    },
+    {
+      "name": "fretboard-tests",
+      "command": "cargo test -p fretboard"
+    },
+    {
+      "name": "public-diag-root-help-smoke",
+      "command": "cargo run -p fretboard -- diag --help"
+    },
+    {
+      "name": "public-diag-latest-help-smoke",
+      "command": "cargo run -p fretboard -- diag latest --help"
+    },
+    {
+      "name": "public-diag-run-help-smoke",
+      "command": "cargo run -p fretboard -- diag run --help"
+    },
+    {
+      "name": "fmt-check",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fretboard-public-diag-implementation-v1/README.md",
+    "docs/workstreams/fretboard-public-diag-implementation-v1/DESIGN.md",
+    "docs/workstreams/fretboard-public-diag-implementation-v1/TODO.md",
+    "docs/workstreams/fretboard-public-diag-implementation-v1/MILESTONES.md",
+    "docs/workstreams/fretboard-public-diag-implementation-v1/EVIDENCE_AND_GATES.md",
+    "crates/fret-diag/src/cli/mod.rs",
+    "crates/fret-diag/src/cli/contracts/mod.rs",
+    "crates/fret-diag/src/cli/contracts/commands/query.rs",
+    "crates/fret-diag/src/cli/contracts/commands/script.rs",
+    "crates/fret-diag/src/cli/cutover.rs",
+    "crates/fret-diag/src/lib.rs",
+    "crates/fretboard/Cargo.toml",
+    "crates/fretboard/src/cli/contracts.rs",
+    "crates/fretboard/src/cli/help.rs",
+    "crates/fretboard/src/cli/mod.rs",
+    "crates/fretboard/src/diag.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the first shipped public diagnostics core and its publish/docs posture are aligned. If later work broadens into public inspector or richer maintainer automation, start narrower follow-ons."
+  },
+  "follow_on_of": "fretboard-public-app-author-surface-v1"
+}

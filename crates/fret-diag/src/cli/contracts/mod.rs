@@ -1,16 +1,12 @@
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
+
+use super::DiagCliMode;
 
 pub(crate) mod commands;
 pub(crate) mod shared;
 
 #[derive(Debug, Parser)]
-#[command(
-    name = "fretboard-dev diag",
-    about = "Diagnostics tooling for the Fret workspace.",
-    after_help = "Examples:\n  fretboard-dev diag poke\n  fretboard-dev diag latest\n  fretboard-dev diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag campaign list --lane smoke --tag ui-gallery",
-    disable_help_subcommand = true,
-    arg_required_else_help = true
-)]
+#[command(disable_help_subcommand = true, arg_required_else_help = true)]
 pub(crate) struct DiagCliContract {
     #[command(subcommand)]
     pub command: DiagCommandContract,
@@ -79,23 +75,33 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    DiagCliContract::try_parse_from(args)
+    try_parse_contract_with_mode(DiagCliMode::RepoMaintainer, args)
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
 fn render_command_help(command_name: &str) -> Result<String, String> {
-    render_command_help_path(&[command_name])
+    render_command_help_path_with_mode(DiagCliMode::RepoMaintainer, &[command_name])
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn render_command_help_path(path: &[&str]) -> Result<String, String> {
-    let mut cmd = DiagCliContract::command();
+    render_command_help_path_with_mode(DiagCliMode::RepoMaintainer, path)
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+fn render_command_help_path_with_mode(mode: DiagCliMode, path: &[&str]) -> Result<String, String> {
+    let mut cmd = command_for_mode(mode);
     let mut current = &mut cmd;
     for segment in path {
-        current = current
-            .find_subcommand_mut(segment)
-            .ok_or_else(|| format!("missing clap help for diag {}", path.join(" ")))?;
+        current = current.find_subcommand_mut(segment).ok_or_else(|| {
+            format!(
+                "missing clap help for {} {}",
+                mode.root_command_name(),
+                path.join(" ")
+            )
+        })?;
     }
-    let mut renderable = current.clone().bin_name(full_diag_bin_name(path));
+    let mut renderable = current.clone().bin_name(full_diag_bin_name(mode, path));
     let mut out = Vec::new();
     renderable
         .write_long_help(&mut out)
@@ -103,12 +109,84 @@ fn render_command_help_path(path: &[&str]) -> Result<String, String> {
     String::from_utf8(out).map_err(|err| err.to_string())
 }
 
-fn full_diag_bin_name(path: &[&str]) -> String {
+fn full_diag_bin_name(mode: DiagCliMode, path: &[&str]) -> String {
     if path.is_empty() {
-        "fretboard-dev diag".to_string()
+        mode.root_command_name().to_string()
     } else {
-        format!("fretboard-dev diag {}", path.join(" "))
+        format!("{} {}", mode.root_command_name(), path.join(" "))
     }
+}
+
+pub(crate) fn try_parse_contract_with_mode<I, T>(
+    mode: DiagCliMode,
+    args: I,
+) -> Result<DiagCliContract, clap::Error>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<std::ffi::OsString> + Clone,
+{
+    let mut cmd = command_for_mode(mode);
+    let mut matches = cmd.try_get_matches_from_mut(args)?;
+    DiagCliContract::from_arg_matches_mut(&mut matches).map_err(|err| err.format(&mut cmd))
+}
+
+fn command_for_mode(mode: DiagCliMode) -> clap::Command {
+    let mut cmd = DiagCliContract::command()
+        .name(mode.root_command_name())
+        .bin_name(mode.root_command_name())
+        .about(mode.about())
+        .after_help(mode.root_after_help());
+
+    if let Some(query) = cmd.find_subcommand_mut("query")
+        && let Some(test_id) = query.find_subcommand_mut("test-id")
+    {
+        *test_id = test_id
+            .clone()
+            .override_usage(mode.query_test_id_usage())
+            .after_help(mode.query_test_id_after_help());
+    }
+
+    if let Some(script) = cmd.find_subcommand_mut("script") {
+        *script = script.clone().after_help(mode.script_after_help());
+    }
+
+    match mode {
+        DiagCliMode::RepoMaintainer => cmd,
+        DiagCliMode::PublicAppAuthor => prune_to_public_top_level_commands(cmd, mode),
+    }
+}
+
+fn prune_to_public_top_level_commands(full: clap::Command, mode: DiagCliMode) -> clap::Command {
+    let mut root = clap::Command::new(mode.root_command_name())
+        .bin_name(mode.root_command_name())
+        .disable_help_subcommand(true)
+        .arg_required_else_help(true)
+        .about(mode.about())
+        .after_help(mode.root_after_help());
+
+    for name in [
+        "ai-packet",
+        "compare",
+        "latest",
+        "meta",
+        "pack",
+        "perf",
+        "query",
+        "resolve",
+        "run",
+        "screenshots",
+        "slice",
+        "stats",
+        "windows",
+    ] {
+        let sub = full
+            .find_subcommand(name)
+            .unwrap_or_else(|| panic!("missing diag subcommand: {name}"))
+            .clone();
+        root = root.subcommand(sub);
+    }
+
+    root
 }
 
 #[cfg(test)]
@@ -118,7 +196,7 @@ mod tests {
     use clap::error::ErrorKind;
 
     use super::{
-        DiagCommandContract,
+        DiagCliMode, DiagCommandContract,
         commands::{
             agent::AgentCommandArgs,
             artifact::ArtifactSubcommandArgs,
@@ -135,7 +213,8 @@ mod tests {
             script::ScriptSubcommandArgs,
             sessions::SessionsSubcommandArgs,
         },
-        render_command_help, render_command_help_path, try_parse_contract,
+        render_command_help, render_command_help_path, render_command_help_path_with_mode,
+        try_parse_contract, try_parse_contract_with_mode,
     };
 
     #[test]
@@ -2601,5 +2680,52 @@ mod tests {
         assert!(campaign_run_help.contains("--lane"));
         assert!(campaign_run_help.contains("--platform"));
         assert!(campaign_run_help.contains("--launch"));
+    }
+
+    #[test]
+    fn public_mode_root_help_uses_public_branding_and_examples() {
+        let diag_help = render_command_help_path_with_mode(DiagCliMode::PublicAppAuthor, &[])
+            .expect("public diag root help");
+
+        assert!(diag_help.contains("Usage: fretboard diag"));
+        assert!(diag_help.contains("run"));
+        assert!(diag_help.contains("perf"));
+        assert!(diag_help.contains("compare"));
+        assert!(diag_help.contains(
+            "fretboard diag run ./diag/dialog-escape.json --launch -- cargo run --manifest-path ./Cargo.toml"
+        ));
+        assert!(diag_help.contains(
+            "fretboard diag compare ./target/fret-diag/baseline ./target/fret-diag/candidate --json"
+        ));
+        assert!(!diag_help.contains("Diagnostics tooling for the Fret workspace."));
+        assert!(!diag_help.contains("campaign"));
+        assert!(!diag_help.contains("registry"));
+        assert!(!diag_help.contains("suite"));
+        assert!(!diag_help.contains("script"));
+    }
+
+    #[test]
+    fn public_mode_query_help_uses_public_branding() {
+        let query_test_id_help =
+            render_command_help_path_with_mode(DiagCliMode::PublicAppAuthor, &["query", "test-id"])
+                .expect("public query test-id help");
+
+        assert!(query_test_id_help.contains("Usage: fretboard diag query test-id"));
+        assert!(
+            query_test_id_help
+                .contains("fretboard diag query test-id ./target/fret-diag/latest dialog")
+        );
+        assert!(!query_test_id_help.contains("fretboard-dev diag query test-id"));
+    }
+
+    #[test]
+    fn public_mode_rejects_repo_only_top_level_commands() {
+        let err = try_parse_contract_with_mode(
+            DiagCliMode::PublicAppAuthor,
+            ["fretboard diag", "suite", "ui-gallery"],
+        )
+        .expect_err("public mode should reject repo-only suite");
+
+        assert_eq!(err.kind(), ErrorKind::InvalidSubcommand);
     }
 }

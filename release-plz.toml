@@ -232,6 +232,12 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
+name = "fret-diag"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
 name = "fret-framework"
 release = true
 publish = true

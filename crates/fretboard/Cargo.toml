@@ -13,5 +13,6 @@ description = "Public CLI for Fret app scaffolds, project dev loops, assets, and
 [dependencies]
 clap.workspace = true
 fret-assets = { version = "0.1.0", path = "../fret-assets" }
+fret-diag = { version = "0.1.0", path = "../fret-diag" }
 serde.workspace = true
 serde_json.workspace = true

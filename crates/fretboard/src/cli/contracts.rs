@@ -23,10 +23,25 @@ pub enum FretboardCommandContract {
     Assets(AssetsCommandArgs),
     /// Configure project-local settings and generated config files.
     Config(ConfigCommandArgs),
+    /// Capture and inspect project diagnostics bundles.
+    Diag(ForwardedSubcommandArgs),
     /// Run project-native and web app targets.
     Dev(DevCommandArgs),
     /// Create a new app from a starter template.
     New(NewCommandArgs),
+}
+
+#[derive(Debug, Clone, clap::Args, PartialEq, Eq)]
+#[command(disable_help_flag = true, disable_help_subcommand = true)]
+pub struct ForwardedSubcommandArgs {
+    /// Remaining arguments forwarded to the diagnostics handler.
+    #[arg(
+        value_name = "ARG",
+        num_args = 0..,
+        allow_hyphen_values = true,
+        trailing_var_arg = true
+    )]
+    pub args: Vec<String>,
 }
 
 pub fn try_parse_contract<I, T>(args: I) -> Result<FretboardCliContract, clap::Error>
@@ -82,6 +97,18 @@ mod tests {
     }
 
     #[test]
+    fn diag_contract_forwards_help_flags_to_fret_diag() {
+        let cli = try_parse_contract(["fretboard", "diag", "--help"])
+            .expect("diag --help should forward to fret-diag");
+
+        let FretboardCommandContract::Diag(args) = cli.command else {
+            panic!("expected diag command");
+        };
+
+        assert_eq!(args.args, vec!["--help"]);
+    }
+
+    #[test]
     fn dev_help_lists_native_and_web_targets() {
         let help = render_command_help_path(&["dev"]).expect("dev help should render");
         assert!(help.contains("native"));
@@ -104,6 +131,18 @@ mod tests {
         ])
         .expect("assets command should parse");
         assert!(matches!(cli.command, FretboardCommandContract::Assets(_)));
+    }
+
+    #[test]
+    fn root_contract_parses_diag_forwarded_args() {
+        let cli = try_parse_contract(["fretboard", "diag", "latest", "--dir", "target/fret-diag"])
+            .expect("diag command should parse");
+
+        let FretboardCommandContract::Diag(args) = cli.command else {
+            panic!("expected diag command");
+        };
+
+        assert_eq!(args.args, vec!["latest", "--dir", "target/fret-diag"]);
     }
 
     #[test]

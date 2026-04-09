@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use clap::error::ErrorKind;
 
 use super::{
-    DiagPathOverrides, ResolveDiagCliPathsRequest, ResolvedDiagCliPaths, contracts,
+    DiagCliMode, DiagPathOverrides, ResolveDiagCliPathsRequest, ResolvedDiagCliPaths, contracts,
     resolve_diag_cli_paths, workspace_root,
 };
 
@@ -2842,7 +2842,20 @@ hint: list suites via `fretboard-dev diag list suites`"
     ))
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn maybe_parse_migrated_command_with_workspace(
+    args: &[String],
+    workspace_root: &Path,
+) -> Option<Result<MigratedDiagCommand, String>> {
+    maybe_parse_migrated_command_with_workspace_mode(
+        DiagCliMode::RepoMaintainer,
+        args,
+        workspace_root,
+    )
+}
+
+fn maybe_parse_migrated_command_with_workspace_mode(
+    mode: DiagCliMode,
     args: &[String],
     workspace_root: &Path,
 ) -> Option<Result<MigratedDiagCommand, String>> {
@@ -2853,10 +2866,10 @@ fn maybe_parse_migrated_command_with_workspace(
         return Some(Err(err));
     }
 
-    let argv = std::iter::once("fretboard-dev diag".to_string())
+    let argv = std::iter::once(mode.root_command_name().to_string())
         .chain(args.iter().cloned())
         .collect::<Vec<_>>();
-    let parsed = match contracts::try_parse_contract(argv) {
+    let parsed = match contracts::try_parse_contract_with_mode(mode, argv) {
         Ok(parsed) => parsed,
         Err(err) => return Some(Err(clap_error_to_string(err))),
     };
@@ -2985,9 +2998,17 @@ fn maybe_parse_migrated_command_with_workspace(
 }
 
 pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
+    dispatch_diag_command_with_mode(DiagCliMode::RepoMaintainer, args)
+}
+
+pub(crate) fn dispatch_diag_command_with_mode(
+    mode: DiagCliMode,
+    args: &[String],
+) -> Result<(), String> {
     if args.is_empty() {
-        let err = contracts::try_parse_contract(["fretboard-dev diag", "--help"])
-            .expect_err("diag --help should render clap help");
+        let err =
+            contracts::try_parse_contract_with_mode(mode, [mode.root_command_name(), "--help"])
+                .expect_err("diag --help should render clap help");
         print!("{err}");
         return Ok(());
     }
@@ -2996,10 +3017,10 @@ pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
         return Err(err);
     }
 
-    let argv = std::iter::once("fretboard-dev diag".to_string())
+    let argv = std::iter::once(mode.root_command_name().to_string())
         .chain(args.iter().cloned())
         .collect::<Vec<_>>();
-    match contracts::try_parse_contract(argv) {
+    match contracts::try_parse_contract_with_mode(mode, argv) {
         Ok(_) => {}
         Err(err)
             if err.kind() == ErrorKind::DisplayHelp || err.kind() == ErrorKind::DisplayVersion =>
@@ -3011,7 +3032,7 @@ pub(crate) fn dispatch_diag_command(args: &[String]) -> Result<(), String> {
     }
 
     let workspace_root = workspace_root()?;
-    let parsed = maybe_parse_migrated_command_with_workspace(args, &workspace_root)
+    let parsed = maybe_parse_migrated_command_with_workspace_mode(mode, args, &workspace_root)
         .ok_or_else(|| "internal error: diag contract parser produced no command".to_string())?;
 
     match parsed {

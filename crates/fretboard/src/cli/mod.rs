@@ -47,6 +47,9 @@ fn run() -> Result<(), CliError> {
         contracts::FretboardCommandContract::Config(args) => {
             crate::config::run_config_contract(args).map_err(CliError::Message)
         }
+        contracts::FretboardCommandContract::Diag(args) => {
+            crate::diag::run_public_diag_contract(args.args).map_err(CliError::Message)
+        }
         contracts::FretboardCommandContract::Dev(args) => match args.target {
             crate::dev::contracts::DevTargetContract::Native(args) => {
                 crate::dev::run_native_contract(args).map_err(CliError::Message)

@@ -86,6 +86,7 @@ pub mod transport;
 mod triage_json;
 mod util;
 
+pub use cli::DiagCliMode;
 pub(crate) use post_run_checks::apply_post_run_checks;
 
 pub(crate) use evidence_index::write_evidence_index;
@@ -347,6 +348,10 @@ fn run_bundle_doctor_for_bundle_path(
 
 pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     crate::cli::dispatch_diag_command(&args)
+}
+
+pub fn diag_cmd_with_mode(mode: DiagCliMode, args: Vec<String>) -> Result<(), String> {
+    crate::cli::dispatch_diag_command_with_mode(mode, &args)
 }
 
 pub(crate) fn triage_json_from_stats(
