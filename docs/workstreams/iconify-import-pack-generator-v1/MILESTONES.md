@@ -1,6 +1,6 @@
 # Iconify Import-Pack Generator v1 — Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 ## M0 — Scope and evidence freeze
@@ -129,7 +129,8 @@ Current status:
   - explicit `fretboard icons import iconify-collection` public entrypoint,
   - multicolor SVG-body preservation proof,
   - and repo-local generated-pack compilation proof for the snapshot path.
-- `IIPG-050` and `IIPG-052` are now satisfied without widening the frozen producer contract.
-- `IIPG-051` remains the only active M4 follow-on.
-- The lane stays active for explicit public semantic alias configuration, not for another source or
-  runtime redesign.
+- `IIPG-050`, `IIPG-051`, and `IIPG-052` are now satisfied without widening the frozen producer
+  contract.
+- M4 exit criteria are satisfied.
+- The lane is closed by `CLOSEOUT_AUDIT_2026-04-09.md`; any further work should be a narrower
+  follow-on rather than reopening this directory as an active execution lane.

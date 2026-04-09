@@ -555,6 +555,19 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   Both commands generate a repo-committable pack crate that already exports `PACK_METADATA`,
   `PACK` / `VENDOR_PACK`, and explicit `app::install(...)` /
   `advanced::install_with_ui_services(...)` seams.
+  If the generated pack should also publish semantic `ui.*` aliases, pass
+  `--semantic-aliases ./semantic-aliases.json` with an explicit versioned JSON file such as:
+
+  ```json
+  {
+    "schema_version": 1,
+    "semantic_aliases": [
+      { "semantic_id": "ui.search", "target_icon": "actions-search" }
+    ]
+  }
+  ```
+
+  `target_icon` must use the generated icon name, not the original source path.
   First-party and custom pack crates should also keep pack provenance explicit through
   `PACK_METADATA` and a data-first registration value such as `PACK` / `VENDOR_PACK`.
   Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic

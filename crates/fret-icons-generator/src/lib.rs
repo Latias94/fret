@@ -2,6 +2,7 @@ mod contracts;
 mod fs;
 mod iconify;
 mod naming;
+mod semantic_aliases;
 mod svg_dir;
 mod templates;
 
@@ -9,14 +10,16 @@ use std::collections::BTreeSet;
 
 pub use contracts::{
     DependencySpec, GeneratePackRequest, GeneratedPackReport, IconifyCollectionSource,
-    SemanticAlias, SourceSpec, SvgDirectorySource,
+    SemanticAlias, SemanticAliasConfigFileV1, SourceSpec, SvgDirectorySource,
 };
+pub use semantic_aliases::load_semantic_aliases_json_file;
 
 use fs::{
     crate_module_name, ensure_dir_is_new_or_empty, sanitize_package_name,
     validate_vendor_namespace, write_new_bytes, write_new_file,
 };
 use iconify::collect_iconify_collection;
+use semantic_aliases::sanitize_semantic_aliases;
 use svg_dir::collect_svg_directory;
 use templates::{
     render_advanced_rs, render_app_rs, render_cargo_toml, render_generated_ids, render_icon_list,
@@ -45,6 +48,12 @@ pub enum GeneratePackError {
     MissingSourceFile(String),
     #[error("source path is not a file: {0}")]
     SourcePathNotFile(String),
+    #[error("missing semantic alias config file: {0}")]
+    MissingSemanticAliasConfigFile(String),
+    #[error("semantic alias config path is not a file: {0}")]
+    SemanticAliasConfigPathNotFile(String),
+    #[error("unsupported semantic alias config schema version: expected {expected}, got {actual}")]
+    UnsupportedSemanticAliasConfigSchemaVersion { expected: u32, actual: u32 },
     #[error("no SVG icons found in {0}")]
     NoSvgIconsFound(String),
     #[error("iconify collection has no icons or aliases: {0}")]
@@ -59,6 +68,10 @@ pub enum GeneratePackError {
     MissingIconifyParent { icon_name: String },
     #[error("iconify alias loop detected: {chain}")]
     IconifyAliasLoop { chain: String },
+    #[error("semantic alias id `{semantic_id}` must use the `ui.*` namespace")]
+    SemanticAliasMustUseUiNamespace { semantic_id: String },
+    #[error("duplicate semantic alias id `{semantic_id}`")]
+    DuplicateSemanticAliasId { semantic_id: String },
     #[error("semantic alias target `{target_icon}` does not exist in the generated icon list")]
     MissingSemanticAliasTarget { target_icon: String },
     #[error("semantic alias id cannot be empty")]
@@ -80,6 +93,7 @@ pub fn generate_pack_crate(
         package_name,
         pack_id,
         vendor_namespace,
+        semantic_aliases: sanitize_semantic_aliases(request.semantic_aliases)?,
         ..request
     };
 
@@ -292,6 +306,41 @@ mod tests {
         assert!(matches!(
             err,
             GeneratePackError::MissingSemanticAliasTarget { .. }
+        ));
+    }
+
+    #[test]
+    fn semantic_aliases_must_use_ui_namespace() {
+        let root = make_temp_dir("fret-icons-generator-alias-ui");
+        let source_dir = root.join("source");
+        let output_dir = root.join("generated-pack");
+        std::fs::create_dir_all(&source_dir).expect("create source dir");
+        write_demo_svgs(&source_dir);
+
+        let err = super::generate_pack_crate(GeneratePackRequest {
+            package_name: "demo-icons".to_string(),
+            pack_id: "demo-icons".to_string(),
+            vendor_namespace: "demo".to_string(),
+            output_dir,
+            source: SourceSpec::SvgDirectory(SvgDirectorySource {
+                dir: source_dir,
+                label: "demo-source".to_string(),
+            }),
+            dependency_spec: DependencySpec::Published {
+                fret_version: "0.1.0".to_string(),
+                rust_embed_version: "8.9.0".to_string(),
+            },
+            generator_label: "fretboard icons import svg-dir".to_string(),
+            semantic_aliases: vec![SemanticAlias {
+                semantic_id: "search".to_string(),
+                target_icon: "actions-search".to_string(),
+            }],
+        })
+        .expect_err("non-ui semantic alias should fail");
+
+        assert!(matches!(
+            err,
+            GeneratePackError::SemanticAliasMustUseUiNamespace { .. }
         ));
     }
 

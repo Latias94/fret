@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "iconify-import-pack-generator-v1",
   "title": "Iconify Import-Pack Generator v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-09",
   "scope_kind": "execution",
   "problem": "Keep Fret's third-party icon import story build-time, explicit, and future-proof: developers should be able to generate repo-committable icon-pack crates from Iconify-style sources or local SVG inventories while targeting the shipped `IconPackRegistration` / `PACK_METADATA` / `app::install` contract instead of inventing another pack surface.",
@@ -22,6 +22,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md"
     },
     {
       "role": "status",
@@ -45,7 +49,7 @@
     }
   ],
   "repro": {
-    "summary": "Open the predecessor closeout, the M1 contract freeze, the landed M2/M4 proof notes, and the user-facing docs that now teach both local generator entrypoints, then rerun the generator + CLI proof gates together with the existing icon-pack contract checks.",
+    "summary": "Open the predecessor closeout, the M1 freeze, the M2/M4 proof notes, and the closeout audit, then rerun the generator + CLI proof gates together with the existing icon-pack contract checks.",
     "commands": [
       "cargo nextest run -p fret-icons-generator -p fretboard",
       "cargo check -p fretboard --quiet",
@@ -80,6 +84,7 @@
     "docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
     "docs/workstreams/iconify-import-pack-generator-v1/M2_PROOF_SURFACE_2026-04-09.md",
     "docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md",
+    "docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md",
     "docs/workstreams/iconify-import-pack-generator-v1/BASELINE_AUDIT_2026-04-09.md",
     "docs/workstreams/iconify-import-pack-generator-v1/TODO.md",
     "docs/workstreams/iconify-import-pack-generator-v1/MILESTONES.md",
@@ -94,6 +99,7 @@
     "crates/fret-icons-generator/src/fs.rs",
     "crates/fret-icons-generator/src/iconify.rs",
     "crates/fret-icons-generator/src/naming.rs",
+    "crates/fret-icons-generator/src/semantic_aliases.rs",
     "crates/fret-icons-generator/src/svg_dir.rs",
     "crates/fret-icons-generator/src/templates.rs",
     "crates/fretboard/src/icons/mod.rs",
@@ -121,8 +127,8 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane only for the still-open public semantic-alias config follow-on. The M1 generator contract is frozen, the M2 SVG-directory proof has landed, the M4 local Iconify collection snapshot proof has landed, and M3 docs/gates now teach both local generator entrypoints; do not widen this lane into another icon runtime lane or a runtime network client."
+    "default_action": "follow-on",
+    "notes": "This lane is closed. The v1 producer contract, source support, public semantic alias config, docs, and proof gates are all landed. Open a narrower follow-on for any future remote acquisition step, broader pack-level config, or source-specific ergonomics; do not reopen this directory for another icon runtime lane or a runtime network client."
   },
   "follow_on_of": "icon-system-extension-v1"
 }

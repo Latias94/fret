@@ -2,6 +2,10 @@
 
 Status: landed follow-on proof slice
 
+Status note (2026-04-09): this remains the source-expansion proof read for local Iconify
+collection snapshots. The final shipped verdict for the full lane now lives in
+`docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
+
 Related:
 
 - `docs/workstreams/iconify-import-pack-generator-v1/DESIGN.md`

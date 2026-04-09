@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use fret_icons_generator::{
-    DependencySpec, GeneratePackRequest, IconifyCollectionSource, SourceSpec, SvgDirectorySource,
-    generate_pack_crate,
+    DependencySpec, GeneratePackRequest, IconifyCollectionSource, SemanticAlias, SourceSpec,
+    SvgDirectorySource, generate_pack_crate, load_semantic_aliases_json_file,
 };
 
 use crate::scaffold::fs::{sanitize_package_name, workspace_prefix_from_out_dir};
@@ -90,22 +90,25 @@ fn run_import_contract(mode: &IconsMode, args: IconImportCommandArgs) -> Result<
 
 fn run_svg_dir_import_contract(mode: &IconsMode, args: ImportSvgDirArgs) -> Result<(), String> {
     let source_label = args
+        .common
         .source_label
         .clone()
         .unwrap_or_else(|| default_source_label(&args.source, "svg-directory"));
+    let semantic_aliases = load_semantic_aliases_for_cli(args.common.semantic_aliases.as_deref())?;
 
     run_generated_pack_contract(
         mode,
-        args.crate_name,
-        args.pack_id,
-        args.vendor_namespace,
-        args.path,
+        args.common.crate_name,
+        args.common.pack_id,
+        args.common.vendor_namespace,
+        args.common.path,
         SourceSpec::SvgDirectory(SvgDirectorySource {
             dir: args.source.clone(),
             label: source_label,
         }),
         "fretboard icons import svg-dir",
-        args.no_check,
+        semantic_aliases,
+        args.common.no_check,
     )
 }
 
@@ -114,22 +117,25 @@ fn run_iconify_collection_import_contract(
     args: ImportIconifyCollectionArgs,
 ) -> Result<(), String> {
     let source_label = args
+        .common
         .source_label
         .clone()
         .unwrap_or_else(|| default_source_label(&args.source, "iconify-collection"));
+    let semantic_aliases = load_semantic_aliases_for_cli(args.common.semantic_aliases.as_deref())?;
 
     run_generated_pack_contract(
         mode,
-        args.crate_name,
-        args.pack_id,
-        args.vendor_namespace,
-        args.path,
+        args.common.crate_name,
+        args.common.pack_id,
+        args.common.vendor_namespace,
+        args.common.path,
         SourceSpec::IconifyCollection(IconifyCollectionSource {
             file: args.source.clone(),
             label: source_label,
         }),
         "fretboard icons import iconify-collection",
-        args.no_check,
+        semantic_aliases,
+        args.common.no_check,
     )
 }
 
@@ -141,6 +147,7 @@ fn run_generated_pack_contract(
     path: Option<PathBuf>,
     source: SourceSpec,
     generator_label: &str,
+    semantic_aliases: Vec<SemanticAlias>,
     no_check: bool,
 ) -> Result<(), String> {
     let crate_name = sanitize_package_name(&crate_name)?;
@@ -158,7 +165,7 @@ fn run_generated_pack_contract(
         source,
         dependency_spec: mode.dependency_spec(&out_dir)?,
         generator_label: generator_label.to_string(),
-        semantic_aliases: Vec::new(),
+        semantic_aliases,
     })
     .map_err(|err| err.to_string())?;
 
@@ -172,6 +179,13 @@ fn run_generated_pack_contract(
     println!("  icons           : {}", report.icon_count);
 
     Ok(())
+}
+
+fn load_semantic_aliases_for_cli(path: Option<&Path>) -> Result<Vec<SemanticAlias>, String> {
+    match path {
+        Some(path) => load_semantic_aliases_json_file(path).map_err(|err| err.to_string()),
+        None => Ok(Vec::new()),
+    }
 }
 
 fn default_source_label(source: &Path, fallback: &str) -> String {
@@ -208,7 +222,7 @@ fn maybe_cargo_check(out_dir: &Path, run_check: bool) -> Result<(), String> {
 mod tests {
     use super::contracts::{
         IconImportCommandArgs, IconImportSourceContract, IconsCommandArgs, IconsCommandContract,
-        ImportIconifyCollectionArgs, ImportSvgDirArgs,
+        ImportCommonArgs, ImportIconifyCollectionArgs, ImportSvgDirArgs,
     };
     use super::run_repo_icons_contract;
     use serde_json::Value;
@@ -268,6 +282,19 @@ mod tests {
         .expect("write iconify snapshot");
     }
 
+    fn write_demo_semantic_alias_config(config_file: &Path) {
+        std::fs::write(
+            config_file,
+            r#"{
+  "schema_version": 1,
+  "semantic_aliases": [
+    { "semantic_id": "ui.search", "target_icon": "actions-search" }
+  ]
+}"#,
+        )
+        .expect("write semantic alias config");
+    }
+
     fn cargo_check_generated_pack(out_dir: &Path) {
         let repo_root = repo_workspace_root();
         let target_name = out_dir
@@ -310,12 +337,15 @@ mod tests {
                 command: IconsCommandContract::Import(IconImportCommandArgs {
                     source: IconImportSourceContract::SvgDir(ImportSvgDirArgs {
                         source: source_dir,
-                        crate_name: "demo-icons-pack".to_string(),
-                        vendor_namespace: "demo".to_string(),
-                        pack_id: None,
-                        path: Some(out_dir.clone()),
-                        source_label: Some("demo-source".to_string()),
-                        no_check: true,
+                        common: ImportCommonArgs {
+                            crate_name: "demo-icons-pack".to_string(),
+                            vendor_namespace: "demo".to_string(),
+                            pack_id: None,
+                            path: Some(out_dir.clone()),
+                            source_label: Some("demo-source".to_string()),
+                            semantic_aliases: None,
+                            no_check: true,
+                        },
                     }),
                 }),
             },
@@ -354,12 +384,15 @@ mod tests {
                     source: IconImportSourceContract::IconifyCollection(
                         ImportIconifyCollectionArgs {
                             source: source_file,
-                            crate_name: "demo-iconify-pack".to_string(),
-                            vendor_namespace: "demo".to_string(),
-                            pack_id: None,
-                            path: Some(out_dir.clone()),
-                            source_label: Some("demo-iconify".to_string()),
-                            no_check: true,
+                            common: ImportCommonArgs {
+                                crate_name: "demo-iconify-pack".to_string(),
+                                vendor_namespace: "demo".to_string(),
+                                pack_id: None,
+                                path: Some(out_dir.clone()),
+                                source_label: Some("demo-iconify".to_string()),
+                                semantic_aliases: None,
+                                no_check: true,
+                            },
                         },
                     ),
                 }),
@@ -382,6 +415,62 @@ mod tests {
         assert_eq!(
             provenance["icons"][1]["source_relative_path"],
             "aliases/search-rotated"
+        );
+    }
+
+    #[test]
+    fn repo_svg_dir_import_with_semantic_alias_config_generates_semantic_pack() {
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-icon-pack-alias-proof");
+        let source_dir = suite_root.join("source");
+        let out_dir = suite_root.join("demo-icons-pack");
+        let alias_config = suite_root.join("semantic-aliases.json");
+        std::fs::create_dir_all(&source_dir).expect("create source dir");
+        write_demo_svgs(&source_dir);
+        write_demo_semantic_alias_config(&alias_config);
+
+        run_repo_icons_contract(
+            IconsCommandArgs {
+                command: IconsCommandContract::Import(IconImportCommandArgs {
+                    source: IconImportSourceContract::SvgDir(ImportSvgDirArgs {
+                        source: source_dir,
+                        common: ImportCommonArgs {
+                            crate_name: "demo-icons-pack".to_string(),
+                            vendor_namespace: "demo".to_string(),
+                            pack_id: None,
+                            path: Some(out_dir.clone()),
+                            source_label: Some("demo-source".to_string()),
+                            semantic_aliases: Some(alias_config),
+                            no_check: true,
+                        },
+                    }),
+                }),
+            },
+            &workspace_root,
+        )
+        .expect("repo svg-dir import with aliases should succeed");
+
+        cargo_check_generated_pack(&out_dir);
+
+        let cargo_toml =
+            std::fs::read_to_string(out_dir.join("Cargo.toml")).expect("generated Cargo.toml");
+        assert!(cargo_toml.contains("default = [\"semantic-ui\"]"));
+
+        let lib_rs = std::fs::read_to_string(out_dir.join("src/lib.rs")).expect("generated lib.rs");
+        assert!(lib_rs.contains("pub const UI_SEMANTIC_ALIAS_PACK"));
+        assert!(lib_rs.contains("register_ui_semantic_aliases"));
+        assert!(lib_rs.contains("IconId::new_static(\"ui.search\")"));
+
+        let provenance = std::fs::read_to_string(out_dir.join("pack-provenance.json"))
+            .expect("generated provenance json");
+        let provenance: Value = serde_json::from_str(&provenance).expect("valid provenance json");
+        assert_eq!(
+            provenance["semantic_aliases"][0]["semantic_id"],
+            "ui.search"
+        );
+        assert_eq!(
+            provenance["semantic_aliases"][0]["target_icon"],
+            "actions-search"
         );
     }
 }

@@ -127,6 +127,10 @@ mod tests {
             .expect("icons import help should render");
         assert!(import_help.contains("svg-dir"));
         assert!(import_help.contains("iconify-collection"));
+
+        let svg_help = render_command_help_path(&["icons", "import", "svg-dir"])
+            .expect("icons import svg-dir help should render");
+        assert!(svg_help.contains("semantic-aliases"));
     }
 
     #[test]

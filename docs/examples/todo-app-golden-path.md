@@ -494,6 +494,20 @@ If your source already exists as a local Iconify collection snapshot, use
 `fretboard icons import iconify-collection --source ./iconify/lucide.json --crate-name lucide-icons --vendor-namespace lucide`
 instead of the SVG-directory command above.
 
+If the pack should also publish semantic `ui.*` aliases, pass
+`--semantic-aliases ./semantic-aliases.json` with a committed JSON file:
+
+```json
+{
+  "schema_version": 1,
+  "semantic_aliases": [
+    { "semantic_id": "ui.search", "target_icon": "actions-search" }
+  ]
+}
+```
+
+`target_icon` should match the generated icon name.
+
 That generated crate already emits `PACK_METADATA`, `PACK` / `VENDOR_PACK`, and explicit
 `my_icons::app::install(...)` wiring.
 

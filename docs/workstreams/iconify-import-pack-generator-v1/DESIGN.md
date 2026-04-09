@@ -1,7 +1,11 @@
 # Iconify Import-Pack Generator v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
+
+Status note (2026-04-09): this document remains the design/freeze context for the lane, but the
+final shipped verdict now lives in
+`docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 
 This workstream is a narrow follow-on to `icon-system-extension-v1`. It does not reopen the icon
 runtime split, the icon-definition contract, or the pack metadata/install seam that already closed

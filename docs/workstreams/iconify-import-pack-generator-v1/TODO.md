@@ -1,6 +1,6 @@
 # Iconify Import-Pack Generator v1 — TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 ## Lane opening
@@ -89,9 +89,12 @@ Last updated: 2026-04-09
     - `crates/fretboard/src/icons/mod.rs`
     - `docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`
 - [ ] IIPG-051 Expose an explicit public config surface for semantic alias mappings.
-  - Still intentionally open:
-    - the generator contract already accepts explicit semantic aliases,
-    - but the public CLI does not expose that policy/config surface yet.
+  - Landed in:
+    - `crates/fret-icons-generator/src/contracts.rs`
+    - `crates/fret-icons-generator/src/semantic_aliases.rs`
+    - `crates/fretboard/src/icons/contracts.rs`
+    - `crates/fretboard/src/icons/mod.rs`
+    - `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - [x] IIPG-052 Add one follow-on regression gate that covers snapshot-based generation without
   requiring live network fetch.
   - Covered by the canonical proof gate:
@@ -106,3 +109,8 @@ Last updated: 2026-04-09
 - Do not move pack-specific policy into `crates/fret-ui`.
 - Do not treat vendor curation/alias taste as part of the core generator contract unless the proof
   surface forces that conclusion.
+
+## Final status
+
+- M0 through M4 are now satisfied.
+- This lane is closed by `CLOSEOUT_AUDIT_2026-04-09.md`.

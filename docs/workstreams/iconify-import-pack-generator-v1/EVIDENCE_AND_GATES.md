@@ -1,6 +1,6 @@
 # Iconify Import-Pack Generator v1 — Evidence and Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 ## Smallest current repro
@@ -54,6 +54,10 @@ Environment note for the legacy first-party vendor-generation gate:
   - `fretboard icons import iconify-collection` as the second public local-input entrypoint,
   - multicolor SVG-body preservation coverage,
   - and snapshot-based generated-pack compilation proof without network fetch.
+- `CLOSEOUT_AUDIT_2026-04-09.md` records the final shipped verdict:
+  - explicit public semantic alias configuration now lands through a versioned JSON file,
+  - the lane's remaining M4 follow-on is closed,
+  - and future work should open narrower follow-ons instead of widening this v1 producer lane.
 - User-facing docs now teach both current public generator entrypoints in:
   - `docs/crate-usage-guide.md`
   - `docs/examples/todo-app-golden-path.md`
@@ -82,6 +86,7 @@ This gate now covers:
 - SVG-directory generation,
 - Iconify collection snapshot generation,
 - multicolor Iconify body preservation,
+- explicit semantic alias config parsing and emission,
 - and repo-local generated-pack compile proof for both source kinds.
 
 ### Public CLI surface
@@ -114,6 +119,7 @@ python3 tools/check_icons_generation.py --pack all
 - `docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/M2_PROOF_SURFACE_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`
+- `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `docs/workstreams/icon-system-extension-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `docs/adr/0065-icon-system-and-asset-packaging.md`
 - `docs/crate-usage-guide.md`
@@ -125,6 +131,7 @@ python3 tools/check_icons_generation.py --pack all
 - `crates/fret-icons-generator/src/fs.rs`
 - `crates/fret-icons-generator/src/iconify.rs`
 - `crates/fret-icons-generator/src/naming.rs`
+- `crates/fret-icons-generator/src/semantic_aliases.rs`
 - `crates/fret-icons-generator/src/svg_dir.rs`
 - `crates/fret-icons-generator/src/templates.rs`
 - `crates/fretboard/src/icons/mod.rs`

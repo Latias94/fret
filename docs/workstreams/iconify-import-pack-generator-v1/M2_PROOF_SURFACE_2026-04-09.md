@@ -3,10 +3,10 @@
 Status: landed proof slice
 
 Status note (2026-04-09): this remains the first SVG-directory proof read for the lane. The
-current follow-on status for user-facing docs lives in
-`docs/workstreams/iconify-import-pack-generator-v1/MILESTONES.md`; the landed local Iconify
-collection snapshot expansion lives in
-`docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`.
+landed local Iconify collection snapshot expansion lives in
+`docs/workstreams/iconify-import-pack-generator-v1/M4_ICONIFY_COLLECTION_PROOF_2026-04-09.md`,
+and the final shipped verdict now lives in
+`docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 
 Related:
 

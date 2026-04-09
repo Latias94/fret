@@ -42,7 +42,8 @@ pub enum DependencySpec {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SemanticAlias {
     pub semantic_id: String,
     pub target_icon: String,
@@ -55,4 +56,12 @@ pub struct GeneratedPackReport {
     pub pack_id: String,
     pub vendor_namespace: String,
     pub icon_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticAliasConfigFileV1 {
+    pub schema_version: u32,
+    #[serde(default)]
+    pub semantic_aliases: Vec<SemanticAlias>,
 }
