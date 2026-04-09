@@ -48,6 +48,10 @@ def main(argv: list[str]) -> int:
     py = sys.executable
 
     _run_checked(
+        "Workstream catalog integrity",
+        [py, str(repo_root / "tools/check_workstream_catalog.py")],
+    )
+    _run_checked(
         "ADR ID uniqueness",
         [py, str(repo_root / "tools/check_adr_numbers.py")],
     )

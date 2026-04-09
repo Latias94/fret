@@ -36,6 +36,10 @@ def main(argv: list[str]) -> int:
             "Workspace layering policy",
             [py, str(repo_root / "tools/check_layering.py")],
         )
+        _run_checked(
+            "Workstream catalog integrity",
+            [py, str(repo_root / "tools/check_workstream_catalog.py")],
+        )
 
     if not args.skip_fmt:
         _run_checked("cargo fmt --check", ["cargo", "fmt", "--all", "--", "--check"])
