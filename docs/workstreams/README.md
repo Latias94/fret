@@ -11,6 +11,7 @@ current sequencing and active cross-workstream stance, start with:
 
 - `docs/roadmap.md`
 - `docs/workstreams/standalone/ecosystem-status.md`
+- `docs/workstreams/standalone/icon-system-status.md`
 - `docs/todo-tracker.md`
 
 ## Layout Snapshot

@@ -1,6 +1,6 @@
 # Standalone Workstreams
 
-Catalog updated: 2026-04-02
+Catalog updated: 2026-04-09
 Moved under `docs/workstreams/standalone/`: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -52,6 +52,18 @@ Standalone `imui` notes in this folder are companion or archive material:
 
 Use them for rationale, parity, and migration history, not as the first stop for current API guidance.
 
+## Icon System Note Cluster
+
+Current closeout + follow-on map for the icon-system workstream family:
+
+- `docs/workstreams/standalone/icon-system-status.md`
+
+Use this note as the first stop when deciding whether new icon work should continue from:
+
+- the base icon contract lane,
+- the install/startup reporting branch,
+- or the third-party import/presentation branch.
+
 ## File Index
 
 - `ai-elements-upstream-alignment.md` — first 2026-02-11, latest 2026-03-07 (history: `docs/workstreams/ai-elements-upstream-alignment.md`)
@@ -70,6 +82,7 @@ Use them for rationale, parity, and migration history, not as the first stop for
 - `fret-node-internals-m0.md` — first 2026-02-03, latest 2026-03-01 (history: `docs/workstreams/fret-node-internals-m0.md`)
 - `fret-node-xyflow-parity.md` — first 2026-01-20, latest 2026-02-16 (history: `docs/workstreams/fret-node-xyflow-parity.md`)
 - `gpui-default-semantics-alignment.md` — first 2026-02-18, latest 2026-02-18 (history: `docs/workstreams/gpui-default-semantics-alignment.md`)
+- `icon-system-status.md` — first 2026-04-09, latest 2026-04-09
 - `imui-ecosystem-facade-perf-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`)
 - `imui-imgui-parity-audit-v1.md` — first 2026-02-08, latest 2026-02-16 (historical parity audit; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-imgui-parity-audit-v1.md`)
 - `imui-shadcn-adapter-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-shadcn-adapter-v1.md`)
