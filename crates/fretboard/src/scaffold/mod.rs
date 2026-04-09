@@ -25,7 +25,8 @@ use templates::{
 };
 
 pub fn run_public_new_contract(args: NewCommandArgs) -> Result<(), String> {
-    let cwd = std::env::current_dir().map_err(|e| format!("failed to read current directory: {e}"))?;
+    let cwd =
+        std::env::current_dir().map_err(|e| format!("failed to read current directory: {e}"))?;
     run_new_contract_with_mode(&NewMode::Public { cwd }, args)
 }
 
@@ -180,7 +181,8 @@ fn run_empty_contract(mode: &NewMode, args: ScaffoldEmptyCommandArgs) -> Result<
 }
 
 fn run_todo_contract(mode: &NewMode, args: ScaffoldTodoCommandArgs) -> Result<(), String> {
-    let (out_dir, package_name, run_check) = resolve_scaffold_output(mode, args.output, "todo-app")?;
+    let (out_dir, package_name, run_check) =
+        resolve_scaffold_output(mode, args.output, "todo-app")?;
     init_todo_at(
         mode,
         &out_dir,
@@ -190,10 +192,7 @@ fn run_todo_contract(mode: &NewMode, args: ScaffoldTodoCommandArgs) -> Result<()
     )
 }
 
-fn run_simple_todo_contract(
-    mode: &NewMode,
-    args: ScaffoldTodoCommandArgs,
-) -> Result<(), String> {
+fn run_simple_todo_contract(mode: &NewMode, args: ScaffoldTodoCommandArgs) -> Result<(), String> {
     let (out_dir, package_name, run_check) =
         resolve_scaffold_output(mode, args.output, "simple-todo-app")?;
     init_simple_todo_at(
@@ -223,7 +222,9 @@ fn resolve_scaffold_output(
     default_name: &str,
 ) -> Result<(PathBuf, String, bool), String> {
     let package_name = sanitize_package_name(args.name.as_deref().unwrap_or(default_name))?;
-    let out_dir = args.path.unwrap_or_else(|| mode.default_out_dir(&package_name));
+    let out_dir = args
+        .path
+        .unwrap_or_else(|| mode.default_out_dir(&package_name));
     Ok((out_dir, package_name, !args.no_check))
 }
 
@@ -502,28 +503,16 @@ mod tests {
     ) -> PathBuf {
         let out_dir = suite_root.join(case.package_name);
         let result = match case.template {
-            NewTemplate::Empty => init_empty_at(&out_dir, case.package_name, false, mode.bin_name()),
-            NewTemplate::Hello => init_hello_at(
-                mode,
-                &out_dir,
-                case.package_name,
-                case.opts,
-                false,
-            ),
-            NewTemplate::SimpleTodo => init_simple_todo_at(
-                mode,
-                &out_dir,
-                case.package_name,
-                case.opts,
-                false,
-            ),
-            NewTemplate::Todo => init_todo_at(
-                mode,
-                &out_dir,
-                case.package_name,
-                case.opts,
-                false,
-            ),
+            NewTemplate::Empty => {
+                init_empty_at(&out_dir, case.package_name, false, mode.bin_name())
+            }
+            NewTemplate::Hello => {
+                init_hello_at(mode, &out_dir, case.package_name, case.opts, false)
+            }
+            NewTemplate::SimpleTodo => {
+                init_simple_todo_at(mode, &out_dir, case.package_name, case.opts, false)
+            }
+            NewTemplate::Todo => init_todo_at(mode, &out_dir, case.package_name, case.opts, false),
         };
 
         result.unwrap_or_else(|err| {
@@ -552,14 +541,8 @@ mod tests {
         };
         let out_dir = workspace_root.join("local").join("todo-app");
 
-        init_todo_at(
-            &mode,
-            &out_dir,
-            "todo-app",
-            opts_with_ui_assets(),
-            false,
-        )
-        .expect("todo scaffold should succeed");
+        init_todo_at(&mode, &out_dir, "todo-app", opts_with_ui_assets(), false)
+            .expect("todo scaffold should succeed");
 
         assert!(out_dir.join("assets").is_dir());
         let main_rs = std::fs::read_to_string(out_dir.join("src/main.rs"))

@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "slug": "fretboard-public-dev-implementation-v1",
+  "title": "Fretboard Public Dev Implementation v1",
+  "status": "closed",
+  "updated": "2026-04-09",
+  "scope_kind": "execution",
+  "problem": "Implement the first shipped public `fretboard dev` surface as a project-facing Cargo app run loop without leaking repo demo ids, hotpatch helpers, or mono-repo shell assumptions into the published CLI.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/fretboard-public-dev-implementation-v1/README.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/fretboard-public-dev-implementation-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-dev-implementation-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-dev-implementation-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fretboard-public-dev-implementation-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fretboard-public-dev-implementation-v1/FINAL_STATUS.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md"
+    }
+  ],
+  "repro": {
+    "summary": "Scaffold an external-style hello app, then run it through the public native `fretboard dev` surface; keep a self-hosted smoke that resolves and runs `fretboard` itself through the new Cargo-target selector.",
+    "commands": [
+      "cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-dev-hello --no-check",
+      "cd /tmp/fretboard-dev-hello && cargo run -p fretboard -- dev native --manifest-path ./Cargo.toml",
+      "cargo run -p fretboard -- dev native --manifest-path crates/fretboard/Cargo.toml --bin fretboard -- --help",
+      "cargo run -p fretboard -- dev web --manifest-path apps/fret-demo-web/Cargo.toml --no-open --port 8091"
+    ]
+  },
+  "gates": [
+    {
+      "name": "root-help",
+      "command": "cargo run -p fretboard -- --help"
+    },
+    {
+      "name": "dev-help",
+      "command": "cargo run -p fretboard -- dev --help"
+    },
+    {
+      "name": "dev-native-help",
+      "command": "cargo run -p fretboard -- dev native --help"
+    },
+    {
+      "name": "dev-web-help",
+      "command": "cargo run -p fretboard -- dev web --help"
+    },
+    {
+      "name": "self-hosted-dev-native-smoke",
+      "command": "cargo run -p fretboard -- dev native --manifest-path crates/fretboard/Cargo.toml --bin fretboard -- --help"
+    },
+    {
+      "name": "fretboard-tests",
+      "command": "cargo nextest run -p fretboard"
+    },
+    {
+      "name": "fret-demo-web-wasm-check",
+      "command": "cargo check -p fret-demo-web --target wasm32-unknown-unknown"
+    },
+    {
+      "name": "fmt-check",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fretboard-public-dev-implementation-v1/README.md",
+    "docs/workstreams/fretboard-public-dev-implementation-v1/DESIGN.md",
+    "docs/workstreams/fretboard-public-dev-implementation-v1/TODO.md",
+    "docs/workstreams/fretboard-public-dev-implementation-v1/MILESTONES.md",
+    "docs/workstreams/fretboard-public-dev-implementation-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fretboard-public-dev-implementation-v1/FINAL_STATUS.md",
+    "crates/fretboard/src/cli/contracts.rs",
+    "crates/fretboard/src/cli/help.rs",
+    "crates/fretboard/src/dev.rs",
+    "crates/fretboard/src/dev/contracts.rs",
+    "crates/fretboard/src/dev/project.rs",
+    "crates/fretboard/src/dev/native.rs",
+    "crates/fretboard/src/dev/web.rs",
+    "crates/fret-launch/src/runner/web/effects.rs",
+    "docs/README.md",
+    "docs/crate-usage-guide.md",
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "follow_on",
+    "notes": "This lane is closed after the first shipped public `dev` surface and docs landed. If later work broadens into public diagnostics, hotpatch, or theme import packaging, start narrower follow-ons instead of reopening this folder."
+  },
+  "follow_on_of": "fretboard-public-app-author-surface-v1"
+}

@@ -4,10 +4,10 @@ Status: Accepted
 
 Status note (2026-04-09): the CLI product surface described here is partially superseded by
 `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`. Current shipped public
-`fretboard` owns `new` + `assets` + `config`. Repo-only `fretboard-dev` owns `dev`, `diag`,
-`hotpatch`, `list`, and `theme`. References below to broader `fretboard` dev-tool ambitions should
-be read as historical intent or future follow-on targets rather than current shipped public
-behavior.
+`fretboard` owns `new` + `assets` + `config` + project-facing `dev`. Repo-only `fretboard-dev`
+owns `diag`, `hotpatch`, `list`, `theme`, and richer repo-local `dev` shortcuts. References below
+to broader `fretboard` dev-tool ambitions should be read as historical intent or future follow-on
+targets rather than current shipped public behavior.
 
 ## Context
 
@@ -131,12 +131,12 @@ We define a developer tool entry point as a separate crate/binary:
     - `new`
     - `assets`
     - `config`
+    - `dev native`: run a selected Cargo binary/example by manifest path
+    - `dev web`: run a selected package-root web target via `trunk`
   - repo-only `fretboard-dev`:
-    - `dev native`: run a chosen demo/app with consistent flags and environment
-    - `dev web`: run the wasm harness via a devserver (e.g. `trunk serve`)
+    - repo demo/cookbook launchers and richer `dev` shortcuts
     - `dev native --hotpatch`: maintainer-only hotpatch mode (ADR 0105)
   - future public follow-ons:
-    - project-facing `fretboard dev native/web`
     - reduced `fretboard diag` core
 - Non-responsibilities:
   - The CLI is not a runtime contract; framework crates must not depend on it.
@@ -154,7 +154,7 @@ Implemented:
 - `ecosystem/fret-ui-assets` exists as the preferred UI render-asset surface (images/SVG caches and upload helpers).
 - `ecosystem/fret-bootstrap` exists as the ecosystem "golden path" startup layer (wrapper over `fret-launch`).
 - `crates/fretboard` exists as the current public CLI for starter templates, asset helpers, and
-  project-local config helpers.
+  project-local config helpers, plus project-facing native/web `dev`.
 - `apps/fretboard` exists as the repo-only dev-tools binary for demos, diagnostics, hotpatch, and
   other workspace flows.
 - Public template entry points are taught as `fretboard new ...`; `fretboard-dev new ...` remains
@@ -164,8 +164,8 @@ In progress / next:
 
 - Migrate remaining demos to the bootstrap "golden path" (optional but recommended).
 - Keep `fret-bootstrap` and `fret-ui-assets` small and composable; avoid re-introducing a mixed "app kit" crate.
-- Land project-facing public `dev` and reduced public `diag` follow-ons without widening the public
-  CLI back to mono-repo assumptions.
+- Keep the shipped project-facing public `dev` surface aligned with docs and land the reduced
+  public `diag` follow-on without widening the public CLI back to mono-repo assumptions.
 
 ### 5) Layering rules (hard)
 

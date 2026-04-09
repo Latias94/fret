@@ -3160,6 +3160,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "fret-assets",
+ "serde",
  "serde_json",
 ]
 

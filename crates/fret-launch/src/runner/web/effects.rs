@@ -10,7 +10,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
 use super::super::streaming_upload::StreamingUploadAckKind;
-use super::super::{WinitCommandContext, WinitGlobalContext};
+use super::super::{WinitCommandContext, WinitEventContext, WinitGlobalContext};
 use super::streaming_images;
 use super::{GfxState, WinitAppDriver, WinitRunner};
 

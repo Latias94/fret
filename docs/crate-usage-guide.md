@@ -75,14 +75,14 @@ Rust note:
 - `fret-ui-shadcn`: default component surface (apps).
 - `fret-ui-kit`: component authoring glue (ecosystem libraries).
 - `fret-framework`: framework facade for advanced/manual assembly.
-- `fretboard`: public CLI for asset manifests, project-local config helpers, and starter app
-  scaffolds.
+- `fretboard`: public CLI for starter app scaffolds, project dev loops, asset manifests, and
+  project-local config helpers.
 
 Current CLI split:
 
-- public `fretboard`: `new`, `assets`, `config`
-- repo-only `fretboard-dev`: `dev`, `diag`, `hotpatch`, `list`, `theme`, and repo-local template
-  convenience
+- public `fretboard`: `new`, `assets`, `config`, `dev`
+- repo-only `fretboard-dev`: `diag`, `hotpatch`, `list`, `theme`, repo-local template
+  convenience, and richer repo-only `dev` shortcuts
 - `theme import-vscode` is intentionally kept off the main public CLI; if it becomes public later,
   it should move as a dedicated package around `fret-vscode-theme`
 
@@ -102,10 +102,10 @@ Desktop-first quick start:
 - If you are onboarding a new app author, pair it with the default ladder: `hello` → `simple-todo` → `todo`.
   Treat `todo` as the richer third-rung product baseline, not as a replacement for the first two starters.
 
-Web/wasm quick start (current repo-only tooling):
+Web/wasm quick start:
 
-- `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
-- public `fretboard dev web` is a follow-on target, not current shipped public CLI
+- public project-facing workflow: `fretboard dev web --manifest-path ./Cargo.toml --no-open`
+- repo demo-shell workflow: `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
 
 3) Only depend on `fret-app` if you need app-owned integration surfaces:
 
@@ -643,8 +643,8 @@ in diagnostics bundles. Enable `fret-bootstrap/diagnostics-ws` only when you nee
 WebSocket transport bridge.
 
 Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
-onboarding path. Even if public `dev` lands later, hotpatch remains subordinate to that run loop
-rather than a separate public top-level CLI.
+onboarding path. Public `dev` now exists, but hotpatch remains subordinate to that run loop rather
+than a separate public top-level CLI.
 
 ### `fret-executor`
 

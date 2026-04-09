@@ -13,10 +13,11 @@ Status: Accepted
 
 Status note (2026-04-09): the CLI product split described here has been refined by
 `docs/workstreams/fretboard-public-app-author-surface-v1/README.md` and its target-state
-companions. The current shipped public `fretboard` surface is `new` + `assets` + `config`.
-Repo-only `fretboard-dev` currently owns `dev`, `diag`, `hotpatch`, `list`, and `theme`.
-References below to public `fretboard dev ...` should be read as a future product target, not as
-current shipped public behavior.
+companions, and the implementation lane now lives in
+`docs/workstreams/fretboard-public-dev-implementation-v1/README.md`. The current shipped public
+`fretboard` surface is `new` + `assets` + `config` + project-facing `dev`. Repo-only
+`fretboard-dev` currently owns `diag`, `hotpatch`, `list`, `theme`, and richer repo-local `dev`
+shortcuts.
 
 ## Context
 
@@ -106,12 +107,12 @@ We adopt the Dioxus lesson: dev UX matters, but it must be kept out of core libr
     - `new`
     - `assets`
     - `config`
-  - future product targets:
     - project-facing `dev native`
     - project-facing `dev web`
+  - future product targets:
     - reduced `diag` core
 - repo-only `fretboard-dev` currently owns:
-  - mono-repo demo/cookbook launchers
+  - mono-repo demo/cookbook launchers and richer repo-only `dev` shortcuts
   - diagnostics maintainer tooling
   - hotpatch helpers and advanced transport flags
   - `theme import-vscode`
@@ -136,9 +137,8 @@ We provide an **ecosystem-level meta crate** (`fret`) for desktop-first quick st
 
 ### B) Web (wasm32)
 
-- In this mono-repo today, use `fretboard-dev dev web` to run the wasm harness via `trunk`.
-- Public `fretboard dev web` remains a follow-on target and is not yet part of the shipped public
-  CLI.
+- Use `fretboard dev web --manifest-path ./Cargo.toml` for a project-facing Trunk workflow.
+- In this mono-repo, `fretboard-dev dev web --demo ...` remains the repo demo-shell convenience.
 - Library crates do not embed `trunk`, file servers, or websocket dev tooling.
 
 ## Alternatives Considered
@@ -181,8 +181,8 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
    - “Golden path” (recommended),
    - “Manual assembly” (advanced).
 3. Land the frozen follow-on CLI work without reopening the product taxonomy:
-   - public project-facing `dev native/web`
-   - public reduced `diag` core
+   - keep the shipped public project-facing `dev native/web` surface aligned with docs
+   - land a public reduced `diag` core follow-on
    - keep hotpatch repo-only until the public `dev` lane is stable
    - keep `theme import-vscode` out of the main public CLI
 

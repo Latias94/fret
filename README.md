@@ -83,9 +83,11 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 
 Repo CLI split:
 
-- In this workspace, maintainer commands such as `dev`, `list`, `diag`, `hotpatch`, and `theme`,
-  plus the repo-local `new` workflow, run through `cargo run -p fretboard-dev -- ...`.
-- The published `fretboard` CLI keeps the public `assets`, `config`, and starter `new` workflows.
+- In this workspace, maintainer commands such as `list`, `diag`, `hotpatch`, and `theme`, plus the
+  repo-local `new` workflow and repo demo/cookbook `dev` shortcuts, run through
+  `cargo run -p fretboard-dev -- ...`.
+- The published `fretboard` CLI keeps the public `dev`, `assets`, `config`, and starter `new`
+  workflows.
 
 Use the onboarding ladder on purpose:
 
@@ -111,14 +113,14 @@ Start with `simple-todo` (minimal baseline):
 
 ```bash
 cargo run -p fretboard-dev -- new simple-todo --name my-simple-todo
-cargo run --manifest-path local/my-simple-todo/Cargo.toml
+cargo run -p fretboard -- dev native --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
 Then try the best-practice baseline (`todo`, includes selectors + queries):
 
 ```bash
 cargo run -p fretboard-dev -- new todo --name my-todo
-cargo run --manifest-path local/my-todo/Cargo.toml
+cargo run -p fretboard -- dev native --manifest-path local/my-todo/Cargo.toml
 ```
 
 ### 3) Explore demos and gallery surfaces

@@ -2,6 +2,8 @@ const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-app
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-app --surface framework
   fretboard config menubar --path .
+  fretboard dev native --manifest-path ./Cargo.toml
+  fretboard dev web --manifest-path ./Cargo.toml --no-open
   fretboard new hello --name hello-world
   fretboard new simple-todo --name my-simple-todo
   fretboard new todo --name my-todo"#;
@@ -31,6 +33,7 @@ mod tests {
         let help = render_root_help().expect("root help should render");
         assert!(help.contains("fretboard assets manifest write"));
         assert!(help.contains("fretboard config menubar --path ."));
+        assert!(help.contains("fretboard dev native --manifest-path ./Cargo.toml"));
         assert!(help.contains("fretboard new todo --name my-todo"));
     }
 }
