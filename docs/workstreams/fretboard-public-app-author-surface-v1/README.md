@@ -1,10 +1,14 @@
 # Fretboard Public App-Author Surface v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-09
 
 Goal: define the smallest public `fretboard` surface that external Fret app authors should learn,
 while keeping repo-owned maintainer flows on `fretboard-dev`.
+
+Status note (2026-04-09): this lane is closed. The public/private/package taxonomy is now frozen
+here and in `FINAL_STATUS.md`. Future work should open narrow implementation follow-ons instead of
+reopening the product-taxonomy question.
 
 This lane is a narrow follow-on to:
 
@@ -24,6 +28,7 @@ Primary lane docs:
 - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md`

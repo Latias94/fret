@@ -82,6 +82,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `docs/vscode-theme-import.md`
 - Docs drift / public story:
   - `docs/README.md`
+  - `docs/crate-usage-guide.md`
+  - `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
   - `docs/first-hour.md`
   - `docs/examples/README.md`
   - `docs/examples/todo-app-golden-path.md`
@@ -101,6 +103,8 @@ rg -n "cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard
   - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
 - Theme import posture freeze:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
+- Closeout / follow-on split:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
 - Execution plan:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`

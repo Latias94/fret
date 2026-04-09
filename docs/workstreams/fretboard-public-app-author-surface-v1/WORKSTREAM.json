@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fretboard-public-app-author-surface-v1",
   "title": "Fretboard Public App-Author Surface v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-09",
   "scope_kind": "execution",
   "problem": "Keep Fret's public CLI aligned with the real app-author workflow: publish and teach only project-agnostic commands on `fretboard`, keep repo-owned maintainer flows on `fretboard-dev`, and make future public `dev` / diagnostics work product-shaped instead of mono-repo-shaped.",
@@ -42,6 +42,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md"
     }
   ],
   "repro": {
@@ -123,6 +127,7 @@
     "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md",
@@ -140,6 +145,8 @@
     "apps/fretboard/src/theme.rs",
     "apps/fretboard/src/theme/contracts.rs",
     "docs/README.md",
+    "docs/crate-usage-guide.md",
+    "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
     "docs/setup.md",
     "docs/first-hour.md",
     "docs/examples/README.md",
@@ -158,8 +165,8 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane until the public app-author command taxonomy is explicit and follow-on implementation work can target public `dev` and diagnostics without reopening the product-surface question."
+    "default_action": "follow_on",
+    "notes": "This lane is closed. Future work should open narrow implementation follow-ons for public `dev`, public diagnostics, or dedicated theme-import packaging instead of reopening the product-taxonomy debate."
   },
   "follow_on_of": "release-surface-fearless-refactor-v1"
 }

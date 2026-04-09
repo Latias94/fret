@@ -29,12 +29,19 @@ Default app-author surface to keep in your head:
 Unless a document says otherwise:
 
 - Run commands from the repository root.
-- For repo-maintainer commands (`dev`, `list`, `diag`, `hotpatch`, `theme`, plus the repo-local `new` mode), prefer
-  `cargo run -p fretboard-dev -- ...`
+- Current shipped public CLI surface is `assets`, `config`, and `new`.
+  - Use `cargo run -p fretboard -- ...` or an installed `fretboard` binary.
+- Current repo-maintainer / workspace-only commands stay on `cargo run -p fretboard-dev -- ...`:
+  - `dev`
+  - `diag`
+  - `hotpatch`
+  - `list`
+  - `theme`
+  - repo-local `new`
   - Example (cookbook): `cargo run -p fretboard-dev -- dev native --example simple_todo`
   - Example (native demo bin): `cargo run -p fretboard-dev -- dev native --bin todo_demo`
-- For the published public CLI surface (`assets`, `config`, `new`), use `cargo run -p fretboard -- ...`
-  or an installed `fretboard` binary.
+- Future public `dev` / `diag` and the hotpatch/theme posture are tracked in
+  `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`.
 - Some maintainer/labs docs reference the broad harness app directly:
   - `cargo run -p fret-demo --bin <name>`
   - This is not the first-hour onboarding path; start from [docs/first-hour.md](./first-hour.md) and
@@ -125,11 +132,19 @@ these are the only crate names we treat as stable entry points; internal crates 
 - `fretboard`: public CLI for asset manifests, project-local config helpers, and starter app scaffolds.
 
 Repo maintainers use the non-published `fretboard-dev` package for repo-local templates, demo runners,
-diagnostics, hotpatch, and other workspace-only flows.
+diagnostics, hotpatch, theme conversion, and other workspace-only flows.
+
+CLI split note:
+
+- shipped public `fretboard`: `new`, `assets`, `config`
+- repo-only `fretboard-dev`: `dev`, `diag`, `hotpatch`, `list`, `theme`
+- future public `dev` / `diag` targets and non-public `theme` posture:
+  `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
 
 Web/wasm runs through tooling (not through `fret`):
 
-- `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
+- current repo-only workflow: `cargo run -p fretboard-dev -- dev web --demo ui_gallery`
+- public `fretboard dev web` is a follow-on target, not current shipped public CLI
 
 ## Consumption profiles (modularity)
 

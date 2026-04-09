@@ -11,6 +11,13 @@ Upstream sources:
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
+Status note (2026-04-09): the CLI product split described here has been refined by
+`docs/workstreams/fretboard-public-app-author-surface-v1/README.md` and its target-state
+companions. The current shipped public `fretboard` surface is `new` + `assets` + `config`.
+Repo-only `fretboard-dev` currently owns `dev`, `diag`, `hotpatch`, `list`, and `theme`.
+References below to public `fretboard dev ...` should be read as a future product target, not as
+current shipped public behavior.
+
 ## Context
 
 Fret already has a clear kernel/backends/apps split (ADR 0092) and an ecosystem bootstrap/tools story (ADR 0106).
@@ -51,7 +58,9 @@ Zed/GPUI code anchors (non-normative):
 
 1. **Kernel (portable framework contracts)**: `crates/*` (ADR 0092)
 2. **Ecosystem (policy + defaults + convenience)**: `ecosystem/*` (ADR 0106)
-3. **Tooling (dev workflows)**: `apps/fretboard` (ADR 0106)
+3. **Tooling (dev workflows)**:
+   - public product: `crates/fretboard`
+   - repo-only maintainer CLI: `apps/fretboard` (`fretboard-dev`)
 
 Hard rules remain:
 
@@ -93,9 +102,19 @@ This allows us to give users a practical “resource system” for UI without dr
 We adopt the Dioxus lesson: dev UX matters, but it must be kept out of core libraries.
 
 - `fretboard` is the canonical “one command” entry point for:
-  - `dev native` (run a selected demo/app),
-  - `dev web` (shell out to `trunk serve` or equivalent),
-  - enabling dev-only hotpatch/hotreload wiring by setting environment variables and feature flags.
+  - shipped today:
+    - `new`
+    - `assets`
+    - `config`
+  - future product targets:
+    - project-facing `dev native`
+    - project-facing `dev web`
+    - reduced `diag` core
+- repo-only `fretboard-dev` currently owns:
+  - mono-repo demo/cookbook launchers
+  - diagnostics maintainer tooling
+  - hotpatch helpers and advanced transport flags
+  - `theme import-vscode`
 - `fret-bootstrap` may expose small helpers for dev env wiring (feature-gated), but must not become a toolchain manager.
 
 ### 5) Keep the kernel story unbundled (optional kit allowed)
@@ -117,7 +136,9 @@ We provide an **ecosystem-level meta crate** (`fret`) for desktop-first quick st
 
 ### B) Web (wasm32)
 
-- Use `fretboard-dev dev web` (tooling) to run the wasm harness via `trunk`.
+- In this mono-repo today, use `fretboard-dev dev web` to run the wasm harness via `trunk`.
+- Public `fretboard dev web` remains a follow-on target and is not yet part of the shipped public
+  CLI.
 - Library crates do not embed `trunk`, file servers, or websocket dev tooling.
 
 ## Alternatives Considered
@@ -159,12 +180,17 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
 2. Update docs to present:
    - “Golden path” (recommended),
    - “Manual assembly” (advanced).
-3. Expand `fretboard` to support stable “dev native/web” workflows (without moving toolchain concerns into libraries).
+3. Land the frozen follow-on CLI work without reopening the product taxonomy:
+   - public project-facing `dev native/web`
+   - public reduced `diag` core
+   - keep hotpatch repo-only until the public `dev` lane is stable
+   - keep `theme import-vscode` out of the main public CLI
 
 ## References
 
 - Kernel/backends/apps layering: `docs/adr/0092-crate-structure-core-backends-apps.md`
 - Ecosystem bootstrap and tooling: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+- Public CLI taxonomy freeze + closeout: `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
 - Golden-path app driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
 - Resource ownership boundary: `docs/adr/0004-resource-handles.md`
 - Editor asset pipeline (out of scope): `docs/adr/0026-asset-database-and-import-pipeline.md`

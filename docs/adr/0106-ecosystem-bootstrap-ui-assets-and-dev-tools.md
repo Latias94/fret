@@ -2,6 +2,13 @@
 
 Status: Accepted
 
+Status note (2026-04-09): the CLI product surface described here is partially superseded by
+`docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`. Current shipped public
+`fretboard` owns `new` + `assets` + `config`. Repo-only `fretboard-dev` owns `dev`, `diag`,
+`hotpatch`, `list`, and `theme`. References below to broader `fretboard` dev-tool ambitions should
+be read as historical intent or future follow-on targets rather than current shipped public
+behavior.
+
 ## Context
 
 ADR 0092 locks the core/backends/apps crate structure, keeping the portable framework kernel small and stable.
@@ -115,18 +122,30 @@ is still pre-OSS and has no external users yet, we remove it entirely and keep t
 
 We define a developer tool entry point as a separate crate/binary:
 
-- Name: `fretboard` (CLI), distributed on crates.io as a binary tool.
+- Product name: `fretboard` (CLI), distributed on crates.io as a binary tool.
+- Current implementation split:
+  - publishable public package: `crates/fretboard`
+  - repo-only maintainer package: `apps/fretboard` (`fretboard-dev`)
 - Responsibilities:
-  - `fretboard-dev dev native`: run a chosen demo/app with consistent flags and environment,
-  - `fretboard-dev dev web`: run the wasm harness via a devserver (e.g. `trunk serve`),
-  - `fretboard-dev dev native --hotpatch`: enable hotpatch mode by selecting the appropriate features/args (ADR 0105).
+  - shipped public `fretboard`:
+    - `new`
+    - `assets`
+    - `config`
+  - repo-only `fretboard-dev`:
+    - `dev native`: run a chosen demo/app with consistent flags and environment
+    - `dev web`: run the wasm harness via a devserver (e.g. `trunk serve`)
+    - `dev native --hotpatch`: maintainer-only hotpatch mode (ADR 0105)
+  - future public follow-ons:
+    - project-facing `fretboard dev native/web`
+    - reduced `fretboard diag` core
 - Non-responsibilities:
   - The CLI is not a runtime contract; framework crates must not depend on it.
   - The CLI does not define new UI behaviors; it orchestrates build/run workflows.
 
 Implementation status (in this workspace):
 
-- `apps/fretboard` provides a minimal `fretboard` CLI suitable for local development.
+- `crates/fretboard` provides the current publishable public CLI surface.
+- `apps/fretboard` provides the repo-only `fretboard-dev` maintainer CLI.
 
 ### 4b) Implementation Status (Current)
 
@@ -134,13 +153,19 @@ Implemented:
 
 - `ecosystem/fret-ui-assets` exists as the preferred UI render-asset surface (images/SVG caches and upload helpers).
 - `ecosystem/fret-bootstrap` exists as the ecosystem "golden path" startup layer (wrapper over `fret-launch`).
-- `apps/fretboard` exists as a dev-tools binary for running native/web demos with consistent flags.
-- `fretboard-dev new todo` provides a starter template for new apps (see `docs/examples/todo-app-golden-path.md`).
+- `crates/fretboard` exists as the current public CLI for starter templates, asset helpers, and
+  project-local config helpers.
+- `apps/fretboard` exists as the repo-only dev-tools binary for demos, diagnostics, hotpatch, and
+  other workspace flows.
+- Public template entry points are taught as `fretboard new ...`; `fretboard-dev new ...` remains
+  the repo-local maintainer variant.
 
 In progress / next:
 
 - Migrate remaining demos to the bootstrap "golden path" (optional but recommended).
 - Keep `fret-bootstrap` and `fret-ui-assets` small and composable; avoid re-introducing a mixed "app kit" crate.
+- Land project-facing public `dev` and reduced public `diag` follow-ons without widening the public
+  CLI back to mono-repo assumptions.
 
 ### 5) Layering rules (hard)
 
@@ -216,7 +241,9 @@ breaking stable contracts.
 1) Add `ecosystem/fret-bootstrap` and update demos to use it (optional but recommended).
 2) Introduce `fret-ui-assets` as a re-export wrapper around `fret-asset-cache` (or rename directly if early enough).
 3) Add `fretboard` CLI once the bootstrap patterns stabilize.
-4) Add a starter template command (`fretboard-dev new`) once the crate boundaries prove stable. (Implemented: `fretboard-dev new todo`.)
+4) Add a starter template command on the public CLI once the crate boundaries prove stable.
+   (Implemented: `fretboard new hello|simple-todo|todo`; repo-local maintainer equivalent remains
+   `fretboard-dev new ...`.)
 
 ## References
 
@@ -225,3 +252,4 @@ breaking stable contracts.
 - Resource handles & ownership: `docs/adr/0004-resource-handles.md`
 - Workspace boundaries / components repo direction: `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - Dev hotpatch integration (this repo): `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+- Public CLI taxonomy closeout: `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`

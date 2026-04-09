@@ -115,12 +115,24 @@ ID format:
 
 ## M5 — Close the policy loop
 
-- [ ] FBPUB-adr-500 Refresh ADR/docs that currently mix future intent with current shipped CLI
+- [x] FBPUB-adr-500 Refresh ADR/docs that currently mix future intent with current shipped CLI
       behavior.
   - Primary targets:
     - `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
+    - `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+    - `docs/README.md`
+    - `docs/crate-usage-guide.md`
+  - Evidence:
+    - `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
+    - `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
     - `docs/README.md`
     - `docs/crate-usage-guide.md`
 
-- [ ] FBPUB-plan-510 Convert the agreed public/private split into one or more landable
+- [x] FBPUB-plan-510 Convert the agreed public/private split into one or more landable
       implementation work items.
+  - Follow-ons recorded:
+    - public `dev` implementation
+    - public diagnostics implementation
+    - dedicated theme-import packaging, if external demand exists
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`

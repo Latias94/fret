@@ -86,3 +86,9 @@ This lane is done when:
 - repo-only `fretboard-dev` ownership is explicit,
 - and remaining implementation work can be split into narrow code-focused follow-ons instead of
   further product-taxonomy debate.
+
+Current state:
+
+- reached on 2026-04-09
+- closeout summary:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`
