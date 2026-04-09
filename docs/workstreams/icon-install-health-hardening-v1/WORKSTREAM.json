@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "slug": "icon-install-health-hardening-v1",
+  "title": "Icon Install Health Hardening v1",
+  "status": "closed",
+  "updated": "2026-04-09",
+  "scope_kind": "closeout",
+  "problem": "Now that Fret has explicit icon-pack metadata, explicit install seams, and a frozen icon registry, this lane hardens the failure semantics so explicit install surfaces fail fast on invalid state while best-effort runtime helpers keep the valid subset instead of poisoning the whole icon surface.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/DESIGN.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/BASELINE_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/M1_CONTRACT_FREEZE_2026-04-09.md"
+    },
+    {
+      "role": "proof",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/M2_PROOF_SURFACE_2026-04-09.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/icon-install-health-hardening-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/icon-system-extension-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    }
+  ],
+  "repro": {
+    "summary": "Historical closeout validation for the shipped split between fail-fast explicit install seams and best-effort partial helper fallback.",
+    "commands": [
+      "cargo nextest run -p fret-icons -p fret-ui-kit -p fret-bootstrap -p fret-icons-lucide -p fret-icons-radix -p fret-icons-generator -p fretboard",
+      "python3 tools/check_layering.py",
+      "git diff --check"
+    ]
+  },
+  "gates": [
+    {
+      "name": "icon-install-hardening",
+      "command": "cargo nextest run -p fret-icons -p fret-ui-kit -p fret-bootstrap -p fret-icons-lucide -p fret-icons-radix -p fret-icons-generator -p fretboard"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/icon-install-health-hardening-v1/DESIGN.md",
+    "docs/workstreams/icon-install-health-hardening-v1/BASELINE_AUDIT_2026-04-09.md",
+    "docs/workstreams/icon-install-health-hardening-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
+    "docs/workstreams/icon-install-health-hardening-v1/M2_PROOF_SURFACE_2026-04-09.md",
+    "docs/workstreams/icon-install-health-hardening-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/icon-install-health-hardening-v1/TODO.md",
+    "docs/workstreams/icon-install-health-hardening-v1/MILESTONES.md",
+    "docs/workstreams/icon-install-health-hardening-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/icon-system-extension-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/generated-icon-presentation-defaults-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "ecosystem/fret-icons/src/lib.rs",
+    "ecosystem/fret-ui-kit/src/declarative/icon.rs",
+    "ecosystem/fret-bootstrap/src/lib.rs",
+    "ecosystem/fret-icons-lucide/src/app.rs",
+    "ecosystem/fret-icons-lucide/src/lib.rs",
+    "ecosystem/fret-icons-radix/src/app.rs",
+    "ecosystem/fret-icons-radix/src/lib.rs",
+    "crates/fret-icons-generator/src/templates.rs",
+    "crates/fret-icons-generator/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed on fail-fast explicit install seams, metadata-conflict rejection, and best-effort partial helper fallback. Do not reopen it for broad fallible bootstrap redesign; if fresh evidence appears, start a narrower follow-on."
+  },
+  "follow_on_of": "icon-system-extension-v1"
+}

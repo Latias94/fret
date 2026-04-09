@@ -6,10 +6,14 @@ use fret_icons::{IconRegistry, InstalledIconPacks};
 pub fn install(app: &mut fret_app::App) {
     app.with_global_mut(IconRegistry::default, |icons, app| {
         crate::PACK.register_into_registry(icons);
-        let frozen = icons.freeze_or_default_with_context("fret_icons_radix.app.install");
+        let frozen = icons.freeze().unwrap_or_else(|errors| {
+            panic!("failed to freeze icon registry in fret_icons_radix.app.install: {errors:?}")
+        });
         app.set_global(frozen);
     });
     app.with_global_mut(InstalledIconPacks::default, |installed, _app| {
-        installed.record(crate::PACK_METADATA);
+        installed.record(crate::PACK_METADATA).unwrap_or_else(|err| {
+            panic!("failed to record installed icon pack metadata in fret_icons_radix.app.install: {err}")
+        });
     });
 }

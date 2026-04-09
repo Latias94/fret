@@ -334,6 +334,10 @@ mod tests {
         assert!(
             readme.contains("`BootstrapBuilder::register_icon_pack_contract(demo_icons::PACK)`")
         );
+        let app_rs =
+            std::fs::read_to_string(output_dir.join("src/app.rs")).expect("generated app.rs");
+        assert!(app_rs.contains("let frozen = icons.freeze().unwrap_or_else(|errors|"));
+        assert!(app_rs.contains("installed.record(crate::PACK_METADATA).unwrap_or_else(|err|"));
 
         let provenance = std::fs::read_to_string(output_dir.join("pack-provenance.json"))
             .expect("generated provenance json");

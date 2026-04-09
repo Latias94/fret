@@ -179,6 +179,19 @@ In-tree helper:
 This stores `IconId -> (SvgId, IconPresentation)` in an `IconSvgRegistry` global so SVG-bearing
 icon helpers can emit `SvgSource::Id` directly while still preserving authored render mode.
 
+### Install and freeze failure semantics
+
+The icon contract distinguishes between explicit install surfaces and best-effort runtime helpers:
+
+- explicit pack install surfaces (`crate::app::install(...)`, bootstrap pack registration, and
+  generated pack installers) must treat registry freeze failure or installed-pack metadata
+  conflicts as fail-fast contract violations rather than publishing a misleading “successful”
+  install state,
+- best-effort runtime helpers that cannot fail the surrounding app authoring surface (for example
+  lazy freeze/default fallback or SVG preload helpers) may keep the valid subset and emit
+  diagnostics, but they must not replace a usable icon surface with an empty registry just because
+  unrelated entries are invalid.
+
 ## Consequences
 
 - Icon usage in components/app code becomes stable and comparable to “frontend semantics-first” practices.

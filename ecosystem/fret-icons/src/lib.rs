@@ -172,6 +172,28 @@ pub struct IconPackMetadata {
     pub import_model: IconPackImportModel,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstalledIconPackMetadataConflict {
+    pub existing: IconPackMetadata,
+    pub attempted: IconPackMetadata,
+}
+
+impl std::fmt::Display for InstalledIconPackMetadataConflict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "icon pack metadata conflict for pack_id `{}`: existing vendor namespace `{}` / import model `{:?}`, attempted vendor namespace `{}` / import model `{:?}`",
+            self.existing.pack_id,
+            self.existing.vendor_namespace,
+            self.existing.import_model,
+            self.attempted.vendor_namespace,
+            self.attempted.import_model
+        )
+    }
+}
+
+impl std::error::Error for InstalledIconPackMetadataConflict {}
+
 /// Data-first icon-pack registration contract.
 ///
 /// This stays deliberately small: icon packs remain registry/data oriented rather than growing a
@@ -200,20 +222,25 @@ pub struct InstalledIconPacks {
 }
 
 impl InstalledIconPacks {
-    pub fn record(&mut self, metadata: IconPackMetadata) -> bool {
+    pub fn record(
+        &mut self,
+        metadata: IconPackMetadata,
+    ) -> Result<bool, InstalledIconPackMetadataConflict> {
         if let Some(existing) = self
             .packs
             .iter()
             .find(|existing| existing.pack_id == metadata.pack_id)
         {
-            debug_assert_eq!(
-                *existing, metadata,
-                "same pack_id should not resolve to conflicting metadata"
-            );
-            return false;
+            if *existing == metadata {
+                return Ok(false);
+            }
+            return Err(InstalledIconPackMetadataConflict {
+                existing: *existing,
+                attempted: metadata,
+            });
         }
         self.packs.push(metadata);
-        true
+        Ok(true)
     }
 
     pub fn contains(&self, pack_id: &str) -> bool {
@@ -401,12 +428,12 @@ impl IconRegistry {
     }
 
     pub fn freeze_or_default_with_context(&self, context: &str) -> FrozenIconRegistry {
-        match self.freeze() {
-            Ok(frozen) => frozen,
-            Err(errors) => {
-                emit_freeze_warning(context, &errors);
-                FrozenIconRegistry::default()
-            }
+        let (frozen, errors) = FrozenIconRegistry::from_registry_ref_collecting_errors(self);
+        if errors.is_empty() {
+            frozen
+        } else {
+            emit_freeze_warning(context, &errors);
+            frozen
         }
     }
 
@@ -533,6 +560,15 @@ impl FrozenIconRegistry {
     }
 
     pub fn from_registry_ref(registry: &IconRegistry) -> Result<Self, Vec<ResolveError>> {
+        let (frozen, errors) = Self::from_registry_ref_collecting_errors(registry);
+        if errors.is_empty() {
+            Ok(frozen)
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn from_registry_ref_collecting_errors(registry: &IconRegistry) -> (Self, Vec<ResolveError>) {
         let mut ids: Vec<IconId> = registry.icon_ids().cloned().collect();
         ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
 
@@ -548,11 +584,7 @@ impl FrozenIconRegistry {
             }
         }
 
-        if errors.is_empty() {
-            Ok(Self { icons })
-        } else {
-            Err(errors)
-        }
+        (Self { icons }, errors)
     }
 
     pub fn icon_ids(&self) -> impl Iterator<Item = &IconId> {
@@ -705,13 +737,30 @@ mod tests {
     }
 
     #[test]
-    fn freeze_or_default_returns_empty_when_freeze_fails() {
+    fn freeze_or_default_returns_empty_when_all_entries_fail() {
         let mut registry = IconRegistry::default();
         registry.alias(IconId::new_static("a"), IconId::new_static("b"));
         registry.alias(IconId::new_static("b"), IconId::new_static("a"));
 
         let frozen = registry.freeze_or_default_with_context("test.freeze_or_default");
         assert!(frozen.is_empty());
+    }
+
+    #[test]
+    fn freeze_or_default_keeps_valid_icons_when_other_entries_fail() {
+        let mut registry = IconRegistry::default();
+        let _ = registry.register_svg_static(IconId::new_static("ok"), b"<svg/>");
+        registry.alias(IconId::new_static("a"), IconId::new_static("b"));
+        registry.alias(IconId::new_static("b"), IconId::new_static("a"));
+
+        let frozen = registry.freeze_or_default_with_context("test.freeze_partial");
+        assert_eq!(
+            frozen
+                .resolve_or_missing_owned(&IconId::new_static("ok"))
+                .as_bytes(),
+            b"<svg/>"
+        );
+        assert!(frozen.resolve(&IconId::new_static("a")).is_none());
     }
 
     #[test]
@@ -776,9 +825,33 @@ mod tests {
         };
 
         let mut installed = InstalledIconPacks::default();
-        assert!(installed.record(metadata));
-        assert!(!installed.record(metadata));
+        assert_eq!(installed.record(metadata), Ok(true));
+        assert_eq!(installed.record(metadata), Ok(false));
         assert!(installed.contains("demo-pack"));
         assert_eq!(installed.entries(), &[metadata]);
+    }
+
+    #[test]
+    fn installed_icon_packs_reject_conflicting_metadata_for_same_pack_id() {
+        let mut installed = InstalledIconPacks::default();
+        installed
+            .record(IconPackMetadata {
+                pack_id: "demo-pack",
+                vendor_namespace: "demo",
+                import_model: IconPackImportModel::Generated,
+            })
+            .expect("first record should succeed");
+
+        let err = installed
+            .record(IconPackMetadata {
+                pack_id: "demo-pack",
+                vendor_namespace: "other-demo",
+                import_model: IconPackImportModel::Vendored,
+            })
+            .expect_err("conflicting metadata should fail");
+
+        assert_eq!(err.existing.pack_id, "demo-pack");
+        assert_eq!(err.existing.vendor_namespace, "demo");
+        assert_eq!(err.attempted.vendor_namespace, "other-demo");
     }
 }

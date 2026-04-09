@@ -592,12 +592,20 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.inner = self.inner.init_app(move |app| {
             app.with_global_mut(IconRegistry::default, |icons, app| {
                 pack.register_into_registry(icons);
-                let frozen = icons
-                    .freeze_or_default_with_context("fret_bootstrap.register_icon_pack_contract");
+                let frozen = icons.freeze().unwrap_or_else(|errors| {
+                    panic!(
+                        "failed to freeze icon registry after registering pack `{}` in fret_bootstrap.register_icon_pack_contract: {errors:?}",
+                        pack.metadata.pack_id
+                    )
+                });
                 app.set_global(frozen);
             });
             app.with_global_mut(InstalledIconPacks::default, |installed, _app| {
-                installed.record(pack.metadata);
+                installed.record(pack.metadata).unwrap_or_else(|err| {
+                    panic!(
+                        "failed to record installed icon pack metadata in fret_bootstrap.register_icon_pack_contract: {err}"
+                    )
+                });
             });
         });
         self
@@ -611,8 +619,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.inner = self.inner.init_app(move |app| {
             app.with_global_mut(IconRegistry::default, |icons, app| {
                 register(icons);
-                let frozen =
-                    icons.freeze_or_default_with_context("fret_bootstrap.register_icon_pack");
+                let frozen = icons.freeze().unwrap_or_else(|errors| {
+                    panic!(
+                        "failed to freeze icon registry in fret_bootstrap.register_icon_pack: {errors:?}"
+                    )
+                });
                 app.set_global(frozen);
             });
         });
@@ -988,6 +999,9 @@ mod fn_driver_builder_tests {
     use fret_app::App;
     use fret_assets::{AssetBundleId, AssetRevision, StaticAssetEntry};
     use fret_core::AppWindowId;
+    use fret_icons::{
+        IconId, IconPackImportModel, IconPackMetadata, IconPackRegistration, IconRegistry,
+    };
     use fret_launch::{
         FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     };
@@ -1095,6 +1109,82 @@ mod fn_driver_builder_tests {
         assert!(lib_rs.contains("raw registry-only escape hatch"));
         assert!(lib_rs.contains("fret_icons_lucide::VENDOR_PACK"));
         assert!(lib_rs.contains("fret_icons_radix::VENDOR_PACK"));
+    }
+
+    #[test]
+    fn register_icon_pack_contract_panics_when_registry_cannot_freeze() {
+        fn register_invalid_pack(registry: &mut IconRegistry) {
+            let _ = registry.alias(
+                IconId::new_static("broken.a"),
+                IconId::new_static("broken.b"),
+            );
+            let _ = registry.alias(
+                IconId::new_static("broken.b"),
+                IconId::new_static("broken.a"),
+            );
+        }
+
+        let result = std::panic::catch_unwind(|| {
+            let _builder = BootstrapBuilder::new_fn(
+                App::new(),
+                DriverState,
+                create_window_state,
+                handle_event,
+                render,
+            )
+            .register_icon_pack_contract(IconPackRegistration::new(
+                IconPackMetadata {
+                    pack_id: "broken-pack",
+                    vendor_namespace: "broken",
+                    import_model: IconPackImportModel::Manual,
+                },
+                register_invalid_pack,
+            ));
+        });
+
+        assert!(result.is_err(), "invalid icon pack should fail fast");
+    }
+
+    #[test]
+    fn register_icon_pack_contract_panics_on_metadata_conflict() {
+        fn register_first_pack(registry: &mut IconRegistry) {
+            let _ = registry.register_svg_static(IconId::new_static("demo.first"), b"<svg/>");
+        }
+
+        fn register_second_pack(registry: &mut IconRegistry) {
+            let _ = registry.register_svg_static(IconId::new_static("demo.second"), b"<svg/>");
+        }
+
+        let result = std::panic::catch_unwind(|| {
+            let _builder = BootstrapBuilder::new_fn(
+                App::new(),
+                DriverState,
+                create_window_state,
+                handle_event,
+                render,
+            )
+            .register_icon_pack_contract(IconPackRegistration::new(
+                IconPackMetadata {
+                    pack_id: "demo-pack",
+                    vendor_namespace: "demo",
+                    import_model: IconPackImportModel::Manual,
+                },
+                register_first_pack,
+            ))
+            .register_icon_pack_contract(IconPackRegistration::new(
+                IconPackMetadata {
+                    pack_id: "demo-pack",
+                    vendor_namespace: "other-demo",
+                    import_model: IconPackImportModel::Vendored,
+                },
+                register_second_pack,
+            ));
+        });
+
+        assert!(
+            result.is_err(),
+            "conflicting pack metadata should fail fast"
+        );
     }
 
     #[test]

@@ -362,6 +362,48 @@ mod tests {
     }
 
     #[test]
+    fn preload_icon_svgs_keeps_valid_icons_when_registry_contains_invalid_entries() {
+        let icon_id = IconId::new_static("ui.close");
+        let svg_bytes: &'static [u8] =
+            br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>"#;
+
+        let mut app = fret_app::App::new();
+        app.with_global_mut(IconRegistry::default, |icons, _app| {
+            let _ = icons.register_svg_static(icon_id.clone(), svg_bytes);
+            let _ = icons.alias(
+                IconId::new_static("broken.a"),
+                IconId::new_static("broken.b"),
+            );
+            let _ = icons.alias(
+                IconId::new_static("broken.b"),
+                IconId::new_static("broken.a"),
+            );
+        });
+
+        let mut services = FakeUiServices::default();
+        preload_icon_svgs(&mut app, &mut services);
+        assert!(services.registered.len() >= 2); // missing + our valid icon
+
+        let mut runtime = ElementRuntime::default();
+        let window = fret_core::AppWindowId::default();
+        let bounds = Rect::new(
+            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+        let mut cx =
+            ElementContext::new_for_root_name(&mut app, &mut runtime, window, bounds, "test");
+
+        let el = icon(&mut cx, icon_id);
+        let fret_ui::element::ElementKind::SvgIcon(props) = el.kind else {
+            panic!("expected SvgIcon element");
+        };
+
+        let SvgSource::Id(_) = props.svg else {
+            panic!("expected valid icon to remain preloaded despite broken aliases");
+        };
+    }
+
+    #[test]
     fn icon_defaults_to_inherit_color() {
         let icon_id = IconId::new_static("ui.close");
 
