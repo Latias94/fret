@@ -100,8 +100,18 @@ ID format:
     - `apps/fretboard/src/dev/native.rs`
     - `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 
-- [ ] FBPUB-theme-410 Decide whether `theme import-vscode` belongs in the public CLI, remains on
+- [x] FBPUB-theme-410 Decide whether `theme import-vscode` belongs in the public CLI, remains on
       `fretboard-dev`, or moves to a future dedicated package.
+  - Decision:
+    - do not add it to public `fretboard` v1
+    - keep the current command on `fretboard-dev` for now
+    - future public path, if any, is a dedicated package around `fret-vscode-theme`
+  - Evidence:
+    - `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
+    - `apps/fretboard/src/theme.rs`
+    - `apps/fretboard/src/theme/contracts.rs`
+    - `docs/vscode-theme-import.md`
+    - `ecosystem/fret-vscode-theme/Cargo.toml`
 
 ## M5 — Close the policy loop
 

@@ -269,14 +269,26 @@ Reason:
 
 ### `theme import-vscode`
 
-Status: deferred.
+Status: posture decided; keep it off public `fretboard` and treat any future public utility as a
+dedicated package.
 
 Reason:
 
 - it is plausibly useful to external users,
-- but it is not first-wave onboarding,
-- and its public dependency/positioning story should be decided separately from the core app-author
-  workflow.
+- but it is not part of the central app-author lifecycle,
+- the repo already has a domain-specific library boundary in `fret-vscode-theme`,
+- and widening the main public CLI for a niche conversion workflow is the wrong product tradeoff.
+
+Frozen posture:
+
+- do not add `theme import-vscode` to public `fretboard` v1,
+- keep the current command on `fretboard-dev` for now,
+- future public direction, if warranted:
+  - dedicated package built on `fret-vscode-theme`
+
+Authoritative target-state:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
 
 ## Dioxus comparison
 

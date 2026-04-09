@@ -28,6 +28,10 @@
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md"
     },
     {
+      "role": "target",
+      "path": "docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md"
     },
@@ -52,6 +56,8 @@
       "cargo run -p fretboard-dev -- diag registry --help",
       "cargo run -p fretboard-dev -- hotpatch --help",
       "cargo run -p fretboard-dev -- dev native --help",
+      "cargo run -p fretboard-dev -- theme --help",
+      "cargo run -p fretboard-dev -- theme import-vscode --help",
       "cargo run -p fretboard -- new hello --name hello-world --path /tmp/fretboard-public-hello --no-check",
       "rg -n \"cargo run -p fretboard-dev -- new|cargo run -p fretboard -- new|fretboard-dev dev|fretboard-dev diag\" docs README.md apps -g '*.md'"
     ]
@@ -86,6 +92,14 @@
       "command": "cargo run -p fretboard-dev -- dev native --help"
     },
     {
+      "name": "theme-help-surface",
+      "command": "cargo run -p fretboard-dev -- theme --help"
+    },
+    {
+      "name": "theme-import-help-surface",
+      "command": "cargo run -p fretboard-dev -- theme import-vscode --help"
+    },
+    {
       "name": "shared-cli-tests",
       "command": "cargo nextest run -p fretboard -p fretboard-dev"
     },
@@ -108,6 +122,7 @@
     "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md",
     "docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md",
@@ -123,6 +138,7 @@
     "apps/fretboard/src/diag.rs",
     "apps/fretboard/src/hotpatch/contracts.rs",
     "apps/fretboard/src/theme.rs",
+    "apps/fretboard/src/theme/contracts.rs",
     "docs/README.md",
     "docs/setup.md",
     "docs/first-hour.md",
@@ -131,6 +147,7 @@
     "docs/ui-diagnostics-and-scripted-tests.md",
     "docs/debugging-ui-with-inspector-and-scripts.md",
     "docs/vscode-theme-import.md",
+    "ecosystem/fret-vscode-theme/Cargo.toml",
     "docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md",
     "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md"
   ],

@@ -74,8 +74,9 @@ Current state:
 
 - hotpatch posture was resolved on 2026-04-09 in
   `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
-- remaining blocker:
-  - `theme import-vscode` still needs an explicit public/private/package posture
+- reached on 2026-04-09 once `theme import-vscode` was explicitly kept off public `fretboard` and
+  assigned a future dedicated-package posture in
+  `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
 
 ## Done condition
 

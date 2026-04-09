@@ -23,6 +23,7 @@ Primary lane docs:
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/DIAG_TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/TODO.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/MILESTONES.md`
 - `docs/workstreams/fretboard-public-app-author-surface-v1/EVIDENCE_AND_GATES.md`
@@ -51,6 +52,8 @@ Primary lane docs:
 - Public hotpatch posture is now frozen separately from both public `dev` v1 and repo-only helper
   commands:
   - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
+- Theme import posture is now frozen as a non-`fretboard` public follow-on:
+  - `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
 
 ## Problem statement
 
@@ -121,15 +124,18 @@ If we do not make that taxonomy explicit, docs drift accumulates:
    - Consequence if wrong:
      - we may publish top-level hotpatch helpers before the base run-loop contract is stable.
 
-6. `Unclear`: `theme import-vscode` may be a valid public utility, but it is not part of the
-   first-wave app-author contract.
+6. `Confident`: `theme import-vscode` is project-agnostic, but it still does not belong on public
+   `fretboard` v1; if it becomes public later, it should do so as a dedicated package around
+   `fret-vscode-theme`.
    - Evidence:
      - `apps/fretboard/src/theme.rs`
+     - `apps/fretboard/src/theme/contracts.rs`
+     - `ecosystem/fret-vscode-theme/Cargo.toml`
      - `docs/vscode-theme-import.md`
-     - `apps/fretboard/Cargo.toml`
+     - `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
    - Consequence if wrong:
-     - we either keep a useful public utility unnecessarily hidden, or we pull extra dependency
-       weight into the public CLI too early.
+     - we either keep a useful utility on the repo-only lane too long, or we bloat the main public
+       CLI with a niche conversion workflow that should have been a focused package.
 
 ## Current direction
 
@@ -141,8 +147,8 @@ If we do not make that taxonomy explicit, docs drift accumulates:
 - Keep `list` repo-only.
 - Keep top-level `hotpatch` repo-only and reserve any future public hotpatch story for
   `dev native --hotpatch` only.
-- Defer the `theme import-vscode` decision until the first-wave public app-author contract is
-  otherwise settled.
+- Keep `theme import-vscode` off public `fretboard`; if it becomes public later, it should do so as
+  a dedicated package around `fret-vscode-theme`.
 
 Public `dev` target-state is frozen in:
 
@@ -155,3 +161,7 @@ Public `diag` target-state is frozen in:
 Public hotpatch posture is frozen in:
 
 - `docs/workstreams/fretboard-public-app-author-surface-v1/HOTPATCH_TARGET_INTERFACE_STATE.md`
+
+Theme import posture is frozen in:
+
+- `docs/workstreams/fretboard-public-app-author-surface-v1/THEME_TARGET_INTERFACE_STATE.md`
