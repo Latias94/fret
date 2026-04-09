@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "slug": "svg-presentation-analysis-scaffolding-v1",
+  "title": "SVG Presentation Analysis Scaffolding v1",
+  "status": "closed",
+  "updated": "2026-04-09",
+  "scope_kind": "execution",
+  "problem": "Keep local-SVG presentation analysis explicit, conservative, and future-proof: developers should be able to scaffold reviewable per-icon `original-colors` overrides from a repository-owned SVG directory while reusing the shipped `presentation-defaults.json` contract and generator naming rules, without inferring pack-level defaults or changing import behavior.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/DESIGN.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/BASELINE_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/M1_CONTRACT_FREEZE_2026-04-09.md"
+    },
+    {
+      "role": "proof",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/M2_PROOF_SURFACE_2026-04-09.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/iconify-presentation-defaults-report-v1/CLOSEOUT_AUDIT_2026-04-09.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/svg-presentation-analysis-scaffolding-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the local-SVG suggestion helper on a repository-owned icon directory, inspect the emitted config/report, then feed only the explicit config into `icons import svg-dir ...`.",
+    "commands": [
+      "fretboard icons suggest svg-dir-presentation-overrides --source ./icons --out ./presentation-defaults.json --report-out ./presentation-defaults.report.json",
+      "fretboard icons import svg-dir --source ./icons --crate-name my-icons --vendor-namespace app --presentation-defaults ./presentation-defaults.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "svg-dir-suggestion-helper-proof",
+      "command": "cargo nextest run -p fretboard"
+    },
+    {
+      "name": "public-doc-surfaces",
+      "command": "cargo nextest run -p fret usage_docs_prefer_explicit_app_submodules_for_optional_ecosystems todo_golden_path_keeps_icon_pack_setup_on_app_install_surface"
+    },
+    {
+      "name": "diff-hygiene",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/DESIGN.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/BASELINE_AUDIT_2026-04-09.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/M1_CONTRACT_FREEZE_2026-04-09.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/M2_PROOF_SURFACE_2026-04-09.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/TODO.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/MILESTONES.md",
+    "docs/workstreams/svg-presentation-analysis-scaffolding-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/iconify-presentation-defaults-report-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "docs/workstreams/generated-icon-presentation-defaults-v1/CLOSEOUT_AUDIT_2026-04-09.md",
+    "crates/fret-icons-generator/src/lib.rs",
+    "crates/fret-icons-generator/src/naming.rs",
+    "crates/fretboard/Cargo.toml",
+    "crates/fretboard/src/icons/contracts.rs",
+    "crates/fretboard/src/icons/mod.rs",
+    "crates/fretboard/src/icons/suggest_svg.rs",
+    "crates/fretboard/src/cli/contracts.rs",
+    "crates/fretboard/src/cli/help.rs",
+    "docs/crate-usage-guide.md",
+    "docs/examples/todo-app-golden-path.md",
+    "ecosystem/fret/src/lib.rs",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0065-icon-system-and-asset-packaging.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed on conservative local-SVG override scaffolding only. Do not reopen it for pack-level default inference, import-default changes, or broader generator/runtime work; split a narrower follow-on instead."
+  },
+  "follow_on_of": "iconify-presentation-defaults-report-v1"
+}

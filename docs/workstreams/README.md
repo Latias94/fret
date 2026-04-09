@@ -16,7 +16,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 211
+- Dedicated directories: 212
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -374,6 +374,7 @@ Rule:
 - `docs/workstreams/shimmer-text-style-source-fearless-refactor-v1/` — first 2026-03-07, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/state-management-v1/` — first 2026-02-05, latest 2026-03-12, 3 markdown docs
 - `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
+- `docs/workstreams/svg-presentation-analysis-scaffolding-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for conservative local SVG-directory analysis that scaffolds per-icon `original-colors` overrides and an optional review report without inferring pack-level defaults or changing import behavior)
 - `docs/workstreams/text-infrastructure-v1/` — first 2026-02-19, latest 2026-02-22, 2 markdown docs
 - `docs/workstreams/text-interactive-spans-v1/` — first 2026-02-19, latest 2026-02-28, 2 markdown docs
 - `docs/workstreams/text-intrinsic-sizing-and-wrap-v1/` — first 2026-02-19, latest 2026-02-20, 3 markdown docs
