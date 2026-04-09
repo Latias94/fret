@@ -123,6 +123,7 @@ mod tests {
         let help = render_command_help_path(&["icons"]).expect("icons help should render");
         assert!(help.contains("acquire"));
         assert!(help.contains("import"));
+        assert!(help.contains("suggest"));
 
         let acquire_help = render_command_help_path(&["icons", "acquire"])
             .expect("icons acquire help should render");
@@ -143,6 +144,16 @@ mod tests {
             .expect("icons import svg-dir help should render");
         assert!(svg_help.contains("semantic-aliases"));
         assert!(svg_help.contains("presentation-defaults"));
+
+        let suggest_help = render_command_help_path(&["icons", "suggest"])
+            .expect("icons suggest help should render");
+        assert!(suggest_help.contains("presentation-defaults"));
+
+        let suggest_presentation_help =
+            render_command_help_path(&["icons", "suggest", "presentation-defaults"])
+                .expect("icons suggest presentation-defaults help should render");
+        assert!(suggest_presentation_help.contains("--provenance"));
+        assert!(suggest_presentation_help.contains("--out"));
     }
 
     #[test]
@@ -257,6 +268,23 @@ mod tests {
             "lucide",
         ])
         .expect("icons iconify-collection command should parse");
+
+        assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
+    }
+
+    #[test]
+    fn root_contract_parses_icons_suggest_presentation_defaults_subcommand() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "icons",
+            "suggest",
+            "presentation-defaults",
+            "--provenance",
+            "./mdi.provenance.json",
+            "--out",
+            "./presentation-defaults.json",
+        ])
+        .expect("icons suggest presentation-defaults command should parse");
 
         assert!(matches!(cli.command, FretboardCommandContract::Icons(_)));
     }

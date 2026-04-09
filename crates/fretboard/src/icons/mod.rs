@@ -1,4 +1,5 @@
 mod acquire;
+mod suggest;
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -15,8 +16,8 @@ pub mod contracts;
 
 use self::contracts::{
     IconAcquireCommandArgs, IconAcquireSourceContract, IconImportCommandArgs,
-    IconImportSourceContract, IconsCommandArgs, IconsCommandContract, ImportIconifyCollectionArgs,
-    ImportSvgDirArgs,
+    IconImportSourceContract, IconSuggestCommandArgs, IconSuggestKindContract, IconsCommandArgs,
+    IconsCommandContract, ImportIconifyCollectionArgs, ImportSvgDirArgs,
 };
 
 const PUBLIC_RUST_EMBED_VERSION: &str = "8.9.0";
@@ -81,6 +82,7 @@ fn run_icons_contract_with_mode(mode: &IconsMode, args: IconsCommandArgs) -> Res
     match args.command {
         IconsCommandContract::Acquire(args) => run_acquire_contract(args),
         IconsCommandContract::Import(args) => run_import_contract(mode, args),
+        IconsCommandContract::Suggest(args) => run_suggest_contract(args),
     }
 }
 
@@ -104,6 +106,28 @@ fn run_import_contract(mode: &IconsMode, args: IconImportCommandArgs) -> Result<
         IconImportSourceContract::SvgDir(args) => run_svg_dir_import_contract(mode, args),
         IconImportSourceContract::IconifyCollection(args) => {
             run_iconify_collection_import_contract(mode, args)
+        }
+    }
+}
+
+fn run_suggest_contract(args: IconSuggestCommandArgs) -> Result<(), String> {
+    match args.kind {
+        IconSuggestKindContract::PresentationDefaults(args) => {
+            let report = suggest::run_presentation_defaults_suggestion_contract(args)?;
+            println!("Suggested presentation-defaults config:");
+            println!("  output          : {}", report.out_path.display());
+            println!("  collection      : {}", report.collection);
+            println!("  palette         : {}", report.palette);
+            println!(
+                "  default mode    : {}",
+                match report.default_render_mode {
+                    fret_icons_generator::PresentationRenderMode::Mask => "mask",
+                    fret_icons_generator::PresentationRenderMode::OriginalColors => {
+                        "original-colors"
+                    }
+                }
+            );
+            Ok(())
         }
     }
 }
@@ -256,8 +280,9 @@ fn maybe_cargo_check(out_dir: &Path, run_check: bool) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::contracts::{
-        IconImportCommandArgs, IconImportSourceContract, IconsCommandArgs, IconsCommandContract,
-        ImportCommonArgs, ImportIconifyCollectionArgs, ImportSvgDirArgs,
+        IconImportCommandArgs, IconImportSourceContract, IconSuggestCommandArgs,
+        IconSuggestKindContract, IconsCommandArgs, IconsCommandContract, ImportCommonArgs,
+        ImportIconifyCollectionArgs, ImportSvgDirArgs, SuggestPresentationDefaultsArgs,
     };
     use super::run_repo_icons_contract;
     use serde_json::Value;
@@ -342,6 +367,37 @@ mod tests {
 }"#,
         )
         .expect("write presentation defaults config");
+    }
+
+    fn write_demo_iconify_acquisition_provenance(config_file: &Path, palette: bool) {
+        std::fs::write(
+            config_file,
+            format!(
+                r#"{{
+  "schema_version": 1,
+  "acquisition_kind": "iconify-collection",
+  "collection": "demo",
+  "request": {{ "mode": "subset", "requested_icons": ["brand-logo"] }},
+  "source": {{
+    "api_base_url": "https://api.iconify.design",
+    "collection_info_url": "https://api.iconify.design/collection?prefix=demo&info=true",
+    "icons_url": "https://api.iconify.design/demo.json?icons=brand-logo"
+  }},
+  "upstream": {{
+    "title": "Demo Icons",
+    "total": 2,
+    "collection_info": {{ "palette": {palette} }}
+  }},
+  "snapshot": {{
+    "digest_algorithm": "blake3",
+    "digest_hex": "deadbeef",
+    "icon_count": 1,
+    "alias_count": 0
+  }}
+}}"#
+            ),
+        )
+        .expect("write iconify acquisition provenance");
     }
 
     fn cargo_check_generated_pack(out_dir: &Path) {
@@ -585,5 +641,67 @@ mod tests {
             provenance["presentation_defaults"]["icon_overrides"][0]["icon_name"],
             "brand-logo"
         );
+    }
+
+    #[test]
+    fn repo_iconify_provenance_suggestion_flows_into_imported_pack_defaults() {
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-icon-presentation-suggestion-proof");
+        let source_file = suite_root.join("demo.json");
+        let provenance_file = suite_root.join("demo.provenance.json");
+        let suggestion_file = suite_root.join("presentation-defaults.json");
+        let out_dir = suite_root.join("demo-icons-pack");
+        write_demo_iconify_collection(&source_file);
+        write_demo_iconify_acquisition_provenance(&provenance_file, true);
+
+        run_repo_icons_contract(
+            IconsCommandArgs {
+                command: IconsCommandContract::Suggest(IconSuggestCommandArgs {
+                    kind: IconSuggestKindContract::PresentationDefaults(
+                        SuggestPresentationDefaultsArgs {
+                            provenance: provenance_file,
+                            out: suggestion_file.clone(),
+                        },
+                    ),
+                }),
+            },
+            &workspace_root,
+        )
+        .expect("repo suggestion should succeed");
+
+        run_repo_icons_contract(
+            IconsCommandArgs {
+                command: IconsCommandContract::Import(IconImportCommandArgs {
+                    source: IconImportSourceContract::IconifyCollection(
+                        ImportIconifyCollectionArgs {
+                            source: source_file,
+                            common: ImportCommonArgs {
+                                crate_name: "demo-icons-pack".to_string(),
+                                vendor_namespace: "demo".to_string(),
+                                pack_id: None,
+                                path: Some(out_dir.clone()),
+                                source_label: Some("demo-iconify".to_string()),
+                                semantic_aliases: None,
+                                presentation_defaults: Some(suggestion_file),
+                                no_check: true,
+                            },
+                        },
+                    ),
+                }),
+            },
+            &workspace_root,
+        )
+        .expect("repo iconify import with suggested presentation defaults should succeed");
+
+        cargo_check_generated_pack(&out_dir);
+
+        let provenance = std::fs::read_to_string(out_dir.join("pack-provenance.json"))
+            .expect("generated provenance json");
+        let provenance: Value = serde_json::from_str(&provenance).expect("valid provenance json");
+        assert_eq!(
+            provenance["presentation_defaults"]["default_render_mode"],
+            "original-colors"
+        );
+        assert_eq!(provenance["icons"][0]["render_mode"], "original-colors");
     }
 }

@@ -14,6 +14,8 @@ pub enum IconsCommandContract {
     Acquire(IconAcquireCommandArgs),
     /// Generate icon-pack crates from local icon sources.
     Import(IconImportCommandArgs),
+    /// Suggest explicit helper config from existing icon artifacts.
+    Suggest(IconSuggestCommandArgs),
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq)]
@@ -53,6 +55,28 @@ pub struct AcquireIconifyCollectionArgs {
 pub struct IconImportCommandArgs {
     #[command(subcommand)]
     pub source: IconImportSourceContract,
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq)]
+pub struct IconSuggestCommandArgs {
+    #[command(subcommand)]
+    pub kind: IconSuggestKindContract,
+}
+
+#[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
+pub enum IconSuggestKindContract {
+    /// Suggest a presentation-defaults config from Iconify acquisition provenance.
+    PresentationDefaults(SuggestPresentationDefaultsArgs),
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq)]
+pub struct SuggestPresentationDefaultsArgs {
+    /// Acquisition provenance JSON written by `fretboard icons acquire iconify-collection ...`.
+    #[arg(long, value_name = "FILE")]
+    pub provenance: PathBuf,
+    /// Output path for the emitted `presentation-defaults.json` suggestion.
+    #[arg(long, value_name = "FILE")]
+    pub out: PathBuf,
 }
 
 #[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
