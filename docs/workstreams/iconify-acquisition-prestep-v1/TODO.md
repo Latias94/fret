@@ -12,11 +12,11 @@ Last updated: 2026-04-09
 
 ## M0 — Scope and evidence freeze
 
-- [ ] IAP-010 Audit the current acquisition reference surface:
+- [x] IAP-010 Audit the current acquisition reference surface:
   - closed generator lane docs,
   - current generator input expectations,
   - optional local `repo-ref/dioxus-iconify` fetch workflow reference.
-- [ ] IAP-011 Freeze the non-goals so this lane does not turn into another generator or runtime
+- [x] IAP-011 Freeze the non-goals so this lane does not turn into another generator or runtime
   redesign.
 
 ## M1 — Acquisition contract freeze
@@ -61,3 +61,7 @@ Last updated: 2026-04-09
 - Do not reopen `iconify-import-pack-generator-v1`.
 - Do not add a runtime Iconify client to framework crates.
 - Do not guess semantic aliases from remote vendor data.
+
+Completed M0 evidence:
+
+- `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md`

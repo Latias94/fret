@@ -12,6 +12,10 @@
       "path": "docs/workstreams/iconify-acquisition-prestep-v1/DESIGN.md"
     },
     {
+      "role": "audit",
+      "path": "docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md"
     },
@@ -47,6 +51,7 @@
   ],
   "evidence": [
     "docs/workstreams/iconify-acquisition-prestep-v1/DESIGN.md",
+    "docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/TODO.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/MILESTONES.md",
     "docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md",

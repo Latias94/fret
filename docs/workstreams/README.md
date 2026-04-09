@@ -293,7 +293,7 @@ Rule:
 - `docs/workstreams/hotpatch-devloop-alignment-v1/` — first 2026-02-15, latest 2026-03-01, 4 markdown docs
 - `docs/workstreams/image-source-view-cache-v1/` — first 2026-02-13, latest 2026-02-13, 3 markdown docs
 - `docs/workstreams/image-support-v1/` — first 2026-02-09, latest 2026-02-11, 2 markdown docs
-- `docs/workstreams/iconify-acquisition-prestep-v1/` — first n/a, latest n/a, 4 markdown docs (active follow-on for explicit remote/pinned Iconify acquisition as a separate pre-step that produces local artifacts for the closed generator lane)
+- `docs/workstreams/iconify-acquisition-prestep-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for explicit remote/pinned Iconify acquisition as a separate pre-step that produces local artifacts for the closed generator lane)
 - `docs/workstreams/iconify-import-pack-generator-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the v1 third-party icon-pack generator contract: reusable generator + public CLI, local SVG/Iconify snapshot inputs, explicit semantic alias config, and deterministic proof gates all landed)
 - `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)

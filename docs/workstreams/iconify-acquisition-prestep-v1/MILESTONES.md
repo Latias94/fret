@@ -15,12 +15,15 @@ Primary evidence:
 
 - `docs/workstreams/iconify-acquisition-prestep-v1/DESIGN.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/TODO.md`
+- `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 
 Current status:
 
 - Opened on 2026-04-09 as a narrow follow-on to the closed generator lane.
-- The first active work is M0 evidence freeze.
+- M0 evidence freeze closed on 2026-04-09 with a baseline audit of the current generator/input
+  boundary, multicolor posture, and third-party extensibility surface.
+- The next active work is M1 acquisition contract freeze.
 
 ## M1 — Acquisition contract freeze
 

@@ -20,6 +20,13 @@ What this proves today:
 
 ## Current evidence set
 
+- `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md` freezes the M0
+  baseline:
+  - core multicolor support already exists,
+  - generated Iconify imports preserve multicolor SVG bytes but still default to mask-mode
+    presentation,
+  - third-party local-input pack generation is already a public library + CLI surface,
+  - and the remaining contract debt is explicit remote acquisition plus provenance.
 - `iconify-import-pack-generator-v1` is now closed on the v1 local-input producer contract.
 - The current generator accepts:
   - local SVG directory input,
@@ -50,6 +57,7 @@ cargo check -p fretboard --quiet
 - `docs/workstreams/iconify-acquisition-prestep-v1/TODO.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/MILESTONES.md`
 - `docs/workstreams/iconify-acquisition-prestep-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/iconify-acquisition-prestep-v1/BASELINE_AUDIT_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/M1_CONTRACT_FREEZE_2026-04-09.md`
 - `docs/workstreams/iconify-import-pack-generator-v1/CLOSEOUT_AUDIT_2026-04-09.md`
 - `crates/fret-icons-generator/src/lib.rs`
