@@ -187,6 +187,9 @@ The icon contract distinguishes between explicit install surfaces and best-effor
   generated pack installers) must treat registry freeze failure or installed-pack metadata
   conflicts as fail-fast contract violations rather than publishing a misleading “successful”
   install state,
+- explicit install surfaces may also standardize known install-failure reports so diagnostics /
+  panic-hook integrations can expose structured pack/surface/error details without forcing a broad
+  `Result`-returning bootstrap lifecycle redesign,
 - best-effort runtime helpers that cannot fail the surrounding app authoring surface (for example
   lazy freeze/default fallback or SVG preload helpers) may keep the valid subset and emit
   diagnostics, but they must not replace a usable icon surface with an empty registry just because

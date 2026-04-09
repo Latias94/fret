@@ -76,7 +76,10 @@ use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, TextIntera
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
 #[cfg(not(target_arch = "wasm32"))]
-use fret_icons::{IconPackRegistration, IconRegistry, InstalledIconPacks};
+use fret_icons::{
+    IconPackRegistration, IconRegistry, InstalledIconPacks, panic_on_icon_pack_metadata_conflict,
+    panic_on_icon_registry_freeze_failure,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
@@ -593,17 +596,19 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             app.with_global_mut(IconRegistry::default, |icons, app| {
                 pack.register_into_registry(icons);
                 let frozen = icons.freeze().unwrap_or_else(|errors| {
-                    panic!(
-                        "failed to freeze icon registry after registering pack `{}` in fret_bootstrap.register_icon_pack_contract: {errors:?}",
-                        pack.metadata.pack_id
+                    panic_on_icon_registry_freeze_failure(
+                        "fret_bootstrap.register_icon_pack_contract",
+                        Some(pack.metadata.pack_id),
+                        errors,
                     )
                 });
                 app.set_global(frozen);
             });
             app.with_global_mut(InstalledIconPacks::default, |installed, _app| {
                 installed.record(pack.metadata).unwrap_or_else(|err| {
-                    panic!(
-                        "failed to record installed icon pack metadata in fret_bootstrap.register_icon_pack_contract: {err}"
+                    panic_on_icon_pack_metadata_conflict(
+                        "fret_bootstrap.register_icon_pack_contract",
+                        err,
                     )
                 });
             });
@@ -620,8 +625,10 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             app.with_global_mut(IconRegistry::default, |icons, app| {
                 register(icons);
                 let frozen = icons.freeze().unwrap_or_else(|errors| {
-                    panic!(
-                        "failed to freeze icon registry in fret_bootstrap.register_icon_pack: {errors:?}"
+                    panic_on_icon_registry_freeze_failure(
+                        "fret_bootstrap.register_icon_pack",
+                        None,
+                        errors,
                     )
                 });
                 app.set_global(frozen);
@@ -1474,33 +1481,81 @@ pub fn init_panic_hook() {
                 .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
                 .unwrap_or_else(|| "<unknown>".to_string());
 
+            let icon_install_failure =
+                fret_icons::current_icon_install_failure_report_for_diagnostics();
             let backtrace = Backtrace::capture();
             match backtrace.status() {
                 std::backtrace::BacktraceStatus::Captured => {
-                    tracing::error!(
-                        thread = thread_name,
-                        location = location,
-                        message = message,
-                        backtrace = %backtrace,
-                        "panic"
-                    );
+                    if let Some(report) = icon_install_failure.as_ref() {
+                        tracing::error!(
+                            thread = thread_name,
+                            location = location,
+                            message = message,
+                            known_panic_kind = "icon_install_failure",
+                            icon_install_surface = report.surface,
+                            icon_install_pack_id = report.pack_id.unwrap_or("<unknown>"),
+                            icon_install_failure_kind = report.kind.as_str(),
+                            icon_install_detail_count = report.details.len(),
+                            icon_install_details = ?report.details,
+                            backtrace = %backtrace,
+                            "panic"
+                        );
+                    } else {
+                        tracing::error!(
+                            thread = thread_name,
+                            location = location,
+                            message = message,
+                            backtrace = %backtrace,
+                            "panic"
+                        );
+                    }
                 }
                 std::backtrace::BacktraceStatus::Disabled
                 | std::backtrace::BacktraceStatus::Unsupported => {
-                    tracing::error!(
-                        thread = thread_name,
-                        location = location,
-                        message = message,
-                        "panic (set RUST_BACKTRACE=1 to capture a backtrace)"
-                    );
+                    if let Some(report) = icon_install_failure.as_ref() {
+                        tracing::error!(
+                            thread = thread_name,
+                            location = location,
+                            message = message,
+                            known_panic_kind = "icon_install_failure",
+                            icon_install_surface = report.surface,
+                            icon_install_pack_id = report.pack_id.unwrap_or("<unknown>"),
+                            icon_install_failure_kind = report.kind.as_str(),
+                            icon_install_detail_count = report.details.len(),
+                            icon_install_details = ?report.details,
+                            "panic (set RUST_BACKTRACE=1 to capture a backtrace)"
+                        );
+                    } else {
+                        tracing::error!(
+                            thread = thread_name,
+                            location = location,
+                            message = message,
+                            "panic (set RUST_BACKTRACE=1 to capture a backtrace)"
+                        );
+                    }
                 }
                 _ => {
-                    tracing::error!(
-                        thread = thread_name,
-                        location = location,
-                        message = message,
-                        "panic"
-                    );
+                    if let Some(report) = icon_install_failure.as_ref() {
+                        tracing::error!(
+                            thread = thread_name,
+                            location = location,
+                            message = message,
+                            known_panic_kind = "icon_install_failure",
+                            icon_install_surface = report.surface,
+                            icon_install_pack_id = report.pack_id.unwrap_or("<unknown>"),
+                            icon_install_failure_kind = report.kind.as_str(),
+                            icon_install_detail_count = report.details.len(),
+                            icon_install_details = ?report.details,
+                            "panic"
+                        );
+                    } else {
+                        tracing::error!(
+                            thread = thread_name,
+                            location = location,
+                            message = message,
+                            "panic"
+                        );
+                    }
                 }
             }
 

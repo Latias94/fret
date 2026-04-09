@@ -7,6 +7,7 @@
 
 use std::{
     borrow::Cow,
+    cell::RefCell,
     collections::HashMap,
     sync::{
         Arc,
@@ -193,6 +194,144 @@ impl std::fmt::Display for InstalledIconPackMetadataConflict {
 }
 
 impl std::error::Error for InstalledIconPackMetadataConflict {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconInstallFailureKind {
+    RegistryFreezeFailed,
+    MetadataConflict,
+}
+
+impl IconInstallFailureKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::RegistryFreezeFailed => "registry_freeze_failed",
+            Self::MetadataConflict => "metadata_conflict",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IconInstallFailureReport {
+    pub surface: &'static str,
+    pub pack_id: Option<&'static str>,
+    pub kind: IconInstallFailureKind,
+    pub details: Vec<String>,
+}
+
+impl IconInstallFailureReport {
+    pub fn registry_freeze(
+        surface: &'static str,
+        pack_id: Option<&'static str>,
+        errors: &[ResolveError],
+    ) -> Self {
+        Self {
+            surface,
+            pack_id,
+            kind: IconInstallFailureKind::RegistryFreezeFailed,
+            details: errors.iter().map(|error| format!("{error:?}")).collect(),
+        }
+    }
+
+    pub fn metadata_conflict(
+        surface: &'static str,
+        conflict: &InstalledIconPackMetadataConflict,
+    ) -> Self {
+        Self {
+            surface,
+            pack_id: Some(conflict.existing.pack_id),
+            kind: IconInstallFailureKind::MetadataConflict,
+            details: vec![
+                format!(
+                    "existing vendor namespace `{}` / import model `{:?}`",
+                    conflict.existing.vendor_namespace, conflict.existing.import_model
+                ),
+                format!(
+                    "attempted vendor namespace `{}` / import model `{:?}`",
+                    conflict.attempted.vendor_namespace, conflict.attempted.import_model
+                ),
+            ],
+        }
+    }
+}
+
+impl std::fmt::Display for IconInstallFailureReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "icon install failure in `{}`", self.surface)?;
+        if let Some(pack_id) = self.pack_id {
+            write!(f, " for pack `{pack_id}`")?;
+        }
+        match self.kind {
+            IconInstallFailureKind::RegistryFreezeFailed => {
+                write!(f, ": failed to freeze icon registry")?;
+            }
+            IconInstallFailureKind::MetadataConflict => {
+                write!(f, ": conflicting installed icon pack metadata")?;
+            }
+        }
+        if !self.details.is_empty() {
+            write!(f, " [{}]", self.details.join(" | "))?;
+        }
+        Ok(())
+    }
+}
+
+thread_local! {
+    static CURRENT_ICON_INSTALL_FAILURE_REPORT: RefCell<Option<IconInstallFailureReport>> = const {
+        RefCell::new(None)
+    };
+}
+
+struct IconInstallFailureReportScope;
+
+impl IconInstallFailureReportScope {
+    fn install(report: IconInstallFailureReport) -> Self {
+        CURRENT_ICON_INSTALL_FAILURE_REPORT.with(|slot| {
+            *slot.borrow_mut() = Some(report);
+        });
+        Self
+    }
+}
+
+impl Drop for IconInstallFailureReportScope {
+    fn drop(&mut self) {
+        CURRENT_ICON_INSTALL_FAILURE_REPORT.with(|slot| {
+            slot.borrow_mut().take();
+        });
+    }
+}
+
+/// Returns the current icon-install failure report for diagnostics/panic-hook integration.
+///
+/// This is only populated while one of the explicit icon install helpers is panicking.
+pub fn current_icon_install_failure_report_for_diagnostics() -> Option<IconInstallFailureReport> {
+    CURRENT_ICON_INSTALL_FAILURE_REPORT.with(|slot| slot.borrow().clone())
+}
+
+fn panic_with_icon_install_failure(report: IconInstallFailureReport) -> ! {
+    let _scope = IconInstallFailureReportScope::install(report.clone());
+    panic!("{report}");
+}
+
+/// Panic with a known icon-install failure report for registry-freeze failures.
+pub fn panic_on_icon_registry_freeze_failure(
+    surface: &'static str,
+    pack_id: Option<&'static str>,
+    errors: Vec<ResolveError>,
+) -> ! {
+    panic_with_icon_install_failure(IconInstallFailureReport::registry_freeze(
+        surface, pack_id, &errors,
+    ))
+}
+
+/// Panic with a known icon-install failure report for installed-pack metadata conflicts.
+pub fn panic_on_icon_pack_metadata_conflict(
+    surface: &'static str,
+    conflict: InstalledIconPackMetadataConflict,
+) -> ! {
+    panic_with_icon_install_failure(IconInstallFailureReport::metadata_conflict(
+        surface, &conflict,
+    ))
+}
 
 /// Data-first icon-pack registration contract.
 ///
@@ -853,5 +992,98 @@ mod tests {
         assert_eq!(err.existing.pack_id, "demo-pack");
         assert_eq!(err.existing.vendor_namespace, "demo");
         assert_eq!(err.attempted.vendor_namespace, "other-demo");
+    }
+
+    #[test]
+    fn icon_install_failure_report_scope_is_only_visible_while_installed() {
+        let report = IconInstallFailureReport::registry_freeze(
+            "test.icon.install",
+            Some("demo-pack"),
+            &[ResolveError::AliasLoop {
+                requested: IconId::new_static("demo.icon"),
+                chain: vec![
+                    IconId::new_static("demo.icon"),
+                    IconId::new_static("demo.icon"),
+                ],
+            }],
+        );
+
+        assert_eq!(current_icon_install_failure_report_for_diagnostics(), None);
+        {
+            let _scope = IconInstallFailureReportScope::install(report.clone());
+            assert_eq!(
+                current_icon_install_failure_report_for_diagnostics(),
+                Some(report)
+            );
+        }
+        assert_eq!(current_icon_install_failure_report_for_diagnostics(), None);
+    }
+
+    #[test]
+    fn panic_on_icon_registry_freeze_failure_uses_human_readable_message() {
+        let result = std::panic::catch_unwind(|| {
+            panic_on_icon_registry_freeze_failure(
+                "test.icon.install",
+                Some("demo-pack"),
+                vec![ResolveError::AliasLoop {
+                    requested: IconId::new_static("demo.icon"),
+                    chain: vec![
+                        IconId::new_static("demo.icon"),
+                        IconId::new_static("demo.icon"),
+                    ],
+                }],
+            );
+        });
+
+        let panic = result.expect_err("freeze failure should panic");
+        let message = panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| {
+                panic
+                    .downcast_ref::<&str>()
+                    .map(|message| (*message).to_string())
+            })
+            .expect("string panic payload");
+        assert!(message.contains("icon install failure in `test.icon.install`"));
+        assert!(message.contains("for pack `demo-pack`"));
+        assert!(message.contains("failed to freeze icon registry"));
+        assert_eq!(current_icon_install_failure_report_for_diagnostics(), None);
+    }
+
+    #[test]
+    fn panic_on_icon_pack_metadata_conflict_uses_human_readable_message() {
+        let result = std::panic::catch_unwind(|| {
+            panic_on_icon_pack_metadata_conflict(
+                "test.icon.install",
+                InstalledIconPackMetadataConflict {
+                    existing: IconPackMetadata {
+                        pack_id: "demo-pack",
+                        vendor_namespace: "demo",
+                        import_model: IconPackImportModel::Generated,
+                    },
+                    attempted: IconPackMetadata {
+                        pack_id: "demo-pack",
+                        vendor_namespace: "other-demo",
+                        import_model: IconPackImportModel::Vendored,
+                    },
+                },
+            );
+        });
+
+        let panic = result.expect_err("metadata conflict should panic");
+        let message = panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| {
+                panic
+                    .downcast_ref::<&str>()
+                    .map(|message| (*message).to_string())
+            })
+            .expect("string panic payload");
+        assert!(message.contains("icon install failure in `test.icon.install`"));
+        assert!(message.contains("for pack `demo-pack`"));
+        assert!(message.contains("conflicting installed icon pack metadata"));
+        assert_eq!(current_icon_install_failure_report_for_diagnostics(), None);
     }
 }

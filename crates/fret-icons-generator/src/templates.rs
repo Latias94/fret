@@ -219,7 +219,10 @@ fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str, render_mode: Ic
 
 pub(crate) fn render_app_rs(crate_module_name: &str) -> String {
     format!(
-        r#"use fret_icons::{{IconRegistry, InstalledIconPacks}};
+        r#"use fret_icons::{{
+    IconRegistry, InstalledIconPacks, panic_on_icon_pack_metadata_conflict,
+    panic_on_icon_registry_freeze_failure,
+}};
 
 /// Install this icon pack into a `fret-app` application.
 ///
@@ -228,17 +231,17 @@ pub fn install(app: &mut fret_app::App) {{
     app.with_global_mut(IconRegistry::default, |icons, app| {{
         crate::PACK.register_into_registry(icons);
         let frozen = icons.freeze().unwrap_or_else(|errors| {{
-            panic!(
-                "failed to freeze icon registry in {crate_module_name}.app.install: {{errors:?}}"
+            panic_on_icon_registry_freeze_failure(
+                "{crate_module_name}.app.install",
+                Some(crate::PACK_METADATA.pack_id),
+                errors,
             )
         }});
         app.set_global(frozen);
     }});
     app.with_global_mut(InstalledIconPacks::default, |installed, _app| {{
         installed.record(crate::PACK_METADATA).unwrap_or_else(|err| {{
-            panic!(
-                "failed to record installed icon pack metadata in {crate_module_name}.app.install: {{err}}"
-            )
+            panic_on_icon_pack_metadata_conflict("{crate_module_name}.app.install", err)
         }});
     }});
 }}

@@ -188,7 +188,8 @@ mod tests {
         assert!(!public_surface.contains("pub fn install_with_ui_services("));
         assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
         assert!(APP_RS.contains("let frozen = icons.freeze().unwrap_or_else(|errors|"));
-        assert!(APP_RS.contains("installed.record(crate::PACK_METADATA).unwrap_or_else(|err|"));
+        assert!(APP_RS.contains("panic_on_icon_registry_freeze_failure("));
+        assert!(APP_RS.contains("panic_on_icon_pack_metadata_conflict("));
         assert!(!APP_RS.contains("install_with_ui_services"));
         assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
     }

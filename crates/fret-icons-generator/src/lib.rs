@@ -337,7 +337,8 @@ mod tests {
         let app_rs =
             std::fs::read_to_string(output_dir.join("src/app.rs")).expect("generated app.rs");
         assert!(app_rs.contains("let frozen = icons.freeze().unwrap_or_else(|errors|"));
-        assert!(app_rs.contains("installed.record(crate::PACK_METADATA).unwrap_or_else(|err|"));
+        assert!(app_rs.contains("panic_on_icon_registry_freeze_failure("));
+        assert!(app_rs.contains("panic_on_icon_pack_metadata_conflict("));
 
         let provenance = std::fs::read_to_string(output_dir.join("pack-provenance.json"))
             .expect("generated provenance json");
