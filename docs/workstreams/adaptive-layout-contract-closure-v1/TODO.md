@@ -62,7 +62,7 @@ Last updated: 2026-04-10
   silently widen into the editor-panel adaptive story.
 - [x] ALC-043 Decide whether the next reusable editor rail slice belongs in `fret-ui-editor`, a
   workspace-shell layer, or can stay app-local after the panel-resize proof is promoted.
-- [ ] ALC-044 Promote one reviewable editor-rail composition that uses the existing
+- [x] ALC-044 Promote one reviewable editor-rail composition that uses the existing
   `WorkspaceFrame.left/right` shell seam plus editor-owned inner panel content before extracting a
   new public rail primitive.
 
@@ -140,3 +140,9 @@ Completed query-axis proof evidence:
 - `ecosystem/fret-ui-shadcn/tests/navigation_menu_query_mode_reopen.rs`
 - `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
 - `tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json`
+
+Completed editor-rail composition evidence:
+
+- `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`
+- `apps/fret-examples/src/workspace_shell_demo.rs`
+- `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`

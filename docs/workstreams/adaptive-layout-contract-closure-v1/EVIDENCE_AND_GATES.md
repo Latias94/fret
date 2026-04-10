@@ -54,6 +54,8 @@ What this proves now:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md`
   - records the passing query-axis promotion run, the packed share artifact, and the narrowed
     trigger-pointer fix that keeps the Gallery proof stable.
+- `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`
+  - records the first reviewable editor-rail composition through the existing workspace shell seam.
 - `docs/known-issues.md`
   - already states that remaining viewport breakpoints should mean device-level behavior, not a
     substitute for container queries.
@@ -103,6 +105,11 @@ What this proves now:
     contracts.
 - `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`
   - keeps the docs-path teaching surface explicit about query-axis ownership.
+- `apps/fret-examples/src/workspace_shell_demo.rs`
+  - keeps the chosen shell seam executable by mounting editor-owned panel content through
+    `WorkspaceFrame.right(...)`.
+- `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`
+  - keeps the owner seam explicit and reviewable at the source-test level.
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json`
   - current narrow-window screenshot/bundle proof surface.
 - `tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json`
@@ -167,6 +174,13 @@ Current promoted run:
 - packed artifact:
   `target/fret-diag/adaptive-panel-resize-promote/sessions/1775822919781-88694/share/1775822919993.zip`
 
+### Workspace-shell editor-rail composition
+
+```bash
+cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --no-fail-fast
+cargo check -p fret-demo --bin workspace_shell_demo --message-format short
+```
+
 ### Diff hygiene
 
 ```bash
@@ -176,9 +190,9 @@ python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-
 
 ## Next active gap
 
-The M2 proof gap is now closed.
+The M2 proof gap and the first M3 composition slice are now closed.
 
-The next adaptive gap lives in M3:
+The next adaptive gap lives in M4:
 
-- promote one reviewable editor-rail composition on the existing
-  `WorkspaceFrame.left/right` shell seam before extracting any new public rail primitive.
+- decide whether this lane closes as-is,
+- or split a narrower follow-on instead of widening this lane past its proof-oriented scope.

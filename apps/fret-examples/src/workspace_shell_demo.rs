@@ -23,6 +23,9 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 use fret_ui_kit::{TreeItem, TreeState};
+use fret_ui_editor::composites::{
+    InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
+};
 use fret_workspace::close_policy::{
     WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy, WorkspaceDirtyCloseRequest,
 };
@@ -528,7 +531,41 @@ impl WorkspaceShellDemoDriver {
                         .selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {
                             two_row_pinned
                         });
+                    let (
+                        active_pane_label,
+                        active_tab_label,
+                        active_tab_count,
+                        active_dirty_count,
+                    ): (Arc<str>, Arc<str>, usize, usize) =
+                        cx.data().selector_model_layout(&window_layout, |layout| {
+                            let active_pane_label = layout
+                                .active_pane
+                                .clone()
+                                .unwrap_or_else(|| Arc::from("<none>"));
+                            let (active_tab_label, active_tab_count, active_dirty_count) = layout
+                                .active_pane
+                                .as_ref()
+                                .and_then(|pane_id| layout.pane_tree.find_pane(pane_id.as_ref()))
+                                .map(|pane| {
+                                    let active_tab_label = pane
+                                        .tabs
+                                        .active()
+                                        .cloned()
+                                        .unwrap_or_else(|| Arc::from("<none>"));
+                                    let active_tab_count = pane.tabs.tabs().len();
+                                    let active_dirty_count = pane.tabs.dirty_in_tab_order().len();
+                                    (active_tab_label, active_tab_count, active_dirty_count)
+                                })
+                                .unwrap_or_else(|| (Arc::from("<none>"), 0, 0));
+                            (
+                                active_pane_label,
+                                active_tab_label,
+                                active_tab_count,
+                                active_dirty_count,
+                            )
+                        });
                     let theme_for_center = theme.clone();
+                    let theme_for_right = theme.clone();
                     let window_layout_for_center = window_layout.clone();
                     let center = cx.keyed("workspace_shell.center", move |cx| {
                         let mut render_pane =
@@ -857,9 +894,178 @@ impl WorkspaceShellDemoDriver {
                             &mut render_pane,
                         )
                     });
+                    let right = cx.keyed("workspace_shell.right", move |cx| {
+                        let theme_for_right_header = theme_for_right.clone();
+                        let theme_for_right_container = theme_for_right.clone();
+                        let shell_group_test_id: Arc<str> =
+                            Arc::from("workspace-shell-editor-rail-group-shell");
+                        let selection_group_test_id: Arc<str> =
+                            Arc::from("workspace-shell-editor-rail-group-selection");
+                        let inspector = InspectorPanel::new(None)
+                            .options(InspectorPanelOptions {
+                                layout: fill_layout(),
+                                title: Some(Arc::from("Editor Rail")),
+                                test_id: Some(Arc::from("workspace-shell-editor-rail")),
+                                header_test_id: Some(Arc::from(
+                                    "workspace-shell-editor-rail-header",
+                                )),
+                                content_test_id: Some(Arc::from(
+                                    "workspace-shell-editor-rail-content",
+                                )),
+                                ..Default::default()
+                            })
+                            .into_element(
+                                cx,
+                                move |cx, _panel_cx| {
+                                    let muted =
+                                        theme_for_right_header.color_token("muted-foreground");
+                                    vec![fret_ui_kit::ui::text(
+                                        "Workspace shell slot + editor-owned inner panel",
+                                    )
+                                    .text_sm()
+                                    .text_color(fret_ui_kit::ColorRef::Color(muted))
+                                    .into_element(cx)]
+                                },
+                                move |cx, _panel_cx| {
+                                    vec![
+                                        PropertyGroup::new("Selection")
+                                            .options(PropertyGroupOptions {
+                                                collapsible: false,
+                                                test_id: Some(selection_group_test_id.clone()),
+                                                ..Default::default()
+                                            })
+                                            .into_element(
+                                                cx,
+                                                |_cx| None,
+                                                move |cx| {
+                                                    vec![PropertyGrid::new().into_element(
+                                                        cx,
+                                                        move |cx, row_cx| {
+                                                            vec![
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| cx.text("Active pane"),
+                                                                    |cx| {
+                                                                        cx.text(
+                                                                            active_pane_label
+                                                                                .clone(),
+                                                                        )
+                                                                    },
+                                                                ),
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| cx.text("Active tab"),
+                                                                    |cx| {
+                                                                        cx.text(
+                                                                            active_tab_label
+                                                                                .clone(),
+                                                                        )
+                                                                    },
+                                                                ),
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| cx.text("Tabs in pane"),
+                                                                    |cx| {
+                                                                        cx.text(format!(
+                                                                            "{active_tab_count}"
+                                                                        ))
+                                                                    },
+                                                                ),
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| cx.text("Dirty tabs"),
+                                                                    |cx| {
+                                                                        cx.text(format!(
+                                                                            "{active_dirty_count}"
+                                                                        ))
+                                                                    },
+                                                                ),
+                                                            ]
+                                                        },
+                                                    )]
+                                                },
+                                            ),
+                                        PropertyGroup::new("Shell")
+                                            .options(PropertyGroupOptions {
+                                                collapsible: false,
+                                                test_id: Some(shell_group_test_id.clone()),
+                                                ..Default::default()
+                                            })
+                                            .into_element(
+                                                cx,
+                                                |_cx| None,
+                                                move |cx| {
+                                                    vec![PropertyGrid::new().into_element(
+                                                        cx,
+                                                        move |cx, row_cx| {
+                                                            vec![
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| cx.text("Left slot"),
+                                                                    |cx| cx.text("File tree rail"),
+                                                                ),
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| cx.text("Right slot"),
+                                                                    |cx| cx.text("Editor rail"),
+                                                                ),
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| {
+                                                                        cx.text("Two-row tabs")
+                                                                    },
+                                                                    |cx| {
+                                                                        cx.text(if two_row_pinned {
+                                                                            "Pinned"
+                                                                        } else {
+                                                                            "Auto"
+                                                                        })
+                                                                    },
+                                                                ),
+                                                                row_cx.row(
+                                                                    cx,
+                                                                    |cx| {
+                                                                        cx.text("Dirty close prompt")
+                                                                    },
+                                                                    |cx| {
+                                                                        cx.text(if prompt_open {
+                                                                            "Open"
+                                                                        } else {
+                                                                            "Closed"
+                                                                        })
+                                                                    },
+                                                                ),
+                                                            ]
+                                                        },
+                                                    )]
+                                                },
+                                            ),
+                                    ]
+                                },
+                            );
+
+                        cx.container(
+                            ContainerProps {
+                                layout: fixed_width_fill_height(Px(320.0)),
+                                background: Some(
+                                    theme_for_right_container.color_token("background"),
+                                ),
+                                border: Edges {
+                                    left: Px(1.0),
+                                    ..Default::default()
+                                },
+                                border_color: Some(
+                                    theme_for_right_container.color_token("border"),
+                                ),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![inspector],
+                        )
+                    });
 
                     let frame = WorkspaceFrame::new(center)
                         .left(left)
+                        .right(right)
                         .background(bg)
                         .into_element(cx);
 

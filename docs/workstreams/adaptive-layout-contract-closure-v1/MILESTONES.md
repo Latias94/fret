@@ -92,7 +92,8 @@ Current status:
   `target/fret-diag/adaptive-navigation-menu-query-axis/sessions/1775826527322-55840`.
 - Closed on 2026-04-10 via
   `docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md`.
-- The next active work returns to M3, with `ALC-044` now the first unresolved bounded slice.
+- The follow-on M3 rail-composition slice that this milestone pointed to is now complete as well;
+  see `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`.
 
 ## M3 — First fearless-refactor slices
 
@@ -127,11 +128,12 @@ Current status:
   `fret-workspace::WorkspaceFrame.left/right` shell slots as the outer rail seam, keep
   `fret-ui-editor` as the reusable inner-panel owner, and keep the concrete rail recipe app-local
   until a second consumer proves extraction.
-- Residual risk remains on other dialog-family trigger examples because the lane still lacks an
-  explicit narrow-window trigger-width sweep for every docs-path snippet.
-- The next unresolved adaptive owner question is no longer the outer seam; it is whether an
-  app-local rail recipe becomes shared enough to justify extraction after the panel-resize proof is
-  promoted.
+- A sixth bounded slice now implements that seam decision in running code:
+  `workspace_shell_demo` mounts an editor rail through `WorkspaceFrame.right(...)` while the inner
+  surface stays on `InspectorPanel + PropertyGroup + PropertyGrid`.
+- Closed on 2026-04-10 via
+  `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`.
+- The next active work returns to M4 closeout or follow-on split decisions.
 
 ## M4 — Closeout or split
 
@@ -148,4 +150,8 @@ Primary evidence:
 
 Current status:
 
-- Not started.
+- Active next step.
+- M4 now owns the remaining lane decisions:
+  - refresh the repo-level entrypoints if needed,
+  - decide whether this lane closes cleanly,
+  - or split a narrower follow-on instead of silently widening scope.
