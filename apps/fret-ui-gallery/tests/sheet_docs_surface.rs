@@ -130,3 +130,17 @@ fn sheet_docs_diag_script_covers_docs_path_and_parts_followup() {
         );
     }
 }
+
+#[test]
+fn sheet_demo_snippet_uses_a_unique_overlay_panel_test_id() {
+    let demo = include_str!("../src/ui/snippets/sheet/demo.rs");
+
+    assert!(
+        demo.contains("\"ui-gallery-sheet-demo-panel\""),
+        "sheet demo snippet should expose a unique overlay panel test id for diag scripts",
+    );
+    assert!(
+        !demo.contains("\"ui-gallery-sheet-demo-content\""),
+        "sheet demo snippet should not reuse the DocSection content test id for the open sheet panel",
+    );
+}

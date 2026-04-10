@@ -82,7 +82,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         }),
                     ]
                 })
-                .test_id("ui-gallery-sheet-demo-content")
+                .test_id("ui-gallery-sheet-demo-panel")
             }),
         ])
         .into_element(cx)

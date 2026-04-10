@@ -1,8 +1,13 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-sheet-docs-demo-open-screenshot",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "ui-gallery-sheet-demo-narrow-open-screenshot",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigates to the Sheet page in a narrow window.",
+      "Opens the default Sheet demo.",
+      "Waits for the slide-in motion to settle before capturing screenshot and bundle."
+    ]
   },
   "steps": [
     {
@@ -15,9 +20,8 @@
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 760.0 },
     { "type": "wait_frames", "n": 8 },
-
     {
       "type": "type_text_into",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
@@ -26,7 +30,6 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 4 },
-
     {
       "type": "ensure_visible",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-sheet" },
@@ -47,7 +50,6 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 20 },
-
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
@@ -74,11 +76,11 @@
     { "type": "wait_frames", "n": 40 },
     {
       "type": "capture_screenshot",
-      "label": "ui-gallery-sheet-docs-demo-open-desktop"
+      "label": "ui-gallery-sheet-demo-open-narrow"
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-sheet-docs-demo-open-desktop"
+      "label": "ui-gallery-sheet-demo-open-narrow"
     }
   ]
 }
