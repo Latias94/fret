@@ -24,6 +24,10 @@
       "path": "docs/workstreams/adaptive-layout-contract-closure-v1/BASELINE_AUDIT_2026-04-10.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md"
     },
@@ -64,6 +68,10 @@
     {
       "name": "diff-check",
       "command": "git diff --check"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
     }
   ],
   "evidence": [
@@ -71,6 +79,7 @@
     "docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/M1_CONTRACT_FREEZE_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/BASELINE_AUDIT_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md",

@@ -37,6 +37,9 @@ What this proves now:
   - records the intended public-surface split, naming rules, and the current rename queue.
 - `docs/workstreams/adaptive-layout-contract-closure-v1/M1_CONTRACT_FREEZE_2026-04-10.md`
   - records the lane-local contract freeze and what it unblocks next.
+- `docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md`
+  - pins the owner split for editor rails / inspector sidebars so app-shell `Sidebar` does not
+    become the accidental center of panel-adaptive work.
 - `docs/known-issues.md`
   - already states that remaining viewport breakpoints should mean device-level behavior, not a
     substitute for container queries.
@@ -108,6 +111,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gall
 
 ```bash
 git diff --check
+python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
 
 ## Next gate to promote

@@ -58,6 +58,10 @@ Last updated: 2026-04-10
   - carousel breakpoint vocabulary and page copy,
   - data-table / pagination / navigation-menu responsive teaching surfaces.
 - [x] ALC-041 Land the smallest slice with tests or diag evidence before widening scope.
+- [x] ALC-042 Pin the editor rail / inspector sidebar owner layer so app-shell `Sidebar` does not
+  silently widen into the editor-panel adaptive story.
+- [ ] ALC-043 Decide whether the next reusable editor rail slice belongs in `fret-ui-editor`, a
+  future workspace-shell layer, or can stay app-local after the panel-resize proof is promoted.
 
 ## M4 — Docs, closeout, or follow-on split
 
@@ -109,3 +113,7 @@ Completed sidebar boundary-pin slice evidence:
 - `apps/fret-ui-gallery/src/ui/pages/sidebar.rs`
 - `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`
 - `docs/audits/shadcn-sidebar.md`
+
+Completed editor-panel owner audit evidence:
+
+- `docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md`

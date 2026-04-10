@@ -106,8 +106,14 @@ Current status:
 - A third bounded docs-surface slice pins `SidebarProvider::is_mobile(...)` /
   `is_mobile_breakpoint(...)` as app-shell/device-shell vocabulary and keeps editor/panel rails as
   a separate future surface instead of forcing a premature rename.
+- A fourth bounded audit slice now confirms that reusable editor side panels should stay on the
+  existing editor/workspace owner path (`fret-ui-editor` composites plus workspace shell), while
+  `fret-docking` keeps topology/registry ownership and shadcn `Sidebar` remains app-shell only.
 - Residual risk remains on other dialog-family trigger examples because the lane still lacks an
   explicit narrow-window trigger-width sweep for every docs-path snippet.
+- The next unresolved adaptive owner question is not "rename Sidebar again" but whether a reusable
+  container-aware `PanelRail` / `InspectorSidebar` seam is genuinely shared enough to extract above
+  current app shells.
 
 ## M4 — Closeout or split
 
