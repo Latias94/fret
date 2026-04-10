@@ -1,7 +1,21 @@
 # Adaptive Layout Contract Closure v1 — TODO
 
-Status: Active
+Status: Closed closeout tracker (adaptive taxonomy + proof closure shipped; follow-on only)
 Last updated: 2026-04-10
+
+Companion docs:
+
+- `DESIGN.md`
+- `TARGET_INTERFACE_STATE.md`
+- `MILESTONES.md`
+- `EVIDENCE_AND_GATES.md`
+- `CLOSEOUT_AUDIT_2026-04-10.md`
+
+Closeout note on 2026-04-10:
+
+- `CLOSEOUT_AUDIT_2026-04-10.md` closes this lane on the shipped adaptive taxonomy / proof
+  surface / editor-rail owner-split goal
+- read the checklist rows below as shipped scope accounting, not as an open execution queue
 
 ## Lane opening
 
@@ -68,11 +82,11 @@ Last updated: 2026-04-10
 
 ## M4 — Docs, closeout, or follow-on split
 
-- [ ] ALC-050 Refresh roadmap, todo tracker, known issues, and usage docs as the adaptive story
+- [x] ALC-050 Refresh roadmap, todo tracker, known issues, and usage docs as the adaptive story
   gets frozen.
-- [ ] ALC-051 Decide whether older workstream docs need status notes or can remain pure mechanism
+- [x] ALC-051 Decide whether older workstream docs need status notes or can remain pure mechanism
   references.
-- [ ] ALC-052 Close this lane explicitly or split a narrower follow-on once the first fearless
+- [x] ALC-052 Close this lane explicitly or split a narrower follow-on once the first fearless
   slices reveal the remaining backlog shape.
 
 ## Boundaries to protect
@@ -146,3 +160,11 @@ Completed editor-rail composition evidence:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`
+
+Completed M4 closeout evidence:
+
+- `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`
+- `docs/roadmap.md`
+- `docs/todo-tracker.md`
+- `docs/known-issues.md`
+- `docs/crate-usage-guide.md`

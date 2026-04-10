@@ -1,6 +1,6 @@
 # Adaptive Layout Contract Closure v1 — Target Interface State
 
-Status: target state for M1 adaptive taxonomy freeze
+Status: Closed-lane target-state reference (shipped guidance; follow-on only)
 Last updated: 2026-04-10
 
 Companion docs:
@@ -10,8 +10,16 @@ Companion docs:
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
+- `CLOSEOUT_AUDIT_2026-04-10.md`
 - `M1_CONTRACT_FREEZE_2026-04-10.md`
 - `../../adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md`
+
+Closeout note on 2026-04-10:
+
+- read this file as the shipped target-state reference for the closed adaptive-closure lane,
+  together with `EVIDENCE_AND_GATES.md` and `CLOSEOUT_AUDIT_2026-04-10.md`
+- future adaptive work should reuse the tier split and naming rules recorded here unless fresh
+  evidence justifies a narrower follow-on contract change
 
 This document records the intended end state for the adaptive authoring surface.
 

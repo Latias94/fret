@@ -1,11 +1,18 @@
 # Adaptive Layout Contract Closure v1 — Evidence and Gates
 
-Status: Active
+Status: Closed closeout lane (adaptive taxonomy + proof closure shipped; follow-on only)
 Last updated: 2026-04-10
 
-## Smallest current repro
+Closeout note on 2026-04-10:
 
-Use this sequence before widening the adaptive audit:
+- `CLOSEOUT_AUDIT_2026-04-10.md` closes this lane on the shipped adaptive taxonomy / proof
+  surface / editor-rail owner-split goal.
+- Read the commands below as the closed validation set for this shipped posture, not as an active
+  widening queue.
+
+## Smallest closeout repro
+
+Use this focused validation set when touching the shipped adaptive authoring posture:
 
 ```bash
 cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface
@@ -56,11 +63,15 @@ What this proves now:
     trigger-pointer fix that keeps the Gallery proof stable.
 - `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`
   - records the first reviewable editor-rail composition through the existing workspace shell seam.
+- `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`
+  - records the final closeout verdict and follow-on policy for this closed lane.
 - `docs/known-issues.md`
   - already states that remaining viewport breakpoints should mean device-level behavior, not a
     substitute for container queries.
 - `docs/crate-usage-guide.md`
-  - already keeps adaptive helpers explicit on `fret::env::{...}`.
+  - records the shipped import posture:
+    low-level adaptive reads stay explicit on `fret::env::{...}` while shared classification /
+    policy nouns stay explicit on `fret::adaptive::{...}`.
 - `ecosystem/fret/src/lib.rs`
   - shows the current public adaptive export surface, including the explicit `fret::adaptive`
     facade lane.
@@ -124,7 +135,7 @@ What this proves now:
 - `tools/diag-scripts/docking/container-queries/container-queries-docking-panel-resize.json`
   - current v2 script payload for the promoted panel-resize gate, now with layout-sidecar capture.
 
-## Active gate set
+## Closeout gate set
 
 ### UI Gallery narrow-window proof
 
@@ -188,11 +199,17 @@ git diff --check
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
 
-## Next active gap
+## Follow-on policy
 
-The M2 proof gap and the first M3 composition slice are now closed.
+Do not reopen this lane for:
 
-The next adaptive gap lives in M4:
+- generic responsive cleanup,
+- another broad naming pass without fresh proof pressure,
+- or speculative public rail extraction before a second real consumer exists.
 
-- decide whether this lane closes as-is,
-- or split a narrower follow-on instead of widening this lane past its proof-oriented scope.
+If future adaptive work is needed, start a narrower follow-on such as:
+
+1. one component-family adaptive parity lane,
+2. one editor-rail extraction lane after a second real consumer exists,
+3. or one higher-level adaptive strategy lane if `fret::adaptive` needs to grow beyond today's
+   explicit classification helpers.

@@ -32,8 +32,12 @@ Plan:
   - ADR: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
   - Mechanism baseline: `docs/workstreams/container-queries-v1/container-queries-v1.md`
   - Mechanism baseline: `docs/workstreams/environment-queries-v1/environment-queries-v1.md`
-  - Cross-lane authoring/proof closure:
-    `docs/workstreams/adaptive-layout-contract-closure-v1/DESIGN.md`
+  - Shipped cross-lane authoring/proof closure:
+    `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`
+  - Shipped gate/evidence set:
+    `docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md`
+  - Closeout verdict:
+    `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`
 
 ## Common Diagnostics
 

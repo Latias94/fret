@@ -38,12 +38,11 @@ It complements (but does not replace) ADRs:
     - `docs/workstreams/container-queries-v1/container-queries-v1.md`
     - `docs/workstreams/container-queries-v1/container-queries-v1-todo.md`
     - `docs/workstreams/container-queries-v1/container-queries-v1-milestones.md`
-- Current cross-lane execution surface for authoring taxonomy, Gallery proof, and first adaptive
-  refactors:
-  - `docs/workstreams/adaptive-layout-contract-closure-v1/DESIGN.md`
-  - `docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md`
-  - `docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md`
+- Closed cross-lane closeout record for the shipped adaptive authoring taxonomy, Gallery proof,
+  and editor-rail owner split:
+  - `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`
   - `docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`
 
 ## P0 - Environment queries (viewport/device capabilities)
 
@@ -55,9 +54,10 @@ It complements (but does not replace) ADRs:
     - `docs/workstreams/environment-queries-v1/environment-queries-v1.md`
     - `docs/workstreams/environment-queries-v1/environment-queries-v1-todo.md`
     - `docs/workstreams/environment-queries-v1/environment-queries-v1-milestones.md`
-- Treat `adaptive-layout-contract-closure-v1` as the current lane for cross-lane authoring and
-  first-party proof-surface closure; keep `environment-queries-v1` focused on the mechanism
-  baseline and historical migration record.
+- Treat `adaptive-layout-contract-closure-v1` as the closed closeout record for the shipped
+  cross-lane authoring/proof posture; keep `environment-queries-v1` focused on the mechanism
+  baseline and historical migration record, and start any future adaptive work as a narrower
+  follow-on instead of reopening the closed lane.
 
 ## P1 - Authoring surfaces (imui convergence)
 

@@ -199,8 +199,11 @@ When app code needs explicit semantics nouns, import them intentionally from
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
 import them intentionally from `fret::selector::ui::DepsBuilder`,
 `fret::selector::DepsSignature`, and `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
-Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
-instead of treating breakpoint/media helpers as part of the default app vocabulary.
+Do the same for low-level environment/responsive reads: import them intentionally from
+`fret::env::{...}` instead of treating breakpoint/media helpers as part of the default app
+vocabulary. When app code wants shared adaptive classification or policy nouns above raw query
+reads, import them explicitly from `fret::adaptive::{...}` rather than expecting either lane from
+the default app vocabulary.
 When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
 that helper off the default prelude too and import `fret::children::UiElementSinkExt as _`
 explicitly at the call site.
@@ -268,9 +271,12 @@ collapsed to one public component conversion trait; new docs/examples should fol
 teaching the legacy split conversion trait names. When reusable component code needs explicit
 command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
 of expecting `CommandId` from `fret::component::prelude::*`. When reusable component code needs
-environment/responsive helpers, import them explicitly from `fret::env::{...}` instead of
-expecting breakpoint/media helpers from `fret::component::prelude::*`. When reusable component or
-advanced code intentionally needs raw activation helper glue, import `fret::activate::{on_activate,
+low-level environment/responsive reads, import them explicitly from `fret::env::{...}` instead of
+expecting breakpoint/media helpers from `fret::component::prelude::*`. When reusable component
+code wants shared adaptive classification or policy nouns above raw query reads, import them
+explicitly from `fret::adaptive::{...}` instead of expecting that lane from
+`fret::component::prelude::*`. When reusable component or advanced code intentionally needs raw
+activation helper glue, import `fret::activate::{on_activate,
 on_activate_notify, on_activate_request_redraw, on_activate_request_redraw_notify}` explicitly
 instead of expecting those helper names from the component prelude.
 When reusable component code needs overlay anchoring helpers or overlay stack/introspection nouns,

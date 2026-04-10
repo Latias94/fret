@@ -1,10 +1,11 @@
 # Adaptive Layout Contract Closure v1
 
-Status: Active
+Status: Closed closeout lane (adaptive taxonomy + proof closure shipped; follow-on only)
 Last updated: 2026-04-10
 
 Related:
 
+- `CLOSEOUT_AUDIT_2026-04-10.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -20,6 +21,22 @@ Related:
 - `docs/workstreams/genui-json-render-v1/genui-json-render-v1.md`
 - `docs/known-issues.md`
 - `docs/crate-usage-guide.md`
+
+Closeout reading rule on 2026-04-10:
+
+- treat this document as the historical design record for a closed cross-lane adaptive-closure
+  lane, not as an active execution tracker
+- read the shipped posture from `TARGET_INTERFACE_STATE.md`, `EVIDENCE_AND_GATES.md`, and
+  `CLOSEOUT_AUDIT_2026-04-10.md`
+- reopen only through a narrower follow-on if fresh component-family, editor-rail extraction, or
+  higher-level adaptive-policy evidence appears
+
+Closeout note on 2026-04-10:
+
+- the lane goal is complete enough to close:
+  adaptive taxonomy frozen, low-level vs shared-policy import lanes explicit, user-visible proof
+  surfaces active, and editor-rail ownership proven in running code
+- remaining work is narrower follow-on work rather than unfinished v1 closure debt
 
 This lane exists because Fret already landed the lower-level adaptive mechanisms, but it still
 does not have one active execution surface that answers the framework-level question:

@@ -24,14 +24,13 @@ active plans.
 
 Workstream docs live under `docs/workstreams/` (living implementation trackers; not normative contracts).
 
-Active tracker highlights:
+Tracker highlights:
 
-- Adaptive layout contract closure (cross-lane execution surface for container vs environment
-  queries, breakpoint vocabulary, Gallery proof surfaces, and first fearless-refactor slices):
-  `docs/workstreams/adaptive-layout-contract-closure-v1/DESIGN.md`,
-  `docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md`,
-  `docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md`, and
-  `docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md`.
+- Adaptive layout contract closure closeout record (closed cross-lane authoring taxonomy + proof
+  surface lane for container vs environment queries, breakpoint vocabulary, and editor-rail owner
+  split): `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`,
+  `docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`.
 - Text system v2 (Parley + attributed spans): `docs/workstreams/standalone/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`.
 - Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.

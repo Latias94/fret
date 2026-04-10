@@ -1,7 +1,13 @@
 # Adaptive Layout Contract Closure v1 — Milestones
 
-Status: Active
+Status: Closed closeout lane (adaptive taxonomy + proof closure shipped; follow-on only)
 Last updated: 2026-04-10
+
+Closeout note on 2026-04-10:
+
+- `CLOSEOUT_AUDIT_2026-04-10.md` closes this lane on the shipped adaptive taxonomy / proof
+  surface / editor-rail owner-split goal.
+- Future work should start as a narrower follow-on rather than reopening this broad lane.
 
 ## M0 — Baseline and inventory freeze
 
@@ -133,7 +139,8 @@ Current status:
   surface stays on `InspectorPanel + PropertyGroup + PropertyGrid`.
 - Closed on 2026-04-10 via
   `docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md`.
-- The next active work returns to M4 closeout or follow-on split decisions.
+- This milestone handed the lane back to M4 closeout / follow-on split decisions, which are now
+  resolved.
 
 ## M4 — Closeout or split
 
@@ -150,8 +157,12 @@ Primary evidence:
 
 Current status:
 
-- Active next step.
-- M4 now owns the remaining lane decisions:
-  - refresh the repo-level entrypoints if needed,
-  - decide whether this lane closes cleanly,
-  - or split a narrower follow-on instead of silently widening scope.
+- Closed on 2026-04-10 via
+  `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`.
+- Repo-level entrypoints now point readers to:
+  - `TARGET_INTERFACE_STATE.md`
+  - `EVIDENCE_AND_GATES.md`
+  - `CLOSEOUT_AUDIT_2026-04-10.md`
+- `container-queries-v1` and `environment-queries-v1` remain mechanism/reference lanes rather than
+  reopened authoring trackers.
+- Future adaptive work should start as a narrower follow-on only if fresh evidence appears.
