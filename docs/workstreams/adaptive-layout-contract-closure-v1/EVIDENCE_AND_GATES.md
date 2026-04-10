@@ -9,7 +9,10 @@ Use this sequence before widening the adaptive audit:
 
 ```bash
 cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface
+cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface --no-fail-fast
+cargo nextest run -p fret-ui-shadcn --test navigation_menu_query_mode_reopen --no-fail-fast
 cargo build -p fret-ui-gallery --release
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json --dir target/fret-diag/adaptive-navigation-menu-query-axis --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json --dir target/fret-diag-popup-menu-narrow-sweep --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery
 ```
 
@@ -19,6 +22,8 @@ What this proves now:
   fixes,
 - the Dialog demo trigger/content path also stays within a 420px-wide window after moving width
   ownership onto the preview-root shell,
+- the Navigation Menu docs path now teaches viewport-vs-container ownership explicitly and keeps a
+  real launched-app proof for switching between the two query sources,
 - the lane starts from user-visible narrow-window evidence rather than abstract breakpoint theory,
 - and future adaptive refactors have one immediate UI Gallery regression anchor.
 
@@ -46,6 +51,9 @@ What this proves now:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/M2_PANEL_RESIZE_GATE_PROMOTION_2026-04-10.md`
   - records the passing promotion run, the packed share artifact, and the script-compatibility note
     for the fixed-window panel-resize proof.
+- `docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md`
+  - records the passing query-axis promotion run, the packed share artifact, and the narrowed
+    trigger-pointer fix that keeps the Gallery proof stable.
 - `docs/known-issues.md`
   - already states that remaining viewport breakpoints should mean device-level behavior, not a
     substitute for container queries.
@@ -79,14 +87,26 @@ What this proves now:
 - `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`
   - keeps the sidebar page explicit that `is_mobile(...)` / `is_mobile_breakpoint(...)` are
     app-shell/device-shell controls rather than generic panel-adaptive helpers.
+- `apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs`
+  - keeps the Navigation Menu docs page explicit about query-axis teaching copy and the promoted
+    diag script.
 - `ecosystem/fret-ui-shadcn/tests/combobox_responsive_breakpoint.rs`
   - keeps the viewport/device-shell branch on the responsive combobox follow-up under a focused
     real-runtime gate.
 - `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs`
   - keeps the container-query field orientation proof explicit after renaming the public enum to
     `FieldOrientation::ContainerAdaptive`.
+- `ecosystem/fret-ui-shadcn/tests/navigation_menu_query_mode_reopen.rs`
+  - keeps the real pointer-driven query-switch reopen regression fixed at the component layer.
+- `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
+  - keeps the narrowed pointer-up coordination in the policy layer instead of widening runtime
+    contracts.
+- `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`
+  - keeps the docs-path teaching surface explicit about query-axis ownership.
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json`
   - current narrow-window screenshot/bundle proof surface.
+- `tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json`
+  - current query-axis screenshot/bundle proof surface for the Navigation Menu docs page.
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-demo-narrow-sweep.json`
   - explicit narrow-window proof for the Dialog docs demo trigger and content bounds.
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-narrow-header-sweep.json`
@@ -107,6 +127,22 @@ cargo nextest run -p fret-ui-gallery --test field_docs_surface --no-fail-fast
 cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --no-fail-fast
 cargo nextest run -p fret-ui-shadcn --test combobox_responsive_breakpoint --test field_responsive_orientation --no-fail-fast
 ```
+
+### UI Gallery query-axis teaching proof
+
+```bash
+cargo nextest run -p fret-ui-shadcn --test navigation_menu_query_mode_reopen --no-fail-fast
+cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface --no-fail-fast
+cargo build -p fret-ui-gallery --release
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json --dir target/fret-diag/adaptive-navigation-menu-query-axis --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery
+```
+
+Current promoted run:
+
+- session dir:
+  `target/fret-diag/adaptive-navigation-menu-query-axis/sessions/1775826527322-55840`
+- packed artifact:
+  `target/fret-diag/adaptive-navigation-menu-query-axis/sessions/1775826527322-55840/share/1775826529426.zip`
 
 ### UI Gallery narrow-window screenshot sweep
 
@@ -138,11 +174,11 @@ git diff --check
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
 
-## Remaining proof gap
+## Next active gap
 
-The next M2 gap is no longer panel-resize promotion.
+The M2 proof gap is now closed.
 
-What still needs to land is:
+The next adaptive gap lives in M3:
 
-- one explicit Gallery teaching surface that compares container-driven and viewport-driven adaptive
-  behavior without blending the two into one ambiguous "responsive" story.
+- promote one reviewable editor-rail composition on the existing
+  `WorkspaceFrame.left/right` shell seam before extracting any new public rail primitive.

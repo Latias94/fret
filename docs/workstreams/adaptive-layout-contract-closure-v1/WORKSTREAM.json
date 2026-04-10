@@ -36,6 +36,10 @@
       "path": "docs/workstreams/adaptive-layout-contract-closure-v1/M2_PANEL_RESIZE_GATE_PROMOTION_2026-04-10.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md"
     },
@@ -57,10 +61,13 @@
     }
   ],
   "repro": {
-    "summary": "This lane now keeps both user-visible narrow-window proof and fixed-window panel-resize proof active before widening the adaptive audit.",
+    "summary": "This lane now keeps user-visible narrow-window proof, fixed-window panel-resize proof, and an explicit Navigation Menu query-axis teaching proof active before widening the adaptive audit.",
     "commands": [
       "cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface",
+      "cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface --no-fail-fast",
+      "cargo nextest run -p fret-ui-shadcn --test navigation_menu_query_mode_reopen --no-fail-fast",
       "cargo build -p fret-ui-gallery --release",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json --dir target/fret-diag/adaptive-navigation-menu-query-axis --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery",
       "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json --dir target/fret-diag-popup-menu-narrow-sweep --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery",
       "cargo build -p fret-demo --bin container_queries_docking_demo --release",
       "cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/adaptive-panel-resize-promote --session-auto --pack --include-screenshots --launch target/release/container_queries_docking_demo"
@@ -70,6 +77,18 @@
     {
       "name": "ui-gallery-popup-menu-narrow-surface",
       "command": "cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface"
+    },
+    {
+      "name": "ui-gallery-navigation-menu-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface --no-fail-fast"
+    },
+    {
+      "name": "navigation-menu-query-mode-reopen",
+      "command": "cargo nextest run -p fret-ui-shadcn --test navigation_menu_query_mode_reopen --no-fail-fast"
+    },
+    {
+      "name": "ui-gallery-navigation-menu-query-axis",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json --dir target/fret-diag/adaptive-navigation-menu-query-axis --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery"
     },
     {
       "name": "ui-gallery-popup-menu-narrow-sweep",
@@ -96,6 +115,7 @@
     "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/M2_PANEL_RESIZE_GATE_PROMOTION_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md",
@@ -109,8 +129,13 @@
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json",
     "tools/diag-scripts/container-queries-docking-panel-resize.json",
     "tools/diag-scripts/docking/container-queries/container-queries-docking-panel-resize.json",
+    "apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs",
+    "tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json",
+    "ecosystem/fret-ui-shadcn/tests/navigation_menu_query_mode_reopen.rs",
+    "ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs",
     "apps/fret-examples/src/container_queries_docking_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/demo.rs",
+    "apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs",
     "apps/fret-ui-gallery/src/ui/pages/carousel.rs",
     "ecosystem/fret/src/lib.rs",
     "ecosystem/fret-ui-kit/src/adaptive.rs",

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
+use fret_core::{Modifiers, MouseButton, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{CommandId, Effect, FrameId, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
@@ -766,6 +766,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
                     let entry = states.states.entry(value).or_default();
                     entry.was_escape_close = true;
                     entry.was_click_close = false;
+                    entry.opened_by_pointer_move = false;
                     entry.has_pointer_move_opened = false;
                 }
             }
@@ -1021,6 +1022,14 @@ impl NavigationMenuTrigger {
                     {
                         NavigationMenuTriggerPointerMoveAction::Ignore => false,
                         NavigationMenuTriggerPointerMoveAction::Open => {
+                            let was_open_before = host
+                                .models_mut()
+                                .read(&value_for_pointer_move, |v| v.clone())
+                                .ok()
+                                .flatten()
+                                .is_some_and(|v| {
+                                    v.as_ref() == item_value_for_pointer_move.as_ref()
+                                });
                             let mut root = root_state_for_pointer_move
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
@@ -1031,10 +1040,21 @@ impl NavigationMenuTrigger {
                                 item_value_for_pointer_move.clone(),
                                 cfg,
                             );
+                            let opened_by_pointer_move = host
+                                .models_mut()
+                                .read(&value_for_pointer_move, |v| v.clone())
+                                .ok()
+                                .flatten()
+                                .is_some_and(|v| {
+                                    v.as_ref() == item_value_for_pointer_move.as_ref()
+                                });
+                            let opened_by_pointer_move =
+                                !was_open_before && opened_by_pointer_move;
                             states.states.insert(
                                 item_value_for_pointer_move.clone(),
                                 NavigationMenuTriggerState {
                                     has_pointer_move_opened: true,
+                                    opened_by_pointer_move,
                                     was_click_close: false,
                                     was_escape_close: false,
                                 },
@@ -1088,6 +1108,7 @@ impl NavigationMenuTrigger {
                             let entry = states.states.entry(selected).or_default();
                             entry.was_escape_close = true;
                             entry.was_click_close = false;
+                            entry.opened_by_pointer_move = false;
                             entry.has_pointer_move_opened = false;
 
                             true
@@ -1176,6 +1197,86 @@ impl NavigationMenuTrigger {
                         }),
                     );
 
+                    let root_state_for_pointer_activate = root_state.clone();
+                    let value_for_pointer_activate = value_model.clone();
+                    let trigger_states_for_pointer_activate = trigger_states.clone();
+                    let item_value_for_pointer_activate = item_value.clone();
+                    cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                        if up.button != MouseButton::Left || !up.is_click {
+                            return fret_ui::action::PressablePointerUpResult::Continue;
+                        }
+                        if up.down_hit_pressable_target != Some(action_cx.target) {
+                            return fret_ui::action::PressablePointerUpResult::Continue;
+                        }
+
+                        let current = host
+                            .models_mut()
+                            .read(&value_for_pointer_activate, |v| v.clone())
+                            .ok()
+                            .flatten();
+                        let current_matches = current
+                            .as_ref()
+                            .is_some_and(|v| v.as_ref() == item_value_for_pointer_activate.as_ref());
+                        if current_matches {
+                            let mut states = trigger_states_for_pointer_activate
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            if let Some(entry) =
+                                states.states.get_mut(item_value_for_pointer_activate.as_ref())
+                                && entry.opened_by_pointer_move
+                            {
+                                // Mirror the Radix intent that the first pointer click after a
+                                // hover-driven reopen should not immediately toggle the item back
+                                // closed in the same interaction sequence.
+                                entry.has_pointer_move_opened = false;
+                                entry.opened_by_pointer_move = false;
+                                entry.was_click_close = false;
+                                entry.was_escape_close = false;
+                                return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                            }
+                            return fret_ui::action::PressablePointerUpResult::Continue;
+                        }
+                        if current.is_some() {
+                            return fret_ui::action::PressablePointerUpResult::Continue;
+                        }
+
+                        let mut root = root_state_for_pointer_activate
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        root.on_item_select(
+                            host,
+                            action_cx,
+                            &value_for_pointer_activate,
+                            item_value_for_pointer_activate.clone(),
+                            cfg,
+                        );
+
+                        let now_open = host
+                            .models_mut()
+                            .read(&value_for_pointer_activate, |v| v.clone())
+                            .ok()
+                            .flatten()
+                            .is_some_and(|v| {
+                                v.as_ref() == item_value_for_pointer_activate.as_ref()
+                            });
+
+                        let mut states = trigger_states_for_pointer_activate
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        let entry = states
+                            .states
+                            .entry(item_value_for_pointer_activate.clone())
+                            .or_default();
+                        entry.was_click_close = !now_open;
+                        entry.opened_by_pointer_move = false;
+                        if now_open {
+                            entry.was_escape_close = false;
+                        }
+                        entry.has_pointer_move_opened = false;
+
+                        fret_ui::action::PressablePointerUpResult::SkipActivate
+                    }));
+
                     let root_state_for_activate = root_state.clone();
                     let value_for_activate = value_model.clone();
                     let trigger_states_for_activate = trigger_states.clone();
@@ -1208,6 +1309,7 @@ impl NavigationMenuTrigger {
                                 .entry(item_value_for_activate.clone())
                                 .or_default();
                             entry.was_click_close = !now_open;
+                            entry.opened_by_pointer_move = false;
                             if now_open {
                                 entry.was_escape_close = false;
                             }
@@ -1233,6 +1335,7 @@ impl NavigationMenuTrigger {
                             {
                                 entry.was_escape_close = false;
                                 entry.was_click_close = false;
+                                entry.opened_by_pointer_move = false;
                                 entry.has_pointer_move_opened = false;
                             }
                             return;
@@ -1690,6 +1793,7 @@ impl NavigationMenuRootState {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct NavigationMenuTriggerState {
     pub has_pointer_move_opened: bool,
+    pub opened_by_pointer_move: bool,
     pub was_click_close: bool,
     pub was_escape_close: bool,
 }

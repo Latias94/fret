@@ -113,6 +113,64 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .items_center()
     .into_element(cx);
 
+    let query_source_copy = cx
+        .text_props(TextProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
+            text: if use_container_query {
+                Arc::from("Query source: container width. The demo keeps the window wide but clamps only the local card below md.")
+            } else {
+                Arc::from("Query source: viewport width. The breakpoint follows the full window width for upstream web parity.")
+            },
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: Px(13.0),
+                weight: FontWeight::MEDIUM,
+                slant: Default::default(),
+                line_height: Some(Px(18.0)),
+                letter_spacing_em: None,
+                ..Default::default()
+            }),
+            color: Some(muted_foreground),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        })
+        .test_id("ui-gallery-navigation-menu-query-source-copy");
+
+    let query_outcome_copy = cx
+        .text_props(TextProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
+            text: if use_container_query {
+                Arc::from("Outcome: the Components panel drops to the single-column layout because only the local demo region shrinks.")
+            } else {
+                Arc::from("Outcome: the Components panel stays on the two-column desktop layout because the window itself remains above md.")
+            },
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: Px(13.0),
+                weight: FontWeight::NORMAL,
+                slant: Default::default(),
+                line_height: Some(Px(18.0)),
+                letter_spacing_em: None,
+                ..Default::default()
+            }),
+            color: Some(muted_foreground),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        })
+        .test_id("ui-gallery-navigation-menu-query-outcome-copy");
+
     let demo_container_layout = cx.with_theme(|theme| {
         let layout = if use_container_query {
             // Keep the container below Tailwind's `md` threshold so the demo can showcase the
@@ -375,7 +433,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         },
     );
 
-    ui::v_stack(move |_cx| vec![toggle, demo])
+    ui::v_stack(move |_cx| vec![toggle, query_source_copy, query_outcome_copy, demo])
         .gap(Space::N3)
         .items_start()
         .into_element(cx)

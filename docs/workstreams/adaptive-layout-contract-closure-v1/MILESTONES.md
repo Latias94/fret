@@ -68,6 +68,9 @@ Exit criteria:
 Primary gates:
 
 - `cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface`
+- `cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface --no-fail-fast`
+- `cargo nextest run -p fret-ui-shadcn --test navigation_menu_query_mode_reopen --no-fail-fast`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json --dir target/fret-diag/adaptive-navigation-menu-query-axis --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json --dir target/fret-diag-popup-menu-narrow-sweep --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --session-auto --pack --include-screenshots --launch target/release/container_queries_docking_demo`
 
@@ -84,8 +87,12 @@ Current status:
 - The promoted script now leaves before/after layout sidecars in addition to screenshots and
   bounded bundles, so container-width ownership is reviewable without reopening the older
   container-query implementation lane.
-- M2 remains active because `ALC-031` still needs one explicit Gallery teaching surface that keeps
-  container-driven and viewport-driven behavior visibly separate.
+- The query-axis teaching proof was promoted on 2026-04-10 via the Navigation Menu docs page,
+  focused component/gallery tests, and a passing diag run under
+  `target/fret-diag/adaptive-navigation-menu-query-axis/sessions/1775826527322-55840`.
+- Closed on 2026-04-10 via
+  `docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md`.
+- The next active work returns to M3, with `ALC-044` now the first unresolved bounded slice.
 
 ## M3 — First fearless-refactor slices
 

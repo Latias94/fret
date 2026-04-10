@@ -21,6 +21,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
     let notes = doc_layout::notes_block([
         "The main preview now follows the official new-york-v4 Navigation Menu demo structure (Home, Components, Docs, List, Simple, With Icon), while the container-query toggle remains a Fret-specific follow-up.",
+        "Container Query Toggle is the explicit query-axis teaching surface for this page: keep the window wide, change only the local demo card, and compare viewport-vs-container `md` behavior without mixing the two.",
         "`navigation_menu(cx, model, |cx| ..)` is now the default first-party root helper, while `NavigationMenu::new(model)` remains available when callers want the explicit root builder seam.",
         "`NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator` remain the upstream-shaped lane on the same family rather than an advanced escape hatch.",
         "`NavigationMenu` keeps viewport placement on logical `align=start` by default; under `DirectionProvider(Rtl)` that yields the same visual outcome as the upstream RTL example's explicit `align={dir === \"rtl\" ? \"end\" : \"start\"}` wiring.",
@@ -59,7 +60,9 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-navigation-menu-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let demo_with_toggle = DocSection::build(cx, "Container Query Toggle", demo_with_toggle)
-        .description("Compare viewport-driven and container-driven md breakpoint behavior.")
+        .description(
+            "Keep the window wide, shrink only the local demo card, and compare viewport-driven versus container-driven md breakpoint behavior.",
+        )
         .test_id_prefix("ui-gallery-navigation-menu-container-query-toggle")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
 

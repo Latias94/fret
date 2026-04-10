@@ -45,7 +45,7 @@ Last updated: 2026-04-10
 
 - [x] ALC-030 Keep the existing popup/menu narrow-surface proof green and treat it as this lane's
   first gallery-level regression anchor.
-- [ ] ALC-031 Add or refresh one explicit Gallery proof surface that compares container-driven and
+- [x] ALC-031 Add or refresh one explicit Gallery proof surface that compares container-driven and
   viewport-driven behavior without mixing them.
 - [x] ALC-032 Promote one panel-resize proof surface that validates container-first behavior while
   the window size stays fixed.
@@ -130,3 +130,13 @@ Completed panel-resize gate promotion evidence:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/M2_PANEL_RESIZE_GATE_PROMOTION_2026-04-10.md`
 - `tools/diag-scripts/container-queries-docking-panel-resize.json`
 - `tools/diag-scripts/docking/container-queries/container-queries-docking-panel-resize.json`
+
+Completed query-axis proof evidence:
+
+- `docs/workstreams/adaptive-layout-contract-closure-v1/M2_GALLERY_QUERY_AXIS_PROOF_2026-04-10.md`
+- `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/demo.rs`
+- `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`
+- `apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs`
+- `ecosystem/fret-ui-shadcn/tests/navigation_menu_query_mode_reopen.rs`
+- `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
+- `tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json`
