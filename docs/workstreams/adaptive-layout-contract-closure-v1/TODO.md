@@ -47,7 +47,7 @@ Last updated: 2026-04-10
   first gallery-level regression anchor.
 - [ ] ALC-031 Add or refresh one explicit Gallery proof surface that compares container-driven and
   viewport-driven behavior without mixing them.
-- [ ] ALC-032 Promote one panel-resize proof surface that validates container-first behavior while
+- [x] ALC-032 Promote one panel-resize proof surface that validates container-first behavior while
   the window size stays fixed.
 
 ## M3 — First fearless-refactor slices
@@ -124,3 +124,9 @@ Completed editor-panel owner audit evidence:
 Completed workspace-rail seam audit evidence:
 
 - `docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md`
+
+Completed panel-resize gate promotion evidence:
+
+- `docs/workstreams/adaptive-layout-contract-closure-v1/M2_PANEL_RESIZE_GATE_PROMOTION_2026-04-10.md`
+- `tools/diag-scripts/container-queries-docking-panel-resize.json`
+- `tools/diag-scripts/docking/container-queries/container-queries-docking-panel-resize.json`

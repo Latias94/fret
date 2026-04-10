@@ -78,7 +78,14 @@ Current status:
 - `ui-gallery-overlay-narrow-header-sweep.json` also passed after the Dialog width-lane fix, so
   sampled Popover / Sheet / Drawer / Alert Dialog overlay surfaces do not currently show the same
   narrow-window regression class.
-- The panel-resize gate still needs to be promoted into this lane's active evidence set.
+- The panel-resize gate was promoted on 2026-04-10 via the `container_queries_docking_demo`
+  release build plus a passing diag run under
+  `target/fret-diag/adaptive-panel-resize-promote/sessions/1775822919781-88694`.
+- The promoted script now leaves before/after layout sidecars in addition to screenshots and
+  bounded bundles, so container-width ownership is reviewable without reopening the older
+  container-query implementation lane.
+- M2 remains active because `ALC-031` still needs one explicit Gallery teaching surface that keeps
+  container-driven and viewport-driven behavior visibly separate.
 
 ## M3 — First fearless-refactor slices
 

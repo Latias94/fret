@@ -43,6 +43,9 @@ What this proves now:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md`
   - resolves the next-shell seam decision by pinning `WorkspaceFrame.left/right` as the existing
     outer rail seam while keeping rail recipes app-local for now.
+- `docs/workstreams/adaptive-layout-contract-closure-v1/M2_PANEL_RESIZE_GATE_PROMOTION_2026-04-10.md`
+  - records the passing promotion run, the packed share artifact, and the script-compatibility note
+    for the fixed-window panel-resize proof.
 - `docs/known-issues.md`
   - already states that remaining viewport breakpoints should mean device-level behavior, not a
     substitute for container queries.
@@ -88,7 +91,11 @@ What this proves now:
   - explicit narrow-window proof for the Dialog docs demo trigger and content bounds.
 - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-narrow-header-sweep.json`
   - sampled overlay-family proof that Popover / Sheet / Drawer / Alert Dialog still fit in a
-    narrow window after the current width-hygiene slice.
+  narrow window after the current width-hygiene slice.
+- `tools/diag-scripts/container-queries-docking-panel-resize.json`
+  - stable redirect path for the promoted panel-resize gate.
+- `tools/diag-scripts/docking/container-queries/container-queries-docking-panel-resize.json`
+  - current v2 script payload for the promoted panel-resize gate, now with layout-sidecar capture.
 
 ## Active gate set
 
@@ -110,6 +117,20 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gall
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-narrow-header-sweep.json --dir target/fret-diag-overlay-narrow-header-sweep --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery
 ```
 
+### Fixed-window panel-resize proof
+
+```bash
+cargo build -p fret-demo --bin container_queries_docking_demo --release
+cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/adaptive-panel-resize-promote --session-auto --pack --include-screenshots --launch target/release/container_queries_docking_demo
+```
+
+Current promoted run:
+
+- session dir:
+  `target/fret-diag/adaptive-panel-resize-promote/sessions/1775822919781-88694`
+- packed artifact:
+  `target/fret-diag/adaptive-panel-resize-promote/sessions/1775822919781-88694/share/1775822919993.zip`
+
 ### Diff hygiene
 
 ```bash
@@ -117,18 +138,11 @@ git diff --check
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
 
-## Next gate to promote
+## Remaining proof gap
 
-The existing panel-resize proof from the container-query lane should be promoted into this lane
-once the baseline inventory is frozen:
+The next M2 gap is no longer panel-resize promotion.
 
-```bash
-cargo build -p fret-demo --bin container_queries_docking_demo --release
-cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --session-auto --pack --include-screenshots --launch target/release/container_queries_docking_demo
-```
+What still needs to land is:
 
-Why this matters:
-
-- it proves panel-width behavior while the window size stays fixed,
-- it keeps editor-grade docking reality in scope,
-- and it prevents the lane from confusing viewport breakpoints with true container responsiveness.
+- one explicit Gallery teaching surface that compares container-driven and viewport-driven adaptive
+  behavior without blending the two into one ambiguous "responsive" story.

@@ -1,16 +1,37 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "container-queries-docking-panel-resize",
+    "tags": ["docking", "container-queries", "panel-resize", "layout"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Launches the container_queries_docking_demo harness.",
+      "Captures before/after evidence while resizing the left dock panel inside a fixed window.",
+      "Leaves bundle, screenshot, and layout-sidecar evidence for container-first panel adaptation."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 5 },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "cq-dock-demo-mode" } },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cq-dock-demo-mode" }
+      },
       "timeout_frames": 240
     },
     { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "container-queries-docking-before.layout"
+    },
     { "type": "capture_bundle", "label": "container-queries-docking-before" },
-    { "type": "capture_screenshot" },
+    {
+      "type": "capture_screenshot",
+      "label": "container-queries-docking-before"
+    },
     {
       "type": "drag_pointer",
       "target": { "kind": "test_id", "id": "cq-dock-demo-split-anchor" },
@@ -19,9 +40,18 @@
       "steps": 24
     },
     { "type": "wait_frames", "n": 12 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "container-queries-docking-after.layout"
+    },
     { "type": "capture_bundle", "label": "container-queries-docking-after" },
-    { "type": "capture_screenshot" },
-    { "type": "capture_bundle", "label": "container-queries-docking-panel-resize" }
+    {
+      "type": "capture_screenshot",
+      "label": "container-queries-docking-after"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "container-queries-docking-panel-resize"
+    }
   ]
 }
-
