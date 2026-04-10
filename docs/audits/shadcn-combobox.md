@@ -101,8 +101,9 @@ Base UI combobox lifecycle semantics.
   typed recipe surface (`trigger(...)`, `ComboboxContent::new([..])`,
   `ComboboxInput::children([InputGroupAddon...])`) rather than a generic root `children(...)`
   API.
-- Note: `Combobox::responsive(true)` remains the viewport-driven follow-up for the upstream
-  responsive example instead of becoming another default docs-path section.
+- Note: `Combobox::device_shell_responsive(true)` remains the explicit viewport/device-shell
+  follow-up for the upstream responsive example instead of becoming another default docs-path
+  section.
 
 ## Known gaps
 

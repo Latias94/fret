@@ -329,7 +329,7 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
                             move |cx| {
                                 vec![
                                     Combobox::new(value, open)
-                                        .responsive(true)
+                                        .device_shell_responsive(true)
                                         .a11y_label("Combobox")
                                         .items(items)
                                         .into_element_parts(cx, |_cx| {

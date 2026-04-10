@@ -823,8 +823,8 @@ pub struct Combobox {
     content_side_offset: Px,
     content_align_offset: Px,
     anchor_element_id: Option<GlobalElementId>,
-    responsive: bool,
-    responsive_device_md_breakpoint: Px,
+    device_shell_responsive: bool,
+    device_shell_md_breakpoint: Px,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -931,8 +931,8 @@ impl Combobox {
             content_side_offset: Px(6.0),
             content_align_offset: Px(0.0),
             anchor_element_id: None,
-            responsive: false,
-            responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
+            device_shell_responsive: false,
+            device_shell_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
             placeholder: Arc::from("Select..."),
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
@@ -1019,17 +1019,18 @@ impl Combobox {
 
     /// When enabled, follows the upstream shadcn "responsive combobox" recipe: it uses a Drawer on
     /// narrow viewports (mobile) and a Popover on desktop.
-    pub fn responsive(mut self, responsive: bool) -> Self {
-        self.responsive = responsive;
+    pub fn device_shell_responsive(mut self, responsive: bool) -> Self {
+        self.device_shell_responsive = responsive;
         self
     }
 
-    /// Overrides the device-level viewport breakpoint used by [`Combobox::responsive`].
+    /// Overrides the device-level viewport breakpoint used by
+    /// [`Combobox::device_shell_responsive`].
     ///
     /// This is intentionally **viewport-driven** (mobile vs desktop), not container-query-driven.
     /// For panel-width responsiveness, prefer container queries (ADR 0231).
-    pub fn responsive_device_md_breakpoint(mut self, breakpoint: Px) -> Self {
-        self.responsive_device_md_breakpoint = breakpoint;
+    pub fn device_shell_md_breakpoint(mut self, breakpoint: Px) -> Self {
+        self.device_shell_md_breakpoint = breakpoint;
         self
     }
 
@@ -1208,8 +1209,8 @@ impl Combobox {
             self.disabled,
             self.control_id,
             self.a11y_label,
-            self.responsive,
-            self.responsive_device_md_breakpoint,
+            self.device_shell_responsive,
+            self.device_shell_md_breakpoint,
             self.search_enabled,
             self.group_separators,
             self.auto_highlight,
@@ -1255,8 +1256,8 @@ fn combobox_with_patch<H: UiHost>(
     disabled: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
-    responsive: bool,
-    responsive_device_md_breakpoint: Px,
+    device_shell_responsive: bool,
+    device_shell_md_breakpoint: Px,
     search_enabled: bool,
     group_separators: bool,
     auto_highlight: bool,
@@ -1539,10 +1540,10 @@ fn combobox_with_patch<H: UiHost>(
         let is_desktop = fret_ui_kit::declarative::viewport_width_at_least(
             cx,
             Invalidation::Layout,
-            responsive_device_md_breakpoint,
+            device_shell_md_breakpoint,
             fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
         );
-        if responsive && !is_desktop {
+        if device_shell_responsive && !is_desktop {
             let addon_slots_for_trigger = combobox_input_addon_slots(input_addons);
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();
             let open_change_reason_model_for_content = open_change_reason_model.clone();

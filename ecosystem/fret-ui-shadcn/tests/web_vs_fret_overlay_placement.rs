@@ -8270,7 +8270,7 @@ fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &
 
 fn combobox_demo_open_snapshot(
     theme: &WebGoldenTheme,
-    responsive: bool,
+    device_shell_responsive: bool,
 ) -> fret_core::SemanticsSnapshot {
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -8298,7 +8298,7 @@ fn combobox_demo_open_snapshot(
 
         Combobox::new(value.clone(), open.clone())
             .a11y_label("Select a fruit")
-            .responsive(responsive)
+            .device_shell_responsive(device_shell_responsive)
             .items(items)
             .into_element_parts(cx, |_cx| {
                 vec![

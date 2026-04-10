@@ -116,7 +116,7 @@ Legend:
 | Dropdown Menu | `dropdown_menu` | `tools/diag-scripts/ui-gallery-dropdown-open-select.json`, `tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json` | TODO | Open/select + submenu dismiss | In progress | Add safe-corridor sweep + bounds gate. |
 | Empty | `empty` | `tools/diag-scripts/ui-gallery-empty-background-gradient-screenshot.json` | `ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs` | Layout + visuals (responsive padding; background) | In progress | Add non-overlap sub-part anchors if typography changes. |
 | Extras | `shadcn_extras` | `tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json` | TODO | Visual smoke + layout | In progress | Convert screenshots to specific invariants over time. |
-| Field | `field` | `tools/diag-scripts/ui-gallery-field-docs-smoke.json`, `tools/diag-scripts/ui-gallery-field-responsive-orientation-container-md.json` | `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs` | Layout (container-driven responsive orientation) | In progress | Add focus-visible + invalid ring token gates if needed. |
+| Field | `field` | `tools/diag-scripts/ui-gallery-field-docs-smoke.json`, `tools/diag-scripts/ui-gallery-field-responsive-orientation-container-md.json` | `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs` | Layout (container-driven container-adaptive orientation) | In progress | Add focus-visible + invalid ring token gates if needed. |
 | Form | `form` | TODO | TODO | TODO | TODO | |
 | Forms | `forms` | TODO | TODO | TODO | TODO | |
 | Hover Card | `hover_card` | `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json` | TODO | Overlay scroll clamp | In progress | Add hover-intent + focus behavior gates. |

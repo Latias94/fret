@@ -433,8 +433,9 @@ pub enum FieldOrientation {
     #[default]
     Vertical,
     Horizontal,
-    /// Matches the upstream `orientation="responsive"` variant (container-query driven in web).
-    Responsive,
+    /// Matches the upstream `orientation="responsive"` outcome while naming the container-query
+    /// axis explicitly on the Fret surface.
+    ContainerAdaptive,
 }
 
 #[derive(Debug)]
@@ -1936,7 +1937,7 @@ impl Field {
                                 },
                                 move |_cx| children,
                             ),
-                            FieldOrientation::Responsive => {
+                            FieldOrientation::ContainerAdaptive => {
                                 if md_breakpoint {
                                     let mut children_row = children.into_iter().collect::<Vec<_>>();
                                     let first_has_flex_grow = children_row

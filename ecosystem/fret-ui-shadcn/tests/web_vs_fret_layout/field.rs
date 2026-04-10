@@ -151,7 +151,7 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
             .into_element(cx);
 
         let field = shadcn::Field::new(vec![content, input])
-            .orientation(shadcn::FieldOrientation::Responsive)
+            .orientation(shadcn::FieldOrientation::ContainerAdaptive)
             .into_element(cx);
 
         vec![cx.container(

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "slug": "adaptive-layout-contract-closure-v1",
+  "title": "Adaptive Layout Contract Closure v1",
+  "status": "active",
+  "updated": "2026-04-10",
+  "scope_kind": "execution",
+  "problem": "Fret already ships container queries, environment queries, and Tailwind-like breakpoint helpers, but it still lacks one authoritative execution lane that closes the adaptive UI story end-to-end: which behaviors follow container width vs viewport/device capabilities, which helpers belong on the public authoring path, and how first-party gallery/docs/gates prove narrow-window and resizable-panel outcomes.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/M1_CONTRACT_FREEZE_2026-04-10.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/BASELINE_AUDIT_2026-04-10.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/container-queries-v1/container-queries-v1.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/environment-queries-v1/environment-queries-v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the UI Gallery narrow-surface proof and the popup/menu sweep before widening the adaptive audit.",
+    "commands": [
+      "cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface",
+      "cargo build -p fret-ui-gallery --release",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json --dir target/fret-diag-popup-menu-narrow-sweep --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery"
+    ]
+  },
+  "gates": [
+    {
+      "name": "ui-gallery-popup-menu-narrow-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface"
+    },
+    {
+      "name": "ui-gallery-popup-menu-narrow-sweep",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json --dir target/fret-diag-popup-menu-narrow-sweep --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/adaptive-layout-contract-closure-v1/DESIGN.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/M1_CONTRACT_FREEZE_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/BASELINE_AUDIT_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md",
+    "docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md",
+    "docs/workstreams/container-queries-v1/container-queries-v1.md",
+    "docs/workstreams/environment-queries-v1/environment-queries-v1.md",
+    "docs/known-issues.md",
+    "docs/crate-usage-guide.md",
+    "apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs",
+    "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json",
+    "apps/fret-ui-gallery/src/ui/snippets/navigation_menu/demo.rs",
+    "apps/fret-ui-gallery/src/ui/pages/carousel.rs",
+    "ecosystem/fret/src/lib.rs",
+    "ecosystem/fret-ui-kit/src/adaptive.rs",
+    "ecosystem/fret-ui-kit/src/declarative/container_queries.rs",
+    "ecosystem/fret-ui-kit/src/declarative/viewport_queries.rs",
+    "ecosystem/fret-ui-shadcn/src/carousel.rs",
+    "ecosystem/fret-ui-shadcn/src/dialog.rs",
+    "ecosystem/fret-ui-shadcn/src/drawer.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the adaptive taxonomy, proof surfaces, and first fearless-refactor slices are explicit. Do not reopen the older mechanism lanes for broad authoring/gateway work."
+  }
+}

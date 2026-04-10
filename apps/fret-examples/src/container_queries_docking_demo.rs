@@ -173,7 +173,7 @@ impl DemoDockPanelFactory {
                             shadcn::FieldLabel::new("Name").into_element(cx),
                             shadcn::FieldContent::new([field_input_stub]).into_element(cx),
                         ])
-                        .orientation(shadcn::FieldOrientation::Responsive)
+                        .orientation(shadcn::FieldOrientation::ContainerAdaptive)
                         .into_element(cx)
                         .attach_semantics(
                             SemanticsDecoration::default().test_id("cq-dock-demo-field"),

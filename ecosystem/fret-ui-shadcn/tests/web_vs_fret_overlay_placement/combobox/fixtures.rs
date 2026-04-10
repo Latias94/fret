@@ -68,7 +68,7 @@ fn build_combobox_responsive_overlay(
 
     Combobox::new(value, open.clone())
         .a11y_label("Select a framework")
-        .responsive(true)
+        .device_shell_responsive(true)
         .items(items)
         .into_element_parts(cx, |_cx| {
             vec![shadcn::ComboboxPart::from(

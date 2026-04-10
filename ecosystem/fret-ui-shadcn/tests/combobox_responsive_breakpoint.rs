@@ -141,7 +141,7 @@ fn render_frame(
                                 move |cx| {
                                     vec![
                                         Combobox::new(value, open)
-                                            .responsive(true)
+                                            .device_shell_responsive(true)
                                             .a11y_label("Combobox")
                                             .test_id_prefix("combobox-responsive")
                                             .items(items)

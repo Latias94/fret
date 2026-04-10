@@ -9,6 +9,7 @@ fn field_page_documents_source_axes_and_children_api_decision() {
     for needle in [
         "Reference stack: shadcn Field docs, base/radix field recipes, and the corresponding base/new-york example sets.",
         "Headless mechanism cross-check: Base UI defines a dedicated field/label/control/description/error split, while Radix Primitives does not ship a standalone generic `Field` primitive.",
+        "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and the upstream `responsive` outcome via `FieldOrientation::ContainerAdaptive`.",
         "No extra generic root `compose()` / `asChild` / `children(...)` API is needed here",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "Preview mirrors the upstream shadcn Field docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Anatomy`, `Form`, `Input`, `Textarea`, `Select`, `Slider`, `Fieldset`, `Checkbox`, `Radio`, `Switch`, `Choice Card`, `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`.",

@@ -11,7 +11,7 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
         "Headless contract references: Base UI combobox parts and combobox root semantics.",
         "Radix Primitives does not ship a standalone `Combobox` primitive",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
-        "`Combobox::responsive(true)` remains the viewport-driven follow-up for the responsive example instead of widening the default docs path.",
+        "`Combobox::device_shell_responsive(true)` remains the explicit viewport/device-shell follow-up for the responsive example instead of widening the default docs path.",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here",
         "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
@@ -64,6 +64,7 @@ fn combobox_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let popup = include_str!("../src/ui/snippets/combobox/trigger_button.rs");
     let input_group = include_str!("../src/ui/snippets/combobox/input_group.rs");
     let rtl = include_str!("../src/ui/snippets/combobox/rtl.rs");
+    let normalized_basic = normalize_ws(basic);
 
     for needle in [
         "use fret::{UiChild, UiCx};",
@@ -90,6 +91,14 @@ fn combobox_docs_path_snippets_stay_copyable_and_docs_aligned() {
             "combobox basic snippet should keep the docs-aligned content/input composition visible; missing `{needle}`"
         );
     }
+    assert!(
+        normalized_basic.contains(".w_full().max_w(Px(260.0)).min_w_0()"),
+        "combobox basic snippet should keep width ownership on the caller/root lane while allowing whitespace-insensitive formatting",
+    );
+    assert!(
+        !basic.contains(".width_px(Px(260.0))"),
+        "combobox basic snippet should keep width ownership on the caller/root lane instead of forcing a fixed-width trigger",
+    );
 
     for needle in [
         ".variant(shadcn::ComboboxTriggerVariant::Button)",
@@ -137,6 +146,32 @@ fn combobox_docs_path_snippets_stay_copyable_and_docs_aligned() {
     assert!(
         !combined.contains("Combobox::children("),
         "combobox docs-path snippets should not widen the root surface into a generic children API",
+    );
+}
+
+#[test]
+fn combobox_follow_up_long_list_keeps_width_on_the_caller_lane() {
+    let long_list = include_str!("../src/ui/snippets/combobox/long_list.rs");
+    let normalized_long_list = normalize_ws(long_list);
+
+    for needle in [".test_id_prefix(\"ui-gallery-combobox-long-list\")"] {
+        assert!(
+            long_list.contains(needle),
+            "combobox long-list follow-up should clamp to the docs column while keeping caller-owned width; missing `{needle}`",
+        );
+    }
+    assert!(
+        normalized_long_list.contains(".w_full().max_w(Px(320.0)).min_w_0()"),
+        "combobox long-list follow-up should keep the combobox root on the caller-owned width lane",
+    );
+    assert!(
+        normalized_long_list.contains(".w_full().max_w(Px(360.0)).min_w_0()"),
+        "combobox long-list follow-up should keep the outer preview shell on the caller-owned width lane",
+    );
+
+    assert!(
+        !long_list.contains(".width_px(Px(320.0))"),
+        "combobox long-list follow-up should not force a fixed-width trigger that can overflow a narrow docs column",
     );
 }
 

@@ -84,7 +84,7 @@ pub(super) fn preview_combobox(
         "Radix Primitives does not ship a standalone `Combobox` primitive, so this family aligns shadcn docs/recipes and Base UI headless combobox semantics rather than a dedicated Radix primitive export.",
         "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
-        "`Combobox::responsive(true)` remains the viewport-driven follow-up for the responsive example instead of widening the default docs path.",
+        "`Combobox::device_shell_responsive(true)` remains the explicit viewport/device-shell follow-up for the responsive example instead of widening the default docs path.",
         "`Combobox::required(true)` now covers both the closed trigger surface and the open search input surface, so required semantics follow the actual combobox node across states without widening the recipe to a generic children API.",
         "`Combobox::aria_invalid(true)` is the root invalid lane; callers should not restate invalid state on `ComboboxInput` just to get trigger/search chrome.",
         "Combobox is intentionally a Popover + Command recipe surface; the remaining work here is docs/public-surface drift rather than a `fret-ui` mechanism bug.",

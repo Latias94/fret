@@ -155,6 +155,16 @@ pub mod env {
     };
 }
 
+/// Explicit higher-level adaptive policy vocabulary for app code that wants shared classification
+/// helpers above raw query reads.
+pub mod adaptive {
+    pub use fret_ui_kit::adaptive::{
+        AdaptiveQuerySource, DeviceAdaptiveClass, DeviceAdaptivePolicy, DeviceAdaptiveSnapshot,
+        PanelAdaptiveClass, PanelAdaptivePolicy, device_adaptive_class, device_adaptive_snapshot,
+        panel_adaptive_class,
+    };
+}
+
 /// Explicit child-collection helpers for app code that opts into manual sink-style composition.
 pub mod children {
     pub use fret_ui_kit::ui::UiElementSinkExt;
@@ -3533,6 +3543,15 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("Space"));
         assert!(!app_prelude_exports_symbol("TextOverflow"));
         assert!(!app_prelude_exports_symbol("TextWrap"));
+        assert!(!app_prelude_exports_symbol("AdaptiveQuerySource"));
+        assert!(!app_prelude_exports_symbol("DeviceAdaptiveClass"));
+        assert!(!app_prelude_exports_symbol("DeviceAdaptivePolicy"));
+        assert!(!app_prelude_exports_symbol("DeviceAdaptiveSnapshot"));
+        assert!(!app_prelude_exports_symbol("PanelAdaptiveClass"));
+        assert!(!app_prelude_exports_symbol("PanelAdaptivePolicy"));
+        assert!(!app_prelude_exports_symbol("device_adaptive_class"));
+        assert!(!app_prelude_exports_symbol("device_adaptive_snapshot"));
+        assert!(!app_prelude_exports_symbol("panel_adaptive_class"));
         assert!(!app_prelude_exports_symbol("accent_color"));
         assert!(!app_prelude_exports_symbol("tailwind"));
         assert!(!app_prelude_exports_symbol("container_breakpoints"));
@@ -3695,6 +3714,7 @@ mod authoring_surface_policy_tests {
             })
             .collect::<std::collections::BTreeSet<_>>();
         let expected = [
+            "adaptive",
             "activate",
             "actions",
             "assets",
@@ -3876,6 +3896,20 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn root_surface_exposes_explicit_adaptive_module() {
+        let root_header = root_surface_header_source();
+
+        assert!(root_header.contains("pub mod adaptive {"));
+        assert!(root_header.contains("pub use fret_ui_kit::adaptive::{"));
+        assert!(root_header.contains("AdaptiveQuerySource, DeviceAdaptiveClass,"));
+        assert!(root_header.contains("DeviceAdaptivePolicy,"));
+        assert!(root_header.contains("DeviceAdaptiveSnapshot,"));
+        assert!(root_header.contains("PanelAdaptiveClass, PanelAdaptivePolicy,"));
+        assert!(root_header.contains("device_adaptive_class, device_adaptive_snapshot,"));
+        assert!(root_header.contains("panel_adaptive_class,"));
+    }
+
+    #[test]
     fn app_and_advanced_modules_expose_view_runtime_on_explicit_lanes_only() {
         let root_header = root_surface_header_source();
         let advanced_surface = advanced_prelude_source();
@@ -3964,6 +3998,15 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("SemanticsProps"));
         assert!(!app_prelude_exports_symbol("UiElementSinkExt"));
+        assert!(!app_prelude_exports_symbol("AdaptiveQuerySource"));
+        assert!(!app_prelude_exports_symbol("DeviceAdaptiveClass"));
+        assert!(!app_prelude_exports_symbol("DeviceAdaptivePolicy"));
+        assert!(!app_prelude_exports_symbol("DeviceAdaptiveSnapshot"));
+        assert!(!app_prelude_exports_symbol("PanelAdaptiveClass"));
+        assert!(!app_prelude_exports_symbol("PanelAdaptivePolicy"));
+        assert!(!app_prelude_exports_symbol("device_adaptive_class"));
+        assert!(!app_prelude_exports_symbol("device_adaptive_snapshot"));
+        assert!(!app_prelude_exports_symbol("panel_adaptive_class"));
         assert!(!app_prelude_exports_symbol("ContainerQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ViewportQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ImageMetadata"));
@@ -4051,6 +4094,17 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude_exports_symbol("SemanticsRole"));
         assert!(!component_prelude.contains("pub use fret_ui_kit::prelude::*;"));
         assert!(!component_prelude_exports_symbol("accent_color"));
+        assert!(!component_prelude_exports_symbol("AdaptiveQuerySource"));
+        assert!(!component_prelude_exports_symbol("DeviceAdaptiveClass"));
+        assert!(!component_prelude_exports_symbol("DeviceAdaptivePolicy"));
+        assert!(!component_prelude_exports_symbol("DeviceAdaptiveSnapshot"));
+        assert!(!component_prelude_exports_symbol("PanelAdaptiveClass"));
+        assert!(!component_prelude_exports_symbol("PanelAdaptivePolicy"));
+        assert!(!component_prelude_exports_symbol("device_adaptive_class"));
+        assert!(!component_prelude_exports_symbol(
+            "device_adaptive_snapshot"
+        ));
+        assert!(!component_prelude_exports_symbol("panel_adaptive_class"));
         assert!(!component_prelude_exports_symbol("container_breakpoints"));
         assert!(!component_prelude_exports_symbol("safe_area_insets"));
         assert!(!component_prelude_exports_symbol("viewport_breakpoints"));

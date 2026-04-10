@@ -57,7 +57,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
                     .test_id("ui-gallery-field-responsive-name-input"),
             ])
-            .orientation(shadcn::FieldOrientation::Responsive)
+            .orientation(shadcn::FieldOrientation::ContainerAdaptive)
             .into_element(cx),
             shadcn::Field::new([
                 shadcn::Button::new("Submit").into_element(cx),
@@ -65,7 +65,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx),
             ])
-            .orientation(shadcn::FieldOrientation::Responsive)
+            .orientation(shadcn::FieldOrientation::ContainerAdaptive)
             .into_element(cx),
         ])
         .into_element(cx),

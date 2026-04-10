@@ -139,7 +139,7 @@ fn render_field_and_measure(
                 let control = fixed(cx, Px(220.0), Px(44.0)).test_id("field.control");
 
                 let field = Field::new([label, control])
-                    .orientation(FieldOrientation::Responsive)
+                    .orientation(FieldOrientation::ContainerAdaptive)
                     .into_element(cx);
 
                 vec![cx.container(
@@ -182,7 +182,7 @@ fn render_field_and_measure(
 }
 
 #[test]
-fn field_orientation_responsive_follows_container_md_breakpoint() {
+fn field_orientation_container_adaptive_follows_container_md_breakpoint() {
     // Narrow container (< md): vertical stack.
     let (label, control) = render_field_and_measure(Px(600.0), 2);
     assert!(

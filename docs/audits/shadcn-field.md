@@ -54,8 +54,11 @@ docs and example implementations in `repo-ref/ui`.
 - `FieldDescription` expands to full width by default to match upstream wrapping behavior (`w-full`).
 - `FieldDescription` negative-margin detail for “description before final sibling” is supported
   (upstream uses `nth-last-2:-mt-1`).
-- `FieldGroup` supports upstream `orientation="responsive"` behavior:
-  - Approximates the `@md/field-group` container query via a viewport breakpoint (`>=768px`).
+- `Field` supports the upstream `orientation="responsive"` outcome via
+  `FieldOrientation::ContainerAdaptive`:
+  - Evaluates the `@md/field-group` threshold via `container_width_at_least(...)`, with a
+    viewport-width fallback only while the container region is still unknown in frame-lagged
+    query scenarios.
   - Applies `w-auto` to direct children when in row layout; for `<input>/<textarea>`, approximates
     the browser default `cols=20` intrinsic width (so the input does not expand to the widest sibling).
 

@@ -205,6 +205,7 @@ macro_rules! ui_component_render_once {
 }
 
 pub mod activate;
+pub mod adaptive;
 pub mod colors;
 pub mod command;
 mod corners4;

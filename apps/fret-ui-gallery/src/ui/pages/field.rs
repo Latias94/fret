@@ -43,7 +43,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Use `FieldSeparator` sparingly so grouped sections remain understandable to screen readers.",
     ]);
     let api_reference = doc_layout::notes_block([
-        "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
+        "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and the upstream `responsive` outcome via `FieldOrientation::ContainerAdaptive`.",
         "`Field::build(...)` is the focused field-local association lane when parts should share labeling/description context without manually threading ids.",
         "`field_set(...)` and `field_group(...)` are the default first-party grouped authoring entrypoints; `FieldSet` / `FieldGroup` remain the underlying typed recipe surface when direct builder access is useful.",
         "`FieldLegend` and `FieldSeparator` cover semantic grouping labels and section separation.",
@@ -61,6 +61,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Field::build(...)` now also supports `Input` / `Textarea` auto association, but this page keeps explicit-id text-field examples so the default teaching surface stays closer to the upstream docs.",
         "Choice Card keeps the recipe shorthand (`RadioGroupItemVariant::ChoiceCard`) on purpose, while the next composable-children section shows the explicit wrapper lane.",
         "The responsive section keeps one gallery-only width toggle so the docs-aligned responsive layout can be exercised across the container breakpoint.",
+        "`FieldOrientation::ContainerAdaptive` keeps the public API explicit about the container-query axis even though the upstream docs call the layout `responsive`.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
         "The current audit still points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
         "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
