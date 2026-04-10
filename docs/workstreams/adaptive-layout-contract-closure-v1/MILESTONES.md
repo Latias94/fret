@@ -103,6 +103,9 @@ Current status:
   `Combobox::device_shell_responsive(...)` / `device_shell_md_breakpoint(...)` for the
   viewport/device-shell branch and `FieldOrientation::ContainerAdaptive` for the container-query
   field layout lane.
+- A third bounded docs-surface slice pins `SidebarProvider::is_mobile(...)` /
+  `is_mobile_breakpoint(...)` as app-shell/device-shell vocabulary and keeps editor/panel rails as
+  a separate future surface instead of forcing a premature rename.
 - Residual risk remains on other dialog-family trigger examples because the lane still lacks an
   explicit narrow-window trigger-width sweep for every docs-path snippet.
 

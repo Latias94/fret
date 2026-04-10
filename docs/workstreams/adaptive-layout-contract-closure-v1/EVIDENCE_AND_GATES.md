@@ -67,6 +67,9 @@ What this proves now:
 - `apps/fret-ui-gallery/tests/field_docs_surface.rs`
   - keeps the public docs lane explicit about `FieldOrientation::ContainerAdaptive` while the page
     still mirrors the upstream `Responsive Layout` section naming.
+- `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`
+  - keeps the sidebar page explicit that `is_mobile(...)` / `is_mobile_breakpoint(...)` are
+    app-shell/device-shell controls rather than generic panel-adaptive helpers.
 - `ecosystem/fret-ui-shadcn/tests/combobox_responsive_breakpoint.rs`
   - keeps the viewport/device-shell branch on the responsive combobox follow-up under a focused
     real-runtime gate.
@@ -88,6 +91,7 @@ What this proves now:
 ```bash
 cargo nextest run -p fret-ui-gallery --test popup_menu_narrow_surface --test combobox_docs_surface --test dialog_docs_surface --no-fail-fast
 cargo nextest run -p fret-ui-gallery --test field_docs_surface --no-fail-fast
+cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --no-fail-fast
 cargo nextest run -p fret-ui-shadcn --test combobox_responsive_breakpoint --test field_responsive_orientation --no-fail-fast
 ```
 

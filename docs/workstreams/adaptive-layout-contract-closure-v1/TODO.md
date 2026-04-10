@@ -103,3 +103,9 @@ Completed adaptive naming slice evidence:
 - `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs`
 - `apps/fret-ui-gallery/tests/combobox_docs_surface.rs`
 - `apps/fret-ui-gallery/tests/field_docs_surface.rs`
+
+Completed sidebar boundary-pin slice evidence:
+
+- `apps/fret-ui-gallery/src/ui/pages/sidebar.rs`
+- `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`
+- `docs/audits/shadcn-sidebar.md`

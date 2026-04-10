@@ -174,6 +174,17 @@ coverage for `sidebar-*` pages.
 - Kept the `SidebarRail` fix scoped to `fret-ui-shadcn` recipe code by moving the visible rail treatment to a dedicated pressable composition path instead of widening the mechanism layer for directional cursor variants first.
 - Added a targeted unit test asserting the hover recipe split (`default/icon` transparent surface vs `offcanvas` filled surface) and the offcanvas hairline offset in `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
 
+### Update note (2026-04-10)
+
+- Recorded the adaptive-lane classification explicitly: `SidebarProvider::is_mobile(...)` and
+  `is_mobile_breakpoint(...)` remain acceptable app-shell/device-shell vocabulary for the current
+  sidebar recipe, but they should not silently become the generic panel/container adaptive story.
+- Updated the UI gallery sidebar page/docs-surface gate to say that the forced-mobile example is an
+  app-shell sheet path for diagnostics, not evidence that `Sidebar` should be reused as the editor
+  rail / inspector sidebar primitive.
+- Current recommendation: keep the runtime/sidebar API stable for app-shell usage, and introduce a
+  separate container-aware rail surface later if editor-grade panel adaptation needs it.
+
 ## Component-by-component audit (24/24)
 
 Status legend:

@@ -16,7 +16,9 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`SidebarProvider` owns default open state, controlled models, viewport/mobile inference, and width defaults (`width`, `width_icon`, `width_mobile`).",
+        "`SidebarProvider::is_mobile(...)` and `is_mobile_breakpoint(...)` are app-shell/device-shell controls for the sidebar's desktop-vs-sheet branch, not generic panel/container adaptive helpers.",
         "`Sidebar` owns `side`, `variant`, and `collapsible`; `SidebarInset` remains required for the inset variant.",
+        "`Sidebar` should stay an app-shell surface; editor rails and inspector sidebars should use a separate container-aware surface instead of reusing sidebar mobile inference.",
         "`SidebarHeader`, `SidebarFooter`, `SidebarContent`, `SidebarGroup`, `SidebarGroupLabel`, `SidebarGroupAction`, and `SidebarGroupContent` cover the upstream section structure directly.",
         "`SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuAction`, `SidebarMenuBadge`, `SidebarMenuSub`, `SidebarMenuSubItem`, `SidebarMenuSubButton`, and `SidebarRail` are already landed in the recipe layer.",
         "Focused composition seams now cover the docs-critical children lanes: `SidebarGroupLabel::children(...).as_child(true)`, `SidebarMenuButton::children(...)`, `SidebarGroupAction::children(...)`, `SidebarMenuAction::children(...)`, `Sidebar::into_element_with_children(...)`, and `SidebarMenuItem::into_element_with_children(...)`.",
@@ -27,6 +29,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Width ownership follows upstream: use `SidebarProvider::width`, `width_icon`, and `width_mobile` first; `Sidebar` keeps theme-token fallback defaults.",
         "Keep `test_id_prefix` stable: `tools/diag-scripts/ui-gallery/sidebar/*` depend on DocSection tab trigger IDs.",
         "Mobile example forces `is_mobile(true)` for deterministic overlay + focus-restore diagnostics.",
+        "That forced-mobile example documents the app-shell sheet path only; it is not evidence that `Sidebar` should become the generic answer for editor panel adaptation.",
         "The official docs split many sidebar parts into separate headings; the gallery keeps one consolidated `Structure` section so the copyable Fret authoring surface stays compact, but it now explicitly includes the `SidebarGroupLabel asChild + CollapsibleTrigger` lane from the upstream `SidebarGroup` docs.",
         "The new `AppSidebar` section is intentionally closer to shadcn block `sidebar-07`: it favors a single inline file over upstream's multi-file split so app authors can copy and trim it directly.",
         "Children/composition support is already present on the sidebar family. The page now makes that explicit instead of implying the recipe is incomplete, and the `Structure` snippet demonstrates the one docs-path seam that previously stayed implicit.",
@@ -81,7 +84,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::use_sidebar::SOURCE, "example")
         .no_shell();
     let mobile = DocSection::build(cx, "Extras: Mobile", mobile)
-        .description("Forced-mobile sheet path kept for deterministic overlay/focus diagnostics.")
+        .description("Forced-mobile app-shell sheet path kept for deterministic overlay/focus diagnostics.")
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-sidebar-mobile")
         .code_rust_from_file_region(snippets::mobile::SOURCE, "example")
@@ -96,7 +99,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Sidebar docs path first, then adds a block-aligned `AppSidebar` template based on `sidebar-07` before the lower-level `Structure` surface. The structure snippet now carries the official `SidebarGroupLabel asChild` collapsible-group lane, while Mobile remains a gallery-specific extra for deterministic diagnostics.",
+            "Preview follows the shadcn Sidebar docs path first, then adds a block-aligned `AppSidebar` template based on `sidebar-07` before the lower-level `Structure` surface. The structure snippet now carries the official `SidebarGroupLabel asChild` collapsible-group lane, while Mobile remains a gallery-specific app-shell extra for deterministic diagnostics instead of standing in for editor/panel adaptive rails.",
         ),
         vec![
             usage,
