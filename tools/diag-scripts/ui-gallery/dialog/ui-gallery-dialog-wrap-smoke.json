@@ -143,6 +143,30 @@
       "predicate": {
         "kind": "exists_under",
         "scope": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-content" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-dialog-sticky-footer-description"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-dialog-sticky-footer-description"
+        },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-content" },
         "target": { "kind": "test_id", "id": "ui-gallery-dialog-sticky-footer-row-01" }
       },
       "timeout_frames": 240

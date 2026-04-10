@@ -121,6 +121,10 @@ fn dialog_docs_path_snippets_stay_copyable_and_docs_aligned() {
         "dialog sticky-footer snippet should keep the upstream docs copy",
     );
     assert!(
+        sticky.contains("\"ui-gallery-dialog-sticky-footer-description\""),
+        "dialog sticky-footer snippet should expose a stable description test id for wrap diagnostics",
+    );
+    assert!(
         !sticky.contains("Save changes"),
         "dialog sticky-footer snippet should not reintroduce the extra action that drifts from upstream",
     );
@@ -254,6 +258,7 @@ fn dialog_docs_diag_scripts_cover_docs_path_and_existing_regression_gates() {
     for needle in [
         "\"ui-gallery-dialog-scrollable-content\"",
         "\"ui-gallery-dialog-sticky-footer-content\"",
+        "\"ui-gallery-dialog-sticky-footer-description\"",
         "\"ui-gallery-dialog-scrollable-row-01\"",
         "\"ui-gallery-dialog-sticky-footer-row-01\"",
     ] {

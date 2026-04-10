@@ -1780,7 +1780,14 @@ impl DialogHeader {
             .map(|child| apply_header_text_alignment(child, align))
             .collect();
 
-        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            children,
+        )
     }
 }
 
@@ -2367,6 +2374,40 @@ mod tests {
             props.padding.left,
             fret_ui::element::SpacingLength::Px(Px(0.0))
         );
+    }
+
+    #[test]
+    fn dialog_header_inner_stack_is_fill_width_for_wrapping_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new(
+                    "This dialog description should wrap against the header width instead of clipping horizontally.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        let stack = el
+            .children
+            .first()
+            .expect("expected dialog header inner stack");
+        let ElementKind::Flex(props) = &stack.kind else {
+            panic!(
+                "expected dialog header inner stack to be Flex, got {:?}",
+                stack.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 
     #[test]

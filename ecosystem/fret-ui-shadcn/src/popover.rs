@@ -1542,7 +1542,14 @@ impl PopoverHeader {
             LayoutRefinement::default().w_full().min_w_0(),
         );
         let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N1, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N1)
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            children,
+        )
     }
 }
 
@@ -1690,6 +1697,40 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn popover_header_inner_stack_is_fill_width_for_wrapping_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            PopoverHeader::new([
+                PopoverTitle::new("Title").into_element(cx),
+                PopoverDescription::new(
+                    "This popover description should wrap against the header width instead of clipping horizontally.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        let stack = element
+            .children
+            .first()
+            .expect("expected popover header inner stack");
+        let ElementKind::Flex(FlexProps { layout, .. }) = &stack.kind else {
+            panic!(
+                "expected popover header inner stack to be Flex, got {:?}",
+                stack.kind
+            );
+        };
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 
     #[test]
