@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{Duration, Instant, SystemTime};
+
+use fret_core::time::{Duration, Instant, SystemTime};
 
 use super::contracts::DevWebCommandArgs;
 use super::project::{SelectedWebTarget, WebTargetKind, resolve_web_target};

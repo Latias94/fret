@@ -24,7 +24,7 @@ Fret needs an equivalent per-entity customization surface that:
 3. Uses Fret’s renderer-level `Paint` / `PaintBindingV1` contract (ADR 0306), so advanced looks
    (gradients/materials) remain possible without adding one-off APIs for the node graph.
 
-ADR 0308 introduced the UI-only **geometry** override surface. This ADR defines the matching
+ADR 0321 introduced the UI-only **geometry** override surface. This ADR defines the matching
 UI-only **paint** override surface.
 
 ## Decision
@@ -39,7 +39,7 @@ Paint overrides must be **paint-only**:
 
 - They may affect emitted `SceneOp`s and paint caches.
 - They must **not** affect derived geometry, routing topology, spatial indexing, or hit-testing
-  (except via existing interaction-width mechanisms from ADR 0308).
+  (except via existing interaction-width mechanisms from ADR 0321).
 
 ### v1 override surface (minimum)
 
@@ -58,7 +58,7 @@ strictly paint-only:
 
 Notes:
 
-- Geometry-affecting fields (node size, edge interaction width) remain in ADR 0308 overrides.
+- Geometry-affecting fields (node size, edge interaction width) remain in ADR 0321 overrides.
 - This ADR does not mandate *how* chrome is rendered (single-path vs multi-stroke outline/glow).
   That remains a policy decision expressed through `NodeGraphSkin` + presenter hints.
 

@@ -160,18 +160,20 @@ fn run_svg_dir_import_contract(mode: &IconsMode, args: ImportSvgDirArgs) -> Resu
 
     run_generated_pack_contract(
         mode,
-        args.common.crate_name,
-        args.common.pack_id,
-        args.common.vendor_namespace,
-        args.common.path,
-        SourceSpec::SvgDirectory(SvgDirectorySource {
-            dir: args.source.clone(),
-            label: source_label,
-        }),
-        "fretboard icons import svg-dir",
-        semantic_aliases,
-        presentation_defaults,
-        args.common.no_check,
+        GeneratedPackContractRequest {
+            crate_name: args.common.crate_name,
+            pack_id: args.common.pack_id,
+            vendor_namespace: args.common.vendor_namespace,
+            path: args.common.path,
+            source: SourceSpec::SvgDirectory(SvgDirectorySource {
+                dir: args.source.clone(),
+                label: source_label,
+            }),
+            generator_label: "fretboard icons import svg-dir",
+            semantic_aliases,
+            presentation_defaults,
+            no_check: args.common.no_check,
+        },
     )
 }
 
@@ -190,36 +192,44 @@ fn run_iconify_collection_import_contract(
 
     run_generated_pack_contract(
         mode,
-        args.common.crate_name,
-        args.common.pack_id,
-        args.common.vendor_namespace,
-        args.common.path,
-        SourceSpec::IconifyCollection(IconifyCollectionSource {
-            file: args.source.clone(),
-            label: source_label,
-        }),
-        "fretboard icons import iconify-collection",
-        semantic_aliases,
-        presentation_defaults,
-        args.common.no_check,
+        GeneratedPackContractRequest {
+            crate_name: args.common.crate_name,
+            pack_id: args.common.pack_id,
+            vendor_namespace: args.common.vendor_namespace,
+            path: args.common.path,
+            source: SourceSpec::IconifyCollection(IconifyCollectionSource {
+                file: args.source.clone(),
+                label: source_label,
+            }),
+            generator_label: "fretboard icons import iconify-collection",
+            semantic_aliases,
+            presentation_defaults,
+            no_check: args.common.no_check,
+        },
     )
 }
 
-fn run_generated_pack_contract(
-    mode: &IconsMode,
+struct GeneratedPackContractRequest {
     crate_name: String,
     pack_id: Option<String>,
     vendor_namespace: String,
     path: Option<PathBuf>,
     source: SourceSpec,
-    generator_label: &str,
+    generator_label: &'static str,
     semantic_aliases: Vec<SemanticAlias>,
     presentation_defaults: PresentationDefaults,
     no_check: bool,
+}
+
+fn run_generated_pack_contract(
+    mode: &IconsMode,
+    request: GeneratedPackContractRequest,
 ) -> Result<(), String> {
-    let crate_name = sanitize_package_name(&crate_name)?;
-    let out_dir = path.unwrap_or_else(|| mode.default_out_dir(&crate_name));
-    let pack_id = match pack_id.as_deref() {
+    let crate_name = sanitize_package_name(&request.crate_name)?;
+    let out_dir = request
+        .path
+        .unwrap_or_else(|| mode.default_out_dir(&crate_name));
+    let pack_id = match request.pack_id.as_deref() {
         Some(pack_id) => sanitize_package_name(pack_id)?,
         None => crate_name.clone(),
     };
@@ -227,17 +237,17 @@ fn run_generated_pack_contract(
     let report = generate_pack_crate(GeneratePackRequest {
         package_name: crate_name,
         pack_id,
-        vendor_namespace,
+        vendor_namespace: request.vendor_namespace,
         output_dir: out_dir.clone(),
-        source,
+        source: request.source,
         dependency_spec: mode.dependency_spec(&out_dir)?,
-        generator_label: generator_label.to_string(),
-        semantic_aliases,
-        presentation_defaults,
+        generator_label: request.generator_label.to_string(),
+        semantic_aliases: request.semantic_aliases,
+        presentation_defaults: request.presentation_defaults,
     })
     .map_err(|err| err.to_string())?;
 
-    maybe_cargo_check(&out_dir, !no_check)?;
+    maybe_cargo_check(&out_dir, !request.no_check)?;
 
     println!("Generated Fret icon pack crate:");
     println!("  path            : {}", report.output_dir.display());

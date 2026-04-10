@@ -603,9 +603,6 @@ impl View for TodoView {
 
         let tip_nonce_value = locals.tip_nonce.paint_value(cx);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
-                #[cfg(not(target_arch = "wasm32"))]
-                std::thread::sleep(Duration::from_millis(120));
-
                 const TIPS: &[&str] = &[
                     "Finish one active task before adding another.",
                     "Break the next large item into a single concrete step.",

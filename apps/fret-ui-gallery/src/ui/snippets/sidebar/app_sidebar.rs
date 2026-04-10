@@ -495,15 +495,14 @@ fn project_groups(
             ))
             .into_element(cx);
 
-        let action_trigger =
-            shadcn::SidebarMenuAction::new([sidebar_icon(cx, "lucide.more-horizontal")])
-                .a11y_label(format!("Project actions for {}", project.name))
-                .show_on_hover(true)
-                .test_id(format!(
-                    "ui-gallery-sidebar-app-sidebar-project-action-{}",
-                    project.key
-                ))
-                .into_element(cx);
+        let action_trigger = shadcn::SidebarMenuAction::new([sidebar_icon(cx, "lucide.ellipsis")])
+            .a11y_label(format!("Project actions for {}", project.name))
+            .show_on_hover(true)
+            .test_id(format!(
+                "ui-gallery-sidebar-app-sidebar-project-action-{}",
+                project.key
+            ))
+            .into_element(cx);
 
         let menu = shadcn::DropdownMenu::uncontrolled(cx)
             .compose()

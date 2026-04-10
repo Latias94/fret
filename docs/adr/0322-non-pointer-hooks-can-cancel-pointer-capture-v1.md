@@ -1,4 +1,4 @@
-# ADR 0307: Non-pointer Hooks Can Cancel Pointer Capture (v1)
+# ADR 0322: Non-pointer Hooks Can Cancel Pointer Capture (v1)
 
 Status: Proposed
 
@@ -113,4 +113,3 @@ Cons / risks:
    - assert `pointer_capture_active=false` and the drag state is cleared.
 3. Update the `fret-node` workstream contract gap log and remove the “cannot release capture from
    key hooks” limitation once aligned.
-

@@ -43,7 +43,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ),
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Report Conversation")
-                            .leading_icon(icon_id("lucide.alert-triangle")),
+                            .leading_icon(icon_id("lucide.triangle-alert")),
                     ),
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Block User")

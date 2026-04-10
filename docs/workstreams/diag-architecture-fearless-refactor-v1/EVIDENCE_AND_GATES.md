@@ -14,7 +14,7 @@ Contracts and foundations:
 
 - ADR (bundles + scripts): `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR (semantics): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- ADR (debug extensions): `docs/adr/0310-ui-diagnostics-debug-extensions-v1.md`
+- ADR (debug extensions): `docs/adr/0323-ui-diagnostics-debug-extensions-v1.md`
 - Bundle + script workflow: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect/pick workflow: `docs/debugging-ui-with-inspector-and-scripts.md`
 

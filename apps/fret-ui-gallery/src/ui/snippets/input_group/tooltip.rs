@@ -45,7 +45,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([icon::icon(cx, IconId::new_static("lucide.circle-help"))])
+                    .children([icon::icon(
+                        cx,
+                        IconId::new_static("lucide.circle-question-mark"),
+                    )])
                     .test_id("ui-gallery-input-group-tooltip-email-help")
                     .into_element(cx);
                 let content = shadcn::TooltipContent::build(cx, |_cx| {
@@ -65,7 +68,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([icon::icon(cx, IconId::new_static("lucide.circle-help"))])
+                    .children([icon::icon(
+                        cx,
+                        IconId::new_static("lucide.circle-question-mark"),
+                    )])
                     .test_id("ui-gallery-input-group-tooltip-api-key-help")
                     .into_element(cx);
                 let content = shadcn::TooltipContent::build(cx, |_cx| {

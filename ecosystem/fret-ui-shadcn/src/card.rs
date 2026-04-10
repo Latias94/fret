@@ -898,6 +898,56 @@ mod tests {
         }
     }
 
+    fn assert_same_root_kind(actual: &AnyElement, expected: &AnyElement, label: &str) {
+        assert_eq!(
+            std::mem::discriminant(&actual.kind),
+            std::mem::discriminant(&expected.kind),
+            "expected {label} builder root kind to match eager path",
+        );
+    }
+
+    fn root_layout(element: &AnyElement) -> &fret_ui::element::LayoutStyle {
+        match &element.kind {
+            ElementKind::Container(ContainerProps { layout, .. }) => layout,
+            ElementKind::Grid(GridProps { layout, .. }) => layout,
+            ElementKind::Flex(FlexProps { layout, .. }) => layout,
+            _ => panic!("expected element root to expose layout properties"),
+        }
+    }
+
+    fn element_padding(element: &AnyElement) -> Option<&SpacingEdges> {
+        match &element.kind {
+            ElementKind::Container(ContainerProps { padding, .. }) => Some(padding),
+            ElementKind::Grid(GridProps { padding, .. }) => Some(padding),
+            _ => None,
+        }
+    }
+
+    fn root_padding(element: &AnyElement) -> &SpacingEdges {
+        element_padding(element)
+            .unwrap_or_else(|| panic!("expected element root to expose padding properties"))
+    }
+
+    fn subtree_has_matching_padding(el: &AnyElement, pb: Px) -> bool {
+        let mut stack = vec![el];
+        while let Some(node) = stack.pop() {
+            if let Some(padding) = element_padding(node)
+                && padding.bottom == pb.into()
+                && padding.left == padding.right
+                && matches!(
+                    padding.left,
+                    fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                )
+            {
+                return true;
+            }
+            for child in &node.children {
+                stack.push(child);
+            }
+        }
+        false
+    }
+
     #[test]
     fn card_free_helpers_render_expected_structure() {
         let window = AppWindowId::default();
@@ -1387,39 +1437,21 @@ mod tests {
             let px_sm = MetricRef::space(Space::N4).resolve(theme);
 
             let default_header_el = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
-            let ElementKind::Container(ContainerProps {
-                padding: default_header_padding,
-                ..
-            }) = &default_header_el.kind
-            else {
-                panic!("expected CardHeader to be a container element");
-            };
+            let default_header_padding = root_padding(&default_header_el);
             assert_eq!(default_header_padding.left, px_default.into());
             assert_eq!(default_header_padding.right, px_default.into());
 
             let explicit_header_el = CardHeader::new(Vec::<AnyElement>::new())
                 .size(CardSize::Sm)
                 .into_element(cx);
-            let ElementKind::Container(ContainerProps {
-                padding: explicit_header_padding,
-                ..
-            }) = &explicit_header_el.kind
-            else {
-                panic!("expected CardHeader(size=Sm) to be a container element");
-            };
+            let explicit_header_padding = root_padding(&explicit_header_el);
             assert_eq!(explicit_header_padding.left, px_sm.into());
             assert_eq!(explicit_header_padding.right, px_sm.into());
 
             let inherited_header_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
                 CardHeader::new(Vec::<AnyElement>::new()).into_element(cx)
             });
-            let ElementKind::Container(ContainerProps {
-                padding: inherited_header_padding,
-                ..
-            }) = &inherited_header_el.kind
-            else {
-                panic!("expected CardHeader(inherited Sm) to be a container element");
-            };
+            let inherited_header_padding = root_padding(&inherited_header_el);
             assert_eq!(inherited_header_padding.left, px_sm.into());
             assert_eq!(inherited_header_padding.right, px_sm.into());
 
@@ -1511,22 +1543,10 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let eager = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
             let built = CardHeader::build(|_cx, _out| {}).into_element(cx);
+            let eager_padding = root_padding(&eager);
+            let built_padding = root_padding(&built);
 
-            let ElementKind::Container(ContainerProps {
-                padding: eager_padding,
-                ..
-            }) = &eager.kind
-            else {
-                panic!("expected eager CardHeader to be a container element");
-            };
-            let ElementKind::Container(ContainerProps {
-                padding: built_padding,
-                ..
-            }) = &built.kind
-            else {
-                panic!("expected built CardHeader to be a container element");
-            };
-
+            assert_same_root_kind(&built, &eager, "CardHeader");
             assert_eq!(built_padding.top, eager_padding.top);
             assert_eq!(built_padding.right, eager_padding.right);
             assert_eq!(built_padding.bottom, eager_padding.bottom);
@@ -1587,6 +1607,8 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let eager_header = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
+            let eager_content = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
             let children = ui::children![cx;
                 Card::build(|_cx, _out| {}).ui().w_full(),
                 CardHeader::build(|_cx, _out| {}).ui().w_full(),
@@ -1596,8 +1618,8 @@ mod tests {
             assert_eq!(children.len(), 3);
             assert!(matches!(children[0].kind, ElementKind::Container(_)));
             assert!(children[0].inherited_foreground.is_some());
-            assert!(matches!(children[1].kind, ElementKind::Container(_)));
-            assert!(matches!(children[2].kind, ElementKind::Container(_)));
+            assert_same_root_kind(&children[1], &eager_header, "CardHeader");
+            assert_same_root_kind(&children[2], &eager_content, "CardContent");
         });
     }
 
@@ -1611,6 +1633,8 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let eager_header = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
+            let eager_content = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
             let mut out = Vec::new();
             out.push_ui(cx, Card::build(|_cx, _out| {}));
             out.push_ui(cx, CardHeader::build(|_cx, _out| {}));
@@ -1619,8 +1643,8 @@ mod tests {
             assert_eq!(out.len(), 3);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
             assert!(out[0].inherited_foreground.is_some());
-            assert!(matches!(out[1].kind, ElementKind::Container(_)));
-            assert!(matches!(out[2].kind, ElementKind::Container(_)));
+            assert_same_root_kind(&out[1], &eager_header, "CardHeader");
+            assert_same_root_kind(&out[2], &eager_content, "CardContent");
         });
     }
 
@@ -1653,6 +1677,8 @@ mod tests {
                 .ui()
                 .max_w(Px(200.0))
                 .into_element(cx);
+            let eager_header = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
+            let eager_content = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
 
             let ElementKind::Container(ContainerProps {
                 layout: card_layout,
@@ -1663,24 +1689,14 @@ mod tests {
             else {
                 panic!("expected ui()-patched Card root to be a container element");
             };
-            let ElementKind::Container(ContainerProps {
-                layout: header_layout,
-                ..
-            }) = &header.kind
-            else {
-                panic!("expected ui()-patched CardHeader to be a container element");
-            };
-            let ElementKind::Container(ContainerProps {
-                layout: content_layout,
-                ..
-            }) = &content.kind
-            else {
-                panic!("expected ui()-patched CardContent to be a container element");
-            };
+            let header_layout = root_layout(&header);
+            let content_layout = root_layout(&content);
 
             assert_eq!(card_background, &Some(background));
             assert_eq!(card_border_color, &Some(border));
             assert_eq!(card_layout.size.max_width, Some(Length::Px(Px(320.0))));
+            assert_same_root_kind(&header, &eager_header, "CardHeader");
+            assert_same_root_kind(&content, &eager_content, "CardContent");
             assert_eq!(header_layout.size.max_width, Some(Length::Px(Px(240.0))));
             assert_eq!(content_layout.size.max_width, Some(Length::Px(Px(200.0))));
         });
@@ -1727,21 +1743,8 @@ mod tests {
                 .children
                 .get(1)
                 .unwrap_or_else(|| panic!("expected built Card content child"));
-
-            let ElementKind::Container(ContainerProps {
-                padding: header_padding,
-                ..
-            }) = &header.kind
-            else {
-                panic!("expected built Card header to be a container element");
-            };
-            let ElementKind::Container(ContainerProps {
-                padding: content_padding,
-                ..
-            }) = &content.kind
-            else {
-                panic!("expected built Card content to be a container element");
-            };
+            let header_padding = root_padding(header);
+            let content_padding = root_padding(content);
 
             assert_eq!(header_padding.left, px_sm.into());
             assert_eq!(header_padding.right, px_sm.into());
@@ -1828,28 +1831,8 @@ mod tests {
                 .border_bottom(true)
                 .into_element(cx);
 
-            fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
-                let mut stack = vec![el];
-                while let Some(node) = stack.pop() {
-                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
-                        && padding.bottom == pb.into()
-                        && padding.left == padding.right
-                        && matches!(
-                            padding.left,
-                            fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
-                        )
-                    {
-                        return true;
-                    }
-                    for child in &node.children {
-                        stack.push(child);
-                    }
-                }
-                false
-            }
-
             assert!(
-                has_header_padding(&el, pb),
+                subtree_has_matching_padding(&el, pb),
                 "expected CardHeader(border_bottom=true) to apply pb-6 to the padded header container"
             );
         });
@@ -1874,28 +1857,8 @@ mod tests {
                     .into_element(cx)
             });
 
-            fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
-                let mut stack = vec![el];
-                while let Some(node) = stack.pop() {
-                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind
-                        && padding.bottom == pb.into()
-                        && padding.left == padding.right
-                        && matches!(
-                            padding.left,
-                            fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
-                        )
-                    {
-                        return true;
-                    }
-                    for child in &node.children {
-                        stack.push(child);
-                    }
-                }
-                false
-            }
-
             assert!(
-                has_header_padding(&el, pb_sm),
+                subtree_has_matching_padding(&el, pb_sm),
                 "expected CardHeader(border_bottom=true,size=sm) to apply pb-4 to the padded header container"
             );
         });

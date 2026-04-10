@@ -52,6 +52,10 @@ upstream SVG filename stem).
 
 Generated vendor constants are exposed under `generated_ids::lucide::*`.
 
+Legacy Lucide vendor ids that upstream now treats as deprecated renames are also registered as
+reader-compatible aliases from `vendor-aliases.txt`. This keeps older `lucide.*` call sites
+resolvable without mutating the canonical vendored asset ids.
+
 ## Maintenance
 
 - Generate full Lucide list and Rust constants:
@@ -62,7 +66,7 @@ Generated vendor constants are exposed under `generated_ids::lucide::*`.
 - Sync SVGs from upstream sources into `assets/icons`:
   - `python3 tools/sync_icons.py --pack lucide --clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`
-- Verify referenced vendor IDs resolve to vendored assets:
+- Verify referenced vendor IDs resolve to vendored assets or declared legacy vendor aliases:
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - Release-time one-shot checks:
   - Icons only: `python3 tools/pre_release_icons.py`

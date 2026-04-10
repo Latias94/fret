@@ -913,7 +913,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let _ = self.clear_internal_drag_hover_if_needed();
         }
         if self.dock_tearoff_follow.is_some() {
-            self.stop_dock_tearoff_follow(std::time::Instant::now(), true);
+            self.stop_dock_tearoff_follow(fret_core::time::Instant::now(), true);
         }
         true
     }

@@ -36,7 +36,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Add one real extension via the registry to validate the seam (`dock.graph.v1`).
 - [x] Document extension key naming rules and clipping expectations.
   - Design note: `docs/workstreams/diag-architecture-fearless-refactor-v1/DEBUG_EXTENSIONS_V1.md`
-  - ADR: `docs/adr/0310-ui-diagnostics-debug-extensions-v1.md`
+  - ADR: `docs/adr/0323-ui-diagnostics-debug-extensions-v1.md`
 
 ## M3 — Layout correctness workflow
 

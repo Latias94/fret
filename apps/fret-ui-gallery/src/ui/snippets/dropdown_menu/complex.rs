@@ -79,9 +79,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 shadcn::DropdownMenuSub::new(
                                     shadcn::DropdownMenuSubTrigger::new("More Projects").refine(
                                         |item| {
-                                            item.leading_icon(IconId::new_static(
-                                                "lucide.more-horizontal",
-                                            ))
+                                            item.leading_icon(IconId::new_static("lucide.ellipsis"))
                                         },
                                     ),
                                     shadcn::DropdownMenuSubContent::new([
@@ -146,7 +144,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .update(&menu_state, |state| state.show_status_bar = checked);
                         }
                     })
-                    .leading_icon(IconId::new_static("lucide.layout"))
+                    .leading_icon(IconId::new_static("lucide.panels-top-left"))
                     .into(),
                     shadcn::DropdownMenuSub::new(
                         shadcn::DropdownMenuSubTrigger::new("Theme")
@@ -268,7 +266,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuSeparator::new().into(),
                 shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuItem::new("Help & Support")
-                        .leading_icon(IconId::new_static("lucide.help-circle"))
+                        .leading_icon(IconId::new_static("lucide.circle-question-mark"))
                         .into(),
                     shadcn::DropdownMenuItem::new("Documentation")
                         .leading_icon(IconId::new_static("lucide.file-text"))

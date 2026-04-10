@@ -9,6 +9,7 @@ from _gate_lib import WORKSPACE_ROOT, fail, ok
 GATE_NAME = "fret-launch root surface snapshot"
 LIB_RS = WORKSPACE_ROOT / "crates/fret-launch/src/lib.rs"
 EXPECTED_PUBLIC_MODULES = {
+    "assets",
     "dev_state",
     "imported_viewport_target",
     "native_external_import",

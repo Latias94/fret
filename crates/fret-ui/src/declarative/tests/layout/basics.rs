@@ -1780,19 +1780,25 @@ fn pressable_with_auto_width_chrome_container_shrink_wraps_in_grid_auto_track() 
     let children = ui.children(grid_node);
     assert_eq!(children.len(), 2);
 
-    let pressable_bounds = ui.debug_node_bounds(children[1]).expect("pressable bounds");
+    let pressable_node = children[1];
+    let chrome_node = ui.children(pressable_node)[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let chrome_bounds = ui.debug_node_bounds(chrome_node).expect("chrome bounds");
 
     assert_eq!(
         pressable_bounds.origin,
-        Point::new(Px(154.0), Px(0.0)),
-        "expected explicit-height pressable to keep the auto right-hand track origin, got {pressable_bounds:?}"
+        Point::new(Px(122.0), Px(0.0)),
+        "expected explicit-height pressable to keep the auto right-hand track origin derived from its padded chrome width, got pressable={pressable_bounds:?}; chrome={chrome_bounds:?}"
     );
     assert_eq!(
         pressable_bounds.size.width,
-        Px(86.0),
-        "expected pressable root to inherit its chrome container width inside a grid auto track, got {pressable_bounds:?}"
+        Px(118.0),
+        "expected pressable root to inherit its padded chrome container width inside a grid auto track, got pressable={pressable_bounds:?}; chrome={chrome_bounds:?}"
     );
     assert_eq!(pressable_bounds.size.height, Px(36.0));
+    assert_eq!(chrome_bounds.size.width, Px(118.0));
 }
 
 #[test]

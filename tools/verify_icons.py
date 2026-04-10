@@ -7,8 +7,7 @@ import sys
 from pathlib import Path
 
 
-LUCIDE_RE = re.compile(r"\blucide\.([a-z0-9-]+)\b")
-RADIX_RE = re.compile(r"\bradix\.([a-z0-9-]+)\b")
+ICON_ID_LITERAL_RE = re.compile(r'(?P<quote>["\'])(?P<pack>lucide|radix)\.(?P<stem>[a-z0-9-]+)(?P=quote)')
 
 
 def repo_root() -> Path:
@@ -20,6 +19,34 @@ def read_icon_stems(pack_dir: Path) -> set[str]:
     if not assets_dir.exists():
         return set()
     return {p.stem for p in assets_dir.glob("*.svg")}
+
+
+def read_vendor_aliases(pack_dir: Path) -> dict[str, str]:
+    aliases_path = pack_dir / "vendor-aliases.txt"
+    if not aliases_path.exists():
+        return {}
+
+    aliases: dict[str, str] = {}
+    for line_no, raw in enumerate(aliases_path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        alias_name, sep, target_name = line.partition("=")
+        if not sep:
+            raise SystemExit(
+                f"Invalid alias entry in {aliases_path}:{line_no}: expected <legacy-name>=<canonical-name>."
+            )
+
+        alias_name = alias_name.strip()
+        target_name = target_name.strip()
+        if not alias_name or not target_name:
+            raise SystemExit(
+                f"Invalid alias entry in {aliases_path}:{line_no}: empty alias or target name."
+            )
+        aliases[alias_name] = target_name
+
+    return aliases
 
 
 def iter_workspace_files(root: Path):
@@ -60,13 +87,10 @@ def collect_vendor_refs(root: Path):
 
         rel = file.relative_to(root).as_posix()
 
-        for match in LUCIDE_RE.finditer(text):
-            stem = match.group(1)
-            refs["lucide"].setdefault(stem, []).append(rel)
-
-        for match in RADIX_RE.finditer(text):
-            stem = match.group(1)
-            refs["radix"].setdefault(stem, []).append(rel)
+        for match in ICON_ID_LITERAL_RE.finditer(text):
+            pack = match.group("pack")
+            stem = match.group("stem")
+            refs[pack].setdefault(stem, []).append(rel)
 
     return refs
 
@@ -96,7 +120,26 @@ def main() -> int:
 
     for pack in ("lucide", "radix"):
         pack_dir = find_pack_dir(root, pack)
-        available = read_icon_stems(pack_dir)
+        assets = read_icon_stems(pack_dir)
+        aliases = read_vendor_aliases(pack_dir)
+        invalid_alias_targets = sorted(
+            alias_name
+            for alias_name, target_name in aliases.items()
+            if target_name not in assets
+        )
+        if invalid_alias_targets:
+            print(
+                f"[verify-icons] INVALID: {pack} vendor aliases target missing canonical assets",
+                file=sys.stderr,
+            )
+            for alias_name in invalid_alias_targets:
+                print(
+                    f"  - {pack}.{alias_name} -> {pack}.{aliases[alias_name]}",
+                    file=sys.stderr,
+                )
+            return 2
+
+        available = assets | set(aliases)
 
         for stem, files in sorted(refs[pack].items()):
             if stem not in available:
@@ -124,4 +167,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

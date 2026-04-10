@@ -234,7 +234,7 @@ fn view_box_after_rotation(
     height: f64,
     rotate: u8,
 ) -> (f64, f64, f64, f64) {
-    if rotate % 2 == 0 {
+    if rotate.is_multiple_of(2) {
         return (left, top, width, height);
     }
 

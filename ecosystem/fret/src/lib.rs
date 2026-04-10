@@ -111,11 +111,11 @@ use fret_framework as kernel;
 /// Canonical app-facing window identity alias for the default authoring surface.
 pub type WindowId = fret_core::AppWindowId;
 
+/// Re-export portable action/command identity types for app code and macros.
+pub use fret_runtime::{ActionId, CommandId, TypedAction};
 /// Re-export the curated default shadcn/ui surface as `shadcn`.
 #[cfg(feature = "shadcn")]
 pub use fret_ui_shadcn::facade as shadcn;
-/// Re-export portable action/command identity types for app code and macros.
-pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
 /// Explicit icon helpers and identifiers for app and component code that opt into icon-specific
 /// authoring.

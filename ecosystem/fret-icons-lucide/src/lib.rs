@@ -41,17 +41,7 @@ pub fn register_icons(reg: &mut IconRegistry) {
 /// Register Lucide vendor icon IDs (`lucide.*`) into an [`IconRegistry`].
 pub fn register_vendor_icons(reg: &mut IconRegistry) {
     register_curated(reg);
-
-    // Legacy Lucide IDs (lucide-react exports `MoreHorizontal`, older packs ship `more-horizontal.svg`).
-    // Newer Lucide versions standardize on `ellipsis` / `ellipsis-vertical`.
-    let _ = reg.alias_if_missing(
-        IconId::new("lucide.more-horizontal"),
-        IconId::new("lucide.ellipsis"),
-    );
-    let _ = reg.alias_if_missing(
-        IconId::new("lucide.more-vertical"),
-        IconId::new("lucide.ellipsis-vertical"),
-    );
+    register_legacy_vendor_aliases(reg);
 }
 
 /// Register semantic `ui.*` aliases for this icon pack.
@@ -89,6 +79,30 @@ fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {
     };
 
     let _ = reg.register_svg_bytes(IconId::new(format!("lucide.{icon_name}")), bytes);
+}
+
+fn register_legacy_vendor_aliases(reg: &mut IconRegistry) {
+    for line in include_str!("../vendor-aliases.txt").lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let Some((legacy_name, canonical_name)) = line.split_once('=') else {
+            continue;
+        };
+
+        let legacy_name = legacy_name.trim();
+        let canonical_name = canonical_name.trim();
+        if legacy_name.is_empty() || canonical_name.is_empty() {
+            continue;
+        }
+
+        let _ = reg.alias_if_missing(
+            IconId::new(format!("lucide.{legacy_name}")),
+            IconId::new(format!("lucide.{canonical_name}")),
+        );
+    }
 }
 
 #[cfg(feature = "semantic-ui")]
@@ -157,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn lucide_more_horizontal_alias_resolves() {
+    fn lucide_legacy_vendor_aliases_resolve() {
         let mut reg = IconRegistry::default();
         register_vendor_icons(&mut reg);
 
@@ -165,6 +179,10 @@ mod tests {
             .expect("expected lucide.ellipsis to resolve");
         reg.resolve(&IconId::new("lucide.more-horizontal"))
             .expect("expected lucide.more-horizontal legacy alias to resolve");
+        reg.resolve(&IconId::new("lucide.circle-question-mark"))
+            .expect("expected lucide.circle-question-mark to resolve");
+        reg.resolve(&IconId::new("lucide.help-circle"))
+            .expect("expected lucide.help-circle legacy alias to resolve");
     }
 
     #[test]
@@ -203,6 +221,8 @@ mod tests {
         assert!(README.contains("semantic `IconId` / `ui.*` ids"));
         assert!(README.contains("first-writer-wins (`alias_if_missing(...)`)"));
         assert!(README.contains("without mutating `lucide.*` vendor ids"));
+        assert!(README.contains("Legacy Lucide vendor ids"));
+        assert!(README.contains("`vendor-aliases.txt`"));
         assert!(README.contains("one installer/bundle surface"));
         assert!(README.contains("`app-integration`"));
     }

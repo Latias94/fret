@@ -1,4 +1,4 @@
-# ADR 0312: Window Input Hit Testing and Passthrough v1 (Window-Level)
+# ADR 0324: Window Input Hit Testing and Passthrough v1 (Window-Level)
 
 Status: Accepted
 

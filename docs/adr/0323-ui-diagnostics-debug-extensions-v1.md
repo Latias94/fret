@@ -1,8 +1,8 @@
 ---
-title: "ADR 0310: UI Diagnostics Debug Extensions v1"
+title: "ADR 0323: UI Diagnostics Debug Extensions v1"
 ---
 
-# ADR 0310: UI Diagnostics Debug Extensions v1
+# ADR 0323: UI Diagnostics Debug Extensions v1
 
 Status: Proposed
 
@@ -99,4 +99,3 @@ Reference implementation lives in:
 - Runtime registry + capture budgets: `ecosystem/fret-bootstrap/src/ui_diagnostics/extensions.rs`
 - Snapshot field: `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (`debug.extensions`)
 - Capture hook: `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (assign `debug.extensions`)
-

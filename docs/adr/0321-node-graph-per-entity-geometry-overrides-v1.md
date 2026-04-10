@@ -1,4 +1,4 @@
-# ADR 0308: Node Graph Per-Entity Geometry Overrides (v1)
+# ADR 0321: Node Graph Per-Entity Geometry Overrides (v1)
 
 Status: Proposed
 
@@ -17,7 +17,7 @@ Fret has two existing, intentionally separated styling surfaces:
 - **Base tokens**: `NodeGraphStyle` (typed, theme-derived).
 - **Paint-only per-entity chrome**: `NodeGraphSkin` (UI-only; must not affect geometry/hit-testing).
 
-ADR 0307 split style into **paint** vs **geometry** planes and reserved space for per-entity
+ADR 0320 split style into **paint** vs **geometry** planes and reserved space for per-entity
 geometry overrides. This ADR defines that missing per-entity surface.
 
 Hard boundary:
@@ -95,4 +95,3 @@ geometry churn.
 
 - Stroke-space wire gradients (renderer + paint evaluation space work; track separately).
 - Arbitrary per-entity “CSS bag” style overrides.
-

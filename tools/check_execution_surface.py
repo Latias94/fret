@@ -62,13 +62,20 @@ def main(argv: list[str]) -> int:
                 "crates/fret-launch/src/runner/desktop/runner/dispatcher.rs",
                 "crates/fret-launch/src/runner/desktop/runner/hotpatch.rs",
                 "crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs",
-                # Diagnostics and devtools are allowed to use raw threads.
-                "crates/fret-diag/src/lib.rs",
-                "crates/fret-diag-ws/src/client.rs",
-                "crates/fret-diag-ws/src/server.rs",
-                "apps/fret-devtools/src/main.rs",
-                "apps/fret-devtools/src/pack.rs",
-                "apps/fret-devtools-mcp/src/main.rs",
+                # Tooling surfaces are allowed to own local worker threads and polling loops.
+                "crates/fret-diag/",
+                "crates/fret-diag-ws/",
+                "crates/fretboard/",
+                "apps/fretboard/",
+                "apps/fret-diag-export/",
+                "apps/fret-devtools/",
+                "apps/fret-devtools-mcp/",
+                # Explicit compare / control harnesses intentionally bypass the default UI
+                # execution surface so they can measure raw backend behavior.
+                "apps/fret-demo/src/bin/wgpu_hello_world_control.rs",
+                "apps/fret-examples/src/hello_world_compare_demo.rs",
+                # Test-only inline fixture.
+                "ecosystem/fret-ui-assets/src/image_source.rs",
             ),
         ),
         Rule(
@@ -78,13 +85,19 @@ def main(argv: list[str]) -> int:
             allowlist=(
                 # Tooling is allowed to poll/wait.
                 "apps/fretboard/",
-                "apps/fret-diag-export/src/main.rs",
+                "crates/fretboard/",
+                "crates/fret-diag/",
+                "crates/fret-diag-ws/",
+                "apps/fret-diag-export/",
                 "crates/fret-launch/src/runner/desktop/runner/hotpatch.rs",
-                "crates/fret-diag/src/lib.rs",
-                "crates/fret-diag/src/compare.rs",
-                "crates/fret-diag/src/stats.rs",
-                "crates/fret-diag/src/stats/script_runtime.rs",
-                "crates/fret-diag-ws/src/client.rs",
+                # Explicit compare / control harnesses intentionally use wall-clock sampling.
+                "apps/fret-demo/src/bin/wgpu_hello_world_control.rs",
+                "apps/fret-examples/src/hello_world_compare_demo.rs",
+                # Async/query lab surfaces intentionally model blocking or dual-runtime backends.
+                "apps/fret-cookbook/examples/async_inbox_basics.rs",
+                "apps/fret-examples/src/async_playground_demo.rs",
+                # Test-only inline fixture.
+                "ecosystem/fret-ui-assets/src/image_source.rs",
                 "apps/fret-examples/src/todo_demo.rs",
             ),
         ),
@@ -93,9 +106,8 @@ def main(argv: list[str]) -> int:
             pattern=re.compile(r"\b(std::sync::mpsc|crossbeam_channel|async_channel|flume)\b"),
             scope_prefixes=("ecosystem/", "apps/"),
             allowlist=(
-                # Devtools uses a local mpsc worker for packing artifacts.
-                "apps/fret-devtools/src/main.rs",
-                "apps/fret-devtools/src/pack.rs",
+                # Devtools keeps its worker wiring local to the tooling process.
+                "apps/fret-devtools/",
             ),
         ),
         Rule(
@@ -112,7 +124,11 @@ def main(argv: list[str]) -> int:
             scope_prefixes=("ecosystem/", "apps/"),
             allowlist=(
                 # MCP server uses Tokio internally; it is not part of the UI runtime scheduling contract.
-                "apps/fret-devtools-mcp/src/main.rs",
+                "apps/fret-devtools-mcp/",
+                # These examples intentionally exercise async query integration against Tokio or a
+                # sync-vs-async comparison harness; they are not the default UI timer story.
+                "apps/fret-examples/src/async_playground_demo.rs",
+                "apps/fret-examples/src/query_async_tokio_demo.rs",
             ),
         ),
     ]

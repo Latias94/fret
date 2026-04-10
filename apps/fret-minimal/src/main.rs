@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use fret_app::{App, Model};
 use fret_core::{AppWindowId, Axis, Corners, Edges, Px, SemanticsRole};
+use fret_runtime::{DispatcherHandle, Runnable};
 use fret_ui::Theme;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
@@ -204,7 +205,7 @@ fn main() -> anyhow::Result<()> {
     let wgpu_report_enabled = env_bool("FRET_MINIMAL_WGPU_REPORT");
 
     fret_bootstrap::ui_app("fret-minimal", init_window, view)
-        .on_gpu_ready(move |_app, context, _renderer| {
+        .on_gpu_ready(move |app, context, _renderer| {
             if !wgpu_report_enabled {
                 return;
             }
@@ -218,10 +219,15 @@ fn main() -> anyhow::Result<()> {
             dump_wgpu_report("gpu_ready", &context.instance);
 
             let instance = context.instance.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(Duration::from_secs(10));
-                dump_wgpu_report("t+10s", &instance);
-            });
+            if let Some(dispatcher) = app.global::<DispatcherHandle>().cloned() {
+                let delayed_report: Runnable =
+                    Box::new(move || dump_wgpu_report("t+10s", &instance));
+                dispatcher.dispatch_after(Duration::from_secs(10), delayed_report);
+            } else {
+                eprintln!(
+                    "fret-minimal: missing DispatcherHandle global; skipping delayed wgpu report"
+                );
+            }
         })
         .configure(move |config| {
             if let Some(ms) = frame_interval_ms {

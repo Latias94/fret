@@ -24,7 +24,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .a11y_label("More Options")
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Icon)
-        .icon(icon_id("lucide.more-horizontal"))
+        .icon(icon_id("lucide.ellipsis"))
         .toggle_model(menu_open.clone())
         .border_left_width_override(Px(0.0))
         .corner_radii_override(corners_last)

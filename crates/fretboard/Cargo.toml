@@ -14,6 +14,7 @@ description = "Public CLI for Fret app scaffolds, project dev loops, assets, and
 blake3.workspace = true
 clap.workspace = true
 fret-assets = { version = "0.1.0", path = "../fret-assets" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-diag = { version = "0.1.0", path = "../fret-diag" }
 fret-icons-generator = { version = "0.1.0", path = "../fret-icons-generator" }
 serde.workspace = true

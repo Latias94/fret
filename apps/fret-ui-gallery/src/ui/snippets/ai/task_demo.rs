@@ -45,7 +45,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 vec![
                     (
                         "Define request schema",
-                        Some(("schema.ts", "lucide.file-json")),
+                        Some(("schema.ts", "lucide.file-braces")),
                     ),
                     ("Implement streaming transport", None),
                     ("Add retry + backoff policy", None),

@@ -17,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-input-group-dropdown-leading-button")
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::InputGroupButtonSize::IconXs)
-        .icon(IconId::new_static("lucide.more-horizontal"))
+        .icon(IconId::new_static("lucide.ellipsis"))
         .into_element(cx);
 
     let more_dropdown = shadcn::DropdownMenu::uncontrolled(cx)

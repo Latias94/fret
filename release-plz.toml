@@ -100,6 +100,12 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
+name = "fret-icons-generator"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
 name = "fret-launch"
 release = true
 publish = true

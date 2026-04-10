@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import shutil
+import subprocess
 
 
 @dataclass(frozen=True)
@@ -105,6 +107,23 @@ def write_generated_ids(stems: list[str], out_path: Path, spec: IconPackSpec) ->
     lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
+    format_rust_file(out_path)
+
+
+def format_rust_file(path: Path) -> None:
+    rustfmt = shutil.which("rustfmt")
+    if rustfmt is None:
+        raise SystemExit("rustfmt not found in PATH; required to stabilize generated Rust files.")
+
+    proc = subprocess.run(
+        [rustfmt, "--edition", "2024", str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip()
+        raise SystemExit(f"rustfmt failed for {path}: {detail}")
 
 
 def generate_pack(

@@ -9,7 +9,7 @@ scope: ecosystem/fret-node
 
 ## M0 (contracts + gates)
 
-- [x] Land ADR 0307 (paint vs geometry style surfaces + invalidation rules).
+- [x] Land ADR 0320 (paint vs geometry style surfaces + invalidation rules).
 - [x] Add conformance gates:
   - [x] Geometry style change rebuilds derived geometry + spatial index.
   - [x] Paint-only style change does **not** rebuild derived geometry (retain v1 gate).
@@ -26,7 +26,7 @@ scope: ecosystem/fret-node
 
 ## M2 (per-entity geometry overrides, optional)
 
-- [x] Land ADR 0308 (UI-only per-entity geometry overrides + invalidation rules).
+- [x] Land ADR 0321 (UI-only per-entity geometry overrides + invalidation rules).
 - [x] Define a UI-only per-node/per-edge override surface for geometry:
   - node size overrides (width/height, screen-space px),
   - per-edge interaction-width overrides (screen-space px).

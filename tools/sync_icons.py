@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 from pathlib import Path
 
@@ -75,6 +76,7 @@ def _sync_pack(
             continue
 
         shutil.copy2(src, dst)
+        dst.chmod(0o644)
         copied += 1
 
     if missing:

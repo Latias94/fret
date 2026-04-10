@@ -1217,7 +1217,7 @@ Platform receiver predicates (desktop-only; require runner cursor probe diagnost
 
 Notes:
 
-- `hit_test` supports: `normal`, `passthrough_all`, `passthrough_regions` (ADR 0312 / ADR 0313).
+- `hit_test` supports: `normal`, `passthrough_all`, `passthrough_regions` (ADR 0324 / ADR 0313).
 - `hit_test_regions_fingerprint64` is a stable, canonicalized fingerprint of the effective regions
   union. It is intended for scripted regression gates that want to assert that the runner applied
   a specific region shape without relying on pixels.

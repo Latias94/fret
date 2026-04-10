@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 use std::path::Path;
 use std::process::{Child, Command};
-use std::time::{Duration, Instant, SystemTime};
+
+use fret_core::time::{Duration, Instant, SystemTime};
 
 use super::contracts::DevNativeCommandArgs;
 use super::project::{NativeTargetKind, SelectedNativeTarget, resolve_native_target};

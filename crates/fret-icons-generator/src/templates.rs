@@ -90,13 +90,12 @@ pub(crate) fn render_lib_rs(request: &GeneratePackRequest, icons: &[CollectedSvg
     let has_aliases = !request.semantic_aliases.is_empty();
     let registration_lines = render_registration_lines(icons);
     let alias_pack_const = if has_aliases {
-        format!(
-            r#"
+        r#"
 #[cfg(feature = "semantic-ui")]
 pub const UI_SEMANTIC_ALIAS_PACK: IconPackRegistration =
     IconPackRegistration::new(PACK_METADATA, register_ui_semantic_aliases);
 "#
-        )
+        .to_string()
     } else {
         String::new()
     };

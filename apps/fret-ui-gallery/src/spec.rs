@@ -2946,8 +2946,19 @@ pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
 
 #[cfg(feature = "gallery-dev")]
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    let suffix = command.strip_prefix(CMD_DATA_GRID_ROW_PREFIX)?;
-    suffix.parse::<u64>().ok()
+    static BY_COMMAND: OnceLock<HashMap<String, u64>> = OnceLock::new();
+    let by_command = BY_COMMAND.get_or_init(|| {
+        let mut map: HashMap<String, u64> = HashMap::new();
+        for row in 0..DATA_GRID_ROWS {
+            let Some(command) = data_grid_row_command(row) else {
+                continue;
+            };
+            map.insert(command.as_str().to_string(), row as u64);
+        }
+        map
+    });
+
+    by_command.get(command).copied()
 }
 
 pub(crate) fn page_meta(selected: &str) -> (&'static str, &'static str) {

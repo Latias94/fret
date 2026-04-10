@@ -48,6 +48,7 @@ def _pack_generated_files(pack: str) -> list[Path]:
     if pack == "lucide":
         return [
             Path("ecosystem/fret-icons-lucide/icon-list.txt"),
+            Path("ecosystem/fret-icons-lucide/vendor-aliases.txt"),
             Path("ecosystem/fret-icons-lucide/src/generated_ids.rs"),
         ]
     if pack == "radix":

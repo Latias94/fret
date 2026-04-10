@@ -70,5 +70,5 @@ For region-based hit testing, prefer asserting a stable fingerprint rather than 
 
 - Window styles: `docs/adr/0139-window-styles-and-utility-windows.md`
 - Window background materials: `docs/adr/0310-window-background-materials-v1.md`
-- Window hit testing (facet): `docs/adr/0312-window-input-hit-testing-and-passthrough-v1.md`
+- Window hit testing (facet): `docs/adr/0324-window-input-hit-testing-and-passthrough-v1.md`
 - Window hit-test regions: `docs/adr/0313-window-hit-test-regions-v1.md`

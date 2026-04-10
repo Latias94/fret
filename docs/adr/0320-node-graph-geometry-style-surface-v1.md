@@ -1,4 +1,4 @@
-# ADR 0307: Node Graph Geometry-Affecting Style Surface (v1)
+# ADR 0320: Node Graph Geometry-Affecting Style Surface (v1)
 
 Status: Accepted
 

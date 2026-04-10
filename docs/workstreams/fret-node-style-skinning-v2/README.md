@@ -44,8 +44,8 @@ Canonical tracking docs:
 
 Design contract (source of truth):
 
-- ADR: `docs/adr/0307-node-graph-geometry-style-surface-v1.md`
-- ADR (M2): `docs/adr/0308-node-graph-per-entity-geometry-overrides-v1.md`
+- ADR: `docs/adr/0320-node-graph-geometry-style-surface-v1.md`
+- ADR (M2): `docs/adr/0321-node-graph-per-entity-geometry-overrides-v1.md`
 
 ## Current status (2026-03-01)
 
@@ -53,4 +53,4 @@ Design contract (source of truth):
 - M1 is complete: `NodeGraphStyle` is split into paint vs geometry token bundles and geometry
   caches key off the geometry fingerprint only.
 - M2 (optional) is complete: a UI-only per-entity geometry override surface is implemented with
-  explicit revision invalidation and conformance gates (see ADR 0308).
+  explicit revision invalidation and conformance gates (see ADR 0321).

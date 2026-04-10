@@ -32,7 +32,7 @@ overrides**:
 - `NodeGraphSkin`:
   - Paint-only chrome/policy hints (selection rings, hover emphasis, etc.).
 - UI-only overrides:
-  - Geometry: `NodeGraphGeometryOverrides` (ADR 0308)
+  - Geometry: `NodeGraphGeometryOverrides` (ADR 0321)
     - includes per-edge `interaction_width_px` (XyFlow `interactionWidth` parity).
   - Paint: `NodeGraphPaintOverrides` (ADR 0309)
     - per-edge: `stroke_paint`, `stroke_width_mul`, `dash`

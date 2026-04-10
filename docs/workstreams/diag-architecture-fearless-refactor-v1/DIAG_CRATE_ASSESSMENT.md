@@ -60,7 +60,7 @@ ADRs and protocol types.
       - new viewers/panels,
       without touching central wiring in `crates/fret-diag` and `fret-bootstrap`.
    - Progress:
-     - runtime snapshots expose a bounded `debug.extensions` seam (ADR 0310),
+     - runtime snapshots expose a bounded `debug.extensions` seam (ADR 0323),
      - tooling has a CLI viewer (`fretboard-dev diag extensions ...`) to browse/print extension payloads.
    - Next: promote a single “how to author diagnostics” guide as the default path for ecosystem PRs
      (register writer → capture bundle → view evidence → add a gate).

@@ -4,7 +4,7 @@ Status: Accepted
 
 ## Context
 
-ADR 0312 defines a portable, capability-gated window hit-testing facet:
+ADR 0324 defines a portable, capability-gated window hit-testing facet:
 
 - `WindowStyleRequest.hit_test = Normal | PassthroughAll`
 

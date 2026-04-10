@@ -64,12 +64,12 @@ impl ToolStatus {
     pub fn icon_id(self) -> IconId {
         match self {
             Self::ApprovalRequested => IconId::new_static("lucide.clock"),
-            Self::ApprovalResponded => IconId::new_static("lucide.check-circle"),
+            Self::ApprovalResponded => ids::ui::STATUS_SUCCEEDED,
             Self::InputAvailable => IconId::new_static("lucide.clock"),
             Self::InputStreaming => IconId::new_static("lucide.circle"),
-            Self::OutputAvailable => IconId::new_static("lucide.check-circle"),
-            Self::OutputDenied => IconId::new_static("lucide.x-circle"),
-            Self::OutputError => IconId::new_static("lucide.x-circle"),
+            Self::OutputAvailable => ids::ui::STATUS_SUCCEEDED,
+            Self::OutputDenied => ids::ui::STATUS_FAILED,
+            Self::OutputError => ids::ui::STATUS_FAILED,
         }
     }
 

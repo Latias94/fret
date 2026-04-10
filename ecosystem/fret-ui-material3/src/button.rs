@@ -449,6 +449,7 @@ fn material_button_chrome_props(
     let mut props = ContainerProps::default();
     props.background = background;
     props.corner_radii = corner_radii;
+    props.layout.size.min_width = Some(Length::Px(size.min_width));
     props.layout.size.min_height = Some(Length::Px(size.container_height));
     if let Some(outline) = outline {
         props.border = Edges::all(outline.width);
@@ -665,6 +666,7 @@ fn animated_button_corner_radii<H: UiHost>(
 
 #[derive(Debug, Clone, Copy)]
 struct ButtonSizeTokens {
+    min_width: Px,
     container_height: Px,
     leading_space: Px,
     trailing_space: Px,
@@ -674,8 +676,10 @@ struct ButtonSizeTokens {
 }
 
 fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
+    let min_width = button_min_width();
     match size {
         ButtonSize::XSmall => ButtonSizeTokens {
+            min_width,
             container_height: theme
                 .metric_by_key("md.comp.button.xsmall.container.height")
                 .unwrap_or(Px(32.0)),
@@ -696,6 +700,7 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
                 .unwrap_or(Px(1.0)),
         },
         ButtonSize::Small => ButtonSizeTokens {
+            min_width,
             container_height: theme
                 .metric_by_key("md.comp.button.small.container.height")
                 .unwrap_or(Px(40.0)),
@@ -716,6 +721,7 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
                 .unwrap_or(Px(1.0)),
         },
         ButtonSize::Medium => ButtonSizeTokens {
+            min_width,
             container_height: theme
                 .metric_by_key("md.comp.button.medium.container.height")
                 .unwrap_or(Px(56.0)),
@@ -736,6 +742,7 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
                 .unwrap_or(Px(1.0)),
         },
         ButtonSize::Large => ButtonSizeTokens {
+            min_width,
             container_height: theme
                 .metric_by_key("md.comp.button.large.container.height")
                 .unwrap_or(Px(96.0)),
@@ -756,6 +763,7 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
                 .unwrap_or(Px(2.0)),
         },
         ButtonSize::XLarge => ButtonSizeTokens {
+            min_width,
             container_height: theme
                 .metric_by_key("md.comp.button.xlarge.container.height")
                 .unwrap_or(Px(136.0)),
@@ -776,6 +784,13 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
                 .unwrap_or(Px(3.0)),
         },
     }
+}
+
+fn button_min_width() -> Px {
+    // Keep the Material button root on an explicit minimum width so visual snapshots and layout do
+    // not depend on underconstrained wrapper fill resolution. This matches the current web-facing
+    // Material button contract that Fret is aligning to.
+    Px(64.0)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -859,5 +874,15 @@ mod tests {
         assert_eq!(label.layout.size.width, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.shrink, 1.0);
+    }
+
+    #[test]
+    fn button_chrome_applies_material_min_width() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let tokens = button_size_tokens(theme, ButtonSize::Small);
+        let props = material_button_chrome_props(None, Corners::all(Px(20.0)), None, tokens);
+
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(64.0))));
     }
 }

@@ -212,7 +212,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let footer = shadcn::SidebarFooter::new([shadcn::SidebarMenu::new([
                 shadcn::SidebarMenuItem::new(
                     shadcn::SidebarMenuButton::new("frank@example.com")
-                        .icon(IconId::new_static("lucide.user-2"))
+                        .icon(IconId::new_static("lucide.user-round"))
                         .on_activate(set_text_model(last_action.clone(), "open-account"))
                         .into_element(cx),
                 )

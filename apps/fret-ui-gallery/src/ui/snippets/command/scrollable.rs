@@ -104,7 +104,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .leading_icon(icon_id("lucide.bell"))
                 .on_select_action(noop.clone()),
             shadcn::CommandItem::new("Help & Support")
-                .leading_icon(icon_id("lucide.circle-help"))
+                .leading_icon(icon_id("lucide.circle-question-mark"))
                 .on_select_action(noop.clone()),
         ])
         .heading("Account")

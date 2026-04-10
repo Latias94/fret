@@ -10,6 +10,7 @@
 //! - Manual assembly with curated re-exports and without ecosystem defaults should usually start
 //!   with `fret-framework` and then opt into `fret-bootstrap` as needed.
 //! - Advanced host/runner integration belongs in `fret-launch`.
+//! - Asset startup / resolver helpers live under [`assets`].
 //! - Specialized interop/media helpers live under dedicated submodules such as
 //!   [`imported_viewport_target`], [`native_external_import`], [`shared_allocation`], and [`media`].
 //!

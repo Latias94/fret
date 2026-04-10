@@ -8,9 +8,9 @@ This note defines the **runtime snapshot extension seam** tracked by M2 in this 
 It is intended to let ecosystem crates contribute small, debug-oriented signals without widening
 the core typed snapshot schema on every iteration.
 
-For the long-lived contract, see ADR 0310:
+For the long-lived contract, see ADR 0323:
 
-- `docs/adr/0310-ui-diagnostics-debug-extensions-v1.md`
+- `docs/adr/0323-ui-diagnostics-debug-extensions-v1.md`
 
 ## Scope
 

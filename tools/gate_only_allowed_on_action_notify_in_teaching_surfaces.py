@@ -28,6 +28,10 @@ ALLOWED: dict[str, dict[str, str]] = {
         "act::Redo": "history traversal is coupled to a RAF effect",
     },
 }
+SKIP_FILES = {
+    # Source-policy harness that intentionally searches for forbidden helper spellings.
+    "apps/fret-examples/src/lib.rs",
+}
 
 
 def main() -> None:
@@ -44,6 +48,8 @@ def main() -> None:
     violations: list[tuple[Path, int, str]] = []
     for path in files:
         rel = path.resolve().relative_to(WORKSPACE_ROOT).as_posix()
+        if rel in SKIP_FILES:
+            continue
         allowed_tokens = ALLOWED.get(rel, {})
         text = path.read_text(encoding="utf-8", errors="replace")
         for line_no, line in enumerate(text.splitlines(), start=1):

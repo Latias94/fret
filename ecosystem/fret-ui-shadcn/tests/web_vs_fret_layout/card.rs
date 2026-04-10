@@ -444,10 +444,10 @@ fn card_header_inside_bordered_padded_container_keeps_action_intrinsic_width() {
                 },
                 border: Edges::all(Px(1.0)),
                 padding: Edges {
-                    top: Px(24.0).into(),
-                    bottom: Px(24.0).into(),
-                    left: Px(0.0).into(),
-                    right: Px(0.0).into(),
+                    top: Px(24.0),
+                    bottom: Px(24.0),
+                    left: Px(0.0),
+                    right: Px(0.0),
                 }
                 .into(),
                 ..Default::default()
