@@ -60,8 +60,11 @@ Last updated: 2026-04-10
 - [x] ALC-041 Land the smallest slice with tests or diag evidence before widening scope.
 - [x] ALC-042 Pin the editor rail / inspector sidebar owner layer so app-shell `Sidebar` does not
   silently widen into the editor-panel adaptive story.
-- [ ] ALC-043 Decide whether the next reusable editor rail slice belongs in `fret-ui-editor`, a
-  future workspace-shell layer, or can stay app-local after the panel-resize proof is promoted.
+- [x] ALC-043 Decide whether the next reusable editor rail slice belongs in `fret-ui-editor`, a
+  workspace-shell layer, or can stay app-local after the panel-resize proof is promoted.
+- [ ] ALC-044 Promote one reviewable editor-rail composition that uses the existing
+  `WorkspaceFrame.left/right` shell seam plus editor-owned inner panel content before extracting a
+  new public rail primitive.
 
 ## M4 — Docs, closeout, or follow-on split
 
@@ -117,3 +120,7 @@ Completed sidebar boundary-pin slice evidence:
 Completed editor-panel owner audit evidence:
 
 - `docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md`
+
+Completed workspace-rail seam audit evidence:
+
+- `docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md`

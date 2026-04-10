@@ -28,6 +28,10 @@
       "path": "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md"
     },
@@ -80,6 +84,7 @@
     "docs/workstreams/adaptive-layout-contract-closure-v1/M1_CONTRACT_FREEZE_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/BASELINE_AUDIT_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/TODO.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/MILESTONES.md",
     "docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md",

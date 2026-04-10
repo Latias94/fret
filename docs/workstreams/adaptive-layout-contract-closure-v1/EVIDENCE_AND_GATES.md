@@ -40,6 +40,9 @@ What this proves now:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md`
   - pins the owner split for editor rails / inspector sidebars so app-shell `Sidebar` does not
     become the accidental center of panel-adaptive work.
+- `docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md`
+  - resolves the next-shell seam decision by pinning `WorkspaceFrame.left/right` as the existing
+    outer rail seam while keeping rail recipes app-local for now.
 - `docs/known-issues.md`
   - already states that remaining viewport breakpoints should mean device-level behavior, not a
     substitute for container queries.

@@ -109,11 +109,15 @@ Current status:
 - A fourth bounded audit slice now confirms that reusable editor side panels should stay on the
   existing editor/workspace owner path (`fret-ui-editor` composites plus workspace shell), while
   `fret-docking` keeps topology/registry ownership and shadcn `Sidebar` remains app-shell only.
+- A fifth bounded audit slice now resolves the next seam decision: use the existing
+  `fret-workspace::WorkspaceFrame.left/right` shell slots as the outer rail seam, keep
+  `fret-ui-editor` as the reusable inner-panel owner, and keep the concrete rail recipe app-local
+  until a second consumer proves extraction.
 - Residual risk remains on other dialog-family trigger examples because the lane still lacks an
   explicit narrow-window trigger-width sweep for every docs-path snippet.
-- The next unresolved adaptive owner question is not "rename Sidebar again" but whether a reusable
-  container-aware `PanelRail` / `InspectorSidebar` seam is genuinely shared enough to extract above
-  current app shells.
+- The next unresolved adaptive owner question is no longer the outer seam; it is whether an
+  app-local rail recipe becomes shared enough to justify extraction after the panel-resize proof is
+  promoted.
 
 ## M4 — Closeout or split
 
