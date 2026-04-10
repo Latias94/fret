@@ -1,0 +1,46 @@
+# Device-Shell Strategy Surface v1 — TODO
+
+Status: Active
+Last updated: 2026-04-10
+
+Companion docs:
+
+- `DESIGN.md`
+- `MILESTONES.md`
+- `EVIDENCE_AND_GATES.md`
+- `WORKSTREAM.json`
+
+## Lane opening
+
+- [x] DSS-001 Open a narrow follow-on instead of reopening
+  `adaptive-layout-contract-closure-v1`.
+- [x] DSS-002 Record the initial device-shell branching evidence and owner boundaries.
+
+## M0 — Baseline and owner split
+
+- [ ] DSS-010 Audit the current desktop/mobile branch sites across gallery and recipe code.
+- [ ] DSS-011 Decide which branch patterns should stay app-local and which justify a shared
+  strategy helper.
+- [ ] DSS-012 Record the owner split between app-shell device surfaces, recipe wrappers, and
+  raw-query escape hatches.
+
+## M1 — Contract freeze
+
+- [ ] DSS-020 Freeze the naming and ownership rules for higher-level device-shell strategy.
+- [ ] DSS-021 Decide whether the shared surface belongs in `fret-ui-kit`, `fret-ui-shadcn`, or a
+  mixed helper + wrapper split.
+- [ ] DSS-022 Decide whether the app-facing lane needs a `fret::adaptive` facade export or should
+  remain crate-local first.
+
+## M2 — Proof and first landing slice
+
+- [ ] DSS-030 Keep one explicit `Dialog` vs `Drawer` proof surface green.
+- [ ] DSS-031 Keep one explicit `Popover` vs `Drawer` proof surface green.
+- [ ] DSS-032 Land the first bounded extraction only after the contract is frozen.
+
+## Boundaries to protect
+
+- Do not reopen the closed broad adaptive lane for generic responsive cleanup.
+- Do not turn app-shell/device-shell helpers into generic panel/container adaptive helpers.
+- Do not move device-shell policy into `crates/fret-ui`.
+- Do not widen `Sidebar` into the editor rail story.

@@ -58,6 +58,12 @@ It complements (but does not replace) ADRs:
   cross-lane authoring/proof posture; keep `environment-queries-v1` focused on the mechanism
   baseline and historical migration record, and start any future adaptive work as a narrower
   follow-on instead of reopening the closed lane.
+- Current narrow follow-on for higher-level desktop/mobile shell branching above raw viewport
+  queries:
+  - `docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md`
+  - `docs/workstreams/device-shell-strategy-surface-v1/TODO.md`
+  - `docs/workstreams/device-shell-strategy-surface-v1/MILESTONES.md`
+  - `docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md`
 
 ## P1 - Authoring surfaces (imui convergence)
 

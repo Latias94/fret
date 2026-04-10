@@ -31,6 +31,11 @@ Tracker highlights:
   split): `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`,
   `docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`.
+- Device-shell strategy surface follow-on (active narrow lane for explicit desktop/mobile shell
+  branching above raw viewport queries): `docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md`,
+  `docs/workstreams/device-shell-strategy-surface-v1/TODO.md`,
+  `docs/workstreams/device-shell-strategy-surface-v1/MILESTONES.md`, and
+  `docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md`.
 - Text system v2 (Parley + attributed spans): `docs/workstreams/standalone/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`.
 - Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.

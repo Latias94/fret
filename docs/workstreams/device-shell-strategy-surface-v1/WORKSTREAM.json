@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "device-shell-strategy-surface-v1",
+  "title": "Device-Shell Strategy Surface v1",
+  "status": "active",
+  "updated": "2026-04-10",
+  "scope_kind": "execution",
+  "problem": "Fret now has a closed adaptive taxonomy baseline, but higher-level desktop/mobile shell branching still appears as repeated raw viewport-query conditionals in app-facing code. This lane owns the narrow follow-on question: what shared device-shell strategy surface should exist above raw query reads without reopening panel/container adaptive work.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused source tests keep the current device-shell branching evidence visible before any shared helper/wrapper extraction.",
+    "commands": [
+      "cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --test sidebar_docs_surface --no-fail-fast",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app drawer_responsive_dialog_keeps_desktop_dialog_on_composable_content_lane drawer_page_marks_usage_as_default_and_snap_points_as_follow_up remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface date_picker_usage_snippet_stays_on_the_composed_popover_calendar_lane --no-fail-fast",
+      "git diff --check",
+      "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    ]
+  },
+  "gates": [
+    {
+      "name": "device-shell-strategy-source-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --test sidebar_docs_surface --no-fail-fast"
+    },
+    {
+      "name": "default-app-authoring-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app drawer_responsive_dialog_keeps_desktop_dialog_on_composable_content_lane drawer_page_marks_usage_as_default_and_snap_points_as_follow_up remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface date_picker_usage_snippet_stays_on_the_composed_popover_calendar_lane --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/TODO.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/MILESTONES.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md",
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/audits/shadcn-sidebar.md",
+    "apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs",
+    "apps/fret-ui-gallery/tests/sidebar_docs_surface.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs",
+    "apps/fret-ui-gallery/src/ui/pages/drawer.rs",
+    "apps/fret-ui-gallery/src/ui/pages/sidebar.rs",
+    "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+    "ecosystem/fret-ui-shadcn/src/dialog.rs",
+    "ecosystem/fret-ui-shadcn/src/sheet.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Keep this lane narrow: higher-level desktop/mobile shell strategy only. Do not pull panel/container adaptive work or editor-rail extraction into this follow-on."
+  }
+}
