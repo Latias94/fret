@@ -1,6 +1,6 @@
 # Device-Shell Strategy Surface v1 — Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-11
 
 ## M0 — Baseline and owner split
@@ -77,11 +77,50 @@ Exit criteria:
 Primary evidence:
 
 - `docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/device-shell-strategy-surface-v1/M2_FIRST_EXTRACTION_2026-04-11.md`
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
 - focused tests in `apps/fret-ui-gallery/tests/*`
 
 Current status:
 
-- Active next step.
-- First extraction target is now frozen enough to implement:
-  a crate-local `fret-ui-kit` device-shell switch helper for repeated overlay-shell branching,
-  with recipe wrappers only if the first landed helper proves durable.
+- Landed on 2026-04-11 via
+  `docs/workstreams/device-shell-strategy-surface-v1/M2_FIRST_EXTRACTION_2026-04-11.md`.
+- `fret-ui-kit` now owns a crate-local binary helper surface:
+  `DeviceShellMode`, `DeviceShellSwitchPolicy`, `device_shell_mode(...)`, and
+  `device_shell_switch(...)`.
+- `Date Picker` now uses the shared helper while still showing explicit desktop `Popover` and
+  mobile `Drawer` branch bodies.
+- This first extraction record is now historical within the lane; see M3 for the second-consumer
+  proof and final closeout verdict.
+
+## M3 — Second consumer proof and closeout
+
+Exit criteria:
+
+- The helper lands on a second real consumer without becoming a generic responsive manager.
+- The lane proves whether two consumers are enough to close on the current owner split.
+- The closeout leaves future facade/wrapper work as explicit follow-ons.
+
+Primary evidence:
+
+- `docs/workstreams/device-shell-strategy-surface-v1/M3_SECOND_CONSUMER_PROOF_2026-04-11.md`
+- `docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
+- `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
+- `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`
+
+Current status:
+
+- Landed on 2026-04-11 via
+  `docs/workstreams/device-shell-strategy-surface-v1/M3_SECOND_CONSUMER_PROOF_2026-04-11.md`.
+- `Breadcrumb` now joins `Date Picker` as a second real helper consumer and keeps explicit
+  `DropdownMenu` / `Drawer` branch bodies visible.
+- The lane closed on 2026-04-11 via
+  `docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`.
+- Future facade promotion or wrapper growth now belongs in a new bounded follow-on.

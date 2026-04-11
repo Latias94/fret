@@ -2,8 +2,8 @@ use fret_core::{Edges, Px};
 use fret_ui::{ElementContextAccess, GlobalElementId, Invalidation, UiHost};
 
 use crate::declarative::{
-    ContainerQueryHysteresis, ViewportQueryHysteresis, container_queries, occlusion_queries,
-    pointer_queries, safe_area_queries, viewport_queries,
+    container_queries, occlusion_queries, pointer_queries, safe_area_queries, viewport_queries,
+    ContainerQueryHysteresis, ViewportQueryHysteresis,
 };
 
 /// Explicit query-source selector for adaptive policy surfaces.
@@ -83,6 +83,51 @@ impl DeviceAdaptivePolicy {
     }
 }
 
+/// Binary device-shell branch result for explicit desktop/mobile shell authoring.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeviceShellMode {
+    Desktop,
+    Mobile,
+}
+
+impl DeviceShellMode {
+    pub fn is_desktop(self) -> bool {
+        matches!(self, Self::Desktop)
+    }
+
+    pub fn is_mobile(self) -> bool {
+        matches!(self, Self::Mobile)
+    }
+}
+
+/// Shared policy for binary desktop/mobile shell switching.
+#[derive(Debug, Clone, Copy)]
+pub struct DeviceShellSwitchPolicy {
+    pub desktop_min_width: Px,
+    pub hysteresis: ViewportQueryHysteresis,
+}
+
+impl Default for DeviceShellSwitchPolicy {
+    fn default() -> Self {
+        Self {
+            desktop_min_width: viewport_queries::tailwind::MD,
+            hysteresis: ViewportQueryHysteresis::default(),
+        }
+    }
+}
+
+impl DeviceShellSwitchPolicy {
+    pub fn desktop_min_width(mut self, width: Px) -> Self {
+        self.desktop_min_width = width;
+        self
+    }
+
+    pub fn hysteresis(mut self, hysteresis: ViewportQueryHysteresis) -> Self {
+        self.hysteresis = hysteresis;
+        self
+    }
+}
+
 /// Shared policy for panel/container classification.
 #[derive(Debug, Clone, Copy)]
 pub struct PanelAdaptivePolicy {
@@ -126,6 +171,57 @@ pub struct DeviceAdaptiveSnapshot {
     pub coarse_pointer: bool,
     pub safe_area_insets: Edges,
     pub occlusion_insets: Edges,
+}
+
+/// Resolves whether the current window should use a desktop or mobile shell branch.
+#[track_caller]
+pub fn device_shell_mode<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    invalidation: Invalidation,
+    policy: DeviceShellSwitchPolicy,
+) -> DeviceShellMode
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    if viewport_queries::viewport_width_at_least(
+        cx,
+        invalidation,
+        policy.desktop_min_width,
+        policy.hysteresis,
+    ) {
+        DeviceShellMode::Desktop
+    } else {
+        DeviceShellMode::Mobile
+    }
+}
+
+/// Lands exactly one explicit desktop/mobile shell branch without widening generic children APIs.
+#[track_caller]
+pub fn device_shell_switch<'a, H, Cx, DesktopBranch, MobileBranch, DesktopChild, MobileChild>(
+    cx: &mut Cx,
+    invalidation: Invalidation,
+    policy: DeviceShellSwitchPolicy,
+    desktop: DesktopBranch,
+    mobile: MobileBranch,
+) -> fret_ui::element::AnyElement
+where
+    H: UiHost + 'a,
+    Cx: ElementContextAccess<'a, H>,
+    DesktopBranch: FnOnce(&mut Cx) -> DesktopChild,
+    MobileBranch: FnOnce(&mut Cx) -> MobileChild,
+    DesktopChild: crate::ui_builder::IntoUiElement<H>,
+    MobileChild: crate::ui_builder::IntoUiElement<H>,
+{
+    match device_shell_mode(cx, invalidation, policy) {
+        DeviceShellMode::Desktop => {
+            let child = desktop(cx);
+            crate::land_child(cx, child)
+        }
+        DeviceShellMode::Mobile => {
+            let child = mobile(cx);
+            crate::land_child(cx, child)
+        }
+    }
 }
 
 fn normalize_device_thresholds(policy: DeviceAdaptivePolicy) -> (Px, Px) {
@@ -246,5 +342,21 @@ mod tests {
         let (medium, wide) = normalize_panel_thresholds(policy);
         assert_eq!(medium, Px(768.0));
         assert_eq!(wide, Px(1280.0));
+    }
+
+    #[test]
+    fn device_shell_switch_policy_defaults_to_md_breakpoint() {
+        let policy = DeviceShellSwitchPolicy::default();
+        assert_eq!(policy.desktop_min_width, viewport_queries::tailwind::MD);
+        assert_eq!(policy.hysteresis.up, Px(8.0));
+        assert_eq!(policy.hysteresis.down, Px(8.0));
+    }
+
+    #[test]
+    fn device_shell_mode_bool_helpers_match_variants() {
+        assert!(DeviceShellMode::Desktop.is_desktop());
+        assert!(!DeviceShellMode::Desktop.is_mobile());
+        assert!(DeviceShellMode::Mobile.is_mobile());
+        assert!(!DeviceShellMode::Mobile.is_desktop());
     }
 }

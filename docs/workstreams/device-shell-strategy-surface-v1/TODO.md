@@ -1,6 +1,6 @@
 # Device-Shell Strategy Surface v1 — TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-04-11
 
 Companion docs:
@@ -35,9 +35,15 @@ Companion docs:
 
 ## M2 — Proof and first landing slice
 
-- [ ] DSS-030 Keep one explicit `Dialog` vs `Drawer` proof surface green.
-- [ ] DSS-031 Keep one explicit `Popover` vs `Drawer` proof surface green.
-- [ ] DSS-032 Land the first bounded extraction only after the contract is frozen.
+- [x] DSS-030 Keep one explicit `Dialog` vs `Drawer` proof surface green.
+- [x] DSS-031 Keep one explicit `Popover` vs `Drawer` proof surface green.
+- [x] DSS-032 Land the first bounded extraction only after the contract is frozen.
+
+## M3 — Second consumer proof and closeout
+
+- [x] DSS-040 Prove the shared helper on a second real app-facing consumer.
+- [x] DSS-041 Decide whether the second consumer is enough to close the lane without facade promotion.
+- [x] DSS-042 Close the lane with explicit follow-on policy.
 
 ## Boundaries to protect
 
@@ -65,3 +71,23 @@ Completed M1 freeze evidence:
 - `ecosystem/fret-ui-kit/src/adaptive.rs`
 - `apps/fret-ui-gallery/src/ui/pages/combobox.rs`
 - `ecosystem/fret-ui-shadcn/src/combobox.rs`
+
+Completed M2 landing evidence:
+
+- `docs/workstreams/device-shell-strategy-surface-v1/M2_FIRST_EXTRACTION_2026-04-11.md`
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
+- `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
+
+Completed M3 closeout evidence:
+
+- `docs/workstreams/device-shell-strategy-surface-v1/M3_SECOND_CONSUMER_PROOF_2026-04-11.md`
+- `docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
+- `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
+- `apps/fret-ui-gallery/tests/sidebar_docs_surface.rs`

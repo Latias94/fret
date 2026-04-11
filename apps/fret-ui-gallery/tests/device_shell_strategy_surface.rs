@@ -3,17 +3,36 @@ fn normalize_ws(source: &str) -> String {
 }
 
 #[test]
-fn date_picker_dropdowns_still_show_raw_device_shell_branching_evidence() {
-    let source = include_str!("../src/ui/snippets/date_picker/dropdowns.rs");
+fn adaptive_module_exports_crate_local_device_shell_switch_surface() {
+    let source = include_str!("../../../ecosystem/fret-ui-kit/src/adaptive.rs");
 
     for needle in [
-        "let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(",
-        "shadcn::Popover::from_open(open.clone())",
-        "shadcn::Drawer::new(open.clone())",
+        "pub enum DeviceShellMode {",
+        "pub struct DeviceShellSwitchPolicy {",
+        "pub fn device_shell_mode<'a, H: UiHost + 'a, Cx>(",
+        "pub fn device_shell_switch<'a, H, Cx, DesktopBranch, MobileBranch, DesktopChild, MobileChild>(",
     ] {
         assert!(
             source.contains(needle),
-            "date picker dropdowns should keep the current device-shell branching evidence visible; missing `{needle}`"
+            "adaptive module should expose the crate-local device-shell helper surface; missing `{needle}`"
+        );
+    }
+}
+
+#[test]
+fn date_picker_dropdowns_now_use_shared_device_shell_switch_but_keep_explicit_shell_branches() {
+    let source = include_str!("../src/ui/snippets/date_picker/dropdowns.rs");
+
+    for needle in [
+        "use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};",
+        "let overlay = device_shell_switch(",
+        "DeviceShellSwitchPolicy::default()",
+        "shadcn::Popover::from_open(desktop_open.clone())",
+        "shadcn::Drawer::new(mobile_open.clone())",
+    ] {
+        assert!(
+            source.contains(needle),
+            "date picker dropdowns should use the shared device-shell helper while keeping explicit popover/drawer branches visible; missing `{needle}`"
         );
     }
 }
@@ -61,17 +80,20 @@ fn sidebar_page_keeps_app_shell_device_shell_boundary_explicit() {
 }
 
 #[test]
-fn breadcrumb_responsive_snippet_still_shows_raw_dropdown_vs_drawer_branching() {
+fn breadcrumb_responsive_snippet_now_uses_shared_device_shell_helpers_but_keeps_explicit_shell_branches(
+) {
     let source = include_str!("../src/ui/snippets/breadcrumb/responsive.rs");
 
     for needle in [
-        "let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(",
+        "use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_mode, device_shell_switch};",
+        "let is_desktop = device_shell_mode(cx, Invalidation::Layout, shell_policy).is_desktop();",
+        "vec![device_shell_switch(",
         "let dropdown = shadcn::DropdownMenu::from_open(open.clone())",
         "let drawer = shadcn::Drawer::new(open.clone());",
     ] {
         assert!(
             source.contains(needle),
-            "breadcrumb responsive snippet should keep the current dropdown-vs-drawer branching evidence visible; missing `{needle}`"
+            "breadcrumb responsive snippet should use shared device-shell helpers while keeping explicit dropdown/drawer branches visible; missing `{needle}`"
         );
     }
 }

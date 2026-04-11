@@ -1,11 +1,11 @@
 # Device-Shell Strategy Surface v1 — Evidence and Gates
 
-Status: Active
+Status: Closed closeout reference
 Last updated: 2026-04-11
 
 ## Smallest current repro
 
-Use this focused source/gate set before proposing any shared device-shell strategy helper:
+Use this focused source/gate set to verify the shipped device-shell strategy surface:
 
 ```bash
 cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --test sidebar_docs_surface --no-fail-fast
@@ -16,9 +16,11 @@ python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-
 
 What this proves now:
 
-- the repo still contains at least one app-level raw viewport branch for `Popover` vs `Drawer`,
-- the repo also still contains an app-level raw desktop/mobile branch for `DropdownMenu` vs
-  `Drawer`,
+- the repo now has a crate-local `fret-ui-kit` device-shell switch helper surface,
+- `Date Picker` now uses that shared helper while keeping explicit `Popover` vs `Drawer` branches
+  visible,
+- `Breadcrumb` now uses the same shared helper while keeping explicit `DropdownMenu` vs `Drawer`
+  branches visible,
 - the docs-path `Dialog` vs `Drawer` pairing remains explicit and reviewable,
 - combobox already demonstrates one recipe-owned explicit device-shell API shape,
 - and sidebar device-shell ownership is already pinned away from the editor-rail story.
@@ -36,13 +38,21 @@ What this proves now:
   - records the frozen target surface for higher-level device-shell strategy.
 - `docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`
   - records the layer split and the "crate-local first, no facade promotion yet" decision.
+- `docs/workstreams/device-shell-strategy-surface-v1/M2_FIRST_EXTRACTION_2026-04-11.md`
+  - records the first landed shared helper slice and what still remains explicit by design.
+- `docs/workstreams/device-shell-strategy-surface-v1/M3_SECOND_CONSUMER_PROOF_2026-04-11.md`
+  - records the second real helper consumer and the proof-sufficiency decision.
+- `docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+  - records the final shipped owner split, gate set, and follow-on policy.
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
+  - crate-local `device_shell_*` helper surface and default breakpoint policy.
 - `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
-  - focused source gate for current raw branch sites, recipe-owned explicit naming, and app-shell
-    boundary evidence.
+  - focused source gate for the shipped helper surface, its two real consumers, recipe-owned
+    explicit naming, and app-shell boundary evidence.
 - `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
-  - current raw `viewport_width_at_least(...)` branch for `Popover` vs `Drawer`.
+  - first consumer of `device_shell_switch(...)` with explicit `Popover` and `Drawer` bodies.
 - `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
-  - current raw `viewport_width_at_least(...)` branch for `DropdownMenu` vs `Drawer`.
+  - second helper consumer with explicit `DropdownMenu` and `Drawer` bodies.
 - `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
   - current explicit `Dialog` vs `Drawer` pairing proof surface.
 - `apps/fret-ui-gallery/src/ui/pages/combobox.rs`
@@ -67,7 +77,7 @@ What this proves now:
 - `ecosystem/fret-ui-shadcn/src/sheet.rs`
   - current viewport-query-based sheet sizing policy.
 
-## Active gate set
+## Shipped gate set
 
 ### Source evidence gate
 
@@ -88,13 +98,14 @@ git diff --check
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
 
-## Next active gap
+## Follow-on policy
 
-The next gap is no longer "who owns the contract?"
+This lane is now closed.
 
-That is now frozen.
+Any future work should be treated as a fresh bounded question, for example:
 
-The next active gap is implementation:
+- whether the shipped helper now deserves `fret` facade promotion,
+- whether a recipe-owned wrapper should exist above the helper,
+- or whether device-shell policy should grow beyond width-only switching.
 
-- land the first crate-local `fret-ui-kit` helper for repeated `Popover` / `DropdownMenu` /
-  `Drawer` device-shell switching without reopening app-shell or panel/container ownership.
+Those should not be reopened implicitly from this closed lane.

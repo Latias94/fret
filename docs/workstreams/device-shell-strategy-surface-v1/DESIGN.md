@@ -1,7 +1,12 @@
 # Device-Shell Strategy Surface v1
 
-Status: Active
-Last updated: 2026-04-10
+Status: Closed closeout reference
+Last updated: 2026-04-11
+
+Status note (2026-04-11): this document remains the lane-opening rationale. The current shipped
+guidance lives in `CLOSEOUT_AUDIT_2026-04-11.md` and
+`M3_SECOND_CONSUMER_PROOF_2026-04-11.md`. References below to mostly raw app-level viewport
+branches should be read as opening-state evidence rather than the final shipped lane state.
 
 Related:
 
