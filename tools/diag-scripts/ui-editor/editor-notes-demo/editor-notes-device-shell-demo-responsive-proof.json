@@ -1,0 +1,226 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "editor-notes-device-shell-demo-responsive-proof",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "ui_editor",
+      "responsive",
+      "device_shell",
+      "workspace_frame",
+      "drawer",
+      "layout_sidecar",
+      "regression"
+    ],
+    "target_hints": [
+      "Uses the app-local editor_notes_device_shell_demo proof surface.",
+      "Verifies the wide shell keeps selection and inspector in explicit WorkspaceFrame rails.",
+      "Verifies the compact shell hides those rails, surfaces a drawer trigger, and mounts the same inner editor content inside the drawer."
+    ],
+    "env_defaults": {
+      "FRET_EDITOR_NOTES_DEMO_PRESET": "default"
+    }
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 820.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.left-rail" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.right-rail" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.left-rail" },
+        "min_w_px": 240.0,
+        "min_h_px": 320.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.right-rail" },
+        "min_w_px": 320.0,
+        "min_h_px": 320.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "editor-notes-device-shell-demo.desktop-rails"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "editor-notes-device-shell-demo.desktop-rails"
+    },
+
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 820.0 },
+    { "type": "wait_frames", "n": 16 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.mobile-header" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.trigger"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.left-rail" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "editor-notes-device-shell-demo.right-rail" }
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "editor-notes-device-shell-demo.mobile-header"
+    },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "editor-notes-device-shell-demo.drawer.trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.content"
+        },
+        "target": { "kind": "test_id", "id": "editor-notes-demo.selection" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.content"
+        },
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "editor-notes-device-shell-demo.drawer.content"
+      },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.content"
+        },
+        "padding_px": 0.0,
+        "eps_px": 2.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.viewport"
+        },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-device-shell-demo.drawer.close"
+        },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "editor-notes-device-shell-demo.mobile-drawer-open"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "editor-notes-device-shell-demo.mobile-drawer-open"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "editor-notes-device-shell-demo.mobile-drawer-open"
+    }
+  ]
+}

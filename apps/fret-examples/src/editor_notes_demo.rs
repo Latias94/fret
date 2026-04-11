@@ -46,7 +46,7 @@ pub(crate) mod act {
     ]);
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub(crate) enum EditorAssetSelection {
     #[default]
     Material,
@@ -61,9 +61,9 @@ pub(crate) struct EditorAssetState {
     subtitle: Arc<str>,
     name_id_source: Arc<str>,
     notes_id_source: Arc<str>,
-    name_model: Model<String>,
-    notes_model: Model<String>,
-    notes_outcome_model: Model<String>,
+    pub(crate) name_model: Model<String>,
+    pub(crate) notes_model: Model<String>,
+    pub(crate) notes_outcome_model: Model<String>,
 }
 
 struct EditorNotesDemoView {
@@ -145,11 +145,13 @@ impl View for EditorNotesDemoView {
         );
         let left_rail = ui::container(|_cx| [selection_panel])
             .w_px(Px(256.0))
+            .flex_shrink_0()
             .h_full()
             .into_element(cx)
             .test_id(TEST_ID_LEFT_RAIL);
         let right_rail = ui::container(|_cx| [inspector])
             .w_px(Px(360.0))
+            .flex_shrink_0()
             .h_full()
             .into_element(cx)
             .test_id(TEST_ID_RIGHT_RAIL);
@@ -238,20 +240,6 @@ fn make_asset_state(
         notes_model: app.models_mut().insert(notes.to_string()),
         notes_outcome_model: app.models_mut().insert("Idle".to_string()),
     }
-}
-
-pub(crate) fn editor_asset_panel_state(
-    cx: &mut AppUi<'_, '_>,
-    asset: &EditorAssetState,
-) -> (String, String, String) {
-    cx.data().selector_model_paint(
-        (
-            &asset.name_model,
-            &asset.notes_model,
-            &asset.notes_outcome_model,
-        ),
-        |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
-    )
 }
 
 fn selection_button<'a, Cx>(

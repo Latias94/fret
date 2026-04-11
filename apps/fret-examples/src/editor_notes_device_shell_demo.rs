@@ -6,7 +6,8 @@ use fret::{Defaults, FretApp, shadcn};
 use fret_core::Px;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::{ColorRef, Space};
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 use fret_workspace::WorkspaceFrame;
 
 use crate::editor_notes_demo::{self, EditorAssetSelection, EditorAssetState};
@@ -17,6 +18,7 @@ const TEST_ID_RIGHT_RAIL: &str = "editor-notes-device-shell-demo.right-rail";
 const TEST_ID_MOBILE_HEADER: &str = "editor-notes-device-shell-demo.mobile-header";
 const TEST_ID_DRAWER_TRIGGER: &str = "editor-notes-device-shell-demo.drawer.trigger";
 const TEST_ID_DRAWER_CONTENT: &str = "editor-notes-device-shell-demo.drawer.content";
+const TEST_ID_DRAWER_VIEWPORT: &str = "editor-notes-device-shell-demo.drawer.viewport";
 const TEST_ID_DRAWER_CLOSE: &str = "editor-notes-device-shell-demo.drawer.close";
 
 const DESKTOP_OWNERSHIP_NOTE: &str = "WorkspaceFrame owns the desktop shell rails; fret-ui-editor still owns the shared inspector content.";
@@ -68,8 +70,18 @@ impl View for EditorNotesDeviceShellDemoView {
         let theme = Theme::global(&*cx.app).snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = editor_notes_demo::editor_asset_for_selection(&self.assets, selected).clone();
-        let (name_value, committed_notes, notes_outcome) =
-            editor_notes_demo::editor_asset_panel_state(cx, &asset);
+        let name_value = cx
+            .watch_model(&asset.name_model)
+            .paint()
+            .cloned_or_default();
+        let committed_notes = cx
+            .watch_model(&asset.notes_model)
+            .paint()
+            .cloned_or_default();
+        let notes_outcome = cx
+            .watch_model(&asset.notes_outcome_model)
+            .paint()
+            .cloned_or_default();
         let committed_label = editor_notes_demo::committed_line_count_label(&committed_notes);
         let desktop_background = theme.color_token("background");
 
@@ -108,11 +120,13 @@ impl View for EditorNotesDeviceShellDemoView {
                 );
                 let left_rail = ui::container(|_cx| [selection_panel])
                     .w_px(Px(256.0))
+                    .flex_shrink_0()
                     .h_full()
                     .into_element(cx)
                     .test_id(TEST_ID_LEFT_RAIL);
                 let right_rail = ui::container(|_cx| [inspector])
                     .w_px(Px(360.0))
+                    .flex_shrink_0()
                     .h_full()
                     .into_element(cx)
                     .test_id(TEST_ID_RIGHT_RAIL);
@@ -158,7 +172,21 @@ impl View for EditorNotesDeviceShellDemoView {
                                 .gap(Space::N4)
                                 .w_full()
                                 .min_w_0()
-                                .p(Space::N4)
+                                .into_element(cx);
+                            let body = shadcn::ScrollArea::new([body])
+                                .refine_layout(
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .h_px(Px(320.0))
+                                        .min_w_0()
+                                        .min_h_0(),
+                                )
+                                .viewport_test_id(TEST_ID_DRAWER_VIEWPORT)
+                                .into_element(cx);
+                            let body = ui::container(|_cx| [body])
+                                .px(Space::N4)
+                                .w_full()
+                                .min_w_0()
                                 .into_element(cx);
 
                             shadcn::DrawerContent::new([])

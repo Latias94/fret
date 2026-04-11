@@ -22,3 +22,33 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
         );
     }
 }
+
+#[test]
+fn editor_notes_device_shell_demo_diag_script_keeps_desktop_rail_and_mobile_drawer_proof_steps() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-device-shell-demo-responsive-proof.json"
+    );
+
+    for needle in [
+        "\"schema_version\": 2",
+        "\"editor-notes-device-shell-demo.root\"",
+        "\"editor-notes-device-shell-demo.left-rail\"",
+        "\"editor-notes-device-shell-demo.right-rail\"",
+        "\"editor-notes-device-shell-demo.mobile-header\"",
+        "\"editor-notes-device-shell-demo.drawer.trigger\"",
+        "\"editor-notes-device-shell-demo.drawer.content\"",
+        "\"editor-notes-device-shell-demo.drawer.viewport\"",
+        "\"editor-notes-device-shell-demo.drawer.close\"",
+        "\"kind\": \"not_exists\"",
+        "\"kind\": \"exists_under\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"type\": \"capture_layout_sidecar\"",
+        "\"type\": \"capture_bundle\"",
+        "\"type\": \"capture_screenshot\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "editor notes device shell diag script should keep the desktop rail / mobile drawer proof reviewable; missing `{needle}`"
+        );
+    }
+}
