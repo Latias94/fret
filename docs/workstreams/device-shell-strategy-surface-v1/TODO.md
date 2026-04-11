@@ -6,6 +6,7 @@ Last updated: 2026-04-11
 Companion docs:
 
 - `DESIGN.md`
+- `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
 - `WORKSTREAM.json`
@@ -26,10 +27,10 @@ Companion docs:
 
 ## M1 — Contract freeze
 
-- [ ] DSS-020 Freeze the naming and ownership rules for higher-level device-shell strategy.
-- [ ] DSS-021 Decide whether the shared surface belongs in `fret-ui-kit`, `fret-ui-shadcn`, or a
+- [x] DSS-020 Freeze the naming and ownership rules for higher-level device-shell strategy.
+- [x] DSS-021 Decide whether the shared surface belongs in `fret-ui-kit`, `fret-ui-shadcn`, or a
   mixed helper + wrapper split.
-- [ ] DSS-022 Decide whether the app-facing lane needs a `fret::adaptive` facade export or should
+- [x] DSS-022 Decide whether the app-facing lane needs a `fret::adaptive` facade export or should
   remain crate-local first.
 
 ## M2 — Proof and first landing slice
@@ -56,3 +57,11 @@ Completed M0 audit evidence:
 - `ecosystem/fret-ui-shadcn/src/combobox.rs`
 - `apps/fret-ui-gallery/src/ui/pages/sidebar.rs`
 - `ecosystem/fret-ui-shadcn/src/sidebar.rs`
+
+Completed M1 freeze evidence:
+
+- `docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
+- `apps/fret-ui-gallery/src/ui/pages/combobox.rs`
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`

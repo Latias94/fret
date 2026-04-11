@@ -48,16 +48,23 @@ Exit criteria:
 Primary evidence:
 
 - `docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md`
+- `docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md`
+- `docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`
 - `docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md`
 - `docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md`
+- `ecosystem/fret-ui-kit/src/adaptive.rs`
 
 Current status:
 
-- Active next step.
-- M0 now leaves one strong candidate for the first shared helper direction:
-  a higher-level `Popover` / `DropdownMenu` / `Drawer`-style device-shell switcher above raw
-  viewport queries, while `Sidebar` remains out of scope and `Combobox` remains the explicit
-  recipe-owned naming exemplar.
+- Closed on 2026-04-11 via
+  `docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`.
+- The freeze now states:
+  - classification stays on `fret::adaptive`
+  - shared binary branch helpers land in `fret-ui-kit` first
+  - facade promotion stays deferred until a landed helper proves stable
+  - `Sidebar` remains provider/app-shell-owned
+- The next active work is M2: land the first bounded extraction around repeated
+  `Popover` / `DropdownMenu` / `Drawer` branch shapes.
 
 ## M2 — Proof and first landing slice
 
@@ -74,4 +81,7 @@ Primary evidence:
 
 Current status:
 
-- Pending.
+- Active next step.
+- First extraction target is now frozen enough to implement:
+  a crate-local `fret-ui-kit` device-shell switch helper for repeated overlay-shell branching,
+  with recipe wrappers only if the first landed helper proves durable.

@@ -32,6 +32,10 @@ What this proves now:
     broad adaptive closure tracker.
 - `docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md`
   - records the first owner-split inventory and extraction ranking for this lane.
+- `docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md`
+  - records the frozen target surface for higher-level device-shell strategy.
+- `docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`
+  - records the layer split and the "crate-local first, no facade promotion yet" decision.
 - `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
   - focused source gate for current raw branch sites, recipe-owned explicit naming, and app-shell
     boundary evidence.
@@ -86,10 +90,11 @@ python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-
 
 ## Next active gap
 
-The next gap is not another broad adaptive audit.
+The next gap is no longer "who owns the contract?"
 
-It is one contract decision:
+That is now frozen.
 
-- should Fret expose a shared higher-level device-shell strategy helper/wrapper above raw viewport
-  queries for the repeated `Popover` / `DropdownMenu` / `Drawer` family, and if yes, which layer
-  should own it?
+The next active gap is implementation:
+
+- land the first crate-local `fret-ui-kit` helper for repeated `Popover` / `DropdownMenu` /
+  `Drawer` device-shell switching without reopening app-shell or panel/container ownership.

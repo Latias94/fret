@@ -12,8 +12,16 @@
       "path": "docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md"
     },
     {
+      "role": "target",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
       "role": "status",
       "path": "docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md"
     },
     {
       "role": "execution",
@@ -65,7 +73,9 @@
   ],
   "evidence": [
     "docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md",
     "docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md",
     "docs/workstreams/device-shell-strategy-surface-v1/TODO.md",
     "docs/workstreams/device-shell-strategy-surface-v1/MILESTONES.md",
     "docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md",
