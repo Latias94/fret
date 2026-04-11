@@ -60,7 +60,13 @@
       },
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-demo-content" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
     {
       "type": "capture_screenshot",
       "label": "ui-gallery-dialog-docs-demo-open-desktop"
