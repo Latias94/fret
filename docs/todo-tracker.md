@@ -77,6 +77,10 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/container-aware-editor-rail-surface-v1/DESIGN.md`
   - `docs/workstreams/container-aware-editor-rail-surface-v1/TARGET_INTERFACE_STATE.md`
   - `docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+- Closed narrow follow-on for shared container-aware editor-rail helper shape:
+  - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/DESIGN.md`
+  - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/M0_BASELINE_AUDIT_2026-04-11.md`
+  - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md`
 
 ## P1 - Authoring surfaces (imui convergence)
 

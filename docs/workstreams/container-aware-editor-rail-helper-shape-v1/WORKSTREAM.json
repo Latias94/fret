@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "container-aware-editor-rail-helper-shape-v1",
+  "title": "Container-Aware Editor Rail Helper Shape v1",
+  "status": "closed",
+  "updated": "2026-04-11",
+  "scope_kind": "execution",
+  "follow_on_of": "container-aware-editor-rail-surface-v1",
+  "problem": "The previous lane closed after proving two shell-mounted editor-rail consumers. What remained was the narrower question of whether those two consumers now justify a shared helper below any future public extraction, or whether the wrapper layer should stay explicit and app-local.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/M0_BASELINE_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused source gates keep the two existing shell-mounted rail proofs visible while this closed lane records why no shared helper was extracted yet.",
+    "commands": [
+      "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast",
+      "git diff --check",
+      "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols",
+      "python3 -m json.tool docs/workstreams/container-aware-editor-rail-helper-shape-v1/WORKSTREAM.json > /dev/null"
+    ]
+  },
+  "gates": [
+    {
+      "name": "editor-rail-source-surfaces",
+      "command": "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/container-aware-editor-rail-helper-shape-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/DESIGN.md",
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/M0_BASELINE_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/TODO.md",
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/MILESTONES.md",
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "ecosystem/fret-workspace/src/frame.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md",
+    "docs/adr/0156-workspace-shell-tabs-and-pane-layout.md"
+  ],
+  "continue_policy": {
+    "default_action": "new_follow_on",
+    "notes": "This lane is closed on a no-new-helper verdict. Reopen only through a narrower follow-on when repeated container-aware rail behavior exists beyond the already-owned shell seam and inner editor content."
+  }
+}
