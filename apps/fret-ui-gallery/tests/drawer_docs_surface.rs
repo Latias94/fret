@@ -20,3 +20,23 @@ fn drawer_responsive_dialog_diag_script_waits_for_stable_overlay_bounds() {
         );
     }
 }
+
+#[test]
+fn drawer_docs_demo_diag_script_waits_for_stable_overlay_bounds() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-docs-demo-open-screenshot.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-drawer-demo-content\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"stable_frames\": 6",
+        "\"max_move_px\": 1.0",
+        "\"ui-gallery-drawer-docs-demo-open-desktop\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "drawer docs demo diag script should wait for stable overlay bounds before screenshots; missing `{needle}`",
+        );
+    }
+}
