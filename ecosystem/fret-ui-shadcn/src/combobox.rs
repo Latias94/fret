@@ -1019,6 +1019,10 @@ impl Combobox {
 
     /// When enabled, follows the upstream shadcn "responsive combobox" recipe: it uses a Drawer on
     /// narrow viewports (mobile) and a Popover on desktop.
+    ///
+    /// This remains a recipe-owned wrapper: the binary shell classification now delegates to
+    /// `fret_ui_kit::adaptive::device_shell_mode(...)`, while the recipe still owns the resulting
+    /// `Popover` vs `Drawer` policy.
     pub fn device_shell_responsive(mut self, responsive: bool) -> Self {
         self.device_shell_responsive = responsive;
         self
@@ -1537,12 +1541,11 @@ fn combobox_with_patch<H: UiHost>(
 
         // Device-level responsiveness: shadcn's "responsive combobox" uses Drawer on mobile.
         // This is a viewport breakpoint by design (not a container query).
-        let is_desktop = fret_ui_kit::declarative::viewport_width_at_least(
-            cx,
-            Invalidation::Layout,
-            device_shell_md_breakpoint,
-            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
-        );
+        let device_shell_policy = fret_ui_kit::adaptive::DeviceShellSwitchPolicy::default()
+            .desktop_min_width(device_shell_md_breakpoint);
+        let is_desktop =
+            fret_ui_kit::adaptive::device_shell_mode(cx, Invalidation::Layout, device_shell_policy)
+                .is_desktop();
         if device_shell_responsive && !is_desktop {
             let addon_slots_for_trigger = combobox_input_addon_slots(input_addons);
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();

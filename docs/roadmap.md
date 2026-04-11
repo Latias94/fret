@@ -43,6 +43,13 @@ Tracker highlights:
   `docs/workstreams/device-shell-adaptive-facade-promotion-v1/M0_BASELINE_AUDIT_2026-04-11.md`,
   `docs/workstreams/device-shell-adaptive-facade-promotion-v1/CLOSEOUT_AUDIT_2026-04-11.md`, and
   `docs/workstreams/device-shell-adaptive-facade-promotion-v1/EVIDENCE_AND_GATES.md`.
+- Device-shell recipe wrapper surface closeout record (closed narrow follow-on that keeps
+  `Combobox` as the current recipe-owned wrapper exemplar above the shared helper, aligns its
+  internal shell classification with the shared helper owner, and keeps `Date Picker`,
+  `Breadcrumb`, `Dialog`, and `Sidebar` on their existing explicit lanes):
+  `docs/workstreams/device-shell-recipe-wrapper-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md`,
+  `docs/workstreams/device-shell-recipe-wrapper-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`, and
+  `docs/workstreams/device-shell-recipe-wrapper-surface-v1/EVIDENCE_AND_GATES.md`.
 - Text system v2 (Parley + attributed spans): `docs/workstreams/standalone/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`.
 - Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.

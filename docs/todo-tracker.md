@@ -68,6 +68,10 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/device-shell-adaptive-facade-promotion-v1/M0_BASELINE_AUDIT_2026-04-11.md`
   - `docs/workstreams/device-shell-adaptive-facade-promotion-v1/CLOSEOUT_AUDIT_2026-04-11.md`
   - `docs/workstreams/device-shell-adaptive-facade-promotion-v1/EVIDENCE_AND_GATES.md`
+- Closed narrow follow-on for recipe-owned wrapper growth above the shipped helper:
+  - `docs/workstreams/device-shell-recipe-wrapper-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md`
+  - `docs/workstreams/device-shell-recipe-wrapper-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+  - `docs/workstreams/device-shell-recipe-wrapper-surface-v1/EVIDENCE_AND_GATES.md`
 
 ## P1 - Authoring surfaces (imui convergence)
 
