@@ -144,3 +144,23 @@ fn sheet_demo_snippet_uses_a_unique_overlay_panel_test_id() {
         "sheet demo snippet should not reuse the DocSection content test id for the open sheet panel",
     );
 }
+
+#[test]
+fn sheet_docs_demo_diag_script_waits_for_stable_overlay_bounds() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-docs-demo-open-screenshot.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-sheet-demo-panel\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"stable_frames\": 6",
+        "\"max_move_px\": 1.0",
+        "\"ui-gallery-sheet-docs-demo-open-desktop\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "sheet docs demo diag script should wait for stable overlay bounds before screenshots; missing `{needle}`",
+        );
+    }
+}

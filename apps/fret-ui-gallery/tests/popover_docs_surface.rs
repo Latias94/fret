@@ -225,3 +225,23 @@ fn popover_docs_diag_scripts_cover_docs_path_and_existing_regression_gates() {
         "popover docs smoke script should be promoted into the ui-gallery shadcn conformance suite",
     );
 }
+
+#[test]
+fn popover_demo_narrow_diag_script_waits_for_stable_overlay_bounds() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-demo-narrow-open-screenshot.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-popover-demo-panel\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"stable_frames\": 6",
+        "\"max_move_px\": 1.0",
+        "\"ui-gallery-popover-demo-open-narrow\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "popover demo narrow diag script should wait for stable overlay bounds before screenshots; missing `{needle}`",
+        );
+    }
+}
