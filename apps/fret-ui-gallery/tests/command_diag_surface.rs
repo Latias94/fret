@@ -27,6 +27,7 @@ fn command_dialog_ax_activated_diag_script_reuses_the_stable_basic_trigger_open_
     );
 
     for needle in [
+        "\"inject_runner_accessibility_activation\"",
         "\"runner_accessibility_activated\"",
         "\"ui-gallery-command-basic-trigger.chrome\"",
         "\"ui-gallery-command-basic-input\"",
@@ -39,6 +40,27 @@ fn command_dialog_ax_activated_diag_script_reuses_the_stable_basic_trigger_open_
         assert!(
             script.contains(needle),
             "command accessibility diag script should keep the same stable open-chain after the accessibility precondition; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
+fn command_palette_ax_activated_diag_script_injects_runner_accessibility_before_shortcut() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/command/a11y-ui-gallery-command-palette-shortcut-primary-ax-activated.json"
+    );
+
+    for needle in [
+        "\"inject_runner_accessibility_activation\"",
+        "\"runner_accessibility_activated\"",
+        "\"press_shortcut\"",
+        "\"primary+p\"",
+        "\"Command palette\"",
+        "\"ui-gallery-command-palette-shortcut-primary-ax-activated\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "command palette accessibility diag script should inject runner accessibility before exercising the shortcut; missing `{needle}`",
         );
     }
 }

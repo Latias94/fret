@@ -145,6 +145,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::AssertClipboardWriteResult { .. }
         | UiActionStepV2::AssertClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
+        | UiActionStepV2::InjectRunnerAccessibilityActivation
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
@@ -193,6 +194,9 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
         UiActionStepV2::CaptureLayoutSidecar { .. } => "capture_layout_sidecar",
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
+        UiActionStepV2::InjectRunnerAccessibilityActivation => {
+            "inject_runner_accessibility_activation"
+        }
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
         UiActionStepV2::WaitClipboardWriteResult { .. } => "wait_clipboard_write_result",
         UiActionStepV2::AssertClipboardWriteResult { .. } => "assert_clipboard_write_result",
@@ -439,11 +443,12 @@ pub(super) fn dispatch_drive_script_step(
         step @ (UiActionStepV2::SetClipboardForceUnavailable { .. }
         | UiActionStepV2::SetClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
+        | UiActionStepV2::InjectRunnerAccessibilityActivation
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::WaitMs { .. }
         | UiActionStepV2::ResetDiagnostics) => {
             let handled =
-                script_steps::handle_effect_only_steps(service, window, step, active, output);
+                script_steps::handle_effect_only_steps(service, app, window, step, active, output);
             debug_assert!(handled);
         }
         step @ (UiActionStepV2::WaitClipboardWriteResult { .. }
@@ -2233,10 +2238,12 @@ impl UiDiagnosticsService {
             step @ (UiActionStepV2::SetClipboardForceUnavailable { .. }
             | UiActionStepV2::SetClipboardText { .. }
             | UiActionStepV2::InjectIncomingOpen { .. }
+            | UiActionStepV2::InjectRunnerAccessibilityActivation
             | UiActionStepV2::WaitFrames { .. }
             | UiActionStepV2::ResetDiagnostics) => {
                 handled = script_steps::handle_effect_only_steps(
                     self,
+                    app,
                     window,
                     step,
                     &mut active,

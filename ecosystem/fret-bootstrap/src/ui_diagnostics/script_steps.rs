@@ -391,6 +391,7 @@ pub(super) fn handle_window_effect_steps(
 
 pub(super) fn handle_effect_only_steps(
     svc: &mut UiDiagnosticsService,
+    app: &mut App,
     window: AppWindowId,
     step: UiActionStepV2,
     active: &mut ActiveScript,
@@ -441,6 +442,19 @@ pub(super) fn handle_effect_only_steps(
             output
                 .effects
                 .push(Effect::DiagIncomingOpenInject { window, items });
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        UiActionStepV2::InjectRunnerAccessibilityActivation => {
+            app.with_global_mut(
+                fret_runtime::RunnerAccessibilityDiagnosticsStore::default,
+                |store, app| {
+                    store.record_activation_request(window, app.frame_id());
+                },
+            );
             active.wait_until = None;
             active.screenshot_wait = None;
             active.next_step = active.next_step.saturating_add(1);

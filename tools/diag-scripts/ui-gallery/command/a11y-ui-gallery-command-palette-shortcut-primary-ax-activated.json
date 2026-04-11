@@ -5,11 +5,7 @@
   },
   "schema_version": 2,
   "steps": [
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "runner_accessibility_activated" },
-      "timeout_frames": 1200
-    },
+    { "type": "inject_runner_accessibility_activation" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
     { "type": "press_shortcut", "shortcut": "primary+p" },

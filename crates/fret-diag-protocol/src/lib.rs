@@ -527,6 +527,12 @@ pub enum UiActionStepV2 {
         modifiers: Option<UiKeyModifiersV1>,
     },
     ResetDiagnostics,
+    /// Inject a synthetic runner accessibility activation evidence event for diagnostics.
+    ///
+    /// This updates `RunnerAccessibilityDiagnosticsStore` for the active script window without
+    /// depending on the host OS accessibility stack to request the initial tree.
+    /// It is intended for deterministic diagnostics and harness verification only.
+    InjectRunnerAccessibilityActivation,
     /// Set a “base reference” for subsequent selector-driven steps.
     ///
     /// When a base reference is set, the runtime may scope later selector resolution to the
@@ -3490,6 +3496,22 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::RunnerAccessibilityActivated
+        ));
+    }
+
+    #[test]
+    fn step_inject_runner_accessibility_activation_serializes_and_deserializes() {
+        let value =
+            serde_json::to_value(UiActionStepV2::InjectRunnerAccessibilityActivation).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({ "type": "inject_runner_accessibility_activation" })
+        );
+
+        let roundtrip: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiActionStepV2::InjectRunnerAccessibilityActivation
         ));
     }
 
