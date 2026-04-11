@@ -1,7 +1,7 @@
 # Device-Shell Strategy Surface v1 — Evidence and Gates
 
 Status: Active
-Last updated: 2026-04-10
+Last updated: 2026-04-11
 
 ## Smallest current repro
 
@@ -17,7 +17,10 @@ python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-
 What this proves now:
 
 - the repo still contains at least one app-level raw viewport branch for `Popover` vs `Drawer`,
+- the repo also still contains an app-level raw desktop/mobile branch for `DropdownMenu` vs
+  `Drawer`,
 - the docs-path `Dialog` vs `Drawer` pairing remains explicit and reviewable,
+- combobox already demonstrates one recipe-owned explicit device-shell API shape,
 - and sidebar device-shell ownership is already pinned away from the editor-rail story.
 
 ## Current evidence set
@@ -27,12 +30,22 @@ What this proves now:
 - `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`
   - follow-on policy baseline that justifies opening this narrower lane instead of reopening the
     broad adaptive closure tracker.
+- `docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md`
+  - records the first owner-split inventory and extraction ranking for this lane.
 - `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
-  - focused source gate for current device-shell branching evidence.
+  - focused source gate for current raw branch sites, recipe-owned explicit naming, and app-shell
+    boundary evidence.
 - `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
   - current raw `viewport_width_at_least(...)` branch for `Popover` vs `Drawer`.
+- `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
+  - current raw `viewport_width_at_least(...)` branch for `DropdownMenu` vs `Drawer`.
 - `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
   - current explicit `Dialog` vs `Drawer` pairing proof surface.
+- `apps/fret-ui-gallery/src/ui/pages/combobox.rs`
+  - current docs-path note that treats `Combobox::device_shell_responsive(true)` as an explicit
+    follow-up lane.
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
+  - current recipe-owned explicit device-shell API and viewport-driven branch implementation.
 - `apps/fret-ui-gallery/src/ui/pages/drawer.rs`
   - current docs-path teaching copy that keeps responsive dialog as explicit desktop/mobile
     pairing rather than a shared helper.
@@ -78,4 +91,5 @@ The next gap is not another broad adaptive audit.
 It is one contract decision:
 
 - should Fret expose a shared higher-level device-shell strategy helper/wrapper above raw viewport
-  queries, and if yes, which layer should own it?
+  queries for the repeated `Popover` / `DropdownMenu` / `Drawer` family, and if yes, which layer
+  should own it?

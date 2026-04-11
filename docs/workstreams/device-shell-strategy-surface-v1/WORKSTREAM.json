@@ -3,13 +3,17 @@
   "slug": "device-shell-strategy-surface-v1",
   "title": "Device-Shell Strategy Surface v1",
   "status": "active",
-  "updated": "2026-04-10",
+  "updated": "2026-04-11",
   "scope_kind": "execution",
   "problem": "Fret now has a closed adaptive taxonomy baseline, but higher-level desktop/mobile shell branching still appears as repeated raw viewport-query conditionals in app-facing code. This lane owns the narrow follow-on question: what shared device-shell strategy surface should exist above raw query reads without reopening panel/container adaptive work.",
   "authoritative_docs": [
     {
       "role": "design",
       "path": "docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md"
     },
     {
       "role": "execution",
@@ -61,6 +65,7 @@
   ],
   "evidence": [
     "docs/workstreams/device-shell-strategy-surface-v1/DESIGN.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md",
     "docs/workstreams/device-shell-strategy-surface-v1/TODO.md",
     "docs/workstreams/device-shell-strategy-surface-v1/MILESTONES.md",
     "docs/workstreams/device-shell-strategy-surface-v1/EVIDENCE_AND_GATES.md",
@@ -70,7 +75,10 @@
     "apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs",
     "apps/fret-ui-gallery/tests/sidebar_docs_surface.rs",
     "apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs",
     "apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs",
+    "apps/fret-ui-gallery/src/ui/pages/combobox.rs",
+    "ecosystem/fret-ui-shadcn/src/combobox.rs",
     "apps/fret-ui-gallery/src/ui/pages/drawer.rs",
     "apps/fret-ui-gallery/src/ui/pages/sidebar.rs",
     "ecosystem/fret-ui-shadcn/src/sidebar.rs",

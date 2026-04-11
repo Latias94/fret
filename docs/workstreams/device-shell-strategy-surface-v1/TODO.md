@@ -1,7 +1,7 @@
 # Device-Shell Strategy Surface v1 — TODO
 
 Status: Active
-Last updated: 2026-04-10
+Last updated: 2026-04-11
 
 Companion docs:
 
@@ -18,10 +18,10 @@ Companion docs:
 
 ## M0 — Baseline and owner split
 
-- [ ] DSS-010 Audit the current desktop/mobile branch sites across gallery and recipe code.
-- [ ] DSS-011 Decide which branch patterns should stay app-local and which justify a shared
+- [x] DSS-010 Audit the current desktop/mobile branch sites across gallery and recipe code.
+- [x] DSS-011 Decide which branch patterns should stay app-local and which justify a shared
   strategy helper.
-- [ ] DSS-012 Record the owner split between app-shell device surfaces, recipe wrappers, and
+- [x] DSS-012 Record the owner split between app-shell device surfaces, recipe wrappers, and
   raw-query escape hatches.
 
 ## M1 — Contract freeze
@@ -44,3 +44,15 @@ Companion docs:
 - Do not turn app-shell/device-shell helpers into generic panel/container adaptive helpers.
 - Do not move device-shell policy into `crates/fret-ui`.
 - Do not widen `Sidebar` into the editor rail story.
+
+Completed M0 audit evidence:
+
+- `docs/workstreams/device-shell-strategy-surface-v1/M0_BRANCH_SITE_AUDIT_2026-04-11.md`
+- `apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs`
+- `apps/fret-ui-gallery/src/ui/pages/combobox.rs`
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- `apps/fret-ui-gallery/src/ui/pages/sidebar.rs`
+- `ecosystem/fret-ui-shadcn/src/sidebar.rs`
