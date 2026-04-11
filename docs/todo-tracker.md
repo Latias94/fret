@@ -81,6 +81,10 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/DESIGN.md`
   - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/M0_BASELINE_AUDIT_2026-04-11.md`
   - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+- Closed narrow follow-on for editor-rail mobile downgrade ownership:
+  - `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/DESIGN.md`
+  - `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/M0_BASELINE_AUDIT_2026-04-11.md`
+  - `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/CLOSEOUT_AUDIT_2026-04-11.md`
 
 ## P1 - Authoring surfaces (imui convergence)
 

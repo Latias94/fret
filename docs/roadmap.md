@@ -62,6 +62,12 @@ Tracker highlights:
   `docs/workstreams/container-aware-editor-rail-helper-shape-v1/DESIGN.md`,
   `docs/workstreams/container-aware-editor-rail-helper-shape-v1/M0_BASELINE_AUDIT_2026-04-11.md`,
   and `docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md`.
+- Outer-shell editor-rail mobile downgrade closeout record (closed narrow follow-on that freezes
+  mobile downgrade as an outer-shell concern, keeps `Sidebar` out of the editor-rail story, and
+  declines to extract a shared downgrade helper without repeated editor-shell evidence):
+  `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/DESIGN.md`,
+  `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/M0_BASELINE_AUDIT_2026-04-11.md`,
+  and `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/CLOSEOUT_AUDIT_2026-04-11.md`.
 - Text system v2 (Parley + attributed spans): `docs/workstreams/standalone/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`.
 - Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.

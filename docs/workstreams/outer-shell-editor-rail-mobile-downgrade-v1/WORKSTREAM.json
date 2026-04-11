@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "slug": "outer-shell-editor-rail-mobile-downgrade-v1",
+  "title": "Outer-Shell Editor Rail Mobile Downgrade v1",
+  "status": "closed",
+  "updated": "2026-04-11",
+  "scope_kind": "execution",
+  "follow_on_of": "container-aware-editor-rail-surface-v1",
+  "problem": "The repo already has a closed device-shell strategy lane and closed editor-rail owner-split lanes. What remained open was the narrower question of who owns the mobile downgrade from desktop editor rail to drawer/sheet/route, and whether that downgrade should become a shared helper yet.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/M0_BASELINE_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused source gates keep explicit device-shell branch composition, the app-shell sidebar boundary, and the existing desktop rail proofs visible for this closed owner-split record.",
+    "commands": [
+      "cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast",
+      "git diff --check",
+      "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols",
+      "python3 -m json.tool docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/WORKSTREAM.json > /dev/null"
+    ]
+  },
+  "gates": [
+    {
+      "name": "device-shell-strategy-source-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --no-fail-fast"
+    },
+    {
+      "name": "editor-rail-source-surfaces",
+      "command": "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/DESIGN.md",
+    "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/M0_BASELINE_AUDIT_2026-04-11.md",
+    "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/TODO.md",
+    "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/MILESTONES.md",
+    "docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-helper-shape-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "apps/fret-ui-gallery/src/ui/snippets/drawer/responsive_dialog.rs",
+    "apps/fret-ui-gallery/src/ui/pages/sidebar.rs",
+    "apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "new_follow_on",
+    "notes": "This lane is closed on an outer-shell ownership verdict. Reopen only if repeated editor-shell mobile downgrade behavior appears beyond generic device-shell branching and app-local presentation policy."
+  }
+}
