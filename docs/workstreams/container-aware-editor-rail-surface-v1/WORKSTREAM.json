@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "slug": "container-aware-editor-rail-surface-v1",
+  "title": "Container-Aware Editor Rail Surface v1",
+  "status": "closed",
+  "updated": "2026-04-11",
+  "scope_kind": "execution",
+  "follow_on_of": "adaptive-layout-contract-closure-v1",
+  "problem": "The closed adaptive-layout lane already froze that shadcn `Sidebar` stays app-shell-only and that `WorkspaceFrame.left/right` already provides the outer shell seam for editor rails. What remains open is the narrower question of how a future reusable editor rail surface should be shaped, how mobile vs container adaptation should be split, and what proof threshold justifies public extraction.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M2_CONSUMER_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M2_SECOND_CONSUMER_PROOF_2026-04-11.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M2_PANEL_RESIZE_GATE_ADOPTION_2026-04-11.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/container-aware-editor-rail-surface-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused source gates keep the sidebar boundary, the existing workspace-shell seam, and the second app-local rail proof visible for this closed owner-split record.",
+    "commands": [
+      "cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/adaptive-panel-resize-promote --session-auto --pack --include-screenshots --launch target/release/container_queries_docking_demo",
+      "git diff --check",
+      "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols",
+      "python3 -m json.tool docs/workstreams/container-aware-editor-rail-surface-v1/WORKSTREAM.json > /dev/null"
+    ]
+  },
+  "gates": [
+    {
+      "name": "sidebar-boundary-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --no-fail-fast"
+    },
+    {
+      "name": "workspace-rail-source-surface",
+      "command": "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "editor-notes-rail-source-surface",
+      "command": "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "fixed-window-panel-resize-proof",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/adaptive-panel-resize-promote --session-auto --pack --include-screenshots --launch target/release/container_queries_docking_demo"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/container-aware-editor-rail-surface-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/container-aware-editor-rail-surface-v1/DESIGN.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/M2_CONSUMER_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/M2_PANEL_RESIZE_GATE_ADOPTION_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/M2_SECOND_CONSUMER_PROOF_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/TODO.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/MILESTONES.md",
+    "docs/workstreams/container-aware-editor-rail-surface-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/EDITOR_PANEL_SURFACE_AUDIT_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/WORKSPACE_RAIL_SEAM_AUDIT_2026-04-10.md",
+    "docs/workstreams/adaptive-layout-contract-closure-v1/M3_EDITOR_RAIL_COMPOSITION_2026-04-10.md",
+    "docs/audits/shadcn-sidebar.md",
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "apps/fret-ui-gallery/src/ui/pages/sidebar.rs",
+    "apps/fret-ui-gallery/tests/sidebar_docs_surface.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
+    "apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
+    "tools/diag-scripts/container-queries-docking-panel-resize.json",
+    "tools/diag-scripts/docking/container-queries/container-queries-docking-panel-resize.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md",
+    "docs/adr/0156-workspace-shell-tabs-and-pane-layout.md"
+  ],
+  "continue_policy": {
+    "default_action": "new_follow_on",
+    "notes": "This lane is closed. Future work should open a narrower follow-on for shared container-aware helper extraction, public rail promotion, or outer-shell downgrade composition rather than reopening this owner-split lane."
+  }
+}

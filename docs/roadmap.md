@@ -50,6 +50,12 @@ Tracker highlights:
   `docs/workstreams/device-shell-recipe-wrapper-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md`,
   `docs/workstreams/device-shell-recipe-wrapper-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`, and
   `docs/workstreams/device-shell-recipe-wrapper-surface-v1/EVIDENCE_AND_GATES.md`.
+- Container-aware editor-rail surface closeout record (closed narrow follow-on that freezes the
+  owner split, proves a second shell-mounted rail consumer, and still defers public extraction
+  until a narrower container-aware helper lane is explicitly warranted):
+  `docs/workstreams/container-aware-editor-rail-surface-v1/DESIGN.md`,
+  `docs/workstreams/container-aware-editor-rail-surface-v1/TARGET_INTERFACE_STATE.md`, and
+  `docs/workstreams/container-aware-editor-rail-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`.
 - Text system v2 (Parley + attributed spans): `docs/workstreams/standalone/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1/ui-typography-presets-v1.md`.
 - Text style cascade fearless refactor (mechanism contract + ecosystem migration): `docs/workstreams/text-style-cascade-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md`, and `docs/workstreams/text-style-cascade-fearless-refactor-v1/MILESTONES.md`.

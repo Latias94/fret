@@ -16,18 +16,23 @@ use fret_ui_editor::controls::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{ColorRef, Space};
+use fret_workspace::WorkspaceFrame;
 
 const ENV_EDITOR_PRESET: &str = "FRET_EDITOR_NOTES_DEMO_PRESET";
 const HOST_BASE_COLOR: shadcn::themes::ShadcnBaseColor = shadcn::themes::ShadcnBaseColor::Slate;
 const HOST_DEFAULT_SCHEME: shadcn::themes::ShadcnColorScheme =
     shadcn::themes::ShadcnColorScheme::Dark;
 const TEST_ID_ROOT: &str = "editor-notes-demo.root";
+const TEST_ID_LEFT_RAIL: &str = "editor-notes-demo.left-rail";
 const TEST_ID_SELECTION: &str = "editor-notes-demo.selection";
 const TEST_ID_SELECT_MATERIAL: &str = "editor-notes-demo.selection.material";
 const TEST_ID_SELECT_LIGHT: &str = "editor-notes-demo.selection.light";
 const TEST_ID_SELECT_CAMERA: &str = "editor-notes-demo.selection.camera";
+const TEST_ID_CENTER: &str = "editor-notes-demo.center";
+const TEST_ID_CENTER_PREVIEW: &str = "editor-notes-demo.center.preview";
 const TEST_ID_INSPECTOR: &str = "editor-notes-demo.inspector";
 const TEST_ID_INSPECTOR_CONTENT: &str = "editor-notes-demo.inspector.content";
+const TEST_ID_RIGHT_RAIL: &str = "editor-notes-demo.right-rail";
 const TEST_ID_NAME: &str = "editor-notes-demo.inspector.name";
 const TEST_ID_NOTES: &str = "editor-notes-demo.inspector.notes";
 const TEST_ID_NOTES_COMMITTED: &str = "editor-notes-demo.inspector.notes.committed";
@@ -138,9 +143,9 @@ impl View for EditorNotesDemoView {
         let theme = Theme::global(&*cx.app).snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = self.asset(selected).clone();
-        let (committed_notes, notes_outcome) = cx.data().selector_model_paint(
-            (&asset.notes_model, &asset.notes_outcome_model),
-            |(committed_notes, notes_outcome)| (committed_notes, notes_outcome),
+        let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(
+            (&asset.name_model, &asset.notes_model, &asset.notes_outcome_model),
+            |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
         );
 
         let selection_panel = {
@@ -190,24 +195,41 @@ impl View for EditorNotesDemoView {
                 shadcn::CardContent::new([body]),
             ])
             .ui()
-            .w_px(Px(240.0))
+            .w_full()
             .into_element(cx)
             .test_id(TEST_ID_SELECTION)
         };
 
+        let center = render_center_panel(
+            cx,
+            asset.clone(),
+            name_value,
+            committed_notes.clone(),
+            notes_outcome.clone(),
+        );
         let inspector = render_inspector_panel(
             cx,
             asset,
             committed_line_count_label(&committed_notes),
             notes_outcome,
         );
-        let content = ui::h_flex(|_cx| [selection_panel, inspector])
-            .gap(Space::N4)
-            .size_full()
+        let left_rail = ui::container(|_cx| [selection_panel])
+            .w_px(Px(256.0))
+            .h_full()
+            .into_element(cx)
+            .test_id(TEST_ID_LEFT_RAIL);
+        let right_rail = ui::container(|_cx| [inspector])
+            .w_px(Px(360.0))
+            .h_full()
+            .into_element(cx)
+            .test_id(TEST_ID_RIGHT_RAIL);
+        let frame = WorkspaceFrame::new(center)
+            .left(left_rail)
+            .right(right_rail)
+            .background(Some(theme.color_token("background")))
             .into_element(cx);
 
-        ui::container(|_cx| [content])
-            .bg(ColorRef::Color(theme.color_token("background")))
+        ui::container(|_cx| [frame])
             .p(Space::N4)
             .size_full()
             .into_element(cx)
@@ -273,6 +295,139 @@ where
         .ui()
         .w_full()
         .into_element_in(cx)
+}
+
+fn render_center_panel<'a, Cx>(
+    cx: &mut Cx,
+    asset: EditorAssetState,
+    name_value: String,
+    committed_notes: String,
+    notes_outcome: String,
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let preview_text = if committed_notes.trim().is_empty() {
+        "No committed notes yet. Edit Notes in the inspector, then blur back to Name to keep the local draft alive.".to_string()
+    } else {
+        committed_notes.clone()
+    };
+    let note_summary = committed_line_count_label(&committed_notes);
+    let outcome_label = if notes_outcome.is_empty() {
+        "Idle".to_string()
+    } else {
+        notes_outcome
+    };
+    let title = asset.title.clone();
+    let subtitle = asset.subtitle.clone();
+    let header = shadcn::CardHeader::new([
+        ui::v_flex(|cx| {
+            let muted = cx.theme_snapshot().color_token("muted-foreground");
+            ui::children![
+                cx;
+                shadcn::CardTitle::new(title.clone()),
+                shadcn::CardDescription::new(subtitle.clone()),
+                ui::text("WorkspaceFrame owns the outer shell slots; fret-ui-editor owns the reusable inspector content.")
+                    .text_sm()
+                    .text_color(ColorRef::Color(muted))
+                    .wrap(fret_core::TextWrap::Word)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N1)
+        .into_element_in(cx),
+    ]);
+    let content = shadcn::CardContent::new([
+        ui::v_flex(|cx| {
+            let muted = cx.theme_snapshot().color_token("muted-foreground");
+            ui::children![
+                cx;
+                ui::h_flex(|cx| {
+                    ui::children![
+                        cx;
+                        ui::v_flex(|cx| {
+                            ui::children![
+                                cx;
+                                ui::text("Active asset")
+                                    .text_sm()
+                                    .text_color(ColorRef::Color(muted))
+                                    .into_element(cx),
+                                ui::text(name_value.clone())
+                                    .text_base()
+                                    .font_semibold()
+                                    .wrap(fret_core::TextWrap::Word)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N1)
+                        .into_element(cx),
+                        ui::v_flex(|cx| {
+                            ui::children![
+                                cx;
+                                ui::text("Inspector state")
+                                    .text_sm()
+                                    .text_color(ColorRef::Color(muted))
+                                    .into_element(cx),
+                                ui::text(note_summary.clone())
+                                    .text_sm()
+                                    .into_element(cx),
+                                ui::text(format!("Last action: {outcome_label}"))
+                                    .text_sm()
+                                    .text_color(ColorRef::Color(muted))
+                                    .wrap(fret_core::TextWrap::Word)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N1)
+                        .items_end()
+                        .into_element(cx),
+                    ]
+                })
+                .items_start()
+                .justify_between()
+                .w_full()
+                .gap(Space::N4)
+                .into_element(cx),
+                ui::v_flex(|cx| {
+                    let muted = cx.theme_snapshot().color_token("muted-foreground");
+                    ui::children![
+                        cx;
+                        ui::text("Committed notes")
+                            .text_sm()
+                            .font_semibold()
+                            .into_element(cx),
+                        ui::text("This center region is app-local content, while both side regions are mounted through the existing workspace shell seam.")
+                            .text_sm()
+                            .text_color(ColorRef::Color(muted))
+                            .wrap(fret_core::TextWrap::Word)
+                            .into_element(cx),
+                        ui::text(preview_text)
+                            .text_sm()
+                            .wrap(fret_core::TextWrap::Word)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .w_full()
+                .p(Space::N3)
+                .rounded_md()
+                .border_1()
+                .test_id(TEST_ID_CENTER_PREVIEW)
+                .into_element(cx),
+            ]
+        })
+        .gap(Space::N4)
+        .w_full()
+        .min_w_0()
+        .into_element_in(cx),
+    ]);
+
+    shadcn::Card::new(ui::children![cx; header, content])
+        .ui()
+        .size_full()
+        .min_w_0()
+        .into_element_in(cx)
+        .test_id(TEST_ID_CENTER)
 }
 
 fn render_inspector_panel<'a, Cx>(
