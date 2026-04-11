@@ -126,5 +126,5 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.into_element(cx)]
+    vec![body.test_id("ui-gallery-alert-dialog").into_element(cx)]
 }

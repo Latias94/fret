@@ -2389,6 +2389,10 @@ mod tests {
         let cases = [
             (PAGE_AVATAR, "ui-gallery-avatar"),
             (PAGE_CARD, "ui-gallery-card"),
+            (PAGE_DIALOG, "ui-gallery-dialog"),
+            (PAGE_ALERT_DIALOG, "ui-gallery-alert-dialog"),
+            (PAGE_POPOVER, "ui-gallery-popover"),
+            (PAGE_SHEET, "ui-gallery-sheet"),
             (PAGE_TYPOGRAPHY, "ui-gallery-typography"),
         ];
 
