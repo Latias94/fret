@@ -131,7 +131,13 @@
       },
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 16 },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-top-content" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "ui-gallery-sheet-side-top-open" },
     { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-top-open" },
     { "type": "click_stable", "target": { "kind": "role_and_name", "role": "button", "name": "Close" } },
@@ -162,7 +168,13 @@
       },
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 16 },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-bottom-content" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "ui-gallery-sheet-side-bottom-open" },
     { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-bottom-open" },
     { "type": "click_stable", "target": { "kind": "role_and_name", "role": "button", "name": "Close" } },

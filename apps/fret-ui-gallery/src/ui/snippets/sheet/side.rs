@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
+use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -15,6 +16,28 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         let name_model = demo_name.clone();
         let username_model = demo_username.clone();
 
+        let row = |cx: &mut UiCx<'_>,
+                   label: &'static str,
+                   model: Model<String>,
+                   input_test_id: String| {
+            let label_cell = ui::h_row(move |cx| ui::children![cx; ui::label(label)])
+                .layout(LayoutRefinement::default().w_px(Px(96.0)).flex_shrink_0())
+                .justify_end()
+                .items_center()
+                .into_element(cx);
+
+            let input = shadcn::Input::new(model)
+                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                .test_id(input_test_id)
+                .into_element(cx);
+
+            ui::h_flex(move |_cx| vec![label_cell, input])
+                .gap(Space::N4)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+        };
+
         shadcn::Sheet::new_controllable(cx, None, false)
             .side(side)
             .children([
@@ -27,38 +50,25 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::SheetPart::content_with(move |cx| {
                     let fields = ui::v_flex(|cx| {
                         vec![
-                            shadcn::Field::new([
-                                shadcn::FieldLabel::new("Name").into_element(cx),
-                                shadcn::Input::new(name_model.clone())
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::Field::new([
-                                shadcn::FieldLabel::new("Username").into_element(cx),
-                                shadcn::Input::new(username_model.clone())
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
+                            row(
+                                cx,
+                                "Name",
+                                name_model.clone(),
+                                format!("ui-gallery-sheet-side-{id}-name-input"),
+                            ),
+                            row(
+                                cx,
+                                "Username",
+                                username_model.clone(),
+                                format!("ui-gallery-sheet-side-{id}-username-input"),
+                            ),
                         ]
                     })
                     .gap(Space::N4)
+                    .px_4()
+                    .py_4()
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
-
-                    let fields = {
-                        let props = decl_style::container_props(
-                            Theme::global(&*cx.app),
-                            ChromeRefinement::default().px(Space::N4),
-                            LayoutRefinement::default()
-                                .w_full()
-                                .min_w_0()
-                                .min_h_0()
-                                .flex_1(),
-                        );
-                        cx.container(props, move |_cx| vec![fields])
-                    };
 
                     shadcn::SheetContent::new([]).with_children(cx, |cx| {
                         vec![

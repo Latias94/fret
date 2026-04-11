@@ -48,6 +48,7 @@ fn sheet_snippets_keep_the_default_root_lane_and_docs_aligned_followups() {
     let no_close = include_str!("../src/ui/snippets/sheet/no_close_button.rs");
     let rtl = include_str!("../src/ui/snippets/sheet/rtl.rs");
     let side = include_str!("../src/ui/snippets/sheet/side.rs");
+    let normalized_side = normalize_ws(side);
 
     for needle in [
         "use fret::{UiChild, UiCx};",
@@ -107,6 +108,20 @@ fn sheet_snippets_keep_the_default_root_lane_and_docs_aligned_followups() {
         !side.contains("\"Cancel\""),
         "sheet side snippet should not reintroduce the extra Cancel action that drifts from the upstream docs example",
     );
+    for needle in [
+        "format!(\"ui-gallery-sheet-side-{id}-name-input\")",
+        "format!(\"ui-gallery-sheet-side-{id}-username-input\")",
+    ] {
+        assert!(
+            side.contains(needle),
+            "sheet side snippet should expose stable field anchors for overlap diagnostics; missing `{needle}`",
+        );
+    }
+    assert!(
+        !normalized_side
+            .contains("LayoutRefinement::default().w_full().min_w_0().min_h_0().flex_1()"),
+        "sheet side snippet should keep the fields in the natural top/bottom content flow instead of borrowing the full-height demo container lane",
+    );
 }
 
 #[test]
@@ -161,6 +176,28 @@ fn sheet_docs_demo_diag_script_waits_for_stable_overlay_bounds() {
         assert!(
             script.contains(needle),
             "sheet docs demo diag script should wait for stable overlay bounds before screenshots; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
+fn sheet_side_top_bottom_diag_script_waits_for_stable_overlay_bounds() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-side-top-bottom-screenshots.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-sheet-side-top-content\"",
+        "\"ui-gallery-sheet-side-bottom-content\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"stable_frames\": 6",
+        "\"max_move_px\": 1.0",
+        "\"ui-gallery-sheet-side-top-open\"",
+        "\"ui-gallery-sheet-side-bottom-open\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "sheet side screenshot script should wait for stable overlay bounds before capturing top/bottom evidence; missing `{needle}`",
         );
     }
 }

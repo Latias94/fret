@@ -2349,6 +2349,37 @@ mod tests {
         );
     }
 
+    fn assert_sheet_side_footer_does_not_overlap_name_input(side: &str, bounds: Rect) {
+        let mut rendered = render_gallery_page_with_bounds(PAGE_SHEET, bounds);
+        let trigger_test_id = format!("ui-gallery-sheet-side-{side}-trigger");
+        let content_test_id = format!("ui-gallery-sheet-side-{side}-content");
+        let name_input_test_id = format!("ui-gallery-sheet-side-{side}-name-input");
+        let save_test_id = format!("ui-gallery-sheet-side-{side}-save");
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, &trigger_test_id);
+        click_test_id_center(&mut rendered, &trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, &content_test_id, 24);
+        wait_until_test_id_exists(&mut rendered, &name_input_test_id, 24);
+        wait_until_test_id_exists(&mut rendered, &save_test_id, 24);
+
+        for _ in 0..8 {
+            render_gallery_frame(&mut rendered);
+        }
+
+        let name_input_bounds = visual_bounds_by_test_id(&rendered, &name_input_test_id);
+        let save_bounds = visual_bounds_by_test_id(&rendered, &save_test_id);
+
+        assert!(
+            !rects_intersect(name_input_bounds, save_bounds),
+            "expected sheet side footer action to stay clear of the Name input: side={side} name_input={name_input_bounds:?} save={save_bounds:?}"
+        );
+        assert!(
+            save_bounds.origin.y.0
+                >= name_input_bounds.origin.y.0 + name_input_bounds.size.height.0 - 1.0,
+            "expected sheet side footer action to stay below the Name input: side={side} name_input={name_input_bounds:?} save={save_bounds:?}"
+        );
+    }
+
     #[test]
     fn gallery_component_pages_scroll_to_bottom_without_height_drift() {
         let cases = [
@@ -4448,6 +4479,18 @@ mod tests {
                 viewport_test_id,
                 None,
             );
+        }
+    }
+
+    #[test]
+    fn sheet_side_top_and_bottom_footer_actions_do_not_overlap_name_inputs() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(720.0)),
+        );
+
+        for side in ["top", "bottom"] {
+            assert_sheet_side_footer_does_not_overlap_name_input(side, bounds);
         }
     }
 
