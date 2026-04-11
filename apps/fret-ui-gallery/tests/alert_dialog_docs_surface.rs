@@ -312,3 +312,29 @@ fn alert_dialog_docs_demo_diag_script_waits_for_stable_overlay_bounds() {
         );
     }
 }
+
+#[test]
+fn alert_dialog_docs_examples_diag_script_waits_for_stable_overlay_bounds() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-example-open-screenshots.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-alert-dialog-small-content\"",
+        "\"ui-gallery-alert-dialog-media-content\"",
+        "\"ui-gallery-alert-dialog-small-media-content\"",
+        "\"ui-gallery-alert-dialog-destructive-content\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"stable_frames\": 6",
+        "\"max_move_px\": 1.0",
+        "\"ui-gallery-alert-dialog-small-open-desktop\"",
+        "\"ui-gallery-alert-dialog-media-open-desktop\"",
+        "\"ui-gallery-alert-dialog-small-media-open-desktop\"",
+        "\"ui-gallery-alert-dialog-destructive-open-desktop\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "alert dialog docs examples diag script should wait for stable overlay bounds before screenshots; missing `{needle}`",
+        );
+    }
+}
