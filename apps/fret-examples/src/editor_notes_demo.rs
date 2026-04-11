@@ -38,7 +38,7 @@ const TEST_ID_NOTES: &str = "editor-notes-demo.inspector.notes";
 const TEST_ID_NOTES_COMMITTED: &str = "editor-notes-demo.inspector.notes.committed";
 const TEST_ID_NOTES_OUTCOME: &str = "editor-notes-demo.inspector.notes.outcome";
 
-mod act {
+pub(crate) mod act {
     fret::actions!([
         SelectMaterial = "editor_notes_demo.select.material.v1",
         SelectLight = "editor_notes_demo.select.light.v1",
@@ -47,7 +47,7 @@ mod act {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum EditorAssetSelection {
+pub(crate) enum EditorAssetSelection {
     #[default]
     Material,
     Light,
@@ -55,7 +55,7 @@ enum EditorAssetSelection {
 }
 
 #[derive(Clone)]
-struct EditorAssetState {
+pub(crate) struct EditorAssetState {
     selection: EditorAssetSelection,
     title: Arc<str>,
     subtitle: Arc<str>,
@@ -70,7 +70,7 @@ struct EditorNotesDemoView {
     assets: Arc<[EditorAssetState]>,
 }
 
-fn install_editor_notes_demo_theme(app: &mut App) {
+pub(crate) fn install_editor_notes_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(app, HOST_BASE_COLOR, HOST_DEFAULT_SCHEME);
     fret_ui_editor::theme::install_editor_theme_preset_v1(
         app,
@@ -97,35 +97,9 @@ pub fn run() -> anyhow::Result<()> {
 
 impl View for EditorNotesDemoView {
     fn init(app: &mut App, _window: WindowId) -> Self {
-        let assets: Arc<[EditorAssetState]> = vec![
-            make_asset_state(
-                app,
-                EditorAssetSelection::Material,
-                "Material",
-                "Surface authoring metadata",
-                "Weathered Steel",
-                "Review roughness breakup.\nValidate clear-coat against the hero shot.",
-            ),
-            make_asset_state(
-                app,
-                EditorAssetSelection::Light,
-                "Key Light",
-                "Shot review notes",
-                "Key Light A",
-                "Keep the rim subtle on close-ups.\nRevisit exposure after fog tuning.",
-            ),
-            make_asset_state(
-                app,
-                EditorAssetSelection::Camera,
-                "Camera",
-                "Sequence continuity notes",
-                "ShotCam_Main",
-                "Preserve this draft across blur.\nCommit only when the sequence note is ready.",
-            ),
-        ]
-        .into();
-
-        Self { assets }
+        Self {
+            assets: default_editor_assets(app),
+        }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
@@ -144,61 +118,15 @@ impl View for EditorNotesDemoView {
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = self.asset(selected).clone();
         let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(
-            (&asset.name_model, &asset.notes_model, &asset.notes_outcome_model),
+            (
+                &asset.name_model,
+                &asset.notes_model,
+                &asset.notes_outcome_model,
+            ),
             |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
         );
 
-        let selection_panel = {
-            let header = shadcn::CardHeader::new([
-                ui::v_flex(|cx| {
-                    ui::children![
-                        cx;
-                        shadcn::CardTitle::new("Scene outline"),
-                        shadcn::CardDescription::new(
-                            "Select an editor-owned surface, then blur Notes to Name to keep a local draft alive.",
-                        ),
-                    ]
-                })
-                .gap(Space::N1)
-                .into_element(cx),
-            ]);
-
-            let material_button = selection_button(
-                cx,
-                "Material",
-                selected == EditorAssetSelection::Material,
-                act::SelectMaterial.into(),
-                TEST_ID_SELECT_MATERIAL,
-            );
-            let light_button = selection_button(
-                cx,
-                "Key Light",
-                selected == EditorAssetSelection::Light,
-                act::SelectLight.into(),
-                TEST_ID_SELECT_LIGHT,
-            );
-            let camera_button = selection_button(
-                cx,
-                "Camera",
-                selected == EditorAssetSelection::Camera,
-                act::SelectCamera.into(),
-                TEST_ID_SELECT_CAMERA,
-            );
-
-            let body = ui::v_flex(|_cx| [material_button, light_button, camera_button])
-                .gap(Space::N2)
-                .into_element(cx);
-
-            shadcn::Card::new(ui::children![
-                cx;
-                header,
-                shadcn::CardContent::new([body]),
-            ])
-            .ui()
-            .w_full()
-            .into_element(cx)
-            .test_id(TEST_ID_SELECTION)
-        };
+        let selection_panel = render_selection_panel(cx, selected);
 
         let center = render_center_panel(
             cx,
@@ -206,6 +134,8 @@ impl View for EditorNotesDemoView {
             name_value,
             committed_notes.clone(),
             notes_outcome.clone(),
+            "WorkspaceFrame owns the outer shell slots; fret-ui-editor owns the reusable inspector content.",
+            "This center region is app-local content, while both side regions are mounted through the existing workspace shell seam.",
         );
         let inspector = render_inspector_panel(
             cx,
@@ -240,11 +170,48 @@ impl View for EditorNotesDemoView {
 
 impl EditorNotesDemoView {
     fn asset(&self, selection: EditorAssetSelection) -> &EditorAssetState {
-        self.assets
-            .iter()
-            .find(|asset| asset.selection == selection)
-            .unwrap_or_else(|| &self.assets[0])
+        editor_asset_for_selection(&self.assets, selection)
     }
+}
+
+pub(crate) fn default_editor_assets(app: &mut App) -> Arc<[EditorAssetState]> {
+    vec![
+        make_asset_state(
+            app,
+            EditorAssetSelection::Material,
+            "Material",
+            "Surface authoring metadata",
+            "Weathered Steel",
+            "Review roughness breakup.\nValidate clear-coat against the hero shot.",
+        ),
+        make_asset_state(
+            app,
+            EditorAssetSelection::Light,
+            "Key Light",
+            "Shot review notes",
+            "Key Light A",
+            "Keep the rim subtle on close-ups.\nRevisit exposure after fog tuning.",
+        ),
+        make_asset_state(
+            app,
+            EditorAssetSelection::Camera,
+            "Camera",
+            "Sequence continuity notes",
+            "ShotCam_Main",
+            "Preserve this draft across blur.\nCommit only when the sequence note is ready.",
+        ),
+    ]
+    .into()
+}
+
+pub(crate) fn editor_asset_for_selection<'a>(
+    assets: &'a [EditorAssetState],
+    selection: EditorAssetSelection,
+) -> &'a EditorAssetState {
+    assets
+        .iter()
+        .find(|asset| asset.selection == selection)
+        .unwrap_or_else(|| &assets[0])
 }
 
 fn make_asset_state(
@@ -273,6 +240,20 @@ fn make_asset_state(
     }
 }
 
+pub(crate) fn editor_asset_panel_state(
+    cx: &mut AppUi<'_, '_>,
+    asset: &EditorAssetState,
+) -> (String, String, String) {
+    cx.data().selector_model_paint(
+        (
+            &asset.name_model,
+            &asset.notes_model,
+            &asset.notes_outcome_model,
+        ),
+        |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
+    )
+}
+
 fn selection_button<'a, Cx>(
     cx: &mut Cx,
     label: &'static str,
@@ -297,12 +278,72 @@ where
         .into_element_in(cx)
 }
 
-fn render_center_panel<'a, Cx>(
+pub(crate) fn render_selection_panel<'a, Cx>(
+    cx: &mut Cx,
+    selected: EditorAssetSelection,
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let header = shadcn::CardHeader::new([
+        ui::v_flex(|cx| {
+            ui::children![
+                cx;
+                shadcn::CardTitle::new("Scene outline"),
+                shadcn::CardDescription::new(
+                    "Select an editor-owned surface, then blur Notes to Name to keep a local draft alive.",
+                ),
+            ]
+        })
+        .gap(Space::N1)
+        .into_element_in(cx),
+    ]);
+
+    let material_button = selection_button(
+        cx,
+        "Material",
+        selected == EditorAssetSelection::Material,
+        act::SelectMaterial.into(),
+        TEST_ID_SELECT_MATERIAL,
+    );
+    let light_button = selection_button(
+        cx,
+        "Key Light",
+        selected == EditorAssetSelection::Light,
+        act::SelectLight.into(),
+        TEST_ID_SELECT_LIGHT,
+    );
+    let camera_button = selection_button(
+        cx,
+        "Camera",
+        selected == EditorAssetSelection::Camera,
+        act::SelectCamera.into(),
+        TEST_ID_SELECT_CAMERA,
+    );
+
+    let body = ui::v_flex(|_cx| [material_button, light_button, camera_button])
+        .gap(Space::N2)
+        .into_element_in(cx);
+
+    shadcn::Card::new(ui::children![
+        cx;
+        header,
+        shadcn::CardContent::new([body]),
+    ])
+    .ui()
+    .w_full()
+    .into_element_in(cx)
+    .test_id(TEST_ID_SELECTION)
+}
+
+pub(crate) fn render_center_panel<'a, Cx>(
     cx: &mut Cx,
     asset: EditorAssetState,
     name_value: String,
     committed_notes: String,
     notes_outcome: String,
+    ownership_note: &'static str,
+    committed_notes_intro: &'static str,
 ) -> AnyElement
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
@@ -320,107 +361,103 @@ where
     };
     let title = asset.title.clone();
     let subtitle = asset.subtitle.clone();
-    let header = shadcn::CardHeader::new([
-        ui::v_flex(|cx| {
-            let muted = cx.theme_snapshot().color_token("muted-foreground");
-            ui::children![
-                cx;
-                shadcn::CardTitle::new(title.clone()),
-                shadcn::CardDescription::new(subtitle.clone()),
-                ui::text("WorkspaceFrame owns the outer shell slots; fret-ui-editor owns the reusable inspector content.")
-                    .text_sm()
-                    .text_color(ColorRef::Color(muted))
-                    .wrap(fret_core::TextWrap::Word)
+    let header = shadcn::CardHeader::new([ui::v_flex(|cx| {
+        let muted = cx.theme_snapshot().color_token("muted-foreground");
+        ui::children![
+            cx;
+            shadcn::CardTitle::new(title.clone()),
+            shadcn::CardDescription::new(subtitle.clone()),
+            ui::text(ownership_note)
+                .text_sm()
+                .text_color(ColorRef::Color(muted))
+                .wrap(fret_core::TextWrap::Word)
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N1)
+    .into_element_in(cx)]);
+    let content = shadcn::CardContent::new([ui::v_flex(|cx| {
+        let muted = cx.theme_snapshot().color_token("muted-foreground");
+        ui::children![
+            cx;
+            ui::h_flex(|cx| {
+                ui::children![
+                    cx;
+                    ui::v_flex(|cx| {
+                        ui::children![
+                            cx;
+                            ui::text("Active asset")
+                                .text_sm()
+                                .text_color(ColorRef::Color(muted))
+                                .into_element(cx),
+                            ui::text(name_value.clone())
+                                .text_base()
+                                .font_semibold()
+                                .wrap(fret_core::TextWrap::Word)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N1)
                     .into_element(cx),
-            ]
-        })
-        .gap(Space::N1)
-        .into_element_in(cx),
-    ]);
-    let content = shadcn::CardContent::new([
-        ui::v_flex(|cx| {
-            let muted = cx.theme_snapshot().color_token("muted-foreground");
-            ui::children![
-                cx;
-                ui::h_flex(|cx| {
-                    ui::children![
-                        cx;
-                        ui::v_flex(|cx| {
-                            ui::children![
-                                cx;
-                                ui::text("Active asset")
-                                    .text_sm()
-                                    .text_color(ColorRef::Color(muted))
-                                    .into_element(cx),
-                                ui::text(name_value.clone())
-                                    .text_base()
-                                    .font_semibold()
-                                    .wrap(fret_core::TextWrap::Word)
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N1)
+                    ui::v_flex(|cx| {
+                        ui::children![
+                            cx;
+                            ui::text("Inspector state")
+                                .text_sm()
+                                .text_color(ColorRef::Color(muted))
+                                .into_element(cx),
+                            ui::text(note_summary.clone())
+                                .text_sm()
+                                .into_element(cx),
+                            ui::text(format!("Last action: {outcome_label}"))
+                                .text_sm()
+                                .text_color(ColorRef::Color(muted))
+                                .wrap(fret_core::TextWrap::Word)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N1)
+                    .items_end()
+                    .into_element(cx),
+                ]
+            })
+            .items_start()
+            .justify_between()
+            .w_full()
+            .gap(Space::N4)
+            .into_element(cx),
+            ui::v_flex(|cx| {
+                let muted = cx.theme_snapshot().color_token("muted-foreground");
+                ui::children![
+                    cx;
+                    ui::text("Committed notes")
+                        .text_sm()
+                        .font_semibold()
                         .into_element(cx),
-                        ui::v_flex(|cx| {
-                            ui::children![
-                                cx;
-                                ui::text("Inspector state")
-                                    .text_sm()
-                                    .text_color(ColorRef::Color(muted))
-                                    .into_element(cx),
-                                ui::text(note_summary.clone())
-                                    .text_sm()
-                                    .into_element(cx),
-                                ui::text(format!("Last action: {outcome_label}"))
-                                    .text_sm()
-                                    .text_color(ColorRef::Color(muted))
-                                    .wrap(fret_core::TextWrap::Word)
-                                    .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N1)
-                        .items_end()
+                    ui::text(committed_notes_intro)
+                        .text_sm()
+                        .text_color(ColorRef::Color(muted))
+                        .wrap(fret_core::TextWrap::Word)
                         .into_element(cx),
-                    ]
-                })
-                .items_start()
-                .justify_between()
-                .w_full()
-                .gap(Space::N4)
-                .into_element(cx),
-                ui::v_flex(|cx| {
-                    let muted = cx.theme_snapshot().color_token("muted-foreground");
-                    ui::children![
-                        cx;
-                        ui::text("Committed notes")
-                            .text_sm()
-                            .font_semibold()
-                            .into_element(cx),
-                        ui::text("This center region is app-local content, while both side regions are mounted through the existing workspace shell seam.")
-                            .text_sm()
-                            .text_color(ColorRef::Color(muted))
-                            .wrap(fret_core::TextWrap::Word)
-                            .into_element(cx),
-                        ui::text(preview_text)
-                            .text_sm()
-                            .wrap(fret_core::TextWrap::Word)
-                            .into_element(cx),
-                    ]
-                })
-                .gap(Space::N2)
-                .w_full()
-                .p(Space::N3)
-                .rounded_md()
-                .border_1()
-                .test_id(TEST_ID_CENTER_PREVIEW)
-                .into_element(cx),
-            ]
-        })
-        .gap(Space::N4)
-        .w_full()
-        .min_w_0()
-        .into_element_in(cx),
-    ]);
+                    ui::text(preview_text)
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .w_full()
+            .p(Space::N3)
+            .rounded_md()
+            .border_1()
+            .test_id(TEST_ID_CENTER_PREVIEW)
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N4)
+    .w_full()
+    .min_w_0()
+    .into_element_in(cx)]);
 
     shadcn::Card::new(ui::children![cx; header, content])
         .ui()
@@ -430,7 +467,7 @@ where
         .test_id(TEST_ID_CENTER)
 }
 
-fn render_inspector_panel<'a, Cx>(
+pub(crate) fn render_inspector_panel<'a, Cx>(
     cx: &mut Cx,
     asset: EditorAssetState,
     committed_label: String,
@@ -576,7 +613,7 @@ where
         )
 }
 
-fn committed_line_count_label(text: &str) -> String {
+pub(crate) fn committed_line_count_label(text: &str) -> String {
     let lines = text.lines().count();
     match lines {
         0 => "No committed notes".to_string(),

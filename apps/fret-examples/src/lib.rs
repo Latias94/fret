@@ -145,6 +145,8 @@ pub mod echarts_multi_grid_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod editor_notes_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod editor_notes_device_shell_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod embedded_viewport_demo;
