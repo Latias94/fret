@@ -63,6 +63,11 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md`
   - `docs/workstreams/device-shell-strategy-surface-v1/M3_SECOND_CONSUMER_PROOF_2026-04-11.md`
   - `docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+- Closed narrow follow-on for explicit `fret::adaptive` facade promotion of the shipped
+  `device_shell_*` helper:
+  - `docs/workstreams/device-shell-adaptive-facade-promotion-v1/M0_BASELINE_AUDIT_2026-04-11.md`
+  - `docs/workstreams/device-shell-adaptive-facade-promotion-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+  - `docs/workstreams/device-shell-adaptive-facade-promotion-v1/EVIDENCE_AND_GATES.md`
 
 ## P1 - Authoring surfaces (imui convergence)
 

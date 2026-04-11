@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "slug": "device-shell-adaptive-facade-promotion-v1",
+  "title": "Device-Shell Adaptive Facade Promotion v1",
+  "status": "closed",
+  "updated": "2026-04-11",
+  "scope_kind": "closeout",
+  "follow_on_of": "device-shell-strategy-surface-v1",
+  "problem": "The shared `device_shell_*` helper is now proven in `fret-ui-kit`, but the explicit app-facing import lane is still unsettled. This lane owns the narrow question of whether those helpers should now be promoted to `fret::adaptive::{...}` without widening the default preludes.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/device-shell-adaptive-facade-promotion-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/device-shell-adaptive-facade-promotion-v1/M0_BASELINE_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/device-shell-adaptive-facade-promotion-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/device-shell-adaptive-facade-promotion-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/device-shell-adaptive-facade-promotion-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/device-shell-adaptive-facade-promotion-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md"
+    }
+  ],
+  "repro": {
+    "summary": "Keep the facade export and explicit-lane boundary visible through root-source tests and app-facing gallery source tests.",
+    "commands": [
+      "cargo nextest run -p fret root_surface_exposes_explicit_adaptive_module app_prelude_stays_explicit_instead_of_reexporting_legacy_surface app_prelude_omits_low_level_mechanism_types component_prelude_is_curated_for_reusable_component_authors usage_docs_expose_curated_component_surface --no-fail-fast",
+      "cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --no-fail-fast",
+      "git diff --check",
+      "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    ]
+  },
+  "gates": [
+    {
+      "name": "root-facade-surface",
+      "command": "cargo nextest run -p fret root_surface_exposes_explicit_adaptive_module app_prelude_stays_explicit_instead_of_reexporting_legacy_surface app_prelude_omits_low_level_mechanism_types component_prelude_is_curated_for_reusable_component_authors usage_docs_expose_curated_component_surface --no-fail-fast"
+    },
+    {
+      "name": "app-facing-proof-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test device_shell_strategy_surface --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/device-shell-adaptive-facade-promotion-v1/DESIGN.md",
+    "docs/workstreams/device-shell-adaptive-facade-promotion-v1/M0_BASELINE_AUDIT_2026-04-11.md",
+    "docs/workstreams/device-shell-adaptive-facade-promotion-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/device-shell-adaptive-facade-promotion-v1/TODO.md",
+    "docs/workstreams/device-shell-adaptive-facade-promotion-v1/MILESTONES.md",
+    "docs/workstreams/device-shell-adaptive-facade-promotion-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md",
+    "docs/workstreams/device-shell-strategy-surface-v1/TARGET_INTERFACE_STATE.md",
+    "ecosystem/fret-ui-kit/src/adaptive.rs",
+    "ecosystem/fret/src/lib.rs",
+    "docs/crate-usage-guide.md",
+    "apps/fret-ui-gallery/src/ui/snippets/date_picker/dropdowns.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/breadcrumb/responsive.rs",
+    "apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Future work should start a narrower follow-on for wrapper growth, richer policy, or broader teaching-surface rollout rather than reopening this explicit facade-promotion slice."
+  }
+}

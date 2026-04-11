@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("responsive.rs");
 
 // region: example
+use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_mode, device_shell_switch};
 use fret::children::UiElementSinkExt;
 use fret::component::prelude::Model;
 use fret::{UiChild, UiCx};
-use fret_ui::element::AnyElement;
 use fret_ui::Invalidation;
-use fret_ui_kit::adaptive::{device_shell_mode, device_shell_switch, DeviceShellSwitchPolicy};
+use fret_ui::element::AnyElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
@@ -37,9 +37,11 @@ fn breadcrumb_trigger_props(trigger_test_id: Arc<str>) -> fret_ui::element::Pres
 
 fn render_breadcrumb_overflow_trigger(cx: &mut UiCx<'_>, trigger_test_id: Arc<str>) -> AnyElement {
     cx.pressable(breadcrumb_trigger_props(trigger_test_id), move |cx, _st| {
-        vec![bc::BreadcrumbEllipsis::new()
-            .size(fret_core::Px(16.0))
-            .into_element(cx)]
+        vec![
+            bc::BreadcrumbEllipsis::new()
+                .size(fret_core::Px(16.0))
+                .into_element(cx),
+        ]
     })
 }
 
@@ -50,9 +52,11 @@ fn render_breadcrumb_overflow_drawer_trigger(
 ) -> AnyElement {
     cx.pressable(breadcrumb_trigger_props(trigger_test_id), move |cx, _st| {
         cx.pressable_on_activate(toggle.clone());
-        vec![bc::BreadcrumbEllipsis::new()
-            .size(fret_core::Px(16.0))
-            .into_element(cx)]
+        vec![
+            bc::BreadcrumbEllipsis::new()
+                .size(fret_core::Px(16.0))
+                .into_element(cx),
+        ]
     })
 }
 
@@ -90,15 +94,17 @@ fn render_breadcrumb_drawer_content(
             ..Default::default()
         },
         move |cx| {
-            vec![ui::v_stack(move |cx| {
-                overflow_items
-                    .iter()
-                    .map(|(label, _href)| fret_ui_kit::ui::text(*label).into_element(cx))
-                    .collect::<Vec<_>>()
-            })
-            .gap(Space::N1)
-            .items_stretch()
-            .into_element(cx)]
+            vec![
+                ui::v_stack(move |cx| {
+                    overflow_items
+                        .iter()
+                        .map(|(label, _href)| fret_ui_kit::ui::text(*label).into_element(cx))
+                        .collect::<Vec<_>>()
+                })
+                .gap(Space::N1)
+                .items_stretch()
+                .into_element(cx),
+            ]
         },
     );
 
@@ -161,10 +167,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let mut out: Vec<AnyElement> = Vec::new();
 
             out.push(bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                vec![bc::BreadcrumbLink::new(items[0].0)
-                    .href(items[0].1.unwrap_or("#"))
-                    .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                    .into_element(cx)]
+                vec![
+                    bc::BreadcrumbLink::new(items[0].0)
+                        .href(items[0].1.unwrap_or("#"))
+                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                        .into_element(cx),
+                ]
             }));
             out.push(bc::BreadcrumbSeparator::new().into_element(cx));
 
@@ -223,17 +231,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 let tail_layout = tail_max_w.clone();
                 out.push(bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     if is_last || href.is_none() {
-                        vec![bc::BreadcrumbPage::new(*label)
-                            .truncate(true)
-                            .refine_layout(tail_layout.clone())
-                            .into_element(cx)]
+                        vec![
+                            bc::BreadcrumbPage::new(*label)
+                                .truncate(true)
+                                .refine_layout(tail_layout.clone())
+                                .into_element(cx),
+                        ]
                     } else {
-                        vec![bc::BreadcrumbLink::new(*label)
-                            .href(href.unwrap_or("#"))
-                            .truncate(true)
-                            .refine_layout(tail_layout.clone())
-                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                            .into_element(cx)]
+                        vec![
+                            bc::BreadcrumbLink::new(*label)
+                                .href(href.unwrap_or("#"))
+                                .truncate(true)
+                                .refine_layout(tail_layout.clone())
+                                .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                                .into_element(cx),
+                        ]
                     }
                 }));
 

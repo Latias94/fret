@@ -201,9 +201,9 @@ import them intentionally from `fret::selector::ui::DepsBuilder`,
 `fret::selector::DepsSignature`, and `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for low-level environment/responsive reads: import them intentionally from
 `fret::env::{...}` instead of treating breakpoint/media helpers as part of the default app
-vocabulary. When app code wants shared adaptive classification or policy nouns above raw query
-reads, import them explicitly from `fret::adaptive::{...}` rather than expecting either lane from
-the default app vocabulary.
+vocabulary. When app code wants shared adaptive classification or explicit device-shell strategy
+nouns above raw query reads, import them explicitly from `fret::adaptive::{...}` rather than
+expecting either lane from the default app vocabulary.
 When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
 that helper off the default prelude too and import `fret::children::UiElementSinkExt as _`
 explicitly at the call site.

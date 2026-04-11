@@ -156,11 +156,12 @@ pub mod env {
 }
 
 /// Explicit higher-level adaptive policy vocabulary for app code that wants shared classification
-/// helpers above raw query reads.
+/// or device-shell strategy helpers above raw query reads.
 pub mod adaptive {
     pub use fret_ui_kit::adaptive::{
         AdaptiveQuerySource, DeviceAdaptiveClass, DeviceAdaptivePolicy, DeviceAdaptiveSnapshot,
-        PanelAdaptiveClass, PanelAdaptivePolicy, device_adaptive_class, device_adaptive_snapshot,
+        DeviceShellMode, DeviceShellSwitchPolicy, PanelAdaptiveClass, PanelAdaptivePolicy,
+        device_adaptive_class, device_adaptive_snapshot, device_shell_mode, device_shell_switch,
         panel_adaptive_class,
     };
 }
@@ -3358,6 +3359,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::adaptive::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::activate::{on_activate,"));
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::prelude::*;`"));
         assert!(CRATE_USAGE_GUIDE.contains("advanced-only"));
@@ -3547,10 +3549,14 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("DeviceAdaptiveClass"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptivePolicy"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptiveSnapshot"));
+        assert!(!app_prelude_exports_symbol("DeviceShellMode"));
+        assert!(!app_prelude_exports_symbol("DeviceShellSwitchPolicy"));
         assert!(!app_prelude_exports_symbol("PanelAdaptiveClass"));
         assert!(!app_prelude_exports_symbol("PanelAdaptivePolicy"));
         assert!(!app_prelude_exports_symbol("device_adaptive_class"));
         assert!(!app_prelude_exports_symbol("device_adaptive_snapshot"));
+        assert!(!app_prelude_exports_symbol("device_shell_mode"));
+        assert!(!app_prelude_exports_symbol("device_shell_switch"));
         assert!(!app_prelude_exports_symbol("panel_adaptive_class"));
         assert!(!app_prelude_exports_symbol("accent_color"));
         assert!(!app_prelude_exports_symbol("tailwind"));
@@ -3904,8 +3910,10 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("AdaptiveQuerySource, DeviceAdaptiveClass,"));
         assert!(root_header.contains("DeviceAdaptivePolicy,"));
         assert!(root_header.contains("DeviceAdaptiveSnapshot,"));
+        assert!(root_header.contains("DeviceShellMode, DeviceShellSwitchPolicy,"));
         assert!(root_header.contains("PanelAdaptiveClass, PanelAdaptivePolicy,"));
         assert!(root_header.contains("device_adaptive_class, device_adaptive_snapshot,"));
+        assert!(root_header.contains("device_shell_mode, device_shell_switch,"));
         assert!(root_header.contains("panel_adaptive_class,"));
     }
 
@@ -4002,10 +4010,14 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("DeviceAdaptiveClass"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptivePolicy"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptiveSnapshot"));
+        assert!(!app_prelude_exports_symbol("DeviceShellMode"));
+        assert!(!app_prelude_exports_symbol("DeviceShellSwitchPolicy"));
         assert!(!app_prelude_exports_symbol("PanelAdaptiveClass"));
         assert!(!app_prelude_exports_symbol("PanelAdaptivePolicy"));
         assert!(!app_prelude_exports_symbol("device_adaptive_class"));
         assert!(!app_prelude_exports_symbol("device_adaptive_snapshot"));
+        assert!(!app_prelude_exports_symbol("device_shell_mode"));
+        assert!(!app_prelude_exports_symbol("device_shell_switch"));
         assert!(!app_prelude_exports_symbol("panel_adaptive_class"));
         assert!(!app_prelude_exports_symbol("ContainerQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ViewportQueryHysteresis"));
@@ -4098,12 +4110,16 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("DeviceAdaptiveClass"));
         assert!(!component_prelude_exports_symbol("DeviceAdaptivePolicy"));
         assert!(!component_prelude_exports_symbol("DeviceAdaptiveSnapshot"));
+        assert!(!component_prelude_exports_symbol("DeviceShellMode"));
+        assert!(!component_prelude_exports_symbol("DeviceShellSwitchPolicy"));
         assert!(!component_prelude_exports_symbol("PanelAdaptiveClass"));
         assert!(!component_prelude_exports_symbol("PanelAdaptivePolicy"));
         assert!(!component_prelude_exports_symbol("device_adaptive_class"));
         assert!(!component_prelude_exports_symbol(
             "device_adaptive_snapshot"
         ));
+        assert!(!component_prelude_exports_symbol("device_shell_mode"));
+        assert!(!component_prelude_exports_symbol("device_shell_switch"));
         assert!(!component_prelude_exports_symbol("panel_adaptive_class"));
         assert!(!component_prelude_exports_symbol("container_breakpoints"));
         assert!(!component_prelude_exports_symbol("safe_area_insets"));

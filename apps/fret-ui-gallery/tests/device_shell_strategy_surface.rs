@@ -23,8 +23,14 @@ fn adaptive_module_exports_crate_local_device_shell_switch_surface() {
 fn date_picker_dropdowns_now_use_shared_device_shell_switch_but_keep_explicit_shell_branches() {
     let source = include_str!("../src/ui/snippets/date_picker/dropdowns.rs");
 
+    assert!(
+        source.contains("use fret::adaptive::{")
+            && source.contains("DeviceShellSwitchPolicy")
+            && source.contains("device_shell_switch"),
+        "date picker dropdowns should import the shared device-shell helper from `fret::adaptive`"
+    );
+
     for needle in [
-        "use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};",
         "let overlay = device_shell_switch(",
         "DeviceShellSwitchPolicy::default()",
         "shadcn::Popover::from_open(desktop_open.clone())",
@@ -80,12 +86,19 @@ fn sidebar_page_keeps_app_shell_device_shell_boundary_explicit() {
 }
 
 #[test]
-fn breadcrumb_responsive_snippet_now_uses_shared_device_shell_helpers_but_keeps_explicit_shell_branches(
-) {
+fn breadcrumb_responsive_snippet_now_uses_shared_device_shell_helpers_but_keeps_explicit_shell_branches()
+ {
     let source = include_str!("../src/ui/snippets/breadcrumb/responsive.rs");
 
+    assert!(
+        source.contains("use fret::adaptive::{")
+            && source.contains("DeviceShellSwitchPolicy")
+            && source.contains("device_shell_mode")
+            && source.contains("device_shell_switch"),
+        "breadcrumb responsive snippet should import the shared device-shell helpers from `fret::adaptive`"
+    );
+
     for needle in [
-        "use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_mode, device_shell_switch};",
         "let is_desktop = device_shell_mode(cx, Invalidation::Layout, shell_policy).is_desktop();",
         "vec![device_shell_switch(",
         "let dropdown = shadcn::DropdownMenu::from_open(open.clone())",
@@ -113,6 +126,21 @@ fn combobox_surface_keeps_explicit_recipe_owned_device_shell_naming() {
         assert!(
             present,
             "combobox surface should keep explicit recipe-owned device-shell naming visible; missing `{needle}`"
+        );
+    }
+}
+
+#[test]
+fn fret_root_surface_now_exposes_explicit_device_shell_strategy_lane() {
+    let root = include_str!("../../../ecosystem/fret/src/lib.rs");
+
+    for needle in [
+        "DeviceShellMode, DeviceShellSwitchPolicy,",
+        "device_shell_mode, device_shell_switch,",
+    ] {
+        assert!(
+            root.contains(needle),
+            "fret root adaptive lane should re-export explicit device-shell strategy helpers; missing `{needle}`"
         );
     }
 }

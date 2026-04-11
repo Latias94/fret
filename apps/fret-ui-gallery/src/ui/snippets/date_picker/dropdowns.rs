@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
 use super::fixed_today;
+use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};
 use fret::children::UiElementSinkExt;
 use fret::component::prelude::Model;
 use fret::{UiChild, UiCx};
-use fret_ui::element::AnyElement;
 use fret_ui::Invalidation;
+use fret_ui::element::AnyElement;
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_kit::adaptive::{device_shell_switch, DeviceShellSwitchPolicy};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
