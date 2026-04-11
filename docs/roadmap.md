@@ -50,6 +50,13 @@ Tracker highlights:
   `docs/workstreams/device-shell-recipe-wrapper-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md`,
   `docs/workstreams/device-shell-recipe-wrapper-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`, and
   `docs/workstreams/device-shell-recipe-wrapper-surface-v1/EVIDENCE_AND_GATES.md`.
+- Adaptive presentation surface closeout record (closed narrow follow-on that synthesizes the
+  upper-interface owner split across explicit dialog/drawer pairing, shared-helper call-site
+  branching, sidebar app-shell mobile inference, and editor-rail outer-shell downgrade, then
+  closes on a no-new-helper verdict for the current `Dialog` / `Drawer` family):
+  `docs/workstreams/adaptive-presentation-surface-v1/TARGET_INTERFACE_STATE.md`,
+  `docs/workstreams/adaptive-presentation-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`, and
+  `docs/workstreams/adaptive-presentation-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`.
 - Container-aware editor-rail surface closeout record (closed narrow follow-on that freezes the
   owner split, proves a second shell-mounted rail consumer, and still defers public extraction
   until a narrower container-aware helper lane is explicitly warranted):

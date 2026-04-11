@@ -72,6 +72,10 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/device-shell-recipe-wrapper-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md`
   - `docs/workstreams/device-shell-recipe-wrapper-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
   - `docs/workstreams/device-shell-recipe-wrapper-surface-v1/EVIDENCE_AND_GATES.md`
+- Closed narrow follow-on for the upper adaptive presentation interface:
+  - `docs/workstreams/adaptive-presentation-surface-v1/TARGET_INTERFACE_STATE.md`
+  - `docs/workstreams/adaptive-presentation-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`
+  - `docs/workstreams/adaptive-presentation-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
 - Closed narrow follow-on for container-aware editor rail / inspector sidebar extraction
   threshold:
   - `docs/workstreams/container-aware-editor-rail-surface-v1/DESIGN.md`

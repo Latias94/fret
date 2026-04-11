@@ -89,3 +89,23 @@ fn dialog_and_sidebar_boundaries_stay_outside_wrapper_growth() {
         );
     }
 }
+
+#[test]
+fn dialog_and_drawer_recipe_sources_do_not_ship_device_shell_wrapper_api_yet() {
+    let dialog = include_str!("../../../ecosystem/fret-ui-shadcn/src/dialog.rs");
+    let drawer = include_str!("../../../ecosystem/fret-ui-shadcn/src/drawer.rs");
+
+    for (name, source) in [("dialog", dialog), ("drawer", drawer)] {
+        for forbidden in [
+            "device_shell_responsive(",
+            "device_shell_md_breakpoint(",
+            "device_shell_switch(",
+            "DeviceShellSwitchPolicy",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{name} recipe source should not ship a family-specific device-shell wrapper surface yet; found `{forbidden}`",
+            );
+        }
+    }
+}
