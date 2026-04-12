@@ -24,9 +24,15 @@ pub fn render(
         .a11y_label("Combobox demo")
         .auto_highlight(true)
         .query_model(query.clone())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(260.0))
+                .min_w_0(),
+        )
         .test_id_prefix("ui-gallery-combobox-demo")
         .items(base_items())
-        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .trigger(shadcn::ComboboxTrigger::new())
         .input(shadcn::ComboboxInput::new().placeholder("Select a fruit"))
         .into_element(cx)
 }

@@ -34,50 +34,58 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let name = cx.local_model_keyed("name", || String::from("Pedro Duarte"));
     let username = cx.local_model_keyed("username", || String::from("@peduarte"));
 
-    let name_model = name.clone();
-    let username_model = username.clone();
+    ui::v_flex(move |cx| {
+        let name_model = name.clone();
+        let username_model = username.clone();
 
-    shadcn::Dialog::new(open.clone())
-        .children([
-            shadcn::DialogPart::trigger(shadcn::DialogTrigger::build(
-                shadcn::Button::new("Open Dialog")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .refine_layout(LayoutRefinement::default().min_w(Px(220.0)))
-                    .test_id("ui-gallery-dialog-demo-trigger"),
-            )),
-            shadcn::DialogPart::content_with(move |cx| {
-                let fields =
-                    profile_fields(cx, name_model.clone(), username_model.clone()).into_element(cx);
-                shadcn::DialogContent::new([])
-                    .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
-                    .with_children(cx, |cx| {
-                        vec![
-                            shadcn::DialogHeader::new([]).with_children(cx, |cx| {
+        vec![
+            shadcn::Dialog::new(open.clone())
+                .children([
+                    shadcn::DialogPart::trigger(shadcn::DialogTrigger::build(
+                        shadcn::Button::new("Open Dialog")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                            .test_id("ui-gallery-dialog-demo-trigger"),
+                    )),
+                    shadcn::DialogPart::content_with(move |cx| {
+                        let fields = profile_fields(cx, name_model.clone(), username_model.clone())
+                            .into_element(cx);
+                        shadcn::DialogContent::new([])
+                            .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
+                            .with_children(cx, |cx| {
                                 vec![
-                                    shadcn::DialogTitle::new("Edit profile").into_element(cx),
-                                    shadcn::DialogDescription::new(
-                                        "Make changes to your profile here. Click save when you're done.",
-                                    )
-                                    .into_element(cx),
+                                    shadcn::DialogHeader::new([]).with_children(cx, |cx| {
+                                        vec![
+                                            shadcn::DialogTitle::new("Edit profile")
+                                                .into_element(cx),
+                                            shadcn::DialogDescription::new(
+                                                "Make changes to your profile here. Click save when you're done.",
+                                            )
+                                            .into_element(cx),
+                                        ]
+                                    }),
+                                    fields,
+                                    shadcn::DialogFooter::new([]).with_children(cx, |cx| {
+                                        vec![
+                                            shadcn::DialogClose::from_scope()
+                                                .build(
+                                                    cx,
+                                                    shadcn::Button::new("Cancel")
+                                                        .variant(shadcn::ButtonVariant::Outline),
+                                                ),
+                                            shadcn::Button::new("Save changes").into_element(cx),
+                                        ]
+                                    }),
                                 ]
-                            }),
-                            fields,
-                            shadcn::DialogFooter::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DialogClose::from_scope()
-                                        .build(
-                                            cx,
-                                            shadcn::Button::new("Cancel")
-                                                .variant(shadcn::ButtonVariant::Outline),
-                                        ),
-                                    shadcn::Button::new("Save changes").into_element(cx),
-                                ]
-                            }),
-                        ]
-                    })
-                    .test_id("ui-gallery-dialog-demo-content")
-            }),
-        ])
-        .into_element(cx)
+                            })
+                            .test_id("ui-gallery-dialog-demo-content")
+                    }),
+                ])
+                .into_element(cx),
+        ]
+    })
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().max_w(Px(220.0)).min_w_0())
+    .into_element(cx)
 }
 // endregion: example

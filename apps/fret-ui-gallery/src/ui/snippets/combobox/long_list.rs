@@ -71,9 +71,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox long list")
         .query_model(query.clone())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(320.0))
+                .min_w_0(),
+        )
         .test_id_prefix("ui-gallery-combobox-long-list")
         .items(items)
-        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(320.0)))
+        .trigger(shadcn::ComboboxTrigger::new())
         .input(shadcn::ComboboxInput::new().placeholder("Pick an item"))
         .into_element(cx);
 
@@ -85,7 +91,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     })
     .gap(Space::N2)
     .items_start()
-    .layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(Px(360.0))
+            .min_w_0(),
+    )
     .into_element(cx)
 }
 // endregion: example

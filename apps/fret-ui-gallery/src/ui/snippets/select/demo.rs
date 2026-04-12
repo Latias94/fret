@@ -11,10 +11,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
 
     shadcn::Select::new(value, open)
-        .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
-        .trigger(
-            shadcn::SelectTrigger::new().refine_layout(LayoutRefinement::default().w_px(Px(180.0))),
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(180.0))
+                .min_w_0(),
         )
+        .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
+        .trigger(shadcn::SelectTrigger::new())
         .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
         .content(shadcn::SelectContent::new())
         .entries([shadcn::SelectGroup::new([

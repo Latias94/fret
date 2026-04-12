@@ -2,8 +2,8 @@ use fret_core::{Edges, Px};
 use fret_ui::{ElementContextAccess, GlobalElementId, Invalidation, UiHost};
 
 use crate::declarative::{
-    container_queries, occlusion_queries, pointer_queries, safe_area_queries, viewport_queries,
-    ContainerQueryHysteresis, ViewportQueryHysteresis,
+    ContainerQueryHysteresis, ViewportQueryHysteresis, container_queries, occlusion_queries,
+    pointer_queries, safe_area_queries, viewport_queries,
 };
 
 /// Explicit query-source selector for adaptive policy surfaces.

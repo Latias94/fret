@@ -81,7 +81,9 @@ fn dialog_docs_path_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "LayoutRefinement::default().min_w(Px(220.0))",
+        "LayoutRefinement::default().w_full().min_w_0()",
+        ".layout(LayoutRefinement::default().w_full().max_w(Px(220.0)).min_w_0())",
+        "ui::v_flex(move |cx| {",
         "shadcn::DialogTitle::new(\"Edit profile\")",
         "shadcn::DialogClose::from_scope()",
         "shadcn::Button::new(\"Save changes\").into_element(cx)",
@@ -201,6 +203,9 @@ fn dialog_docs_diag_scripts_cover_docs_path_and_existing_regression_gates() {
     let demo_screenshot = include_str!(
         "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-demo-open-screenshot.json"
     );
+    let narrow_demo = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-demo-narrow-sweep.json"
+    );
     let default_close = include_str!(
         "../../../tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-default-close-click.json"
     );
@@ -241,6 +246,18 @@ fn dialog_docs_diag_scripts_cover_docs_path_and_existing_regression_gates() {
         assert!(
             demo_screenshot.contains(needle),
             "dialog docs demo screenshot script should keep the upstream-shaped demo evidence path stable; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-dialog-demo-trigger\"",
+        "\"ui-gallery-dialog-demo-content\"",
+        "\"bounds_within_window\"",
+        "\"ui-gallery-dialog-demo-open-narrow\"",
+    ] {
+        assert!(
+            narrow_demo.contains(needle),
+            "dialog narrow sweep should keep the narrow-window width-hygiene selectors stable; missing `{needle}`",
         );
     }
 

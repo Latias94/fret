@@ -81,7 +81,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ));
 
     shadcn::ContextMenu::uncontrolled(cx)
-        .content_test_id("ui-gallery-context-menu-demo-content")
+        .content_test_id("ui-gallery-context-menu-demo-panel")
         .compose()
         .trigger(trigger)
         .content(

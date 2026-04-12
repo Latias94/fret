@@ -71,15 +71,7 @@ fn settle_frames(
 ) {
     for tick in 0..frames {
         let request_semantics = tick + 1 == frames;
-        render_frame(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            request_semantics,
-            root(),
-        );
+        render_frame(ui, app, services, window, bounds, request_semantics, root());
     }
 }
 
@@ -174,47 +166,45 @@ fn build_root(
             name: None,
         };
 
-        vec![cx.layout_query_region_with_id(region_props, move |cx, region_id| {
-            let items = vec![
-                shadcn::NavigationMenuItem::new("alpha", "Alpha", [alpha_content])
-                    .trigger_test_id("nav-trigger-alpha"),
-                shadcn::NavigationMenuItem::new("beta", "Beta", [beta_content])
-                    .trigger_test_id("nav-trigger-beta"),
-            ];
+        vec![
+            cx.layout_query_region_with_id(region_props, move |cx, region_id| {
+                let items = vec![
+                    shadcn::NavigationMenuItem::new("alpha", "Alpha", [alpha_content])
+                        .trigger_test_id("nav-trigger-alpha"),
+                    shadcn::NavigationMenuItem::new("beta", "Beta", [beta_content])
+                        .trigger_test_id("nav-trigger-beta"),
+                ];
 
-            let md_query = if use_container_query.get() {
-                shadcn::NavigationMenuMdBreakpointQuery::Container
-            } else {
-                shadcn::NavigationMenuMdBreakpointQuery::Viewport
-            };
+                let md_query = if use_container_query.get() {
+                    shadcn::NavigationMenuMdBreakpointQuery::Container
+                } else {
+                    shadcn::NavigationMenuMdBreakpointQuery::Viewport
+                };
 
-            let menu = shadcn::NavigationMenu::new(model.clone())
-                .items(items)
-                .container_query_region(region_id)
-                .md_breakpoint_query(md_query)
-                .viewport_test_id("nav-viewport")
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_full()
-                        .min_w_0(),
-                )
-                .into_element(cx);
+                let menu = shadcn::NavigationMenu::new(model.clone())
+                    .items(items)
+                    .container_query_region(region_id)
+                    .md_breakpoint_query(md_query)
+                    .viewport_test_id("nav-viewport")
+                    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx);
 
-            vec![cx.container(
-                fret_ui::element::ContainerProps {
-                    layout: LayoutStyle {
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                move |_cx| vec![menu],
-            )]
-        })]
+                    move |_cx| vec![menu],
+                )]
+            }),
+        ]
     }
 }
 
@@ -240,7 +230,11 @@ fn build_root_with_switch(
             |_cx| Vec::new(),
         );
 
-        let use_container_query = cx.watch_model(&query_model).layout().copied().unwrap_or(false);
+        let use_container_query = cx
+            .watch_model(&query_model)
+            .layout()
+            .copied()
+            .unwrap_or(false);
         let theme = cx.theme_snapshot();
         let region_props = LayoutQueryRegionProps {
             layout: fret_ui_kit::declarative::style::layout_style(
@@ -325,19 +319,11 @@ fn navigation_menu_reopens_after_switching_md_query_source() {
     let mut services = FakeServices;
     let mut timers = TimerQueue::default();
 
-    settle_frames(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        3,
-        {
-            let model = model.clone();
-            let use_container_query = use_container_query.clone();
-            move || Box::new(build_root(model.clone(), use_container_query.clone()))
-        },
-    );
+    settle_frames(&mut ui, &mut app, &mut services, window, bounds, 3, {
+        let model = model.clone();
+        let use_container_query = use_container_query.clone();
+        move || Box::new(build_root(model.clone(), use_container_query.clone()))
+    });
 
     let snap = ui
         .semantics_snapshot()
@@ -416,19 +402,11 @@ fn navigation_menu_reopens_after_switching_md_query_source() {
 
     use_container_query.set(true);
 
-    settle_frames(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        4,
-        {
-            let model = model.clone();
-            let use_container_query = use_container_query.clone();
-            move || Box::new(build_root(model.clone(), use_container_query.clone()))
-        },
-    );
+    settle_frames(&mut ui, &mut app, &mut services, window, bounds, 4, {
+        let model = model.clone();
+        let use_container_query = use_container_query.clone();
+        move || Box::new(build_root(model.clone(), use_container_query.clone()))
+    });
 
     let snap = ui
         .semantics_snapshot()
@@ -500,19 +478,11 @@ fn navigation_menu_reopens_after_clicking_query_switch() {
     let mut services = FakeServices;
     let mut timers = TimerQueue::default();
 
-    settle_frames(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        3,
-        {
-            let model = model.clone();
-            let query_model = query_model.clone();
-            move || Box::new(build_root_with_switch(model.clone(), query_model.clone()))
-        },
-    );
+    settle_frames(&mut ui, &mut app, &mut services, window, bounds, 3, {
+        let model = model.clone();
+        let query_model = query_model.clone();
+        move || Box::new(build_root_with_switch(model.clone(), query_model.clone()))
+    });
 
     let snap = ui
         .semantics_snapshot()
@@ -582,19 +552,11 @@ fn navigation_menu_reopens_after_clicking_query_switch() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    settle_frames(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        4,
-        {
-            let model = model.clone();
-            let query_model = query_model.clone();
-            move || Box::new(build_root_with_switch(model.clone(), query_model.clone()))
-        },
-    );
+    settle_frames(&mut ui, &mut app, &mut services, window, bounds, 4, {
+        let model = model.clone();
+        let query_model = query_model.clone();
+        move || Box::new(build_root_with_switch(model.clone(), query_model.clone()))
+    });
 
     assert!(
         app.models().get_copied(&query_model).unwrap_or(false),

@@ -38,7 +38,8 @@ fn navigation_menu_page_keeps_query_axis_teaching_explicit() {
 }
 
 #[test]
-fn navigation_menu_toggle_snippet_and_diag_gate_compare_viewport_vs_container_without_mixing_axes() {
+fn navigation_menu_toggle_snippet_and_diag_gate_compare_viewport_vs_container_without_mixing_axes()
+{
     let snippet = include_str!("../src/ui/snippets/navigation_menu/demo.rs");
     let diag_script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/navigation/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json"

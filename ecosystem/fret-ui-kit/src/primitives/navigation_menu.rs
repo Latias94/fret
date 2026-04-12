@@ -1048,8 +1048,7 @@ impl NavigationMenuTrigger {
                                 .is_some_and(|v| {
                                     v.as_ref() == item_value_for_pointer_move.as_ref()
                                 });
-                            let opened_by_pointer_move =
-                                !was_open_before && opened_by_pointer_move;
+                            let opened_by_pointer_move = !was_open_before && opened_by_pointer_move;
                             states.states.insert(
                                 item_value_for_pointer_move.clone(),
                                 NavigationMenuTriggerState {
@@ -1214,15 +1213,16 @@ impl NavigationMenuTrigger {
                             .read(&value_for_pointer_activate, |v| v.clone())
                             .ok()
                             .flatten();
-                        let current_matches = current
-                            .as_ref()
-                            .is_some_and(|v| v.as_ref() == item_value_for_pointer_activate.as_ref());
+                        let current_matches = current.as_ref().is_some_and(|v| {
+                            v.as_ref() == item_value_for_pointer_activate.as_ref()
+                        });
                         if current_matches {
                             let mut states = trigger_states_for_pointer_activate
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
-                            if let Some(entry) =
-                                states.states.get_mut(item_value_for_pointer_activate.as_ref())
+                            if let Some(entry) = states
+                                .states
+                                .get_mut(item_value_for_pointer_activate.as_ref())
                                 && entry.opened_by_pointer_move
                             {
                                 // Mirror the Radix intent that the first pointer click after a

@@ -13,6 +13,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox basic")
         .query_model(query.clone())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(260.0))
+                .min_w_0(),
+        )
         .test_id_prefix("ui-gallery-combobox-basic")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),
@@ -21,7 +27,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .trigger(shadcn::ComboboxTrigger::new())
         .input(shadcn::ComboboxInput::new().placeholder("Select a framework"))
         .content(shadcn::ComboboxContent::new([
             shadcn::ComboboxContentPart::input(

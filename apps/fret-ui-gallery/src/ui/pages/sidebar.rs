@@ -84,7 +84,9 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::use_sidebar::SOURCE, "example")
         .no_shell();
     let mobile = DocSection::build(cx, "Extras: Mobile", mobile)
-        .description("Forced-mobile app-shell sheet path kept for deterministic overlay/focus diagnostics.")
+        .description(
+            "Forced-mobile app-shell sheet path kept for deterministic overlay/focus diagnostics.",
+        )
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-sidebar-mobile")
         .code_rust_from_file_region(snippets::mobile::SOURCE, "example")
