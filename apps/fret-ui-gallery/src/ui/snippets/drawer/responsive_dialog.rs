@@ -80,19 +80,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx)
         },
         move |cx| {
-            let form = profile_form(cx, desktop_email.clone(), desktop_username.clone(), None)
-                .into_element(cx);
+            let form = profile_form(
+                cx,
+                desktop_email.clone(),
+                desktop_username.clone(),
+                Some(ProfileFormTestIds {
+                    form: "ui-gallery-drawer-responsive-desktop-form",
+                    email: "ui-gallery-drawer-responsive-desktop-email",
+                    username: "ui-gallery-drawer-responsive-desktop-username",
+                    save: "ui-gallery-drawer-responsive-desktop-save",
+                }),
+            )
+            .into_element(cx);
             shadcn::DialogContent::new([])
                 .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
                 .with_children(cx, |cx| {
                     vec![
                         shadcn::DialogHeader::new([]).with_children(cx, |cx| {
                             vec![
-                                shadcn::DialogTitle::new("Edit profile").into_element(cx),
+                                shadcn::DialogTitle::new("Edit profile")
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-drawer-responsive-desktop-title"),
                                 shadcn::DialogDescription::new(
                                     "Make changes to your profile here. Click save when you're done.",
                                 )
-                                .into_element(cx),
+                                .into_element(cx)
+                                .test_id("ui-gallery-drawer-responsive-desktop-description"),
                             ]
                         }),
                         form,
@@ -137,10 +150,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .children(|cx| {
                                     ui::children![
                                         cx;
-                                        shadcn::DrawerTitle::new("Edit profile"),
+                                        shadcn::DrawerTitle::new("Edit profile")
+                                            .into_element(cx)
+                                            .test_id("ui-gallery-drawer-responsive-mobile-title"),
                                         shadcn::DrawerDescription::new(
                                             "Make changes to your profile here. Click save when you're done.",
                                         )
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-drawer-responsive-mobile-description")
                                     ]
                                 }),
                             form,

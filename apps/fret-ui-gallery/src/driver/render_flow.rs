@@ -2518,6 +2518,85 @@ mod tests {
         }
     }
 
+    fn assert_overlay_content_and_targets_stay_within_bounds(
+        page: &str,
+        trigger_test_id: &str,
+        content_test_id: &str,
+        target_test_ids: &[&str],
+        bounds: Rect,
+    ) -> (Rect, Vec<Rect>) {
+        let mut rendered = render_gallery_page_with_bounds(page, bounds);
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, content_test_id, 24);
+        for target_test_id in target_test_ids {
+            wait_until_test_id_exists(&mut rendered, target_test_id, 24);
+        }
+
+        let mut last_content_bounds: Option<Rect> = None;
+        let mut stable_frames = 0usize;
+        for _ in 0..48 {
+            render_gallery_frame(&mut rendered);
+
+            let current_bounds = visual_bounds_by_test_id(&rendered, content_test_id);
+            let moved = last_content_bounds.is_none_or(|last| {
+                (current_bounds.origin.x.0 - last.origin.x.0).abs() > 0.5
+                    || (current_bounds.origin.y.0 - last.origin.y.0).abs() > 0.5
+                    || (current_bounds.size.width.0 - last.size.width.0).abs() > 0.5
+                    || (current_bounds.size.height.0 - last.size.height.0).abs() > 0.5
+            });
+            if moved {
+                stable_frames = 0;
+            } else {
+                stable_frames = stable_frames.saturating_add(1);
+            }
+            last_content_bounds = Some(current_bounds);
+
+            if stable_frames >= 3 {
+                break;
+            }
+        }
+
+        let content_bounds = visual_bounds_by_test_id(&rendered, content_test_id);
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0;
+        let content_bottom = content_bounds.origin.y.0 + content_bounds.size.height.0;
+        let window_bottom = bounds.origin.y.0 + bounds.size.height.0;
+        let window_right = bounds.origin.x.0 + bounds.size.width.0;
+        let epsilon = 1.0;
+        let mut target_bounds = Vec::with_capacity(target_test_ids.len());
+
+        assert!(
+            content_bounds.origin.x.0 >= bounds.origin.x.0 - epsilon
+                && content_bounds.origin.y.0 >= bounds.origin.y.0 - epsilon
+                && content_right <= window_right + epsilon
+                && content_bottom <= window_bottom + epsilon,
+            "expected overlay content to stay within the window bounds: page={page} trigger={trigger_test_id} content={content_test_id} window_bounds={bounds:?} content_bounds={content_bounds:?}"
+        );
+
+        for target_test_id in target_test_ids {
+            let target_bounds_rect = visual_bounds_by_test_id(&rendered, target_test_id);
+            let target_right = target_bounds_rect.origin.x.0 + target_bounds_rect.size.width.0;
+            let target_bottom = target_bounds_rect.origin.y.0 + target_bounds_rect.size.height.0;
+
+            assert!(
+                target_bounds_rect.origin.x.0 >= content_bounds.origin.x.0 - epsilon
+                    && target_bounds_rect.origin.y.0 >= content_bounds.origin.y.0 - epsilon
+                    && target_right <= content_right + epsilon
+                    && target_bottom <= content_bottom + epsilon,
+                "expected overlay target to stay within the content bounds: page={page} trigger={trigger_test_id} content={content_test_id} target={target_test_id} content_bounds={content_bounds:?} target_bounds={target_bounds_rect:?}"
+            );
+            assert!(
+                target_bottom <= window_bottom + epsilon && target_right <= window_right + epsilon,
+                "expected overlay target to stay within the window bounds: page={page} trigger={trigger_test_id} content={content_test_id} target={target_test_id} window_bounds={bounds:?} target_bounds={target_bounds_rect:?}"
+            );
+
+            target_bounds.push(target_bounds_rect);
+        }
+
+        (content_bounds, target_bounds)
+    }
+
     #[test]
     fn gallery_component_pages_scroll_to_bottom_without_height_drift() {
         let cases = [
@@ -4703,6 +4782,104 @@ mod tests {
                 Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(420.0), Px(760.0)),
             ),
+        );
+    }
+
+    #[test]
+    fn drawer_responsive_dialog_desktop_branch_keeps_form_inside_dialog_at_desktop_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DRAWER,
+            "ui-gallery-drawer-responsive-desktop-trigger",
+            "ui-gallery-drawer-responsive-desktop-content",
+            &[
+                "ui-gallery-drawer-responsive-desktop-title",
+                "ui-gallery-drawer-responsive-desktop-description",
+                "ui-gallery-drawer-responsive-desktop-email",
+                "ui-gallery-drawer-responsive-desktop-username",
+                "ui-gallery-drawer-responsive-desktop-save",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(960.0), Px(820.0)),
+            ),
+        );
+
+        let title = targets[0];
+        let description = targets[1];
+        let email = targets[2];
+        let username = targets[3];
+        let save = targets[4];
+        let epsilon = 1.0;
+
+        assert!(
+            description.origin.y.0 >= title.origin.y.0 + title.size.height.0 - epsilon,
+            "expected desktop responsive-dialog description to stay below the title: title={title:?} description={description:?}"
+        );
+        assert!(
+            email.origin.y.0 >= description.origin.y.0 + description.size.height.0 - epsilon,
+            "expected desktop responsive-dialog email field to stay below the description: description={description:?} email={email:?}"
+        );
+        assert!(
+            username.origin.y.0 >= email.origin.y.0 + email.size.height.0 - epsilon,
+            "expected desktop responsive-dialog username field to stay below the email field: email={email:?} username={username:?}"
+        );
+        assert!(
+            save.origin.y.0 >= username.origin.y.0 + username.size.height.0 - epsilon,
+            "expected desktop responsive-dialog save action to stay below the username field: username={username:?} save={save:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_responsive_dialog_mobile_branch_keeps_form_and_footer_inside_drawer_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DRAWER,
+            "ui-gallery-drawer-responsive-mobile-trigger",
+            "ui-gallery-drawer-responsive-mobile-content",
+            &[
+                "ui-gallery-drawer-responsive-mobile-title",
+                "ui-gallery-drawer-responsive-mobile-description",
+                "ui-gallery-drawer-responsive-mobile-email",
+                "ui-gallery-drawer-responsive-mobile-username",
+                "ui-gallery-drawer-responsive-mobile-save",
+                "ui-gallery-drawer-responsive-mobile-cancel",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let title = targets[0];
+        let description = targets[1];
+        let email = targets[2];
+        let username = targets[3];
+        let save = targets[4];
+        let cancel = targets[5];
+        let epsilon = 1.0;
+
+        assert!(
+            description.origin.y.0 >= title.origin.y.0 + title.size.height.0 - epsilon,
+            "expected mobile responsive-dialog description to stay below the title: title={title:?} description={description:?}"
+        );
+        assert!(
+            email.origin.y.0 >= description.origin.y.0 + description.size.height.0 - epsilon,
+            "expected mobile responsive-dialog email field to stay below the description: description={description:?} email={email:?}"
+        );
+        assert!(
+            username.origin.y.0 >= email.origin.y.0 + email.size.height.0 - epsilon,
+            "expected mobile responsive-dialog username field to stay below the email field: email={email:?} username={username:?}"
+        );
+        assert!(
+            save.origin.y.0 >= username.origin.y.0 + username.size.height.0 - epsilon,
+            "expected mobile responsive-dialog save action to stay below the username field: username={username:?} save={save:?}"
+        );
+        assert!(
+            cancel.origin.y.0 >= save.origin.y.0 + save.size.height.0 - epsilon,
+            "expected mobile responsive-dialog cancel action to stay below the form save action: save={save:?} cancel={cancel:?}"
+        );
+        assert!(
+            !rects_intersect(save, cancel),
+            "expected mobile responsive-dialog save and cancel actions not to overlap: save={save:?} cancel={cancel:?}"
         );
     }
 
