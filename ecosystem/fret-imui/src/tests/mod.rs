@@ -126,6 +126,10 @@ impl TestHost {
         Self::default()
     }
 
+    fn commands_mut(&mut self) -> &mut CommandRegistry {
+        &mut self.commands
+    }
+
     fn advance_frame(&mut self) {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.frame_id.0 = self.frame_id.0.saturating_add(1);

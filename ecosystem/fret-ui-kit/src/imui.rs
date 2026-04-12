@@ -18,7 +18,7 @@ use std::time::Duration;
 use fret_authoring::UiWriter;
 use fret_core::{Point, Px, Rect, Size};
 use fret_interaction::dpi;
-use fret_runtime::ActionId;
+use fret_runtime::{ActionId, CommandId};
 use fret_ui::element::{AnyElement, PointerRegionProps};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -733,6 +733,22 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) -> ResponseExt {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_action_with_options(
             self, label, action, options,
+        );
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
+    pub fn menu_item_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
+        self.menu_item_command_with_options(command, MenuItemOptions::default())
+    }
+
+    pub fn menu_item_command_with_options(
+        &mut self,
+        command: impl Into<CommandId>,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_command_with_options(
+            self, command, options,
         );
         self.record_focusable(resp.id, resp.enabled);
         resp
@@ -1541,6 +1557,28 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: MenuItemOptions,
     ) -> ResponseExt {
         menu_controls::menu_item_action_with_options(self, label.into(), action.into(), options)
+    }
+
+    fn menu_item_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
+        self.menu_item_command_with_options(command, MenuItemOptions::default())
+    }
+
+    fn menu_item_command_with_options(
+        &mut self,
+        command: impl Into<CommandId>,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let command = command.into();
+        let presentation =
+            self.with_cx_mut(|cx| crate::command::command_presentation_for_window(cx, &command));
+
+        let mut options = options;
+        options.enabled = options.enabled && presentation.enabled;
+        if options.shortcut.is_none() {
+            options.shortcut = presentation.shortcut;
+        }
+
+        menu_controls::menu_item_action_with_options(self, presentation.label, command, options)
     }
 
     fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {

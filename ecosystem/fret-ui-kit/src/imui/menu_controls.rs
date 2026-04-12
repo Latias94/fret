@@ -9,7 +9,7 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
-    PressableProps, RowProps, SpacingLength,
+    PressableProps, RowProps, SemanticsDecoration, SpacerProps, SpacingLength, TextProps,
 };
 
 use super::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
@@ -96,6 +96,12 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
         let close_popup = options.close_popup.clone();
         let test_id = options.test_id.clone();
+        let shortcut = options.shortcut.clone();
+        let shortcut_test_id = options.shortcut_test_id.clone().or_else(|| {
+            test_id
+                .as_ref()
+                .map(|test_id| Arc::from(format!("{test_id}.shortcut")))
+        });
         let mut enabled = options.enabled && !super::imui_is_disabled(cx);
         if let Some(action) = action.as_ref() {
             enabled = enabled && cx.action_is_enabled(action);
@@ -126,7 +132,26 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     if let Some(indicator) = indicator.clone() {
                         out.push(cx.text(indicator));
                     }
-                    out.push(cx.text(label_for_visuals.clone()));
+                    let mut label_props = TextProps::new(label_for_visuals.clone());
+                    label_props.layout.size.width = Length::Fill;
+                    label_props.layout.flex.shrink = 1.0;
+                    label_props.wrap = fret_core::TextWrap::None;
+                    label_props.overflow = fret_core::TextOverflow::Ellipsis;
+                    out.push(cx.text_props(label_props));
+
+                    if let Some(shortcut) = shortcut.clone() {
+                        out.push(cx.spacer(SpacerProps::default()));
+
+                        let mut shortcut_props = TextProps::new(shortcut);
+                        shortcut_props.wrap = fret_core::TextWrap::None;
+                        shortcut_props.overflow = fret_core::TextOverflow::Clip;
+                        let mut shortcut = cx.text_props(shortcut_props);
+                        if let Some(test_id) = shortcut_test_id.clone() {
+                            shortcut = shortcut
+                                .attach_semantics(SemanticsDecoration::default().test_id(test_id));
+                        }
+                        out.push(shortcut);
+                    }
                     out
                 })]
             });

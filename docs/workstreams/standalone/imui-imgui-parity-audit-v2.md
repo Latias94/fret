@@ -199,11 +199,13 @@ The real remaining gaps are narrower:
 3. No immediate tab-bar/menu-bar family in the generic `imui` layer
    - Those behaviors exist elsewhere in the repo (`fret-workspace`, shell demos, shadcn/menu
      surfaces), but the generic immediate layer cannot yet express them as first-class helpers.
-4. No immediate shortcut/key-ownership convenience layer comparable to `Shortcut()`,
-   `SetNextItemShortcut()`, or `SetItemKeyOwner()`
-   - Fret has a stronger app-wide command/keymap architecture.
-   - What is missing is the thin immediate authoring seam that ties item-local affordances and
-     shortcut hints to that command system without dropping into lower layers.
+4. First-cut immediate command shortcut seam now exists, but key ownership is still open
+   - `fret-ui-kit::imui` now exposes `menu_item_command[_with_options]`, which resolves the
+     command title, enabled state, and shortcut hint from Fret's command/keymap layer without
+     widening `crates/fret-ui`.
+   - The remaining gap is depth rather than ownership: there is still no immediate equivalent to
+     `SetNextItemShortcut()` / `SetItemKeyOwner()`, no item-local shortcut registration seam, and
+     no broader first-party proof surface beyond menu-item command affordances.
 5. Partial item-status parity
    - `ResponseExt` covers a useful subset of hover, click, drag, context-menu, and nav-highlight
      behavior.
@@ -217,6 +219,8 @@ Owner:
 - `ecosystem/fret-ui-editor::imui`
 - `ecosystem/fret-ui-kit/src/imui/multi_select.rs`
 - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
+- `ecosystem/fret-ui-kit/src/command.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `ecosystem/fret-imui/src/tests/composition.rs`
 

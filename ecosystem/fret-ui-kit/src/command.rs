@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use fret_runtime::{
-    ActionId, CommandId, CommandMeta, InputContext, InputDispatchPhase, KeymapService, Platform,
-    PlatformCapabilities, WindowCommandGatingSnapshot, format_sequence,
+    ActionId, CommandId, CommandMeta, CommandScope, InputContext, InputDispatchPhase,
+    KeymapService, Platform, PlatformCapabilities, WindowCommandGatingSnapshot, format_sequence,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -41,6 +41,15 @@ pub struct CommandCatalogOptions {
     /// When `true`, commands that fail their `when` gating are excluded instead of being rendered
     /// as disabled rows.
     pub hide_disabled: bool,
+}
+
+/// Data-only command presentation derived from host command metadata and current window gating
+/// state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandPresentation {
+    pub label: Arc<str>,
+    pub shortcut: Option<Arc<str>>,
+    pub enabled: bool,
 }
 
 /// Data-only command item derived from host command metadata and current window gating state.
@@ -93,6 +102,13 @@ impl CommandCatalogItem {
         self.shortcut = Some(shortcut.into());
         self
     }
+}
+
+pub fn command_presentation_for_window<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    command: &CommandId,
+) -> CommandPresentation {
+    command_presentation_for_window_with_platform(cx, command, Platform::current())
 }
 
 /// Data-only command catalog group. Group ownership belongs to component-policy layers, not to a
@@ -179,7 +195,7 @@ pub fn command_catalog_entries_from_host_commands_with_gating_snapshot<H: UiHost
             continue;
         }
 
-        let item = command_catalog_item_from_meta_with_gating(cx, gating, id, meta);
+        let item = command_catalog_item_from_meta_with_gating(&*cx.app, gating, id, meta);
         if let Some(category) = meta.category.clone() {
             groups.entry(category).or_default().push(item);
         } else {
@@ -276,13 +292,11 @@ impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
 }
 
 fn command_catalog_item_from_meta_with_gating<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+    app: &H,
     gating: &WindowCommandGatingSnapshot,
     id: &CommandId,
     meta: &CommandMeta,
 ) -> CommandCatalogItem {
-    let input_ctx = gating.input_ctx();
-
     let mut keywords: Vec<Arc<str>> = meta.keywords.clone();
     keywords.push(Arc::from(id.as_str()));
     if let Some(category) = meta.category.as_ref() {
@@ -292,27 +306,90 @@ fn command_catalog_item_from_meta_with_gating<H: UiHost>(
         keywords.push(description.clone());
     }
 
-    let shortcut = cx
-        .app
-        .global::<KeymapService>()
+    let presentation = command_presentation_from_meta_with_gating(app, gating, id, Some(meta));
+
+    let mut item = CommandCatalogItem::new(presentation.label, id.clone())
+        .value(Arc::from(id.as_str()))
+        .keywords(keywords)
+        .disabled(!presentation.enabled);
+    if let Some(shortcut) = presentation.shortcut {
+        item = item.shortcut(shortcut);
+    }
+    item
+}
+
+fn command_presentation_for_window_with_platform<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    command: &CommandId,
+    platform: Platform,
+) -> CommandPresentation {
+    let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+        &*cx.app,
+        cx.window,
+        fallback_input_context_for_platform(&*cx.app, platform),
+    );
+    let meta = cx.app.commands().get(command.clone());
+    command_presentation_from_meta_with_gating(&*cx.app, &gating, command, meta)
+}
+
+fn command_presentation_from_meta_with_gating<H: UiHost>(
+    app: &H,
+    gating: &WindowCommandGatingSnapshot,
+    command: &CommandId,
+    meta: Option<&CommandMeta>,
+) -> CommandPresentation {
+    let label = meta
+        .map(|meta| meta.title.clone())
+        .unwrap_or_else(|| Arc::from(command.as_str()));
+    let enabled = meta.map_or_else(
+        || gating.is_enabled_for_meta(command, CommandScope::App, None),
+        |meta| gating.is_enabled_for_command(command, meta),
+    );
+    let shortcut = command_shortcut_label_with_gating(app, gating, command, meta);
+
+    CommandPresentation {
+        label,
+        shortcut,
+        enabled,
+    }
+}
+
+fn command_shortcut_label_with_gating<H: UiHost>(
+    app: &H,
+    gating: &WindowCommandGatingSnapshot,
+    command: &CommandId,
+    meta: Option<&CommandMeta>,
+) -> Option<Arc<str>> {
+    let input_ctx = gating.input_ctx();
+    app.global::<KeymapService>()
         .and_then(|svc| {
             svc.keymap
                 .display_shortcut_for_command_sequence_with_key_contexts(
                     input_ctx,
                     gating.key_contexts(),
-                    id,
+                    command,
                 )
         })
-        .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
+        .or_else(|| {
+            meta.and_then(|meta| {
+                meta.default_keybindings
+                    .iter()
+                    .find(|binding| {
+                        binding.platform.matches(input_ctx.platform)
+                            && binding.when.as_ref().is_none_or(|when| {
+                                when.eval_with_key_contexts(input_ctx, gating.key_contexts())
+                            })
+                    })
+                    .map(|binding| binding.sequence.clone())
+            })
+        })
+        .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)))
+}
 
-    let mut item = CommandCatalogItem::new(meta.title.clone(), id.clone())
-        .value(Arc::from(id.as_str()))
-        .keywords(keywords)
-        .disabled(!gating.is_enabled_for_command(id, meta));
-    if let Some(shortcut) = shortcut {
-        item = item.shortcut(shortcut);
-    }
-    item
+fn fallback_input_context_for_platform<H: UiHost>(app: &H, platform: Platform) -> InputContext {
+    let mut input_ctx = default_fallback_input_context(app);
+    input_ctx.platform = platform;
+    input_ctx
 }
 
 fn trimmed_arc(value: Arc<str>) -> Arc<str> {
@@ -331,9 +408,10 @@ mod tests {
     use std::collections::HashMap;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, KeyCode, Modifiers, Point, Px, Rect, Size};
     use fret_runtime::{
-        CommandScope, WindowCommandActionAvailabilityService, WindowCommandEnabledService,
+        CommandScope, DefaultKeybinding, KeyChord, PlatformFilter,
+        WindowCommandActionAvailabilityService, WindowCommandEnabledService,
     };
 
     fn bounds() -> Rect {
@@ -458,5 +536,57 @@ mod tests {
             item.disabled,
             "expected the command entry to be disabled via WindowCommandGatingService snapshot"
         );
+    }
+
+    #[test]
+    fn command_presentation_uses_default_keybindings_when_keymap_service_is_missing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.open");
+        let chord = KeyChord::new(
+            KeyCode::KeyO,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Open").with_default_keybindings([DefaultKeybinding::single(
+                PlatformFilter::Windows,
+                chord,
+            )]),
+        );
+
+        let presentation =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmd", |cx| {
+                command_presentation_for_window_with_platform(cx, &cmd, Platform::Windows)
+            });
+        let expected = format_sequence(Platform::Windows, &[chord]);
+        assert_eq!(presentation.label.as_ref(), "Open");
+        assert_eq!(presentation.shortcut.as_deref(), Some(expected.as_str()));
+        assert!(presentation.enabled);
+    }
+
+    #[test]
+    fn command_presentation_respects_window_command_enabled_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.disabled");
+        app.commands_mut()
+            .register(cmd.clone(), CommandMeta::new("Disabled"));
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let presentation =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmd", |cx| {
+                command_presentation_for_window_with_platform(cx, &cmd, Platform::Windows)
+            });
+        assert_eq!(presentation.label.as_ref(), "Disabled");
+        assert!(!presentation.enabled);
     }
 }

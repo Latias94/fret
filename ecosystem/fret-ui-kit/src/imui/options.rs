@@ -164,7 +164,9 @@ impl Default for TreeNodeOptions {
 pub struct MenuItemOptions {
     pub enabled: bool,
     pub close_popup: Option<fret_runtime::Model<bool>>,
+    pub shortcut: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
+    pub shortcut_test_id: Option<Arc<str>>,
 }
 
 impl Default for MenuItemOptions {
@@ -172,7 +174,9 @@ impl Default for MenuItemOptions {
         Self {
             enabled: true,
             close_popup: None,
+            shortcut: None,
             test_id: None,
+            shortcut_test_id: None,
         }
     }
 }
