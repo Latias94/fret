@@ -11,19 +11,24 @@ fn profile_fields<H: UiHost>(
     name: Model<String>,
     username: Model<String>,
 ) -> impl IntoUiElement<H> + use<H> {
-    let field = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<String>| {
+    let field = |cx: &mut ElementContext<'_, H>,
+                 label: &'static str,
+                 model: Model<String>,
+                 input_test_id: &'static str| {
         shadcn::Field::new(ui::children![
             cx;
             shadcn::FieldLabel::new(label),
-            shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full())
+            shadcn::Input::new(model)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .test_id(input_test_id)
         ])
         .into_element(cx)
     };
 
     shadcn::FieldSet::new(ui::children![
         cx;
-        field(cx, "Name", name),
-        field(cx, "Username", username)
+        field(cx, "Name", name, "ui-gallery-dialog-demo-name-input"),
+        field(cx, "Username", username, "ui-gallery-dialog-demo-username-input")
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
@@ -54,16 +59,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
                             .with_children(cx, |cx| {
                                 vec![
-                                    shadcn::DialogHeader::new([]).with_children(cx, |cx| {
-                                        vec![
-                                            shadcn::DialogTitle::new("Edit profile")
-                                                .into_element(cx),
-                                            shadcn::DialogDescription::new(
-                                                "Make changes to your profile here. Click save when you're done.",
-                                            )
-                                            .into_element(cx),
-                                        ]
-                                    }),
+                                    shadcn::DialogHeader::new([])
+                                        .with_children(cx, |cx| {
+                                            vec![
+                                                shadcn::DialogTitle::new("Edit profile")
+                                                    .into_element(cx)
+                                                    .test_id("ui-gallery-dialog-demo-title"),
+                                                shadcn::DialogDescription::new(
+                                                    "Make changes to your profile here. Click save when you're done.",
+                                                )
+                                                .into_element(cx)
+                                                .test_id("ui-gallery-dialog-demo-description"),
+                                            ]
+                                        })
+                                        .test_id("ui-gallery-dialog-demo-header"),
                                     fields,
                                     shadcn::DialogFooter::new([]).with_children(cx, |cx| {
                                         vec![
@@ -71,9 +80,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 .build(
                                                     cx,
                                                     shadcn::Button::new("Cancel")
-                                                        .variant(shadcn::ButtonVariant::Outline),
+                                                        .variant(shadcn::ButtonVariant::Outline)
+                                                        .test_id("ui-gallery-dialog-demo-cancel"),
                                                 ),
-                                            shadcn::Button::new("Save changes").into_element(cx),
+                                            shadcn::Button::new("Save changes")
+                                                .test_id("ui-gallery-dialog-demo-save")
+                                                .into_element(cx),
                                         ]
                                     }),
                                 ]

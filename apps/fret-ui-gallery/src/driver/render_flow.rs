@@ -4942,6 +4942,60 @@ mod tests {
     }
 
     #[test]
+    fn dialog_demo_header_fields_and_footer_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DIALOG,
+            "ui-gallery-dialog-demo-trigger",
+            "ui-gallery-dialog-demo-content",
+            &[
+                "ui-gallery-dialog-demo-title",
+                "ui-gallery-dialog-demo-description",
+                "ui-gallery-dialog-demo-name-input",
+                "ui-gallery-dialog-demo-username-input",
+                "ui-gallery-dialog-demo-save",
+                "ui-gallery-dialog-demo-cancel",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let title = targets[0];
+        let description = targets[1];
+        let name = targets[2];
+        let username = targets[3];
+        let save = targets[4];
+        let cancel = targets[5];
+        let epsilon = 1.0;
+
+        assert!(
+            description.origin.y.0 >= title.origin.y.0 + title.size.height.0 - epsilon,
+            "expected dialog demo description to stay below the title: title={title:?} description={description:?}"
+        );
+        assert!(
+            name.origin.y.0 >= description.origin.y.0 + description.size.height.0 - epsilon,
+            "expected dialog demo name input to stay below the description: description={description:?} name={name:?}"
+        );
+        assert!(
+            username.origin.y.0 >= name.origin.y.0 + name.size.height.0 - epsilon,
+            "expected dialog demo username input to stay below the name input: name={name:?} username={username:?}"
+        );
+        assert!(
+            save.origin.y.0 >= username.origin.y.0 + username.size.height.0 - epsilon,
+            "expected dialog demo save action to stay below the username input: username={username:?} save={save:?}"
+        );
+        assert!(
+            cancel.origin.y.0 >= save.origin.y.0 + save.size.height.0 - epsilon,
+            "expected dialog demo cancel action to stay below the save action: save={save:?} cancel={cancel:?}"
+        );
+        assert!(
+            !rects_intersect(save, cancel),
+            "expected dialog demo save and cancel actions not to overlap: save={save:?} cancel={cancel:?}"
+        );
+    }
+
+    #[test]
     fn drawer_rtl_header_controls_chart_and_footer_stay_within_window_at_narrow_size() {
         let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
             PAGE_DRAWER,
