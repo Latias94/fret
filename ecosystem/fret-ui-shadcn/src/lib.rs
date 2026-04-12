@@ -52,6 +52,7 @@
 
 mod a11y_modal;
 mod accordion;
+mod adaptive_shell;
 mod alert;
 mod alert_dialog;
 mod aspect_ratio;

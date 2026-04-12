@@ -17,8 +17,7 @@ use fret_ui::element::{
     Length, MainAlign, OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration,
     SizeStyle, SpacerProps, VisualTransformProps,
 };
-use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_mode};
+use fret_ui::{CommandAvailability, ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -792,12 +791,7 @@ impl SidebarProvider {
         };
 
         let is_mobile = self.is_mobile_override.unwrap_or_else(|| {
-            device_shell_mode(
-                cx,
-                Invalidation::Layout,
-                DeviceShellSwitchPolicy::default().desktop_min_width(self.is_mobile_breakpoint),
-            )
-            .is_mobile()
+            !crate::adaptive_shell::is_desktop_shell(cx, self.is_mobile_breakpoint)
         });
         let resolved_widths = {
             let theme = Theme::global(&*cx.app);
