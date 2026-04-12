@@ -136,6 +136,17 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
 - Compatibility-only:
   - `imui_node_graph_demo`
 
+Mounting rule for the immediate-mode lane:
+
+- If your IMUI content already lives under an explicit layout host such as `Column`, `Row`, or
+  `v_flex`, prefer `fret_imui::imui(cx, ...)`.
+- If you are mounting IMUI directly at the view root or under a non-layout parent, prefer
+  `fret_imui::imui_vstack(cx.elements(), ...)`.
+- `imui_vstack(...)` is the explicit root-host bridge, not evidence that generic helper growth
+  should reopen.
+- `imui_action_basics` demonstrates the nested layout-host shape; `imui_hello_demo` remains the
+  small smoke/reference proof of the explicit root-hosted shape.
+
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
 
 - `simple_todo_v2_target` — comparison target for denser payload-row / root-handler keyed-list authoring on the same `LocalState<Vec<Row>>` baseline; it is intentionally evidence-oriented, not the default tutorial surface.

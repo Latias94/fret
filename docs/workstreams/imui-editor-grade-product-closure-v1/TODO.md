@@ -31,6 +31,10 @@ Last updated: 2026-04-12
       surfaces, freezes the current minimum budget as `imui_action_basics` +
       `imui_editor_proof_demo`, and rejects reference/compatibility-only surfaces as sole
       justification.
+- [x] Publish the first-open root-host teaching rule for `imui(...)` vs `imui_vstack(...)`.
+      Result: `P0_ROOT_HOSTING_RULE_2026-04-12.md` and `docs/examples/README.md` now explain the
+      nested-layout-host shape versus the explicit root-host bridge, without reopening helper
+      growth.
 
 ## P1 - Editor workbench shell closure
 

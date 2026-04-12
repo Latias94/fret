@@ -307,6 +307,9 @@ mod authoring_surface_policy_tests {
     const IMUI_PROOF_BUDGET_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
     );
+    const IMUI_ROOT_HOSTING_RULE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1501,6 +1504,33 @@ mod authoring_surface_policy_tests {
             assert!(
                 EXAMPLES_DOCS_README.contains(marker),
                 "docs/examples/README.md should classify the immediate-mode teaching surfaces: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack() {
+        for marker in [
+            "Mounting rule for the immediate-mode lane:",
+            "`fret_imui::imui(cx, ...)`.",
+            "`fret_imui::imui_vstack(cx.elements(), ...)`.",
+            "`imui_vstack(...)` is the explicit root-host bridge",
+            "`imui_action_basics` demonstrates the nested layout-host shape; `imui_hello_demo` remains the",
+        ] {
+            assert!(
+                EXAMPLES_DOCS_README.contains(marker),
+                "docs/examples/README.md should keep the immediate-mode mounting rule explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "If your IMUI content already lives under an explicit layout host, prefer",
+            "If you are mounting IMUI directly at the view root or under a non-layout parent, prefer",
+            "`imui_vstack(...)` is the explicit root-host bridge, not evidence that generic helper growth should",
+        ] {
+            assert!(
+                IMUI_ROOT_HOSTING_RULE_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the root-host teaching rule explicit: {marker}"
             );
         }
     }

@@ -38,6 +38,7 @@ Primary evidence:
 - `P0_TEACHING_SURFACE_INVENTORY_2026-04-12.md`
 - `P0_FOOTGUN_AUDIT_2026-04-12.md`
 - `P0_PROOF_BUDGET_RULE_2026-04-12.md`
+- `P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
@@ -51,6 +52,9 @@ Current status:
 - Future `fret-ui-kit::imui` public helper widening now has an explicit minimum proof budget:
   it must name two real first-party proof surfaces, and the current budget floor is the frozen
   golden pair rather than any single reference demo.
+- The first-open mounting rule is now explicit:
+  nested layout host -> `fret_imui::imui(cx, ...)`,
+  root/non-layout parent -> `fret_imui::imui_vstack(cx.elements(), ...)`.
 - The current footgun audit concludes that documentation and proof-selection dominate; the only
   credible helper-shape candidate is a narrow app-lane root-host helper.
 - The demote/delete plan is now frozen:
