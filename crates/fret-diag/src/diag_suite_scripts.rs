@@ -51,3 +51,26 @@ pub(crate) fn docking_arbitration_suite_scripts() -> Vec<String> {
         vec!["tools/diag-scripts/suites/docking-arbitration/common".to_string()]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn docking_arbitration_suite_uses_platform_split_inputs() {
+        #[cfg(target_os = "windows")]
+        assert_eq!(
+            docking_arbitration_suite_scripts(),
+            vec![
+                "tools/diag-scripts/suites/docking-arbitration/common".to_string(),
+                "tools/diag-scripts/suites/docking-arbitration/windows".to_string(),
+            ]
+        );
+
+        #[cfg(not(target_os = "windows"))]
+        assert_eq!(
+            docking_arbitration_suite_scripts(),
+            vec!["tools/diag-scripts/suites/docking-arbitration/common".to_string()]
+        );
+    }
+}

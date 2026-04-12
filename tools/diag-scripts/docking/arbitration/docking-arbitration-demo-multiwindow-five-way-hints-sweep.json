@@ -61,6 +61,21 @@
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
+
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-hint-inner-top" },
+        "min_w_px": 20.0,
+        "min_h_px": 20.0
+      },
+      "timeout_frames": 240
+    },
 
     { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-hint-inner-top" } },
     { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "top" }, "timeout_frames": 240 },
@@ -85,4 +100,3 @@
     { "type": "capture_bundle", "label": "five-way-hints-after-close" }
   ]
 }
-

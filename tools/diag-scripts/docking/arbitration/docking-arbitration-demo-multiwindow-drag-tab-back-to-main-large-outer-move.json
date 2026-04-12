@@ -97,6 +97,23 @@
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" },
+        "min_w_px": 20.0,
+        "min_h_px": 20.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" }
     },
     { "type": "wait_frames", "n": 2 },
@@ -104,11 +121,6 @@
       "type": "wait_until",
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
-    },
-    {
-      "type": "move_pointer",
-      "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" }
     },
     { "type": "wait_frames", "n": 2 },
     { "type": "pointer_up", "window": { "kind": "first_seen" } },
