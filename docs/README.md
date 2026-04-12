@@ -112,9 +112,10 @@ Unless a document says otherwise:
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
 - UI Gallery docs-style component pages tracker: `docs/workstreams/standalone/ui-gallery-docs-page-layout-refactor.md`
 - AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port/ai-elements-port.md`, `docs/workstreams/ai-elements-port/ai-elements-port-todo.md`, and `docs/workstreams/standalone/ai-elements-upstream-alignment.md`
+- Diagnostics first-open workflow: `docs/diagnostics-first-open.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - Diag artifact + evidence model (M2): `docs/workstreams/diag-fearless-refactor-v2/ARTIFACT_AND_EVIDENCE_MODEL_V1.md`
-- Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
+- Inspect workflow branch (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Window style profiles (ecosystem recipes): `docs/window-style-profiles.md`
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`

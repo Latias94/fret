@@ -7,6 +7,11 @@ scope: diagnostics, devtools, regression, workflow
 
 # DevTools GUI Dogfood Workflow
 
+Status note (2026-04-12): this file is the DevTools GUI branch over the shared diagnostics
+contracts. The canonical first-open diagnostics workflow now lives in
+`docs/diagnostics-first-open.md`. Read this note after the shared CLI-first artifacts loop is
+already clear.
+
 This note captures one end-to-end dogfood workflow for `apps/fret-devtools`.
 
 The goal is not to define a GUI-only run model. The goal is to prove that DevTools GUI can drive and inspect

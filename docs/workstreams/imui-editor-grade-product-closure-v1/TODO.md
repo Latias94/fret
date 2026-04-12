@@ -88,7 +88,11 @@ Last updated: 2026-04-12
       proves direct `diag run` -> named bundles -> latest resolution -> `diag compare`, plus the
       aggregate campaign root -> `diag summarize` -> `regression.summary.json` /
       `regression.index.json` -> `diag dashboard` handoff.
-- [ ] Stop forcing authors to discover the workflow by hopping across multiple diagnostics notes.
+- [x] Stop forcing authors to discover the workflow by hopping across multiple diagnostics notes.
+      Result: `P2_DISCOVERABILITY_ENTRY_2026-04-12.md` and `docs/diagnostics-first-open.md` now
+      freeze one canonical first-open diagnostics entry, while the existing inspect, bundles/scripts,
+      GUI dogfood, and diagnostics-v2 navigation notes are explicitly demoted to branch/reference
+      roles instead of competing start pages.
 
 ## P3 - Multi-window hand-feel closure
 

@@ -114,6 +114,8 @@ Primary evidence:
 - `P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
 - `P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
 - `P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
+- `P2_DISCOVERABILITY_ENTRY_2026-04-12.md`
+- `docs/diagnostics-first-open.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -143,7 +145,13 @@ Current status:
 - The aggregate half of that gate now proves:
   one campaign root with `campaign.manifest.json`, explicit root `diag summarize`,
   `regression.summary.json`, `regression.index.json`, and successful `diag dashboard` projection.
-- The remaining open P2 work is now the docs/discoverability closure, not the bounded smoke gate.
+- The discoverability entry is now explicit:
+  `docs/diagnostics-first-open.md` is the canonical first-open diagnostics workflow, and the
+  inspect, bundles/scripts, GUI dogfood, and diagnostics-v2 navigation docs are now explicit
+  branch/reference notes instead of competing start pages.
+- P2 is now closed for this lane.
+  Future diagnostics/devtools work that becomes implementation-heavy should move into a narrower
+  devtools follow-on instead of widening this folder.
 
 ## M4 - P3 multi-window hand-feel closure
 

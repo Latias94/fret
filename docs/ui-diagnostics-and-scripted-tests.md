@@ -11,6 +11,8 @@ implemented for Fret apps that run through `fret-bootstrap`'s `UiAppDriver`.
 
 Scope note:
 
+- For the canonical **first-open diagnostics workflow**, start with:
+  `docs/diagnostics-first-open.md`.
 - This file focuses on **bundles + scripts** (how to dump `bundle.json`, how the script harness is triggered, and
   how to author stable, selector-driven repros).
 - For the canonical artifact/evidence taxonomy (source-of-truth vs derived vs optional evidence, the bounded

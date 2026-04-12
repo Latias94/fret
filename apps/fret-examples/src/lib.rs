@@ -328,6 +328,16 @@ mod authoring_surface_policy_tests {
     const IMUI_P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md"
     );
+    const IMUI_P2_DISCOVERABILITY_ENTRY_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md"
+    );
+    const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
+        include_str!("../../../docs/diagnostics-first-open.md");
+    const DIAGNOSTICS_START_HERE_DOC: &str =
+        include_str!("../../../docs/workstreams/diag-fearless-refactor-v2/START_HERE.md");
+    const DIAGNOSTICS_GUI_DOGFOOD_DOC: &str = include_str!(
+        "../../../docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+    );
     const IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT: &str =
         include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
     const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
@@ -1736,6 +1746,61 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN.contains(marker),
                 "the bounded P2 devtools smoke campaign should keep the frozen manifest marker: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p2_discoverability_entry() {
+        for marker in [
+            "`docs/diagnostics-first-open.md`",
+            "the canonical first-open diagnostics entry",
+            "inspect -> selector -> script -> launched run -> bounded evidence -> compare/summarize/dashboard",
+            "`docs/debugging-ui-with-inspector-and-scripts.md`",
+            "`docs/ui-diagnostics-and-scripted-tests.md`",
+            "`docs/workstreams/diag-fearless-refactor-v2/START_HERE.md`",
+            "`docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`",
+        ] {
+            assert!(
+                IMUI_P2_DISCOVERABILITY_ENTRY_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P2 discoverability entry explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "This is the **default first-open diagnostics entry** for Fret.",
+            "1. Inspect and pick one stable selector.",
+            "2. Patch or choose one JSON script.",
+            "3. Run the script into one explicit diagnostics artifacts root.",
+            "4. Read bounded evidence first.",
+            "5. Compare either one bundle pair or one aggregate root.",
+            "`docs/workstreams/diag-fearless-refactor-v2/START_HERE.md` only after this page.",
+        ] {
+            assert!(
+                DIAGNOSTICS_FIRST_OPEN_DOC.contains(marker),
+                "the canonical diagnostics first-open doc should keep the frozen entry marker: {marker}"
+            );
+        }
+
+        for marker in [
+            "the canonical first-open diagnostics workflow now lives in",
+            "`docs/diagnostics-first-open.md`",
+            "maintainer/workstream navigation note",
+        ] {
+            assert!(
+                DIAGNOSTICS_START_HERE_DOC.contains(marker),
+                "the diagnostics start-here note should keep its branch/reference role explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The canonical first-open diagnostics workflow now lives in",
+            "`docs/diagnostics-first-open.md`",
+            "this file is the DevTools GUI branch over the shared diagnostics",
+        ] {
+            assert!(
+                DIAGNOSTICS_GUI_DOGFOOD_DOC.contains(marker),
+                "the DevTools GUI dogfood note should keep its branch role explicit: {marker}"
             );
         }
     }

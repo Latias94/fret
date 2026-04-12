@@ -7,7 +7,12 @@ scope: diagnostics, navigation, maintainer, onboarding
 
 # Diagnostics Start Here
 
-Status: Draft
+Status: Draft maintainer/workstream navigation note
+
+Status note (2026-04-12): this file remains the diagnostics v2 navigation page for maintainers and
+contract readers, but the canonical first-open diagnostics workflow now lives in
+`docs/diagnostics-first-open.md`. Read this file after the first-open loop is already clear or when
+you specifically need workstream/background routing.
 
 Use this page when you need one quick answer to:
 
@@ -17,7 +22,14 @@ Use this page when you need one quick answer to:
 
 ## 1) Default starting point
 
-If you are not sure where to begin, start here:
+If you are not sure where to begin with a live UI debugging task, do **not** start here.
+
+Start with:
+
+- `docs/diagnostics-first-open.md`
+
+If you are already past first-open onboarding and need diagnostics workstream/navigation context,
+start here:
 
 1. `docs/workstreams/diag-fearless-refactor-v2/README.md`
 2. `docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md`

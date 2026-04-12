@@ -17,6 +17,7 @@ instead of ad-hoc logs. Bundles capture:
 
 Core docs:
 
+- First-open diagnostics workflow: `docs/diagnostics-first-open.md`
 - Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
 - Interactive inspect workflow: `docs/debugging-ui-with-inspector-and-scripts.md`
 
