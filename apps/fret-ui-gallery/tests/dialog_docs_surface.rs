@@ -129,19 +129,34 @@ fn dialog_docs_path_snippets_stay_copyable_and_docs_aligned() {
         ),
         "dialog sticky-footer snippet should keep the upstream docs copy",
     );
-    assert!(
-        sticky.contains("\"ui-gallery-dialog-sticky-footer-description\""),
-        "dialog sticky-footer snippet should expose a stable description test id for wrap diagnostics",
-    );
+    for needle in [
+        "\"ui-gallery-dialog-sticky-footer-title\"",
+        "\"ui-gallery-dialog-sticky-footer-description\"",
+        "\"ui-gallery-dialog-sticky-footer-header\"",
+        "\"ui-gallery-dialog-sticky-footer-close\"",
+    ] {
+        assert!(
+            sticky.contains(needle),
+            "dialog sticky-footer snippet should expose stable geometry anchors; missing `{needle}`",
+        );
+    }
     assert!(
         !sticky.contains("Save changes"),
         "dialog sticky-footer snippet should not reintroduce the extra action that drifts from upstream",
     );
 
-    assert!(
-        scrollable.contains("This is a dialog with scrollable content."),
-        "dialog scrollable-content snippet should keep the upstream docs copy",
-    );
+    for needle in [
+        "This is a dialog with scrollable content.",
+        "\"ui-gallery-dialog-scrollable-title\"",
+        "\"ui-gallery-dialog-scrollable-description\"",
+        "\"ui-gallery-dialog-scrollable-header\"",
+        "\"ui-gallery-dialog-scrollable-viewport\"",
+    ] {
+        assert!(
+            scrollable.contains(needle),
+            "dialog scrollable-content snippet should keep copy and stable geometry anchors; missing `{needle}`",
+        );
+    }
 
     for needle in [
         "\"فتح الحوار\"",
@@ -151,6 +166,14 @@ fn dialog_docs_path_snippets_stay_copyable_and_docs_aligned() {
         "\"اسم المستخدم\"",
         "\"إلغاء\"",
         "\"حفظ التغييرات\"",
+        "\"ui-gallery-dialog-rtl-header\"",
+        "\"ui-gallery-dialog-rtl-title\"",
+        "\"ui-gallery-dialog-rtl-description\"",
+        "\"ui-gallery-dialog-rtl-name-input\"",
+        "\"ui-gallery-dialog-rtl-username-input\"",
+        "\"ui-gallery-dialog-rtl-cancel\"",
+        "\"ui-gallery-dialog-rtl-save\"",
+        "LayoutRefinement::default().w_full().min_w_0()",
         "LayoutRefinement::default().max_w(Px(384.0))",
     ] {
         assert!(

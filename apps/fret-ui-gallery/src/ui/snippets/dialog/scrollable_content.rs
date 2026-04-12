@@ -63,15 +63,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DialogContent::new([])
                     .with_children(cx, |cx| {
                         vec![
-                            shadcn::DialogHeader::new([]).with_children(cx, |cx| {
-                                vec![
-                                    shadcn::DialogTitle::new("Scrollable Content").into_element(cx),
-                                    shadcn::DialogDescription::new(
-                                        "This is a dialog with scrollable content.",
-                                    )
-                                    .into_element(cx),
-                                ]
-                            }),
+                            shadcn::DialogHeader::new([])
+                                .with_children(cx, |cx| {
+                                    vec![
+                                        shadcn::DialogTitle::new("Scrollable Content")
+                                            .into_element(cx)
+                                            .test_id("ui-gallery-dialog-scrollable-title"),
+                                        shadcn::DialogDescription::new(
+                                            "This is a dialog with scrollable content.",
+                                        )
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-dialog-scrollable-description"),
+                                    ]
+                                })
+                                .test_id("ui-gallery-dialog-scrollable-header"),
                             scroll_body,
                         ]
                     })

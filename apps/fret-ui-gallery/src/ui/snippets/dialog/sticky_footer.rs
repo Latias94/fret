@@ -65,21 +65,25 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         vec![
                             shadcn::DialogHeader::new([]).with_children(cx, |cx| {
                                 vec![
-                                    shadcn::DialogTitle::new("Sticky Footer").into_element(cx),
+                                    shadcn::DialogTitle::new("Sticky Footer")
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-dialog-sticky-footer-title"),
                                 shadcn::DialogDescription::new(
                                     "This dialog has a sticky footer that stays visible while the content scrolls.",
                                 )
                                 .into_element(cx)
                                 .test_id("ui-gallery-dialog-sticky-footer-description"),
                             ]
-                            }),
+                            })
+                            .test_id("ui-gallery-dialog-sticky-footer-header"),
                             scroll_body,
                             shadcn::DialogFooter::new([]).with_children(cx, |cx| {
                                 vec![
                                     shadcn::DialogClose::from_scope().build(
                                         cx,
                                         shadcn::Button::new("Close")
-                                            .variant(shadcn::ButtonVariant::Outline),
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-dialog-sticky-footer-close"),
                                     ),
                                 ]
                             }),

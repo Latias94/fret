@@ -11,19 +11,29 @@ fn profile_fields<H: UiHost>(
     name: Model<String>,
     username: Model<String>,
 ) -> impl IntoUiElement<H> + use<H> {
-    let field = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<String>| {
+    let field = |cx: &mut ElementContext<'_, H>,
+                 label: &'static str,
+                 model: Model<String>,
+                 input_test_id: &'static str| {
         shadcn::Field::new(ui::children![
             cx;
             shadcn::FieldLabel::new(label),
-            shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full())
+            shadcn::Input::new(model)
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .test_id(input_test_id)
         ])
         .into_element(cx)
     };
 
     shadcn::FieldSet::new(ui::children![
         cx;
-        field(cx, "الاسم", name),
-        field(cx, "اسم المستخدم", username)
+        field(cx, "الاسم", name, "ui-gallery-dialog-rtl-name-input"),
+        field(
+            cx,
+            "اسم المستخدم",
+            username,
+            "ui-gallery-dialog-rtl-username-input",
+        )
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
@@ -43,6 +53,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DialogPart::trigger(shadcn::DialogTrigger::build(
                     shadcn::Button::new("فتح الحوار")
                         .variant(shadcn::ButtonVariant::Outline)
+                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                         .test_id("ui-gallery-dialog-rtl-trigger"),
                 )),
                 shadcn::DialogPart::content_with(move |cx| {
@@ -52,25 +63,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
                         .with_children(cx, |cx| {
                             vec![
-                                shadcn::DialogHeader::new([]).with_children(cx, |cx| {
-                                    vec![
-                                        shadcn::DialogTitle::new("تعديل الملف الشخصي")
-                                            .into_element(cx),
-                                        shadcn::DialogDescription::new(
-                                            "قم بإجراء تغييرات على ملفك الشخصي هنا. انقر فوق حفظ عند الانتهاء.",
-                                        )
-                                        .into_element(cx),
-                                    ]
-                                }),
+                                shadcn::DialogHeader::new([])
+                                    .with_children(cx, |cx| {
+                                        vec![
+                                            shadcn::DialogTitle::new("تعديل الملف الشخصي")
+                                                .into_element(cx)
+                                                .test_id("ui-gallery-dialog-rtl-title"),
+                                            shadcn::DialogDescription::new(
+                                                "قم بإجراء تغييرات على ملفك الشخصي هنا. انقر فوق حفظ عند الانتهاء.",
+                                            )
+                                            .into_element(cx)
+                                            .test_id("ui-gallery-dialog-rtl-description"),
+                                        ]
+                                    })
+                                    .test_id("ui-gallery-dialog-rtl-header"),
                                 fields,
                                 shadcn::DialogFooter::new([]).with_children(cx, |cx| {
                                     vec![
                                         shadcn::DialogClose::from_scope().build(
                                             cx,
                                             shadcn::Button::new("إلغاء")
-                                                .variant(shadcn::ButtonVariant::Outline),
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .test_id("ui-gallery-dialog-rtl-cancel"),
                                         ),
-                                        shadcn::Button::new("حفظ التغييرات").into_element(cx),
+                                        shadcn::Button::new("حفظ التغييرات")
+                                            .test_id("ui-gallery-dialog-rtl-save")
+                                            .into_element(cx),
                                     ]
                                 }),
                             ]

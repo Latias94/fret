@@ -4996,6 +4996,150 @@ mod tests {
     }
 
     #[test]
+    fn dialog_rtl_header_fields_and_footer_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DIALOG,
+            "ui-gallery-dialog-rtl-trigger",
+            "ui-gallery-dialog-rtl-content",
+            &[
+                "ui-gallery-dialog-rtl-title",
+                "ui-gallery-dialog-rtl-description",
+                "ui-gallery-dialog-rtl-name-input",
+                "ui-gallery-dialog-rtl-username-input",
+                "ui-gallery-dialog-rtl-save",
+                "ui-gallery-dialog-rtl-cancel",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let title = targets[0];
+        let description = targets[1];
+        let name = targets[2];
+        let username = targets[3];
+        let save = targets[4];
+        let cancel = targets[5];
+        let epsilon = 1.0;
+
+        assert!(
+            description.origin.y.0 >= title.origin.y.0 + title.size.height.0 - epsilon,
+            "expected dialog RTL description to stay below the title: title={title:?} description={description:?}"
+        );
+        assert!(
+            name.origin.y.0 >= description.origin.y.0 + description.size.height.0 - epsilon,
+            "expected dialog RTL name input to stay below the description: description={description:?} name={name:?}"
+        );
+        assert!(
+            username.origin.y.0 >= name.origin.y.0 + name.size.height.0 - epsilon,
+            "expected dialog RTL username input to stay below the name input: name={name:?} username={username:?}"
+        );
+        assert!(
+            save.origin.y.0 >= username.origin.y.0 + username.size.height.0 - epsilon,
+            "expected dialog RTL save action to stay below the username input: username={username:?} save={save:?}"
+        );
+        assert!(
+            cancel.origin.y.0 >= save.origin.y.0 + save.size.height.0 - epsilon,
+            "expected dialog RTL cancel action to stay below the save action: save={save:?} cancel={cancel:?}"
+        );
+        assert!(
+            !rects_intersect(save, cancel),
+            "expected dialog RTL save and cancel actions not to overlap: save={save:?} cancel={cancel:?}"
+        );
+    }
+
+    #[test]
+    fn dialog_scrollable_header_and_viewport_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DIALOG,
+            "ui-gallery-dialog-scrollable-trigger",
+            "ui-gallery-dialog-scrollable-content",
+            &[
+                "ui-gallery-dialog-scrollable-title",
+                "ui-gallery-dialog-scrollable-description",
+                "ui-gallery-dialog-scrollable-viewport",
+                "ui-gallery-dialog-scrollable-row-01",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let title = targets[0];
+        let description = targets[1];
+        let viewport = targets[2];
+        let row = targets[3];
+        let epsilon = 1.0;
+
+        assert!(
+            description.origin.y.0 >= title.origin.y.0 + title.size.height.0 - epsilon,
+            "expected scrollable dialog description to stay below the title: title={title:?} description={description:?}"
+        );
+        assert!(
+            viewport.origin.y.0 >= description.origin.y.0 + description.size.height.0 - epsilon,
+            "expected scrollable dialog viewport to stay below the description: description={description:?} viewport={viewport:?}"
+        );
+        assert!(
+            row.origin.y.0 >= viewport.origin.y.0 - epsilon
+                && row.origin.y.0 + row.size.height.0
+                    <= viewport.origin.y.0 + viewport.size.height.0 + epsilon,
+            "expected the first scrollable dialog row to stay visible inside the viewport after open: viewport={viewport:?} row={row:?}"
+        );
+    }
+
+    #[test]
+    fn dialog_sticky_footer_viewport_and_close_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DIALOG,
+            "ui-gallery-dialog-sticky-footer-trigger",
+            "ui-gallery-dialog-sticky-footer-content",
+            &[
+                "ui-gallery-dialog-sticky-footer-title",
+                "ui-gallery-dialog-sticky-footer-description",
+                "ui-gallery-dialog-sticky-footer-viewport",
+                "ui-gallery-dialog-sticky-footer-row-01",
+                "ui-gallery-dialog-sticky-footer-close",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let title = targets[0];
+        let description = targets[1];
+        let viewport = targets[2];
+        let row = targets[3];
+        let close = targets[4];
+        let epsilon = 1.0;
+
+        assert!(
+            description.origin.y.0 >= title.origin.y.0 + title.size.height.0 - epsilon,
+            "expected sticky-footer dialog description to stay below the title: title={title:?} description={description:?}"
+        );
+        assert!(
+            viewport.origin.y.0 >= description.origin.y.0 + description.size.height.0 - epsilon,
+            "expected sticky-footer dialog viewport to stay below the description: description={description:?} viewport={viewport:?}"
+        );
+        assert!(
+            row.origin.y.0 >= viewport.origin.y.0 - epsilon
+                && row.origin.y.0 + row.size.height.0
+                    <= viewport.origin.y.0 + viewport.size.height.0 + epsilon,
+            "expected the first sticky-footer dialog row to stay visible inside the viewport after open: viewport={viewport:?} row={row:?}"
+        );
+        assert!(
+            close.origin.y.0 >= viewport.origin.y.0 + viewport.size.height.0 - epsilon,
+            "expected sticky-footer dialog close action to stay below the scroll viewport: viewport={viewport:?} close={close:?}"
+        );
+        assert!(
+            !rects_intersect(viewport, close),
+            "expected sticky-footer dialog close action not to overlap the scroll viewport: viewport={viewport:?} close={close:?}"
+        );
+    }
+
+    #[test]
     fn drawer_rtl_header_controls_chart_and_footer_stay_within_window_at_narrow_size() {
         let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
             PAGE_DRAWER,
