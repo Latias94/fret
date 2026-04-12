@@ -2193,6 +2193,78 @@
       ]
     },
     {
+      "id": "todo-min-window-footer-visible",
+      "path": "tools/diag-scripts/tooling/todo/todo-min-window-footer-visible.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-todo-resize"
+      ],
+      "tags": [
+        "footer",
+        "min_window",
+        "responsive",
+        "todo_demo"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "todo-resize-drag-jitter-steady",
+      "path": "tools/diag-scripts/tooling/todo/todo-resize-drag-jitter-steady.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-todo-resize"
+      ],
+      "tags": [
+        "drag_jitter",
+        "resize",
+        "steady",
+        "todo_demo"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "todo-resize-roundtrip-footer-within-window",
+      "path": "tools/diag-scripts/tooling/todo/todo-resize-roundtrip-footer-within-window.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-todo-resize"
+      ],
+      "tags": [
+        "footer",
+        "resize_roundtrip",
+        "responsive",
+        "todo_demo"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "todo-resize-roundtrip-immediate-layout",
+      "path": "tools/diag-scripts/tooling/todo/todo-resize-roundtrip-immediate-layout.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-todo-resize"
+      ],
+      "tags": [
+        "immediate_layout",
+        "resize_roundtrip",
+        "responsive",
+        "todo_demo"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
@@ -8708,6 +8780,7 @@
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-file-tree-bounce-keep-alive.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "diag-hardening-smoke-workspace",
         "workspace-shell-demo-file-tree-keep-alive"
       ],
       "tags": [],
@@ -8735,6 +8808,30 @@
         "Targets the already-active tab (doc-a-2) so the close target is in-view and deterministic.",
         "Clicks the close button and asserts a pointer-triggered dispatch trace entry exists.",
         "Asserts the tab is removed from the UI tree."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks the active tab as dirty via demo debug button.",
+        "Attempts to close the tab via the demo debug Close active (pane-a) button (blocked by policy).",
+        "Asserts a dirty-close prompt is shown, then discards and closes the tab."
       ]
     },
     {
@@ -9087,6 +9184,29 @@
         "Asserts initial pos_in_set for a known tab.",
         "Drags the first tab to the end and drops it.",
         "Asserts pos_in_set updates after the reorder."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "focus",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Enters the tab strip (Ctrl+F6) from pane content.",
+        "Presses Escape to restore focus to pane content.",
+        "Asserts content focus is restored."
       ]
     }
   ]

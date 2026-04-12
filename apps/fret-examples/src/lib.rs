@@ -316,6 +316,9 @@ mod authoring_surface_policy_tests {
     const IMUI_WORKBENCH_PROOF_MATRIX_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
     );
+    const IMUI_P1_SHELL_DIAG_SMOKE_DECISION_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -336,6 +339,9 @@ mod authoring_surface_policy_tests {
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
     const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
+    const WORKSPACE_HARDENING_SHELL_DIAG_SUITE: &str = include_str!(
+        "../../../tools/diag-scripts/suites/diag-hardening-smoke-workspace/suite.json"
+    );
 
     fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
         for entry in std::fs::read_dir(dir).unwrap() {
@@ -1584,6 +1590,40 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_WORKBENCH_PROOF_MATRIX_NOTE.contains(marker),
                 "the workstream should keep the P1 workbench proof matrix explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_shell_diag_smoke_minimum() {
+        for marker in [
+            "`diag-hardening-smoke-workspace` should remain the promoted P1 shell smoke suite.",
+            "Do not create a second parallel P1 shell suite yet.",
+            "tab close / reorder / split preview",
+            "dirty-close prompt",
+            "content-focus restore via Escape",
+            "left-rail / file-tree liveness",
+            "`workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`",
+            "`workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`",
+            "`workspace-shell-demo-file-tree-bounce-keep-alive.json`",
+        ] {
+            assert!(
+                IMUI_P1_SHELL_DIAG_SMOKE_DECISION_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P1 shell diagnostics floor explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
+            "workspace-shell-demo-tab-reorder-first-to-end-smoke.json",
+            "workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke.json",
+            "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
+            "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json",
+            "workspace-shell-demo-file-tree-bounce-keep-alive.json",
+        ] {
+            assert!(
+                WORKSPACE_HARDENING_SHELL_DIAG_SUITE.contains(marker),
+                "the promoted workspace shell smoke suite should keep the frozen minimum roster entry: {marker}"
             );
         }
     }

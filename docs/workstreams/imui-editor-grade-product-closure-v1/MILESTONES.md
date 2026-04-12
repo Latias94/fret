@@ -76,6 +76,7 @@ Exit criteria:
 Primary evidence:
 
 - `P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
+- `P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md`
@@ -95,6 +96,10 @@ Current status:
   `fret-docking` for dock choreography,
   `fret-ui-editor` for editor composites,
   and app/example ownership for scene-local center content.
+- The promoted P1 shell diagnostics floor is now explicit:
+  `diag-hardening-smoke-workspace` remains the launched shell suite, and its frozen minimum now
+  spans tab close/reorder/split preview, dirty-close prompt, Escape focus restore, and file-tree
+  keep-alive.
 
 ## M3 - P2 unified diagnostics/devtools surface
 

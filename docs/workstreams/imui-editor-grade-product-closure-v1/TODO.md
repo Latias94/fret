@@ -58,7 +58,11 @@ Last updated: 2026-04-12
       `workspace_shell_demo` / `editor_notes_demo` as the shell-first proof order and classifies
       `imui_editor_proof_demo` as supporting docking/editor evidence instead of the default shell
       backlog.
-- [ ] Promote at least one shell-level diagnostics smoke suite beyond tabstrip-only checks.
+- [x] Promote at least one shell-level diagnostics smoke suite beyond tabstrip-only checks.
+      Result: `P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md` now freezes
+      `diag-hardening-smoke-workspace` as the promoted P1 shell smoke suite and requires the suite
+      minimum to span tab close/reorder/split preview plus dirty-close prompt, Escape focus
+      restore, and file-tree keep-alive.
 
 ## P2 - Unified diagnostics/devtools surface
 

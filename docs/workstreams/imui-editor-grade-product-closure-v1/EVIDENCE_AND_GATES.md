@@ -13,6 +13,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -76,7 +77,15 @@ This package currently proves:
 
 - `workspace_shell_demo` remains the primary coherent shell proof,
 - `editor_notes_demo` remains the minimal shell-mounted rail proof,
+- the launched shell smoke floor now reaches beyond tabstrip-only checks,
 - and the shell proof set does not silently collapse back into the generic `imui` backlog.
+
+The promoted launched suite now freezes this minimum shell coverage:
+
+- tab close / reorder / split preview,
+- dirty-close prompt and discard close,
+- content-focus restore via Escape,
+- and left-rail / file-tree keep-alive.
 
 ### Diagnostics / tooling gates
 
