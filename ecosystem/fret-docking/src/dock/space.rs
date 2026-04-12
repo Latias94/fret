@@ -6658,9 +6658,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                     }
                     fret_core::Event::PointerCancel(e) => {
-                        if self.pending_dock_drags.remove(&e.pointer_id).is_some()
-                            || self.pending_dock_tabs_drags.remove(&e.pointer_id).is_some()
-                        {
+                        let has_pending_dock_drag = self.pending_dock_drags.contains_key(&e.pointer_id)
+                            || self.pending_dock_tabs_drags.contains_key(&e.pointer_id);
+                        if has_pending_dock_drag {
+                            let preserve_pending_dock_drag = matches!(
+                                e.reason,
+                                fret_core::PointerCancelReason::LeftWindow
+                            );
+                            if !preserve_pending_dock_drag {
+                                self.pending_dock_drags.remove(&e.pointer_id);
+                                self.pending_dock_tabs_drags.remove(&e.pointer_id);
+                            }
                             request_pointer_capture = Some(None);
                             dock.hover = None;
                             invalidate_paint = true;

@@ -673,7 +673,7 @@ fn pending_dock_drag_does_not_start_drag_session_on_pointer_up_before_activation
     );
 }
 #[test]
-fn pending_dock_drag_clears_on_pointer_cancel() {
+fn pending_dock_drag_survives_left_window_cancel_while_button_held() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
 
@@ -698,10 +698,7 @@ fn pending_dock_drag_clears_on_pointer_cancel() {
         &Event::PointerCancel(fret_core::PointerCancelEvent {
             pointer_id: fret_core::PointerId(0),
             position: Some(tab_pos),
-            buttons: fret_core::MouseButtons {
-                left: true,
-                ..Default::default()
-            },
+            buttons: fret_core::MouseButtons::default(),
             modifiers: Modifiers::default(),
             pointer_type: fret_core::PointerType::Mouse,
             reason: fret_core::PointerCancelReason::LeftWindow,
@@ -711,7 +708,78 @@ fn pending_dock_drag_clears_on_pointer_cancel() {
 
     assert!(
         harness.app.drag(fret_core::PointerId(0)).is_none(),
-        "pending dock drag must not create a drag session on cancel",
+        "pending dock drag should remain pending after left-window cancel while the button is held",
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "pointer capture should still be released on cancel",
+    );
+
+    let activate_pos = Point::new(Px(tab_pos.x.0 + 20.0), tab_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: activate_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let drag = harness
+        .app
+        .drag(fret_core::PointerId(0))
+        .and_then(|d| d.payload::<DockPanelDragPayload>().map(|_| d))
+        .expect("expected pending dock drag to activate after a held-button left-window cancel");
+    assert!(
+        drag.dragging,
+        "expected drag session to start in dragging state after cancel-resume activation"
+    );
+}
+
+#[test]
+fn pending_dock_drag_clears_on_follow_up_move_without_button_after_left_window_cancel() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let tab_pos = harness.tab_point(0);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: tab_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: Some(tab_pos),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "left-window cancel should not immediately create a drag session",
     );
 
     let position = harness.viewport_point();
@@ -728,10 +796,29 @@ fn pending_dock_drag_clears_on_pointer_cancel() {
     );
     let effects = harness.app.take_effects();
     assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "the first button-up move after cancel should clear pending drag before hover forwarding resumes, got: {effects:?}",
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
         effects
             .iter()
             .any(|e| matches!(e, Effect::ViewportInput(_))),
-        "expected viewport hover forwarding after pending drag cancel, got: {effects:?}",
+        "expected viewport hover forwarding after the follow-up move clears pending drag, got: {effects:?}",
     );
 }
 #[test]
