@@ -481,6 +481,21 @@ fn sidebar_sheet_side(side: SidebarSide) -> SheetSide {
     }
 }
 
+fn sidebar_fill_height_stack<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: ContainerProps,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    shadcn_layout::container_vstack_fill_width(
+        cx,
+        props,
+        shadcn_layout::VStackProps::default()
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().h_full().min_h_0()),
+        children,
+    )
+}
+
 fn sidebar_toggle_command_id() -> CommandId {
     CommandId::from(SIDEBAR_TOGGLE_COMMAND_ID)
 }
@@ -1004,8 +1019,22 @@ impl Sidebar {
                         let children = with_sidebar_surface_provider(cx, surface_context, |cx| {
                             render_children(cx).into_iter().collect::<Vec<_>>()
                         });
-                        let content_root =
-                            cx.container(ContainerProps::default(), move |_cx| children);
+                        let content_root = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        min_width: Some(Length::Px(Px(0.0))),
+                                        min_height: Some(Length::Px(Px(0.0))),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            move |_cx| children,
+                        );
 
                         cx.key_add_on_key_down_capture_for(content_root.id, on_key_down.clone());
                         cx.command_on_command_for(content_root.id, on_command.clone());
@@ -1014,11 +1043,8 @@ impl Sidebar {
                             on_command_availability.clone(),
                         );
 
-                        let surface = shadcn_layout::container_flow_fill_width(
-                            cx,
-                            surface_props,
-                            vec![content_root],
-                        );
+                        let surface =
+                            sidebar_fill_height_stack(cx, surface_props, vec![content_root]);
 
                         SheetContent::new([surface])
                             .refine_style(
@@ -1136,8 +1162,8 @@ impl Sidebar {
         let children = with_sidebar_surface_provider(cx, surface_context, |cx| {
             render_children(cx).into_iter().collect::<Vec<_>>()
         });
-        let surface = shadcn_layout::container_flow_fill_width(cx, props, children);
-        shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
+        let surface = sidebar_fill_height_stack(cx, props, children);
+        sidebar_fill_height_stack(cx, wrapper_props, vec![surface])
     }
 
     #[track_caller]
@@ -1197,7 +1223,7 @@ impl Sidebar {
                     },
                     move |cx| {
                         let surface = with_sidebar_surface_provider(cx, surface_context, |cx| {
-                            shadcn_layout::container_flow_fill_width(cx, surface_props, children)
+                            sidebar_fill_height_stack(cx, surface_props, children)
                         });
 
                         SheetContent::new([surface])
@@ -1314,9 +1340,9 @@ impl Sidebar {
         props.layout.overflow = Overflow::Clip;
 
         let surface = with_sidebar_surface_provider(cx, surface_context, |cx| {
-            shadcn_layout::container_flow_fill_width(cx, props, children)
+            sidebar_fill_height_stack(cx, props, children)
         });
-        shadcn_layout::container_flow(cx, wrapper_props, vec![surface])
+        sidebar_fill_height_stack(cx, wrapper_props, vec![surface])
     }
 }
 
@@ -4270,9 +4296,9 @@ mod tests {
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point, Px,
-        Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService,
+        AppWindowId, NodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point,
+        Px, Rect, SemanticsNode, SemanticsRole, SemanticsSnapshot, Size as CoreSize, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{Effect, FrameId, TickId};
     use fret_ui::element::{
@@ -4393,6 +4419,41 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text(child, needle)),
         }
+    }
+
+    fn semantics_node_by_test_id<'a>(
+        snap: &'a SemanticsSnapshot,
+        test_id: &str,
+    ) -> &'a SemanticsNode {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("expected semantics node with test_id `{test_id}`"))
+    }
+
+    fn semantics_node_by_id(snap: &SemanticsSnapshot, id: NodeId) -> &SemanticsNode {
+        snap.nodes
+            .iter()
+            .find(|n| n.id == id)
+            .unwrap_or_else(|| panic!("expected semantics node with id {id:?}"))
+    }
+
+    fn viewport_ancestor_for<'a>(
+        snap: &'a SemanticsSnapshot,
+        node: &'a SemanticsNode,
+    ) -> &'a SemanticsNode {
+        let mut current = node.parent;
+        while let Some(id) = current {
+            let candidate = semantics_node_by_id(snap, id);
+            if candidate.role == SemanticsRole::Viewport {
+                return candidate;
+            }
+            current = candidate.parent;
+        }
+        panic!(
+            "expected a viewport ancestor for test_id {:?}",
+            node.test_id.as_deref()
+        );
     }
 
     fn render_sidebar_frame(
@@ -4994,6 +5055,69 @@ mod tests {
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
             "expected mobile sidebar sheet content to render sidebar children"
+        );
+    }
+
+    #[test]
+    fn sidebar_mobile_branch_keeps_content_viewport_height_nonzero() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(420.0), Px(760.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(true);
+
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-mobile-nonzero-viewport",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .open_mobile(Some(open_mobile_model.clone()))
+                    .is_mobile(true)
+                    .with(cx, |cx| {
+                        let button = SidebarMenuButton::new("Inbox")
+                            .test_id("sidebar-mobile-viewport-menu-button")
+                            .into_element(cx);
+                        let item = SidebarMenuItem::new(button).into_element(cx);
+                        let menu = SidebarMenu::new([item]).into_element(cx);
+                        let content = SidebarContent::new([menu]).into_element(cx);
+                        let sidebar = Sidebar::new([content]).into_element(cx);
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = semantics_node_by_test_id(&snap, "sidebar-mobile-viewport-menu-button");
+        let viewport = viewport_ancestor_for(&snap, button);
+
+        assert!(
+            viewport.bounds.size.height.0 > 64.0,
+            "expected mobile sidebar content viewport to keep a real visible height, got {:?}",
+            viewport.bounds
         );
     }
 
@@ -5672,6 +5796,62 @@ mod tests {
             button.bounds.size.width.0 >= 200.0,
             "expected SidebarContent -> SidebarMenu -> SidebarMenuButton to preserve a full-width menu lane, got {:?}",
             button.bounds
+        );
+    }
+
+    #[test]
+    fn sidebar_content_menu_button_keeps_nonzero_viewport_height_in_desktop_shell() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(true);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-content-nonzero-viewport",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .with(cx, |cx| {
+                        let button = SidebarMenuButton::new("Inbox")
+                            .test_id("sidebar-desktop-viewport-menu-button")
+                            .into_element(cx);
+                        let item = SidebarMenuItem::new(button).into_element(cx);
+                        let menu = SidebarMenu::new([item]).into_element(cx);
+                        let content = SidebarContent::new([menu]).into_element(cx);
+                        let sidebar = Sidebar::new([content]).into_element(cx);
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = semantics_node_by_test_id(&snap, "sidebar-desktop-viewport-menu-button");
+        let viewport = viewport_ancestor_for(&snap, button);
+
+        assert!(
+            viewport.bounds.size.height.0 > 64.0,
+            "expected desktop sidebar content viewport to keep a real visible height, got {:?}",
+            viewport.bounds
         );
     }
 
