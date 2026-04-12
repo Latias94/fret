@@ -9,7 +9,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .children([
             shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(
                 shadcn::Button::new("Open Sheet")
-                    .variant(shadcn::ButtonVariant::Outline),
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-sheet-no-close-trigger"),
             )),
             shadcn::SheetPart::content_with(|cx| {
                 shadcn::SheetContent::new([])
@@ -25,7 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             ]
                         })]
                     })
-                    .test_id("ui-gallery-sheet-no-close-button-content")
+                    .test_id("ui-gallery-sheet-no-close-panel")
             }),
         ])
         .into_element(cx)

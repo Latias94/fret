@@ -10,19 +10,29 @@ fn profile_fields<H: UiHost>(
     name: Model<String>,
     username: Model<String>,
 ) -> impl IntoUiElement<H> + use<H> {
-    let field = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<String>| {
+    let field = |cx: &mut ElementContext<'_, H>,
+                 label: &'static str,
+                 input_test_id: &'static str,
+                 model: Model<String>| {
         shadcn::Field::new(ui::children![
             cx;
             shadcn::FieldLabel::new(label),
-            shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full())
+            shadcn::Input::new(model)
+                .test_id(input_test_id)
+                .refine_layout(LayoutRefinement::default().w_full())
         ])
         .into_element(cx)
     };
 
     shadcn::FieldSet::new(ui::children![
         cx;
-        field(cx, "الاسم", name),
-        field(cx, "اسم المستخدم", username)
+        field(cx, "الاسم", "ui-gallery-sheet-rtl-name-input", name),
+        field(
+            cx,
+            "اسم المستخدم",
+            "ui-gallery-sheet-rtl-username-input",
+            username,
+        )
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
@@ -75,16 +85,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             fields,
                             shadcn::SheetFooter::new([]).with_children(cx, |cx| {
                                 vec![
-                                    shadcn::Button::new("حفظ التغييرات").into_element(cx),
+                                    shadcn::Button::new("حفظ التغييرات")
+                                        .test_id("ui-gallery-sheet-rtl-save")
+                                        .into_element(cx),
                                     shadcn::SheetClose::from_scope().build(
                                         cx,
                                         shadcn::Button::new("إغلاق")
+                                            .test_id("ui-gallery-sheet-rtl-close")
                                             .variant(shadcn::ButtonVariant::Outline),
                                     ),
                                 ]
                             }),
                         ]
                     })
+                    .test_id("ui-gallery-sheet-rtl-panel")
                 }),
             ])
             .into_element(cx)

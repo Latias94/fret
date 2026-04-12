@@ -1229,6 +1229,137 @@ fn flex_child_auto_margins_center_child() {
 }
 
 #[test]
+fn flex_child_margin_top_auto_pushes_tail_group_to_bottom_in_columns() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp63-flex-mt-auto-column-tail-group",
+        |cx| {
+            vec![cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0).into(),
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut a = crate::element::ContainerProps::default();
+                    a.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    a.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                    let mut b = crate::element::ContainerProps::default();
+                    b.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    b.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    b.layout.margin.top = crate::element::MarginEdge::Auto;
+
+                    vec![cx.container(a, |_cx| vec![]), cx.container(b, |_cx| vec![])]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let children = ui.children(flex_node);
+    assert_eq!(children.len(), 2);
+    let a_bounds = ui.debug_node_bounds(children[0]).expect("a bounds");
+    let b_bounds = ui.debug_node_bounds(children[1]).expect("b bounds");
+
+    assert_eq!(a_bounds.origin.y, Px(0.0));
+    assert_eq!(b_bounds.origin.y, Px(90.0));
+}
+
+#[test]
+fn flex_child_margin_top_auto_ignores_absolute_trailing_siblings() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp64-flex-mt-auto-ignores-absolute-tail",
+        |cx| {
+            vec![cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0).into(),
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut header = crate::element::ContainerProps::default();
+                    header.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    header.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                    let mut footer = crate::element::ContainerProps::default();
+                    footer.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    footer.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    footer.layout.margin.top = crate::element::MarginEdge::Auto;
+
+                    let mut close = crate::element::ContainerProps::default();
+                    close.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    close.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    close.layout.position = crate::element::PositionStyle::Absolute;
+
+                    vec![
+                        cx.container(header, |_cx| vec![]),
+                        cx.container(footer, |_cx| vec![]),
+                        cx.container(close, |_cx| vec![]),
+                    ]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let children = ui.children(flex_node);
+    assert_eq!(children.len(), 3);
+    let footer_bounds = ui.debug_node_bounds(children[1]).expect("footer bounds");
+
+    assert_eq!(footer_bounds.origin.y, Px(90.0));
+}
+
+#[test]
 fn flex_child_negative_margin_shifts_layout() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

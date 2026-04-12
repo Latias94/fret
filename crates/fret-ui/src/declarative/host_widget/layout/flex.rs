@@ -92,17 +92,42 @@ impl ElementHostWidget {
             Px((cx.available.width.0 - pad_w).max(0.0)),
             Px((cx.available.height.0 - pad_h).max(0.0)),
         );
-        let gap_x = super::spacing_px_for_basis(props.gap, inner_size.width);
+        let gap_main = super::spacing_px_for_basis(props.gap, inner_size.width);
         let auto_margin_inner_size = inner_size;
+
+        let is_in_flow = |style: &crate::element::LayoutStyle| {
+            style.position != crate::element::PositionStyle::Absolute
+        };
 
         let mut ml_auto_tail_group_start: Option<usize> = None;
         let mut ml_auto_tail_shift_x = 0.0f32;
+        let mut mt_auto_tail_group_start: Option<usize> = None;
+        let mut mt_auto_tail_shift_y = 0.0f32;
         if props.direction == fret_core::Axis::Horizontal && cx.children.len() > 1 {
             for (idx, &child) in cx.children.iter().enumerate() {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if matches!(child_style.margin.left, crate::element::MarginEdge::Auto) {
-                    if idx + 1 < cx.children.len() {
+                    if cx.children[idx + 1..]
+                        .iter()
+                        .copied()
+                        .any(|next| is_in_flow(&layout_style_for_node(cx.app, window, next)))
+                    {
                         ml_auto_tail_group_start = Some(idx);
+                    }
+                    break;
+                }
+            }
+        }
+        if props.direction == fret_core::Axis::Vertical && cx.children.len() > 1 {
+            for (idx, &child) in cx.children.iter().enumerate() {
+                let child_style = layout_style_for_node(cx.app, window, child);
+                if matches!(child_style.margin.top, crate::element::MarginEdge::Auto) {
+                    if cx.children[idx + 1..]
+                        .iter()
+                        .copied()
+                        .any(|next| is_in_flow(&layout_style_for_node(cx.app, window, next)))
+                    {
+                        mt_auto_tail_group_start = Some(idx);
                     }
                     break;
                 }
@@ -112,10 +137,13 @@ impl ElementHostWidget {
         if let Some(start) = ml_auto_tail_group_start {
             let mut tail_right = 0.0f32;
             for &child in &cx.children[start..] {
+                let child_style = layout_style_for_node(cx.app, window, child);
+                if !is_in_flow(&child_style) {
+                    continue;
+                }
                 let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
                     continue;
                 };
-                let child_style = layout_style_for_node(cx.app, window, child);
                 let right_margin = match child_style.margin.right {
                     crate::element::MarginEdge::Px(px) => px.0,
                     crate::element::MarginEdge::Fill | crate::element::MarginEdge::Fraction(_) => {
@@ -127,6 +155,28 @@ impl ElementHostWidget {
                 tail_right = tail_right.max(x + layout.size.width.0 + right_margin);
             }
             ml_auto_tail_shift_x = (auto_margin_inner_size.width.0 - tail_right).max(0.0);
+        }
+        if let Some(start) = mt_auto_tail_group_start {
+            let mut tail_bottom = 0.0f32;
+            for &child in &cx.children[start..] {
+                let child_style = layout_style_for_node(cx.app, window, child);
+                if !is_in_flow(&child_style) {
+                    continue;
+                }
+                let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
+                    continue;
+                };
+                let bottom_margin = match child_style.margin.bottom {
+                    crate::element::MarginEdge::Px(px) => px.0,
+                    crate::element::MarginEdge::Fill | crate::element::MarginEdge::Fraction(_) => {
+                        0.0
+                    }
+                    crate::element::MarginEdge::Auto => 0.0,
+                };
+                let y = layout.origin.y.0 - pad_top;
+                tail_bottom = tail_bottom.max(y + layout.size.height.0 + bottom_margin);
+            }
+            mt_auto_tail_shift_y = (auto_margin_inner_size.height.0 - tail_bottom).max(0.0);
         }
 
         for (child_index, &child) in cx.children.iter().enumerate() {
@@ -164,12 +214,15 @@ impl ElementHostWidget {
                         // Preserve the explicit `gap` between the auto-margin item and the next
                         // sibling. Some layout-engine outcomes collapse that gap when `ml-auto`
                         // is present, but web flexbox keeps it intact.
-                        if let Some(&next_child) = cx.children.get(child_index + 1)
+                        if let Some(next_child) = cx.children[child_index + 1..]
+                            .iter()
+                            .copied()
+                            .find(|next| is_in_flow(&layout_style_for_node(cx.app, window, *next)))
                             && let Some(next_layout) =
                                 cx.tree.layout_engine_child_local_rect(cx.node, next_child)
                         {
                             let next_x = next_layout.origin.x.0 - pad_left;
-                            let desired = (next_x - gap_x - layout.size.width.0).max(0.0);
+                            let desired = (next_x - gap_main - layout.size.width.0).max(0.0);
                             x = x.min(desired);
                         }
                     }
@@ -244,7 +297,23 @@ impl ElementHostWidget {
                     }
                 }
                 fret_core::Axis::Vertical => {
-                    if single_child && (margin_top_auto || margin_bottom_auto) {
+                    if mt_auto_tail_group_start == Some(child_index) {
+                        // Preserve the explicit `gap` between the auto-margin item and the next
+                        // sibling when `margin-top: auto` aligns a trailing group to the bottom.
+                        if let Some(next_child) = cx.children[child_index + 1..]
+                            .iter()
+                            .copied()
+                            .find(|next| is_in_flow(&layout_style_for_node(cx.app, window, *next)))
+                            && let Some(next_layout) =
+                                cx.tree.layout_engine_child_local_rect(cx.node, next_child)
+                        {
+                            let next_y = next_layout.origin.y.0 - pad_top;
+                            let desired = (next_y - gap_main - layout.size.height.0).max(0.0);
+                            y = y.min(desired);
+                        }
+                    }
+
+                    if margin_top_auto || margin_bottom_auto {
                         let top = if margin_top_auto {
                             0.0
                         } else {
@@ -258,10 +327,18 @@ impl ElementHostWidget {
                         let free =
                             auto_margin_inner_size.height.0 - layout.size.height.0 - top - bottom;
                         if margin_top_auto && margin_bottom_auto {
-                            y = (top + (free.max(0.0) / 2.0)).max(0.0);
+                            if single_child {
+                                y = (top + (free.max(0.0) / 2.0)).max(0.0);
+                            }
                         } else if margin_top_auto {
-                            y = (top + free.max(0.0)).max(0.0);
-                        } else if margin_bottom_auto {
+                            if mt_auto_tail_group_start == Some(child_index) {
+                                // When `margin-top: auto` appears on an item with following
+                                // siblings, treat it as a flexible spacer that bottom-aligns the
+                                // whole trailing group (matching web flexbox).
+                            } else {
+                                y = (top + free.max(0.0)).max(0.0);
+                            }
+                        } else if margin_bottom_auto && single_child {
                             y = top.max(0.0);
                         }
                     }
@@ -294,6 +371,11 @@ impl ElementHostWidget {
                 && ml_auto_tail_group_start.is_some_and(|start| child_index >= start)
             {
                 x += ml_auto_tail_shift_x;
+            }
+            if mt_auto_tail_shift_y > 0.0
+                && mt_auto_tail_group_start.is_some_and(|start| child_index >= start)
+            {
+                y += mt_auto_tail_shift_y;
             }
 
             let local_x = x + pad_left;

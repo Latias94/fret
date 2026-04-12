@@ -161,6 +161,33 @@ fn sheet_demo_snippet_uses_a_unique_overlay_panel_test_id() {
 }
 
 #[test]
+fn sheet_followup_snippets_expose_stable_overlay_panel_and_field_test_ids() {
+    let no_close = include_str!("../src/ui/snippets/sheet/no_close_button.rs");
+    let rtl = include_str!("../src/ui/snippets/sheet/rtl.rs");
+
+    for needle in [
+        "\"ui-gallery-sheet-no-close-trigger\"",
+        "\"ui-gallery-sheet-no-close-panel\"",
+    ] {
+        assert!(
+            no_close.contains(needle),
+            "sheet no-close snippet should expose stable overlay anchors for screenshots; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-sheet-rtl-panel\"",
+        "\"ui-gallery-sheet-rtl-name-input\"",
+        "\"ui-gallery-sheet-rtl-username-input\"",
+    ] {
+        assert!(
+            rtl.contains(needle),
+            "sheet RTL snippet should expose stable overlay and field anchors for diagnostics; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
 fn sheet_docs_demo_diag_script_waits_for_stable_overlay_bounds() {
     let script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-docs-demo-open-screenshot.json"
@@ -176,6 +203,30 @@ fn sheet_docs_demo_diag_script_waits_for_stable_overlay_bounds() {
         assert!(
             script.contains(needle),
             "sheet docs demo diag script should wait for stable overlay bounds before screenshots; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
+fn sheet_followup_diag_script_waits_for_stable_overlay_bounds() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-docs-followup-open-screenshots.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-sheet-no-close-trigger\"",
+        "\"ui-gallery-sheet-no-close-panel\"",
+        "\"ui-gallery-sheet-rtl-trigger\"",
+        "\"ui-gallery-sheet-rtl-panel\"",
+        "\"type\": \"wait_bounds_stable\"",
+        "\"stable_frames\": 6",
+        "\"max_move_px\": 1.0",
+        "\"ui-gallery-sheet-no-close-open-desktop\"",
+        "\"ui-gallery-sheet-rtl-open-desktop\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "sheet follow-up screenshot script should wait for stable overlay bounds before capturing no-close and RTL evidence; missing `{needle}`",
         );
     }
 }

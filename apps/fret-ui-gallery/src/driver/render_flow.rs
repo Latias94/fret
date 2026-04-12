@@ -2380,6 +2380,59 @@ mod tests {
         );
     }
 
+    fn assert_sheet_footer_actions_stay_within_panel(
+        trigger_test_id: &str,
+        panel_test_id: &str,
+        anchor_test_id: &str,
+        action_test_ids: &[&str],
+        bounds: Rect,
+    ) {
+        let mut rendered = render_gallery_page_with_bounds(PAGE_SHEET, bounds);
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, panel_test_id, 24);
+        wait_until_test_id_exists(&mut rendered, anchor_test_id, 24);
+        for action_test_id in action_test_ids {
+            wait_until_test_id_exists(&mut rendered, action_test_id, 24);
+        }
+
+        for _ in 0..8 {
+            render_gallery_frame(&mut rendered);
+        }
+
+        let panel_bounds = visual_bounds_by_test_id(&rendered, panel_test_id);
+        let anchor_bounds = visual_bounds_by_test_id(&rendered, anchor_test_id);
+        let anchor_bottom = anchor_bounds.origin.y.0 + anchor_bounds.size.height.0;
+        let window_bottom = bounds.origin.y.0 + bounds.size.height.0;
+        let window_right = bounds.origin.x.0 + bounds.size.width.0;
+        let epsilon = 1.0;
+
+        for action_test_id in action_test_ids {
+            let action_bounds = visual_bounds_by_test_id(&rendered, action_test_id);
+            let action_bottom = action_bounds.origin.y.0 + action_bounds.size.height.0;
+            let action_right = action_bounds.origin.x.0 + action_bounds.size.width.0;
+            let panel_bottom = panel_bounds.origin.y.0 + panel_bounds.size.height.0;
+            let panel_right = panel_bounds.origin.x.0 + panel_bounds.size.width.0;
+
+            assert!(
+                action_bounds.origin.x.0 >= panel_bounds.origin.x.0 - epsilon
+                    && action_bounds.origin.y.0 >= panel_bounds.origin.y.0 - epsilon
+                    && action_right <= panel_right + epsilon
+                    && action_bottom <= panel_bottom + epsilon,
+                "expected sheet footer action to stay within the panel bounds: trigger={trigger_test_id} panel={panel_test_id} action={action_test_id} panel_bounds={panel_bounds:?} action_bounds={action_bounds:?}"
+            );
+            assert!(
+                action_bottom <= window_bottom + epsilon && action_right <= window_right + epsilon,
+                "expected sheet footer action to stay within the window bounds at narrow sizes: trigger={trigger_test_id} panel={panel_test_id} action={action_test_id} window_bounds={bounds:?} action_bounds={action_bounds:?}"
+            );
+            assert!(
+                action_bounds.origin.y.0 >= anchor_bottom - epsilon,
+                "expected sheet footer action to stay below the last form field instead of drifting above the content lane: trigger={trigger_test_id} panel={panel_test_id} anchor={anchor_test_id} anchor_bounds={anchor_bounds:?} action={action_test_id} action_bounds={action_bounds:?}"
+            );
+        }
+    }
+
     #[test]
     fn gallery_component_pages_scroll_to_bottom_without_height_drift() {
         let cases = [
@@ -4492,6 +4545,40 @@ mod tests {
         for side in ["top", "bottom"] {
             assert_sheet_side_footer_does_not_overlap_name_input(side, bounds);
         }
+    }
+
+    #[test]
+    fn sheet_demo_footer_actions_stay_within_panel_at_narrow_size() {
+        assert_sheet_footer_actions_stay_within_panel(
+            "ui-gallery-sheet-demo-trigger.chrome",
+            "ui-gallery-sheet-demo-panel",
+            "ui-gallery-sheet-demo-username-input",
+            &[
+                "ui-gallery-sheet-demo-save.chrome",
+                "ui-gallery-sheet-demo-close.chrome",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+    }
+
+    #[test]
+    fn sheet_rtl_footer_actions_stay_within_panel_at_medium_narrow_size() {
+        assert_sheet_footer_actions_stay_within_panel(
+            "ui-gallery-sheet-rtl-trigger.chrome",
+            "ui-gallery-sheet-rtl-panel",
+            "ui-gallery-sheet-rtl-username-input",
+            &[
+                "ui-gallery-sheet-rtl-save.chrome",
+                "ui-gallery-sheet-rtl-close.chrome",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(960.0), Px(820.0)),
+            ),
+        );
     }
 
     #[cfg(feature = "gallery-dev")]

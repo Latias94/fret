@@ -10,19 +10,29 @@ fn profile_fields<H: UiHost>(
     name: Model<String>,
     username: Model<String>,
 ) -> impl IntoUiElement<H> + use<H> {
-    let field = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<String>| {
+    let field = |cx: &mut ElementContext<'_, H>,
+                 label: &'static str,
+                 input_test_id: &'static str,
+                 model: Model<String>| {
         shadcn::Field::new(ui::children![
             cx;
             shadcn::FieldLabel::new(label),
-            shadcn::Input::new(model).refine_layout(LayoutRefinement::default().w_full())
+            shadcn::Input::new(model)
+                .test_id(input_test_id)
+                .refine_layout(LayoutRefinement::default().w_full())
         ])
         .into_element(cx)
     };
 
     shadcn::FieldSet::new(ui::children![
         cx;
-        field(cx, "Name", name),
-        field(cx, "Username", username)
+        field(cx, "Name", "ui-gallery-sheet-demo-name-input", name),
+        field(
+            cx,
+            "Username",
+            "ui-gallery-sheet-demo-username-input",
+            username,
+        )
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
@@ -72,10 +82,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         fields,
                         shadcn::SheetFooter::new([]).with_children(cx, |cx| {
                             vec![
-                                shadcn::Button::new("Save changes").into_element(cx),
+                                shadcn::Button::new("Save changes")
+                                    .test_id("ui-gallery-sheet-demo-save")
+                                    .into_element(cx),
                                 shadcn::SheetClose::from_scope().build(
                                     cx,
                                     shadcn::Button::new("Close")
+                                        .test_id("ui-gallery-sheet-demo-close")
                                         .variant(shadcn::ButtonVariant::Outline),
                                 ),
                             ]
