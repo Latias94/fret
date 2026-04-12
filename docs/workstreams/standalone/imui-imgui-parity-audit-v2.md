@@ -1,7 +1,7 @@
 # imui ↔ Dear ImGui Parity Audit (v2)
 
 Status: current audit snapshot (not an ADR)
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 ## Purpose
 
@@ -196,9 +196,13 @@ The real remaining gaps are narrower:
    - The remaining gap is depth rather than ownership: there is still no `BeginChild()`-scale
      flag surface, no menu-bar nesting story, and no larger first-party pane proof that exercises
      mixed child regions with tabs/toolbars/status chrome.
-3. No immediate tab-bar/menu-bar family in the generic `imui` layer
-   - Those behaviors exist elsewhere in the repo (`fret-workspace`, shell demos, shadcn/menu
-     surfaces), but the generic immediate layer cannot yet express them as first-class helpers.
+3. First-cut immediate menu-bar family now exists, but tab-bar and richer menubar policy are
+   still open
+   - `fret-ui-kit::imui` now exposes a small `menu_bar[_with_options]` container plus
+     `begin_menu[_with_options]` trigger/helper seam for click-open top-level menus.
+   - The remaining gap is depth rather than ownership: there is still no generic immediate tab-bar
+     family, no hover-switch/roving/mnemonic menubar policy in the `imui` layer, and no first-cut
+     submenu convenience helper above raw popup/menu primitives.
 4. First-cut immediate command shortcut seam now exists, but key ownership is still open
    - `fret-ui-kit::imui` now exposes `menu_item_command[_with_options]`, which resolves the
      command title, enabled state, and shortcut hint from Fret's command/keymap layer without
@@ -219,6 +223,7 @@ Owner:
 - `ecosystem/fret-ui-editor::imui`
 - `ecosystem/fret-ui-kit/src/imui/multi_select.rs`
 - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
 - `ecosystem/fret-ui-kit/src/command.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`

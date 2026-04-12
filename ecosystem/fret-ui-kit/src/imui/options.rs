@@ -28,6 +28,38 @@ impl Default for PopupMenuOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct MenuBarOptions {
+    pub gap: crate::MetricRef,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for MenuBarOptions {
+    fn default() -> Self {
+        Self {
+            gap: crate::MetricRef::space(crate::Space::N1),
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BeginMenuOptions {
+    pub enabled: bool,
+    pub test_id: Option<Arc<str>>,
+    pub popup: PopupMenuOptions,
+}
+
+impl Default for BeginMenuOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            test_id: None,
+            popup: PopupMenuOptions::default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct PopupModalOptions {
     pub size: Size,

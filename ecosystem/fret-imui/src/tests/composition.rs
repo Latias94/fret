@@ -232,6 +232,76 @@ fn container_helpers_layout_horizontal_vertical_grid_and_scroll() {
 }
 
 #[test]
+fn menu_bar_helper_arranges_triggers_horizontally_and_stamps_menubar_semantics() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(140.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-menu-bar",
+        |cx| {
+            crate::imui(cx, |ui| {
+                ui.menu_bar_with_options(
+                    fret_ui_kit::imui::MenuBarOptions {
+                        test_id: Some(Arc::from("imui-menu-bar.root")),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.begin_menu_with_options(
+                            "file",
+                            "File",
+                            fret_ui_kit::imui::BeginMenuOptions {
+                                test_id: Some(Arc::from("imui-menu-bar.file")),
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                        let _ = ui.begin_menu_with_options(
+                            "edit",
+                            "Edit",
+                            fret_ui_kit::imui::BeginMenuOptions {
+                                test_id: Some(Arc::from("imui-menu-bar.edit")),
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let file = bounds_for_test_id(&ui, "imui-menu-bar.file");
+    let edit = bounds_for_test_id(&ui, "imui-menu-bar.edit");
+    assert!(edit.origin.x.0 > file.origin.x.0 + file.size.width.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let menubar = snap
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("imui-menu-bar.root"))
+        .expect("menubar semantics node");
+    assert_eq!(menubar.role, SemanticsRole::MenuBar);
+}
+
+#[test]
 fn child_region_helper_stacks_content_and_forwards_scroll_options() {
     let window = AppWindowId::default();
     let bounds = Rect::new(

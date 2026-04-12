@@ -38,6 +38,7 @@ mod floating_window;
 mod floating_window_on_area;
 mod interaction_runtime;
 mod menu_controls;
+mod menu_family_controls;
 mod multi_select;
 mod options;
 mod popup_overlay;
@@ -78,12 +79,12 @@ use interaction_runtime::{
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
-    ButtonOptions, ChildRegionOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions,
-    DragSourceOptions, DropTargetOptions, GridOptions, HorizontalOptions, InputTextOptions,
-    MenuItemOptions, PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions,
-    SeparatorTextOptions, SliderOptions, SwitchOptions, TableColumn, TableColumnWidth,
-    TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
-    VerticalOptions, VirtualListOptions,
+    BeginMenuOptions, ButtonOptions, ChildRegionOptions, CollapsingHeaderOptions,
+    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
+    HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,
+    PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions, SliderOptions,
+    SwitchOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions, TextAreaOptions,
+    TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
@@ -470,6 +471,21 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.add(element);
     }
 
+    pub fn menu_bar(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.menu_bar_with_options(MenuBarOptions::default(), f);
+    }
+
+    pub fn menu_bar_with_options(
+        &mut self,
+        options: MenuBarOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self
+            .with_cx_mut(|cx| menu_family_controls::menu_bar_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
     pub fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
         self.vertical_with_options(VerticalOptions::default(), f);
     }
@@ -736,6 +752,25 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         );
         self.record_focusable(resp.id, resp.enabled);
         resp
+    }
+
+    pub fn begin_menu(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_menu_with_options(id, label, BeginMenuOptions::default(), f)
+    }
+
+    pub fn begin_menu_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginMenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
     }
 
     pub fn menu_item_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
@@ -1148,6 +1183,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         let element = self.with_cx_mut(|cx| horizontal_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn menu_bar(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.menu_bar_with_options(MenuBarOptions::default(), f);
+    }
+
+    fn menu_bar_with_options(
+        &mut self,
+        options: MenuBarOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element =
+            self.with_cx_mut(|cx| menu_family_controls::menu_bar_element(cx, None, options, f));
         self.add(element);
     }
 
@@ -1579,6 +1628,25 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         }
 
         menu_controls::menu_item_action_with_options(self, presentation.label, command, options)
+    }
+
+    fn begin_menu(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_menu_with_options(id, label, BeginMenuOptions::default(), f)
+    }
+
+    fn begin_menu_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginMenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
     }
 
     fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
