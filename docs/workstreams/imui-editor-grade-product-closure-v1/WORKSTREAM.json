@@ -37,6 +37,10 @@
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -73,7 +77,7 @@
       "cargo build -p fret-demo --bin workspace_shell_demo",
       "cargo build -p fret-devtools",
       "cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface",
-      "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
+      "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke",
       "cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy"
     ]
@@ -97,7 +101,7 @@
     },
     {
       "name": "examples-imui-teaching-classification",
-      "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
+      "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
     },
     {
       "name": "workspace-shell-source-surfaces",
@@ -140,6 +144,7 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_DEMOTE_DELETE_PLAN_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md",

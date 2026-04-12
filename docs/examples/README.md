@@ -147,6 +147,16 @@ Mounting rule for the immediate-mode lane:
 - `imui_action_basics` demonstrates the nested layout-host shape; `imui_hello_demo` remains the
   small smoke/reference proof of the explicit root-hosted shape.
 
+Stable identity rule for the immediate-mode lane:
+
+- For static lists whose order never changes, `ui.for_each_unkeyed(...)` is acceptable.
+- For dynamic collections that insert, remove, reorder, or preserve per-row state, prefer
+  `ui.for_each_keyed(...)` or `ui.id(key, ...)`.
+- Rebuild rows each frame; do not treat element values as cloneable reusable UI.
+- `imui_action_basics` is still the right generic/default proof even though it does not need keyed
+  identity yet; `imui_editor_proof_demo` is the heavier proof where explicit stable identity is
+  already visible.
+
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
 
 - `simple_todo_v2_target` — comparison target for denser payload-row / root-handler keyed-list authoring on the same `LocalState<Vec<Row>>` baseline; it is intentionally evidence-oriented, not the default tutorial surface.

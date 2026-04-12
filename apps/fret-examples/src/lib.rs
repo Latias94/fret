@@ -310,6 +310,9 @@ mod authoring_surface_policy_tests {
     const IMUI_ROOT_HOSTING_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md"
     );
+    const IMUI_STABLE_IDENTITY_RULE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1531,6 +1534,34 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_ROOT_HOSTING_RULE_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the root-host teaching rule explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_examples_docs_name_the_stable_identity_rule() {
+        for marker in [
+            "Stable identity rule for the immediate-mode lane:",
+            "`ui.for_each_unkeyed(...)` is acceptable.",
+            "`ui.for_each_keyed(...)` or `ui.id(key, ...)`.",
+            "Rebuild rows each frame; do not treat element values as cloneable reusable UI.",
+            "`imui_editor_proof_demo` is the heavier proof where explicit stable identity is",
+        ] {
+            assert!(
+                EXAMPLES_DOCS_README.contains(marker),
+                "docs/examples/README.md should keep the immediate-mode stable-identity rule explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "For static lists whose order never changes, `ui.for_each_unkeyed(...)` is acceptable.",
+            "For dynamic collections that can insert, remove, reorder, or preserve per-row state, prefer",
+            "Rebuild UI rows each frame; do not treat elements as cloneable reusable values.",
+            "already uses explicit `ui.id(...)` where stable panel identity matters",
+        ] {
+            assert!(
+                IMUI_STABLE_IDENTITY_RULE_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the stable-identity teaching rule explicit: {marker}"
             );
         }
     }

@@ -35,6 +35,10 @@ Last updated: 2026-04-12
       Result: `P0_ROOT_HOSTING_RULE_2026-04-12.md` and `docs/examples/README.md` now explain the
       nested-layout-host shape versus the explicit root-host bridge, without reopening helper
       growth.
+- [x] Publish the first-open stable-identity rule for static vs dynamic IMUI collections.
+      Result: `P0_STABLE_IDENTITY_RULE_2026-04-12.md` and `docs/examples/README.md` now explain
+      when `ui.for_each_unkeyed(...)` is acceptable versus when `ui.for_each_keyed(...)` /
+      `ui.id(key, ...)` is the default posture.
 
 ## P1 - Editor workbench shell closure
 

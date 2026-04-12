@@ -39,6 +39,7 @@ Primary evidence:
 - `P0_FOOTGUN_AUDIT_2026-04-12.md`
 - `P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `P0_ROOT_HOSTING_RULE_2026-04-12.md`
+- `P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
@@ -55,6 +56,9 @@ Current status:
 - The first-open mounting rule is now explicit:
   nested layout host -> `fret_imui::imui(cx, ...)`,
   root/non-layout parent -> `fret_imui::imui_vstack(cx.elements(), ...)`.
+- The first-open stable-identity rule is now explicit:
+  `ui.for_each_unkeyed(...)` is only for static/order-stable lists, while dynamic collections
+  should default to `ui.for_each_keyed(...)` or `ui.id(key, ...)`.
 - The current footgun audit concludes that documentation and proof-selection dominate; the only
   credible helper-shape candidate is a narrow app-lane root-host helper.
 - The demote/delete plan is now frozen:

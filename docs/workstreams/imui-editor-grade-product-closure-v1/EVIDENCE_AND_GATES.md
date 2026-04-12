@@ -11,6 +11,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_DEMOTE_DELETE_PLAN_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -55,12 +56,13 @@ gap: authoring, shell, tooling, and hand-feel.
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke`
 - `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy`
 - `cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface`
-- `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
+- `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
 
 This package now locks the current immediate-mode product message at the source-policy layer:
 
 - the golden pair is named explicitly,
 - the nested-vs-root mounting rule stays explicit,
+- the static-vs-dynamic stable-identity rule stays explicit,
 - the reference/advanced/compatibility roster stays classified,
 - and the proof budget rule stays frozen before any future helper widening.
 

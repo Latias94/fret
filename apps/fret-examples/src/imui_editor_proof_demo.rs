@@ -3830,6 +3830,9 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
                             fret_imui::imui_vstack(cx, move |ui| {
                                 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 
+                                // Dock panels can move across roots and windows, so the immediate
+                                // content keeps an explicit stable identity instead of relying on
+                                // callsite position alone.
                                 ui.id(&panel_key, |ui| {
                                     ui.text("Controls panel (declarative root inside docking)");
                                     ui.text(format!("embedded viewport target: {target:?}"));
