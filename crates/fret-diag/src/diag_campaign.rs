@@ -579,6 +579,7 @@ fn build_campaign_item_suite_context(
         launch_high_priority: ctx.launch_high_priority,
         launch_write_bundle_json: ctx.launch_write_bundle_json,
         keep_open: ctx.keep_open,
+        process_exit_on_completion: false,
         checks: ctx.checks.clone(),
     }
 }
@@ -4788,6 +4789,7 @@ mod tests {
             suite_ctx.suite_script_inputs,
             vec!["shared-input.json".to_string()]
         );
+        assert!(!suite_ctx.process_exit_on_completion);
 
         let script_plan = build_campaign_item_execution_plan(
             1,
@@ -4811,6 +4813,7 @@ mod tests {
             script_ctx.launch_env,
             vec![("BASE".to_string(), "1".to_string())]
         );
+        assert!(!script_ctx.process_exit_on_completion);
     }
 
     #[test]
@@ -4980,6 +4983,7 @@ mod tests {
         assert_eq!(suite_ctx.rest, plan.suite_rest);
         assert_eq!(suite_ctx.suite_script_inputs, plan.suite_script_inputs);
         assert_eq!(suite_ctx.resolved_paths.out_dir, plan.out_dir);
+        assert!(!suite_ctx.process_exit_on_completion);
     }
 
     #[test]

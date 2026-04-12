@@ -2837,6 +2837,7 @@ hint: list suites via `fretboard-dev diag list suites`"
             launch_high_priority: args.launch.launch_high_priority,
             launch_write_bundle_json: args.launch.launch_write_bundle_json,
             keep_open: args.launch.keep_open,
+            process_exit_on_completion: true,
             checks,
         },
     ))
