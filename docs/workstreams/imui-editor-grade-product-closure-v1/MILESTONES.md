@@ -112,6 +112,7 @@ Exit criteria:
 Primary evidence:
 
 - `P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
+- `P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -127,7 +128,11 @@ Current status:
 - The compare story is now explicit:
   direct bundle/session diff uses `diag compare`, while aggregate run-set comparison flows through
   `diag summarize` plus shared `regression.summary.json` / `regression.index.json` consumers.
-- The owner split and bounded devtools smoke package remain open before M3 can close.
+- The owner split is now explicit:
+  `fret-bootstrap` owns runtime capture/export, `fret-diag` owns shared orchestration and artifact
+  projections, `fret-devtools` owns GUI UX over those contracts, and `fret-devtools-mcp` owns the
+  headless automation/resource adapter over the same contracts.
+- The bounded devtools smoke package remains open before M3 can close.
 
 ## M4 - P3 multi-window hand-feel closure
 

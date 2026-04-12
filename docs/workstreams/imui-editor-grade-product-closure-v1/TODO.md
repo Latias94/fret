@@ -71,11 +71,15 @@ Last updated: 2026-04-12
       Result: `P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md` now freezes a CLI-first
       inspect/pick -> script -> bundle -> compare loop, and keeps DevTools GUI / MCP as thin
       consumers over the same artifacts root and compare semantics.
-- [ ] Decide what must stay in:
+- [x] Decide what must stay in:
       - `apps/fret-devtools`,
       - `crates/fret-diag`,
       - `ecosystem/fret-bootstrap`,
       - and `apps/fret-devtools-mcp`.
+      Result: `P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md` now freezes
+      `fret-bootstrap` as the in-app runtime/export seam, `fret-diag` as the shared
+      orchestration/artifact engine, `fret-devtools` as GUI UX over shared contracts, and
+      `fret-devtools-mcp` as the headless automation/resource adapter.
 - [ ] Add one bounded devtools smoke package that validates the first-open path rather than only
       isolated tooling commands.
 - [ ] Stop forcing authors to discover the workflow by hopping across multiple diagnostics notes.

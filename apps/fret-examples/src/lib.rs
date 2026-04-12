@@ -322,6 +322,9 @@ mod authoring_surface_policy_tests {
     const IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md"
     );
+    const IMUI_P2_DIAGNOSTICS_OWNER_SPLIT_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1651,6 +1654,25 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the P2 first-open diagnostics path explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p2_diagnostics_owner_split() {
+        for marker in [
+            "`ecosystem/fret-bootstrap` owns the in-app diagnostics runtime/export seam.",
+            "`crates/fret-diag` owns orchestration, artifact tooling, compare/summarize/dashboard projections,",
+            "`apps/fret-devtools` owns editor-grade diagnostics UX over the shared contracts.",
+            "`apps/fret-devtools-mcp` owns the headless MCP adapter and resource/tool projection over the same",
+            "Do not move orchestration policy into `ecosystem/fret-bootstrap`.",
+            "Do not let `apps/fret-devtools` or `apps/fret-devtools-mcp` invent a second run model or",
+            "When GUI or MCP needs a new capability that CLI would also need, land it in `crates/fret-diag`",
+            "When the target app needs new inspect/pick/script/runtime evidence, land it in",
+        ] {
+            assert!(
+                IMUI_P2_DIAGNOSTICS_OWNER_SPLIT_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P2 diagnostics owner split explicit: {marker}"
             );
         }
     }
