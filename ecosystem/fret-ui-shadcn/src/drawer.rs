@@ -28,6 +28,7 @@ pub use crate::sheet::{
 };
 
 pub type DrawerDirection = DrawerSide;
+use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_mode};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::{
     shadcn_drawer_inertia_bounce_spring_description, shadcn_drawer_settle_spring_description,
@@ -910,10 +911,12 @@ impl DrawerHeader {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let side = drawer_side_in_scope(cx);
-        let md_breakpoint = cx
-            .environment_viewport_width(fret_ui::Invalidation::Layout)
-            .0
-            >= fret_ui_kit::declarative::viewport_tailwind::MD.0;
+        let md_breakpoint = device_shell_mode(
+            cx,
+            fret_ui::Invalidation::Layout,
+            DeviceShellSwitchPolicy::default(),
+        )
+        .is_desktop();
         let centered = matches!(side, DrawerSide::Top | DrawerSide::Bottom) && !md_breakpoint;
         let text_align = self.text_align.unwrap_or({
             if centered {

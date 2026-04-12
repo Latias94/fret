@@ -18,6 +18,7 @@ use fret_ui::element::{
     SizeStyle, SpacerProps, VisualTransformProps,
 };
 use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::adaptive::{DeviceShellSwitchPolicy, device_shell_mode};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -27,9 +28,7 @@ use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::{
-    ViewportQueryHysteresis, viewport_tailwind, viewport_width_at_least,
-};
+use fret_ui_kit::declarative::viewport_tailwind;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::typography;
@@ -793,12 +792,12 @@ impl SidebarProvider {
         };
 
         let is_mobile = self.is_mobile_override.unwrap_or_else(|| {
-            !viewport_width_at_least(
+            device_shell_mode(
                 cx,
                 Invalidation::Layout,
-                self.is_mobile_breakpoint,
-                ViewportQueryHysteresis::default(),
+                DeviceShellSwitchPolicy::default().desktop_min_width(self.is_mobile_breakpoint),
             )
+            .is_mobile()
         });
         let resolved_widths = {
             let theme = Theme::global(&*cx.app);
@@ -5193,6 +5192,69 @@ mod tests {
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
             "expected inferred mobile sidebar sheet content to render sidebar children"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_custom_mobile_breakpoint_can_force_mobile_sheet_branch() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(true);
+
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-mobile-infer-from-custom-breakpoint",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .open_mobile(Some(open_mobile_model.clone()))
+                    .is_mobile_breakpoint(Px(900.0))
+                    .with(cx, |cx| {
+                        let content = SidebarMenuButton::new("Inbox")
+                            .test_id("sidebar-mobile-custom-breakpoint-menu-button")
+                            .into_element(cx);
+                        let sidebar = Sidebar::new([content]).into_element(cx);
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::Dialog),
+            "expected custom mobile breakpoint above the current viewport width to keep the sidebar on the mobile sheet branch"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref()
+                    == Some("sidebar-mobile-custom-breakpoint-menu-button")),
+            "expected custom-breakpoint mobile sidebar sheet content to render sidebar children"
         );
     }
 
