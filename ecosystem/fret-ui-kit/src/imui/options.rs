@@ -590,3 +590,10 @@ impl Default for ScrollOptions {
         }
     }
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct ChildRegionOptions {
+    pub scroll: ScrollOptions,
+    pub test_id: Option<Arc<str>>,
+    pub content_test_id: Option<Arc<str>>,
+}

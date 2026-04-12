@@ -27,6 +27,7 @@ use crate::IntoUiElement;
 pub mod adapters;
 mod boolean_controls;
 mod button_controls;
+mod child_region;
 mod combo_controls;
 mod combo_model_controls;
 mod containers;
@@ -77,11 +78,12 @@ use interaction_runtime::{
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
-    ButtonOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions,
-    DropTargetOptions, GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions,
-    PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
-    SliderOptions, SwitchOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
-    TextAreaOptions, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    ButtonOptions, ChildRegionOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions,
+    DragSourceOptions, DropTargetOptions, GridOptions, HorizontalOptions, InputTextOptions,
+    MenuItemOptions, PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions,
+    SeparatorTextOptions, SliderOptions, SwitchOptions, TableColumn, TableColumnWidth,
+    TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
+    VerticalOptions, VirtualListOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
@@ -573,6 +575,26 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) {
         let build_focus = self.build_focus.clone();
         let element = self.with_cx_mut(|cx| scroll_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn child_region(
+        &mut self,
+        id: &str,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.child_region_with_options(id, ChildRegionOptions::default(), f);
+    }
+
+    pub fn child_region_with_options(
+        &mut self,
+        id: &str,
+        options: ChildRegionOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self
+            .with_cx_mut(|cx| child_region::child_region_element(cx, id, build_focus, options, f));
         self.add(element);
     }
 
@@ -1197,6 +1219,25 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         let element = self.with_cx_mut(|cx| scroll_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn child_region(
+        &mut self,
+        id: &str,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.child_region_with_options(id, ChildRegionOptions::default(), f);
+    }
+
+    fn child_region_with_options(
+        &mut self,
+        id: &str,
+        options: ChildRegionOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element =
+            self.with_cx_mut(|cx| child_region::child_region_element(cx, id, None, options, f));
         self.add(element);
     }
 

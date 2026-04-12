@@ -190,10 +190,12 @@ The real remaining gaps are narrower:
    - The remaining gap is breadth rather than ownership: there is still no large first-party
      asset-grid/file-browser proof, no marquee/box-select bridge, and no richer keyboard-owner
      story around the collection helper.
-2. No public immediate child-region/window helper comparable to `BeginChild()`
-   - Fret has explicit scroll and virtual-list containers, which is architecturally cleaner.
-   - But there is still no single immediate "framed child region with coarse clipping and focus
-     scope expectations" helper that matches common editor-pane authoring needs.
+2. First-cut immediate child-region helper now exists, but it is still intentionally narrow
+   - `fret-ui-kit::imui` now exposes a keyed `child_region[_with_options]` helper that wraps a
+     framed scroll surface with default vertical item flow and coarse clipping.
+   - The remaining gap is depth rather than ownership: there is still no `BeginChild()`-scale
+     flag surface, no menu-bar nesting story, and no larger first-party pane proof that exercises
+     mixed child regions with tabs/toolbars/status chrome.
 3. No immediate tab-bar/menu-bar family in the generic `imui` layer
    - Those behaviors exist elsewhere in the repo (`fret-workspace`, shell demos, shadcn/menu
      surfaces), but the generic immediate layer cannot yet express them as first-class helpers.
@@ -214,7 +216,9 @@ Owner:
 - `ecosystem/fret-ui-kit::imui`
 - `ecosystem/fret-ui-editor::imui`
 - `ecosystem/fret-ui-kit/src/imui/multi_select.rs`
+- `ecosystem/fret-ui-kit/src/imui/child_region.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
+- `ecosystem/fret-imui/src/tests/composition.rs`
 
 Not the owner:
 
@@ -352,7 +356,6 @@ Do next:
 
 Focus on the missing editor collection conveniences:
 
-- child-region/pane helper,
 - shortcut/key-owner convenience seam,
 - optional immediate tab/menu-bar helpers only if shell proofs justify them.
 
@@ -384,7 +387,7 @@ From this audit forward:
 1. The top remaining gap to Dear ImGui-grade editor feel is runner/backend and shell closure, not
    runtime architecture.
 2. The next generic immediate work should be narrow:
-   child-region, shortcut/key-owner ergonomics, and stronger first-party collection proofs.
+   shortcut/key-owner ergonomics, optional tab/menu helpers, and stronger first-party pane proofs.
 3. `crates/fret-ui` should resist parity-driven growth unless an ADR-backed mechanism hole is
    proven.
 4. The historical v1 parity audit remains useful as archive evidence, but this v2 note is the
