@@ -1022,3 +1022,211 @@ impl DataTable {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point, Px,
+        Rect, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+    };
+    use fret_runtime::Model;
+    use fret_ui::ThemeConfig;
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn demo_columns() -> Arc<[ColumnDef<u32>]> {
+        Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }])
+    }
+
+    fn demo_data() -> Arc<[u32]> {
+        Arc::from(vec![1u32, 2, 3, 4])
+    }
+
+    fn render_data_table_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        state: Model<TableState>,
+        data: Arc<[u32]>,
+        columns: Arc<[ColumnDef<u32>]>,
+    ) {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "data-table",
+            |cx| {
+                vec![
+                    DataTable::new()
+                        .row_height(Px(40.0))
+                        .header_height(Px(40.0))
+                        .column_actions_menu(false)
+                        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
+                        .debug_ids(TableDebugIds {
+                            header_row_test_id: Some(Arc::<str>::from("data-table-header-row")),
+                            row_test_id_prefix: Some(Arc::<str>::from("data-table-row-")),
+                            ..Default::default()
+                        })
+                        .into_element(
+                            cx,
+                            data.clone(),
+                            1,
+                            state.clone(),
+                            columns.clone(),
+                            |_row, index, _parent| RowKey::from_index(index),
+                            |col| Arc::from(col.id.as_ref()),
+                            |cx, _col, row| cx.text(format!("Row {row}")),
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    #[test]
+    fn data_table_fixed_height_wrapper_keeps_header_and_first_body_row_visible() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = FakeServices;
+        let state = app.models_mut().insert({
+            let mut state = TableState::default();
+            state.pagination.page_size = 2;
+            state
+        });
+        let data = demo_data();
+        let columns = demo_columns();
+
+        // Virtualized rows mount after viewport metrics are committed on the next frame.
+        for _ in 0..2 {
+            render_data_table_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                state.clone(),
+                data.clone(),
+                columns.clone(),
+            );
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot after data-table render");
+
+        let header = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("data-table-header-row"))
+            .unwrap_or_else(|| panic!("expected data-table header debug anchor"));
+        let row0 = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("data-table-row-0"))
+            .unwrap_or_else(|| panic!("expected first data-table row debug anchor"));
+
+        assert!(
+            header.bounds.size.height.0 > 20.0,
+            "expected data-table header row to keep a real height, got {:?}",
+            header.bounds
+        );
+        assert!(
+            row0.bounds.size.height.0 > 20.0,
+            "expected first data-table body row to keep a real height, got {:?}",
+            row0.bounds
+        );
+        assert!(
+            row0.bounds.origin.y.0 >= header.bounds.origin.y.0 + header.bounds.size.height.0 - 1.0,
+            "expected first body row to sit below the fixed header; header={:?} row={:?}",
+            header.bounds,
+            row0.bounds
+        );
+    }
+}
