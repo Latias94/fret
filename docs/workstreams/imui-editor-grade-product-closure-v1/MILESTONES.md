@@ -164,13 +164,23 @@ Exit criteria:
 
 Primary evidence:
 
+- `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 
 Current status:
 
-- Not started.
+- In progress.
+- The first P3 checklist is now explicit:
+  `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` freezes hovered-window, peek-behind,
+  transparent payload, and mixed-DPI follow-drag as the runner-owned parity budget for this lane.
+- The owner split is now explicit:
+  `crates/fret-launch`, runner/backend integrations, and `ecosystem/fret-docking` stay the default
+  owners, while `crates/fret-ui` and generic `imui` helpers remain out of scope unless stronger
+  evidence reopens them.
+- The bounded parity gate is still open.
+  P3 is not closed until one gate or diag suite explicitly names all four checklist items.
 
 ## M5 - Narrow follow-ons or closeout
 

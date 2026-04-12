@@ -65,6 +65,10 @@
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -152,6 +156,10 @@
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_discoverability_entry"
     },
     {
+      "name": "imui-p3-multiwindow-runner-gap-checklist",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist"
+    },
+    {
       "name": "imui-p2-devtools-first-open-smoke",
       "command": "python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
     },
@@ -195,6 +203,7 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md",
@@ -203,6 +212,7 @@
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
+    "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
     "docs/diagnostics-first-open.md",
     "docs/ui-diagnostics-and-scripted-tests.md",
     "apps/fret-cookbook/examples/imui_action_basics.rs",

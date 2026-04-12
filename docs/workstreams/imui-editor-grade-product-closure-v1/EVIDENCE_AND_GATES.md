@@ -18,7 +18,9 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - `docs/diagnostics-first-open.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -122,6 +124,7 @@ This package currently proves:
 
 ### Lane hygiene gates
 
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
@@ -141,6 +144,14 @@ If P0 needs more validation later, the next useful gate should be a launched smo
 the first-open immediate authoring loop, not another docs-only classification check.
 
 ### P3 multi-window parity gate
+
+The checklist freeze is now explicit:
+
+- `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` freezes hovered-window selection,
+  peek-behind, transparent payload overlap behavior, and mixed-DPI follow-drag as the minimum P3
+  parity budget for this lane.
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
+  now protects that source-policy split.
 
 We still need one bounded gate package that names:
 

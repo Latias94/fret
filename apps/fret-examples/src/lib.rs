@@ -331,12 +331,21 @@ mod authoring_surface_policy_tests {
     const IMUI_P2_DISCOVERABILITY_ENTRY_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md"
     );
+    const IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md"
+    );
     const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
         include_str!("../../../docs/diagnostics-first-open.md");
     const DIAGNOSTICS_START_HERE_DOC: &str =
         include_str!("../../../docs/workstreams/diag-fearless-refactor-v2/START_HERE.md");
     const DIAGNOSTICS_GUI_DOGFOOD_DOC: &str = include_str!(
         "../../../docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
+    );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md"
+    );
+    const MACOS_DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC: &str = include_str!(
+        "../../../docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md"
     );
     const IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT: &str =
         include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
@@ -1801,6 +1810,59 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAGNOSTICS_GUI_DOGFOOD_DOC.contains(marker),
                 "the DevTools GUI dogfood note should keep its branch role explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist() {
+        for marker in [
+            "`crates/fret-launch`",
+            "`ecosystem/fret-docking`",
+            "`crates/fret-ui` remains the mechanism layer",
+            "hovered-window, peek-behind, transparent payload, and mixed-DPI follow-drag",
+            "`cargo run -p fret-demo --bin workspace_shell_demo`",
+            "P3 is a runner/backend closure problem by default, not an `imui` API backlog.",
+            "The next real P3 slice should promote one bounded parity gate or diag suite",
+        ] {
+            assert!(
+                IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P3 runner gap checklist explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Hovered-window selection stays runner-owned",
+            "Peek-behind while moving a tear-off window stays runner-owned",
+            "Transparent payload overlap behavior stays runner-owned",
+            "Mixed-DPI follow-drag correctness stays runner-owned",
+        ] {
+            assert!(
+                IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE.contains(marker),
+                "the P3 checklist note should keep the frozen parity budget category: {marker}"
+            );
+        }
+
+        for marker in [
+            "hovered-window",
+            "peek-behind",
+            "transparent payload",
+            "per-monitor DPI transitions while a drag is active",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
+                "the docking parity workstream should keep the runner-owned evidence marker: {marker}"
+            );
+        }
+
+        for marker in [
+            "Cross-window drag hover is stable",
+            "No “stuck follow”",
+            "Mouse-up outside any window still commits the drop",
+        ] {
+            assert!(
+                MACOS_DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
+                "the macOS parity note should keep the hand-feel evidence marker: {marker}"
             );
         }
     }

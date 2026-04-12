@@ -96,7 +96,11 @@ Last updated: 2026-04-12
 
 ## P3 - Multi-window hand-feel closure
 
-- [ ] Freeze the current runner/backend gap inventory into one short parity checklist for this lane.
+- [x] Freeze the current runner/backend gap inventory into one short parity checklist for this lane.
+      Result: `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` now freezes hovered-window,
+      peek-behind, transparent payload, and mixed-DPI follow-drag as the minimum P3 parity budget,
+      and keeps the owner split pinned to `crates/fret-launch`, runner/backend integrations, and
+      `ecosystem/fret-docking`.
 - [ ] Promote one bounded multi-window parity gate or diag suite that explicitly names:
       hovered window, peek-behind, transparent payload, and mixed-DPI follow-drag expectations.
 - [ ] Keep `crates/fret-ui` contract growth out of runner-gap fixes unless ADR-backed evidence says
