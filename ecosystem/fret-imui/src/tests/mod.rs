@@ -580,6 +580,16 @@ fn click_at(
     services: &mut FakeTextService,
     at: Point,
 ) {
+    click_at_with_modifiers(ui, app, services, at, Modifiers::default());
+}
+
+fn click_at_with_modifiers(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    at: Point,
+    modifiers: Modifiers,
+) {
     ui.dispatch_event(
         app,
         services,
@@ -587,7 +597,7 @@ fn click_at(
             pointer_id: PointerId(0),
             position: at,
             button: MouseButton::Left,
-            modifiers: Modifiers::default(),
+            modifiers,
             click_count: 1,
             pointer_type: PointerType::Mouse,
         }),
@@ -599,7 +609,7 @@ fn click_at(
             pointer_id: PointerId(0),
             position: at,
             button: MouseButton::Left,
-            modifiers: Modifiers::default(),
+            modifiers,
             is_click: true,
             click_count: 1,
             pointer_type: PointerType::Mouse,

@@ -3,7 +3,7 @@
 use std::rc::Rc;
 
 use fret_authoring::Response;
-use fret_core::{Point, PointerId, Rect, Size};
+use fret_core::{Modifiers, Point, PointerId, Rect, Size};
 use fret_runtime::DragSessionId;
 use fret_ui::GlobalElementId;
 
@@ -152,6 +152,13 @@ pub struct ResponseExt {
     pub press_holding: bool,
     pub context_menu_requested: bool,
     pub context_menu_anchor: Option<Point>,
+    /// True when `clicked` was produced by a pointer click rather than keyboard activation.
+    pub pointer_clicked: bool,
+    /// Best-effort modifier snapshot for the pointer click that produced `clicked`.
+    ///
+    /// Consumers should read this through `pointer_click_modifiers()` so keyboard activations map
+    /// to `None`.
+    pub pointer_click_modifiers: Modifiers,
     pub drag: DragResponse,
 }
 
@@ -410,6 +417,14 @@ impl ResponseExt {
 
     pub fn context_menu_requested(self) -> bool {
         self.context_menu_requested
+    }
+
+    pub fn pointer_clicked(self) -> bool {
+        self.pointer_clicked
+    }
+
+    pub fn pointer_click_modifiers(self) -> Option<Modifiers> {
+        self.pointer_clicked.then_some(self.pointer_click_modifiers)
     }
 
     pub fn context_menu_anchor(self) -> Option<Point> {

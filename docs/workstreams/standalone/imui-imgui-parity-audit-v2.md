@@ -182,11 +182,14 @@ Already present in Fret's current immediate stack:
 
 The real remaining gaps are narrower:
 
-1. No generic immediate multi-select collection controller
-   - Dear ImGui now exposes `BeginMultiSelect()` and demonstrates it in large editor-style asset
-     views.
-   - Fret has multi-selection in domain-specific surfaces (for example node graph logic and some
-     recipe-specific selection models), but not yet as one generic `imui` collection primitive.
+1. First-cut generic immediate multi-select collection primitive now exists, but the proof breadth
+   is still narrower than Dear ImGui
+   - `fret-ui-kit::imui` now exposes a reusable `ImUiMultiSelectState<K>` model plus
+     model-backed `multi_selectable[_with_options]` helpers with plain click, primary-modifier
+     toggle, and shift-range selection semantics.
+   - The remaining gap is breadth rather than ownership: there is still no large first-party
+     asset-grid/file-browser proof, no marquee/box-select bridge, and no richer keyboard-owner
+     story around the collection helper.
 2. No public immediate child-region/window helper comparable to `BeginChild()`
    - Fret has explicit scroll and virtual-list containers, which is architecturally cleaner.
    - But there is still no single immediate "framed child region with coarse clipping and focus
@@ -210,6 +213,8 @@ Owner:
 - `ecosystem/fret-imui`
 - `ecosystem/fret-ui-kit::imui`
 - `ecosystem/fret-ui-editor::imui`
+- `ecosystem/fret-ui-kit/src/imui/multi_select.rs`
+- `ecosystem/fret-imui/src/tests/interaction.rs`
 
 Not the owner:
 
@@ -347,7 +352,6 @@ Do next:
 
 Focus on the missing editor collection conveniences:
 
-- multi-select block/controller,
 - child-region/pane helper,
 - shortcut/key-owner convenience seam,
 - optional immediate tab/menu-bar helpers only if shell proofs justify them.
@@ -380,7 +384,7 @@ From this audit forward:
 1. The top remaining gap to Dear ImGui-grade editor feel is runner/backend and shell closure, not
    runtime architecture.
 2. The next generic immediate work should be narrow:
-   multi-select, child-region, and shortcut/key-owner ergonomics.
+   child-region, shortcut/key-owner ergonomics, and stronger first-party collection proofs.
 3. `crates/fret-ui` should resist parity-driven growth unless an ADR-backed mechanism hole is
    proven.
 4. The historical v1 parity audit remains useful as archive evidence, but this v2 note is the

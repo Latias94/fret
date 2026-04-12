@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{AppWindowId, CursorIcon, MouseButton, Point, Px};
+use fret_core::{AppWindowId, CursorIcon, Modifiers, MouseButton, Point, Px};
 use fret_interaction::drag::DragThreshold as InteractionDragThreshold;
 use fret_interaction::runtime_drag::{DragMoveOutcome, update_thresholded_move};
 use fret_ui::action::UiActionHostExt as _;
@@ -31,6 +31,11 @@ struct ImUiContextMenuAnchorStore {
 #[derive(Default)]
 struct ImUiLongPressStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<LongPressSignalState>>,
+}
+
+#[derive(Default)]
+struct ImUiPointerClickModifiersStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<Modifiers>>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -114,6 +119,19 @@ pub(super) fn long_press_signal_model_for<H: UiHost>(
             st.by_element
                 .entry(id)
                 .or_insert_with(|| app.models_mut().insert(LongPressSignalState::default()))
+                .clone()
+        })
+}
+
+pub(super) fn pointer_click_modifiers_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<Modifiers> {
+    cx.app
+        .with_global_mut_untracked(ImUiPointerClickModifiersStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| app.models_mut().insert(Modifiers::default()))
                 .clone()
         })
 }
@@ -239,6 +257,8 @@ pub(super) fn sanitize_response_for_enabled(enabled: bool, response: &mut super:
     response.press_holding = false;
     response.context_menu_requested = false;
     response.context_menu_anchor = None;
+    response.pointer_clicked = false;
+    response.pointer_click_modifiers = Modifiers::default();
     response.drag = super::DragResponse::default();
 }
 

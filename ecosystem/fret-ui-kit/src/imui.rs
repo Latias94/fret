@@ -37,6 +37,7 @@ mod floating_window;
 mod floating_window_on_area;
 mod interaction_runtime;
 mod menu_controls;
+mod multi_select;
 mod options;
 mod popup_overlay;
 mod popup_store;
@@ -70,9 +71,11 @@ use interaction_runtime::{
     handle_pointer_region_drag_move_with_threshold, handle_pressable_drag_move_with_threshold,
     hover_blocked_by_active_item_for, imui_is_disabled, install_hover_query_hooks_for_pressable,
     long_press_signal_model_for, mark_active_item_on_left_pointer_down,
-    populate_pressable_drag_response, prepare_pointer_region_drag_on_left_down,
-    prepare_pressable_drag_on_pointer_down, sanitize_response_for_enabled,
+    pointer_click_modifiers_model_for, populate_pressable_drag_response,
+    prepare_pointer_region_drag_on_left_down, prepare_pressable_drag_on_pointer_down,
+    sanitize_response_for_enabled,
 };
+pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
     ButtonOptions, CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions,
     DropTargetOptions, GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions,
@@ -120,6 +123,7 @@ const KEY_SECONDARY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.secondary_clicked.
 const KEY_DOUBLE_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.double_clicked.v1");
 const KEY_LONG_PRESSED: u64 = fnv1a64(b"fret-ui-kit.imui.long_pressed.v1");
 const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_requested.v1");
+const KEY_POINTER_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.pointer_clicked.v1");
 const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
 const KEY_HOVER_STATIONARY_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.stationary_met.v1");
@@ -731,6 +735,39 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::selectable_with_options(self, label, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn multi_selectable<K: Clone + PartialEq + 'static>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<ImUiMultiSelectState<K>>,
+        all_keys: &[K],
+        key: K,
+    ) -> ResponseExt {
+        self.multi_selectable_with_options(
+            label,
+            model,
+            all_keys,
+            key,
+            SelectableOptions::default(),
+        )
+    }
+
+    pub fn multi_selectable_with_options<K: Clone + PartialEq + 'static>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<ImUiMultiSelectState<K>>,
+        all_keys: &[K],
+        key: K,
+        options: SelectableOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::multi_selectable_with_options(
+            self, label, model, all_keys, key, options,
+        );
         self.record_focusable(resp.id, focusable);
         resp
     }
@@ -1481,6 +1518,40 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: SelectableOptions,
     ) -> ResponseExt {
         selectable_controls::selectable_with_options(self, label.into(), options)
+    }
+
+    fn multi_selectable<K: Clone + PartialEq + 'static>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<ImUiMultiSelectState<K>>,
+        all_keys: &[K],
+        key: K,
+    ) -> ResponseExt {
+        self.multi_selectable_with_options(
+            label,
+            model,
+            all_keys,
+            key,
+            SelectableOptions::default(),
+        )
+    }
+
+    fn multi_selectable_with_options<K: Clone + PartialEq + 'static>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<ImUiMultiSelectState<K>>,
+        all_keys: &[K],
+        key: K,
+        options: SelectableOptions,
+    ) -> ResponseExt {
+        multi_select::multi_selectable_with_options(
+            self,
+            label.into(),
+            model,
+            all_keys,
+            key,
+            options,
+        )
     }
 
     fn combo(

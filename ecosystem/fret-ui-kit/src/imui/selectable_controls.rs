@@ -60,6 +60,9 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             let long_press_signal_model_for_down = long_press_signal_model.clone();
             let long_press_signal_model_for_move = long_press_signal_model.clone();
             let long_press_signal_model_for_up = long_press_signal_model.clone();
+            let pointer_click_modifiers_model = super::pointer_click_modifiers_model_for(cx, id);
+            let pointer_click_modifiers_model_for_up = pointer_click_modifiers_model.clone();
+            let pointer_click_modifiers_model_for_report = pointer_click_modifiers_model.clone();
 
             if enabled {
                 let close_popup = close_popup.clone();
@@ -182,6 +185,13 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
                     return PressablePointerUpResult::SkipActivate;
                 }
 
+                if up.is_click && up.button == MouseButton::Left {
+                    let _ = host.update_model(&pointer_click_modifiers_model_for_up, |value| {
+                        *value = up.modifiers;
+                    });
+                    host.record_transient_event(acx, super::KEY_POINTER_CLICKED);
+                }
+
                 if up.is_click && up.button == MouseButton::Left && up.click_count == 2 {
                     host.record_transient_event(acx, super::KEY_DOUBLE_CLICKED);
                     host.notify(acx);
@@ -216,6 +226,16 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
                     |_app, v| *v,
                 )
                 .unwrap_or(None);
+            response.pointer_clicked = cx.take_transient_for(id, super::KEY_POINTER_CLICKED);
+            if response.pointer_clicked {
+                response.pointer_click_modifiers = cx
+                    .read_model(
+                        &pointer_click_modifiers_model_for_report,
+                        fret_ui::Invalidation::Paint,
+                        |_app, modifiers| *modifiers,
+                    )
+                    .unwrap_or_default();
+            }
             super::populate_pressable_drag_response(cx, id, response);
             response.core.rect = cx.last_bounds_for_element(id);
             let hover_delay = super::install_hover_query_hooks_for_pressable(
