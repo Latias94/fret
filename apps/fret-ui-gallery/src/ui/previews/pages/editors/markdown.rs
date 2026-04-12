@@ -547,7 +547,8 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         Space::N4,
         fret_ui::element::CrossAlign::Start,
         |_cx| vec![editor_panel, preview_panel],
-    );
+    )
+    .into_element(cx);
 
     let body = body.attach_semantics(
         SemanticsDecoration::default()

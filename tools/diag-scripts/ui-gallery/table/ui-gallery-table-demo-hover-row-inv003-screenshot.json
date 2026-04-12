@@ -54,10 +54,19 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-table-demo-row-inv003" } },
     { "type": "wait_frames", "n": 6 },
     { "type": "capture_screenshot", "label": "ui-gallery-table-demo-hover-row-inv003" },
     { "type": "capture_bundle", "label": "ui-gallery-table-demo-hover-row-inv003" }
   ]
 }
-
