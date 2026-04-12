@@ -11,6 +11,7 @@ pub struct PopupMenuOptions {
     pub placement: popper::PopperContentPlacement,
     pub estimated_size: Size,
     pub modal: bool,
+    pub auto_focus: bool,
 }
 
 impl Default for PopupMenuOptions {
@@ -24,6 +25,7 @@ impl Default for PopupMenuOptions {
             ),
             estimated_size: Size::new(Px(160.0), Px(120.0)),
             modal: true,
+            auto_focus: true,
         }
     }
 }
@@ -56,6 +58,33 @@ impl Default for BeginMenuOptions {
             enabled: true,
             test_id: None,
             popup: PopupMenuOptions::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BeginSubmenuOptions {
+    pub enabled: bool,
+    pub test_id: Option<Arc<str>>,
+    pub popup: PopupMenuOptions,
+}
+
+impl Default for BeginSubmenuOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            test_id: None,
+            popup: PopupMenuOptions {
+                placement: popper::PopperContentPlacement::new(
+                    popper::LayoutDirection::Ltr,
+                    popper::Side::Right,
+                    popper::Align::Start,
+                    Px(4.0),
+                ),
+                estimated_size: Size::new(Px(160.0), Px(120.0)),
+                modal: false,
+                auto_focus: false,
+            },
         }
     }
 }
@@ -199,6 +228,8 @@ pub struct MenuItemOptions {
     pub shortcut: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub shortcut_test_id: Option<Arc<str>>,
+    pub submenu: bool,
+    pub expanded: Option<bool>,
 }
 
 impl Default for MenuItemOptions {
@@ -209,6 +240,8 @@ impl Default for MenuItemOptions {
             shortcut: None,
             test_id: None,
             shortcut_test_id: None,
+            submenu: false,
+            expanded: None,
         }
     }
 }

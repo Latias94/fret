@@ -79,12 +79,12 @@ use interaction_runtime::{
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
-    BeginMenuOptions, ButtonOptions, ChildRegionOptions, CollapsingHeaderOptions,
-    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
-    HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,
-    PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions, SliderOptions,
-    SwitchOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions, TextAreaOptions,
-    TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    BeginMenuOptions, BeginSubmenuOptions, ButtonOptions, ChildRegionOptions,
+    CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions,
+    GridOptions, HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions,
+    PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
+    SliderOptions, SwitchOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
+    TextAreaOptions, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
@@ -771,6 +771,25 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
+    }
+
+    pub fn begin_submenu(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_submenu_with_options(id, label, BeginSubmenuOptions::default(), f)
+    }
+
+    pub fn begin_submenu_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginSubmenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        menu_family_controls::begin_submenu_with_options(self, id, label.into(), options, f)
     }
 
     pub fn menu_item_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
@@ -1647,6 +1666,25 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
+    }
+
+    fn begin_submenu(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_submenu_with_options(id, label, BeginSubmenuOptions::default(), f)
+    }
+
+    fn begin_submenu_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginSubmenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        menu_family_controls::begin_submenu_with_options(self, id, label.into(), options, f)
     }
 
     fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {

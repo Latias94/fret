@@ -21,6 +21,11 @@ pub(in crate::imui) struct ImUiMenuNavState {
     pub(super) items: Rc<RefCell<Vec<GlobalElementId>>>,
 }
 
+#[derive(Debug, Clone)]
+pub(in crate::imui) struct ImUiMenuOpenDescendantState {
+    pub(super) children: Rc<RefCell<Vec<AnyElement>>>,
+}
+
 pub(super) fn popup_open_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     id: &str,
@@ -75,13 +80,19 @@ pub(super) fn close_popup<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(ui: &
     });
 }
 
-pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+pub(super) struct PopupMenuBuilt {
+    pub(super) children: Vec<AnyElement>,
+    pub(super) first_item: Option<GlobalElementId>,
+    pub(super) content_focus: Option<GlobalElementId>,
+}
+
+pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     id: &str,
-    trigger: Option<GlobalElementId>,
+    root_name: &str,
     options: PopupMenuOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> bool {
+) -> Option<PopupMenuBuilt> {
     ui.with_cx_mut(|cx| {
         let (open, anchor_model, panel_id) = super::with_popup_store_for_id(cx, id, |st, _app| {
             (st.open.clone(), st.anchor.clone(), st.panel_id)
@@ -90,7 +101,7 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
             .unwrap_or(false);
         if !is_open {
-            return false;
+            return None;
         }
 
         let anchor = cx
@@ -104,7 +115,7 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 st.keep_alive_frame = None;
             });
             cx.app.request_redraw(cx.window);
-            return false;
+            return None;
         };
 
         let keep_alive_frame = cx.frame_id;
@@ -112,14 +123,9 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             st.keep_alive_frame = Some(keep_alive_frame);
         });
 
-        let overlay_key = format!("fret-ui-kit.imui.popup.overlay.{id}");
-        let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
-
-        let root_name = OverlayController::popover_root_name(overlay_id);
         let desired = panel_id
             .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size))
             .unwrap_or(options.estimated_size);
-
         let layout = popper::popper_content_layout_sized(
             cx.environment_viewport_bounds(fret_ui::Invalidation::Layout),
             anchor,
@@ -134,9 +140,11 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
 
         let nav_items = Rc::new(RefCell::new(Vec::<GlobalElementId>::new()));
         let nav_items_for_state = nav_items.clone();
+        let extra_children = Rc::new(RefCell::new(Vec::<AnyElement>::new()));
+        let extra_children_for_state = extra_children.clone();
         let mut menu_id_for_focus: Option<GlobalElementId> = None;
         let mut build = Some(f);
-        let panel = cx.with_root_name(root_name.as_str(), |cx| {
+        let panel = cx.with_root_name(root_name, |cx| {
             cx.named("fret-ui-kit.imui.popup.panel", |cx| {
                 let mut semantics = fret_ui::element::SemanticsProps::default();
                 semantics.role = SemanticsRole::Menu;
@@ -174,16 +182,23 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                         col.layout.size.width = Length::Auto;
                         col.layout.size.height = Length::Auto;
                         vec![cx.column(col, move |cx| {
-                            let mut out: Vec<AnyElement> = Vec::new();
-                            let mut ui = ImUiFacade {
-                                cx,
-                                out: &mut out,
-                                build_focus: None,
-                            };
-                            if let Some(f) = build.take() {
-                                f(&mut ui);
-                            }
-                            out
+                            cx.provide(
+                                ImUiMenuOpenDescendantState {
+                                    children: extra_children_for_state.clone(),
+                                },
+                                move |cx| {
+                                    let mut out: Vec<AnyElement> = Vec::new();
+                                    let mut ui = ImUiFacade {
+                                        cx,
+                                        out: &mut out,
+                                        build_focus: None,
+                                    };
+                                    if let Some(f) = build.take() {
+                                        f(&mut ui);
+                                    }
+                                    out
+                                },
+                            )
                         })]
                     })]
                 });
@@ -193,18 +208,50 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             })
         });
 
-        let trigger_id = trigger.unwrap_or(overlay_id);
         let first_item = nav_items.borrow().first().copied();
-        let initial_focus = menu_root::MenuInitialFocusTargets::new()
-            .keyboard_entry_focus(first_item)
-            .pointer_content_focus(menu_id_for_focus);
+        let mut children = vec![panel];
+        children.extend(extra_children.borrow_mut().drain(..));
+        Some(PopupMenuBuilt {
+            children,
+            first_item,
+            content_focus: menu_id_for_focus,
+        })
+    })
+}
+
+pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    id: &str,
+    trigger: Option<GlobalElementId>,
+    options: PopupMenuOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> bool {
+    let overlay_id = ui.with_cx_mut(|cx| {
+        let overlay_key = format!("fret-ui-kit.imui.popup.overlay.{id}");
+        cx.named(overlay_key.as_str(), |cx| cx.root_id())
+    });
+    let root_name = OverlayController::popover_root_name(overlay_id);
+    let Some(built) = build_popup_menu(ui, id, root_name.as_str(), options, f) else {
+        return false;
+    };
+
+    ui.with_cx_mut(|cx| {
+        let open = super::with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
+        let trigger_id = trigger.unwrap_or(overlay_id);
+        let initial_focus = if options.auto_focus {
+            menu_root::MenuInitialFocusTargets::new()
+                .keyboard_entry_focus(built.first_item)
+                .pointer_content_focus(built.content_focus)
+        } else {
+            menu_root::MenuInitialFocusTargets::new()
+        };
         let req = menu_root::dismissible_menu_request_with_modal(
             cx,
             overlay_id,
             trigger_id,
-            open.clone(),
+            open,
             OverlayPresence::instant(true),
-            vec![panel],
+            built.children,
             root_name.clone(),
             initial_focus,
             None,
@@ -213,9 +260,9 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             options.modal,
         );
         OverlayController::request(cx, req);
+    });
 
-        true
-    })
+    true
 }
 
 pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(

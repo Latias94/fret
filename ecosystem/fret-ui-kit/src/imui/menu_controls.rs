@@ -102,6 +102,8 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 .as_ref()
                 .map(|test_id| Arc::from(format!("{test_id}.shortcut")))
         });
+        let submenu = options.submenu;
+        let expanded = options.expanded;
         let mut enabled = options.enabled && !super::imui_is_disabled(cx);
         if let Some(action) = action.as_ref() {
             enabled = enabled && cx.action_is_enabled(action);
@@ -151,6 +153,9 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                                 .attach_semantics(SemanticsDecoration::default().test_id(test_id));
                         }
                         out.push(shortcut);
+                    } else if submenu {
+                        out.push(cx.spacer(SpacerProps::default()));
+                        out.push(cx.text(Arc::from("\u{203A}")));
                     }
                     out
                 })]
@@ -179,6 +184,7 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 label: Some(label.clone()),
                 test_id,
                 checked,
+                expanded,
                 ..Default::default()
             };
 

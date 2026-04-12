@@ -10,7 +10,10 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
-use super::{BeginMenuOptions, ImUiFacade, MenuBarOptions, ResponseExt, UiWriterImUiFacadeExt};
+use super::{
+    BeginMenuOptions, BeginSubmenuOptions, ImUiFacade, MenuBarOptions, MenuItemOptions,
+    ResponseExt, UiWriterImUiFacadeExt,
+};
 
 pub(super) fn menu_bar_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -56,6 +59,80 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             open_before,
             enabled,
             options.test_id.clone(),
+        )
+    });
+
+    if enabled && trigger.clicked() {
+        if open_before {
+            ui.close_popup(id);
+        } else if let Some(anchor) = trigger.core.rect {
+            ui.open_popup_at(id, anchor);
+        }
+    }
+
+    let submenu_root_name = format!("fret-ui-kit.imui.popup.inline.{id}");
+    let built_popup = super::popup_overlay::build_popup_menu(
+        ui,
+        id,
+        submenu_root_name.as_str(),
+        options.popup,
+        f,
+    );
+    let popup_opened = built_popup.is_some();
+    if let Some(mut built) = built_popup {
+        let mut attached_to_parent = false;
+        ui.with_cx_mut(|cx| {
+            if let Some(state) = cx.provided::<super::popup_overlay::ImUiMenuOpenDescendantState>()
+            {
+                state.children.borrow_mut().extend(built.children.drain(..));
+                attached_to_parent = true;
+            }
+        });
+        if !attached_to_parent {
+            for child in built.children {
+                ui.add(child);
+            }
+        }
+    }
+    if !enabled && popup_opened {
+        ui.close_popup(id);
+    }
+
+    ui.with_cx_mut(|cx| {
+        cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
+            *value
+        })
+        .unwrap_or(false)
+    })
+}
+
+pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    id: &str,
+    label: Arc<str>,
+    options: BeginSubmenuOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> bool {
+    let enabled = options.enabled && ui.with_cx_mut(|cx| !super::imui_is_disabled(cx));
+    let popup_open = ui.popup_open_model(id);
+    let open_before = ui.with_cx_mut(|cx| {
+        cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
+            *value
+        })
+        .unwrap_or(false)
+    });
+
+    let trigger = ui.push_id(format!("{id}.trigger"), |ui| {
+        super::menu_controls::menu_item_with_options(
+            ui,
+            label.clone(),
+            MenuItemOptions {
+                enabled,
+                test_id: options.test_id.clone(),
+                submenu: true,
+                expanded: Some(open_before),
+                ..Default::default()
+            },
         )
     });
 

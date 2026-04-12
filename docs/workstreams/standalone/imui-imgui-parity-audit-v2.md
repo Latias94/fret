@@ -196,13 +196,14 @@ The real remaining gaps are narrower:
    - The remaining gap is depth rather than ownership: there is still no `BeginChild()`-scale
      flag surface, no menu-bar nesting story, and no larger first-party pane proof that exercises
      mixed child regions with tabs/toolbars/status chrome.
-3. First-cut immediate menu-bar family now exists, but tab-bar and richer menubar policy are
-   still open
+3. First-cut immediate menu family now includes top-level menus plus a submenu seam, but tab-bar
+   and richer menubar policy are still open
    - `fret-ui-kit::imui` now exposes a small `menu_bar[_with_options]` container plus
-     `begin_menu[_with_options]` trigger/helper seam for click-open top-level menus.
+     `begin_menu[_with_options]` and `begin_submenu[_with_options]` trigger/helper seams for
+     click-open top-level and nested menus.
    - The remaining gap is depth rather than ownership: there is still no generic immediate tab-bar
-     family, no hover-switch/roving/mnemonic menubar policy in the `imui` layer, and no first-cut
-     submenu convenience helper above raw popup/menu primitives.
+     family, no hover-switch/roving/mnemonic menubar policy in the `imui` layer, and no richer
+     submenu policy around grace intent, hover switching, or keyboard-owner orchestration.
 4. First-cut immediate command shortcut seam now exists, but key ownership is still open
    - `fret-ui-kit::imui` now exposes `menu_item_command[_with_options]`, which resolves the
      command title, enabled state, and shortcut hint from Fret's command/keymap layer without
