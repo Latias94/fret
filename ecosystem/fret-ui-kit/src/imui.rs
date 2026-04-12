@@ -47,6 +47,7 @@ mod response;
 mod selectable_controls;
 mod separator_text_controls;
 mod slider_controls;
+mod tab_family_controls;
 mod table_controls;
 mod text_controls;
 mod tooltip_overlay;
@@ -83,8 +84,9 @@ pub use options::{
     CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions,
     GridOptions, HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions,
     PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
-    SliderOptions, SwitchOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
-    TextAreaOptions, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn, TableColumnWidth,
+    TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
+    VerticalOptions, VirtualListOptions,
 };
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
@@ -92,6 +94,7 @@ pub use response::{
     FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt,
     VirtualListResponse,
 };
+pub use tab_family_controls::ImUiTabBar;
 pub use table_controls::{ImUiTable, ImUiTableRow};
 
 /// Extension trait bridging `fret-ui-kit` authoring (`UiBuilder<T>`) into an immediate-mode output.
@@ -483,6 +486,27 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let build_focus = self.build_focus.clone();
         let element = self
             .with_cx_mut(|cx| menu_family_controls::menu_bar_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn tab_bar(
+        &mut self,
+        id: &str,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) {
+        self.tab_bar_with_options(id, TabBarOptions::default(), f);
+    }
+
+    pub fn tab_bar_with_options(
+        &mut self,
+        id: &str,
+        options: TabBarOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| {
+            tab_family_controls::tab_bar_element(cx, id, build_focus, options, f)
+        });
         self.add(element);
     }
 
@@ -1216,6 +1240,21 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     ) {
         let element =
             self.with_cx_mut(|cx| menu_family_controls::menu_bar_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn tab_bar(&mut self, id: &str, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>)) {
+        self.tab_bar_with_options(id, TabBarOptions::default(), f);
+    }
+
+    fn tab_bar_with_options(
+        &mut self,
+        id: &str,
+        options: TabBarOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) {
+        let element =
+            self.with_cx_mut(|cx| tab_family_controls::tab_bar_element(cx, id, None, options, f));
         self.add(element);
     }
 

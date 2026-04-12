@@ -46,6 +46,23 @@ impl Default for MenuBarOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct TabBarOptions {
+    pub selected: Option<fret_runtime::Model<Option<Arc<str>>>>,
+    pub gap: crate::MetricRef,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for TabBarOptions {
+    fn default() -> Self {
+        Self {
+            selected: None,
+            gap: crate::MetricRef::space(crate::Space::N1),
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BeginMenuOptions {
     pub enabled: bool,
     pub test_id: Option<Arc<str>>,
@@ -242,6 +259,25 @@ impl Default for MenuItemOptions {
             shortcut_test_id: None,
             submenu: false,
             expanded: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TabItemOptions {
+    pub enabled: bool,
+    pub default_selected: bool,
+    pub test_id: Option<Arc<str>>,
+    pub panel_test_id: Option<Arc<str>>,
+}
+
+impl Default for TabItemOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            default_selected: false,
+            test_id: None,
+            panel_test_id: None,
         }
     }
 }
