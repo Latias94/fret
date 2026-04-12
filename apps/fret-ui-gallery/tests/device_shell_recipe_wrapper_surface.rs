@@ -109,3 +109,50 @@ fn dialog_and_drawer_recipe_sources_do_not_ship_device_shell_wrapper_api_yet() {
         }
     }
 }
+
+#[test]
+fn shadcn_private_adaptive_shell_seam_stays_internal_and_narrow() {
+    let lib = include_str!("../../../ecosystem/fret-ui-shadcn/src/lib.rs");
+    let helper = include_str!("../../../ecosystem/fret-ui-shadcn/src/adaptive_shell.rs");
+    let drawer = include_str!("../../../ecosystem/fret-ui-shadcn/src/drawer.rs");
+    let sidebar = include_str!("../../../ecosystem/fret-ui-shadcn/src/sidebar.rs");
+    let combobox = include_str!("../../../ecosystem/fret-ui-shadcn/src/combobox.rs");
+
+    assert!(
+        lib.contains("mod adaptive_shell;"),
+        "shadcn should keep the adaptive shell helper crate-private; missing `mod adaptive_shell;`",
+    );
+    for forbidden in ["pub mod adaptive_shell;", "raw_module!(adaptive_shell);"] {
+        assert!(
+            !lib.contains(forbidden),
+            "shadcn should not expose the adaptive shell helper through public or raw lanes; found `{forbidden}`",
+        );
+    }
+
+    assert!(
+        helper.contains("pub(crate) fn is_desktop_shell<H: UiHost>("),
+        "adaptive shell helper should stay on a crate-private callable seam",
+    );
+    for forbidden in [
+        "pub fn is_desktop_shell<",
+        "device_shell_switch(",
+        "pub struct DeviceShellSwitchPolicy",
+    ] {
+        assert!(
+            !helper.contains(forbidden),
+            "adaptive shell helper should stay a thin private wrapper rather than a second public strategy owner; found `{forbidden}`",
+        );
+    }
+
+    for (name, source) in [("drawer", drawer), ("sidebar", sidebar)] {
+        assert!(
+            source.contains("crate::adaptive_shell::is_desktop_shell("),
+            "{name} should reuse the private adaptive shell seam instead of growing public wrapper vocabulary",
+        );
+    }
+
+    assert!(
+        !combobox.contains("crate::adaptive_shell::is_desktop_shell("),
+        "combobox should stay on the explicit shared helper lane rather than silently moving onto the private shadcn seam",
+    );
+}
