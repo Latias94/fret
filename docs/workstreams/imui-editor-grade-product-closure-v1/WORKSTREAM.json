@@ -41,6 +41,10 @@
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -145,6 +149,7 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md",
@@ -178,6 +183,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane active only while it is freezing the maturity-gap taxonomy, proof surfaces, the P0 proof budget rule, and the gate package. Start narrower follow-ons once any phase turns into implementation-heavy work."
+    "notes": "Keep this lane active only while it is freezing the maturity-gap taxonomy, proof surfaces, the P0 teaching pack, the P1 shell proof matrix, and the gate package. Start narrower follow-ons once any phase turns into implementation-heavy work."
   }
 }

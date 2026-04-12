@@ -12,6 +12,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -70,6 +71,12 @@ This package now locks the current immediate-mode product message at the source-
 
 - `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+
+This package currently proves:
+
+- `workspace_shell_demo` remains the primary coherent shell proof,
+- `editor_notes_demo` remains the minimal shell-mounted rail proof,
+- and the shell proof set does not silently collapse back into the generic `imui` backlog.
 
 ### Diagnostics / tooling gates
 

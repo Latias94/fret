@@ -313,6 +313,9 @@ mod authoring_surface_policy_tests {
     const IMUI_STABLE_IDENTITY_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
     );
+    const IMUI_WORKBENCH_PROOF_MATRIX_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1562,6 +1565,25 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_STABLE_IDENTITY_RULE_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the stable-identity teaching rule explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_workbench_shell_proof_matrix() {
+        for marker in [
+            "`apps/fret-examples/src/workspace_shell_demo.rs`",
+            "`apps/fret-examples/src/editor_notes_demo.rs`",
+            "`apps/fret-examples/src/imui_editor_proof_demo.rs`",
+            "`docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md`",
+            "`docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`",
+            "`workspace_shell_demo` is the primary P1 coherent workbench-shell proof",
+            "`editor_notes_demo` is the minimal secondary proof for shell-mounted rails",
+            "shell-level missing pieces should stay out of the generic `imui` backlog",
+        ] {
+            assert!(
+                IMUI_WORKBENCH_PROOF_MATRIX_NOTE.contains(marker),
+                "the workstream should keep the P1 workbench proof matrix explicit: {marker}"
             );
         }
     }

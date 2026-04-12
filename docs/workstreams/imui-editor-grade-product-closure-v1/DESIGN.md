@@ -12,6 +12,7 @@ Related:
 - `P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `P0_STABLE_IDENTITY_RULE_2026-04-12.md`
+- `P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -193,6 +194,10 @@ Expected outcome:
 - Editor shell proof:
   - `apps/fret-examples/src/workspace_shell_demo.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
+- Supporting shell/docking evidence:
+  - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+  - `docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - Diagnostics/devtools proof:
   - `docs/ui-diagnostics-and-scripted-tests.md`
   - `docs/workstreams/diag-fearless-refactor-v2/README.md`

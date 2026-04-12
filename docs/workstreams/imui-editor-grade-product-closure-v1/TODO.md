@@ -42,13 +42,22 @@ Last updated: 2026-04-12
 
 ## P1 - Editor workbench shell closure
 
-- [ ] Build one reviewable proof matrix for workspace shell + docking + editor composites.
-- [ ] Decide which missing closure belongs in:
+- [x] Build one reviewable proof matrix for workspace shell + docking + editor composites.
+      Result: `P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md` now freezes the current primary proof,
+      supporting proofs, and reading order.
+- [x] Decide which missing closure belongs in:
       - `ecosystem/fret-workspace`,
       - `ecosystem/fret-docking`,
       - `ecosystem/fret-ui-editor`,
       - or recipe crates.
-- [ ] Keep shell-level missing pieces out of the generic `imui` backlog by default.
+      Result: `P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md` now maps shell slots/tabstrip/command
+      scope to `fret-workspace`, docking choreography to `fret-docking`, editor composites to
+      `fret-ui-editor`, and scene-local center content to app/recipe ownership.
+- [x] Keep shell-level missing pieces out of the generic `imui` backlog by default.
+      Result: `P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md` now freezes
+      `workspace_shell_demo` / `editor_notes_demo` as the shell-first proof order and classifies
+      `imui_editor_proof_demo` as supporting docking/editor evidence instead of the default shell
+      backlog.
 - [ ] Promote at least one shell-level diagnostics smoke suite beyond tabstrip-only checks.
 
 ## P2 - Unified diagnostics/devtools surface

@@ -75,6 +75,7 @@ Exit criteria:
 
 Primary evidence:
 
+- `P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md`
@@ -82,7 +83,18 @@ Primary evidence:
 
 Current status:
 
-- Not started.
+- In progress.
+- The primary P1 workbench-shell proof is now frozen as
+  `apps/fret-examples/src/workspace_shell_demo.rs`.
+- The minimal shell-mounted editor-rail proof is now frozen as
+  `apps/fret-examples/src/editor_notes_demo.rs`.
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` remains supporting docking/editor evidence,
+  but is no longer the default workbench-shell reading order.
+- The current owner split is now explicit:
+  `fret-workspace` for shell slots/tabstrip/command scope,
+  `fret-docking` for dock choreography,
+  `fret-ui-editor` for editor composites,
+  and app/example ownership for scene-local center content.
 
 ## M3 - P2 unified diagnostics/devtools surface
 
