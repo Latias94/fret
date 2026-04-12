@@ -26,6 +26,12 @@ Workstream docs live under `docs/workstreams/` (living implementation trackers; 
 
 Tracker highlights:
 
+- ImUi editor-grade product-closure follow-on (active lane that treats the remaining gap against
+  Dear ImGui as a product-closure problem rather than another stack rewrite, with ordered phases for
+  authoring-lane convergence, workbench shell closure, diagnostics/devtools unification, and
+  multi-window hand-feel closure): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
+  `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
+  `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
 - Adaptive layout contract closure closeout record (closed cross-lane authoring taxonomy + proof
   surface lane for container vs environment queries, breakpoint vocabulary, and editor-rail owner
   split): `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`,

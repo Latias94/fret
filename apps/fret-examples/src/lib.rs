@@ -304,6 +304,9 @@ mod authoring_surface_policy_tests {
     const IMUI_FLOATING_WINDOWS_DEMO: &str = include_str!("imui_floating_windows_demo.rs");
     const IMUI_HELLO_DEMO: &str = include_str!("imui_hello_demo.rs");
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
+    const IMUI_PROOF_BUDGET_RULE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1477,6 +1480,61 @@ mod authoring_surface_policy_tests {
             ],
             &[],
         );
+    }
+
+    #[test]
+    fn immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster() {
+        for marker in [
+            "Immediate-mode sidecar (when you intentionally want the IMUI lane):",
+            "imui_action_basics",
+            "imui_editor_proof_demo",
+            "imui_hello_demo",
+            "imui_response_signals_demo",
+            "imui_shadcn_adapter_demo",
+            "imui_floating_windows_demo",
+            "imui_node_graph_demo",
+            "Golden pair:",
+            "Reference/smoke:",
+            "Reference/product-validation:",
+            "Compatibility-only:",
+        ] {
+            assert!(
+                EXAMPLES_DOCS_README.contains(marker),
+                "docs/examples/README.md should classify the immediate-mode teaching surfaces: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening() {
+        for marker in [
+            "Any future `fret-ui-kit::imui` public helper widening must name at least two real first-party proof",
+            "For P0, the current minimum proof budget is the frozen immediate-mode golden pair:",
+            "`apps/fret-cookbook/examples/imui_action_basics.rs`",
+            "`apps/fret-examples/src/imui_editor_proof_demo.rs`",
+            "Reference, advanced, or compatibility-only surfaces do not count by themselves.",
+        ] {
+            assert!(
+                IMUI_PROOF_BUDGET_RULE_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the proof budget rule explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn imui_hello_demo_is_explicitly_demoted_to_smoke_reference() {
+        for marker in [
+            "Reference/smoke demo: tiny IMUI hello surface.",
+            "no longer the best",
+            "first-contact teaching surface for the immediate-mode lane.",
+            "Prefer `apps/fret-cookbook/examples/imui_action_basics.rs`",
+            "`apps/fret-examples/src/imui_editor_proof_demo.rs`",
+        ] {
+            assert!(
+                IMUI_HELLO_DEMO.contains(marker),
+                "imui_hello_demo should stay explicitly demoted to smoke/reference: {marker}"
+            );
+        }
     }
 
     #[test]

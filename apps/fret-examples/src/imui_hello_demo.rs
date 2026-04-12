@@ -1,3 +1,10 @@
+//! Reference/smoke demo: tiny IMUI hello surface.
+//!
+//! This file stays useful as the smallest runnable facade smoke, but it is no longer the best
+//! first-contact teaching surface for the immediate-mode lane.
+//! Prefer `apps/fret-cookbook/examples/imui_action_basics.rs` for the generic/default immediate
+//! path, then `apps/fret-examples/src/imui_editor_proof_demo.rs` for the editor-grade path.
+
 use fret::{FretApp, advanced::prelude::*};
 
 struct ImUiHelloView;

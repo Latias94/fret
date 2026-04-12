@@ -120,6 +120,22 @@ cargo run -p fretboard-dev -- list cookbook-examples --all
 Tip: when running cookbook examples via `fretboard-dev dev native --example <name>`, `fretboard-dev` will
 auto-enable required cookbook features for known Lab examples and print what it enabled.
 
+Immediate-mode sidecar (when you intentionally want the IMUI lane):
+
+- Golden pair:
+  - `imui_action_basics` — generic/default immediate authoring on the app lane
+  - `imui_editor_proof_demo` — editor-grade immediate proof on the intended generic/editor owner
+    split
+- Reference/smoke:
+  - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
+- Reference/product-validation:
+  - `imui_response_signals_demo`
+  - `imui_shadcn_adapter_demo`
+- Advanced/reference:
+  - `imui_floating_windows_demo`
+- Compatibility-only:
+  - `imui_node_graph_demo`
+
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
 
 - `simple_todo_v2_target` — comparison target for denser payload-row / root-handler keyed-list authoring on the same `LocalState<Vec<Row>>` baseline; it is intentionally evidence-oriented, not the default tutorial surface.
@@ -186,8 +202,16 @@ Explicit advanced/reference roster:
 - `genui_demo` is a generator/editor integration reference surface. It keeps explicit model
   ownership because the point is catalog/runtime/validation integration, not first-contact app
   authoring.
+- `imui_hello_demo` is a tiny IMUI smoke/reference surface. It remains useful for the smallest
+  runnable facade check, but the generic/editor immediate teaching path should start from
+  `imui_action_basics` and `imui_editor_proof_demo`.
+- `imui_response_signals_demo` and `imui_shadcn_adapter_demo` are IMUI reference surfaces. They
+  validate response/query behavior and adapter/product composition rather than the default
+  immediate teaching path.
 - `imui_floating_windows_demo` is an IMUI overlap/floating proof surface. It validates IMUI
   interaction contracts and diagnostics affordances rather than the retained-mode onboarding lane.
+- `imui_node_graph_demo` is an IMUI compatibility-only proof. It exists to keep the retained-bridge
+  node-graph path auditable and should not be treated as the default downstream immediate path.
 
 Start from the “Examples redesign” workstream for the intended product surface:
 

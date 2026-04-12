@@ -92,6 +92,16 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Authoring surfaces (imui convergence)
 
+- Active editor-grade product-closure follow-on for the remaining Dear ImGui-class maturity gap:
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+- Use the new product-closure lane for the active phase ordering across authoring, shell, tooling,
+  and multi-window hand-feel. Keep the older `imui` stack and helper lanes as closeout evidence
+  unless fresh proof exceeds their audits.
 - Source of truth for the closed `imui` compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`

@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-10
+Catalog updated: 2026-04-12
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 218
+- Dedicated directories: 227
 - Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -97,6 +97,22 @@ those files, keep historical names when they are the evidence.
 ## Immediate-Mode Workstream Map
 
 Current source of truth for the in-tree immediate-mode stack:
+
+- Active editor-grade product-closure follow-on:
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_TEACHING_SURFACE_INVENTORY_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_FOOTGUN_AUDIT_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_DEMOTE_DELETE_PLAN_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+  - Scope: close the remaining maturity gap after the stack-reset closeouts without reopening
+    runtime widening or generic helper-growth by default; future `fret-ui-kit::imui` widening now
+    needs the frozen two-surface proof budget before review; split implementation-heavy work into
+    narrower follow-ons.
 
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
@@ -186,6 +202,9 @@ Historical companion/audit notes retained under `standalone/`:
 
 Rule:
 
+- Prefer the active product-closure follow-on for the current "what is still missing relative to an
+  editor-grade Dear ImGui-class experience?" answer and for the current phase ordering across
+  authoring, shell, tooling, and multi-window hand-feel.
 - Prefer the compatibility-retained follow-on lane for the latest keep/delete verdict on retained
   compatibility surfaces that leaked into public/proof `imui` paths.
 - Prefer the v2 workstream for the closed stack reset, editor adapter closure, and teaching-surface
@@ -218,6 +237,8 @@ Rule:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-16, 50 markdown docs
 - `docs/workstreams/action-payload-surface-dedup-v1/` — first n/a, latest n/a, 0 markdown docs
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/` — first 2026-03-17, latest 2026-03-17, 8 markdown docs
+- `docs/workstreams/adaptive-layout-contract-closure-v1/` — first 2026-04-10, latest 2026-04-10, 13 markdown docs
+- `docs/workstreams/adaptive-presentation-surface-v1/` — first 2026-04-11, latest 2026-04-11, 8 markdown docs
 - `docs/workstreams/ai-elements-port/` — first 2026-02-05, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/animata-recipes-v1/` — first 2026-02-13, latest 2026-02-27, 2 markdown docs
 - `docs/workstreams/app-composition-density-follow-on-v1/` — first 2026-03-17, latest 2026-03-20, 7 markdown docs
@@ -236,6 +257,8 @@ Rule:
 - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/` — first 2026-03-25, latest 2026-03-25, 5 markdown docs
 - `docs/workstreams/code-editor-ecosystem-v1/` — first 2026-01-27, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
+- `docs/workstreams/container-aware-editor-rail-helper-shape-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
+- `docs/workstreams/container-aware-editor-rail-surface-v1/` — first 2026-04-11, latest 2026-04-11, 11 markdown docs
 - `docs/workstreams/container-queries-v1/` — first 2026-02-09, latest 2026-02-11, 3 markdown docs
 - `docs/workstreams/control-chrome-normalization-audit-v1/` — first 2026-02-18, latest 2026-02-19, 3 markdown docs
 - `docs/workstreams/control-id-form-association-v1/` — first 2026-03-06, latest 2026-03-08, 3 markdown docs
@@ -244,6 +267,9 @@ Rule:
 - `docs/workstreams/current-color-inheritance-fearless-refactor-v1/` — first 2026-02-23, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/default-app-productization-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-09, 7 markdown docs
+- `docs/workstreams/device-shell-adaptive-facade-promotion-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
+- `docs/workstreams/device-shell-recipe-wrapper-surface-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
+- `docs/workstreams/device-shell-strategy-surface-v1/` — first 2026-04-10, latest 2026-04-11, 10 markdown docs
 - `docs/workstreams/delinea-engine-contract-closure-v1/` — first 2026-02-09, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-ai-agent-debugging-v1/` — first 2026-02-21, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-06, 20 markdown docs
@@ -319,6 +345,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
+- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 9 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)
 - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the transparent moving-window payload overlap diagnostics/runtime lane)
@@ -342,6 +369,7 @@ Rule:
 - `docs/workstreams/mobile-share-and-clipboard-v1/` — first 2026-02-12, latest 2026-02-12, 3 markdown docs
 - `docs/workstreams/motion-foundation-v1/` — first 2026-02-12, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/onboarding-ergonomics-v1/` — first 2026-02-16, latest 2026-03-08, 3 markdown docs
+- `docs/workstreams/outer-shell-editor-rail-mobile-downgrade-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
 - `docs/workstreams/open-source-onboarding-fearless-refactor-v1/` — first 2026-03-04, latest 2026-03-04, 3 markdown docs
 - `docs/workstreams/open-source-readiness-fearless-refactor-v1/` — first 2026-03-04, latest 2026-03-12, 4 markdown docs
 - `docs/workstreams/overlay-input-arbitration-v2/` — first 2026-01-24, latest 2026-02-11, 3 markdown docs
