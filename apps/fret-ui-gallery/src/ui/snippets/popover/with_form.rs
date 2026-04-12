@@ -24,9 +24,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             cx;
             shadcn::PopoverHeader::new(ui::children![
                 cx;
-                shadcn::PopoverTitle::new("Dimensions"),
+                shadcn::PopoverTitle::new("Dimensions")
+                    .into_element(cx)
+                    .test_id("ui-gallery-popover-with-form-title"),
                 shadcn::PopoverDescription::new("Set the dimensions for the layer.")
-            ]),
+                    .into_element(cx)
+                    .test_id("ui-gallery-popover-with-form-description")
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-popover-with-form-header"),
             shadcn::FieldGroup::new(ui::children![
                 cx;
                 shadcn::Field::new(ui::children![
@@ -35,6 +41,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .refine_layout(LayoutRefinement::default().w_px(Px(128.0))),
                     shadcn::Input::new(width.clone())
                         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .test_id("ui-gallery-popover-with-form-width-input")
                 ])
                 .orientation(shadcn::FieldOrientation::Horizontal),
                 shadcn::Field::new(ui::children![
@@ -43,6 +50,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .refine_layout(LayoutRefinement::default().w_px(Px(128.0))),
                     shadcn::Input::new(height.clone())
                         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .test_id("ui-gallery-popover-with-form-height-input")
                 ])
                 .orientation(shadcn::FieldOrientation::Horizontal)
             ])

@@ -109,55 +109,58 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 let goal_for_increase = goal_model.clone();
 
                 let content = ui::v_stack(|cx| {
-                    vec![
-                        ui::h_flex(|cx| {
-                            vec![
-                                goal_adjust_button(
-                                    cx,
-                                    goal_for_decrease.clone(),
-                                    -GOAL_STEP,
-                                    "lucide.minus",
-                                    "Decrease goal",
-                                    current_goal <= GOAL_MIN,
-                                    "ui-gallery-drawer-demo-decrease",
-                                )
-                                .into_element(cx),
-                                ui::v_stack(|cx| {
-                                    vec![
-                                        ui::text(current_goal.to_string())
-                                            .text_size_px(Px(56.0))
-                                            .font_bold()
-                                            .tabular_nums()
-                                            .into_element(cx),
-                                        ui::text("Calories/day")
-                                            .text_sm()
-                                            .font_medium()
-                                            .text_color(ColorRef::Color(muted_fg))
-                                            .into_element(cx),
-                                    ]
-                                })
-                                .gap(Space::N1)
-                                .items_center()
-                                .layout(LayoutRefinement::default().flex_1().min_w_0())
-                                .into_element(cx),
-                                goal_adjust_button(
-                                    cx,
-                                    goal_for_increase.clone(),
-                                    GOAL_STEP,
-                                    "lucide.plus",
-                                    "Increase goal",
-                                    current_goal >= GOAL_MAX,
-                                    "ui-gallery-drawer-demo-increase",
-                                )
-                                .into_element(cx),
-                            ]
-                        })
-                        .gap(Space::N3)
-                        .items_center()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx),
-                        goal_chart(cx, current_goal).into_element(cx),
-                    ]
+                    let goal_controls = ui::h_flex(|cx| {
+                        vec![
+                            goal_adjust_button(
+                                cx,
+                                goal_for_decrease.clone(),
+                                -GOAL_STEP,
+                                "lucide.minus",
+                                "Decrease goal",
+                                current_goal <= GOAL_MIN,
+                                "ui-gallery-drawer-demo-decrease",
+                            )
+                            .into_element(cx),
+                            ui::v_stack(|cx| {
+                                vec![
+                                    ui::text(current_goal.to_string())
+                                        .text_size_px(Px(56.0))
+                                        .font_bold()
+                                        .tabular_nums()
+                                        .into_element(cx),
+                                    ui::text("Calories/day")
+                                        .text_sm()
+                                        .font_medium()
+                                        .text_color(ColorRef::Color(muted_fg))
+                                        .into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N1)
+                            .items_center()
+                            .layout(LayoutRefinement::default().flex_1().min_w_0())
+                            .into_element(cx),
+                            goal_adjust_button(
+                                cx,
+                                goal_for_increase.clone(),
+                                GOAL_STEP,
+                                "lucide.plus",
+                                "Increase goal",
+                                current_goal >= GOAL_MAX,
+                                "ui-gallery-drawer-demo-increase",
+                            )
+                            .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N3)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx)
+                    .test_id("ui-gallery-drawer-demo-goal-controls");
+                    let chart = goal_chart(cx, current_goal)
+                        .into_element(cx)
+                        .test_id("ui-gallery-drawer-demo-chart");
+
+                    vec![goal_controls, chart]
                 })
                 .gap(Space::N0)
                 .items_stretch()
@@ -168,42 +171,43 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                 shadcn::DrawerContent::new([])
                     .children(|cx| {
-                        vec![
-                            ui::v_stack(move |cx| {
+                        let header = shadcn::DrawerHeader::new([])
+                            .children(|cx| {
                                 ui::children![
                                     cx;
-                                    shadcn::DrawerHeader::new([]).children(|cx| {
-                                        ui::children![
-                                            cx;
-                                            shadcn::DrawerTitle::new("Move Goal"),
-                                            shadcn::DrawerDescription::new(
-                                                "Set your daily activity goal.",
-                                            )
-                                        ]
-                                    }),
-                                    content,
-                                    shadcn::DrawerFooter::new([]).children(|cx| {
-                                        ui::children![
-                                            cx;
-                                            shadcn::Button::new("Submit"),
-                                            shadcn::DrawerClose::from_scope().child(
-                                                shadcn::Button::new("Cancel")
-                                                    .variant(shadcn::ButtonVariant::Outline),
-                                            )
-                                        ]
-                                    })
+                                    shadcn::DrawerTitle::new("Move Goal"),
+                                    shadcn::DrawerDescription::new(
+                                        "Set your daily activity goal.",
+                                    )
                                 ]
                             })
-                            .gap(Space::N0)
-                            .items_stretch()
-                            .layout(
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .max_w(Px(384.0))
-                                    .min_w_0()
-                                    .mx_auto(),
-                            )
-                            .into_element(cx),
+                            .into_element(cx)
+                            .test_id("ui-gallery-drawer-demo-header");
+                        let footer = shadcn::DrawerFooter::new([]).children(|cx| {
+                            ui::children![
+                                cx;
+                                shadcn::Button::new("Submit")
+                                    .test_id("ui-gallery-drawer-demo-submit"),
+                                shadcn::DrawerClose::from_scope().child(
+                                    shadcn::Button::new("Cancel")
+                                        .variant(shadcn::ButtonVariant::Outline)
+                                        .test_id("ui-gallery-drawer-demo-cancel"),
+                                )
+                            ]
+                        });
+
+                        vec![
+                            ui::v_stack(move |cx| ui::children![cx; header, content, footer])
+                                .gap(Space::N0)
+                                .items_stretch()
+                                .layout(
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .max_w(Px(384.0))
+                                        .min_w_0()
+                                        .mx_auto(),
+                                )
+                                .into_element(cx),
                         ]
                     })
                     .test_id("ui-gallery-drawer-demo-content")

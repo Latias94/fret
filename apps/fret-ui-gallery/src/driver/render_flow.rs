@@ -1336,6 +1336,7 @@ mod tests {
     ) {
         let mut last_gallery_scroll_y: Option<f64> = None;
         let mut stable_frames = 0usize;
+        let chrome_test_id = format!("{target_test_id}.chrome");
 
         for _ in 0..96 {
             let gallery_viewport =
@@ -1347,9 +1348,13 @@ mod tests {
             let gallery_scroll = node_by_test_id(gallery_snapshot, "ui-gallery-content-viewport")
                 .extra
                 .scroll;
-            let target_node = find_node_by_test_id(gallery_snapshot, target_test_id)
-                .map(|node| (node.id, node.bounds));
-            let target_bounds = target_node.and_then(|(node_id, node_bounds)| {
+            let target_node = [target_test_id, chrome_test_id.as_str()]
+                .into_iter()
+                .find_map(|candidate| {
+                    find_node_by_test_id(gallery_snapshot, candidate)
+                        .map(|node| (candidate, node.id, node.bounds))
+                });
+            let target_bounds = target_node.and_then(|(_, node_id, node_bounds)| {
                 rendered
                     .state
                     .ui
@@ -1367,7 +1372,7 @@ mod tests {
                     return;
                 }
 
-                let did_scroll = target_node.is_some_and(|(node_id, _)| {
+                let did_scroll = target_node.is_some_and(|(_, node_id, _)| {
                     rendered
                         .state
                         .ui
@@ -1500,7 +1505,16 @@ mod tests {
     }
 
     fn click_test_id_center(rendered: &mut RenderedGalleryPage, target_test_id: &str) {
-        let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+        let chrome_test_id = format!("{target_test_id}.chrome");
+        let resolved_test_id =
+            if visual_bounds_by_test_id_if_present(rendered, target_test_id).is_some() {
+                target_test_id
+            } else if visual_bounds_by_test_id_if_present(rendered, &chrome_test_id).is_some() {
+                chrome_test_id.as_str()
+            } else {
+                target_test_id
+            };
+        let target_bounds = visual_bounds_by_test_id(rendered, resolved_test_id);
         let position = Point::new(
             Px(target_bounds.origin.x.0 + target_bounds.size.width.0 * 0.5),
             Px(target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5),
@@ -4880,6 +4894,170 @@ mod tests {
         assert!(
             !rects_intersect(save, cancel),
             "expected mobile responsive-dialog save and cancel actions not to overlap: save={save:?} cancel={cancel:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_demo_header_controls_chart_and_footer_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DRAWER,
+            "ui-gallery-drawer-demo-trigger",
+            "ui-gallery-drawer-demo-content",
+            &[
+                "ui-gallery-drawer-demo-header",
+                "ui-gallery-drawer-demo-goal-controls",
+                "ui-gallery-drawer-demo-chart",
+                "ui-gallery-drawer-demo-submit.chrome",
+                "ui-gallery-drawer-demo-cancel.chrome",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let header = targets[0];
+        let controls = targets[1];
+        let chart = targets[2];
+        let submit = targets[3];
+        let cancel = targets[4];
+        let epsilon = 1.0;
+
+        assert!(
+            controls.origin.y.0 >= header.origin.y.0 + header.size.height.0 - epsilon,
+            "expected drawer demo controls to stay below the header block: header={header:?} controls={controls:?}"
+        );
+        assert!(
+            chart.origin.y.0 >= controls.origin.y.0 + controls.size.height.0 - epsilon,
+            "expected drawer demo chart to stay below the controls block: controls={controls:?} chart={chart:?}"
+        );
+        assert!(
+            submit.origin.y.0 >= chart.origin.y.0 + chart.size.height.0 - epsilon,
+            "expected drawer demo submit action to stay below the chart: chart={chart:?} submit={submit:?}"
+        );
+        assert!(
+            cancel.origin.y.0 >= submit.origin.y.0 + submit.size.height.0 - epsilon,
+            "expected drawer demo cancel action to stay below the submit action: submit={submit:?} cancel={cancel:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_rtl_header_controls_chart_and_footer_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_DRAWER,
+            "ui-gallery-drawer-rtl-trigger",
+            "ui-gallery-drawer-rtl-content",
+            &[
+                "ui-gallery-drawer-rtl-header",
+                "ui-gallery-drawer-rtl-goal-controls",
+                "ui-gallery-drawer-rtl-chart",
+                "ui-gallery-drawer-rtl-submit.chrome",
+                "ui-gallery-drawer-rtl-cancel.chrome",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let header = targets[0];
+        let controls = targets[1];
+        let chart = targets[2];
+        let submit = targets[3];
+        let cancel = targets[4];
+        let epsilon = 1.0;
+
+        assert!(
+            controls.origin.y.0 >= header.origin.y.0 + header.size.height.0 - epsilon,
+            "expected RTL drawer controls to stay below the header block: header={header:?} controls={controls:?}"
+        );
+        assert!(
+            chart.origin.y.0 >= controls.origin.y.0 + controls.size.height.0 - epsilon,
+            "expected RTL drawer chart to stay below the controls block: controls={controls:?} chart={chart:?}"
+        );
+        assert!(
+            submit.origin.y.0 >= chart.origin.y.0 + chart.size.height.0 - epsilon,
+            "expected RTL drawer submit action to stay below the chart: chart={chart:?} submit={submit:?}"
+        );
+        assert!(
+            cancel.origin.y.0 >= submit.origin.y.0 + submit.size.height.0 - epsilon,
+            "expected RTL drawer cancel action to stay below the submit action: submit={submit:?} cancel={cancel:?}"
+        );
+    }
+
+    #[test]
+    fn popover_demo_panel_and_form_rows_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_POPOVER,
+            "ui-gallery-popover-demo-trigger",
+            "ui-gallery-popover-demo-panel",
+            &[
+                "ui-gallery-popover-demo-header",
+                "ui-gallery-popover-demo-width-input",
+                "ui-gallery-popover-demo-max-width-input",
+                "ui-gallery-popover-demo-height-input",
+                "ui-gallery-popover-demo-max-height-input",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let header = targets[0];
+        let width = targets[1];
+        let max_width = targets[2];
+        let height = targets[3];
+        let max_height = targets[4];
+        let epsilon = 1.0;
+
+        assert!(
+            width.origin.y.0 >= header.origin.y.0 + header.size.height.0 - epsilon,
+            "expected popover demo width input to stay below the header block: header={header:?} width={width:?}"
+        );
+        assert!(
+            max_width.origin.y.0 >= width.origin.y.0 + width.size.height.0 - epsilon,
+            "expected popover demo max-width input to stay below the width input: width={width:?} max_width={max_width:?}"
+        );
+        assert!(
+            height.origin.y.0 >= max_width.origin.y.0 + max_width.size.height.0 - epsilon,
+            "expected popover demo height input to stay below the max-width input: max_width={max_width:?} height={height:?}"
+        );
+        assert!(
+            max_height.origin.y.0 >= height.origin.y.0 + height.size.height.0 - epsilon,
+            "expected popover demo max-height input to stay below the height input: height={height:?} max_height={max_height:?}"
+        );
+    }
+
+    #[test]
+    fn popover_with_form_panel_and_inputs_stay_within_window_at_narrow_size() {
+        let (_content_bounds, targets) = assert_overlay_content_and_targets_stay_within_bounds(
+            PAGE_POPOVER,
+            "ui-gallery-popover-with-form-trigger",
+            "ui-gallery-popover-with-form-panel",
+            &[
+                "ui-gallery-popover-with-form-header",
+                "ui-gallery-popover-with-form-width-input",
+                "ui-gallery-popover-with-form-height-input",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+
+        let header = targets[0];
+        let width = targets[1];
+        let height = targets[2];
+        let epsilon = 1.0;
+
+        assert!(
+            width.origin.y.0 >= header.origin.y.0 + header.size.height.0 - epsilon,
+            "expected popover-with-form width input to stay below the header block: header={header:?} width={width:?}"
+        );
+        assert!(
+            height.origin.y.0 >= width.origin.y.0 + width.size.height.0 - epsilon,
+            "expected popover-with-form height input to stay below the width input: width={width:?} height={height:?}"
         );
     }
 
