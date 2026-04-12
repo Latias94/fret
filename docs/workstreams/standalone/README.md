@@ -46,6 +46,7 @@ Closed stack reset + teaching-surface closeout record:
 
 Standalone `imui` notes in this folder are companion or archive material:
 
+- `imui-imgui-parity-audit-v2.md` is the current parity snapshot.
 - `imui-imgui-parity-audit-v1.md` is a historical parity audit.
 - `imui-ecosystem-facade-perf-v1.md` is a historical companion perf note.
 - `imui-shadcn-adapter-v1.md` is a historical adapter companion note.
@@ -84,6 +85,7 @@ Use this note as the first stop when deciding whether new icon work should conti
 - `fret-node-xyflow-parity.md` — first 2026-01-20, latest 2026-02-16 (history: `docs/workstreams/fret-node-xyflow-parity.md`)
 - `gpui-default-semantics-alignment.md` — first 2026-02-18, latest 2026-02-18 (history: `docs/workstreams/gpui-default-semantics-alignment.md`)
 - `icon-system-status.md` — first 2026-04-09, latest 2026-04-09
+- `imui-imgui-parity-audit-v2.md` — first 2026-04-12, latest 2026-04-12 (current parity snapshot across runner/backend, shell/workbench, and immediate authoring layers)
 - `imui-ecosystem-facade-perf-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`)
 - `imui-imgui-parity-audit-v1.md` — first 2026-02-08, latest 2026-02-16 (historical parity audit; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-imgui-parity-audit-v1.md`)
 - `imui-shadcn-adapter-v1.md` — first 2026-02-06, latest 2026-02-06 (historical imui companion note; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`) (history: `docs/workstreams/imui-shadcn-adapter-v1.md`)

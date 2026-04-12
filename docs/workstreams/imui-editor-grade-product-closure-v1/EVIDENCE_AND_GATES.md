@@ -20,7 +20,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
-- `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - `docs/diagnostics-first-open.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`

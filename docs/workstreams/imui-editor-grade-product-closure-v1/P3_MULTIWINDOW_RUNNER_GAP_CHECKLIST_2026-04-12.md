@@ -10,7 +10,7 @@ Related:
 - `EVIDENCE_AND_GATES.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
-- `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 
 ## Purpose
 
@@ -25,7 +25,7 @@ This note freezes that checklist without pretending the bounded P3 gate already 
 
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
-- `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `DESIGN.md`
 
@@ -124,7 +124,7 @@ Use this bounded posture when reopening P3:
 2. Read parity evidence in this order:
    - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
    - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
-   - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+   - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 3. Treat the gate as still open:
    - this slice only freezes what the future bounded P3 gate must explicitly name,
    - it does not claim that the gate already exists.

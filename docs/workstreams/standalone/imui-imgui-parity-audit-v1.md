@@ -22,6 +22,7 @@ For the current canonical `imui` ownership story and active execution plan, use:
 - `docs/workstreams/imui-stack-fearless-refactor-v2/TODO.md`
 - `docs/workstreams/imui-stack-fearless-refactor-v2/MILESTONES.md`
 - `docs/workstreams/imui-stack-fearless-refactor-v2/BASELINE_AUDIT_2026-03-31.md`
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 
 ## Upstream references (non-normative)
 

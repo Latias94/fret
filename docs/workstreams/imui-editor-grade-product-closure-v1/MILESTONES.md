@@ -169,7 +169,7 @@ Primary evidence:
 - `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
-- `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 
 Current status:
 

@@ -18,7 +18,7 @@ current sequencing and active cross-workstream stance, start with:
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
 - Dedicated directories: 227
-- Standalone markdown files: 46 (see `docs/workstreams/standalone/README.md`)
+- Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
 ## Promotion Rule
@@ -203,8 +203,9 @@ Historical archive directories retained for rationale/audit history only:
 - `docs/workstreams/imui-ecosystem-facade-v2/`
 - `docs/workstreams/imui-ecosystem-facade-v3/`
 
-Historical companion/audit notes retained under `standalone/`:
+Current + historical companion/audit notes retained under `standalone/`:
 
+- `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/standalone/imui-ecosystem-facade-perf-v1.md`
 - `docs/workstreams/standalone/imui-shadcn-adapter-v1.md`
@@ -471,6 +472,6 @@ Rule:
 
 ## Standalone Bucket
 
-- `docs/workstreams/standalone/README.md` — first 2026-03-12, latest 2026-03-12, 46 markdown docs
+- `docs/workstreams/standalone/README.md` — first 2026-03-12, latest 2026-03-12, 47 markdown docs
 - `docs/workstreams/standalone/workstream-state-v1.md` — shared machine-readable lane-state convention
 - Use this folder for compact loose notes that still do not justify a dedicated subdirectory.
