@@ -80,8 +80,14 @@ Last updated: 2026-04-12
       `fret-bootstrap` as the in-app runtime/export seam, `fret-diag` as the shared
       orchestration/artifact engine, `fret-devtools` as GUI UX over shared contracts, and
       `fret-devtools-mcp` as the headless automation/resource adapter.
-- [ ] Add one bounded devtools smoke package that validates the first-open path rather than only
+- [x] Add one bounded devtools smoke package that validates the first-open path rather than only
       isolated tooling commands.
+      Result: `P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`,
+      `tools/diag_gate_imui_p2_devtools_first_open.py`, and
+      `tools/diag-campaigns/devtools-first-open-smoke.json` now freeze one repo-owned gate that
+      proves direct `diag run` -> named bundles -> latest resolution -> `diag compare`, plus the
+      aggregate campaign root -> `diag summarize` -> `regression.summary.json` /
+      `regression.index.json` -> `diag dashboard` handoff.
 - [ ] Stop forcing authors to discover the workflow by hopping across multiple diagnostics notes.
 
 ## P3 - Multi-window hand-feel closure

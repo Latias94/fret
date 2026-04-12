@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "devtools-first-open-smoke",
+  "description": "Bounded first-open diagnostics/devtools smoke coverage over the todo baseline loop.",
+  "lane": "smoke",
+  "profile": "bounded",
+  "items": [
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/tooling/todo/todo-baseline.json"
+    }
+  ],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "smoke",
+  "expected_duration_ms": 120000,
+  "tags": ["devtools", "developer-loop", "first-open", "todo", "smoke"]
+}

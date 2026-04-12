@@ -325,6 +325,13 @@ mod authoring_surface_policy_tests {
     const IMUI_P2_DIAGNOSTICS_OWNER_SPLIT_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md"
     );
+    const IMUI_P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md"
+    );
+    const IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT: &str =
+        include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
+    const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
+        include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1673,6 +1680,62 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_P2_DIAGNOSTICS_OWNER_SPLIT_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the P2 diagnostics owner split explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p2_bounded_devtools_smoke_package() {
+        for marker in [
+            "`python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`",
+            "`tools/diag-campaigns/devtools-first-open-smoke.json`",
+            "`tools/diag-scripts/tooling/todo/todo-baseline.json`",
+            "verify that `diag resolve latest` and `diag latest` resolve through",
+            "`script.result.json:last_bundle_dir`",
+            "run direct `diag compare` over `todo-after-add` vs `todo-after-toggle-done`",
+            "`campaign.manifest.json`",
+            "`diag summarize <campaign_root> --dir <campaign_root> --json`",
+            "`regression.summary.json`",
+            "`regression.index.json`",
+            "run `diag dashboard <campaign_root> --json`",
+        ] {
+            assert!(
+                IMUI_P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P2 bounded devtools smoke package explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "CAMPAIGN_ID = \"devtools-first-open-smoke\"",
+            "SCRIPT_PATH = \"tools/diag-scripts/tooling/todo/todo-baseline.json\"",
+            "\"diag\",",
+            "\"run\",",
+            "\"resolve\",",
+            "\"latest\",",
+            "\"compare\",",
+            "\"campaign\",",
+            "\"dashboard\",",
+            "\"regression.summary.json\"",
+            "\"regression.index.json\"",
+        ] {
+            assert!(
+                IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT.contains(marker),
+                "the bounded P2 devtools smoke gate should keep the shared first-open loop step: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"id\": \"devtools-first-open-smoke\"",
+            "\"kind\": \"script\"",
+            "\"value\": \"tools/diag-scripts/tooling/todo/todo-baseline.json\"",
+            "\"lane\": \"smoke\"",
+            "\"profile\": \"bounded\"",
+            "\"devtools\"",
+            "\"first-open\"",
+        ] {
+            assert!(
+                IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN.contains(marker),
+                "the bounded P2 devtools smoke campaign should keep the frozen manifest marker: {marker}"
             );
         }
     }

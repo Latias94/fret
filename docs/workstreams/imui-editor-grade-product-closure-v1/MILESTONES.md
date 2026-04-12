@@ -113,6 +113,7 @@ Primary evidence:
 
 - `P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
 - `P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
+- `P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -132,7 +133,17 @@ Current status:
   `fret-bootstrap` owns runtime capture/export, `fret-diag` owns shared orchestration and artifact
   projections, `fret-devtools` owns GUI UX over those contracts, and `fret-devtools-mcp` owns the
   headless automation/resource adapter over the same contracts.
-- The bounded devtools smoke package remains open before M3 can close.
+- The bounded devtools smoke package is now explicit:
+  `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
+  now freezes one repo-owned gate over `tools/diag-scripts/tooling/todo/todo-baseline.json` and
+  `tools/diag-campaigns/devtools-first-open-smoke.json`.
+- The direct half of that gate now proves:
+  real `diag run`, named bundle emission, latest-bundle resolution through
+  `script.result.json:last_bundle_dir`, and direct `diag compare` over a state-changing pair.
+- The aggregate half of that gate now proves:
+  one campaign root with `campaign.manifest.json`, explicit root `diag summarize`,
+  `regression.summary.json`, `regression.index.json`, and successful `diag dashboard` projection.
+- The remaining open P2 work is now the docs/discoverability closure, not the bounded smoke gate.
 
 ## M4 - P3 multi-window hand-feel closure
 

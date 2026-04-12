@@ -16,6 +16,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -36,6 +37,8 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `apps/fret-devtools/src/main.rs`
 - `apps/fret-devtools-mcp/src/main.rs`
+- `tools/diag_gate_imui_p2_devtools_first_open.py`
+- `tools/diag-campaigns/devtools-first-open-smoke.json`
 
 ## First-open repro surfaces
 
@@ -93,6 +96,8 @@ The promoted launched suite now freezes this minimum shell coverage:
 
 - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_first_open_diagnostics_path`
 - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_diagnostics_owner_split`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_bounded_devtools_smoke_package`
+- `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
 - `cargo build -p fret-devtools`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
 
@@ -100,6 +105,13 @@ This package currently proves:
 
 - the P2 first-open path starts from CLI-compatible evidence production,
 - the P2 diagnostics owner split stays explicit across runtime, tooling, GUI, and MCP surfaces,
+- one repo-owned P2 smoke gate now proves the direct first-open loop with a real launched app,
+- direct `diag run` leaves named bundle checkpoints and latest-bundle resolution through
+  `script.result.json:last_bundle_dir`,
+- direct `diag compare` remains a shared artifacts-layer verdict rather than a GUI-only diff mode,
+- one bounded campaign root now proves explicit root `diag summarize`,
+  aggregate `regression.summary.json` / `regression.index.json`, and `diag dashboard` over the
+  same shared contracts,
 - DevTools GUI and MCP stay aligned as consumers of the same artifacts root,
 - and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
 
@@ -122,16 +134,6 @@ The current source-policy/doc gates already prove:
 
 If P0 needs more validation later, the next useful gate should be a launched smoke or diag path for
 the first-open immediate authoring loop, not another docs-only classification check.
-
-### P2 first-open devtools workflow gate
-
-We still need one smoke path that validates the whole loop:
-
-- inspect/pick,
-- selector reuse,
-- script execution,
-- bundle output,
-- and compare/summarize entry.
 
 ### P3 multi-window parity gate
 
