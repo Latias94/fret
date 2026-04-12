@@ -111,6 +111,7 @@ Exit criteria:
 
 Primary evidence:
 
+- `P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -119,7 +120,14 @@ Primary evidence:
 
 Current status:
 
-- Not started.
+- In progress.
+- The first-open P2 developer path is now explicit:
+  inspect/pick -> script -> bundle -> compare starts from the CLI-compatible diagnostics contract,
+  while DevTools GUI and MCP stay thin consumers of the same artifacts root.
+- The compare story is now explicit:
+  direct bundle/session diff uses `diag compare`, while aggregate run-set comparison flows through
+  `diag summarize` plus shared `regression.summary.json` / `regression.index.json` consumers.
+- The owner split and bounded devtools smoke package remain open before M3 can close.
 
 ## M4 - P3 multi-window hand-feel closure
 

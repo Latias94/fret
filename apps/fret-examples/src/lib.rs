@@ -319,6 +319,9 @@ mod authoring_surface_policy_tests {
     const IMUI_P1_SHELL_DIAG_SMOKE_DECISION_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md"
     );
+    const IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md"
+    );
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -1624,6 +1627,30 @@ mod authoring_surface_policy_tests {
             assert!(
                 WORKSPACE_HARDENING_SHELL_DIAG_SUITE.contains(marker),
                 "the promoted workspace shell smoke suite should keep the frozen minimum roster entry: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p2_first_open_diagnostics_path() {
+        for marker in [
+            "The P2 first-open path is CLI-first for evidence production.",
+            "DevTools GUI and MCP are thin consumers of the same selector, script, bundle, and regression",
+            "\"Compare\" belongs to the shared artifacts layer:",
+            "`cargo run -p fretboard-dev -- diag inspect on`",
+            "`cargo run -p fretboard-dev -- diag pick-apply <script> --ptr <json-pointer>`",
+            "`cargo run -p fretboard-dev -- diag run <script> --dir <session-dir> --session-auto --launch -- <target cmd>`",
+            "`cargo run -p fretboard-dev -- diag latest`",
+            "`cargo run -p fretboard-dev -- diag compare <a> <b> --json`",
+            "`cargo run -p fret-devtools`",
+            "`cargo run -p fret-devtools-mcp`",
+            "`fret_diag_regression_summarize`",
+            "`fret_diag_regression_dashboard` read those same artifacts as thin",
+            "Portable artifacts remain the handoff unit;",
+        ] {
+            assert!(
+                IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P2 first-open diagnostics path explicit: {marker}"
             );
         }
     }

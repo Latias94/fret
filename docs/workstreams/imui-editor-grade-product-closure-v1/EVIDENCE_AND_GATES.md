@@ -14,6 +14,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
@@ -89,8 +90,15 @@ The promoted launched suite now freezes this minimum shell coverage:
 
 ### Diagnostics / tooling gates
 
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_first_open_diagnostics_path`
 - `cargo build -p fret-devtools`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
+
+This package currently proves:
+
+- the P2 first-open path starts from CLI-compatible evidence production,
+- DevTools GUI and MCP stay aligned as consumers of the same artifacts root,
+- and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
 
 ### Lane hygiene gates
 

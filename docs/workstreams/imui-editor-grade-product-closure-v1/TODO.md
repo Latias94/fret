@@ -66,8 +66,11 @@ Last updated: 2026-04-12
 
 ## P2 - Unified diagnostics/devtools surface
 
-- [ ] Publish one first-open developer path for:
+- [x] Publish one first-open developer path for:
       inspect -> selector -> script -> bundle -> compare.
+      Result: `P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md` now freezes a CLI-first
+      inspect/pick -> script -> bundle -> compare loop, and keeps DevTools GUI / MCP as thin
+      consumers over the same artifacts root and compare semantics.
 - [ ] Decide what must stay in:
       - `apps/fret-devtools`,
       - `crates/fret-diag`,
