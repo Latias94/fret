@@ -19,6 +19,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - `docs/diagnostics-first-open.md`
@@ -39,8 +40,10 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `apps/fret-examples/src/lib.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
+- `apps/fret-examples/src/docking_arbitration_demo.rs`
 - `apps/fret-devtools/src/main.rs`
 - `apps/fret-devtools-mcp/src/main.rs`
+- `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `tools/diag_gate_imui_p2_devtools_first_open.py`
 - `tools/diag-campaigns/devtools-first-open-smoke.json`
 
@@ -56,9 +59,11 @@ Use these when reopening the lane before diving into older notes:
    - `cargo run -p fret-demo --bin workspace_shell_demo`
 4. DevTools proof
    - `cargo run -p fret-devtools`
+5. Multi-window parity proof
+   - `cargo run -p fret-demo --bin docking_arbitration_demo`
 
-These are not the only relevant surfaces, but they give the fastest current read on the four-way
-gap: authoring, shell, tooling, and hand-feel.
+These are not the only relevant surfaces, but they give the fastest current read on the lane
+without reopening older workstreams first.
 
 ## Current focused gates
 
@@ -122,6 +127,22 @@ This package currently proves:
 - DevTools GUI and MCP stay aligned as consumers of the same artifacts root,
 - and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
 
+### Multi-window hand-feel gates
+
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package`
+- `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`
+- `cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+
+This package currently proves:
+
+- one bounded P3 campaign now names hovered-window, peek-behind, transparent payload, and
+  mixed-DPI follow-drag as one lane-owned package,
+- `docking_arbitration_demo` is the launched proof surface for that package,
+- the four expectations map to four repo-owned scripts instead of one vague docking smoke story,
+- and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
+  IMUI lane's new umbrella package.
+
 ### Lane hygiene gates
 
 - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
@@ -145,20 +166,11 @@ the first-open immediate authoring loop, not another docs-only classification ch
 
 ### P3 multi-window parity gate
 
-The checklist freeze is now explicit:
+The checklist and bounded package are now both explicit:
 
-- `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` freezes hovered-window selection,
-  peek-behind, transparent payload overlap behavior, and mixed-DPI follow-drag as the minimum P3
-  parity budget for this lane.
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
-  now protects that source-policy split.
+- `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` freezes the runner-owned parity budget,
+- `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md` freezes the lane-owned bounded package,
+- `tools/diag-campaigns/imui-p3-multiwindow-parity.json` is the canonical P3 campaign manifest.
 
-We still need one bounded gate package that names:
-
-- hovered-window selection,
-- peek-behind while moving a tear-off window,
-- transparent payload overlap behavior,
-- and mixed-DPI cursor/follow correctness.
-
-Do not claim P3 closure with prose alone. The parity lane already shows that this needs a bounded
-proof surface.
+Future work should replace or refine items inside that bounded package rather than inventing
+another parallel P3 gate entry.

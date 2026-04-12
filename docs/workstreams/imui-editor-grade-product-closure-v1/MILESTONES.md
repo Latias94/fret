@@ -165,6 +165,8 @@ Exit criteria:
 Primary evidence:
 
 - `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
+- `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
+- `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v1.md`
@@ -179,8 +181,13 @@ Current status:
   `crates/fret-launch`, runner/backend integrations, and `ecosystem/fret-docking` stay the default
   owners, while `crates/fret-ui` and generic `imui` helpers remain out of scope unless stronger
   evidence reopens them.
-- The bounded parity gate is still open.
-  P3 is not closed until one gate or diag suite explicitly names all four checklist items.
+- The bounded parity package is now explicit:
+  `tools/diag-campaigns/imui-p3-multiwindow-parity.json` now binds four repo-owned scripts into one
+  lane-owned package over `docking_arbitration_demo`, and keeps `diag-hardening-smoke-docking`
+  small instead of overloading it with all P3 stress coverage.
+- P3 is now closed for this lane.
+  Future multi-window implementation-heavy work should continue in the docking parity lane or a
+  narrower runner follow-on instead of widening this folder.
 
 ## M5 - Narrow follow-ons or closeout
 

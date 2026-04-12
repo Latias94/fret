@@ -101,10 +101,16 @@ Last updated: 2026-04-12
       peek-behind, transparent payload, and mixed-DPI follow-drag as the minimum P3 parity budget,
       and keeps the owner split pinned to `crates/fret-launch`, runner/backend integrations, and
       `ecosystem/fret-docking`.
-- [ ] Promote one bounded multi-window parity gate or diag suite that explicitly names:
+- [x] Promote one bounded multi-window parity gate or diag suite that explicitly names:
       hovered window, peek-behind, transparent payload, and mixed-DPI follow-drag expectations.
-- [ ] Keep `crates/fret-ui` contract growth out of runner-gap fixes unless ADR-backed evidence says
+      Result: `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md` and
+      `tools/diag-campaigns/imui-p3-multiwindow-parity.json` now freeze one lane-owned bounded
+      P3 package over four repo-owned scripts, without bloating `diag-hardening-smoke-docking`.
+- [x] Keep `crates/fret-ui` contract growth out of runner-gap fixes unless ADR-backed evidence says
       the runtime contract is actually insufficient.
+      Result: `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` and
+      `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md` now make the source-policy rejection
+      explicit and tie the remaining proof surface to runner/backend-owned diagnostics.
 
 ## Closeout / follow-on management
 

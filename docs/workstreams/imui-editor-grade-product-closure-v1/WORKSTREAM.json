@@ -69,6 +69,10 @@
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -160,6 +164,18 @@
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist"
     },
     {
+      "name": "imui-p3-bounded-multiwindow-parity-package",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package"
+    },
+    {
+      "name": "imui-p3-multiwindow-parity-campaign-validate",
+      "command": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+    },
+    {
+      "name": "imui-p3-multiwindow-parity-campaign-run",
+      "command": "cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"
+    },
+    {
       "name": "imui-p2-devtools-first-open-smoke",
       "command": "python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"
     },
@@ -204,6 +220,7 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md",
@@ -213,6 +230,11 @@
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
+    "tools/diag-campaigns/imui-p3-multiwindow-parity.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
     "docs/diagnostics-first-open.md",
     "docs/ui-diagnostics-and-scripted-tests.md",
     "apps/fret-cookbook/examples/imui_action_basics.rs",
@@ -228,6 +250,7 @@
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools-mcp/src/main.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",

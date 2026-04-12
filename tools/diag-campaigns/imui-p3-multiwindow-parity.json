@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "imui-p3-multiwindow-parity",
+  "description": "Bounded IMUI P3 multi-window parity coverage for runner-owned hovered-window, peek-behind, transparent-payload, and mixed-DPI follow-drag expectations.",
+  "lane": "smoke",
+  "profile": "bounded",
+  "items": [
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json"
+    },
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json"
+    },
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json"
+    },
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json"
+    }
+  ],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "smoke",
+  "expected_duration_ms": 240000,
+  "tags": ["imui", "docking", "multiwindow", "smoke", "runner-owned", "editor-grade"]
+}
