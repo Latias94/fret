@@ -2433,6 +2433,91 @@ mod tests {
         }
     }
 
+    fn assert_alert_dialog_content_and_footer_stay_within_bounds(
+        trigger_test_id: &str,
+        content_test_id: &str,
+        text_test_ids: &[&str],
+        action_test_ids: &[&str],
+        bounds: Rect,
+    ) {
+        let mut rendered = render_gallery_page_with_bounds(PAGE_ALERT_DIALOG, bounds);
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
+        click_test_id_center(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, content_test_id, 24);
+        for text_test_id in text_test_ids {
+            wait_until_test_id_exists(&mut rendered, text_test_id, 24);
+        }
+        for action_test_id in action_test_ids {
+            wait_until_test_id_exists(&mut rendered, action_test_id, 24);
+        }
+
+        for _ in 0..8 {
+            render_gallery_frame(&mut rendered);
+        }
+
+        let content_bounds = visual_bounds_by_test_id(&rendered, content_test_id);
+        let content_right = content_bounds.origin.x.0 + content_bounds.size.width.0;
+        let content_bottom = content_bounds.origin.y.0 + content_bounds.size.height.0;
+        let window_bottom = bounds.origin.y.0 + bounds.size.height.0;
+        let window_right = bounds.origin.x.0 + bounds.size.width.0;
+        let epsilon = 1.0;
+        let mut lowest_text_bottom = content_bounds.origin.y.0;
+
+        for text_test_id in text_test_ids {
+            let text_bounds = visual_bounds_by_test_id(&rendered, text_test_id);
+            let text_right = text_bounds.origin.x.0 + text_bounds.size.width.0;
+            let text_bottom = text_bounds.origin.y.0 + text_bounds.size.height.0;
+            lowest_text_bottom = lowest_text_bottom.max(text_bottom);
+
+            assert!(
+                text_bounds.origin.x.0 >= content_bounds.origin.x.0 - epsilon
+                    && text_bounds.origin.y.0 >= content_bounds.origin.y.0 - epsilon
+                    && text_right <= content_right + epsilon
+                    && text_bottom <= content_bottom + epsilon,
+                "expected alert dialog text to stay within the content bounds: trigger={trigger_test_id} content={content_test_id} text={text_test_id} content_bounds={content_bounds:?} text_bounds={text_bounds:?}"
+            );
+            assert!(
+                text_bottom <= window_bottom + epsilon && text_right <= window_right + epsilon,
+                "expected alert dialog text to stay within the window bounds at narrow sizes: trigger={trigger_test_id} content={content_test_id} text={text_test_id} window_bounds={bounds:?} text_bounds={text_bounds:?}"
+            );
+        }
+
+        let mut action_bounds = Vec::with_capacity(action_test_ids.len());
+        for action_test_id in action_test_ids {
+            let bounds = visual_bounds_by_test_id(&rendered, action_test_id);
+            let action_right = bounds.origin.x.0 + bounds.size.width.0;
+            let action_bottom = bounds.origin.y.0 + bounds.size.height.0;
+
+            assert!(
+                bounds.origin.x.0 >= content_bounds.origin.x.0 - epsilon
+                    && bounds.origin.y.0 >= content_bounds.origin.y.0 - epsilon
+                    && action_right <= content_right + epsilon
+                    && action_bottom <= content_bottom + epsilon,
+                "expected alert dialog footer action to stay within the content bounds: trigger={trigger_test_id} content={content_test_id} action={action_test_id} content_bounds={content_bounds:?} action_bounds={bounds:?}"
+            );
+            assert!(
+                action_bottom <= window_bottom + epsilon && action_right <= window_right + epsilon,
+                "expected alert dialog footer action to stay within the window bounds at narrow sizes: trigger={trigger_test_id} content={content_test_id} action={action_test_id} window_bounds={bounds:?} action_bounds={bounds:?}"
+            );
+            assert!(
+                bounds.origin.y.0 >= lowest_text_bottom - epsilon,
+                "expected alert dialog footer action to stay below the copy lane instead of drifting into it: trigger={trigger_test_id} content={content_test_id} action={action_test_id} text_bottom={lowest_text_bottom} action_bounds={bounds:?}"
+            );
+
+            action_bounds.push((action_test_id, bounds));
+        }
+
+        for (idx, (lhs_id, lhs_bounds)) in action_bounds.iter().enumerate() {
+            for (rhs_id, rhs_bounds) in action_bounds.iter().skip(idx + 1) {
+                assert!(
+                    !rects_intersect(*lhs_bounds, *rhs_bounds),
+                    "expected alert dialog footer actions not to overlap: trigger={trigger_test_id} content={content_test_id} lhs={lhs_id} lhs_bounds={lhs_bounds:?} rhs={rhs_id} rhs_bounds={rhs_bounds:?}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn gallery_component_pages_scroll_to_bottom_without_height_drift() {
         let cases = [
@@ -4577,6 +4662,46 @@ mod tests {
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(960.0), Px(820.0)),
+            ),
+        );
+    }
+
+    #[test]
+    fn alert_dialog_small_with_media_text_and_footer_stay_within_content_at_narrow_size() {
+        assert_alert_dialog_content_and_footer_stay_within_bounds(
+            "ui-gallery-alert-dialog-small-media-trigger.chrome",
+            "ui-gallery-alert-dialog-small-media-content",
+            &[
+                "ui-gallery-alert-dialog-small-media-title",
+                "ui-gallery-alert-dialog-small-media-description",
+            ],
+            &[
+                "ui-gallery-alert-dialog-small-media-cancel.chrome",
+                "ui-gallery-alert-dialog-small-media-action.chrome",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
+            ),
+        );
+    }
+
+    #[test]
+    fn alert_dialog_rtl_small_text_and_footer_stay_within_content_at_narrow_size() {
+        assert_alert_dialog_content_and_footer_stay_within_bounds(
+            "ui-gallery-alert-dialog-rtl-small-trigger.chrome",
+            "ui-gallery-alert-dialog-rtl-small-content",
+            &[
+                "ui-gallery-alert-dialog-rtl-small-title",
+                "ui-gallery-alert-dialog-rtl-small-description",
+            ],
+            &[
+                "ui-gallery-alert-dialog-rtl-small-cancel.chrome",
+                "ui-gallery-alert-dialog-rtl-small-action.chrome",
+            ],
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(760.0)),
             ),
         );
     }

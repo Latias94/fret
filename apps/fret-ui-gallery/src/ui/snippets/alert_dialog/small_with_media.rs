@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("small_with_media.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::Px;
-use fret_ui_shadcn::facade as shadcn;
+use fret_core::{Px, TextOverflow, TextWrap};
+use fret_ui_shadcn::{facade as shadcn, prelude::ui};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
@@ -33,13 +33,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .media(media)
                             .with_children(cx, |cx| {
                                 vec![
-                                    shadcn::AlertDialogTitle::new(
+                                    shadcn::AlertDialogTitle::new_children([ui::text(
                                         "Allow accessory to connect?",
                                     )
+                                    .wrap(TextWrap::Word)
+                                    .overflow(TextOverflow::Clip)
+                                    .test_id("ui-gallery-alert-dialog-small-media-title")
+                                    .into_element(cx)])
                                     .into_element(cx),
-                                    shadcn::AlertDialogDescription::new(
+                                    shadcn::AlertDialogDescription::new_children([ui::text(
                                         "Do you want to allow the USB accessory to connect to this device?",
                                     )
+                                    .wrap(TextWrap::Word)
+                                    .overflow(TextOverflow::Clip)
+                                    .test_id("ui-gallery-alert-dialog-small-media-description")
+                                    .into_element(cx)])
                                     .into_element(cx),
                                 ]
                             }),
