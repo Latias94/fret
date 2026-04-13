@@ -203,6 +203,8 @@ pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         let value = cx
             .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
             .unwrap_or(false);
+        let activate_shortcut = options.activate_shortcut;
+        let shortcut_repeat = options.shortcut_repeat;
 
         let mut props = PressableProps::default();
         props.enabled = enabled;
@@ -218,6 +220,7 @@ pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_pointer_move();
             cx.pressable_clear_on_pointer_up();
+            cx.key_clear_on_key_down_for(id);
 
             let active_item_model = super::active_item_model_for_window(cx);
             let active_item_model_for_down = active_item_model.clone();
@@ -251,6 +254,32 @@ pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
                 host.record_transient_event(acx, super::KEY_CHANGED);
                 host.notify(acx);
             }));
+
+            if enabled && options.focusable {
+                let model_for_shortcut = model.clone();
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                let _ =
+                                    host.update_model(&model_for_shortcut, |v: &mut bool| *v = !*v);
+                                host.record_transient_event(acx, super::KEY_CLICKED);
+                                host.record_transient_event(acx, super::KEY_CHANGED);
+                                host.notify(acx);
+                                return true;
+                            }
+                        }
+
+                        false
+                    }),
+                );
+            }
 
             response.core.hovered = state.hovered;
             response.core.pressed = state.pressed;
