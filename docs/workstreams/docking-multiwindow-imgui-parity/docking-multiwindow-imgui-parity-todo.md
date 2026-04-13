@@ -13,6 +13,10 @@ Status: Active (workstream tracker; keep updated during implementation)
 
 This document tracks executable TODOs for multi-window docking parity. It is intentionally task-first:
 
+- First-open lane state:
+  `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
+- Current baseline audit:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
 - Narrative plan (cross-platform): `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 

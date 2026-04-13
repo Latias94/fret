@@ -111,8 +111,9 @@ It complements (but does not replace) ADRs:
   unless fresh proof exceeds their audits.
 - Use the closed P1 shell follow-on only for the latest no-new-helper-yet verdict on promoted
   first-party shell helpers.
-- Use `docs/workstreams/docking-multiwindow-imgui-parity/` as the next active execution lane for
-  the remaining P3 multi-window hand-feel problem.
+- Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and
+  `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md` as the
+  next active execution lane for the remaining P3 multi-window hand-feel problem.
 - Source of truth for the closed `imui` compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`
@@ -414,6 +415,8 @@ It complements (but does not replace) ADRs:
 - **ImGui-style multi-window tear-off parity (macOS-first, but cross-platform)**
   - Goal: editor-grade “tear off → hover another window → re-dock → close empty window” experience.
   - Workstream:
+    - Lane state: `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
+    - Current baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
     - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
     - macOS detail: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`

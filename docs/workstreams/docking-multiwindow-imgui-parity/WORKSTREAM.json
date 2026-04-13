@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "slug": "docking-multiwindow-imgui-parity",
+  "title": "Docking Multi-Window ImGui Parity",
+  "status": "active",
+  "updated": "2026-04-13",
+  "scope_kind": "execution",
+  "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
+  "authoritative_docs": [
+    {
+      "role": "positioning",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    }
+  ],
+  "repro": {
+    "summary": "Resume this lane from the docking arbitration proof surface and the bounded P3 campaign before touching deeper platform-specific follow behavior.",
+    "commands": [
+      "cargo run -p fret-demo --bin docking_arbitration_demo",
+      "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface"
+    ]
+  },
+  "gates": [
+    {
+      "name": "p3-multiwindow-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface"
+    },
+    {
+      "name": "p3-bounded-campaign-validate",
+      "command": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+    },
+    {
+      "name": "p3-bounded-campaign-run",
+      "command": "cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
+    "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md",
+    "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "tools/diag-campaigns/imui-p3-multiwindow-parity.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
+    "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0013-docking-ops-and-persistence.md",
+    "docs/adr/0017-multi-window-display-and-dpi.md",
+    "docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md",
+    "docs/adr/0054-platform-capabilities-and-portability-matrix.md",
+    "docs/adr/0072-docking-interaction-arbitration-matrix.md",
+    "docs/adr/0083-multi-window-degradation-policy.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for remaining runner/backend-owned multi-window parity closure. Split a narrower runner follow-on only if mixed-DPI or platform-specific placement work clearly outgrows the shared docking parity owner split."
+  }
+}

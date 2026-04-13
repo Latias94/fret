@@ -9,13 +9,18 @@ Upstream sources:
 - Dear ImGui: https://github.com/ocornut/imgui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Draft (workstream document; normative contracts live in ADRs)
+Status: Active execution lane (overview note; authoritative first-open index:
+`docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`; normative contracts live in ADRs)
 
 This workstream targets **editor-grade docking across multiple OS windows** (tear-off + re-dock),
 aiming for Dear ImGui docking branch “multi-viewports” hand-feel parity.
 
 Platform note:
 
+- Lane state / first-open index:
+  `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
+- Current baseline audit:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

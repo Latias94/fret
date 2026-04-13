@@ -340,6 +340,11 @@ mod authoring_surface_policy_tests {
     const IMUI_P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json");
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_BASELINE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md"
+    );
     const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
         include_str!("../../../docs/diagnostics-first-open.md");
     const DIAGNOSTICS_START_HERE_DOC: &str =
@@ -1944,6 +1949,49 @@ mod authoring_surface_policy_tests {
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker)
                     || MACOS_DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
                 "the P3 package should keep the runner-owned evidence marker reachable: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface() {
+        for marker in [
+            "\"slug\": \"docking-multiwindow-imgui-parity\"",
+            "\"status\": \"active\"",
+            "M0_BASELINE_AUDIT_2026-04-13.md",
+            "docking-multiwindow-imgui-parity-todo.md",
+            "cargo run -p fret-demo --bin docking_arbitration_demo",
+            "diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
+            "\"default_action\": \"continue\"",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep an explicit first-open workstream state marker: {marker}"
+            );
+        }
+
+        for marker in [
+            "This lane is the current active execution lane for the remaining P3 multi-window hand-feel problem",
+            "`DW-P0-dpi-006` is the smallest real open blocker in this lane",
+            "do not reopen generic `imui` helper growth or widen `crates/fret-ui`",
+            "`tools/diag-campaigns/imui-p3-multiwindow-parity.json` as the bounded P3 regression entry",
+            "capture one real mixed-DPI acceptance pair",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_BASELINE_NOTE.contains(marker),
+                "the docking parity baseline note should keep the explicit resume marker: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: Active execution lane",
+            "authoritative first-open index",
+            "WORKSTREAM.json",
+            "M0_BASELINE_AUDIT_2026-04-13.md",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
+                "the docking parity narrative note should keep the first-open state visible: {marker}"
             );
         }
     }

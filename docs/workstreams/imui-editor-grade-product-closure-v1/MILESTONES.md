@@ -207,6 +207,10 @@ Current status:
 - P3 is now the next active execution priority after the P1 shell closeout.
   Continue multi-window implementation-heavy work in the existing docking parity lane or a narrower
   runner follow-on instead of widening this folder.
+- The docking parity lane now has an explicit first-open state:
+  `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and
+  `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md` freeze the
+  current resume surface and name `DW-P0-dpi-006` as the next bounded execution slice.
 
 ## M5 - Narrow follow-ons or closeout
 
