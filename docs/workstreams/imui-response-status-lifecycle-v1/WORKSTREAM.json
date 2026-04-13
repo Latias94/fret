@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "slug": "imui-response-status-lifecycle-v1",
+  "title": "ImUi Response Status Lifecycle v1",
+  "status": "active",
+  "updated": "2026-04-13",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "The active immediate-mode product-closure umbrella already narrowed the remaining P0 backlog, but the missing `ResponseExt` item-status lifecycle vocabulary now needs its own bounded lane so the repo can freeze activation/deactivation/edit semantics without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate key-owner problem.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-stack-fearless-refactor-v1/UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the current response-signals demo and the shared-vs-facade boundary smoke before freezing any new lifecycle bits.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_response_signals_demo",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke",
+      "cargo nextest run -p fret-imui",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on"
+    ]
+  },
+  "gates": [
+    {
+      "name": "p0-response-status-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on"
+    },
+    {
+      "name": "imui-response-boundary-smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke"
+    },
+    {
+      "name": "imui-interaction-floor",
+      "command": "cargo nextest run -p fret-imui"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md",
+    "docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md",
+    "docs/workstreams/imui-response-status-lifecycle-v1/TODO.md",
+    "docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md",
+    "docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "docs/workstreams/imui-stack-fearless-refactor-v1/UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md",
+    "ecosystem/fret-authoring/src/lib.rs",
+    "ecosystem/fret-ui-kit/src/imui/response.rs",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs",
+    "ecosystem/fret-imui/src/tests/interaction.rs",
+    "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the first lifecycle quartet, its owner split, and the first bounded implementation slice are explicit. If pressure shifts to key ownership or broader proof-depth work, start another narrow follow-on instead of widening this folder."
+  }
+}

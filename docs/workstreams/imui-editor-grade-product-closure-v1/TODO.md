@@ -8,7 +8,9 @@ Last updated: 2026-04-13
 - [x] Create the lane and record why the older `imui` closeout folders stay closed.
 - [x] Wire the lane into `docs/workstreams/README.md`, `docs/roadmap.md`, and
   `docs/todo-tracker.md`.
-- [ ] Keep the lane narrow: start a dedicated follow-on once a phase becomes implementation-heavy.
+- [x] Keep the lane narrow: start a dedicated follow-on once a phase becomes implementation-heavy.
+      Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now proves this rule for the
+      implementation-heavy `ResponseExt` lifecycle vocabulary slice.
 
 ## P0 - Default authoring lane closure
 
@@ -119,9 +121,12 @@ Last updated: 2026-04-13
 ## Closeout / follow-on management
 
 - [ ] If P0 becomes mostly teaching-surface cleanup, split it into a narrow authoring-lane follow-on.
-- [ ] If further P0 work becomes mostly immediate convenience breadth
+- [x] If further P0 work becomes mostly immediate convenience breadth
       (key ownership, item-status lifecycle, richer collection/pane proof), split a narrow follow-on
       instead of widening this umbrella folder.
+      Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now owns the narrow
+      `ResponseExt` lifecycle vocabulary slice, while this umbrella keeps phase ordering and the
+      remaining cross-phase backlog read.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella

@@ -99,6 +99,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+- Active narrow P0 response-status lifecycle follow-on:
+  - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/TODO.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json`
 - Closed narrow P1 workbench-shell closure follow-on:
   - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md`
@@ -109,6 +116,8 @@ It complements (but does not replace) ADRs:
 - Use the new product-closure lane for the active phase ordering across authoring, shell, tooling,
   and multi-window hand-feel. Keep the older `imui` stack and helper lanes as closeout evidence
   unless fresh proof exceeds their audits.
+- Use `docs/workstreams/imui-response-status-lifecycle-v1/` for the current implementation-heavy
+  P0 `ResponseExt` lifecycle vocabulary work.
 - Use the closed P1 shell follow-on only for the latest no-new-helper-yet verdict on promoted
   first-party shell helpers.
 - Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and

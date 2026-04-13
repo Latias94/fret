@@ -32,6 +32,12 @@ Tracker highlights:
   multi-window hand-feel closure): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
+- ImUi response-status lifecycle follow-on (active narrow P0 lane that freezes `ResponseExt`
+  lifecycle vocabulary around activation/deactivation/edit sequencing without widening
+  `fret-authoring::Response`, `crates/fret-ui`, or the still-separate key-owner problem):
+  `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
+  `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`, and
+  `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
 - ImUi workbench-shell closure follow-on closeout record (closed narrow P1 lane that concluded the
   repo should keep the default workbench answer as explicit example-local assembly over the frozen
   shell starter set for now, rather than promoting a new first-party shell helper):

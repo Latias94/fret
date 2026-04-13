@@ -313,6 +313,12 @@ mod authoring_surface_policy_tests {
     const IMUI_STABLE_IDENTITY_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
     );
+    const IMUI_RESPONSE_STATUS_LIFECYCLE_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md");
+    const IMUI_RESPONSE_STATUS_LIFECYCLE_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json");
+    const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO: &str =
+        include_str!("../../../docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md");
     const IMUI_WORKBENCH_PROOF_MATRIX_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
     );
@@ -1625,6 +1631,48 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_STABLE_IDENTITY_RULE_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the stable-identity teaching rule explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on() {
+        for marker in [
+            "`fret-authoring::Response` must stay unchanged.",
+            "Richer lifecycle status stays in `fret-ui-kit::imui::ResponseExt`.",
+            "The initial quartet is:",
+            "`activated`",
+            "`deactivated`",
+            "`edited`",
+            "`deactivated_after_edit`",
+            "Do not widen `crates/fret-ui` or invent a global key-owner model in this lane.",
+            "`apps/fret-examples/src/imui_response_signals_demo.rs`",
+        ] {
+            assert!(
+                IMUI_RESPONSE_STATUS_LIFECYCLE_DESIGN.contains(marker),
+                "the immediate-mode workstream should keep the P0 response-status lifecycle design explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-response-status-lifecycle-v1\"",
+            "\"follow_on_of\": \"imui-editor-grade-product-closure-v1\"",
+            "immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on",
+        ] {
+            assert!(
+                IMUI_RESPONSE_STATUS_LIFECYCLE_WORKSTREAM.contains(marker),
+                "the response-status lifecycle lane state should keep the follow-on marker: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-response-status-lifecycle-v1/` now proves this rule",
+            "`docs/workstreams/imui-response-status-lifecycle-v1/` now owns the narrow",
+            "`ResponseExt` lifecycle vocabulary slice",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the narrow P0 follow-on marker explicit: {marker}"
             );
         }
     }

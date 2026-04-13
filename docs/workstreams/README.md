@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 228
+- Dedicated directories: 229
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -107,6 +107,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
@@ -123,6 +124,17 @@ Current source of truth for the in-tree immediate-mode stack:
     runtime widening or generic helper-growth by default; future `fret-ui-kit::imui` widening now
     needs the frozen two-surface proof budget before review; split implementation-heavy work into
     narrower follow-ons.
+
+- Active narrow P0 response-status lifecycle follow-on:
+  - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/TODO.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json`
+  - Scope: freeze the narrow `ResponseExt` lifecycle vocabulary and first bounded implementation
+    slice without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate
+    key-owner problem.
 
 - Closed P1 shell follow-on closeout record:
   - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
@@ -224,6 +236,8 @@ Current + historical companion/audit notes retained under `standalone/`:
 
 Rule:
 
+- Prefer the active P0 response-status lifecycle follow-on for current `ResponseExt` lifecycle
+  vocabulary work.
 - Prefer the active product-closure follow-on for the current "what is still missing relative to an
   editor-grade Dear ImGui-class experience?" answer and for the current phase ordering across
   authoring, shell, tooling, and multi-window hand-feel.
@@ -370,7 +384,8 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
-- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 19 markdown docs
+- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
+- `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)
