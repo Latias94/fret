@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "slug": "imui-menu-tab-trigger-response-canonicalization-v1",
+  "title": "ImUi Menu/Tab Trigger Response Canonicalization v1",
+  "status": "closed",
+  "updated": "2026-04-13",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-menu-tab-trigger-response-surface-v1",
+  "problem": "The prior lane already landed helper-owned menu/submenu/tab trigger responses, but it left a duplicate alias layer behind (`*_response*` plus the older helper names). This lane canonicalizes the public facade so the primary helper names carry the richer response values directly and the duplicate alias track can be removed without widening runtime/mechanism contracts.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the current duplicate helper API spread, then re-run the focused behavior and outward-response proof surfaces while canonicalizing the public names.",
+    "commands": [
+      "rg -n \"begin_menu_with_options\\(|begin_menu\\(|begin_submenu_with_options\\(|begin_submenu\\(|tab_bar_with_options\\(|\\.tab_bar\\(\" -g '*.rs'",
+      "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger",
+      "cargo nextest run -p fret-imui menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_reports_selected_change_and_trigger_edges",
+      "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof"
+    ]
+  },
+  "gates": [
+    {
+      "name": "imui-helper-floor",
+      "command": "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger"
+    },
+    {
+      "name": "imui-canonical-trigger-response",
+      "command": "cargo nextest run -p fret-imui menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_reports_selected_change_and_trigger_edges"
+    },
+    {
+      "name": "imui-demo-trigger-response",
+      "command": "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof"
+    },
+    {
+      "name": "lane-hygiene",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/MILESTONES.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/response.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
+    "ecosystem/fret-imui/src/tests/composition.rs",
+    "ecosystem/fret-imui/src/tests/interaction.rs",
+    "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "close",
+    "notes": "This lane is closed. Reuse it as the latest verdict for helper-owned trigger-response canonical naming only. If future work shifts to broader menu/tab policy, key ownership, or shell-level tabstrip behavior, start a different narrow follow-on instead of reopening this cleanup lane."
+  }
+}

@@ -317,11 +317,20 @@ mod authoring_surface_policy_tests {
         include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md");
     const IMUI_RESPONSE_STATUS_LIFECYCLE_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json");
-    const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_DESIGN: &str = include_str!(
-        "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md"
+    const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_FINAL_STATUS: &str = include_str!(
+        "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md"
     );
     const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json"
+    );
+    const IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_DESIGN: &str = include_str!(
+        "../../../docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md"
+    );
+    const IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_FINAL_STATUS: &str = include_str!(
+        "../../../docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md"
+    );
+    const IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json"
     );
     const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO: &str =
         include_str!("../../../docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md");
@@ -1691,18 +1700,17 @@ mod authoring_surface_policy_tests {
     #[test]
     fn immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on() {
         for marker in [
-            "`begin_menu_response[_with_options]`",
-            "`begin_submenu_response[_with_options]`",
-            "`tab_bar_response[_with_options]`",
-            "`begin_menu_with_options` and `begin_submenu_with_options` still return `bool open`.",
-            "`tab_bar_with_options` still returns no outward value",
-            "`fret-authoring::Response`.",
+            "Status: closed closeout note",
+            "`begin_menu_response[_with_options]` now returns `DisclosureResponse`.",
+            "`begin_submenu_response[_with_options]` now returns `DisclosureResponse`.",
+            "`tab_bar_response[_with_options]` now returns `TabBarResponse`.",
+            "widen `fret-authoring::Response` or `crates/fret-ui`",
             "`ecosystem/fret-ui-kit::imui`",
-            "Do not bundle richer menu-bar/submenu/tab policy into this lane.",
+            "`docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` now owns the",
         ] {
             assert!(
-                IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_DESIGN.contains(marker),
-                "the menu/tab trigger response-surface design should stay explicit: {marker}"
+                IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_FINAL_STATUS.contains(marker),
+                "the menu/tab trigger response-surface closeout should stay explicit: {marker}"
             );
         }
 
@@ -1740,6 +1748,62 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_canonicalization_follow_on()
+     {
+        for marker in [
+            "`begin_menu[_with_options] -> DisclosureResponse`",
+            "`begin_submenu[_with_options] -> DisclosureResponse`",
+            "`tab_bar[_with_options] -> TabBarResponse`",
+            "Remove the duplicate `*_response*` compatibility entry points",
+            "helper-owned menu/submenu/tab triggers expose one canonical outward response surface",
+        ] {
+            assert!(
+                IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_DESIGN.contains(marker),
+                "the canonicalization lane design should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout note",
+            "`begin_menu[_with_options]` now returns `DisclosureResponse`.",
+            "`begin_submenu[_with_options]` now returns `DisclosureResponse`.",
+            "`tab_bar[_with_options]` now returns `TabBarResponse`.",
+            "The duplicate `begin_menu_response[_with_options]`",
+            "The shipped helper surface stays inside `ecosystem/fret-ui-kit::imui`",
+            "`fret-authoring::Response` or `crates/fret-ui`.",
+        ] {
+            assert!(
+                IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_FINAL_STATUS.contains(marker),
+                "the canonicalization closeout should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-menu-tab-trigger-response-canonicalization-v1\"",
+            "\"follow_on_of\": \"imui-menu-tab-trigger-response-surface-v1\"",
+            "\"status\": \"closed\"",
+            "menu_and_submenu_helpers_report_toggle_and_trigger_edges",
+            "tab_bar_helper_reports_selected_change_and_trigger_edges",
+            "imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof",
+        ] {
+            assert!(
+                IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM.contains(marker),
+                "the canonicalization lane state should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` now owns the",
+            "cleanup closeout that removes the duplicate alias layer after the response surface landed",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the canonicalization follow-on explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
     fn imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof() {
         assert_current_imui_teaching_surface(
             "imui_response_signals_demo_lifecycle_expansion",
@@ -1760,17 +1824,17 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof() {
+    fn imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof() {
         assert_current_imui_teaching_surface(
-            "imui_response_signals_demo_trigger_response_surface",
+            "imui_response_signals_demo_canonical_trigger_response_surface",
             IMUI_RESPONSE_SIGNALS_DEMO,
             &[
-                "let file_menu = ui.begin_menu_response_with_options(",
+                "let file_menu = ui.begin_menu_with_options(",
                 "file_menu.opened()",
                 "file_menu.closed()",
-                "let recent_menu = ui.begin_submenu_response_with_options(",
+                "let recent_menu = ui.begin_submenu_with_options(",
                 "recent_menu.toggled()",
-                "let tab_response = ui.tab_bar_response_with_options(",
+                "let tab_response = ui.tab_bar_with_options(",
                 "tab_response.selected_changed()",
                 "if let Some(scene_tab) = tab_response.trigger(\"scene\") {",
                 "scene_tab.clicked()",

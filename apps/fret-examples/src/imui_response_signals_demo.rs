@@ -357,7 +357,7 @@ impl View for ImUiResponseSignalsView {
                     ..Default::default()
                 },
                 |ui| {
-                    let file_menu = ui.begin_menu_response_with_options(
+                    let file_menu = ui.begin_menu_with_options(
                         "imui-resp-demo.trigger-menu.file",
                         "Trigger surface menu",
                         fret_ui_kit::imui::BeginMenuOptions {
@@ -365,7 +365,7 @@ impl View for ImUiResponseSignalsView {
                             ..Default::default()
                         },
                         |ui| {
-                            let recent_menu = ui.begin_submenu_response_with_options(
+                            let recent_menu = ui.begin_submenu_with_options(
                                 "imui-resp-demo.trigger-menu.recent",
                                 "Recent",
                                 fret_ui_kit::imui::BeginSubmenuOptions {
@@ -403,7 +403,7 @@ impl View for ImUiResponseSignalsView {
                 },
             );
 
-            let tab_response = ui.tab_bar_response_with_options(
+            let tab_response = ui.tab_bar_with_options(
                 "imui-resp-demo.trigger-tabs",
                 fret_ui_kit::imui::TabBarOptions {
                     selected: Some(trigger_tab_selected.model().clone()),

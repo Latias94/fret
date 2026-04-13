@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 230
+- Dedicated directories: 231
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -136,6 +136,16 @@ Current source of truth for the in-tree immediate-mode stack:
     slice without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate
     key-owner problem.
 
+- Closed narrow P0 menu/tab trigger response canonicalization closeout record:
+  - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
+  - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
+  - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/MILESTONES.md`
+  - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
+  - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json`
+  - Scope: records the landed canonical naming cleanup for helper-owned menu/submenu/tab outward
+    response APIs after the additive response surface was already accepted.
+
 - Closed narrow P0 menu/tab trigger response-surface follow-on:
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/M0_BASELINE_AUDIT_2026-04-13.md`
@@ -250,6 +260,8 @@ Rule:
 
 - Prefer the active P0 response-status lifecycle follow-on for current `ResponseExt` lifecycle
   vocabulary work.
+- Prefer the active P0 menu/tab trigger response canonicalization follow-on for current cleanup of
+  helper-owned menu/submenu/tab outward response naming.
 - Prefer the closed P0 menu/tab trigger response-surface follow-on for the latest helper-owned
   menu/submenu/tab outward-response verdict; start a narrower follow-on if broader policy work is
   still missing.
@@ -400,6 +412,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
+- `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs

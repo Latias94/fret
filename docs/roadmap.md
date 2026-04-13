@@ -38,6 +38,13 @@ Tracker highlights:
   `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
   `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`, and
   `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
+- ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
+  cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
+  names carry the richer outward responses directly, without widening `fret-authoring::Response` /
+  `crates/fret-ui`):
+  `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`,
+  `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`,
+  and `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/EVIDENCE_AND_GATES.md`.
 - ImUi menu/tab trigger response-surface follow-on (closed narrow P0 lane that landed additive
   helper-owned outward response helpers without reopening richer menu/tab policy or widening
   `fret-authoring::Response` / `crates/fret-ui`; legacy `bool open` / no-return wrappers remain

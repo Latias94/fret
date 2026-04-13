@@ -37,7 +37,7 @@ pub(super) fn menu_bar_element<H: UiHost>(
     builder.into_element(cx)
 }
 
-pub(super) fn begin_menu_response_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     id: &str,
     label: Arc<str>,
@@ -115,10 +115,7 @@ pub(super) fn begin_menu_response_with_options<H: UiHost, W: UiWriterImUiFacadeE
     }
 }
 
-pub(super) fn begin_submenu_response_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
+pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     id: &str,
     label: Arc<str>,

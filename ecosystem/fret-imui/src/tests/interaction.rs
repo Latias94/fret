@@ -2284,7 +2284,7 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
 }
 
 #[test]
-fn menu_and_submenu_response_report_toggle_and_trigger_edges() {
+fn menu_and_submenu_helpers_report_toggle_and_trigger_edges() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2324,7 +2324,7 @@ fn menu_and_submenu_response_report_toggle_and_trigger_edges() {
                     ..Default::default()
                 },
                 |ui| {
-                    let menu = ui.begin_menu_response_with_options(
+                    let menu = ui.begin_menu_with_options(
                         "file",
                         "File",
                         fret_ui_kit::imui::BeginMenuOptions {
@@ -2332,7 +2332,7 @@ fn menu_and_submenu_response_report_toggle_and_trigger_edges() {
                             ..Default::default()
                         },
                         |ui| {
-                            let submenu = ui.begin_submenu_response_with_options(
+                            let submenu = ui.begin_submenu_with_options(
                                 "recent",
                                 "Recent",
                                 fret_ui_kit::imui::BeginSubmenuOptions {
@@ -2613,7 +2613,7 @@ fn tab_bar_helper_switches_selected_panel_and_updates_selection_model() {
 }
 
 #[test]
-fn tab_bar_response_reports_selected_change_and_trigger_edges() {
+fn tab_bar_helper_reports_selected_change_and_trigger_edges() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -2645,7 +2645,7 @@ fn tab_bar_response_reports_selected_change_and_trigger_edges() {
         let selected_model = selected_model.clone();
 
         crate::imui(cx, move |ui| {
-            let tabs = ui.tab_bar_response_with_options(
+            let tabs = ui.tab_bar_with_options(
                 "workspace",
                 fret_ui_kit::imui::TabBarOptions {
                     selected: Some(selected_model.clone()),
