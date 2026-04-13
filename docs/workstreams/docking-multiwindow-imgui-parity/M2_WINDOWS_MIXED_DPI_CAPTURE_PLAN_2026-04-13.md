@@ -67,7 +67,8 @@ Preferred helper:
 ```bash
 python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py \
   target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host \
-  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json
+  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json \
+  --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md
 ```
 
 Optional faster path when a prebuilt Windows binary is already available:
@@ -76,7 +77,8 @@ Optional faster path when a prebuilt Windows binary is already available:
 python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py \
   target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host \
   --fretboard-bin target\\release\\fretboard-dev.exe \
-  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json
+  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json \
+  --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md
 ```
 
 What this helper does:
@@ -85,7 +87,8 @@ What this helper does:
 - selects the latest complete session when multiple sessions exist under the out dir,
 - runs `diag dock-routing --json` for each candidate bundle,
 - recommends one `pre-crossing` bundle and one `post-crossing` bundle,
-- and writes one bounded JSON summary that can be copied into the dated evidence note.
+- writes one bounded JSON summary,
+- and can also emit one Markdown evidence-note draft with host fields left as `TODO` when not supplied.
 
 ### 4) Inspect the captured bundle candidates directly when needed
 
@@ -156,6 +159,20 @@ The real-host acceptance pair is good enough for this lane when all of the follo
 
 When a run satisfies the checklist above, record it in a new dated evidence note under this lane.
 
+Recommended helper form when you already know the host summary fields:
+
+```bash
+python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py \
+  target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host \
+  --fretboard-bin target\\release\\fretboard-dev.exe \
+  --canonical-command "cargo run -p fretboard-dev -- diag run ..." \
+  --windows-version "Windows 11 24H2" \
+  --monitor-arrangement "internal panel left, external monitor right" \
+  --scale-factors-used "100% + 150%" \
+  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json \
+  --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md
+```
+
 Minimum contents for that note:
 
 - host summary:
@@ -169,6 +186,12 @@ Minimum contents for that note:
 - `dock-routing` summary lines for both bundles,
 - whether `mixed_dpi_signal_observed` was present only post-crossing or in both bundles,
 - and whether any follow-on automation work is still justified.
+
+The generated note draft is intentionally conservative:
+
+- it does not claim the manual checklist is fully closed,
+- it marks host fields as `TODO` unless they were passed explicitly,
+- and it treats the bounded routing summary as evidence, not as a substitute for human review.
 
 ## Failure recording rule
 

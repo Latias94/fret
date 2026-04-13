@@ -189,7 +189,8 @@ Footgun / recommendation:
     - For the docking mixed-DPI outer-position sweep runbook, prefer
       `python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py <diag_out_dir_or_session_dir>`
       to reuse `diag dock-routing --json` across the three canonical bundle labels and emit one bounded
-      acceptance summary (`--json-out <path>`).
+      acceptance summary (`--json-out <path>`). Add `--note-out <path>` when you also want one
+      Markdown evidence-note draft for the workstream lane.
   - `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard-dev diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
   - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`

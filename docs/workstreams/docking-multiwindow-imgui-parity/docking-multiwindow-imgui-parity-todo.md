@@ -189,6 +189,11 @@ Each TODO is labeled:
       - `tools/diag_pick_docking_mixed_dpi_acceptance_pair.py`
       - Feed it the mixed-DPI out dir or session dir and let it reuse `diag dock-routing --json`
         to recommend the acceptance pair and emit one bounded JSON summary.
+    - [x] Real-host evidence note draft path is now explicit:
+      - `tools/diag_pick_docking_mixed_dpi_acceptance_pair.py --note-out ...`
+      - Use it to generate a dated Markdown draft after bundle selection, then only fill host
+        summary fields left as `TODO` and manual checklist items that bounded routing cannot prove
+        by itself.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.

@@ -50,7 +50,7 @@
       "cargo run -p fret-demo --bin docking_arbitration_demo",
       "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
       "cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json --dir target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
-      "python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json",
+      "python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md",
       "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture"
     ]
   },

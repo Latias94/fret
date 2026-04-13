@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 SCHEMA_VERSION = 1
@@ -105,6 +106,35 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--json-out",
         help="Optional path to write the bounded selection summary as JSON.",
+    )
+    parser.add_argument(
+        "--note-out",
+        help="Optional path to write a Markdown evidence note draft.",
+    )
+    parser.add_argument(
+        "--note-date",
+        default=date.today().isoformat(),
+        help="Date stamp to embed in the generated note.",
+    )
+    parser.add_argument(
+        "--windows-version",
+        help="Optional Windows version string for the note host summary.",
+    )
+    parser.add_argument(
+        "--monitor-arrangement",
+        help="Optional monitor arrangement summary for the note host summary.",
+    )
+    parser.add_argument(
+        "--scale-factors-used",
+        help="Optional host scale factor summary for the note host summary.",
+    )
+    parser.add_argument(
+        "--canonical-command",
+        help="Optional exact `diag run` command string to embed in the note.",
+    )
+    parser.add_argument(
+        "--automation-followup",
+        help="Optional follow-on automation verdict to embed in the note.",
     )
     return parser.parse_args(argv)
 
@@ -245,6 +275,10 @@ def format_point(point: dict[str, object] | None) -> str | None:
     if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
         return None
     return f"{x:.1f},{y:.1f}"
+
+
+def placeholder(value: str | None, *, text: str = "TODO") -> str:
+    return value if value and value.strip() else text
 
 
 def dock_routing_command(
@@ -515,6 +549,164 @@ def write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def crossing_direction_for_label(label: str | None) -> str:
+    if label == "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x":
+        return "+X"
+    if label == "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x":
+        return "-X"
+    return "TODO"
+
+
+def mixed_dpi_signal_presence(
+    pre_candidate: CandidateSummary | None,
+    post_candidate: CandidateSummary | None,
+) -> str:
+    pre_signal = bool(pre_candidate and pre_candidate.mixed_dpi_signal_observed)
+    post_signal = bool(post_candidate and post_candidate.mixed_dpi_signal_observed)
+    if pre_signal and post_signal:
+        return "both bundles"
+    if not pre_signal and post_signal:
+        return "post-crossing only"
+    if pre_signal and not post_signal:
+        return "pre-crossing only"
+    return "neither bundle"
+
+
+def likely_failure_reason(
+    pre_candidate: CandidateSummary | None,
+    post_candidate: CandidateSummary | None,
+    post_candidates: list[CandidateSummary],
+) -> str:
+    if post_candidate is None:
+        return "No post-crossing candidate bundle was summarized; verify the run completed and captured the outer-move bundles."
+    if post_candidate.mixed_dpi_signal_observed and post_candidate.distinct_scale_factor_count >= 2:
+        return "No immediate failure classification from bounded routing evidence."
+    if post_candidate.clamped_observed:
+        return "Likely host/setup mismatch or Windows-clamped outer positions; verify monitor layout before reopening routing logic."
+    if post_candidate.distinct_scale_factor_count < 2:
+        return "Likely host/setup mismatch; the selected post-crossing bundle still exposed only one scale factor."
+    if any(candidate.clamped_observed for candidate in post_candidates):
+        return "Possible initial-placement or window-decoration drift (`DW-P1-win-002`) because one post candidate reported clamped cursor/outer-position evidence."
+    if pre_candidate and pre_candidate.cross_window_hover_observed and not post_candidate.cross_window_hover_observed:
+        return "Possible routing drift; cross-window hover evidence weakened after the outer move."
+    return "Possible routing drift; inspect the losing post-crossing candidate and the raw `diag dock-routing --json` output."
+
+
+def acceptance_checklist_lines(
+    *,
+    pre_candidate: CandidateSummary | None,
+    post_candidate: CandidateSummary | None,
+) -> list[str]:
+    lines = [
+        "- Drag-back completion to one canonical dock graph (`floatings=[]`): TODO (confirm from the full run or final bundle).",
+        f"- Post-crossing bundle reports `mixed_dpi_signal_observed: true`: {'yes' if post_candidate and post_candidate.mixed_dpi_signal_observed else 'no'}.",
+        f"- Post-crossing bundle reports at least two distinct scale factors: {'yes' if post_candidate and post_candidate.distinct_scale_factor_count >= 2 else 'no'}.",
+        "- `dock-routing` keeps stable `scr/scr_used/origin` and `sf_cur/sf_move` evidence: review manually against the summary lines below.",
+        "- No empty floating window or stuck-follow regression while crossing monitors: TODO (confirm from the full run).",
+    ]
+    if pre_candidate is None:
+        lines.append("- Pre-crossing bundle was not available: no.")
+    return lines
+
+
+def render_note_markdown(
+    *,
+    note_date: str,
+    input_path: Path,
+    search_root: Path,
+    selected_context: Path,
+    pre_candidate: CandidateSummary | None,
+    post_candidates: list[CandidateSummary],
+    selected_post: CandidateSummary | None,
+    acceptance_ready: bool,
+    canonical_command: str | None,
+    windows_version: str | None,
+    monitor_arrangement: str | None,
+    scale_factors_used: str | None,
+    automation_followup: str | None,
+) -> str:
+    selected_post_label = selected_post.label if selected_post is not None else None
+    candidate_lines = "\n".join(
+        f"- `{candidate.label}`: {candidate.summary_line}" for candidate in post_candidates
+        if selected_post is None or candidate.bundle_dir != selected_post.bundle_dir
+    )
+    if not candidate_lines:
+        candidate_lines = "- `TODO`: no losing post-crossing candidate remained after selection."
+
+    followup = automation_followup
+    if not followup:
+        if acceptance_ready:
+            followup = (
+                "No immediate automation follow-on is justified from this run alone; record the note and reopen automation only if repeated real-host captures disagree."
+            )
+        else:
+            followup = (
+                "Yes; review the failure classification below before deciding whether the next slice belongs in host setup, routing, or `DW-P1-win-002`."
+            )
+
+    lines = [
+        f"# Windows Mixed-DPI Acceptance Evidence - {note_date}",
+        "",
+        "Status: draft evidence note generated from bounded routing summary",
+        "",
+        "Related:",
+        "",
+        "- `docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md`",
+        "- `tools/diag_pick_docking_mixed_dpi_acceptance_pair.py`",
+        "",
+        "## Host summary",
+        "",
+        f"- Windows version: {placeholder(windows_version)}",
+        f"- Monitor arrangement: {placeholder(monitor_arrangement)}",
+        f"- Scale factors used: {placeholder(scale_factors_used)}",
+        f"- Successful crossing direction: {crossing_direction_for_label(selected_post_label)}",
+        "",
+        "## Commands",
+        "",
+        f"- Canonical `diag run` command: `{placeholder(canonical_command)}`",
+        f"- Helper input path: `{input_path.as_posix()}`",
+        f"- Helper search root: `{search_root.as_posix()}`",
+        "",
+        "## Selected bundles",
+        "",
+        f"- Session directory: `{selected_context.as_posix()}`",
+        f"- `pre-crossing`: `{pre_candidate.bundle_dir.as_posix() if pre_candidate else 'TODO'}`",
+        f"- `post-crossing`: `{selected_post.bundle_dir.as_posix() if selected_post else 'TODO'}`",
+        "",
+        "## Dock-routing summary",
+        "",
+        f"- `pre-crossing`: {pre_candidate.summary_line if pre_candidate else 'TODO'}",
+        f"- `post-crossing`: {selected_post.summary_line if selected_post else 'TODO'}",
+        f"- `mixed_dpi_signal_observed` presence: {mixed_dpi_signal_presence(pre_candidate, selected_post)}",
+        "",
+        "## Acceptance checklist",
+        "",
+        *acceptance_checklist_lines(
+            pre_candidate=pre_candidate,
+            post_candidate=selected_post,
+        ),
+        "",
+        "## Losing post-crossing candidates",
+        "",
+        candidate_lines,
+        "",
+        "## Follow-on automation verdict",
+        "",
+        f"- Automation follow-on still justified: {followup}",
+        "",
+        "## Failure classification (heuristic)",
+        "",
+        f"- {likely_failure_reason(pre_candidate, selected_post, post_candidates)}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def render_summary(
     *,
     input_path: Path,
@@ -672,6 +864,24 @@ def main(argv: list[str]) -> int:
 
     if args.json_out:
         write_json(Path(args.json_out).expanduser().resolve(), payload)
+
+    if args.note_out:
+        note_text = render_note_markdown(
+            note_date=args.note_date,
+            input_path=input_root,
+            search_root=search_root,
+            selected_context=selected_context,
+            pre_candidate=pre_candidate,
+            post_candidates=post_candidates,
+            selected_post=selected_post,
+            acceptance_ready=acceptance_ready,
+            canonical_command=args.canonical_command,
+            windows_version=args.windows_version,
+            monitor_arrangement=args.monitor_arrangement,
+            scale_factors_used=args.scale_factors_used,
+            automation_followup=args.automation_followup,
+        )
+        write_text(Path(args.note_out).expanduser().resolve(), note_text)
 
     return 0
 
