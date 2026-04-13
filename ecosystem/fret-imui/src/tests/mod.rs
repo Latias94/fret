@@ -714,13 +714,24 @@ fn key_down(
     key: KeyCode,
     modifiers: Modifiers,
 ) {
+    key_down_with_repeat(ui, app, services, key, modifiers, false);
+}
+
+fn key_down_with_repeat(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    key: KeyCode,
+    modifiers: Modifiers,
+    repeat: bool,
+) {
     ui.dispatch_event(
         app,
         services,
         &Event::KeyDown {
             key,
             modifiers,
-            repeat: false,
+            repeat,
         },
     );
 }
