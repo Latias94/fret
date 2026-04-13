@@ -345,6 +345,12 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_BASELINE_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"
+    );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md"
+    );
     const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
         include_str!("../../../docs/diagnostics-first-open.md");
     const DIAGNOSTICS_START_HERE_DOC: &str =
@@ -1992,6 +1998,46 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
                 "the docking parity narrative note should keep the first-open state visible: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture() {
+        for marker in [
+            "\"role\": \"next\"",
+            "M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the mixed-DPI acceptance posture reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "Keep the existing bounded P3 campaign generic",
+            "`mixed_dpi_signal_observed` is evidence, not a host capability contract",
+            "Do not add a new `requires mixed-dpi` campaign or script schema key yet",
+            "real-host acceptance pair",
+            "\"pre-crossing\" bundle",
+            "\"post-crossing\" bundle",
+            "`DW-P0-dpi-006` stays open until both the real-host acceptance pair",
+            "the automation decision",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_NOTE.contains(marker),
+                "the docking parity lane should keep the mixed-DPI acceptance posture explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "observed_scale_factors_x1000",
+            "mixed_dpi_signal_observed",
+            "Keep the bounded P3 campaign generic",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the mixed-DPI TODO posture should remain explicit: {marker}"
             );
         }
     }

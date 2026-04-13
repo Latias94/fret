@@ -177,6 +177,10 @@ Each TODO is labeled:
     - [x] Evidence surface area: `dock-routing` includes `current_window_scale_factor_x1000` / `moving_window_scale_factor_x1000`.
     - [x] `dock-routing` now rolls drag scale-factor evidence into top-level `observed_scale_factors_x1000` /
       `mixed_dpi_signal_observed` so manual mixed-DPI triage does not require opening raw entries first.
+    - [x] Acceptance posture is now explicit:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md`
+      - Keep the bounded P3 campaign generic, treat `mixed_dpi_signal_observed` as evidence-only,
+        and defer any `requires mixed-dpi` gate shape until diagnostics has a real environment source.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.
