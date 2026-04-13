@@ -12,8 +12,11 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
+- `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
+- `docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
@@ -30,7 +33,15 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `apps/fret-cookbook/examples/imui_action_basics.rs`
 - `apps/fret-cookbook/src/lib.rs`
 - `ecosystem/fret-ui-kit/src/imui.rs`
+- `ecosystem/fret-ui-kit/src/imui/options.rs`
+- `ecosystem/fret-ui-kit/src/imui/combo_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
+- `ecosystem/fret-imui/src/tests/mod.rs`
+- `ecosystem/fret-imui/src/tests/interaction.rs`
+- `ecosystem/fret-imui/src/tests/models.rs`
+- `ecosystem/fret-imui/src/tests/popup_hover.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/src/imui_hello_demo.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
@@ -71,6 +82,7 @@ without reopening older workstreams first.
 
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke`
 - `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy`
+- `cargo nextest run -p fret-imui`
 - `cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface`
 - `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
 
@@ -80,7 +92,10 @@ This package now locks the current immediate-mode product message at the source-
 - the nested-vs-root mounting rule stays explicit,
 - the static-vs-dynamic stable-identity rule stays explicit,
 - the reference/advanced/compatibility roster stays classified,
-- and the proof budget rule stays frozen before any future helper widening.
+- the proof budget rule stays frozen before any future helper widening,
+- focused item-local shortcuts now span direct pressables, popup/menu triggers, and
+  combo/combo-model triggers at the ecosystem layer,
+- and repeat keydown stays ignored by default unless `shortcut_repeat=true` is explicitly requested.
 
 ### Editor shell gates
 

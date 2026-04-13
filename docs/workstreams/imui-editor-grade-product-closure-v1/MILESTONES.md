@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - Milestones
 
 Status: active execution lane
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 ## M0 - Baseline and owner freeze
 
@@ -40,6 +40,7 @@ Primary evidence:
 - `P0_PROOF_BUDGET_RULE_2026-04-12.md`
 - `P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `P0_STABLE_IDENTITY_RULE_2026-04-12.md`
+- `P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
@@ -64,6 +65,17 @@ Current status:
 - The demote/delete plan is now frozen:
   `imui_hello_demo` is smoke/reference, public docs name the golden pair explicitly, and the
   source-policy gates distinguish golden/reference/compatibility roles.
+- A 2026-04-13 status pass now records that focused item-local shortcut seams materially improved
+  across direct pressables, popup/menu triggers, and combo/combo-model triggers without widening
+  the runtime's global shortcut owner model.
+- The tested shortcut repeat rule is now explicit at the immediate layer:
+  default key repeat does not retrigger activation, and `shortcut_repeat=true` is the opt-in seam.
+- The remaining credible P0 backlog is now narrower:
+  broader multi-select proof, deeper child-region/menu/tab policy, item-status lifecycle
+  vocabulary, and any eventual key-owner surface.
+- Execution consequence:
+  keep this lane as the umbrella recorder, but split any future implementation-heavy P0 work into a
+  narrow follow-on instead of turning M1 back into a generic helper-growth backlog.
 
 ## M2 - P1 editor workbench shell closure
 
@@ -100,6 +112,9 @@ Current status:
   `diag-hardening-smoke-workspace` remains the launched shell suite, and its frozen minimum now
   spans tab close/reorder/split preview, dirty-close prompt, Escape focus restore, and file-tree
   keep-alive.
+- P1 is now split for implementation-heavy work:
+  `docs/workstreams/imui-workbench-shell-closure-v1/` owns the active default-workbench shell
+  closure follow-on, while this umbrella keeps the phase ordering and status record.
 
 ## M3 - P2 unified diagnostics/devtools surface
 

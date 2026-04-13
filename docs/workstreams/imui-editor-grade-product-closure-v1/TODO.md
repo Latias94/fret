@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - TODO
 
 Status: active execution lane
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 ## Lane setup
 
@@ -39,6 +39,10 @@ Last updated: 2026-04-12
       Result: `P0_STABLE_IDENTITY_RULE_2026-04-12.md` and `docs/examples/README.md` now explain
       when `ui.for_each_unkeyed(...)` is acceptable versus when `ui.for_each_keyed(...)` /
       `ui.id(key, ...)` is the default posture.
+- [x] Record the post-shortcut-seam parity status inside the umbrella lane so focused item-local
+      shortcuts are no longer treated as the primary P0 blocker.
+      Result: `P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md` now records the 2026-04-13 shortcut batch,
+      the repeat-semantic test floor, and the narrower remaining P0 backlog.
 
 ## P1 - Editor workbench shell closure
 
@@ -115,7 +119,12 @@ Last updated: 2026-04-12
 ## Closeout / follow-on management
 
 - [ ] If P0 becomes mostly teaching-surface cleanup, split it into a narrow authoring-lane follow-on.
-- [ ] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
+- [ ] If further P0 work becomes mostly immediate convenience breadth
+      (key ownership, item-status lifecycle, richer collection/pane proof), split a narrow follow-on
+      instead of widening this umbrella folder.
+- [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
+      Result: `docs/workstreams/imui-workbench-shell-closure-v1/` is now the active implementation-
+      heavy P1 shell lane; keep this umbrella focused on phase ordering and cross-phase status.
 - [ ] If P2 becomes mostly tooling UX/productization, split it into a narrow devtools follow-on.
 - [ ] If P3 becomes mostly platform diagnostics and runner work, continue using the existing docking
       parity lane or start a narrower follow-on there instead of bloating this folder.

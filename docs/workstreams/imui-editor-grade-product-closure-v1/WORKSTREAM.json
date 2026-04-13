@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "active",
-  "updated": "2026-04-12",
+  "updated": "2026-04-13",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, and one runner-grade multi-window hand-feel story.",
@@ -42,11 +42,23 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
     },
     {
       "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json"
     },
     {
       "role": "status",
@@ -108,6 +120,7 @@
       "cargo build -p fret-demo --bin imui_editor_proof_demo",
       "cargo build -p fret-demo --bin workspace_shell_demo",
       "cargo build -p fret-devtools",
+      "cargo nextest run -p fret-imui",
       "cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface",
       "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke",
@@ -126,6 +139,10 @@
     {
       "name": "imui-editor-adapter-smoke",
       "command": "cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy"
+    },
+    {
+      "name": "imui-focused-shortcut-parity",
+      "command": "cargo nextest run -p fret-imui"
     },
     {
       "name": "cookbook-imui-teaching-surface",
@@ -213,8 +230,11 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md",
+    "docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md",
+    "docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md",
@@ -229,6 +249,7 @@
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
     "tools/diag-campaigns/imui-p3-multiwindow-parity.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
@@ -240,7 +261,15 @@
     "apps/fret-cookbook/examples/imui_action_basics.rs",
     "apps/fret-cookbook/src/lib.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/options.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-imui/src/tests/mod.rs",
+    "ecosystem/fret-imui/src/tests/interaction.rs",
+    "ecosystem/fret-imui/src/tests/models.rs",
+    "ecosystem/fret-imui/src/tests/popup_hover.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_hello_demo.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",

@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-12
+Catalog updated: 2026-04-13
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 227
+- Dedicated directories: 228
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -124,6 +124,16 @@ Current source of truth for the in-tree immediate-mode stack:
     needs the frozen two-surface proof budget before review; split implementation-heavy work into
     narrower follow-ons.
 
+- Active implementation-heavy P1 shell follow-on:
+  - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-workbench-shell-closure-v1/TODO.md`
+  - `docs/workstreams/imui-workbench-shell-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-workbench-shell-closure-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json`
+  - Scope: close the default workbench shell gap now that the umbrella lane already froze the P1
+    proof roster and promoted shell diagnostics floor; keep tabstrip parity and multi-window
+    runner closure in their existing owner lanes.
+
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`
@@ -216,6 +226,8 @@ Rule:
 - Prefer the active product-closure follow-on for the current "what is still missing relative to an
   editor-grade Dear ImGui-class experience?" answer and for the current phase ordering across
   authoring, shell, tooling, and multi-window hand-feel.
+- Prefer the active P1 shell follow-on for implementation-heavy workbench shell composition work
+  after the umbrella lane's proof matrix and shell smoke floor are frozen.
 - Prefer the compatibility-retained follow-on lane for the latest keep/delete verdict on retained
   compatibility surfaces that leaked into public/proof `imui` paths.
 - Prefer the v2 workstream for the closed stack reset, editor adapter closure, and teaching-surface
@@ -357,6 +369,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 19 markdown docs
+- `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)
 - `docs/workstreams/imui-shell-transparent-payload-zorder-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the transparent moving-window payload overlap diagnostics/runtime lane)

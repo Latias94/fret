@@ -319,6 +319,9 @@ mod authoring_surface_policy_tests {
     const IMUI_P1_SHELL_DIAG_SMOKE_DECISION_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md"
     );
+    const IMUI_WORKBENCH_ASSEMBLY_DECISION_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-workbench-shell-closure-v1/M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md"
+    );
     const IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md"
     );
@@ -1661,6 +1664,25 @@ mod authoring_surface_policy_tests {
             assert!(
                 WORKSPACE_HARDENING_SHELL_DIAG_SUITE.contains(marker),
                 "the promoted workspace shell smoke suite should keep the frozen minimum roster entry: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_default_workbench_assembly_decision() {
+        for marker in [
+            "`apps/fret-examples/src/workspace_shell_demo.rs`",
+            "`apps/fret-examples/src/editor_notes_demo.rs`",
+            "`apps/fret-ui-gallery/src/driver/render_flow.rs`",
+            "`docs/workstreams/editor-ecosystem-fearless-refactor-v1/WORKSPACE_SHELL_STARTER_SET.md`",
+            "Keep the default workbench answer as explicit example-local assembly over the frozen starter set.",
+            "Do not introduce `WorkspaceWorkbenchShell`, `EditorWorkbenchShell`, or a similar promoted helper yet.",
+            "Keep `workspace_shell_demo` as the broader P1 product proof.",
+            "Keep UI Gallery workspace shell as a shell-chrome reference/exemplar, not as a competing P1",
+        ] {
+            assert!(
+                IMUI_WORKBENCH_ASSEMBLY_DECISION_NOTE.contains(marker),
+                "the immediate-mode workstream should keep the P1 default workbench assembly decision explicit: {marker}"
             );
         }
     }
