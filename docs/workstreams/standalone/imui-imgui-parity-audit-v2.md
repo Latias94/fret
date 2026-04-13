@@ -216,8 +216,8 @@ The real remaining gaps are narrower:
      expose a focused `activate_shortcut` seam for exact item-local `KeyChord` activation without
      widening the runtime's global shortcut ownership model.
    - Representative `fret-imui` proof now also locks `shortcut_repeat` as opt-in on focused direct
-     pressables, popup items, and menu/menu-submenu triggers, so held chords do not retrigger by
-     default.
+     pressables, popup items, menu/menu-submenu triggers, and combo/combo-model triggers, so held
+     chords do not retrigger by default.
    - The remaining gap is depth rather than ownership: there is still no immediate equivalent to
      `SetNextItemShortcut()` / `SetItemKeyOwner()`, no broader item-local shortcut registration
      seam beyond focused button/selectable/checkbox/switch/disclosure/tab/menu/combo pressables,

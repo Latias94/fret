@@ -1689,6 +1689,268 @@ fn combo_model_activate_shortcut_is_scoped_to_focused_trigger() {
 }
 
 #[test]
+fn combo_model_activate_shortcut_repeat_is_opt_in() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let default_shortcut = KeyChord::new(
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let repeat_shortcut = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+    let default_model = app.models_mut().insert(None::<Arc<str>>);
+    let repeat_model = app.models_mut().insert(None::<Arc<str>>);
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui(cx, |ui| {
+            ui.vertical(|ui| {
+                let _ = ui.combo_model_with_options(
+                    "imui-select-repeat-default-popup",
+                    "Default",
+                    &default_model,
+                    &items,
+                    ComboModelOptions {
+                        test_id: Some(Arc::from("imui-select-repeat.default")),
+                        activate_shortcut: Some(default_shortcut),
+                        ..Default::default()
+                    },
+                );
+                let _ = ui.combo_model_with_options(
+                    "imui-select-repeat-enabled-popup",
+                    "Repeat",
+                    &repeat_model,
+                    &items,
+                    ComboModelOptions {
+                        test_id: Some(Arc::from("imui-select-repeat.repeat")),
+                        activate_shortcut: Some(repeat_shortcut),
+                        shortcut_repeat: true,
+                        ..Default::default()
+                    },
+                );
+            });
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-repeat",
+        render,
+    );
+
+    let default_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.default",
+    );
+    ui.set_focus(Some(default_node));
+    assert_eq!(ui.focus(), Some(default_node));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-repeat",
+        render,
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.default.option.0",
+    ));
+    let default_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.default",
+    );
+    ui.set_focus(Some(default_node));
+    assert_eq!(ui.focus(), Some(default_node));
+
+    key_down_with_repeat(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+        true,
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-repeat",
+        render,
+    );
+    assert!(
+        has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-repeat.default.option.0",
+        ),
+        "expected repeated keydown to leave default combo-model trigger open"
+    );
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::Escape,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-repeat",
+        render,
+    );
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.default.option.0",
+    ));
+
+    let repeat_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.repeat",
+    );
+    ui.set_focus(Some(repeat_node));
+    assert_eq!(ui.focus(), Some(repeat_node));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-repeat",
+        render,
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.repeat.option.0",
+    ));
+    let repeat_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-repeat.repeat",
+    );
+    ui.set_focus(Some(repeat_node));
+    assert_eq!(ui.focus(), Some(repeat_node));
+
+    key_down_with_repeat(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+        true,
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-repeat",
+        render,
+    );
+    assert!(
+        !has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-repeat.repeat.option.0",
+        ),
+        "expected repeated keydown to retrigger only when shortcut_repeat is enabled"
+    );
+}
+
+#[test]
 fn combo_model_popup_scope_override_controls_popup_test_id() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -2125,6 +2387,281 @@ fn combo_activate_shortcut_is_scoped_to_focused_trigger() {
         bounds,
         "imui-combo-shortcut.target.option.0",
     ));
+}
+
+#[test]
+fn combo_activate_shortcut_repeat_is_opt_in() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let default_shortcut = KeyChord::new(
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let repeat_shortcut = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui(cx, |ui| {
+            ui.vertical(|ui| {
+                let _ = ui.combo_with_options(
+                    "imui-combo-repeat-default-popup",
+                    "Default",
+                    "Alpha",
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-repeat.default")),
+                        activate_shortcut: Some(default_shortcut),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.selectable_with_options(
+                            "Alpha",
+                            SelectableOptions {
+                                test_id: Some(Arc::from("imui-combo-repeat.default.option.0")),
+                                ..Default::default()
+                            },
+                        );
+                    },
+                );
+                let _ = ui.combo_with_options(
+                    "imui-combo-repeat-enabled-popup",
+                    "Repeat",
+                    "Beta",
+                    ComboOptions {
+                        test_id: Some(Arc::from("imui-combo-repeat.repeat")),
+                        activate_shortcut: Some(repeat_shortcut),
+                        shortcut_repeat: true,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.selectable_with_options(
+                            "Beta",
+                            SelectableOptions {
+                                test_id: Some(Arc::from("imui-combo-repeat.repeat.option.0")),
+                                ..Default::default()
+                            },
+                        );
+                    },
+                );
+            });
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-repeat",
+        render,
+    );
+
+    let default_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.default",
+    );
+    ui.set_focus(Some(default_node));
+    assert_eq!(ui.focus(), Some(default_node));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-repeat",
+        render,
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.default.option.0",
+    ));
+    let default_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.default",
+    );
+    ui.set_focus(Some(default_node));
+    assert_eq!(ui.focus(), Some(default_node));
+
+    key_down_with_repeat(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+        true,
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-repeat",
+        render,
+    );
+    assert!(
+        has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-combo-repeat.default.option.0",
+        ),
+        "expected repeated keydown to leave default combo trigger open"
+    );
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::Escape,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-repeat",
+        render,
+    );
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.default.option.0",
+    ));
+
+    let repeat_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.repeat",
+    );
+    ui.set_focus(Some(repeat_node));
+    assert_eq!(ui.focus(), Some(repeat_node));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-repeat",
+        render,
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.repeat.option.0",
+    ));
+    let repeat_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-repeat.repeat",
+    );
+    ui.set_focus(Some(repeat_node));
+    assert_eq!(ui.focus(), Some(repeat_node));
+
+    key_down_with_repeat(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+        true,
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-repeat",
+        render,
+    );
+    assert!(
+        !has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-combo-repeat.repeat.option.0",
+        ),
+        "expected repeated keydown to retrigger only when shortcut_repeat is enabled"
+    );
 }
 
 #[test]
