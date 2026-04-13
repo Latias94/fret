@@ -597,6 +597,7 @@ impl Default for ComboModelOptions {
 
 #[derive(Debug, Clone)]
 pub struct HorizontalOptions {
+    pub layout: crate::LayoutRefinement,
     pub gap: crate::MetricRef,
     pub justify: crate::Justify,
     pub items: crate::Items,
@@ -606,6 +607,7 @@ pub struct HorizontalOptions {
 impl Default for HorizontalOptions {
     fn default() -> Self {
         Self {
+            layout: crate::LayoutRefinement::default(),
             gap: crate::MetricRef::space(crate::Space::N0),
             justify: crate::Justify::Start,
             items: crate::Items::Center,
@@ -616,6 +618,7 @@ impl Default for HorizontalOptions {
 
 #[derive(Debug, Clone)]
 pub struct VerticalOptions {
+    pub layout: crate::LayoutRefinement,
     pub gap: crate::MetricRef,
     pub justify: crate::Justify,
     pub items: crate::Items,
@@ -625,6 +628,7 @@ pub struct VerticalOptions {
 impl Default for VerticalOptions {
     fn default() -> Self {
         Self {
+            layout: crate::LayoutRefinement::default(),
             gap: crate::MetricRef::space(crate::Space::N0),
             justify: crate::Justify::Start,
             items: crate::Items::Stretch,
@@ -635,6 +639,7 @@ impl Default for VerticalOptions {
 
 #[derive(Debug, Clone)]
 pub struct GridOptions {
+    pub layout: crate::LayoutRefinement,
     pub columns: usize,
     pub column_gap: crate::MetricRef,
     pub row_gap: crate::MetricRef,
@@ -645,6 +650,7 @@ pub struct GridOptions {
 impl Default for GridOptions {
     fn default() -> Self {
         Self {
+            layout: crate::LayoutRefinement::default(),
             columns: 1,
             column_gap: crate::MetricRef::space(crate::Space::N0),
             row_gap: crate::MetricRef::space(crate::Space::N0),
@@ -806,6 +812,7 @@ pub struct SeparatorTextOptions {
 
 #[derive(Debug, Clone)]
 pub struct ScrollOptions {
+    pub layout: crate::LayoutRefinement,
     pub axis: fret_ui::element::ScrollAxis,
     pub show_scrollbar_x: bool,
     pub show_scrollbar_y: bool,
@@ -815,6 +822,7 @@ pub struct ScrollOptions {
 impl Default for ScrollOptions {
     fn default() -> Self {
         Self {
+            layout: crate::LayoutRefinement::default(),
             axis: fret_ui::element::ScrollAxis::Y,
             show_scrollbar_x: false,
             show_scrollbar_y: true,
