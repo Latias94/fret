@@ -13,8 +13,8 @@ use fret_core::{
 };
 use fret_runtime::{
     ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
-    DragSessionId, Effect, EffectSink, FrameId, GlobalsHost, ModelHost, ModelId, ModelStore,
-    ModelsHost, PlatformCapabilities, ShareSheetToken, TickId, TimeHost, TimerToken,
+    DragSessionId, Effect, EffectSink, FrameId, GlobalsHost, KeyChord, ModelHost, ModelId,
+    ModelStore, ModelsHost, PlatformCapabilities, ShareSheetToken, TickId, TimeHost, TimerToken,
 };
 use fret_ui::action::{DismissReason, DismissRequestCx, OnDismissRequest};
 use fret_ui::declarative::render_root;
@@ -369,6 +369,24 @@ fn run_frame(
     OverlayController::render(ui, app, services, window, bounds);
     ui.layout_all(app, services, bounds, 1.0);
     root
+}
+
+fn advance_and_run_frame<R>(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    bounds: Rect,
+    root_name: &str,
+    render: &R,
+) -> fret_core::NodeId
+where
+    R: for<'a> Fn(&mut ElementContext<'a, TestHost>) -> crate::Elements,
+{
+    app.advance_frame();
+    run_frame(ui, app, services, window, bounds, root_name, |cx| {
+        render(cx)
+    })
 }
 
 fn render_imui_disabled_scope_overlay_scene(
@@ -736,6 +754,35 @@ fn key_down_with_repeat(
     );
 }
 
+fn ctrl_modifiers() -> Modifiers {
+    Modifiers {
+        ctrl: true,
+        ..Default::default()
+    }
+}
+
+fn ctrl_shortcut(key: KeyCode) -> KeyChord {
+    KeyChord::new(key, ctrl_modifiers())
+}
+
+fn key_down_ctrl(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    key: KeyCode,
+) {
+    key_down(ui, app, services, key, ctrl_modifiers());
+}
+
+fn key_down_ctrl_repeat(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    key: KeyCode,
+) {
+    key_down_with_repeat(ui, app, services, key, ctrl_modifiers(), true);
+}
+
 fn text_input_event(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
@@ -943,6 +990,19 @@ fn node_for_test_id(
         .find(|n| n.test_id.as_deref() == Some(test_id))
         .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
         .id
+}
+
+fn focus_test_id(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    bounds: Rect,
+    test_id: &str,
+) -> fret_core::NodeId {
+    let node = node_for_test_id(ui, app, services, bounds, test_id);
+    ui.set_focus(Some(node));
+    assert_eq!(ui.focus(), Some(node));
+    node
 }
 
 fn has_test_id(

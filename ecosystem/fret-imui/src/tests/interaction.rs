@@ -707,24 +707,10 @@ fn button_activate_shortcut_repeat_is_opt_in() {
     app.commands_mut()
         .register(repeat_command.clone(), CommandMeta::new("Enabled Repeat"));
 
-    let default_shortcut = KeyChord::new(
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
-    let repeat_shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let default_shortcut = ctrl_shortcut(KeyCode::KeyJ);
+    let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
-    let render = |cx: &mut ElementContext<'_, TestHost>,
-                  default_command: &CommandId,
-                  repeat_command: &CommandId| {
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
         crate::imui(cx, |ui| {
             ui.vertical(|ui| {
                 ui.button_command_with_options(
@@ -755,40 +741,19 @@ fn button_activate_shortcut_repeat_is_opt_in() {
         window,
         bounds,
         "imui-button-shortcut-repeat",
-        |cx| render(cx, &default_command, &repeat_command),
+        render,
     );
 
-    let default_node = node_for_test_id(
+    let _default_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-button-shortcut-repeat.default",
     );
-    ui.set_focus(Some(default_node));
-    assert_eq!(ui.focus(), Some(default_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
-    key_down_with_repeat(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-        true,
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
+    key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
     assert_eq!(
         app.effects
             .iter()
@@ -805,37 +770,16 @@ fn button_activate_shortcut_repeat_is_opt_in() {
     );
 
     app.effects.clear();
-    let repeat_node = node_for_test_id(
+    let _repeat_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-button-shortcut-repeat.repeat",
     );
-    ui.set_focus(Some(repeat_node));
-    assert_eq!(ui.focus(), Some(repeat_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
-    key_down_with_repeat(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-        true,
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
+    key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyK);
     assert_eq!(
         app.effects
             .iter()
@@ -1559,20 +1503,8 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
 
-    let default_shortcut = KeyChord::new(
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
-    let repeat_shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let default_shortcut = ctrl_shortcut(KeyCode::KeyJ);
+    let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
         crate::imui(cx, |ui| {
@@ -1634,36 +1566,24 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
         render,
     );
 
-    let default_node = node_for_test_id(
+    let _default_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-menu-repeat.default",
     );
-    ui.set_focus(Some(default_node));
-    assert_eq!(ui.focus(), Some(default_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-menu-repeat",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,
@@ -1673,27 +1593,16 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
         "imui-begin-menu-repeat.default.item",
     ));
 
-    key_down_with_repeat(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-        true,
-    );
+    key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-menu-repeat",
-        render,
+        &render,
     );
     assert!(
         has_test_id(
@@ -1706,36 +1615,24 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
         "expected repeated keydown to leave default shortcut trigger open"
     );
 
-    let repeat_node = node_for_test_id(
+    let _repeat_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-menu-repeat.repeat",
     );
-    ui.set_focus(Some(repeat_node));
-    assert_eq!(ui.focus(), Some(repeat_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-menu-repeat",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,
@@ -1745,27 +1642,16 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
         "imui-begin-menu-repeat.repeat.item",
     ));
 
-    key_down_with_repeat(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-        true,
-    );
+    key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-menu-repeat",
-        render,
+        &render,
     );
     assert!(
         !has_test_id(
@@ -2263,20 +2149,8 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
 
-    let default_shortcut = KeyChord::new(
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
-    let repeat_shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let default_shortcut = ctrl_shortcut(KeyCode::KeyJ);
+    let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
         crate::imui(cx, |ui| {
@@ -2365,15 +2239,14 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
     );
     click_at(&mut ui, &mut app, &mut services, file_trigger);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-repeat",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,
@@ -2390,36 +2263,24 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
         "imui-begin-submenu-repeat.file.repeat",
     ));
 
-    let default_node = node_for_test_id(
+    let _default_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-submenu-repeat.file.default",
     );
-    ui.set_focus(Some(default_node));
-    assert_eq!(ui.focus(), Some(default_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-repeat",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,
@@ -2428,37 +2289,24 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
         bounds,
         "imui-begin-submenu-repeat.file.default.item",
     ));
-    let default_node = node_for_test_id(
+    let _default_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-submenu-repeat.file.default",
     );
-    ui.set_focus(Some(default_node));
-    assert_eq!(ui.focus(), Some(default_node));
 
-    key_down_with_repeat(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyJ,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-        true,
-    );
+    key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-repeat",
-        render,
+        &render,
     );
     assert!(
         has_test_id(
@@ -2471,36 +2319,24 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
         "expected repeated keydown to leave default submenu trigger open"
     );
 
-    let repeat_node = node_for_test_id(
+    let _repeat_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-submenu-repeat.file.repeat",
     );
-    ui.set_focus(Some(repeat_node));
-    assert_eq!(ui.focus(), Some(repeat_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-repeat",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,
@@ -2509,37 +2345,24 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
         bounds,
         "imui-begin-submenu-repeat.file.repeat.item",
     ));
-    let repeat_node = node_for_test_id(
+    let _repeat_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-submenu-repeat.file.repeat",
     );
-    ui.set_focus(Some(repeat_node));
-    assert_eq!(ui.focus(), Some(repeat_node));
 
-    key_down_with_repeat(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-        true,
-    );
+    key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-repeat",
-        render,
+        &render,
     );
     assert!(
         !has_test_id(
