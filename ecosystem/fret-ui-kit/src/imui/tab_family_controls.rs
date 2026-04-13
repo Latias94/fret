@@ -24,6 +24,8 @@ struct BuiltTabItem {
     default_selected: bool,
     test_id: Option<Arc<str>>,
     panel_test_id: Option<Arc<str>>,
+    activate_shortcut: Option<fret_runtime::KeyChord>,
+    shortcut_repeat: bool,
     panel_children: Vec<AnyElement>,
 }
 
@@ -99,6 +101,8 @@ impl<'cx, 'a, H: UiHost> ImUiTabBar<'cx, 'a, H> {
             default_selected: options.default_selected,
             test_id,
             panel_test_id,
+            activate_shortcut: options.activate_shortcut,
+            shortcut_repeat: options.shortcut_repeat,
             panel_children,
         });
     }
@@ -285,6 +289,8 @@ fn render_tab_trigger<H: UiHost>(
     let selected_model = selected_model.clone();
     let tab_id = item.id.clone();
     let enabled = item.enabled;
+    let activate_shortcut = item.activate_shortcut;
+    let shortcut_repeat = item.shortcut_repeat;
 
     let element = cx.keyed(("tab-trigger", item.id.clone()), |cx| {
         let response = &mut response;
@@ -307,14 +313,40 @@ fn render_tab_trigger<H: UiHost>(
             cx.key_clear_on_key_down_for(element_id);
 
             if enabled {
-                let selected_model = selected_model.clone();
-                let tab_id = tab_id.clone();
+                let selected_model_for_activate = selected_model.clone();
+                let tab_id_for_activate = tab_id.clone();
                 cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
-                    let _ =
-                        host.update_model(&selected_model, |value| *value = Some(tab_id.clone()));
+                    let _ = host.update_model(&selected_model_for_activate, |value| {
+                        *value = Some(tab_id_for_activate.clone())
+                    });
                     host.record_transient_event(acx, super::KEY_CLICKED);
                     host.notify(acx);
                 }));
+
+                let selected_model_for_shortcut = selected_model.clone();
+                let tab_id_for_shortcut = tab_id.clone();
+                cx.key_on_key_down_for(
+                    element_id,
+                    Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                let _ = host.update_model(&selected_model_for_shortcut, |value| {
+                                    *value = Some(tab_id_for_shortcut.clone())
+                                });
+                                host.record_transient_event(acx, super::KEY_CLICKED);
+                                host.notify(acx);
+                                return true;
+                            }
+                        }
+
+                        false
+                    }),
+                );
             }
 
             response.core.hovered = state.hovered;
