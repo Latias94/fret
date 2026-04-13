@@ -6,7 +6,7 @@ use fret_core::{Edges, KeyCode, Modifiers, Px, SemanticsRole};
 use fret_runtime::ActionId;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
-use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
+use fret_ui::action::{ActivateReason, PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
     PressableProps, RowProps, SemanticsDecoration, SpacerProps, SpacingLength, TextProps,
@@ -104,6 +104,8 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         });
         let submenu = options.submenu;
         let expanded = options.expanded;
+        let activate_shortcut = options.activate_shortcut;
+        let shortcut_repeat = options.shortcut_repeat;
         let mut enabled = options.enabled && !super::imui_is_disabled(cx);
         if let Some(action) = action.as_ref() {
             enabled = enabled && cx.action_is_enabled(action);
@@ -219,10 +221,10 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 }));
 
                 if enabled {
-                    let close_popup = close_popup.clone();
+                    let close_popup_for_activate = close_popup.clone();
                     let action_for_activate = action.clone();
                     cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                        if let Some(open) = close_popup.as_ref() {
+                        if let Some(open) = close_popup_for_activate.as_ref() {
                             let _ = host.update_model(open, |v| *v = false);
                         }
                         host.record_transient_event(acx, super::KEY_CLICKED);
@@ -241,9 +243,35 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     }
                     if let Some(nav_items) = nav_items {
                         let item_id = id;
+                        let close_popup_for_key = close_popup.clone();
+                        let action_for_shortcut = action.clone();
                         cx.key_on_key_down_for(
                             id,
                             Arc::new(move |host, acx, down| {
+                                if let Some(shortcut) = activate_shortcut {
+                                    let matches_shortcut =
+                                        down.key == shortcut.key && down.modifiers == shortcut.mods;
+                                    if matches_shortcut
+                                        && (!down.repeat || shortcut_repeat)
+                                        && !down.ime_composing
+                                    {
+                                        if let Some(open) = close_popup_for_key.as_ref() {
+                                            let _ = host.update_model(open, |v| *v = false);
+                                        }
+                                        host.record_transient_event(acx, super::KEY_CLICKED);
+                                        if let Some(action) = action_for_shortcut.clone() {
+                                            host.record_pending_command_dispatch_source(
+                                                acx,
+                                                &action,
+                                                ActivateReason::Keyboard,
+                                            );
+                                            host.dispatch_command(Some(acx.window), action);
+                                        }
+                                        host.notify(acx);
+                                        return true;
+                                    }
+                                }
+
                                 if down.repeat {
                                     return false;
                                 }
