@@ -31,6 +31,8 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
                 focusable: options.focusable,
                 selected: open_before,
                 test_id: options.test_id.clone(),
+                activate_shortcut: options.activate_shortcut,
+                shortcut_repeat: options.shortcut_repeat,
                 a11y_label: options
                     .a11y_label
                     .clone()
