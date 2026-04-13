@@ -193,6 +193,8 @@ pub mod imui_editor_proof_demo;
 pub mod imui_floating_windows_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_hello_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod imui_interaction_showcase_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
 pub mod imui_node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -303,6 +305,7 @@ mod authoring_surface_policy_tests {
     const IMUI_EDITOR_PROOF_DEMO: &str = include_str!("imui_editor_proof_demo.rs");
     const IMUI_FLOATING_WINDOWS_DEMO: &str = include_str!("imui_floating_windows_demo.rs");
     const IMUI_HELLO_DEMO: &str = include_str!("imui_hello_demo.rs");
+    const IMUI_INTERACTION_SHOWCASE_DEMO: &str = include_str!("imui_interaction_showcase_demo.rs");
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
     const IMUI_PROOF_BUDGET_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
@@ -792,6 +795,7 @@ mod authoring_surface_policy_tests {
             IMUI_EDITOR_PROOF_DEMO,
             IMUI_FLOATING_WINDOWS_DEMO,
             IMUI_HELLO_DEMO,
+            IMUI_INTERACTION_SHOWCASE_DEMO,
             IMUI_NODE_GRAPH_DEMO,
             IMUI_RESPONSE_SIGNALS_DEMO,
             IMUI_SHADCN_ADAPTER_DEMO,
@@ -861,6 +865,15 @@ mod authoring_surface_policy_tests {
                 "IMUI interaction contracts and diagnostics affordances",
             ],
         );
+        assert_explicit_advanced_reference_classification(
+            "imui_interaction_showcase_demo",
+            IMUI_INTERACTION_SHOWCASE_DEMO,
+            &[
+                "product shell polish",
+                "immediate-mode interaction affordances",
+                "shadcn shell chrome",
+            ],
+        );
     }
 
     #[test]
@@ -873,6 +886,8 @@ mod authoring_surface_policy_tests {
             "`postprocess_theme_demo` and `liquid_glass_demo` are renderer/product-validation surfaces",
             "`genui_demo` is a generator/editor integration reference surface",
             "`imui_floating_windows_demo` is an IMUI overlap/floating proof surface",
+            "`imui_response_signals_demo` is an IMUI proof/contract surface",
+            "`imui_interaction_showcase_demo` and `imui_shadcn_adapter_demo` are IMUI product-validation surfaces",
         ] {
             let marker = marker.split_whitespace().collect::<String>();
             assert!(
@@ -1539,6 +1554,21 @@ mod authoring_surface_policy_tests {
         );
 
         assert_current_imui_teaching_surface(
+            "imui_interaction_showcase_demo",
+            IMUI_INTERACTION_SHOWCASE_DEMO,
+            &[
+                "Showcase surface for immediate-mode interaction affordances.",
+                "Current proof/contract surface stays in `imui_response_signals_demo`.",
+                "use fret_ui_shadcn::facade as shadcn;",
+                "fret_imui::imui(cx, move |ui| {",
+                "ui.begin_menu_with_options(",
+                "ui.tab_bar_with_options(",
+                "ui.begin_popup_context_menu(",
+            ],
+            &[],
+        );
+
+        assert_current_imui_teaching_surface(
             "imui_shadcn_adapter_demo",
             IMUI_SHADCN_ADAPTER_DEMO,
             &[
@@ -1584,12 +1614,14 @@ mod authoring_surface_policy_tests {
             "imui_action_basics",
             "imui_editor_proof_demo",
             "imui_hello_demo",
+            "imui_interaction_showcase_demo",
             "imui_response_signals_demo",
             "imui_shadcn_adapter_demo",
             "imui_floating_windows_demo",
             "imui_node_graph_demo",
             "Golden pair:",
             "Reference/smoke:",
+            "Reference/contract proof:",
             "Reference/product-validation:",
             "Compatibility-only:",
         ] {
@@ -2365,6 +2397,10 @@ mod authoring_surface_policy_tests {
         for (name, src) in [
             ("imui_hello_demo", IMUI_HELLO_DEMO),
             ("imui_floating_windows_demo", IMUI_FLOATING_WINDOWS_DEMO),
+            (
+                "imui_interaction_showcase_demo",
+                IMUI_INTERACTION_SHOWCASE_DEMO,
+            ),
             ("imui_response_signals_demo", IMUI_RESPONSE_SIGNALS_DEMO),
             ("imui_shadcn_adapter_demo", IMUI_SHADCN_ADAPTER_DEMO),
             ("imui_editor_proof_demo", IMUI_EDITOR_PROOF_DEMO),
@@ -2405,6 +2441,7 @@ mod authoring_surface_policy_tests {
             IMUI_EDITOR_PROOF_DEMO,
             IMUI_FLOATING_WINDOWS_DEMO,
             IMUI_HELLO_DEMO,
+            IMUI_INTERACTION_SHOWCASE_DEMO,
             IMUI_NODE_GRAPH_DEMO,
             IMUI_RESPONSE_SIGNALS_DEMO,
             IMUI_SHADCN_ADAPTER_DEMO,
@@ -2430,6 +2467,7 @@ mod authoring_surface_policy_tests {
             HELLO_COUNTER_DEMO,
             IMUI_FLOATING_WINDOWS_DEMO,
             IMUI_HELLO_DEMO,
+            IMUI_INTERACTION_SHOWCASE_DEMO,
             IMUI_NODE_GRAPH_DEMO,
             IMUI_RESPONSE_SIGNALS_DEMO,
             IMUI_SHADCN_ADAPTER_DEMO,
@@ -3352,6 +3390,27 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_INTERACTION_SHOWCASE_DEMO,
+            &[
+                "let pulse_count = cx.state().local_init(|| 0u32);",
+                "let autosave_enabled = cx.state().local_init(|| true);",
+                "let selected_tab = cx.state().local_init(|| Some(Arc::<str>::from(\"overview\")));",
+                "let pulse_count_value = pulse_count.layout_value(cx);",
+                "let autosave_enabled_value = autosave_enabled.layout_value(cx);",
+                "let selected_tab_value = selected_tab.layout_value(cx);",
+                "let timeline_value = timeline.layout_value(cx);",
+                "ui.switch_model(\"Autosave snapshots\", autosave_enabled.model())",
+            ],
+            &[
+                "cx.use_local_with(|| 0u32)",
+                "cx.use_local_with(|| true)",
+                "pulse_count.layout(cx).value_or_default()",
+                "autosave_enabled.layout(cx).value_or_default()",
+                "selected_tab.layout(cx).value_or_default()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             IMUI_SHADCN_ADAPTER_DEMO,
             &[
                 "let count_state = cx.state().local_init(|| 0u32);",
@@ -3440,8 +3499,8 @@ mod authoring_surface_policy_tests {
                 ".into_element_in(cx)",
                 "fn render_inspector_panel<'a, Cx>(",
                 ".into_element(cx.elements(),",
-                "let (committed_notes, notes_outcome) = cx.data().selector_model_paint(",
-                "(&asset.notes_model, &asset.notes_outcome_model),",
+                "let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(",
+                "(&asset.name_model, &asset.notes_model, &asset.notes_outcome_model,)",
             ],
             &[
                 "fn selection_button(cx: &mut AppUi<'_, '_>,",
@@ -4313,6 +4372,7 @@ mod authoring_surface_policy_tests {
             HELLO_COUNTER_DEMO,
             IME_SMOKE_DEMO,
             IMUI_EDITOR_PROOF_DEMO,
+            IMUI_INTERACTION_SHOWCASE_DEMO,
             IMUI_SHADCN_ADAPTER_DEMO,
             LIQUID_GLASS_DEMO,
             MARKDOWN_DEMO,

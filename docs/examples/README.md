@@ -128,8 +128,12 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
     split
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
+- Reference/contract proof:
+  - `imui_response_signals_demo` — proof/contract surface for outward responses, helper lifecycle,
+    and interaction queries
 - Reference/product-validation:
-  - `imui_response_signals_demo`
+  - `imui_interaction_showcase_demo` — presentable IMUI shell that keeps the immediate control
+    flow story while using shadcn chrome for layout rhythm
   - `imui_shadcn_adapter_demo`
 - Advanced/reference:
   - `imui_floating_windows_demo`
@@ -226,9 +230,11 @@ Explicit advanced/reference roster:
 - `imui_hello_demo` is a tiny IMUI smoke/reference surface. It remains useful for the smallest
   runnable facade check, but the generic/editor immediate teaching path should start from
   `imui_action_basics` and `imui_editor_proof_demo`.
-- `imui_response_signals_demo` and `imui_shadcn_adapter_demo` are IMUI reference surfaces. They
-  validate response/query behavior and adapter/product composition rather than the default
-  immediate teaching path.
+- `imui_response_signals_demo` is an IMUI proof/contract surface. It validates response/query
+  behavior and canonical helper outward responses rather than the default immediate teaching path.
+- `imui_interaction_showcase_demo` and `imui_shadcn_adapter_demo` are IMUI product-validation
+  surfaces. They validate polished shell composition and adapter/product layering rather than the
+  default immediate teaching path.
 - `imui_floating_windows_demo` is an IMUI overlap/floating proof surface. It validates IMUI
   interaction contracts and diagnostics affordances rather than the retained-mode onboarding lane.
 - `imui_node_graph_demo` is an IMUI compatibility-only proof. It exists to keep the retained-bridge

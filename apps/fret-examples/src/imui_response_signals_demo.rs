@@ -1,3 +1,14 @@
+//! Advanced/reference demo: IMUI response signals proof surface.
+//!
+//! Why advanced: it keeps the outward response/query contract log explicit for click, drag,
+//! context-menu, menu, submenu, tab, and combo helper behavior.
+//! Not a first-contact teaching surface: prefer `imui_action_basics` and
+//! `imui_editor_proof_demo` for onboarding, then use this file when you need proof-first contract
+//! evidence rather than a polished showcase.
+//!
+//! This is a reference/product-validation surface, but it intentionally stays proof-first instead
+//! of showcase-first. Use `imui_interaction_showcase_demo` when you need the presentable shell.
+
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*};
@@ -107,14 +118,15 @@ impl View for ImUiResponseSignalsView {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-            let title = fret_ui_kit::ui::text("imui response signals demo (facade)")
+            let title = fret_ui_kit::ui::text("imui response signals proof (facade)")
                 .text_sm()
                 .font_semibold();
             ui.add_ui(title);
 
-            let hint =
-                fret_ui_kit::ui::text("Right click, double click, drag, and open a context menu.")
-                    .text_xs();
+            let hint = fret_ui_kit::ui::text(
+                "Proof surface: right click, double click, drag, and open menus. For the polished shell, run imui_interaction_showcase_demo.",
+            )
+            .text_xs();
             ui.add_ui(hint);
 
             ui.separator();
