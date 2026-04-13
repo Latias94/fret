@@ -42,9 +42,9 @@ pub(super) fn drop_popup_scope<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
 pub(super) fn open_popup<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(ui: &mut W, id: &str) {
     ui.with_cx_mut(|cx| {
-        let keep_alive_frame = cx.frame_id;
+        let keep_alive_generation = super::popup_render_generation_for_window(cx);
         let open = super::with_popup_store_for_id(cx, id, move |st, _app| {
-            st.keep_alive_frame = Some(keep_alive_frame);
+            st.keep_alive_generation = Some(keep_alive_generation);
             st.open.clone()
         });
         let _ = cx.app.models_mut().update(&open, |v| *v = true);
@@ -58,9 +58,9 @@ pub(super) fn open_popup_at<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     anchor: Rect,
 ) {
     ui.with_cx_mut(|cx| {
-        let keep_alive_frame = cx.frame_id;
+        let keep_alive_generation = super::popup_render_generation_for_window(cx);
         let (open, anchor_model) = super::with_popup_store_for_id(cx, id, move |st, _app| {
-            st.keep_alive_frame = Some(keep_alive_frame);
+            st.keep_alive_generation = Some(keep_alive_generation);
             (st.open.clone(), st.anchor.clone())
         });
         let _ = cx
@@ -112,15 +112,15 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             let _ = cx.app.models_mut().update(&anchor_model, |v| *v = None);
             super::with_popup_store_for_id(cx, id, |st, _app| {
                 st.panel_id = None;
-                st.keep_alive_frame = None;
+                st.keep_alive_generation = None;
             });
             cx.app.request_redraw(cx.window);
             return None;
         };
 
-        let keep_alive_frame = cx.frame_id;
+        let keep_alive_generation = super::popup_render_generation_for_window(cx);
         super::with_popup_store_for_id(cx, id, move |st, _app| {
-            st.keep_alive_frame = Some(keep_alive_frame);
+            st.keep_alive_generation = Some(keep_alive_generation);
         });
 
         let desired = panel_id
@@ -281,9 +281,9 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
             return false;
         }
 
-        let keep_alive_frame = cx.frame_id;
+        let keep_alive_generation = super::popup_render_generation_for_window(cx);
         super::with_popup_store_for_id(cx, id, move |st, _app| {
-            st.keep_alive_frame = Some(keep_alive_frame);
+            st.keep_alive_generation = Some(keep_alive_generation);
         });
 
         let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");

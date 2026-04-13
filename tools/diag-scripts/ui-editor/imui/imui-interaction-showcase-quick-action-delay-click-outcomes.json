@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-interaction-showcase-quick-action-delay-click-outcomes",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["imui", "showcase", "context_menu", "outcomes", "ui_editor"],
+    "target_hints": [
+      "Verifies that the quick-actions popup item remains activatable after waiting extra frames.",
+      "Catches regressions where the popup silently dismisses before the delayed item click commits."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1360.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "imui-interaction-showcase.scroll" },
+      "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.trigger" },
+      "delta_y": -720.0,
+      "require_fully_within_container": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.trigger" }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.trigger" },
+      "button": "right"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.toggle" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.toggle" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-interaction-showcase.header.latest.label"
+        },
+        "text": "Context action flipped the diagnostics rail state."
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "capture_bundle",
+      "label": "imui-interaction-showcase.quick-action-delay-click-outcomes"
+    }
+  ]
+}

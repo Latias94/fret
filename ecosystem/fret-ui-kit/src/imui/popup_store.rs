@@ -12,14 +12,19 @@ pub(super) struct PopupStoreState {
     pub(super) open: fret_runtime::Model<bool>,
     pub(super) anchor: fret_runtime::Model<Option<fret_core::Rect>>,
     pub(super) panel_id: Option<GlobalElementId>,
-    /// Last frame id where the popup was "kept alive" by a `begin_popup_*` call.
-    pub(super) keep_alive_frame: Option<FrameId>,
+    /// Last IMUI render generation where the popup was "kept alive" by a `begin_popup_*` call.
+    ///
+    /// This is intentionally decoupled from the app's global `FrameId`: idle ticks can advance
+    /// frame ids without any IMUI render pass, and open popups must not be treated as stale just
+    /// because no redraw happened for a while.
+    pub(super) keep_alive_generation: Option<u64>,
 }
 
 #[derive(Default)]
 struct PopupStoreWindowState {
     by_id: HashMap<Arc<str>, PopupStoreState>,
     prepared_frame: Option<FrameId>,
+    render_generation: u64,
 }
 
 #[derive(Default)]
@@ -38,20 +43,39 @@ fn prepare_popup_store_for_frame<H: UiHost>(
         return;
     }
     state.prepared_frame = Some(frame_id);
+    state.render_generation = state.render_generation.saturating_add(1);
 
-    let required_keep_alive = FrameId(frame_id.0.saturating_sub(1));
+    let min_live_generation = state.render_generation.saturating_sub(1);
     for st in state.by_id.values_mut() {
         let is_open = app.models().get_copied(&st.open).unwrap_or(false);
         if !is_open {
             continue;
         }
-        if st.keep_alive_frame == Some(required_keep_alive) {
+        if st
+            .keep_alive_generation
+            .is_some_and(|generation| generation >= min_live_generation)
+        {
             continue;
         }
         let _ = app.models_mut().update(&st.open, |v| *v = false);
         let _ = app.models_mut().update(&st.anchor, |v| *v = None);
         st.panel_id = None;
+        st.keep_alive_generation = None;
     }
+}
+
+pub(super) fn popup_render_generation_for_window<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u64 {
+    let window = cx.window;
+    let frame_id = cx.frame_id;
+    cx.app
+        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
+            prepare_popup_store_for_frame(store, app, window, frame_id);
+            store
+                .by_window
+                .get(&window)
+                .map(|state| state.render_generation)
+                .unwrap_or(0)
+        })
 }
 
 pub(super) fn with_popup_store_for_id<H: UiHost, R>(
@@ -75,7 +99,7 @@ pub(super) fn with_popup_store_for_id<H: UiHost, R>(
                 open: app.models_mut().insert(false),
                 anchor: app.models_mut().insert(None::<fret_core::Rect>),
                 panel_id: None,
-                keep_alive_frame: None,
+                keep_alive_generation: None,
             });
             f(entry, app)
         })

@@ -91,7 +91,9 @@ pub use options::{
     TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
     VerticalOptions, VirtualListOptions,
 };
-use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
+use popup_store::{
+    drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,
+};
 pub use response::{
     ComboResponse, DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse,
     FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt, TabBarResponse,
