@@ -28,6 +28,8 @@ struct DisclosureSpec {
     enabled: bool,
     open: Option<fret_runtime::Model<bool>>,
     default_open: bool,
+    activate_shortcut: Option<fret_runtime::KeyChord>,
+    shortcut_repeat: bool,
     selected: bool,
     leaf: bool,
     level: u32,
@@ -46,6 +48,8 @@ impl DisclosureSpec {
             enabled: options.enabled,
             open: options.open,
             default_open: options.default_open,
+            activate_shortcut: options.activate_shortcut,
+            shortcut_repeat: options.shortcut_repeat,
             selected: false,
             leaf: false,
             level: 1,
@@ -65,6 +69,8 @@ impl DisclosureSpec {
             enabled: options.enabled,
             open: options.open,
             default_open: options.default_open,
+            activate_shortcut: options.activate_shortcut,
+            shortcut_repeat: options.shortcut_repeat,
             selected: options.selected,
             leaf: options.leaf,
             level,
@@ -161,6 +167,8 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     let action_label = spec.label.clone();
                     let open_model_for_activate = open_model.clone();
                     let has_children = spec.has_children();
+                    let activate_shortcut = spec.activate_shortcut;
+                    let shortcut_repeat = spec.shortcut_repeat;
                     cx.pressable_on_activate(crate::on_activate(
                         move |host, action_cx, _reason| {
                             host.record_transient_event(action_cx, super::KEY_CLICKED);
@@ -177,6 +185,24 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         cx.key_on_key_down_for(
                             trigger_id,
                             Arc::new(move |host, acx, down| {
+                                if let Some(shortcut) = activate_shortcut {
+                                    let matches_shortcut =
+                                        down.key == shortcut.key && down.modifiers == shortcut.mods;
+                                    if matches_shortcut
+                                        && (!down.repeat || shortcut_repeat)
+                                        && !down.ime_composing
+                                    {
+                                        host.record_transient_event(acx, super::KEY_CLICKED);
+                                        if has_children {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&open_model, |value| *value = !*value);
+                                        }
+                                        host.notify(acx);
+                                        return true;
+                                    }
+                                }
+
                                 let is_menu_key = down.key == KeyCode::ContextMenu;
                                 let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
                                 if !(is_menu_key || is_shift_f10) {

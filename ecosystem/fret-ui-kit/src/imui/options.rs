@@ -189,6 +189,13 @@ pub struct CollapsingHeaderOptions {
     pub test_id: Option<Arc<str>>,
     pub header_test_id: Option<Arc<str>>,
     pub content_test_id: Option<Arc<str>>,
+    /// Exact key chord that activates the disclosure trigger while it is focused.
+    ///
+    /// This is an item-local shortcut seam. It does not participate in global shortcut ownership
+    /// arbitration.
+    pub activate_shortcut: Option<fret_runtime::KeyChord>,
+    /// Whether `activate_shortcut` should fire on repeated keydown events.
+    pub shortcut_repeat: bool,
 }
 
 impl Default for CollapsingHeaderOptions {
@@ -200,6 +207,8 @@ impl Default for CollapsingHeaderOptions {
             test_id: None,
             header_test_id: None,
             content_test_id: None,
+            activate_shortcut: None,
+            shortcut_repeat: false,
         }
     }
 }
@@ -219,6 +228,13 @@ pub struct TreeNodeOptions {
     pub set_size: Option<u32>,
     pub test_id: Option<Arc<str>>,
     pub content_test_id: Option<Arc<str>>,
+    /// Exact key chord that activates the disclosure trigger while it is focused.
+    ///
+    /// This is an item-local shortcut seam. It does not participate in global shortcut ownership
+    /// arbitration.
+    pub activate_shortcut: Option<fret_runtime::KeyChord>,
+    /// Whether `activate_shortcut` should fire on repeated keydown events.
+    pub shortcut_repeat: bool,
 }
 
 impl Default for TreeNodeOptions {
@@ -234,6 +250,8 @@ impl Default for TreeNodeOptions {
             set_size: None,
             test_id: None,
             content_test_id: None,
+            activate_shortcut: None,
+            shortcut_repeat: false,
         }
     }
 }
