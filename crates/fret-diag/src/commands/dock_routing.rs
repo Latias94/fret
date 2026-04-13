@@ -156,6 +156,28 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
         }
     }
     println!("  windows_touched_total: {}", windows.len());
+    let observed_scale_factors = routing
+        .get("observed_scale_factors_x1000")
+        .and_then(|v| v.as_array())
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|value| value.as_u64())
+                .map(|value| format!("{:.3}", (value as f64) / 1000.0))
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .filter(|value| !value.is_empty());
+    if let Some(observed_scale_factors) = observed_scale_factors {
+        println!("  scale_factors_seen: {}", observed_scale_factors);
+    }
+    println!(
+        "  mixed_dpi_signal_observed: {}",
+        routing
+            .get("mixed_dpi_signal_observed")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    );
 
     println!("  entries (most recent first):");
     let max = 12usize;

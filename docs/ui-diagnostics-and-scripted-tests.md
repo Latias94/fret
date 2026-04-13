@@ -184,6 +184,7 @@ Footgun / recommendation:
       - `pos/start/grab/follow` (window-local cursor position + ImGui-style cursor grab anchor),
       - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
       - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
+      - `scale_factors_seen` / `mixed_dpi_signal_observed` (top-level mixed-DPI signal summary from drag evidence),
       - `under` (hover selection source: platform vs heuristic).
   - `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard-dev diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`

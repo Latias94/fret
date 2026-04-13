@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
@@ -569,6 +569,7 @@ fn build_dock_routing_payload_from_json(
 
     let mut entries: Vec<Value> = Vec::new();
     let mut last_fingerprint_by_window: HashMap<u64, u64> = HashMap::new();
+    let mut observed_scale_factors_x1000: BTreeSet<u64> = BTreeSet::new();
 
     for w in windows {
         let window = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -743,6 +744,20 @@ fn build_dock_routing_payload_from_json(
             }
             last_fingerprint_by_window.insert(window, fp);
 
+            if let Some(d) = dock_drag {
+                for key in [
+                    "current_window_scale_factor_x1000_from_runner",
+                    "current_window_scale_factor_x1000",
+                    "moving_window_scale_factor_x1000",
+                ] {
+                    if let Some(scale_factor) = d.get(key).and_then(|v| v.as_u64())
+                        && scale_factor > 0
+                    {
+                        observed_scale_factors_x1000.insert(scale_factor);
+                    }
+                }
+            }
+
             let dock_drag_out = dock_drag.map(|d| {
                 json!({
                     "pointer_id": d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
@@ -816,12 +831,20 @@ fn build_dock_routing_payload_from_json(
         }
     }
 
+    let mixed_dpi_signal_observed = observed_scale_factors_x1000.len() >= 2;
+    let observed_scale_factors_x1000 = observed_scale_factors_x1000
+        .into_iter()
+        .map(Value::from)
+        .collect::<Vec<_>>();
+
     Ok(json!({
         "schema_version": 1,
         "kind": "dock_routing",
         "bundle": bundle_label,
         "warmup_frames": warmup_frames,
         "entries_total": entries.len(),
+        "observed_scale_factors_x1000": observed_scale_factors_x1000,
+        "mixed_dpi_signal_observed": mixed_dpi_signal_observed,
         "entries": entries,
     }))
 }
@@ -1921,6 +1944,11 @@ mod tests {
         assert_eq!(routing["kind"].as_str(), Some("dock_routing"));
         assert_eq!(routing["schema_version"].as_u64(), Some(1));
         assert_eq!(routing["entries_total"].as_u64(), Some(1));
+        assert_eq!(
+            routing["observed_scale_factors_x1000"],
+            json!([1000, 1250, 1500])
+        );
+        assert_eq!(routing["mixed_dpi_signal_observed"].as_bool(), Some(true));
 
         let entries = routing["entries"].as_array().unwrap();
         assert_eq!(entries.len(), 1);

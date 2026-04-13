@@ -167,13 +167,16 @@ Each TODO is labeled:
     - Tip: `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` records:
       - `pos/start/grab/follow` (window-local cursor position + cursor grab anchor),
       - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
-      - `*_scale_factor_x1000` fields when present (mixed-DPI evidence),
+      - `*_scale_factor_x1000` fields plus top-level `observed_scale_factors_x1000` /
+        `mixed_dpi_signal_observed` (mixed-DPI signal evidence),
       and will regenerate stale `dock.routing.json` from the adjacent bundle artifact (no manual deletion needed).
     - Local debug helper:
       - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json`
         sweeps the floating window outer position along +X and -X and captures bundles after each move.
   - Progress:
     - [x] Evidence surface area: `dock-routing` includes `current_window_scale_factor_x1000` / `moving_window_scale_factor_x1000`.
+    - [x] `dock-routing` now rolls drag scale-factor evidence into top-level `observed_scale_factors_x1000` /
+      `mixed_dpi_signal_observed` so manual mixed-DPI triage does not require opening raw entries first.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.
