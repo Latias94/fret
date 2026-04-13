@@ -43,8 +43,8 @@ pub(super) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
             a11y_label: options.a11y_label.clone(),
             test_id: options.test_id.clone(),
             popup: options.popup,
-            activate_shortcut: None,
-            shortcut_repeat: false,
+            activate_shortcut: options.activate_shortcut,
+            shortcut_repeat: options.shortcut_repeat,
         },
         move |ui| {
             for (index, item) in items.iter().enumerate() {
