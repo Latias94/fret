@@ -538,6 +538,154 @@ fn button_command_uses_command_metadata_and_gating() {
 }
 
 #[test]
+fn button_activate_shortcut_is_scoped_to_focused_button() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let command = CommandId::from("test.shortcut.focused");
+    app.commands_mut()
+        .register(command.clone(), CommandMeta::new("Focused Shortcut"));
+
+    let shortcut = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    let render = |cx: &mut ElementContext<'_, TestHost>, command: &CommandId| {
+        crate::imui(cx, |ui| {
+            ui.vertical(|ui| {
+                ui.button_command_with_options(
+                    command.clone(),
+                    fret_ui_kit::imui::ButtonOptions {
+                        test_id: Some(Arc::from("imui-button-shortcut.target")),
+                        activate_shortcut: Some(shortcut),
+                        ..Default::default()
+                    },
+                );
+                ui.button_with_options(
+                    "Other",
+                    fret_ui_kit::imui::ButtonOptions {
+                        test_id: Some(Arc::from("imui-button-shortcut.other")),
+                        ..Default::default()
+                    },
+                );
+            });
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-button-shortcut",
+        |cx| render(cx, &command),
+    );
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    assert!(
+        app.effects.is_empty(),
+        "expected unfocused shortcut to stay local to the button"
+    );
+
+    let other = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-button-shortcut.other",
+    );
+    click_at(&mut ui, &mut app, &mut services, other);
+    app.effects.clear();
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-button-shortcut",
+        |cx| render(cx, &command),
+    );
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    assert!(
+        app.effects.is_empty(),
+        "expected shortcut on another focused button to do nothing"
+    );
+
+    let target = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-button-shortcut.target",
+    );
+    click_at(&mut ui, &mut app, &mut services, target);
+    app.effects.clear();
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-button-shortcut",
+        |cx| render(cx, &command),
+    );
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    assert!(app.effects.iter().any(|effect| {
+        matches!(
+            effect,
+            Effect::Command { window: Some(target_window), command: target_command }
+                if *target_window == window && *target_command == command
+        )
+    }));
+}
+
+#[test]
 fn begin_menu_helper_toggles_popup_and_closes_after_command_activate() {
     let window = AppWindowId::default();
     let bounds = Rect::new(

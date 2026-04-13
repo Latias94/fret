@@ -6,7 +6,7 @@ use fret_core::{KeyCode, MouseButton, SemanticsRole};
 use fret_runtime::ActionId;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
-use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
+use fret_ui::action::{ActivateReason, PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{PressableA11y, PressableProps};
 
 use super::{ButtonOptions, ResponseExt, UiWriterImUiFacadeExt};
@@ -52,6 +52,8 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             test_id: options.test_id.clone(),
             ..Default::default()
         };
+        let activate_shortcut = options.activate_shortcut;
+        let shortcut_repeat = options.shortcut_repeat;
 
         cx.pressable_with_id(props, move |cx, state, id| {
             cx.pressable_clear_on_pointer_down();
@@ -82,9 +84,31 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             }));
 
             if enabled {
+                let action_for_shortcut = action.clone();
                 cx.key_on_key_down_for(
                     id,
                     Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                host.record_transient_event(acx, super::KEY_CLICKED);
+                                if let Some(action) = action_for_shortcut.clone() {
+                                    host.record_pending_command_dispatch_source(
+                                        acx,
+                                        &action,
+                                        ActivateReason::Keyboard,
+                                    );
+                                    host.dispatch_command(Some(acx.window), action);
+                                }
+                                host.notify(acx);
+                                return true;
+                            }
+                        }
+
                         let is_menu_key = down.key == KeyCode::ContextMenu;
                         let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
                         if !(is_menu_key || is_shift_f10) {

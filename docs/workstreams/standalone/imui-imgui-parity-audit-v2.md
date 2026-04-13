@@ -210,9 +210,12 @@ The real remaining gaps are narrower:
    - `fret-ui-kit::imui` now exposes `menu_item_command[_with_options]` and
      `button_command[_with_options]`, which resolve command title, enabled state, and menu-item
      shortcut hints from Fret's command/keymap layer without widening `crates/fret-ui`.
+   - `ButtonOptions` also exposes a focused `activate_shortcut` seam for exact item-local
+     `KeyChord` activation without widening the runtime's global shortcut ownership model.
    - The remaining gap is depth rather than ownership: there is still no immediate equivalent to
-     `SetNextItemShortcut()` / `SetItemKeyOwner()`, no item-local shortcut registration seam, and
-     no richer first-party proof surface beyond menu/button command affordances.
+     `SetNextItemShortcut()` / `SetItemKeyOwner()`, no broader item-local shortcut registration
+     seam beyond focused buttons, and no richer first-party proof surface beyond menu/button
+     command affordances.
 5. Partial item-status parity
    - `ResponseExt` covers a useful subset of hover, click, drag, context-menu, and nav-highlight
      behavior.
