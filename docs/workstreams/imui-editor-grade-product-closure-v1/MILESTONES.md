@@ -115,6 +115,10 @@ Current status:
 - P1 is now split for implementation-heavy work:
   `docs/workstreams/imui-workbench-shell-closure-v1/` owns the active default-workbench shell
   closure follow-on, while this umbrella keeps the phase ordering and status record.
+  Update on 2026-04-13:
+  that follow-on already closed on a no-new-helper-yet verdict for promoted first-party shell
+  helpers, so future active execution should no longer treat P1 shell composition as the default
+  open lane.
 
 ## M3 - P2 unified diagnostics/devtools surface
 
@@ -200,9 +204,9 @@ Current status:
   `tools/diag-campaigns/imui-p3-multiwindow-parity.json` now binds four repo-owned scripts into one
   lane-owned package over `docking_arbitration_demo`, and keeps `diag-hardening-smoke-docking`
   small instead of overloading it with all P3 stress coverage.
-- P3 is now closed for this lane.
-  Future multi-window implementation-heavy work should continue in the docking parity lane or a
-  narrower runner follow-on instead of widening this folder.
+- P3 is now the next active execution priority after the P1 shell closeout.
+  Continue multi-window implementation-heavy work in the existing docking parity lane or a narrower
+  runner follow-on instead of widening this folder.
 
 ## M5 - Narrow follow-ons or closeout
 

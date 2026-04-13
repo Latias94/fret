@@ -8,6 +8,7 @@ of turning into a vague product backlog.
 - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
 - `docs/workstreams/imui-workbench-shell-closure-v1/M0_BASELINE_AUDIT_2026-04-13.md`
 - `docs/workstreams/imui-workbench-shell-closure-v1/M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md`
+- `docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md`
 - `docs/workstreams/imui-workbench-shell-closure-v1/TODO.md`
 - `docs/workstreams/imui-workbench-shell-closure-v1/MILESTONES.md`
 - `docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json`
@@ -98,3 +99,7 @@ The M0 audit also freezes one immediate interpretation rule for future work:
 - if a gap is really about shell assembly/default-path posture, keep it here,
 - if it reduces to tabstrip behavior, continue the existing tabstrip lanes,
 - if it reduces to multi-window hand-feel, continue docking parity.
+
+This lane is now closed.
+Reuse this gate package only as closeout evidence unless fresh repeated full-shell evidence
+explicitly reopens the question.

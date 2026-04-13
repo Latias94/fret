@@ -124,15 +124,16 @@ Current source of truth for the in-tree immediate-mode stack:
     needs the frozen two-surface proof budget before review; split implementation-heavy work into
     narrower follow-ons.
 
-- Active implementation-heavy P1 shell follow-on:
+- Closed P1 shell follow-on closeout record:
   - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
+  - `docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/TODO.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json`
-  - Scope: close the default workbench shell gap now that the umbrella lane already froze the P1
-    proof roster and promoted shell diagnostics floor; keep tabstrip parity and multi-window
-    runner closure in their existing owner lanes.
+  - Scope: records the no-new-helper-yet verdict for promoted first-party workbench shell helpers
+    after the umbrella lane froze the P1 proof roster and promoted shell diagnostics floor; keep
+    active P3 execution in the existing docking parity lane.
 
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
@@ -226,8 +227,9 @@ Rule:
 - Prefer the active product-closure follow-on for the current "what is still missing relative to an
   editor-grade Dear ImGui-class experience?" answer and for the current phase ordering across
   authoring, shell, tooling, and multi-window hand-feel.
-- Prefer the active P1 shell follow-on for implementation-heavy workbench shell composition work
-  after the umbrella lane's proof matrix and shell smoke floor are frozen.
+- Prefer the closed P1 shell follow-on only for the latest no-new-helper-yet verdict on promoted
+  first-party shell helpers.
+- Prefer the existing docking parity lane for the next active P3 multi-window hand-feel work.
 - Prefer the compatibility-retained follow-on lane for the latest keep/delete verdict on retained
   compatibility surfaces that leaked into public/proof `imui` paths.
 - Prefer the v2 workstream for the closed stack reset, editor adapter closure, and teaching-surface

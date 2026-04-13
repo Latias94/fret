@@ -1,6 +1,6 @@
 # ImUi Workbench Shell Closure v1 - Milestones
 
-Status: active execution lane
+Status: closed closeout record
 Last updated: 2026-04-13
 
 ## M0 - Baseline and lane split
@@ -75,4 +75,8 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- Closed on 2026-04-13 via `CLOSEOUT_AUDIT_2026-04-13.md`.
+- This lane now remains as closeout evidence for the no-new-helper-yet verdict on promoted
+  first-party workbench shell helpers.
+- The next active execution priority should continue in the existing docking multi-window parity
+  lane for P3 hand-feel closure rather than keep this folder active.

@@ -32,12 +32,12 @@ Tracker highlights:
   multi-window hand-feel closure): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
-- ImUi workbench-shell closure follow-on (active narrow P1 lane that turns the umbrella's frozen
-  proof roster into implementation-heavy shell composition work around `workspace_shell_demo`,
-  `editor_notes_demo`, and the promoted shell diagnostics floor, while keeping tabstrip parity and
-  runner/backend closure in their existing owner lanes): `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`,
-  `docs/workstreams/imui-workbench-shell-closure-v1/TODO.md`, and
-  `docs/workstreams/imui-workbench-shell-closure-v1/EVIDENCE_AND_GATES.md`.
+- ImUi workbench-shell closure follow-on closeout record (closed narrow P1 lane that concluded the
+  repo should keep the default workbench answer as explicit example-local assembly over the frozen
+  shell starter set for now, rather than promoting a new first-party shell helper):
+  `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`,
+  `docs/workstreams/imui-workbench-shell-closure-v1/M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md`,
+  and `docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md`.
 - Adaptive layout contract closure closeout record (closed cross-lane authoring taxonomy + proof
   surface lane for container vs environment queries, breakpoint vocabulary, and editor-rail owner
   split): `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`,

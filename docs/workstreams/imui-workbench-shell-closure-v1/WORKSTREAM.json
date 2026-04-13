@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "imui-workbench-shell-closure-v1",
   "title": "ImUi Workbench Shell Closure v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-13",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
@@ -19,6 +19,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-workbench-shell-closure-v1/M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md"
     },
     {
       "role": "execution",
@@ -93,6 +97,7 @@
     "docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md",
+    "docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/TODO.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/MILESTONES.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/EVIDENCE_AND_GATES.md",
@@ -119,7 +124,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Keep this lane active only while it is freezing implementation-heavy P1 shell closure. If the next clustered problem is tabstrip parity or runner/backend hand-feel, continue the existing narrower owner lane instead of widening this folder."
+    "default_action": "new_follow_on",
+    "notes": "This lane is closed on a no-new-helper-yet verdict. Reopen only if fresh repeated full-shell evidence justifies promoted helper extraction; continue tabstrip and runner/backend work in their existing owner lanes by default."
   }
 }

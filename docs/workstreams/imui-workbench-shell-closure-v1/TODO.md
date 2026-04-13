@@ -1,6 +1,6 @@
 # ImUi Workbench Shell Closure v1 - TODO
 
-Status: active execution lane
+Status: closed closeout record
 Last updated: 2026-04-13
 
 ## Lane setup
@@ -56,5 +56,7 @@ Last updated: 2026-04-13
       `workspace-tabstrip*` / tab-bar lanes instead of widening this folder.
 - [ ] If the remaining work clusters around runner/backend hand-feel, continue
       `docking-multiwindow-imgui-parity` instead of widening this folder.
-- [ ] Close this lane or split a narrower follow-on once the default workbench proof and shell gate
+- [x] Close this lane or split a narrower follow-on once the default workbench proof and shell gate
       package are stable enough to stop using this folder as the active execution surface.
+      Result: `CLOSEOUT_AUDIT_2026-04-13.md` closes this lane on a no-new-helper-yet verdict and
+      points future active execution back to the docking multi-window parity lane for P3.

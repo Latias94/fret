@@ -123,8 +123,11 @@ Last updated: 2026-04-13
       (key ownership, item-status lifecycle, richer collection/pane proof), split a narrow follow-on
       instead of widening this umbrella folder.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
-      Result: `docs/workstreams/imui-workbench-shell-closure-v1/` is now the active implementation-
-      heavy P1 shell lane; keep this umbrella focused on phase ordering and cross-phase status.
+      Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
+      closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella
+      focused on phase ordering and cross-phase status.
 - [ ] If P2 becomes mostly tooling UX/productization, split it into a narrow devtools follow-on.
-- [ ] If P3 becomes mostly platform diagnostics and runner work, continue using the existing docking
+- [x] If P3 becomes mostly platform diagnostics and runner work, continue using the existing docking
       parity lane or start a narrower follow-on there instead of bloating this folder.
+      Result: after the P1 shell lane closeout, the next active execution priority should continue
+      in `docs/workstreams/docking-multiwindow-imgui-parity/`.

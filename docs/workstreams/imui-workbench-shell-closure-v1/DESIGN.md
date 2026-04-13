@@ -1,10 +1,17 @@
 # ImUi Workbench Shell Closure v1
 
-Status: active execution lane
+Status: Closed closeout reference
 Last updated: 2026-04-13
+
+Status note (2026-04-13): this document remains the lane-opening rationale. The shipped verdict now
+lives in `CLOSEOUT_AUDIT_2026-04-13.md` and
+`M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md`. References below to implementation-heavy
+P1 shell follow-on work should be read as opening-state rationale rather than an active execution
+queue.
 
 Related:
 
+- `CLOSEOUT_AUDIT_2026-04-13.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
