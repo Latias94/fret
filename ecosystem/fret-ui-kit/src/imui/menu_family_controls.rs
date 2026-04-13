@@ -59,6 +59,8 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             open_before,
             enabled,
             options.test_id.clone(),
+            options.activate_shortcut,
+            options.shortcut_repeat,
         )
     });
 
@@ -163,6 +165,8 @@ fn menu_trigger_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     open: bool,
     enabled: bool,
     test_id: Option<Arc<str>>,
+    activate_shortcut: Option<fret_runtime::KeyChord>,
+    shortcut_repeat: bool,
 ) -> ResponseExt {
     let mut response = ResponseExt::default();
 
@@ -189,6 +193,28 @@ fn menu_trigger_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 host.record_transient_event(acx, super::KEY_CLICKED);
                 host.notify(acx);
             }));
+
+            if enabled {
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                host.record_transient_event(acx, super::KEY_CLICKED);
+                                host.notify(acx);
+                                return true;
+                            }
+                        }
+
+                        false
+                    }),
+                );
+            }
 
             response.core.hovered = state.hovered;
             response.core.pressed = state.pressed;

@@ -67,6 +67,13 @@ pub struct BeginMenuOptions {
     pub enabled: bool,
     pub test_id: Option<Arc<str>>,
     pub popup: PopupMenuOptions,
+    /// Exact key chord that activates the menu trigger while it is focused.
+    ///
+    /// This is an item-local shortcut seam. It does not participate in global shortcut ownership
+    /// arbitration.
+    pub activate_shortcut: Option<fret_runtime::KeyChord>,
+    /// Whether `activate_shortcut` should fire on repeated keydown events.
+    pub shortcut_repeat: bool,
 }
 
 impl Default for BeginMenuOptions {
@@ -75,6 +82,8 @@ impl Default for BeginMenuOptions {
             enabled: true,
             test_id: None,
             popup: PopupMenuOptions::default(),
+            activate_shortcut: None,
+            shortcut_repeat: false,
         }
     }
 }
