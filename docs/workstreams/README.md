@@ -136,16 +136,17 @@ Current source of truth for the in-tree immediate-mode stack:
     slice without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate
     key-owner problem.
 
-- Active narrow P0 menu/tab trigger response-surface follow-on:
+- Closed narrow P0 menu/tab trigger response-surface follow-on:
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/M0_BASELINE_AUDIT_2026-04-13.md`
+  - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/TODO.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/MILESTONES.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json`
-  - Scope: decide whether helper-owned menu/submenu/tab triggers should keep their current
-    `bool open` / no-return posture or grow one narrow outward facade response surface without
-    reopening richer menu/tab policy.
+  - Scope: records the landed additive outward response surface for helper-owned menu/submenu/tab
+    triggers while preserving legacy `bool open` / no-return wrappers and keeping richer menu/tab
+    policy out of scope.
 
 - Closed P1 shell follow-on closeout record:
   - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
@@ -249,8 +250,9 @@ Rule:
 
 - Prefer the active P0 response-status lifecycle follow-on for current `ResponseExt` lifecycle
   vocabulary work.
-- Prefer the active P0 menu/tab trigger response-surface follow-on for the current helper-owned
-  menu/submenu/tab outward-response decision.
+- Prefer the closed P0 menu/tab trigger response-surface follow-on for the latest helper-owned
+  menu/submenu/tab outward-response verdict; start a narrower follow-on if broader policy work is
+  still missing.
 - Prefer the active product-closure follow-on for the current "what is still missing relative to an
   editor-grade Dear ImGui-class experience?" answer and for the current phase ordering across
   authoring, shell, tooling, and multi-window hand-feel.
@@ -398,7 +400,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
-- `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 5 markdown docs
+- `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)

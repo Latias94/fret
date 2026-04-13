@@ -1691,8 +1691,11 @@ mod authoring_surface_policy_tests {
     #[test]
     fn immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on() {
         for marker in [
-            "`begin_menu_with_options` and `begin_submenu_with_options` currently return only `bool open`.",
-            "`tab_bar_with_options` currently exposes no outward trigger response surface.",
+            "`begin_menu_response[_with_options]`",
+            "`begin_submenu_response[_with_options]`",
+            "`tab_bar_response[_with_options]`",
+            "`begin_menu_with_options` and `begin_submenu_with_options` still return `bool open`.",
+            "`tab_bar_with_options` still returns no outward value",
             "`fret-authoring::Response`.",
             "`ecosystem/fret-ui-kit::imui`",
             "Do not bundle richer menu-bar/submenu/tab policy into this lane.",
@@ -1706,6 +1709,7 @@ mod authoring_surface_policy_tests {
         for marker in [
             "\"slug\": \"imui-menu-tab-trigger-response-surface-v1\"",
             "\"follow_on_of\": \"imui-editor-grade-product-closure-v1\"",
+            "\"status\": \"closed\"",
             "immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on",
         ] {
             assert!(
@@ -1750,6 +1754,28 @@ mod authoring_surface_policy_tests {
                 "let combo_model_resp = ui.combo_model_with_options(",
                 "combo_model_resp.edited()",
                 "combo_model_resp.deactivated_after_edit()",
+            ],
+            &[],
+        );
+    }
+
+    #[test]
+    fn imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof() {
+        assert_current_imui_teaching_surface(
+            "imui_response_signals_demo_trigger_response_surface",
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            &[
+                "let file_menu = ui.begin_menu_response_with_options(",
+                "file_menu.opened()",
+                "file_menu.closed()",
+                "let recent_menu = ui.begin_submenu_response_with_options(",
+                "recent_menu.toggled()",
+                "let tab_response = ui.tab_bar_response_with_options(",
+                "tab_response.selected_changed()",
+                "if let Some(scene_tab) = tab_response.trigger(\"scene\") {",
+                "scene_tab.clicked()",
+                "scene_tab.activated()",
+                "scene_tab.deactivated()",
             ],
             &[],
         );

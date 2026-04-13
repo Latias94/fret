@@ -2284,6 +2284,176 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
 }
 
 #[test]
+fn menu_and_submenu_response_report_toggle_and_trigger_edges() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let menu_open = Rc::new(Cell::new(false));
+    let menu_opened = Rc::new(Cell::new(false));
+    let menu_closed = Rc::new(Cell::new(false));
+    let menu_activated = Rc::new(Cell::new(false));
+    let menu_deactivated = Rc::new(Cell::new(false));
+    let submenu_open = Rc::new(Cell::new(false));
+    let submenu_opened = Rc::new(Cell::new(false));
+    let submenu_clicked = Rc::new(Cell::new(false));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        let menu_open = menu_open.clone();
+        let menu_opened = menu_opened.clone();
+        let menu_closed = menu_closed.clone();
+        let menu_activated = menu_activated.clone();
+        let menu_deactivated = menu_deactivated.clone();
+        let submenu_open = submenu_open.clone();
+        let submenu_opened = submenu_opened.clone();
+        let submenu_clicked = submenu_clicked.clone();
+
+        crate::imui(cx, move |ui| {
+            ui.menu_bar_with_options(
+                fret_ui_kit::imui::MenuBarOptions {
+                    test_id: Some(Arc::from("imui-menu-response.root")),
+                    ..Default::default()
+                },
+                |ui| {
+                    let menu = ui.begin_menu_response_with_options(
+                        "file",
+                        "File",
+                        fret_ui_kit::imui::BeginMenuOptions {
+                            test_id: Some(Arc::from("imui-menu-response.file")),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let submenu = ui.begin_submenu_response_with_options(
+                                "recent",
+                                "Recent",
+                                fret_ui_kit::imui::BeginSubmenuOptions {
+                                    test_id: Some(Arc::from("imui-menu-response.file.recent")),
+                                    ..Default::default()
+                                },
+                                |ui| {
+                                    let _ = ui.menu_item_with_options(
+                                        "Project",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from(
+                                                "imui-menu-response.file.recent.project",
+                                            )),
+                                            ..Default::default()
+                                        },
+                                    );
+                                },
+                            );
+                            submenu_open.set(submenu.open());
+                            submenu_opened.set(submenu.opened());
+                            submenu_clicked.set(submenu.clicked());
+                        },
+                    );
+                    menu_open.set(menu.open());
+                    menu_opened.set(menu.opened());
+                    menu_closed.set(menu.closed());
+                    menu_activated.set(menu.trigger.activated());
+                    menu_deactivated.set(menu.trigger.deactivated());
+                },
+            );
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-menu-response",
+        render,
+    );
+    assert!(!menu_open.get());
+    assert!(!menu_opened.get());
+    assert!(!menu_closed.get());
+    assert!(!menu_activated.get());
+    assert!(!menu_deactivated.get());
+    assert!(!submenu_open.get());
+    assert!(!submenu_opened.get());
+    assert!(!submenu_clicked.get());
+
+    let file_trigger = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-menu-response.file",
+    );
+    pointer_down_at(&mut ui, &mut app, &mut services, file_trigger);
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-menu-response",
+        &render,
+    );
+    assert!(!menu_open.get());
+    assert!(menu_activated.get());
+    assert!(!menu_deactivated.get());
+
+    pointer_up_at(&mut ui, &mut app, &mut services, file_trigger);
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-menu-response",
+        &render,
+    );
+    assert!(menu_open.get());
+    assert!(menu_opened.get());
+    assert!(menu_deactivated.get());
+    assert!(!submenu_open.get());
+
+    let submenu_trigger = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-menu-response.file.recent",
+    );
+    click_at(&mut ui, &mut app, &mut services, submenu_trigger);
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-menu-response",
+        &render,
+    );
+    assert!(menu_open.get());
+    assert!(submenu_open.get());
+    assert!(submenu_opened.get());
+    assert!(submenu_clicked.get());
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-menu-response.file.recent.project",
+    ));
+}
+
+#[test]
 fn tab_bar_helper_switches_selected_panel_and_updates_selection_model() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -2440,6 +2610,167 @@ fn tab_bar_helper_switches_selected_panel_and_updates_selection_model() {
         |cx| render(cx),
     );
     assert_eq!(selected_out.borrow().as_deref(), Some("scene"));
+}
+
+#[test]
+fn tab_bar_response_reports_selected_change_and_trigger_edges() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let selected_model = app.models_mut().insert(Some(Arc::<str>::from("inspector")));
+    let selected_id = Rc::new(RefCell::new(None::<String>));
+    let selected_changed = Rc::new(Cell::new(false));
+    let scene_clicked = Rc::new(Cell::new(false));
+    let scene_activated = Rc::new(Cell::new(false));
+    let scene_deactivated = Rc::new(Cell::new(false));
+    let scene_selected = Rc::new(Cell::new(false));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        let selected_id = selected_id.clone();
+        let selected_changed = selected_changed.clone();
+        let scene_clicked = scene_clicked.clone();
+        let scene_activated = scene_activated.clone();
+        let scene_deactivated = scene_deactivated.clone();
+        let scene_selected = scene_selected.clone();
+        let selected_model = selected_model.clone();
+
+        crate::imui(cx, move |ui| {
+            let tabs = ui.tab_bar_response_with_options(
+                "workspace",
+                fret_ui_kit::imui::TabBarOptions {
+                    selected: Some(selected_model.clone()),
+                    test_id: Some(Arc::from("imui-tab-response.root")),
+                    ..Default::default()
+                },
+                |tabs| {
+                    tabs.begin_tab_item_with_options(
+                        "scene",
+                        "Scene",
+                        fret_ui_kit::imui::TabItemOptions {
+                            test_id: Some(Arc::from("imui-tab-response.scene")),
+                            panel_test_id: Some(Arc::from("imui-tab-response.scene.panel")),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.text("Scene Panel");
+                        },
+                    );
+                    tabs.begin_tab_item_with_options(
+                        "inspector",
+                        "Inspector",
+                        fret_ui_kit::imui::TabItemOptions {
+                            test_id: Some(Arc::from("imui-tab-response.inspector")),
+                            panel_test_id: Some(Arc::from("imui-tab-response.inspector.panel")),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.text("Inspector Panel");
+                        },
+                    );
+                },
+            );
+
+            selected_id.replace(tabs.selected_id().map(str::to_owned));
+            selected_changed.set(tabs.selected_changed());
+            if let Some(scene) = tabs.trigger("scene") {
+                scene_clicked.set(scene.clicked());
+                scene_activated.set(scene.activated());
+                scene_deactivated.set(scene.deactivated());
+                scene_selected.set(scene.selected());
+            }
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-tab-response",
+        render,
+    );
+    assert_eq!(selected_id.borrow().as_deref(), Some("inspector"));
+    assert!(!selected_changed.get());
+    assert!(!scene_clicked.get());
+    assert!(!scene_activated.get());
+    assert!(!scene_deactivated.get());
+    assert!(!scene_selected.get());
+
+    let scene_tab = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-tab-response.scene",
+    );
+    pointer_down_at(&mut ui, &mut app, &mut services, scene_tab);
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-tab-response",
+        &render,
+    );
+    assert_eq!(selected_id.borrow().as_deref(), Some("inspector"));
+    assert!(!selected_changed.get());
+    assert!(scene_activated.get());
+    assert!(!scene_clicked.get());
+    assert!(!scene_deactivated.get());
+    assert!(!scene_selected.get());
+
+    pointer_up_at(&mut ui, &mut app, &mut services, scene_tab);
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-tab-response",
+        &render,
+    );
+    assert_eq!(selected_id.borrow().as_deref(), Some("scene"));
+    assert!(selected_changed.get());
+    assert!(scene_clicked.get());
+    assert!(scene_deactivated.get());
+    assert!(scene_selected.get());
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-tab-response.scene.panel",
+    ));
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-tab-response",
+        &render,
+    );
+    assert_eq!(selected_id.borrow().as_deref(), Some("scene"));
+    assert!(!selected_changed.get());
+    assert!(!scene_clicked.get());
+    assert!(!scene_activated.get());
+    assert!(!scene_deactivated.get());
+    assert!(scene_selected.get());
 }
 
 #[test]

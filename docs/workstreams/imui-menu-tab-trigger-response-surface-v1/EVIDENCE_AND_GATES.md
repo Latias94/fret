@@ -1,13 +1,14 @@
 # ImUi Menu/Tab Trigger Response Surface v1 - Evidence & Gates
 
-Goal: keep the helper-owned trigger response-surface decision tied to one current-behavior floor,
-one source-policy gate, and one explicit lane boundary instead of letting it drift back into the
-generic `imui` backlog.
+Goal: keep the landed helper-owned trigger response surface tied to one current-behavior floor,
+focused outward-surface proof, one demo/source gate, and one explicit lane boundary instead of
+letting it drift back into the generic `imui` backlog.
 
 ## Evidence anchors (current)
 
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/M0_BASELINE_AUDIT_2026-04-13.md`
+- `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/TODO.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/MILESTONES.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json`
@@ -23,12 +24,15 @@ generic `imui` backlog.
 
 ## First-open repro surfaces
 
-Use these before debating any API shape in the abstract:
+Use these to re-check the landed surface before any follow-on discussion:
 
 1. Current helper behavior floor
    - `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger`
-2. Source-policy split freeze
+2. Landed outward-surface proof
+   - `cargo nextest run -p fret-imui menu_and_submenu_response_report_toggle_and_trigger_edges tab_bar_response_reports_selected_change_and_trigger_edges`
+3. Source-policy split + demo freeze
    - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on`
+   - `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof`
 
 ## Current focused gates
 
@@ -38,10 +42,9 @@ Use these before debating any API shape in the abstract:
 
 This gate currently proves:
 
-- the new follow-on exists as a separate lane,
-- the lifecycle lane keeps this topic deferred,
-- and the umbrella still treats implementation-heavy P0 work as narrow follow-ons instead of one
-  giant backlog.
+- the lane keeps the additive helper-owned trigger response contract explicit,
+- the compatibility wrapper posture stays frozen,
+- and the lifecycle lane still keeps this surface outside its narrower `ResponseExt` lane.
 
 ### Current helper behavior floor
 
@@ -54,19 +57,35 @@ This gate currently proves:
 - tab helpers still switch selected panels through the current model-driven path,
 - and tab activation shortcuts still stay scoped to the focused trigger.
 
+### Landed outward-surface proof
+
+- `cargo nextest run -p fret-imui menu_and_submenu_response_report_toggle_and_trigger_edges tab_bar_response_reports_selected_change_and_trigger_edges`
+
+This gate currently proves:
+
+- menu/submenu additive response helpers report `open` / `toggled` / trigger edges,
+- tab bar additive response reports `selected_changed` and per-trigger response access,
+- and the landed surface stays facade-only instead of rewriting collection policy.
+
+### Demo/source proof
+
+- `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof`
+
+This gate currently proves:
+
+- the teaching demo shows `begin_menu_response_with_options`,
+- the teaching demo shows `begin_submenu_response_with_options`,
+- and the teaching demo shows `tab_bar_response_with_options` + per-trigger access.
+
 ### Lane hygiene gates
 
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 -m json.tool docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json > /dev/null`
 
-## Missing gates before closure
+## Residual routing after closure
 
-Before claiming this lane is closed, add:
-
-- one explicit proof of the final verdict:
-  either no-new-API source proof or a real outward-surface test/demo proof,
-- and any focused interaction gates required by the final outward surface if one lands.
-
-Do not respond to that gap by widening `fret-authoring::Response`, `crates/fret-ui`, or by
+Do not respond to future pressure by widening `fret-authoring::Response`, `crates/fret-ui`, or by
 bundling richer menu/tab policy into this lane.
+Start a narrower follow-on if future work is about broader menu/tab policy instead of this landed
+helper-level response surface.

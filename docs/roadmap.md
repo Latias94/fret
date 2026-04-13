@@ -38,12 +38,13 @@ Tracker highlights:
   `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
   `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`, and
   `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
-- ImUi menu/tab trigger response-surface follow-on (active narrow P0 lane that decides whether
-  helper-owned menu/submenu/tab triggers should keep the current `bool open` / no-return posture
-  or grow one narrow outward facade response surface, without reopening richer menu/tab policy or
-  widening `fret-authoring::Response` / `crates/fret-ui`):
+- ImUi menu/tab trigger response-surface follow-on (closed narrow P0 lane that landed additive
+  helper-owned outward response helpers without reopening richer menu/tab policy or widening
+  `fret-authoring::Response` / `crates/fret-ui`; legacy `bool open` / no-return wrappers remain
+  intact for compatibility):
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md`,
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/M0_BASELINE_AUDIT_2026-04-13.md`,
+  `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`,
   and `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/EVIDENCE_AND_GATES.md`.
 - ImUi workbench-shell closure follow-on closeout record (closed narrow P1 lane that concluded the
   repo should keep the default workbench answer as explicit example-local assembly over the frozen

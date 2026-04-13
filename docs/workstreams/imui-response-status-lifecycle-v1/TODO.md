@@ -90,8 +90,9 @@ Last updated: 2026-04-13
 - [x] Decide whether menu-bar/submenu triggers and tab triggers should stay deferred or move into a
       later narrow follow-on with their own outward response proof.
       Result: `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the
-      helper-owned menu/submenu/tab trigger response-surface decision so this lane can stay focused
-      on public response surfaces that already exist.
+      helper-owned menu/submenu/tab trigger response-surface decision, and it has since landed the
+      additive helper-facing response surface so this lane can stay focused on public response
+      surfaces that already exist.
 - [ ] Start a new narrow follow-on instead of widening this lane if the pressure shifts to key
       ownership or broader proof-depth work.
 - [ ] Close this lane once the first lifecycle vocabulary and focused gates are explicit enough to

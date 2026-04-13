@@ -46,6 +46,16 @@ impl View for ImUiResponseSignalsView {
         let lifecycle_combo_deactivations = cx.state().local_init(|| 0u32);
         let lifecycle_combo_model_edits = cx.state().local_init(|| 0u32);
         let lifecycle_combo_model_after_edit = cx.state().local_init(|| 0u32);
+        let trigger_menu_opened = cx.state().local_init(|| 0u32);
+        let trigger_menu_closed = cx.state().local_init(|| 0u32);
+        let trigger_submenu_toggled = cx.state().local_init(|| 0u32);
+        let trigger_tab_switched = cx.state().local_init(|| 0u32);
+        let trigger_tab_scene_clicks = cx.state().local_init(|| 0u32);
+        let trigger_tab_scene_activations = cx.state().local_init(|| 0u32);
+        let trigger_tab_scene_deactivations = cx.state().local_init(|| 0u32);
+        let trigger_tab_selected = cx
+            .state()
+            .local_init(|| Some(Arc::<str>::from("inspector")));
         let lifecycle_checkbox_value = cx.state().local_init(|| false);
         let lifecycle_slider_value = cx.state().local_init(|| 24.0f32);
         let lifecycle_text_value = cx.state().local_init(String::new);
@@ -79,6 +89,15 @@ impl View for ImUiResponseSignalsView {
         let lifecycle_combo_model_edits_value = lifecycle_combo_model_edits.layout_value(cx);
         let lifecycle_combo_model_after_edit_value =
             lifecycle_combo_model_after_edit.layout_value(cx);
+        let trigger_menu_opened_value = trigger_menu_opened.layout_value(cx);
+        let trigger_menu_closed_value = trigger_menu_closed.layout_value(cx);
+        let trigger_submenu_toggled_value = trigger_submenu_toggled.layout_value(cx);
+        let trigger_tab_switched_value = trigger_tab_switched.layout_value(cx);
+        let trigger_tab_scene_clicks_value = trigger_tab_scene_clicks.layout_value(cx);
+        let trigger_tab_scene_activations_value = trigger_tab_scene_activations.layout_value(cx);
+        let trigger_tab_scene_deactivations_value =
+            trigger_tab_scene_deactivations.layout_value(cx);
+        let trigger_tab_selected_value = trigger_tab_selected.layout_value(cx);
         let lifecycle_checkbox_value_value = lifecycle_checkbox_value.layout_value(cx);
         let lifecycle_slider_value_value = lifecycle_slider_value.layout_value(cx);
         let lifecycle_text_value_value = lifecycle_text_value.layout_value(cx);
@@ -317,6 +336,129 @@ impl View for ImUiResponseSignalsView {
             ))
             .text_xs();
             ui.add_ui(lifecycle_details);
+
+            ui.separator();
+
+            let trigger_surface_report = fret_ui_kit::ui::text(format!(
+                "trigger surfaces: menu open/close={trigger_menu_opened_value}/{trigger_menu_closed_value} submenu toggles={trigger_submenu_toggled_value} tabs selected={} switches={} scene click/a/d={}/{}/{}",
+                trigger_tab_selected_value.as_deref().unwrap_or("none"),
+                trigger_tab_switched_value,
+                trigger_tab_scene_clicks_value,
+                trigger_tab_scene_activations_value,
+                trigger_tab_scene_deactivations_value
+            ))
+            .text_sm()
+            .font_medium();
+            ui.add_ui(trigger_surface_report);
+
+            ui.menu_bar_with_options(
+                fret_ui_kit::imui::MenuBarOptions {
+                    test_id: Some(Arc::from("imui-resp-demo.trigger-menu.root")),
+                    ..Default::default()
+                },
+                |ui| {
+                    let file_menu = ui.begin_menu_response_with_options(
+                        "imui-resp-demo.trigger-menu.file",
+                        "Trigger surface menu",
+                        fret_ui_kit::imui::BeginMenuOptions {
+                            test_id: Some(Arc::from("imui-resp-demo.trigger-menu.file")),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let recent_menu = ui.begin_submenu_response_with_options(
+                                "imui-resp-demo.trigger-menu.recent",
+                                "Recent",
+                                fret_ui_kit::imui::BeginSubmenuOptions {
+                                    test_id: Some(Arc::from(
+                                        "imui-resp-demo.trigger-menu.file.recent",
+                                    )),
+                                    ..Default::default()
+                                },
+                                |ui| {
+                                    let _ = ui.menu_item_with_options(
+                                        "Project Alpha",
+                                        fret_ui_kit::imui::MenuItemOptions {
+                                            test_id: Some(Arc::from(
+                                                "imui-resp-demo.trigger-menu.file.recent.alpha",
+                                            )),
+                                            ..Default::default()
+                                        },
+                                    );
+                                },
+                            );
+                            if recent_menu.toggled() {
+                                let _ = trigger_submenu_toggled
+                                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                            }
+                        },
+                    );
+                    if file_menu.opened() {
+                        let _ = trigger_menu_opened
+                            .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                    }
+                    if file_menu.closed() {
+                        let _ = trigger_menu_closed
+                            .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                    }
+                },
+            );
+
+            let tab_response = ui.tab_bar_response_with_options(
+                "imui-resp-demo.trigger-tabs",
+                fret_ui_kit::imui::TabBarOptions {
+                    selected: Some(trigger_tab_selected.model().clone()),
+                    test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.root")),
+                    ..Default::default()
+                },
+                |tabs| {
+                    tabs.begin_tab_item_with_options(
+                        "scene",
+                        "Scene",
+                        fret_ui_kit::imui::TabItemOptions {
+                            test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.scene")),
+                            panel_test_id: Some(Arc::from(
+                                "imui-resp-demo.trigger-tabs.scene.panel",
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.text("Scene trigger panel");
+                        },
+                    );
+                    tabs.begin_tab_item_with_options(
+                        "inspector",
+                        "Inspector",
+                        fret_ui_kit::imui::TabItemOptions {
+                            test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.inspector")),
+                            panel_test_id: Some(Arc::from(
+                                "imui-resp-demo.trigger-tabs.inspector.panel",
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.text("Inspector trigger panel");
+                        },
+                    );
+                },
+            );
+            if tab_response.selected_changed() {
+                let _ = trigger_tab_switched
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if let Some(scene_tab) = tab_response.trigger("scene") {
+                if scene_tab.clicked() {
+                    let _ = trigger_tab_scene_clicks
+                        .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                }
+                if scene_tab.activated() {
+                    let _ = trigger_tab_scene_activations
+                        .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                }
+                if scene_tab.deactivated() {
+                    let _ = trigger_tab_scene_deactivations
+                        .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                }
+            }
 
             ui.separator();
 

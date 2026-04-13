@@ -165,7 +165,8 @@ Current second landed slice:
 Still deferred in this lane:
 
 - helper-owned menu/submenu/tab trigger response surface work, now tracked in
-  `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`,
+  `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` and landed there as additive
+  facade-only response helpers,
 - richer menu-bar and submenu policy depth,
 - and broader tab policy beyond any eventual helper-owned trigger response surface.
 

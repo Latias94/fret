@@ -7,6 +7,7 @@ use std::sync::Arc;
 use fret_core::{Edges, Px, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
+use fret_ui::action::{ActivateReason, PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
     RowProps, SpacingLength, TextProps,
@@ -14,7 +15,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
 use super::containers::build_imui_children_with_focus;
-use super::{ImUiFacade, ResponseExt, TabBarOptions, TabItemOptions};
+use super::{
+    ImUiFacade, ResponseExt, TabBarOptions, TabBarResponse, TabItemOptions, TabTriggerResponse,
+};
 use crate::primitives::tabs;
 
 struct BuiltTabItem {
@@ -41,7 +44,7 @@ pub(super) fn tab_bar_element<H: UiHost>(
     build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
     options: TabBarOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
-) -> AnyElement {
+) -> (AnyElement, TabBarResponse) {
     let root_name = format!("fret-ui-kit.imui.tab_bar.{id}");
     cx.with_root_name(root_name.as_str(), |cx| {
         let selected = options
@@ -133,11 +136,13 @@ fn render_tab_bar<H: UiHost>(
     items: Vec<BuiltTabItem>,
     build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
     options: TabBarOptions,
-) -> AnyElement {
+) -> (AnyElement, TabBarResponse) {
     let selected = normalize_selected_tab(cx, &selected_model, &items);
+    let selected_changed = super::model_value_changed_for(cx, cx.root_id(), selected.clone());
     let set_size = items.len().min(u32::MAX as usize) as u32;
     let mut selected_trigger_id = None;
     let mut first_focusable = None;
+    let mut trigger_responses = Vec::with_capacity(items.len());
 
     let triggers = items
         .iter()
@@ -158,6 +163,11 @@ fn render_tab_bar<H: UiHost>(
             if is_selected {
                 selected_trigger_id = built.response.id;
             }
+            trigger_responses.push(TabTriggerResponse {
+                id: item.id.clone(),
+                selected: is_selected,
+                trigger: built.response,
+            });
             built.element
         })
         .collect::<Vec<_>>();
@@ -201,7 +211,7 @@ fn render_tab_bar<H: UiHost>(
         },
     );
 
-    let panel = selected.and_then(|selected_id| {
+    let panel = selected.clone().and_then(|selected_id| {
         items
             .into_iter()
             .find(|item| item.id.as_ref() == selected_id.as_ref())
@@ -235,7 +245,14 @@ fn render_tab_bar<H: UiHost>(
     column.layout.size.width = Length::Fill;
     column.layout.size.height = Length::Auto;
     column.gap = SpacingLength::Px(Px(0.0));
-    cx.column(column, move |_cx| children)
+    (
+        cx.column(column, move |_cx| children),
+        TabBarResponse {
+            selected,
+            selected_changed,
+            triggers: trigger_responses,
+        },
+    )
 }
 
 fn normalize_selected_tab<H: UiHost>(
@@ -312,10 +329,26 @@ fn render_tab_trigger<H: UiHost>(
             cx.pressable_clear_on_pointer_up();
             cx.key_clear_on_key_down_for(element_id);
 
+            let active_item_model = super::active_item_model_for_window(cx);
+            let active_item_model_for_down = active_item_model.clone();
+            let active_item_model_for_up = active_item_model.clone();
+            let lifecycle_model = super::lifecycle_session_model_for(cx, element_id);
+            let lifecycle_model_for_activate = lifecycle_model.clone();
+            let lifecycle_model_for_down = lifecycle_model.clone();
+            let lifecycle_model_for_up = lifecycle_model.clone();
+
             if enabled {
                 let selected_model_for_activate = selected_model.clone();
                 let tab_id_for_activate = tab_id.clone();
-                cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
+                    if reason == ActivateReason::Keyboard {
+                        super::mark_lifecycle_instant_if_inactive(
+                            host,
+                            acx,
+                            &lifecycle_model_for_activate,
+                            false,
+                        );
+                    }
                     let _ = host.update_model(&selected_model_for_activate, |value| {
                         *value = Some(tab_id_for_activate.clone())
                     });
@@ -335,6 +368,12 @@ fn render_tab_trigger<H: UiHost>(
                                 && (!down.repeat || shortcut_repeat)
                                 && !down.ime_composing
                             {
+                                super::mark_lifecycle_instant_if_inactive(
+                                    host,
+                                    acx,
+                                    &lifecycle_model,
+                                    false,
+                                );
                                 let _ = host.update_model(&selected_model_for_shortcut, |value| {
                                     *value = Some(tab_id_for_shortcut.clone())
                                 });
@@ -349,6 +388,39 @@ fn render_tab_trigger<H: UiHost>(
                 );
             }
 
+            cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                super::mark_lifecycle_activated_on_left_pointer_down(
+                    host,
+                    acx,
+                    down.button,
+                    &lifecycle_model_for_down,
+                );
+                super::mark_active_item_on_left_pointer_down(
+                    host,
+                    acx,
+                    down.button,
+                    &active_item_model_for_down,
+                    true,
+                );
+                PressablePointerDownResult::Continue
+            }));
+
+            cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                super::mark_lifecycle_deactivated_on_left_pointer_up(
+                    host,
+                    acx,
+                    up.button,
+                    &lifecycle_model_for_up,
+                );
+                super::clear_active_item_on_left_pointer_up(
+                    host,
+                    acx,
+                    up.button,
+                    &active_item_model_for_up,
+                );
+                PressablePointerUpResult::Continue
+            }));
+
             response.core.hovered = state.hovered;
             response.core.pressed = state.pressed;
             response.core.focused = state.focused;
@@ -357,6 +429,29 @@ fn render_tab_trigger<H: UiHost>(
             response.id = Some(element_id);
             response.core.clicked = cx.take_transient_for(element_id, super::KEY_CLICKED);
             response.core.rect = cx.last_bounds_for_element(element_id);
+            let hover_delay = super::install_hover_query_hooks_for_pressable(
+                cx,
+                element_id,
+                state.hovered_raw,
+                None,
+            );
+            response.pointer_hovered_raw = state.hovered_raw;
+            response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+            response.hover_stationary_met = hover_delay.stationary_met;
+            response.hover_delay_short_met = hover_delay.delay_short_met;
+            response.hover_delay_normal_met = hover_delay.delay_normal_met;
+            response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+            response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+            response.hover_blocked_by_active_item =
+                super::hover_blocked_by_active_item_for(cx, element_id, &active_item_model);
+            super::populate_response_lifecycle_transients(cx, element_id, response);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                element_id,
+                state.pressed,
+                false,
+                response,
+            );
             super::sanitize_response_for_enabled(enabled, response);
 
             vec![tab_trigger_visual(

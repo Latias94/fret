@@ -94,8 +94,8 @@ pub use options::{
 use popup_store::{drop_popup_scope_for_id, with_popup_store_for_id};
 pub use response::{
     ComboResponse, DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse,
-    FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt,
-    VirtualListResponse,
+    FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt, TabBarResponse,
+    TabTriggerResponse, VirtualListResponse,
 };
 pub use tab_family_controls::ImUiTabBar;
 pub use table_controls::{ImUiTable, ImUiTableRow};
@@ -503,17 +503,35 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.tab_bar_with_options(id, TabBarOptions::default(), f);
     }
 
+    pub fn tab_bar_response(
+        &mut self,
+        id: &str,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) -> TabBarResponse {
+        self.tab_bar_response_with_options(id, TabBarOptions::default(), f)
+    }
+
+    pub fn tab_bar_response_with_options(
+        &mut self,
+        id: &str,
+        options: TabBarOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) -> TabBarResponse {
+        let build_focus = self.build_focus.clone();
+        let (element, response) = self.with_cx_mut(|cx| {
+            tab_family_controls::tab_bar_element(cx, id, build_focus, options, f)
+        });
+        self.add(element);
+        response
+    }
+
     pub fn tab_bar_with_options(
         &mut self,
         id: &str,
         options: TabBarOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
     ) {
-        let build_focus = self.build_focus.clone();
-        let element = self.with_cx_mut(|cx| {
-            tab_family_controls::tab_bar_element(cx, id, build_focus, options, f)
-        });
-        self.add(element);
+        let _ = self.tab_bar_response_with_options(id, options, f);
     }
 
     pub fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
@@ -808,6 +826,25 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.begin_menu_with_options(id, label, BeginMenuOptions::default(), f)
     }
 
+    pub fn begin_menu_response(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.begin_menu_response_with_options(id, label, BeginMenuOptions::default(), f)
+    }
+
+    pub fn begin_menu_response_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginMenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        menu_family_controls::begin_menu_response_with_options(self, id, label.into(), options, f)
+    }
+
     pub fn begin_menu_with_options(
         &mut self,
         id: &str,
@@ -815,7 +852,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         options: BeginMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
+        self.begin_menu_response_with_options(id, label, options, f)
+            .open()
     }
 
     pub fn begin_submenu(
@@ -827,6 +865,31 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.begin_submenu_with_options(id, label, BeginSubmenuOptions::default(), f)
     }
 
+    pub fn begin_submenu_response(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.begin_submenu_response_with_options(id, label, BeginSubmenuOptions::default(), f)
+    }
+
+    pub fn begin_submenu_response_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginSubmenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        menu_family_controls::begin_submenu_response_with_options(
+            self,
+            id,
+            label.into(),
+            options,
+            f,
+        )
+    }
+
     pub fn begin_submenu_with_options(
         &mut self,
         id: &str,
@@ -834,7 +897,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         options: BeginSubmenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        menu_family_controls::begin_submenu_with_options(self, id, label.into(), options, f)
+        self.begin_submenu_response_with_options(id, label, options, f)
+            .open()
     }
 
     pub fn menu_item_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {
@@ -1291,15 +1355,33 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.tab_bar_with_options(id, TabBarOptions::default(), f);
     }
 
+    fn tab_bar_response(
+        &mut self,
+        id: &str,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) -> TabBarResponse {
+        self.tab_bar_response_with_options(id, TabBarOptions::default(), f)
+    }
+
+    fn tab_bar_response_with_options(
+        &mut self,
+        id: &str,
+        options: TabBarOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
+    ) -> TabBarResponse {
+        let (element, response) =
+            self.with_cx_mut(|cx| tab_family_controls::tab_bar_element(cx, id, None, options, f));
+        self.add(element);
+        response
+    }
+
     fn tab_bar_with_options(
         &mut self,
         id: &str,
         options: TabBarOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
     ) {
-        let element =
-            self.with_cx_mut(|cx| tab_family_controls::tab_bar_element(cx, id, None, options, f));
-        self.add(element);
+        let _ = self.tab_bar_response_with_options(id, options, f);
     }
 
     fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
@@ -1741,6 +1823,25 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.begin_menu_with_options(id, label, BeginMenuOptions::default(), f)
     }
 
+    fn begin_menu_response(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.begin_menu_response_with_options(id, label, BeginMenuOptions::default(), f)
+    }
+
+    fn begin_menu_response_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginMenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        menu_family_controls::begin_menu_response_with_options(self, id, label.into(), options, f)
+    }
+
     fn begin_menu_with_options(
         &mut self,
         id: &str,
@@ -1748,7 +1849,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: BeginMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        menu_family_controls::begin_menu_with_options(self, id, label.into(), options, f)
+        self.begin_menu_response_with_options(id, label, options, f)
+            .open()
     }
 
     fn begin_submenu(
@@ -1760,6 +1862,31 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.begin_submenu_with_options(id, label, BeginSubmenuOptions::default(), f)
     }
 
+    fn begin_submenu_response(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        self.begin_submenu_response_with_options(id, label, BeginSubmenuOptions::default(), f)
+    }
+
+    fn begin_submenu_response_with_options(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        options: BeginSubmenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> DisclosureResponse {
+        menu_family_controls::begin_submenu_response_with_options(
+            self,
+            id,
+            label.into(),
+            options,
+            f,
+        )
+    }
+
     fn begin_submenu_with_options(
         &mut self,
         id: &str,
@@ -1767,7 +1894,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: BeginSubmenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        menu_family_controls::begin_submenu_with_options(self, id, label.into(), options, f)
+        self.begin_submenu_response_with_options(id, label, options, f)
+            .open()
     }
 
     fn selectable(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {

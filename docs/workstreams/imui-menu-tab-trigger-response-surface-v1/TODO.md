@@ -1,6 +1,6 @@
 # ImUi Menu/Tab Trigger Response Surface v1 - TODO
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-04-13
 
 ## Lane setup
@@ -31,18 +31,31 @@ Last updated: 2026-04-13
 
 ## M1 - Contract decision
 
-- [ ] Decide whether helper-owned menu/submenu/tab triggers should keep the current `bool open` /
+- [x] Decide whether helper-owned menu/submenu/tab triggers should keep the current `bool open` /
       no-return posture or gain a narrow outward response surface.
-- [ ] If a new outward surface is justified, freeze the smallest return-shape budget without
+      Result: the lane landed additive response entry points instead of a no-new-API verdict.
+- [x] If a new outward surface is justified, freeze the smallest return-shape budget without
       widening `fret-authoring::Response` or inventing a second response transport.
-- [ ] Keep richer menu-bar/submenu/tab policy depth and key-owner semantics out of this lane even
+      Result: `begin_menu_response[_with_options]` / `begin_submenu_response[_with_options]`
+      return `DisclosureResponse`, and `tab_bar_response[_with_options]` returns
+      `TabBarResponse`.
+- [x] Keep richer menu-bar/submenu/tab policy depth and key-owner semantics out of this lane even
       if a new outward trigger surface lands.
+      Result: legacy `bool open` / no-return wrappers stay intact and broader menu/tab policy
+      still remains outside this lane.
 
 ## M2 - Proof and closeout
 
-- [ ] If the result is a no-new-API verdict, add one explicit source/proof note plus focused gates
+- [x] If the result is a no-new-API verdict, add one explicit source/proof note plus focused gates
       and close the lane.
-- [ ] If the result is a new outward response surface, add focused `fret-imui` tests and one
+      Result: not applicable; the lane landed a narrow outward surface instead.
+- [x] If the result is a new outward response surface, add focused `fret-imui` tests and one
       first-open demo/source gate before claiming the surface is real.
-- [ ] Start another narrower follow-on instead of widening this lane if the pressure shifts from
+      Result: `menu_and_submenu_response_report_toggle_and_trigger_edges`,
+      `tab_bar_response_reports_selected_change_and_trigger_edges`, and
+      `imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof` now freeze the
+      surface.
+- [x] Start another narrower follow-on instead of widening this lane if the pressure shifts from
       trigger response shape to richer menu/tab policy.
+      Result: `FINAL_STATUS.md` now sends any richer policy pressure to a new follow-on instead of
+      reopening this lane.

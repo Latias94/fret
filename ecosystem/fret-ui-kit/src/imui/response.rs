@@ -255,6 +255,22 @@ pub struct ComboResponse {
     pub toggled: bool,
 }
 
+/// Aggregated response surface for helper-owned tab bars.
+#[derive(Debug, Clone, Default)]
+pub struct TabBarResponse {
+    pub selected: Option<std::sync::Arc<str>>,
+    pub selected_changed: bool,
+    pub triggers: Vec<TabTriggerResponse>,
+}
+
+/// Outward trigger response for a single helper-owned tab item.
+#[derive(Debug, Clone)]
+pub struct TabTriggerResponse {
+    pub id: std::sync::Arc<str>,
+    pub selected: bool,
+    pub trigger: ResponseExt,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct VirtualListResponse {
     pub handle: fret_ui::scroll::VirtualListScrollHandle,
@@ -276,6 +292,14 @@ impl DisclosureResponse {
 
     pub fn clicked(self) -> bool {
         self.trigger.clicked()
+    }
+
+    pub fn opened(self) -> bool {
+        self.toggled && self.open
+    }
+
+    pub fn closed(self) -> bool {
+        self.toggled && !self.open
     }
 
     pub fn hovered_like_imgui(self) -> bool {
@@ -310,6 +334,52 @@ impl ComboResponse {
 
     pub fn hovered_like_imgui(self) -> bool {
         self.trigger.hovered_like_imgui()
+    }
+}
+
+impl TabBarResponse {
+    pub fn selected_id(&self) -> Option<&str> {
+        self.selected.as_deref()
+    }
+
+    pub fn selected_changed(&self) -> bool {
+        self.selected_changed
+    }
+
+    pub fn triggers(&self) -> &[TabTriggerResponse] {
+        &self.triggers
+    }
+
+    pub fn trigger(&self, id: &str) -> Option<&TabTriggerResponse> {
+        self.triggers
+            .iter()
+            .find(|trigger| trigger.id.as_ref() == id)
+    }
+}
+
+impl TabTriggerResponse {
+    pub fn id(&self) -> &str {
+        self.id.as_ref()
+    }
+
+    pub fn selected(&self) -> bool {
+        self.selected
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.trigger
+    }
+
+    pub fn clicked(&self) -> bool {
+        self.trigger.clicked()
+    }
+
+    pub fn activated(&self) -> bool {
+        self.trigger.activated()
+    }
+
+    pub fn deactivated(&self) -> bool {
+        self.trigger.deactivated()
     }
 }
 

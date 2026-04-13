@@ -115,5 +115,6 @@ Current status:
 - In progress.
 - The first bounded expansion already landed on public menu/combo response surfaces.
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the helper-owned
-  menu/submenu/tab trigger response-surface decision.
+  menu/submenu/tab trigger response-surface decision and now serves as the landed closeout record
+  for that additive helper-facing surface.
 - Richer menu-bar/submenu policy depth and broader tab policy still remain outside this lane.

@@ -1,6 +1,6 @@
 # ImUi Menu/Tab Trigger Response Surface v1 - Milestones
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-04-13
 
 ## M0 - Baseline and owner freeze
@@ -40,12 +40,13 @@ Primary evidence:
 
 Current status:
 
-- In progress.
-- The current public boundary is explicit:
-  `begin_menu_with_options` / `begin_submenu_with_options` return only `bool open`, while
-  `tab_bar_with_options` exposes no outward trigger response surface.
-- The lane now explicitly treats this as an outward-surface decision rather than another
-  `ResponseExt` vocabulary task.
+- Closed on 2026-04-13.
+- The lane landed additive outward response entry points:
+  `begin_menu_response[_with_options]`, `begin_submenu_response[_with_options]`, and
+  `tab_bar_response[_with_options]`.
+- Compatibility wrappers remain in place:
+  `begin_menu[_with_options]` / `begin_submenu[_with_options]` still return `bool open`, and
+  `tab_bar[_with_options]` still remains a no-return helper entry point.
 
 ## M2 - Proof and closeout
 
@@ -64,4 +65,6 @@ Primary evidence:
 
 Current status:
 
-- Not started.
+- Closed on 2026-04-13.
+- Focused `fret-imui` interaction proof and `imui_response_signals_demo` source proof now exist.
+- `FINAL_STATUS.md` records the residual-gap routing for any broader menu/tab policy work.
