@@ -73,10 +73,13 @@ use interaction_runtime::{
     finish_pressable_drag_on_pointer_up, float_window_collapsed_model_for,
     handle_pointer_region_drag_move_with_threshold, handle_pressable_drag_move_with_threshold,
     hover_blocked_by_active_item_for, imui_is_disabled, install_hover_query_hooks_for_pressable,
-    long_press_signal_model_for, mark_active_item_on_left_pointer_down,
-    pointer_click_modifiers_model_for, populate_pressable_drag_response,
-    prepare_pointer_region_drag_on_left_down, prepare_pressable_drag_on_pointer_down,
-    sanitize_response_for_enabled,
+    lifecycle_session_model_for, long_press_signal_model_for,
+    mark_active_item_on_left_pointer_down, mark_lifecycle_activated_on_left_pointer_down,
+    mark_lifecycle_deactivated_on_left_pointer_up, mark_lifecycle_edit,
+    mark_lifecycle_instant_if_inactive, pointer_click_modifiers_model_for,
+    populate_pressable_drag_response, populate_response_lifecycle_from_active_state,
+    populate_response_lifecycle_transients, prepare_pointer_region_drag_on_left_down,
+    prepare_pressable_drag_on_pointer_down, sanitize_response_for_enabled,
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
@@ -132,6 +135,9 @@ const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_
 const KEY_POINTER_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.pointer_clicked.v1");
 const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
+const KEY_ACTIVATED: u64 = fnv1a64(b"fret-ui-kit.imui.activated.v1");
+const KEY_DEACTIVATED: u64 = fnv1a64(b"fret-ui-kit.imui.deactivated.v1");
+const KEY_DEACTIVATED_AFTER_EDIT: u64 = fnv1a64(b"fret-ui-kit.imui.deactivated_after_edit.v1");
 const KEY_HOVER_STATIONARY_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.stationary_met.v1");
 const KEY_HOVER_DELAY_SHORT_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.delay_short_met.v1");
 const KEY_HOVER_DELAY_NORMAL_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.delay_normal_met.v1");

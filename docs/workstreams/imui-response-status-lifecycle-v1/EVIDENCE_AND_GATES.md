@@ -19,6 +19,9 @@ backlog.
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-kit/src/imui/button_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/slider_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/text_controls.rs`
 - `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
@@ -56,19 +59,18 @@ This gate currently proves:
 
 - the shared `Response` boundary still compiles cleanly beside `ResponseExt`,
 - richer status remains on the facade side,
+- the new lifecycle accessors remain part of the facade response surface,
 - and future lifecycle work still has to respect that split.
 
 ### Current interaction floor
 
-- `cargo nextest run -p fret-imui`
+- `cargo nextest run -p fret-imui button_lifecycle_edges_follow_press_session checkbox_lifecycle_reports_edit_and_deactivated_after_edit`
 
-This package currently provides the existing immediate interaction floor around:
+This focused package currently proves the first landed lifecycle slice around:
 
-- click variants,
-- context-menu request,
-- drag lifecycle,
-- long-press / holding,
-- and other current `ResponseExt` semantics that the new lifecycle vocabulary must not regress.
+- press-session activation / deactivation on direct buttons,
+- `edited` and `deactivated_after_edit` on a value-editing checkbox,
+- and the immediate interaction wiring that those lifecycle edges depend on.
 
 ### Lane hygiene gates
 
@@ -81,10 +83,9 @@ This package currently provides the existing immediate interaction floor around:
 
 Before claiming this lane is closed, add:
 
-- focused interaction tests for `activated`, `deactivated`, `edited`, and
-  `deactivated_after_edit`,
+- broader focused tests beyond direct button + checkbox coverage,
 - one demo/source gate that freezes the new signals on the first-open response demo,
-- and any extra focused tests needed by the first landed implementation slice.
+- and any extra focused tests needed before extending the quartet into menu/tab/combo family.
 
 Do not respond to that gap by widening the shared response contract or by bundling key-owner
 semantics into this lane.

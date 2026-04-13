@@ -150,6 +150,12 @@ Interpretation rules for the first slice:
   possible instead of inventing a second meaning,
 - and the lane should stay inside this quartet until repeated evidence says otherwise.
 
+Current first landed slice:
+
+- direct pressables: `button` and `selectable`,
+- value-editing pressables: `checkbox_model`, `switch_model`, and `slider_f32_model`,
+- focus-owned text entry: `input_text_model` and `textarea_model`.
+
 ## Default owner split
 
 ### `ecosystem/fret-ui-kit::imui`

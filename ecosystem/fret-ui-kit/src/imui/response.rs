@@ -113,6 +113,15 @@ pub struct ResponseExt {
     pub core: Response,
     pub id: Option<GlobalElementId>,
     pub enabled: bool,
+    /// True on the frame an item enters its active or engaged state.
+    pub activated: bool,
+    /// True on the frame an item leaves its active or engaged state.
+    pub deactivated: bool,
+    /// True on the frame an item commits a meaningful value mutation.
+    pub edited: bool,
+    /// True on the frame an item deactivates after having been edited during the same active
+    /// session.
+    pub deactivated_after_edit: bool,
     /// Pointer-hover signal without ImGui-style disabled gating.
     ///
     /// When a widget is disabled, `core.hovered` is forced to `false` by
@@ -391,6 +400,22 @@ impl<T: 'static> DropTargetResponse<T> {
 }
 
 impl ResponseExt {
+    pub fn activated(self) -> bool {
+        self.activated
+    }
+
+    pub fn deactivated(self) -> bool {
+        self.deactivated
+    }
+
+    pub fn edited(self) -> bool {
+        self.edited
+    }
+
+    pub fn deactivated_after_edit(self) -> bool {
+        self.deactivated_after_edit
+    }
+
     pub fn clicked(self) -> bool {
         self.core.clicked()
     }

@@ -43,7 +43,12 @@ Current status:
 - In progress.
 - The lane-opening design already narrows the candidate first slice to:
   `activated`, `deactivated`, `edited`, and `deactivated_after_edit`.
-- Exact transition semantics and explicit defer notes are not frozen yet.
+- The first shipped rule is now explicit:
+  click-only controls keep `edited = false`,
+  value-editing controls align `edited` with existing `core.changed` evidence where possible,
+  and `deactivated_after_edit` remains tied to the same active session instead of becoming a
+  second change signal.
+- Explicit defer notes are still not fully frozen yet.
 
 ## M2 - First implementation slice
 
@@ -58,13 +63,25 @@ Primary evidence:
 - `ecosystem/fret-ui-kit/src/imui/response.rs`
 - `ecosystem/fret-ui-kit/src/imui/button_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/slider_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/text_controls.rs`
 - `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
 
 Current status:
 
-- Not started.
+- In progress.
+- `ResponseExt` now exposes the first lifecycle quartet as facade-only status while
+  `fret-authoring::Response` remains unchanged.
+- The first landed slice now covers:
+  direct pressables, boolean controls, slider, and text entry.
+- Current focused proof now includes:
+  `shared_and_facade_response_boundary_compiles`,
+  `facade_drag_and_long_press_accessors_compile`,
+  `button_lifecycle_edges_follow_press_session`,
+  and `checkbox_lifecycle_reports_edit_and_deactivated_after_edit`.
 
 ## M3 - Expansion or closeout
 

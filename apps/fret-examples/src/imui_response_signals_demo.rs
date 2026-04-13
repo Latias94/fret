@@ -31,6 +31,18 @@ impl View for ImUiResponseSignalsView {
 
         let last_context_menu_anchor = cx.state().local_init(|| None::<Point>);
         let menu_toggle = cx.state().local_init(|| false);
+        let lifecycle_button_activations = cx.state().local_init(|| 0u32);
+        let lifecycle_button_deactivations = cx.state().local_init(|| 0u32);
+        let lifecycle_checkbox_edits = cx.state().local_init(|| 0u32);
+        let lifecycle_checkbox_after_edit = cx.state().local_init(|| 0u32);
+        let lifecycle_slider_edits = cx.state().local_init(|| 0u32);
+        let lifecycle_slider_after_edit = cx.state().local_init(|| 0u32);
+        let lifecycle_text_activations = cx.state().local_init(|| 0u32);
+        let lifecycle_text_deactivations = cx.state().local_init(|| 0u32);
+        let lifecycle_text_after_edit = cx.state().local_init(|| 0u32);
+        let lifecycle_checkbox_value = cx.state().local_init(|| false);
+        let lifecycle_slider_value = cx.state().local_init(|| 24.0f32);
+        let lifecycle_text_value = cx.state().local_init(String::new);
 
         let left_clicks_value = left_clicks.layout_value(cx);
         let secondary_clicks_value = secondary_clicks.layout_value(cx);
@@ -44,6 +56,18 @@ impl View for ImUiResponseSignalsView {
 
         let last_anchor_value = last_context_menu_anchor.layout_value(cx);
         let menu_toggle_value = menu_toggle.layout_value(cx);
+        let lifecycle_button_activations_value = lifecycle_button_activations.layout_value(cx);
+        let lifecycle_button_deactivations_value = lifecycle_button_deactivations.layout_value(cx);
+        let lifecycle_checkbox_edits_value = lifecycle_checkbox_edits.layout_value(cx);
+        let lifecycle_checkbox_after_edit_value = lifecycle_checkbox_after_edit.layout_value(cx);
+        let lifecycle_slider_edits_value = lifecycle_slider_edits.layout_value(cx);
+        let lifecycle_slider_after_edit_value = lifecycle_slider_after_edit.layout_value(cx);
+        let lifecycle_text_activations_value = lifecycle_text_activations.layout_value(cx);
+        let lifecycle_text_deactivations_value = lifecycle_text_deactivations.layout_value(cx);
+        let lifecycle_text_after_edit_value = lifecycle_text_after_edit.layout_value(cx);
+        let lifecycle_checkbox_value_value = lifecycle_checkbox_value.layout_value(cx);
+        let lifecycle_slider_value_value = lifecycle_slider_value.layout_value(cx);
+        let lifecycle_text_value_value = lifecycle_text_value.layout_value(cx);
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
@@ -122,6 +146,84 @@ impl View for ImUiResponseSignalsView {
             ))
             .text_xs();
             ui.add_ui(drag_details);
+
+            ui.separator();
+
+            let lifecycle_report = fret_ui_kit::ui::text(format!(
+                "lifecycle: button a/d={lifecycle_button_activations_value}/{lifecycle_button_deactivations_value} checkbox edit/after={lifecycle_checkbox_edits_value}/{lifecycle_checkbox_after_edit_value} slider edit/after={lifecycle_slider_edits_value}/{lifecycle_slider_after_edit_value} text a/d/after={lifecycle_text_activations_value}/{lifecycle_text_deactivations_value}/{lifecycle_text_after_edit_value}"
+            ))
+            .text_sm()
+            .font_medium();
+            ui.add_ui(lifecycle_report);
+
+            let lifecycle_button = ui.button("Lifecycle button (hold and release)");
+            if lifecycle_button.activated() {
+                let _ = lifecycle_button_activations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if lifecycle_button.deactivated() {
+                let _ = lifecycle_button_deactivations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
+            let lifecycle_checkbox_resp =
+                ui.checkbox_model("Edited checkbox", lifecycle_checkbox_value.model());
+            if lifecycle_checkbox_resp.edited() {
+                let _ = lifecycle_checkbox_edits
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if lifecycle_checkbox_resp.deactivated_after_edit() {
+                let _ = lifecycle_checkbox_after_edit
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
+            let lifecycle_slider_resp = ui.slider_f32_model_with_options(
+                "Edited slider",
+                lifecycle_slider_value.model(),
+                fret_ui_kit::imui::SliderOptions {
+                    min: 0.0,
+                    max: 100.0,
+                    step: 1.0,
+                    ..Default::default()
+                },
+            );
+            if lifecycle_slider_resp.edited() {
+                let _ = lifecycle_slider_edits
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if lifecycle_slider_resp.deactivated_after_edit() {
+                let _ = lifecycle_slider_after_edit
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
+            let lifecycle_text_resp = ui.input_text_model_with_options(
+                lifecycle_text_value.model(),
+                fret_ui_kit::imui::InputTextOptions {
+                    placeholder: Some(Arc::from("Focus, type, and blur")),
+                    ..Default::default()
+                },
+            );
+            if lifecycle_text_resp.activated() {
+                let _ = lifecycle_text_activations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if lifecycle_text_resp.deactivated() {
+                let _ = lifecycle_text_deactivations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if lifecycle_text_resp.deactivated_after_edit() {
+                let _ = lifecycle_text_after_edit
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
+            let lifecycle_details = fret_ui_kit::ui::text(format!(
+                "current values: checkbox={} slider={:.0} text_len={}",
+                lifecycle_checkbox_value_value,
+                lifecycle_slider_value_value,
+                lifecycle_text_value_value.len()
+            ))
+            .text_xs();
+            ui.add_ui(lifecycle_details);
 
             ui.separator();
 

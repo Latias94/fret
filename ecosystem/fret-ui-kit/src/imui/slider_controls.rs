@@ -77,6 +77,11 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             let active_item_model_for_down = active_item_model.clone();
             let active_item_model_for_move = active_item_model.clone();
             let active_item_model_for_up = active_item_model.clone();
+            let lifecycle_model = super::lifecycle_session_model_for(cx, id);
+            let lifecycle_model_for_down = lifecycle_model.clone();
+            let lifecycle_model_for_move = lifecycle_model.clone();
+            let lifecycle_model_for_up = lifecycle_model.clone();
+            let lifecycle_model_for_key = lifecycle_model.clone();
 
             let model_for_down = model.clone();
             cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
@@ -84,6 +89,12 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                     return PressablePointerDownResult::Continue;
                 }
 
+                super::mark_lifecycle_activated_on_left_pointer_down(
+                    host,
+                    acx,
+                    down.button,
+                    &lifecycle_model_for_down,
+                );
                 let _ = host.update_model(&active_item_model_for_down, |st| {
                     st.active = Some(acx.target);
                 });
@@ -101,6 +112,7 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                     }
                 });
                 if changed {
+                    super::mark_lifecycle_edit(host, acx, &lifecycle_model_for_down);
                     host.record_transient_event(acx, super::KEY_CHANGED);
                     host.notify(acx);
                 }
@@ -111,6 +123,12 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             let model_for_move = model.clone();
             cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
                 if !mv.buttons.left {
+                    super::mark_lifecycle_deactivated_on_left_pointer_up(
+                        host,
+                        acx,
+                        MouseButton::Left,
+                        &lifecycle_model_for_move,
+                    );
                     host.release_pointer_capture();
                     let _ = host.update_model(&active_item_model_for_move, |st| {
                         if st.active == Some(acx.target) {
@@ -131,14 +149,21 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                     }
                 });
                 if changed {
+                    super::mark_lifecycle_edit(host, acx, &lifecycle_model_for_move);
                     host.record_transient_event(acx, super::KEY_CHANGED);
                     host.notify(acx);
                 }
                 changed
             }));
 
-            cx.pressable_on_pointer_up(Arc::new(move |host, _acx, up| {
+            cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
                 if up.button == MouseButton::Left {
+                    super::mark_lifecycle_deactivated_on_left_pointer_up(
+                        host,
+                        acx,
+                        up.button,
+                        &lifecycle_model_for_up,
+                    );
                     host.release_pointer_capture();
                     let _ = host.update_model(&active_item_model_for_up, |st| {
                         if st.active == Some(id) {
@@ -184,6 +209,7 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                         });
 
                         if changed {
+                            super::mark_lifecycle_edit(host, acx, &lifecycle_model_for_key);
                             host.record_transient_event(acx, super::KEY_CHANGED);
                             host.notify(acx);
                         }
@@ -218,6 +244,14 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
             response.hover_blocked_by_active_item =
                 super::hover_blocked_by_active_item_for(cx, id, &active_item_model);
+            super::populate_response_lifecycle_transients(cx, id, response);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                id,
+                state.pressed,
+                response.core.changed,
+                response,
+            );
             super::sanitize_response_for_enabled(enabled, response);
 
             vec![cx.text(Arc::from(format!("{label_for_visuals}: {current:.2}")))]

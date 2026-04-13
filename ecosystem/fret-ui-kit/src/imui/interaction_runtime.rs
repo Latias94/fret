@@ -39,6 +39,17 @@ struct ImUiPointerClickModifiersStore {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(super) struct ImUiLifecycleSessionState {
+    pub(super) active: bool,
+    pub(super) edited_during_active: bool,
+}
+
+#[derive(Default)]
+struct ImUiLifecycleSessionStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<ImUiLifecycleSessionState>>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct ImUiSharedHoverDelayState {
     delay_short_met: bool,
     delay_normal_met: bool,
@@ -77,6 +88,12 @@ struct HoverQueryDelayLocalState {
     stationary_met: bool,
     delay_short_met: bool,
     delay_normal_met: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct ResponseLifecycleFrameState {
+    was_active: bool,
+    edited_during_active: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -132,6 +149,22 @@ pub(super) fn pointer_click_modifiers_model_for<H: UiHost>(
             st.by_element
                 .entry(id)
                 .or_insert_with(|| app.models_mut().insert(Modifiers::default()))
+                .clone()
+        })
+}
+
+pub(super) fn lifecycle_session_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<ImUiLifecycleSessionState> {
+    cx.app
+        .with_global_mut_untracked(ImUiLifecycleSessionStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| {
+                    app.models_mut()
+                        .insert(ImUiLifecycleSessionState::default())
+                })
                 .clone()
         })
 }
@@ -245,6 +278,10 @@ pub(super) fn sanitize_response_for_enabled(enabled: bool, response: &mut super:
     if enabled {
         return;
     }
+    response.activated = false;
+    response.deactivated = false;
+    response.edited = false;
+    response.deactivated_after_edit = false;
     response.core.hovered = false;
     response.core.pressed = false;
     response.core.focused = false;
@@ -260,6 +297,153 @@ pub(super) fn sanitize_response_for_enabled(enabled: bool, response: &mut super:
     response.pointer_clicked = false;
     response.pointer_click_modifiers = Modifiers::default();
     response.drag = super::DragResponse::default();
+}
+
+pub(super) fn mark_lifecycle_activated_on_left_pointer_down<
+    H: fret_ui::action::UiActionHost + ?Sized,
+>(
+    host: &mut H,
+    acx: fret_ui::action::ActionCx,
+    button: MouseButton,
+    lifecycle_model: &fret_runtime::Model<ImUiLifecycleSessionState>,
+) {
+    if button != MouseButton::Left {
+        return;
+    }
+    let mut should_fire = false;
+    let _ = host.update_model(lifecycle_model, |st| {
+        if !st.active {
+            st.active = true;
+            st.edited_during_active = false;
+            should_fire = true;
+        }
+    });
+    if should_fire {
+        host.record_transient_event(acx, super::KEY_ACTIVATED);
+    }
+}
+
+pub(super) fn mark_lifecycle_deactivated_on_left_pointer_up<
+    H: fret_ui::action::UiActionHost + ?Sized,
+>(
+    host: &mut H,
+    acx: fret_ui::action::ActionCx,
+    button: MouseButton,
+    lifecycle_model: &fret_runtime::Model<ImUiLifecycleSessionState>,
+) {
+    if button != MouseButton::Left {
+        return;
+    }
+    let mut should_fire = false;
+    let mut after_edit = false;
+    let _ = host.update_model(lifecycle_model, |st| {
+        if st.active {
+            should_fire = true;
+            after_edit = st.edited_during_active;
+            st.active = false;
+            st.edited_during_active = false;
+        }
+    });
+    if should_fire {
+        host.record_transient_event(acx, super::KEY_DEACTIVATED);
+        if after_edit {
+            host.record_transient_event(acx, super::KEY_DEACTIVATED_AFTER_EDIT);
+        }
+    }
+}
+
+pub(super) fn mark_lifecycle_edit<H: fret_ui::action::UiActionHost + ?Sized>(
+    host: &mut H,
+    acx: fret_ui::action::ActionCx,
+    lifecycle_model: &fret_runtime::Model<ImUiLifecycleSessionState>,
+) {
+    let active = host
+        .models_mut()
+        .read(lifecycle_model, |st| st.active)
+        .ok()
+        .unwrap_or(false);
+
+    if active {
+        let _ = host.update_model(lifecycle_model, |st| {
+            st.edited_during_active = true;
+        });
+        return;
+    }
+
+    host.record_transient_event(acx, super::KEY_ACTIVATED);
+    host.record_transient_event(acx, super::KEY_DEACTIVATED);
+    host.record_transient_event(acx, super::KEY_DEACTIVATED_AFTER_EDIT);
+}
+
+pub(super) fn mark_lifecycle_instant_if_inactive<H: fret_ui::action::UiActionHost + ?Sized>(
+    host: &mut H,
+    acx: fret_ui::action::ActionCx,
+    lifecycle_model: &fret_runtime::Model<ImUiLifecycleSessionState>,
+    edited: bool,
+) {
+    let active = host
+        .models_mut()
+        .read(lifecycle_model, |st| st.active)
+        .ok()
+        .unwrap_or(false);
+    if active {
+        if edited {
+            let _ = host.update_model(lifecycle_model, |st| {
+                st.edited_during_active = true;
+            });
+        }
+        return;
+    }
+
+    host.record_transient_event(acx, super::KEY_ACTIVATED);
+    host.record_transient_event(acx, super::KEY_DEACTIVATED);
+    if edited {
+        host.record_transient_event(acx, super::KEY_DEACTIVATED_AFTER_EDIT);
+    }
+}
+
+pub(super) fn populate_response_lifecycle_transients<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    response: &mut super::ResponseExt,
+) {
+    response.activated = cx.take_transient_for(id, super::KEY_ACTIVATED);
+    response.deactivated = cx.take_transient_for(id, super::KEY_DEACTIVATED);
+    response.deactivated_after_edit = cx.take_transient_for(id, super::KEY_DEACTIVATED_AFTER_EDIT);
+}
+
+pub(super) fn populate_response_lifecycle_from_active_state<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    active_now: bool,
+    edited_now: bool,
+    response: &mut super::ResponseExt,
+) {
+    response.edited = edited_now;
+    let (activated, deactivated, deactivated_after_edit) =
+        cx.state_for(id, ResponseLifecycleFrameState::default, |st| {
+            let activated = active_now && !st.was_active;
+            let edited_during_session = if active_now || st.was_active {
+                st.edited_during_active || edited_now
+            } else {
+                false
+            };
+            let deactivated = !active_now && st.was_active;
+            let deactivated_after_edit = deactivated && edited_during_session;
+
+            st.was_active = active_now;
+            st.edited_during_active = if active_now {
+                edited_during_session
+            } else {
+                false
+            };
+
+            (activated, deactivated, deactivated_after_edit)
+        });
+
+    response.activated |= activated;
+    response.deactivated |= deactivated;
+    response.deactivated_after_edit |= deactivated_after_edit;
 }
 
 fn hover_timer_token_for(kind: u64, element: GlobalElementId) -> fret_runtime::TimerToken {

@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, KeyCode, Modifiers, MouseButton, Px, SemanticsRole};
 use fret_ui::UiHost;
-use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt as _};
+use fret_ui::action::{
+    ActivateReason, PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt as _,
+};
 use fret_ui::element::{ContainerProps, Length, PressableA11y, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme};
 
@@ -62,13 +64,25 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             let long_press_signal_model_for_down = long_press_signal_model.clone();
             let long_press_signal_model_for_move = long_press_signal_model.clone();
             let long_press_signal_model_for_up = long_press_signal_model.clone();
+            let lifecycle_model = super::lifecycle_session_model_for(cx, id);
+            let lifecycle_model_for_activate = lifecycle_model.clone();
+            let lifecycle_model_for_down = lifecycle_model.clone();
+            let lifecycle_model_for_up = lifecycle_model.clone();
             let pointer_click_modifiers_model = super::pointer_click_modifiers_model_for(cx, id);
             let pointer_click_modifiers_model_for_up = pointer_click_modifiers_model.clone();
             let pointer_click_modifiers_model_for_report = pointer_click_modifiers_model.clone();
 
             if enabled {
                 let close_popup_for_activate = close_popup.clone();
-                cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
+                    if reason == ActivateReason::Keyboard {
+                        super::mark_lifecycle_instant_if_inactive(
+                            host,
+                            acx,
+                            &lifecycle_model_for_activate,
+                            false,
+                        );
+                    }
                     if let Some(open) = close_popup_for_activate.as_ref() {
                         let _ = host.update_model(open, |v| *v = false);
                     }
@@ -89,6 +103,7 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
                 };
                 let item_id = id;
                 let close_popup_for_key = close_popup.clone();
+                let lifecycle_model_for_shortcut = lifecycle_model.clone();
                 cx.key_on_key_down_for(
                     id,
                     Arc::new(move |host, acx, down| {
@@ -99,6 +114,12 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
                                 && (!down.repeat || shortcut_repeat)
                                 && !down.ime_composing
                             {
+                                super::mark_lifecycle_instant_if_inactive(
+                                    host,
+                                    acx,
+                                    &lifecycle_model_for_shortcut,
+                                    false,
+                                );
                                 if let Some(open) = close_popup_for_key.as_ref() {
                                     let _ = host.update_model(open, |v| *v = false);
                                 }
@@ -156,6 +177,12 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             }
 
             cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                super::mark_lifecycle_activated_on_left_pointer_down(
+                    host,
+                    acx,
+                    down.button,
+                    &lifecycle_model_for_down,
+                );
                 super::prepare_pressable_drag_on_pointer_down(
                     host,
                     acx,
@@ -182,6 +209,12 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             }));
 
             cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                super::mark_lifecycle_deactivated_on_left_pointer_up(
+                    host,
+                    acx,
+                    up.button,
+                    &lifecycle_model_for_up,
+                );
                 super::finish_pressable_drag_on_pointer_up(
                     host,
                     acx,
@@ -267,6 +300,14 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
             response.hover_blocked_by_active_item =
                 super::hover_blocked_by_active_item_for(cx, id, &active_item_model);
+            super::populate_response_lifecycle_transients(cx, id, response);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                id,
+                state.pressed,
+                false,
+                response,
+            );
             super::sanitize_response_for_enabled(enabled, response);
 
             vec![selectable_row_element(

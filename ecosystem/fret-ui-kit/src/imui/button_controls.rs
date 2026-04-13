@@ -72,9 +72,21 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             let long_press_signal_model_for_down = long_press_signal_model.clone();
             let long_press_signal_model_for_move = long_press_signal_model.clone();
             let long_press_signal_model_for_up = long_press_signal_model.clone();
+            let lifecycle_model = super::lifecycle_session_model_for(cx, id);
+            let lifecycle_model_for_activate = lifecycle_model.clone();
+            let lifecycle_model_for_down = lifecycle_model.clone();
+            let lifecycle_model_for_up = lifecycle_model.clone();
 
             let action_for_activate = action.clone();
             cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
+                if reason == ActivateReason::Keyboard {
+                    super::mark_lifecycle_instant_if_inactive(
+                        host,
+                        acx,
+                        &lifecycle_model_for_activate,
+                        false,
+                    );
+                }
                 host.record_transient_event(acx, super::KEY_CLICKED);
                 if let Some(action) = action_for_activate.clone() {
                     host.record_pending_command_dispatch_source(acx, &action, reason);
@@ -84,6 +96,7 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             }));
 
             if enabled {
+                let lifecycle_model_for_shortcut = lifecycle_model.clone();
                 let action_for_shortcut = action.clone();
                 cx.key_on_key_down_for(
                     id,
@@ -95,6 +108,12 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                                 && (!down.repeat || shortcut_repeat)
                                 && !down.ime_composing
                             {
+                                super::mark_lifecycle_instant_if_inactive(
+                                    host,
+                                    acx,
+                                    &lifecycle_model_for_shortcut,
+                                    false,
+                                );
                                 host.record_transient_event(acx, super::KEY_CLICKED);
                                 if let Some(action) = action_for_shortcut.clone() {
                                     host.record_pending_command_dispatch_source(
@@ -123,6 +142,12 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             }
 
             cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                super::mark_lifecycle_activated_on_left_pointer_down(
+                    host,
+                    acx,
+                    down.button,
+                    &lifecycle_model_for_down,
+                );
                 super::prepare_pressable_drag_on_pointer_down(
                     host,
                     acx,
@@ -149,6 +174,12 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             }));
 
             cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                super::mark_lifecycle_deactivated_on_left_pointer_up(
+                    host,
+                    acx,
+                    up.button,
+                    &lifecycle_model_for_up,
+                );
                 super::finish_pressable_drag_on_pointer_up(
                     host,
                     acx,
@@ -217,6 +248,14 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
             response.hover_blocked_by_active_item =
                 super::hover_blocked_by_active_item_for(cx, id, &active_item_model);
+            super::populate_response_lifecycle_transients(cx, id, response);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                id,
+                state.pressed,
+                false,
+                response,
+            );
             super::sanitize_response_for_enabled(enabled, response);
 
             vec![cx.text(label.clone())]

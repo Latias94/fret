@@ -22,6 +22,10 @@ fn shared_and_facade_response_boundary_compiles() {
                 Size::new(8.0.into(), 4.0.into()),
             )),
         },
+        activated: true,
+        deactivated: false,
+        edited: false,
+        deactivated_after_edit: false,
         secondary_clicked: true,
         double_clicked: false,
         context_menu_requested: true,
@@ -32,6 +36,10 @@ fn shared_and_facade_response_boundary_compiles() {
     assert!(shared.clicked());
     assert!(!shared.changed());
 
+    assert!(response.activated());
+    assert!(!response.deactivated());
+    assert!(!response.edited());
+    assert!(!response.deactivated_after_edit());
     assert!(response.secondary_clicked());
     assert!(!response.double_clicked());
     assert!(response.context_menu_requested());
@@ -46,6 +54,10 @@ fn facade_drag_and_long_press_accessors_compile() {
     let _ = response.drag_stopped();
     let _ = response.drag_delta();
     let _ = response.drag_total();
+    let _ = response.activated();
+    let _ = response.deactivated();
+    let _ = response.edited();
+    let _ = response.deactivated_after_edit();
     let _ = response.long_pressed();
     let _ = response.press_holding();
 }

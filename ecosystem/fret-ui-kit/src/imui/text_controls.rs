@@ -56,6 +56,13 @@ pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             response.core.focused = enabled && cx.is_focused_element(id);
             response.core.changed = enabled && text_model_changed_for(cx, id, &current);
             response.core.rect = cx.last_bounds_for_element(id);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                id,
+                response.core.focused,
+                response.core.changed,
+                &mut response,
+            );
 
             let mut props = fret_ui::element::TextInputProps::new(model.clone());
             props.enabled = enabled;
@@ -102,6 +109,13 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
             response.core.focused = enabled && cx.is_focused_element(id);
             response.core.changed = enabled && text_model_changed_for(cx, id, &current);
             response.core.rect = cx.last_bounds_for_element(id);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                id,
+                response.core.focused,
+                response.core.changed,
+                &mut response,
+            );
 
             let mut props = fret_ui::element::TextAreaProps::new(model.clone());
             props.enabled = enabled;
