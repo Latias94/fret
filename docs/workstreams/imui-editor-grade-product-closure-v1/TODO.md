@@ -127,6 +127,12 @@ Last updated: 2026-04-13
       Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now owns the narrow
       `ResponseExt` lifecycle vocabulary slice, while this umbrella keeps phase ordering and the
       remaining cross-phase backlog read.
+- [x] If the remaining P0 pressure becomes helper-owned trigger response shape
+      (menu/submenu/tab outward response) rather than public `ResponseExt` vocabulary, split that
+      into its own narrow follow-on too.
+      Result: `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the
+      helper-owned menu/submenu/tab trigger response-surface decision instead of reopening either
+      the umbrella lane or the lifecycle lane.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella

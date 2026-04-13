@@ -114,5 +114,6 @@ Current status:
 
 - In progress.
 - The first bounded expansion already landed on public menu/combo response surfaces.
-- Menu-bar/submenu trigger policy depth and tab-trigger outward response work remain deferred until
-  a later narrow follow-on proves that those internal surfaces should become directly observable.
+- `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the helper-owned
+  menu/submenu/tab trigger response-surface decision.
+- Richer menu-bar/submenu policy depth and broader tab policy still remain outside this lane.

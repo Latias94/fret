@@ -164,9 +164,10 @@ Current second landed slice:
 
 Still deferred in this lane:
 
-- menu-bar and submenu trigger policy depth,
-- tab-trigger lifecycle proof,
-- and any new outward response surface that would be required to expose tab trigger lifecycle.
+- helper-owned menu/submenu/tab trigger response surface work, now tracked in
+  `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`,
+- richer menu-bar and submenu policy depth,
+- and broader tab policy beyond any eventual helper-owned trigger response surface.
 
 ## Default owner split
 

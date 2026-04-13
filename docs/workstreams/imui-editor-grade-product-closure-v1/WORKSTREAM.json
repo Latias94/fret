@@ -53,6 +53,14 @@
       "path": "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json"
     },
     {
+      "role": "reference",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json"
+    },
+    {
       "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
     },
@@ -246,6 +254,9 @@
     "docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/M0_BASELINE_AUDIT_2026-04-13.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md",
@@ -309,6 +320,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane active only while it is freezing the maturity-gap taxonomy, proof surfaces, the P0 teaching pack, the P1 shell proof matrix, and the gate package. The implementation-heavy P0 `ResponseExt` lifecycle slice now lives in `imui-response-status-lifecycle-v1`; start similarly narrow follow-ons once any other phase turns into implementation-heavy work."
+    "notes": "Keep this lane active only while it is freezing the maturity-gap taxonomy, proof surfaces, the P0 teaching pack, the P1 shell proof matrix, and the gate package. The implementation-heavy P0 `ResponseExt` lifecycle slice now lives in `imui-response-status-lifecycle-v1`, and the helper-owned menu/submenu/tab trigger response question now lives in `imui-menu-tab-trigger-response-surface-v1`; start similarly narrow follow-ons once any other phase turns into implementation-heavy work."
   }
 }

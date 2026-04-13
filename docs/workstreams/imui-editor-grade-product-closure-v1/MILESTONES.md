@@ -72,13 +72,16 @@ Current status:
   default key repeat does not retrigger activation, and `shortcut_repeat=true` is the opt-in seam.
 - The remaining credible P0 backlog is now narrower:
   broader multi-select proof, deeper child-region/menu/tab policy, the separate key-owner surface,
-  and the newly split item-status lifecycle follow-on at
-  `docs/workstreams/imui-response-status-lifecycle-v1/`.
+  the split item-status lifecycle follow-on at
+  `docs/workstreams/imui-response-status-lifecycle-v1/`,
+  and the new helper-owned trigger response-surface follow-on at
+  `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`.
 - Execution consequence:
   keep this lane as the umbrella recorder. The `ResponseExt` lifecycle vocabulary slice now lives in
-  `docs/workstreams/imui-response-status-lifecycle-v1/`, and any further implementation-heavy P0
-  work should keep following the same narrow follow-on rule instead of turning M1 back into a
-  generic helper-growth backlog.
+  `docs/workstreams/imui-response-status-lifecycle-v1/`, the helper-owned menu/submenu/tab trigger
+  response question now lives in `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`,
+  and any further implementation-heavy P0 work should keep following the same narrow follow-on rule
+  instead of turning M1 back into a generic helper-growth backlog.
 
 ## M2 - P1 editor workbench shell closure
 

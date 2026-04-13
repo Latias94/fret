@@ -317,8 +317,16 @@ mod authoring_surface_policy_tests {
         include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md");
     const IMUI_RESPONSE_STATUS_LIFECYCLE_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json");
+    const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_DESIGN: &str = include_str!(
+        "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md"
+    );
+    const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json"
+    );
     const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO: &str =
         include_str!("../../../docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md");
+    const IMUI_RESPONSE_STATUS_LIFECYCLE_TODO: &str =
+        include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/TODO.md");
     const IMUI_WORKBENCH_PROOF_MATRIX_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
     );
@@ -1676,6 +1684,53 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
                 "the umbrella lane should keep the narrow P0 follow-on marker explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on() {
+        for marker in [
+            "`begin_menu_with_options` and `begin_submenu_with_options` currently return only `bool open`.",
+            "`tab_bar_with_options` currently exposes no outward trigger response surface.",
+            "`fret-authoring::Response`.",
+            "`ecosystem/fret-ui-kit::imui`",
+            "Do not bundle richer menu-bar/submenu/tab policy into this lane.",
+        ] {
+            assert!(
+                IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_DESIGN.contains(marker),
+                "the menu/tab trigger response-surface design should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-menu-tab-trigger-response-surface-v1\"",
+            "\"follow_on_of\": \"imui-editor-grade-product-closure-v1\"",
+            "immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on",
+        ] {
+            assert!(
+                IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM.contains(marker),
+                "the menu/tab trigger response-surface lane state should keep the follow-on marker: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the",
+            "helper-owned menu/submenu/tab trigger response-surface decision",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the helper-owned trigger response follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the",
+            "helper-owned menu/submenu/tab trigger response-surface decision",
+        ] {
+            assert!(
+                IMUI_RESPONSE_STATUS_LIFECYCLE_TODO.contains(marker),
+                "the lifecycle lane should keep the helper-owned trigger response deferral explicit: {marker}"
             );
         }
     }
