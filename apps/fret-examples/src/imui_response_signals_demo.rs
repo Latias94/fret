@@ -40,9 +40,16 @@ impl View for ImUiResponseSignalsView {
         let lifecycle_text_activations = cx.state().local_init(|| 0u32);
         let lifecycle_text_deactivations = cx.state().local_init(|| 0u32);
         let lifecycle_text_after_edit = cx.state().local_init(|| 0u32);
+        let lifecycle_menu_activations = cx.state().local_init(|| 0u32);
+        let lifecycle_menu_deactivations = cx.state().local_init(|| 0u32);
+        let lifecycle_combo_activations = cx.state().local_init(|| 0u32);
+        let lifecycle_combo_deactivations = cx.state().local_init(|| 0u32);
+        let lifecycle_combo_model_edits = cx.state().local_init(|| 0u32);
+        let lifecycle_combo_model_after_edit = cx.state().local_init(|| 0u32);
         let lifecycle_checkbox_value = cx.state().local_init(|| false);
         let lifecycle_slider_value = cx.state().local_init(|| 24.0f32);
         let lifecycle_text_value = cx.state().local_init(String::new);
+        let lifecycle_combo_model_value = cx.state().local_init(|| None::<Arc<str>>);
 
         let left_clicks_value = left_clicks.layout_value(cx);
         let secondary_clicks_value = secondary_clicks.layout_value(cx);
@@ -65,9 +72,17 @@ impl View for ImUiResponseSignalsView {
         let lifecycle_text_activations_value = lifecycle_text_activations.layout_value(cx);
         let lifecycle_text_deactivations_value = lifecycle_text_deactivations.layout_value(cx);
         let lifecycle_text_after_edit_value = lifecycle_text_after_edit.layout_value(cx);
+        let lifecycle_menu_activations_value = lifecycle_menu_activations.layout_value(cx);
+        let lifecycle_menu_deactivations_value = lifecycle_menu_deactivations.layout_value(cx);
+        let lifecycle_combo_activations_value = lifecycle_combo_activations.layout_value(cx);
+        let lifecycle_combo_deactivations_value = lifecycle_combo_deactivations.layout_value(cx);
+        let lifecycle_combo_model_edits_value = lifecycle_combo_model_edits.layout_value(cx);
+        let lifecycle_combo_model_after_edit_value =
+            lifecycle_combo_model_after_edit.layout_value(cx);
         let lifecycle_checkbox_value_value = lifecycle_checkbox_value.layout_value(cx);
         let lifecycle_slider_value_value = lifecycle_slider_value.layout_value(cx);
         let lifecycle_text_value_value = lifecycle_text_value.layout_value(cx);
+        let lifecycle_combo_model_value_value = lifecycle_combo_model_value.layout_value(cx);
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
@@ -156,6 +171,13 @@ impl View for ImUiResponseSignalsView {
             .font_medium();
             ui.add_ui(lifecycle_report);
 
+            let lifecycle_more_report = fret_ui_kit::ui::text(format!(
+                "more lifecycle: menu a/d={lifecycle_menu_activations_value}/{lifecycle_menu_deactivations_value} combo a/d={lifecycle_combo_activations_value}/{lifecycle_combo_deactivations_value} combo_model edit/after={lifecycle_combo_model_edits_value}/{lifecycle_combo_model_after_edit_value}"
+            ))
+            .text_sm()
+            .font_medium();
+            ui.add_ui(lifecycle_more_report);
+
             let lifecycle_button = ui.button("Lifecycle button (hold and release)");
             if lifecycle_button.activated() {
                 let _ = lifecycle_button_activations
@@ -216,11 +238,82 @@ impl View for ImUiResponseSignalsView {
                     .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
             }
 
+            let menu_lifecycle = ui.menu_item_with_options(
+                "Lifecycle menu item (press and release)",
+                fret_ui_kit::imui::MenuItemOptions {
+                    test_id: Some(Arc::from("imui-resp-demo.lifecycle-menu")),
+                    ..Default::default()
+                },
+            );
+            if menu_lifecycle.activated() {
+                let _ = lifecycle_menu_activations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if menu_lifecycle.deactivated() {
+                let _ = lifecycle_menu_deactivations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
+            let combo_resp = ui.combo_with_options(
+                "imui-resp-demo.lifecycle-combo",
+                "Lifecycle combo",
+                "Preview only",
+                fret_ui_kit::imui::ComboOptions {
+                    test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo")),
+                    ..Default::default()
+                },
+                |ui| {
+                    let _ = ui.selectable_with_options(
+                        "Preview only",
+                        fret_ui_kit::imui::SelectableOptions {
+                            test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo.option.0")),
+                            ..Default::default()
+                        },
+                    );
+                },
+            );
+            if combo_resp.trigger.activated() {
+                let _ = lifecycle_combo_activations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if combo_resp.trigger.deactivated() {
+                let _ = lifecycle_combo_deactivations
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
+            let lifecycle_combo_items = vec![
+                Arc::<str>::from("Alpha"),
+                Arc::<str>::from("Beta"),
+                Arc::<str>::from("Gamma"),
+            ];
+            let combo_model_resp = ui.combo_model_with_options(
+                "imui-resp-demo.lifecycle-combo-model",
+                "Lifecycle combo model",
+                lifecycle_combo_model_value.model(),
+                &lifecycle_combo_items,
+                fret_ui_kit::imui::ComboModelOptions {
+                    test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo-model")),
+                    placeholder: Some(Arc::from("Pick a mode")),
+                    ..Default::default()
+                },
+            );
+            if combo_model_resp.edited() {
+                let _ = lifecycle_combo_model_edits
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+            if combo_model_resp.deactivated_after_edit() {
+                let _ = lifecycle_combo_model_after_edit
+                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+            }
+
             let lifecycle_details = fret_ui_kit::ui::text(format!(
-                "current values: checkbox={} slider={:.0} text_len={}",
+                "current values: checkbox={} slider={:.0} text_len={} combo_model={}",
                 lifecycle_checkbox_value_value,
                 lifecycle_slider_value_value,
-                lifecycle_text_value_value.len()
+                lifecycle_text_value_value.len(),
+                lifecycle_combo_model_value_value
+                    .as_deref()
+                    .unwrap_or("none")
             ))
             .text_xs();
             ui.add_ui(lifecycle_details);

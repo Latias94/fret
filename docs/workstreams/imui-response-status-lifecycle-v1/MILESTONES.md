@@ -79,7 +79,7 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- Closed on 2026-04-13.
 - `ResponseExt` now exposes the first lifecycle quartet as facade-only status while
   `fret-authoring::Response` remains unchanged.
 - The first landed slice now covers:
@@ -93,7 +93,8 @@ Current status:
   `menu_item_lifecycle_edges_follow_press_session`,
   `checkbox_lifecycle_reports_edit_and_deactivated_after_edit`,
   `combo_lifecycle_tracks_open_session_edges`,
-  and `combo_model_lifecycle_reports_edit_on_option_pick`.
+  `combo_model_lifecycle_reports_edit_on_option_pick`,
+  and `imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof`.
 
 ## M3 - Expansion or closeout
 

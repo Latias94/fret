@@ -55,6 +55,18 @@ This gate currently proves:
 - the lane still points at the correct first-open demo surface,
 - and the umbrella still records that this work moved into a narrow follow-on.
 
+### Demo/source gate
+
+- `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof`
+
+This gate currently proves:
+
+- the first-open response demo still demonstrates the public menu/combo lifecycle surfaces,
+- `menu_item_with_options` remains visible as a click-only lifecycle example,
+- `combo_with_options` still exposes popup-open activation / deactivation through `ComboResponse`,
+- and `combo_model_with_options` still demonstrates `edited` / `deactivated_after_edit` on
+  selection commit.
+
 ### Response boundary gate
 
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke`
@@ -95,7 +107,6 @@ This focused package currently proves the first landed lifecycle slice around:
 Before claiming this lane is closed, add:
 
 - broader focused tests beyond the current button/menu/checkbox/combo coverage,
-- one demo/source gate that freezes the new signals on the first-open response demo,
 - and any extra focused tests needed before deciding whether menu-bar/submenu triggers or tab
   triggers need their own outward response proof.
 

@@ -45,6 +45,7 @@
     "summary": "Start from the current response-signals demo and the shared-vs-facade boundary smoke before freezing any new lifecycle bits.",
     "commands": [
       "cargo run -p fret-demo --bin imui_response_signals_demo",
+      "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke",
       "cargo nextest run -p fret-imui",
       "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on"
@@ -54,6 +55,10 @@
     {
       "name": "p0-response-status-source-policy",
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on"
+    },
+    {
+      "name": "imui-response-demo-source-gate",
+      "command": "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof"
     },
     {
       "name": "imui-response-boundary-smoke",

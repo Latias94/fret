@@ -1514,6 +1514,9 @@ mod authoring_surface_policy_tests {
                 "click.secondary_clicked()",
                 "drag.drag_started()",
                 "trigger.context_menu_requested()",
+                "menu_lifecycle.activated()",
+                "combo_resp.trigger.activated()",
+                "combo_model_resp.deactivated_after_edit()",
             ],
             &[],
         );
@@ -1675,6 +1678,26 @@ mod authoring_surface_policy_tests {
                 "the umbrella lane should keep the narrow P0 follow-on marker explicit: {marker}"
             );
         }
+    }
+
+    #[test]
+    fn imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof() {
+        assert_current_imui_teaching_surface(
+            "imui_response_signals_demo_lifecycle_expansion",
+            IMUI_RESPONSE_SIGNALS_DEMO,
+            &[
+                "let menu_lifecycle = ui.menu_item_with_options(",
+                "menu_lifecycle.activated()",
+                "menu_lifecycle.deactivated()",
+                "let combo_resp = ui.combo_with_options(",
+                "combo_resp.trigger.activated()",
+                "combo_resp.trigger.deactivated()",
+                "let combo_model_resp = ui.combo_model_with_options(",
+                "combo_model_resp.edited()",
+                "combo_model_resp.deactivated_after_edit()",
+            ],
+            &[],
+        );
     }
 
     #[test]

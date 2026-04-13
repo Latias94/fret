@@ -75,6 +75,12 @@ Last updated: 2026-04-13
       Result: `menu_item_with_options`, `combo_with_options`, and
       `combo_model_with_options` now participate in the lifecycle quartet without widening
       `fret-authoring::Response` or inventing a new tab response surface.
+- [x] Freeze the first-open response demo as an executable proof for the public menu/combo
+      lifecycle surfaces.
+      Result: `apps/fret-examples/src/imui_response_signals_demo.rs` now demonstrates
+      `menu_item_with_options`, `combo_with_options`, and `combo_model_with_options`, and
+      `imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof` keeps that teaching surface
+      explicit.
 
 ## M3 - Expansion or closeout
 
