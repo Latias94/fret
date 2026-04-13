@@ -119,13 +119,7 @@ fn checkbox_model_activate_shortcut_is_scoped_to_focused_checkbox() {
 
     let target_model = app.models_mut().insert(false);
     let other_model = app.models_mut().insert(false);
-    let shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let target_value = Rc::new(Cell::new(false));
     let other_value = Rc::new(Cell::new(false));
@@ -1544,35 +1538,24 @@ fn combo_model_activate_shortcut_is_scoped_to_focused_trigger() {
         },
     );
 
-    let other_node = node_for_test_id(
+    let _other_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-select-shortcut.other",
     );
-    ui.set_focus(Some(other_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-select-shortcut",
-        |cx| {
+        &|cx| {
             crate::imui(cx, |ui| {
                 ui.vertical(|ui| {
                     let _ = ui.combo_model_with_options(
@@ -1615,36 +1598,24 @@ fn combo_model_activate_shortcut_is_scoped_to_focused_trigger() {
         "imui-select-shortcut.other.option.0",
     ));
 
-    let target_node = node_for_test_id(
+    let _target_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-select-shortcut.target",
     );
-    ui.set_focus(Some(target_node));
-    assert_eq!(ui.focus(), Some(target_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-select-shortcut",
-        |cx| {
+        &|cx| {
             crate::imui(cx, |ui| {
                 ui.vertical(|ui| {
                     let _ = ui.combo_model_with_options(
@@ -2240,37 +2211,26 @@ fn combo_activate_shortcut_is_scoped_to_focused_trigger() {
     assert!(!target_open.get());
     assert!(!other_open.get());
 
-    let other_node = node_for_test_id(
+    let _other_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-combo-shortcut.other",
     );
-    ui.set_focus(Some(other_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
     let target_open_out = target_open.clone();
     let other_open_out = other_open.clone();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-combo-shortcut",
-        |cx| render(cx, &target_open_out, &other_open_out),
+        &|cx| render(cx, &target_open_out, &other_open_out),
     );
     assert!(!target_open.get());
     assert!(!other_open.get());
@@ -2282,38 +2242,26 @@ fn combo_activate_shortcut_is_scoped_to_focused_trigger() {
         "imui-combo-shortcut.target.option.0",
     ));
 
-    let target_node = node_for_test_id(
+    let _target_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-combo-shortcut.target",
     );
-    ui.set_focus(Some(target_node));
-    assert_eq!(ui.focus(), Some(target_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
     let target_open_out = target_open.clone();
     let other_open_out = other_open.clone();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-combo-shortcut",
-        |cx| render(cx, &target_open_out, &other_open_out),
+        &|cx| render(cx, &target_open_out, &other_open_out),
     );
     assert!(target_open.get());
     assert!(!other_open.get());

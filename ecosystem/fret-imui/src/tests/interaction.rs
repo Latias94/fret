@@ -556,15 +556,9 @@ fn button_activate_shortcut_is_scoped_to_focused_button() {
     app.commands_mut()
         .register(command.clone(), CommandMeta::new("Focused Shortcut"));
 
-    let shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let shortcut = ctrl_shortcut(KeyCode::KeyK);
 
-    let render = |cx: &mut ElementContext<'_, TestHost>, command: &CommandId| {
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
         crate::imui(cx, |ui| {
             ui.vertical(|ui| {
                 ui.button_command_with_options(
@@ -593,19 +587,10 @@ fn button_activate_shortcut_is_scoped_to_focused_button() {
         window,
         bounds,
         "imui-button-shortcut",
-        |cx| render(cx, &command),
+        render,
     );
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
     assert!(
         app.effects.is_empty(),
         "expected unfocused shortcut to stay local to the button"
@@ -621,26 +606,16 @@ fn button_activate_shortcut_is_scoped_to_focused_button() {
     click_at(&mut ui, &mut app, &mut services, other);
     app.effects.clear();
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-button-shortcut",
-        |cx| render(cx, &command),
+        &render,
     );
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
     assert!(
         app.effects.is_empty(),
         "expected shortcut on another focused button to do nothing"
@@ -656,26 +631,16 @@ fn button_activate_shortcut_is_scoped_to_focused_button() {
     click_at(&mut ui, &mut app, &mut services, target);
     app.effects.clear();
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-button-shortcut",
-        |cx| render(cx, &command),
+        &render,
     );
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
     assert!(app.effects.iter().any(|effect| {
         matches!(
             effect,
@@ -811,13 +776,7 @@ fn selectable_activate_shortcut_is_scoped_to_focused_item() {
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
 
-    let shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let shortcut = ctrl_shortcut(KeyCode::KeyK);
     let target_clicked = Rc::new(Cell::new(false));
     let other_clicked = Rc::new(Cell::new(false));
 
@@ -1396,35 +1355,24 @@ fn begin_menu_activate_shortcut_is_scoped_to_focused_trigger() {
         render,
     );
 
-    let edit_node = node_for_test_id(
+    let _edit_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-menu-shortcut.edit",
     );
-    ui.set_focus(Some(edit_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-menu-shortcut",
-        render,
+        &render,
     );
     assert!(!has_test_id(
         &mut ui,
@@ -1441,36 +1389,24 @@ fn begin_menu_activate_shortcut_is_scoped_to_focused_trigger() {
         "imui-begin-menu-shortcut.edit.copy",
     ));
 
-    let file_node = node_for_test_id(
+    let _file_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-menu-shortcut.file",
     );
-    ui.set_focus(Some(file_node));
-    assert_eq!(ui.focus(), Some(file_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-menu-shortcut",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,
@@ -1924,13 +1860,7 @@ fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger() {
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
 
-    let shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
         crate::imui(cx, |ui| {
@@ -2042,35 +1972,24 @@ fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger() {
         "imui-begin-submenu-shortcut.file.history",
     ));
 
-    let history_node = node_for_test_id(
+    let _history_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-submenu-shortcut.file.history",
     );
-    ui.set_focus(Some(history_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-shortcut",
-        render,
+        &render,
     );
     assert!(!has_test_id(
         &mut ui,
@@ -2087,36 +2006,24 @@ fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger() {
         "imui-begin-submenu-shortcut.file.history.yesterday",
     ));
 
-    let recent_node = node_for_test_id(
+    let _recent_node = focus_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-begin-submenu-shortcut.file.recent",
     );
-    ui.set_focus(Some(recent_node));
-    assert_eq!(ui.focus(), Some(recent_node));
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-begin-submenu-shortcut",
-        render,
+        &render,
     );
     assert!(has_test_id(
         &mut ui,

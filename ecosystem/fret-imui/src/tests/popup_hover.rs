@@ -1,5 +1,4 @@
 use super::*;
-use fret_runtime::KeyChord;
 
 #[test]
 fn context_menu_popup_opens_on_right_click_and_closes_on_outside_click() {
@@ -1587,13 +1586,7 @@ fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arr
 
     let open = Rc::new(Cell::new(false));
     let clicked = Rc::new(Cell::new(false));
-    let shortcut = KeyChord::new(
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    let shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   open_out: &Rc<Cell<bool>>,
@@ -1653,43 +1646,32 @@ fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arr
         Modifiers::default(),
     );
 
-    app.advance_frame();
     let open_out = open.clone();
     let clicked_out = clicked.clone();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-popup-context-menu-shortcut",
-        |cx| render(cx, &open_out, &clicked_out),
+        &|cx| render(cx, &open_out, &clicked_out),
     );
     assert!(open.get());
     assert!(!clicked.get());
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
     let open_out = open.clone();
     let clicked_out = clicked.clone();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-popup-context-menu-shortcut",
-        |cx| render(cx, &open_out, &clicked_out),
+        &|cx| render(cx, &open_out, &clicked_out),
     );
     assert!(open.get());
     assert!(!clicked.get());
@@ -1702,18 +1684,17 @@ fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arr
         Modifiers::default(),
     );
 
-    app.advance_frame();
     ui.request_semantics_snapshot();
     let open_out = open.clone();
     let clicked_out = clicked.clone();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-popup-context-menu-shortcut",
-        |cx| render(cx, &open_out, &clicked_out),
+        &|cx| render(cx, &open_out, &clicked_out),
     );
     let focus = ui.focus().expect("focus");
     let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -1726,28 +1707,18 @@ fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arr
     assert!(open.get());
     assert!(!clicked.get());
 
-    key_down(
-        &mut ui,
-        &mut app,
-        &mut services,
-        KeyCode::KeyK,
-        Modifiers {
-            ctrl: true,
-            ..Default::default()
-        },
-    );
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
-    app.advance_frame();
     let open_out = open.clone();
     let clicked_out = clicked.clone();
-    let _root = run_frame(
+    let _root = advance_and_run_frame(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         "imui-popup-context-menu-shortcut",
-        |cx| render(cx, &open_out, &clicked_out),
+        &|cx| render(cx, &open_out, &clicked_out),
     );
     assert!(open.get());
     assert!(clicked.get());
