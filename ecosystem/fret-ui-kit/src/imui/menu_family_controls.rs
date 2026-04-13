@@ -133,6 +133,8 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
                 test_id: options.test_id.clone(),
                 submenu: true,
                 expanded: Some(open_before),
+                activate_shortcut: options.activate_shortcut,
+                shortcut_repeat: options.shortcut_repeat,
                 ..Default::default()
             },
         )

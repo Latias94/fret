@@ -212,15 +212,15 @@ The real remaining gaps are narrower:
      shortcut hints from Fret's command/keymap layer without widening `crates/fret-ui`.
    - `ButtonOptions`, `SelectableOptions`, `CheckboxOptions`, `SwitchOptions`,
      `CollapsingHeaderOptions`, `TreeNodeOptions`, `TabItemOptions`, `MenuItemOptions`,
-     `BeginMenuOptions`, `ComboOptions`, and `ComboModelOptions` also expose a focused
-     `activate_shortcut` seam for exact item-local `KeyChord` activation without widening the
-     runtime's global shortcut ownership model.
+     `BeginMenuOptions`, `BeginSubmenuOptions`, `ComboOptions`, and `ComboModelOptions` also
+     expose a focused `activate_shortcut` seam for exact item-local `KeyChord` activation without
+     widening the runtime's global shortcut ownership model.
    - The remaining gap is depth rather than ownership: there is still no immediate equivalent to
      `SetNextItemShortcut()` / `SetItemKeyOwner()`, no broader item-local shortcut registration
      seam beyond focused button/selectable/checkbox/switch/disclosure/tab/menu/combo pressables,
      and no richer first-party proof surface beyond menu/button command affordances plus focused
-     selectable/checkbox/switch/disclosure/tab/menu/combo/model-backed-combo rows and menubar
-     triggers.
+     selectable/checkbox/switch/disclosure/tab/menu/combo/model-backed-combo rows, menubar
+     triggers, and submenu triggers.
 5. Partial item-status parity
    - `ResponseExt` covers a useful subset of hover, click, drag, context-menu, and nav-highlight
      behavior.

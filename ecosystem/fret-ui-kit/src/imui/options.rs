@@ -93,6 +93,13 @@ pub struct BeginSubmenuOptions {
     pub enabled: bool,
     pub test_id: Option<Arc<str>>,
     pub popup: PopupMenuOptions,
+    /// Exact key chord that activates the submenu trigger while it is focused.
+    ///
+    /// This is an item-local shortcut seam. It does not participate in global shortcut ownership
+    /// arbitration.
+    pub activate_shortcut: Option<fret_runtime::KeyChord>,
+    /// Whether `activate_shortcut` should fire on repeated keydown events.
+    pub shortcut_repeat: bool,
 }
 
 impl Default for BeginSubmenuOptions {
@@ -111,6 +118,8 @@ impl Default for BeginSubmenuOptions {
                 modal: false,
                 auto_focus: false,
             },
+            activate_shortcut: None,
+            shortcut_repeat: false,
         }
     }
 }
