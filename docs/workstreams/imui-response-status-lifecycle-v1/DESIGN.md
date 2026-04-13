@@ -156,6 +156,18 @@ Current first landed slice:
 - value-editing pressables: `checkbox_model`, `switch_model`, and `slider_f32_model`,
 - focus-owned text entry: `input_text_model` and `textarea_model`.
 
+Current second landed slice:
+
+- click-only menu public surface: `menu_item_with_options`,
+- popup-open session surface: `combo_with_options`,
+- and value-editing combo selection surface: `combo_model_with_options`.
+
+Still deferred in this lane:
+
+- menu-bar and submenu trigger policy depth,
+- tab-trigger lifecycle proof,
+- and any new outward response surface that would be required to expose tab trigger lifecycle.
+
 ## Default owner split
 
 ### `ecosystem/fret-ui-kit::imui`

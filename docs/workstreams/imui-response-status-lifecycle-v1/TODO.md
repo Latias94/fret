@@ -44,10 +44,13 @@ Last updated: 2026-04-13
       creating a second meaning beside `core.changed`.
       Result: the first landed slice now covers direct pressables, boolean controls, slider, and
       text entry with the click-only vs value-editing split kept explicit.
-- [ ] Freeze the explicit defer list for this lane:
+- [x] Freeze the explicit defer list for this lane:
       - key-owner semantics,
       - broader collection proof breadth,
       - and menu/tab/pane policy depth.
+      Result needed: public `ResponseExt` surfaces can expand, but menu-bar/submenu policy depth
+      and tab-trigger outward response work stay deferred unless another narrow follow-on proves
+      they should move.
 
 ## M2 - First implementation slice
 
@@ -67,11 +70,19 @@ Last updated: 2026-04-13
       Result: the first slice now lands on direct pressables, boolean controls, slider, and text
       entry, with response smoke plus focused button/checkbox interaction coverage and an expanded
       `imui_response_signals_demo`.
+- [x] Land the first bounded expansion only on public response surfaces that already return
+      `ResponseExt` or `ComboResponse`.
+      Result: `menu_item_with_options`, `combo_with_options`, and
+      `combo_model_with_options` now participate in the lifecycle quartet without widening
+      `fret-authoring::Response` or inventing a new tab response surface.
 
 ## M3 - Expansion or closeout
 
-- [ ] Expand to menu/tab/combo family only if the first slice lands cleanly and repeated evidence
-      says those surfaces need the same lifecycle vocabulary.
+- [x] Expand to the next public menu/combo family surfaces only after the first slice lands
+      cleanly.
+      Result: click-only menu item lifecycle and combo open/edit lifecycle now have focused proof.
+- [ ] Decide whether menu-bar/submenu triggers and tab triggers should stay deferred or move into a
+      later narrow follow-on with their own outward response proof.
 - [ ] Start a new narrow follow-on instead of widening this lane if the pressure shifts to key
       ownership or broader proof-depth work.
 - [ ] Close this lane once the first lifecycle vocabulary and focused gates are explicit enough to

@@ -95,11 +95,15 @@
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs",
     "ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs",
     "ecosystem/fret-imui/src/tests/interaction.rs",
+    "ecosystem/fret-imui/src/tests/models.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
     "apps/fret-examples/src/lib.rs"
   ],
@@ -110,6 +114,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane until the first lifecycle quartet, its owner split, and the first bounded implementation slice are explicit. If pressure shifts to key ownership or broader proof-depth work, start another narrow follow-on instead of widening this folder."
+    "notes": "Continue this lane until the first lifecycle quartet, its owner split, and the bounded public response slices are explicit. If pressure shifts to key ownership, deeper menu-bar/submenu policy, or tab-trigger outward response work, start another narrow follow-on instead of widening this folder."
   }
 }

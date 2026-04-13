@@ -19,11 +19,15 @@ backlog.
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-kit/src/imui/button_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/slider_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/text_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/combo_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs`
 - `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
+- `ecosystem/fret-imui/src/tests/models.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
 - `apps/fret-examples/src/lib.rs`
 
@@ -64,12 +68,19 @@ This gate currently proves:
 
 ### Current interaction floor
 
-- `cargo nextest run -p fret-imui button_lifecycle_edges_follow_press_session checkbox_lifecycle_reports_edit_and_deactivated_after_edit`
+- `cargo nextest run -p fret-imui button_lifecycle_edges_follow_press_session`
+- `cargo nextest run -p fret-imui menu_item_lifecycle_edges_follow_press_session`
+- `cargo nextest run -p fret-imui checkbox_lifecycle_reports_edit_and_deactivated_after_edit`
+- `cargo nextest run -p fret-imui combo_lifecycle_tracks_open_session_edges`
+- `cargo nextest run -p fret-imui combo_model_lifecycle_reports_edit_on_option_pick`
 
 This focused package currently proves the first landed lifecycle slice around:
 
 - press-session activation / deactivation on direct buttons,
+- press-session activation / deactivation on click-only menu items,
 - `edited` and `deactivated_after_edit` on a value-editing checkbox,
+- popup-open activation / deactivation on generic combo triggers,
+- selection-commit `edited` / `deactivated_after_edit` on `combo_model_with_options`,
 - and the immediate interaction wiring that those lifecycle edges depend on.
 
 ### Lane hygiene gates
@@ -83,9 +94,10 @@ This focused package currently proves the first landed lifecycle slice around:
 
 Before claiming this lane is closed, add:
 
-- broader focused tests beyond direct button + checkbox coverage,
+- broader focused tests beyond the current button/menu/checkbox/combo coverage,
 - one demo/source gate that freezes the new signals on the first-open response demo,
-- and any extra focused tests needed before extending the quartet into menu/tab/combo family.
+- and any extra focused tests needed before deciding whether menu-bar/submenu triggers or tab
+  triggers need their own outward response proof.
 
 Do not respond to that gap by widening the shared response contract or by bundling key-owner
 semantics into this lane.

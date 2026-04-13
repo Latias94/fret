@@ -1353,6 +1353,186 @@ fn combo_model_reports_changed_once_after_option_pick() {
 }
 
 #[test]
+fn combo_model_lifecycle_reports_edit_on_option_pick() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(None::<Arc<str>>);
+    let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+
+    let activated = Rc::new(Cell::new(false));
+    let deactivated = Rc::new(Cell::new(false));
+    let edited = Rc::new(Cell::new(false));
+    let after_edit = Rc::new(Cell::new(false));
+    let open = Rc::new(Cell::new(false));
+
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let open_out = open.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-lifecycle",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let resp = ui.combo_model_with_options(
+                    "imui-select-lifecycle-popup",
+                    "Mode",
+                    &model,
+                    &items,
+                    ComboModelOptions {
+                        test_id: Some(Arc::from("imui-select-lifecycle")),
+                        ..Default::default()
+                    },
+                );
+                activated_out.set(resp.activated());
+                deactivated_out.set(resp.deactivated());
+                edited_out.set(resp.edited());
+                after_edit_out.set(resp.deactivated_after_edit());
+                let popup_open = ui.popup_open_model("imui-select-lifecycle-popup");
+                let open_now = ui
+                    .cx_mut()
+                    .read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
+                        *value
+                    })
+                    .unwrap_or(false);
+                open_out.set(open_now);
+            })
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(!open.get());
+
+    let trigger = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-lifecycle",
+    );
+    click_at(&mut ui, &mut app, &mut services, trigger);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let open_out = open.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-lifecycle",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let resp = ui.combo_model_with_options(
+                    "imui-select-lifecycle-popup",
+                    "Mode",
+                    &model,
+                    &items,
+                    ComboModelOptions {
+                        test_id: Some(Arc::from("imui-select-lifecycle")),
+                        ..Default::default()
+                    },
+                );
+                activated_out.set(resp.activated());
+                deactivated_out.set(resp.deactivated());
+                edited_out.set(resp.edited());
+                after_edit_out.set(resp.deactivated_after_edit());
+                let popup_open = ui.popup_open_model("imui-select-lifecycle-popup");
+                let open_now = ui
+                    .cx_mut()
+                    .read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
+                        *value
+                    })
+                    .unwrap_or(false);
+                open_out.set(open_now);
+            })
+        },
+    );
+    assert!(activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(open.get());
+
+    let first_option = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-select-lifecycle.option.0",
+    );
+    click_at(&mut ui, &mut app, &mut services, first_option);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let open_out = open.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-select-lifecycle",
+        |cx| {
+            crate::imui(cx, |ui| {
+                let resp = ui.combo_model_with_options(
+                    "imui-select-lifecycle-popup",
+                    "Mode",
+                    &model,
+                    &items,
+                    ComboModelOptions {
+                        test_id: Some(Arc::from("imui-select-lifecycle")),
+                        ..Default::default()
+                    },
+                );
+                activated_out.set(resp.activated());
+                deactivated_out.set(resp.deactivated());
+                edited_out.set(resp.edited());
+                after_edit_out.set(resp.deactivated_after_edit());
+                let popup_open = ui.popup_open_model("imui-select-lifecycle-popup");
+                let open_now = ui
+                    .cx_mut()
+                    .read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
+                        *value
+                    })
+                    .unwrap_or(false);
+                open_out.set(open_now);
+            })
+        },
+    );
+    assert!(!activated.get());
+    assert!(deactivated.get());
+    assert!(edited.get());
+    assert!(after_edit.get());
+    assert!(!open.get());
+}
+
+#[test]
 fn combo_model_popup_escape_closes_and_restores_trigger_focus() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -2122,6 +2302,167 @@ fn combo_popup_escape_closes_and_restores_trigger_focus() {
         "imui-combo-generic.option.0",
     ));
     assert_eq!(ui.focus(), focus_before_open);
+}
+
+#[test]
+fn combo_lifecycle_tracks_open_session_edges() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let activated = Rc::new(Cell::new(false));
+    let deactivated = Rc::new(Cell::new(false));
+    let edited = Rc::new(Cell::new(false));
+    let after_edit = Rc::new(Cell::new(false));
+    let open = Rc::new(Cell::new(false));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  activated_out: &Rc<Cell<bool>>,
+                  deactivated_out: &Rc<Cell<bool>>,
+                  edited_out: &Rc<Cell<bool>>,
+                  after_edit_out: &Rc<Cell<bool>>,
+                  open_out: &Rc<Cell<bool>>| {
+        crate::imui(cx, |ui| {
+            let resp = ui.combo_with_options(
+                "imui-combo-lifecycle-popup",
+                "Mode",
+                "Alpha",
+                ComboOptions {
+                    test_id: Some(Arc::from("imui-combo-lifecycle")),
+                    ..Default::default()
+                },
+                |ui| {
+                    let _ = ui.selectable_with_options(
+                        "Alpha",
+                        SelectableOptions {
+                            test_id: Some(Arc::from("imui-combo-lifecycle.option.0")),
+                            ..Default::default()
+                        },
+                    );
+                },
+            );
+            activated_out.set(resp.trigger.activated());
+            deactivated_out.set(resp.trigger.deactivated());
+            edited_out.set(resp.trigger.edited());
+            after_edit_out.set(resp.trigger.deactivated_after_edit());
+            open_out.set(resp.open());
+        })
+    };
+
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let open_out = open.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &open_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(!open.get());
+
+    let trigger = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-combo-lifecycle",
+    );
+    click_at(&mut ui, &mut app, &mut services, trigger);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let open_out = open.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &open_out,
+            )
+        },
+    );
+    assert!(activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(open.get());
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::Escape,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let open_out = open.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-combo-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &open_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(!open.get());
 }
 
 #[test]
