@@ -24,7 +24,7 @@ use fret_ui::{ElementContext, GlobalElementId, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use fret_ui_kit::imui::{
-    ComboModelOptions, ComboOptions, FloatingAreaOptions, FloatingWindowOptions,
+    CheckboxOptions, ComboModelOptions, ComboOptions, FloatingAreaOptions, FloatingWindowOptions,
     FloatingWindowResizeOptions, GridOptions, HorizontalOptions, ImUiHoveredFlags,
     InputTextOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions, ScrollOptions,
     SelectableOptions, SliderOptions, SwitchOptions, TableColumn, TableOptions, VerticalOptions,

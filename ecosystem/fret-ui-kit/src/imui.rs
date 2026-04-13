@@ -80,7 +80,7 @@ use interaction_runtime::{
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
-    BeginMenuOptions, BeginSubmenuOptions, ButtonOptions, ChildRegionOptions,
+    BeginMenuOptions, BeginSubmenuOptions, ButtonOptions, CheckboxOptions, ChildRegionOptions,
     CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions,
     GridOptions, HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions,
     PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
@@ -1011,6 +1011,29 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
+    pub fn checkbox_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.checkbox_model_with_options(label, model, CheckboxOptions::default())
+    }
+
+    pub fn checkbox_model_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: CheckboxOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::checkbox_model_with_options(
+            self, label, model, options,
+        );
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
     pub fn switch_model(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -1887,6 +1910,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         model: &fret_runtime::Model<bool>,
     ) -> ResponseExt {
         boolean_controls::checkbox_model(self, label.into(), model)
+    }
+
+    fn checkbox_model_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: CheckboxOptions,
+    ) -> ResponseExt {
+        boolean_controls::checkbox_model_with_options(self, label.into(), model, options)
     }
 
     fn switch_model(
