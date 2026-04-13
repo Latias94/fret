@@ -351,6 +351,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_CAPTURE_PLAN_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
+    );
     const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
         include_str!("../../../docs/diagnostics-first-open.md");
     const DIAGNOSTICS_START_HERE_DOC: &str =
@@ -2005,7 +2008,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture() {
         for marker in [
-            "\"role\": \"next\"",
+            "\"role\": \"status\"",
             "M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md",
         ] {
             assert!(
@@ -2038,6 +2041,49 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the mixed-DPI TODO posture should remain explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_capture_plan() {
+        for marker in [
+            "\"role\": \"next\"",
+            "M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
+            "mixed-dpi-real-host",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the mixed-DPI capture plan reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "Windows native runner",
+            "preferred setup: `100% + 150%`",
+            "docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json",
+            "target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host",
+            "multiwindow-drag-back-outer-sweep-after-tearoff",
+            "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x",
+            "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x",
+            "`mixed_dpi_signal_observed: true`",
+            "`scale_factors_seen` with at least two distinct values",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_CAPTURE_PLAN_NOTE.contains(marker),
+                "the docking parity lane should keep the mixed-DPI capture plan explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Real-host capture runbook is now explicit",
+            "M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
+            "pre-crossing",
+            "post-crossing",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the mixed-DPI TODO runbook should remain explicit: {marker}"
             );
         }
     }

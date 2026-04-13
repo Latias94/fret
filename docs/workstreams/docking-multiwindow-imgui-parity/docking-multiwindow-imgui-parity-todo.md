@@ -181,6 +181,10 @@ Each TODO is labeled:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md`
       - Keep the bounded P3 campaign generic, treat `mixed_dpi_signal_observed` as evidence-only,
         and defer any `requires mixed-dpi` gate shape until diagnostics has a real environment source.
+    - [x] Real-host capture runbook is now explicit:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md`
+      - Use the local-debug outer-position sweep script as the default Windows mixed-DPI capture path,
+        then choose one `pre-crossing` and one `post-crossing` bundle via `diag dock-routing`.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.
