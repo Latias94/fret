@@ -18,7 +18,8 @@ use fret::{FretApp, advanced::prelude::*};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui::element::AnyElement;
-use fret_ui_kit::{ColorRef, Space, UiExt as _, ui};
+use fret_ui_kit::imui::ChildRegionOptions;
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const TEST_ID_ROOT: &str = "imui-interaction-showcase.root";
@@ -726,25 +727,36 @@ fn render_shell_showcase_card(
                         }
                     });
 
-                    ui.child_region("imui-showcase.preview", |ui| {
-                        let selected = selected_tab
-                            .value_in(ui.cx_mut().app.models())
-                            .flatten()
-                            .unwrap_or_else(|| Arc::from("overview"));
-                        let rail_state = if context_toggle
-                            .value_in(ui.cx_mut().app.models())
-                            .unwrap_or(false)
-                        {
-                            "Pinned"
-                        } else {
-                            "Floating"
-                        };
+                    ui.child_region_with_options(
+                        "imui-showcase.preview",
+                        ChildRegionOptions {
+                            layout: LayoutRefinement::default().h_px(Px(112.0)),
+                            test_id: Some(Arc::from("imui-showcase.preview")),
+                            content_test_id: Some(Arc::from("imui-showcase.preview.content")),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let selected = selected_tab
+                                .value_in(ui.cx_mut().app.models())
+                                .flatten()
+                                .unwrap_or_else(|| Arc::from("overview"));
+                            let rail_state = if context_toggle
+                                .value_in(ui.cx_mut().app.models())
+                                .unwrap_or(false)
+                            {
+                                "Pinned"
+                            } else {
+                                "Floating"
+                            };
 
-                        ui.separator_text("Preview");
-                        ui.text(format!("Active tab: {selected}"));
-                        ui.text(format!("Diagnostics rail: {rail_state}"));
-                        ui.text("Menu + tab helpers now return canonical outward responses directly.");
-                    });
+                            ui.separator_text("Preview");
+                            ui.text(format!("Active tab: {selected}"));
+                            ui.text(format!("Diagnostics rail: {rail_state}"));
+                            ui.text(
+                                "Menu + tab helpers now return canonical outward responses directly.",
+                            );
+                        },
+                    );
                 })
             })
             .w_full()

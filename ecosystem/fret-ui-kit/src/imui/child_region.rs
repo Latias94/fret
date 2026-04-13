@@ -16,6 +16,7 @@ pub(super) fn child_region_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     cx.keyed(id, |cx| {
+        let layout = options.layout.clone();
         let scroll_options = options.scroll.clone();
         let test_id = options.test_id.clone();
         let content_test_id = options.content_test_id.clone();
@@ -37,6 +38,7 @@ pub(super) fn child_region_element<H: UiHost>(
             scroll_options.show_scrollbar_x,
             scroll_options.show_scrollbar_y,
         )
+        .layout(layout)
         .p_2()
         .rounded_md()
         .border_1()

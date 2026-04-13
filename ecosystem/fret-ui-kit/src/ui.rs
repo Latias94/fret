@@ -40,40 +40,63 @@ where
     out
 }
 
-fn flex_root_needs_fill_height(direction: Axis, layout: &LayoutRefinement) -> bool {
-    fn metric_ref_is_zero(metric: &crate::MetricRef) -> bool {
-        match metric {
-            crate::MetricRef::Px(px) => px.0.abs() <= f32::EPSILON,
-            crate::MetricRef::Token { key, fallback } => {
-                *key == crate::Space::N0.token_key()
-                    || matches!(fallback, crate::style::MetricFallback::Px(px) if px.0.abs() <= f32::EPSILON)
-            }
+fn metric_ref_is_zero(metric: &MetricRef) -> bool {
+    match metric {
+        MetricRef::Px(px) => px.0.abs() <= f32::EPSILON,
+        MetricRef::Token { key, fallback } => {
+            *key == crate::Space::N0.token_key()
+                || matches!(fallback, crate::style::MetricFallback::Px(px) if px.0.abs() <= f32::EPSILON)
         }
     }
+}
 
-    fn min_max_height_requests_fill(length: &crate::LengthRefinement) -> bool {
-        match length {
-            crate::LengthRefinement::Auto => false,
-            crate::LengthRefinement::Fill | crate::LengthRefinement::Fraction(_) => true,
-            // `min_h_0()` / `max_h_0()` are escape hatches for shrink/clamp behavior; they should
-            // not turn an otherwise auto-height stack into a fill-height flex root.
-            crate::LengthRefinement::Px(metric) => !metric_ref_is_zero(metric),
-        }
+fn min_max_axis_refinement_requests_fill(length: &LengthRefinement) -> bool {
+    match length {
+        LengthRefinement::Auto => false,
+        LengthRefinement::Fill | LengthRefinement::Fraction(_) => true,
+        // `min_h_0()` / `max_h_0()` are escape hatches for shrink/clamp behavior; they should
+        // not force wrapped scroll/flex roots to fill the main axis when the outer box is still
+        // auto-sized.
+        LengthRefinement::Px(metric) => !metric_ref_is_zero(metric),
     }
+}
 
-    let has_height_constraint = layout.size.as_ref().is_some_and(|size| {
-        matches!(
-            size.height,
-            Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
-        ) || size
-            .min_height
+fn layout_requests_fill_on_axis(axis: Axis, layout: &LayoutRefinement) -> bool {
+    let Some(size) = layout.size.as_ref() else {
+        return false;
+    };
+
+    let (main, min, max) = match axis {
+        Axis::Horizontal => (&size.width, &size.min_width, &size.max_width),
+        Axis::Vertical => (&size.height, &size.min_height, &size.max_height),
+    };
+
+    matches!(
+        main,
+        Some(LengthRefinement::Px(_) | LengthRefinement::Fraction(_) | LengthRefinement::Fill)
+    ) || min
+        .as_ref()
+        .is_some_and(min_max_axis_refinement_requests_fill)
+        || max
             .as_ref()
-            .is_some_and(min_max_height_requests_fill)
-            || size
-                .max_height
-                .as_ref()
-                .is_some_and(min_max_height_requests_fill)
-    });
+            .is_some_and(min_max_axis_refinement_requests_fill)
+}
+
+fn scroll_root_needs_fill_on_axis(
+    scroll_axis: ScrollAxis,
+    axis: Axis,
+    layout: &LayoutRefinement,
+) -> bool {
+    let scrolls_on_axis = match axis {
+        Axis::Horizontal => scroll_axis.scroll_x(),
+        Axis::Vertical => scroll_axis.scroll_y(),
+    };
+
+    !scrolls_on_axis || layout_requests_fill_on_axis(axis, layout)
+}
+
+fn flex_root_needs_fill_height(direction: Axis, layout: &LayoutRefinement) -> bool {
+    let has_height_constraint = layout_requests_fill_on_axis(Axis::Vertical, layout);
     if has_height_constraint {
         return true;
     }
@@ -845,9 +868,10 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let layout = self.layout;
         let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
             let theme = Theme::global(&*cx.app);
-            let container = decl_style::container_props(theme, self.chrome, self.layout);
+            let container = decl_style::container_props(theme, self.chrome, layout.clone());
 
             let scrollbar_w = theme.metric_token("metric.scrollbar.width");
             let thumb = theme.color_token("scrollbar.thumb.background");
@@ -864,6 +888,8 @@ where
         let show_scrollbar_y = self.show_scrollbar_y;
         let provided_handle = self.handle;
         let children = self.children.expect("expected scroll children closure");
+        let fill_width = scroll_root_needs_fill_on_axis(axis, Axis::Horizontal, &layout);
+        let fill_height = scroll_root_needs_fill_on_axis(axis, Axis::Vertical, &layout);
 
         cx.container(container, move |cx| {
             let handle = cx.slot_state(ScrollHandle::default, |h| {
@@ -874,8 +900,16 @@ where
             });
 
             let mut scroll_layout = LayoutStyle::default();
-            scroll_layout.size.width = Length::Fill;
-            scroll_layout.size.height = Length::Fill;
+            scroll_layout.size.width = if fill_width {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
+            scroll_layout.size.height = if fill_height {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
             scroll_layout.overflow = Overflow::Clip;
 
             let scroll = cx.scroll(
@@ -999,9 +1033,10 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let layout = self.layout;
         let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
             let theme = Theme::global(&*cx.app);
-            let container = decl_style::container_props(theme, self.chrome, self.layout);
+            let container = decl_style::container_props(theme, self.chrome, layout.clone());
             let scrollbar_w = theme.metric_token("metric.scrollbar.width");
             let thumb = theme.color_token("scrollbar.thumb.background");
             let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
@@ -1014,6 +1049,8 @@ where
         let show_scrollbar_y = self.show_scrollbar_y;
         let provided_handle = self.handle;
         let build = self.build.expect("expected scroll area build closure");
+        let fill_width = scroll_root_needs_fill_on_axis(axis, Axis::Horizontal, &layout);
+        let fill_height = scroll_root_needs_fill_on_axis(axis, Axis::Vertical, &layout);
 
         cx.container(container, move |cx| {
             let handle = cx.slot_state(ScrollHandle::default, |h| {
@@ -1024,8 +1061,16 @@ where
             });
 
             let mut scroll_layout = LayoutStyle::default();
-            scroll_layout.size.width = Length::Fill;
-            scroll_layout.size.height = Length::Fill;
+            scroll_layout.size.width = if fill_width {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
+            scroll_layout.size.height = if fill_height {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
             scroll_layout.overflow = Overflow::Clip;
 
             let scroll = cx.scroll(
@@ -2576,6 +2621,79 @@ mod tests {
                     );
                 }
                 other => panic!("expected inner flex root, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn scroll_area_explicit_height_propagates_fill_height_to_inner_scroll_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = scroll_area(|_cx| [text("hello")])
+                .h_px(Px(120.0))
+                .into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(props) => {
+                    assert_eq!(props.layout.size.height, Length::Px(Px(120.0)));
+                    el.children
+                        .first()
+                        .expect("scroll area container should wrap an inner scroll root")
+                }
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Scroll(props) => {
+                    assert_eq!(
+                        props.layout.size.height,
+                        Length::Fill,
+                        "explicit scroll-area height should keep the inner scroll root fill-sized on its scroll axis"
+                    );
+                }
+                other => panic!("expected inner scroll root, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn scroll_area_build_without_height_constraints_keeps_inner_scroll_root_auto_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = scroll_area_build(|cx, out| out.push(text("hello").into_element(cx)))
+                .into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(props) => {
+                    assert_eq!(props.layout.size.height, Length::Auto);
+                    el.children
+                        .first()
+                        .expect("scroll area container should wrap an inner scroll root")
+                }
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Scroll(props) => {
+                    assert_eq!(
+                        props.layout.size.height,
+                        Length::Auto,
+                        "auto-height scroll-area wrappers should keep the inner scroll root auto-sized on the scroll axis"
+                    );
+                }
+                other => panic!("expected inner scroll root, got {other:?}"),
             }
         });
     }
