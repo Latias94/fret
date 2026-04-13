@@ -291,6 +291,13 @@ pub struct SelectableOptions {
     pub a11y_label: Option<Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<Arc<str>>,
+    /// Exact key chord that activates the selectable while it is focused.
+    ///
+    /// This is an item-local shortcut seam. It does not participate in global shortcut ownership
+    /// arbitration.
+    pub activate_shortcut: Option<fret_runtime::KeyChord>,
+    /// Whether `activate_shortcut` should fire on repeated keydown events.
+    pub shortcut_repeat: bool,
 }
 
 impl Default for SelectableOptions {
@@ -303,6 +310,8 @@ impl Default for SelectableOptions {
             a11y_label: None,
             a11y_role: Some(SemanticsRole::ListBoxOption),
             test_id: None,
+            activate_shortcut: None,
+            shortcut_repeat: false,
         }
     }
 }

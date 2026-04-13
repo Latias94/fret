@@ -29,6 +29,8 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
         let focusable = enabled && options.focusable;
         let selected = options.selected;
         let close_popup = options.close_popup.clone();
+        let activate_shortcut = options.activate_shortcut;
+        let shortcut_repeat = options.shortcut_repeat;
 
         let mut props = PressableProps::default();
         props.enabled = enabled;
@@ -65,80 +67,92 @@ pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             let pointer_click_modifiers_model_for_report = pointer_click_modifiers_model.clone();
 
             if enabled {
-                let close_popup = close_popup.clone();
+                let close_popup_for_activate = close_popup.clone();
                 cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
-                    if let Some(open) = close_popup.as_ref() {
+                    if let Some(open) = close_popup_for_activate.as_ref() {
                         let _ = host.update_model(open, |v| *v = false);
                     }
                     host.record_transient_event(acx, super::KEY_CLICKED);
                     host.notify(acx);
                 }));
 
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
-
-                        host.record_transient_event(acx, super::KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
-
-                if focusable {
+                let nav_items = if focusable {
                     let nav_items = cx
                         .inherited_state::<super::popup_overlay::ImUiMenuNavState>()
                         .map(|st| st.items.clone());
                     if let Some(nav_items) = nav_items.as_ref() {
                         nav_items.borrow_mut().push(id);
                     }
-                    if let Some(nav_items) = nav_items {
-                        let item_id = id;
-                        cx.key_on_key_down_for(
-                            id,
-                            Arc::new(move |host, acx, down| {
-                                if down.repeat || down.modifiers != Modifiers::default() {
-                                    return false;
+                    nav_items
+                } else {
+                    None
+                };
+                let item_id = id;
+                let close_popup_for_key = close_popup.clone();
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                if let Some(open) = close_popup_for_key.as_ref() {
+                                    let _ = host.update_model(open, |v| *v = false);
                                 }
-
-                                let (dir, jump_to) = match down.key {
-                                    KeyCode::ArrowDown => (1isize, None),
-                                    KeyCode::ArrowUp => (-1isize, None),
-                                    KeyCode::Home => (0isize, Some(0usize)),
-                                    KeyCode::End => (0isize, Some(usize::MAX)),
-                                    _ => return false,
-                                };
-
-                                let items = nav_items.borrow();
-                                if items.is_empty() {
-                                    return false;
-                                }
-                                let len = items.len();
-                                let idx = items.iter().position(|id| *id == item_id);
-                                let next_idx = if let Some(jump) = jump_to {
-                                    if jump == usize::MAX {
-                                        len - 1
-                                    } else {
-                                        jump.min(len - 1)
-                                    }
-                                } else {
-                                    let current =
-                                        idx.unwrap_or_else(|| if dir < 0 { len - 1 } else { 0 });
-                                    ((current as isize + dir + len as isize) % len as isize)
-                                        as usize
-                                };
-
-                                host.request_focus(items[next_idx]);
+                                host.record_transient_event(acx, super::KEY_CLICKED);
                                 host.notify(acx);
-                                true
-                            }),
-                        );
-                    }
-                }
+                                return true;
+                            }
+                        }
+
+                        let is_menu_key = down.key == KeyCode::ContextMenu;
+                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
+                        if is_menu_key || is_shift_f10 {
+                            host.record_transient_event(acx, super::KEY_CONTEXT_MENU_REQUESTED);
+                            host.notify(acx);
+                            return true;
+                        }
+
+                        let Some(nav_items) = nav_items.as_ref() else {
+                            return false;
+                        };
+                        if down.repeat || down.modifiers != Modifiers::default() {
+                            return false;
+                        }
+
+                        let (dir, jump_to) = match down.key {
+                            KeyCode::ArrowDown => (1isize, None),
+                            KeyCode::ArrowUp => (-1isize, None),
+                            KeyCode::Home => (0isize, Some(0usize)),
+                            KeyCode::End => (0isize, Some(usize::MAX)),
+                            _ => return false,
+                        };
+
+                        let items = nav_items.borrow();
+                        if items.is_empty() {
+                            return false;
+                        }
+                        let len = items.len();
+                        let idx = items.iter().position(|id| *id == item_id);
+                        let next_idx = if let Some(jump) = jump_to {
+                            if jump == usize::MAX {
+                                len - 1
+                            } else {
+                                jump.min(len - 1)
+                            }
+                        } else {
+                            let current = idx.unwrap_or_else(|| if dir < 0 { len - 1 } else { 0 });
+                            ((current as isize + dir + len as isize) % len as isize) as usize
+                        };
+
+                        host.request_focus(items[next_idx]);
+                        host.notify(acx);
+                        true
+                    }),
+                );
             }
 
             cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
