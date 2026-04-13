@@ -27,6 +27,7 @@ pub(super) fn horizontal_container_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     let layout = options.layout.clone();
+    let test_id = options.test_id.clone();
     let mut builder = crate::ui::h_flex_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
@@ -40,6 +41,9 @@ pub(super) fn horizontal_container_element<H: UiHost>(
     } else {
         builder = builder.no_wrap();
     }
+    if let Some(test_id) = test_id {
+        builder = builder.test_id(test_id);
+    }
     builder.into_element(cx)
 }
 
@@ -50,6 +54,7 @@ pub(super) fn vertical_container_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     let layout = options.layout.clone();
+    let test_id = options.test_id.clone();
     let mut builder = crate::ui::v_flex_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
@@ -63,6 +68,9 @@ pub(super) fn vertical_container_element<H: UiHost>(
     } else {
         builder = builder.no_wrap();
     }
+    if let Some(test_id) = test_id {
+        builder = builder.test_id(test_id);
+    }
     builder.into_element(cx)
 }
 
@@ -73,6 +81,7 @@ pub(super) fn scroll_container_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     let layout = options.layout.clone();
+    let test_id = options.test_id.clone();
     let mut builder = crate::ui::scroll_area_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
@@ -82,6 +91,9 @@ pub(super) fn scroll_container_element<H: UiHost>(
         .show_scrollbars(options.show_scrollbar_x, options.show_scrollbar_y);
     if let Some(handle) = options.handle {
         builder = builder.handle(handle);
+    }
+    if let Some(test_id) = test_id {
+        builder = builder.test_id(test_id);
     }
     builder.into_element(cx)
 }
@@ -93,6 +105,7 @@ pub(super) fn grid_container_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     let layout = options.layout.clone();
+    let test_id = options.test_id.clone();
     let mut cells: Vec<AnyElement> = Vec::new();
     build_imui_children_with_focus(cx, &mut cells, build_focus, f);
 
@@ -125,17 +138,22 @@ pub(super) fn grid_container_element<H: UiHost>(
         row_index += 1;
     }
 
-    crate::ui::v_flex(move |_cx| rows)
+    let mut builder = crate::ui::v_flex(move |_cx| rows)
         .layout(layout)
         .gap_metric(options.row_gap)
         .justify(crate::Justify::Start)
         .items(crate::Items::Stretch)
-        .no_wrap()
-        .into_element(cx)
+        .no_wrap();
+    if let Some(test_id) = test_id {
+        builder = builder.test_id(test_id);
+    }
+    builder.into_element(cx)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::element::{ElementKind, Length};
@@ -144,9 +162,9 @@ mod tests {
         GridOptions, HorizontalOptions, ScrollOptions, grid_container_element,
         horizontal_container_element, scroll_container_element, vertical_container_element,
     };
-    use crate::imui::VerticalOptions;
-    use crate::imui::UiWriterImUiFacadeExt as _;
     use crate::LayoutRefinement;
+    use crate::imui::UiWriterImUiFacadeExt as _;
+    use crate::imui::VerticalOptions;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -236,6 +254,101 @@ mod tests {
                 panic!("expected scroll helper outer container");
             };
             assert_eq!(props.layout.size.height, Length::Px(Px(96.0)));
+        });
+    }
+
+    #[test]
+    fn container_option_test_ids_land_on_outer_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "horizontal.test-id",
+            |cx| {
+                let element = horizontal_container_element(
+                    cx,
+                    None,
+                    HorizontalOptions {
+                        test_id: Some(Arc::from("imui-horizontal")),
+                        ..Default::default()
+                    },
+                    |ui| ui.text("row"),
+                );
+
+                assert_eq!(
+                    element
+                        .semantics_decoration
+                        .as_ref()
+                        .and_then(|decoration| decoration.test_id.as_deref()),
+                    Some("imui-horizontal")
+                );
+            },
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "vertical.test-id", |cx| {
+            let element = vertical_container_element(
+                cx,
+                None,
+                VerticalOptions {
+                    test_id: Some(Arc::from("imui-vertical")),
+                    ..Default::default()
+                },
+                |ui| ui.text("column"),
+            );
+
+            assert_eq!(
+                element
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.test_id.as_deref()),
+                Some("imui-vertical")
+            );
+        });
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "grid.test-id", |cx| {
+            let element = grid_container_element(
+                cx,
+                None,
+                GridOptions {
+                    test_id: Some(Arc::from("imui-grid")),
+                    ..Default::default()
+                },
+                |ui| {
+                    ui.text("A");
+                    ui.text("B");
+                },
+            );
+
+            assert_eq!(
+                element
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.test_id.as_deref()),
+                Some("imui-grid")
+            );
+        });
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "scroll.test-id", |cx| {
+            let element = scroll_container_element(
+                cx,
+                None,
+                ScrollOptions {
+                    test_id: Some(Arc::from("imui-scroll")),
+                    ..Default::default()
+                },
+                |ui| ui.text("scroll"),
+            );
+
+            assert_eq!(
+                element
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.test_id.as_deref()),
+                Some("imui-scroll")
+            );
         });
     }
 }

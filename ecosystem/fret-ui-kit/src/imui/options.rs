@@ -602,6 +602,7 @@ pub struct HorizontalOptions {
     pub justify: crate::Justify,
     pub items: crate::Items,
     pub wrap: bool,
+    pub test_id: Option<Arc<str>>,
 }
 
 impl Default for HorizontalOptions {
@@ -612,6 +613,7 @@ impl Default for HorizontalOptions {
             justify: crate::Justify::Start,
             items: crate::Items::Center,
             wrap: false,
+            test_id: None,
         }
     }
 }
@@ -623,6 +625,7 @@ pub struct VerticalOptions {
     pub justify: crate::Justify,
     pub items: crate::Items,
     pub wrap: bool,
+    pub test_id: Option<Arc<str>>,
 }
 
 impl Default for VerticalOptions {
@@ -633,6 +636,7 @@ impl Default for VerticalOptions {
             justify: crate::Justify::Start,
             items: crate::Items::Stretch,
             wrap: false,
+            test_id: None,
         }
     }
 }
@@ -645,6 +649,7 @@ pub struct GridOptions {
     pub row_gap: crate::MetricRef,
     pub row_justify: crate::Justify,
     pub row_items: crate::Items,
+    pub test_id: Option<Arc<str>>,
 }
 
 impl Default for GridOptions {
@@ -656,6 +661,7 @@ impl Default for GridOptions {
             row_gap: crate::MetricRef::space(crate::Space::N0),
             row_justify: crate::Justify::Start,
             row_items: crate::Items::Center,
+            test_id: None,
         }
     }
 }
@@ -817,6 +823,7 @@ pub struct ScrollOptions {
     pub show_scrollbar_x: bool,
     pub show_scrollbar_y: bool,
     pub handle: Option<fret_ui::scroll::ScrollHandle>,
+    pub test_id: Option<Arc<str>>,
 }
 
 impl Default for ScrollOptions {
@@ -827,6 +834,7 @@ impl Default for ScrollOptions {
             show_scrollbar_x: false,
             show_scrollbar_y: true,
             handle: None,
+            test_id: None,
         }
     }
 }
