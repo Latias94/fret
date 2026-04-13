@@ -1754,6 +1754,259 @@ fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arr
 }
 
 #[test]
+fn menu_item_activate_shortcut_repeat_is_opt_in() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let open = Rc::new(Cell::new(false));
+    let default_clicks = Rc::new(Cell::new(0u32));
+    let repeat_clicks = Rc::new(Cell::new(0u32));
+    let default_shortcut = KeyChord::new(
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let repeat_shortcut = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  open_out: &Rc<Cell<bool>>,
+                  default_clicks_out: &Rc<Cell<u32>>,
+                  repeat_clicks_out: &Rc<Cell<u32>>| {
+        crate::imui(cx, |ui| {
+            let resp = ui.button("OK");
+            open_out.set(ui.begin_popup_context_menu_with_options(
+                "ctx-repeat",
+                resp,
+                PopupMenuOptions {
+                    estimated_size: Size::new(Px(160.0), Px(90.0)),
+                    ..Default::default()
+                },
+                |ui| {
+                    let default_item = ui.menu_item_with_options(
+                        "Item A",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-popup-shortcut-repeat.default")),
+                            activate_shortcut: Some(default_shortcut),
+                            ..Default::default()
+                        },
+                    );
+                    if default_item.clicked() {
+                        default_clicks_out.set(default_clicks_out.get() + 1);
+                    }
+
+                    let repeat_item = ui.menu_item_with_options(
+                        "Item B",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-popup-shortcut-repeat.repeat")),
+                            activate_shortcut: Some(repeat_shortcut),
+                            shortcut_repeat: true,
+                            ..Default::default()
+                        },
+                    );
+                    if repeat_item.clicked() {
+                        repeat_clicks_out.set(repeat_clicks_out.get() + 1);
+                    }
+                },
+            ));
+        })
+    };
+
+    let open_out = open.clone();
+    let default_clicks_out = default_clicks.clone();
+    let repeat_clicks_out = repeat_clicks.clone();
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-shortcut-repeat",
+        |cx| render(cx, &open_out, &default_clicks_out, &repeat_clicks_out),
+    );
+    assert!(!open.get());
+    assert_eq!(default_clicks.get(), 0);
+    assert_eq!(repeat_clicks.get(), 0);
+
+    let at = first_child_point(&ui, root);
+    click_at(&mut ui, &mut app, &mut services, at);
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::ContextMenu,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let default_clicks_out = default_clicks.clone();
+    let repeat_clicks_out = repeat_clicks.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-shortcut-repeat",
+        |cx| render(cx, &open_out, &default_clicks_out, &repeat_clicks_out),
+    );
+    assert!(open.get());
+    assert_eq!(
+        ui.focus(),
+        Some(node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-popup-shortcut-repeat.default",
+        ))
+    );
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let default_clicks_out = default_clicks.clone();
+    let repeat_clicks_out = repeat_clicks.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-shortcut-repeat",
+        |cx| render(cx, &open_out, &default_clicks_out, &repeat_clicks_out),
+    );
+    assert_eq!(default_clicks.get(), 1);
+    assert_eq!(repeat_clicks.get(), 0);
+
+    key_down_with_repeat(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyJ,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+        true,
+    );
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let default_clicks_out = default_clicks.clone();
+    let repeat_clicks_out = repeat_clicks.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-shortcut-repeat",
+        |cx| render(cx, &open_out, &default_clicks_out, &repeat_clicks_out),
+    );
+    assert_eq!(
+        default_clicks.get(),
+        1,
+        "expected repeated keydown to be ignored unless shortcut_repeat is enabled"
+    );
+
+    let repeat_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-popup-shortcut-repeat.repeat",
+    );
+    ui.set_focus(Some(repeat_node));
+    assert_eq!(ui.focus(), Some(repeat_node));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let default_clicks_out = default_clicks.clone();
+    let repeat_clicks_out = repeat_clicks.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-shortcut-repeat",
+        |cx| render(cx, &open_out, &default_clicks_out, &repeat_clicks_out),
+    );
+    assert_eq!(repeat_clicks.get(), 1);
+
+    key_down_with_repeat(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+        true,
+    );
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let default_clicks_out = default_clicks.clone();
+    let repeat_clicks_out = repeat_clicks.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-shortcut-repeat",
+        |cx| render(cx, &open_out, &default_clicks_out, &repeat_clicks_out),
+    );
+    assert_eq!(
+        repeat_clicks.get(),
+        2,
+        "expected repeated keydown to retrigger only when shortcut_repeat is enabled"
+    );
+}
+
+#[test]
 fn menu_item_checkbox_stamps_semantics_checked_state() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
