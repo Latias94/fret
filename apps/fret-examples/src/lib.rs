@@ -2051,6 +2051,7 @@ mod authoring_surface_policy_tests {
             "\"role\": \"next\"",
             "M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
             "mixed-dpi-real-host",
+            "diag_pick_docking_mixed_dpi_acceptance_pair.py",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
@@ -2066,6 +2067,8 @@ mod authoring_surface_policy_tests {
             "multiwindow-drag-back-outer-sweep-after-tearoff",
             "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x",
             "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x",
+            "latest.acceptance-summary.json",
+            "tools/diag_pick_docking_mixed_dpi_acceptance_pair.py",
             "`mixed_dpi_signal_observed: true`",
             "`scale_factors_seen` with at least two distinct values",
         ] {
@@ -2080,6 +2083,7 @@ mod authoring_surface_policy_tests {
             "M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
             "pre-crossing",
             "post-crossing",
+            "diag_pick_docking_mixed_dpi_acceptance_pair.py",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),

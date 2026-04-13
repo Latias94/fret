@@ -186,6 +186,10 @@ Footgun / recommendation:
       - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
       - `scale_factors_seen` / `mixed_dpi_signal_observed` (top-level mixed-DPI signal summary from drag evidence),
       - `under` (hover selection source: platform vs heuristic).
+    - For the docking mixed-DPI outer-position sweep runbook, prefer
+      `python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py <diag_out_dir_or_session_dir>`
+      to reuse `diag dock-routing --json` across the three canonical bundle labels and emit one bounded
+      acceptance summary (`--json-out <path>`).
   - `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard-dev diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
   - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`

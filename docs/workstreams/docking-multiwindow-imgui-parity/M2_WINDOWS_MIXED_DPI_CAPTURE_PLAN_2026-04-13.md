@@ -10,6 +10,7 @@ Related:
 - `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json`
 - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json`
+- `tools/diag_pick_docking_mixed_dpi_acceptance_pair.py`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 
 ## Purpose
@@ -59,7 +60,34 @@ Why this script:
 - then one bundle after a large `-X` outer move,
 - and finally verifies drag-back + re-dock closure.
 
-### 3) Inspect the captured bundle candidates
+### 3) Summarize the session and pick the best acceptance pair
+
+Preferred helper:
+
+```bash
+python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py \
+  target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host \
+  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json
+```
+
+Optional faster path when a prebuilt Windows binary is already available:
+
+```bash
+python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py \
+  target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host \
+  --fretboard-bin target\\release\\fretboard-dev.exe \
+  --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json
+```
+
+What this helper does:
+
+- recursively finds the three expected outer-sweep bundle labels,
+- selects the latest complete session when multiple sessions exist under the out dir,
+- runs `diag dock-routing --json` for each candidate bundle,
+- recommends one `pre-crossing` bundle and one `post-crossing` bundle,
+- and writes one bounded JSON summary that can be copied into the dated evidence note.
+
+### 4) Inspect the captured bundle candidates directly when needed
 
 The run should leave bundle directories with these labels inside the session directory:
 
@@ -67,7 +95,8 @@ The run should leave bundle directories with these labels inside the session dir
 - `multiwindow-drag-back-outer-sweep-after-outer-move-pos-x`
 - `multiwindow-drag-back-outer-sweep-after-outer-move-neg-x`
 
-Use `fretboard-dev diag dock-routing` on the candidate bundle directories:
+Use `fretboard-dev diag dock-routing` on the candidate bundle directories when the helper output is
+not enough, or when you want to inspect the losing post-crossing candidate manually:
 
 ```bash
 cargo run -p fretboard-dev -- diag dock-routing <bundle_dir>
@@ -84,9 +113,9 @@ cargo run -p fretboard-dev -- diag dock-routing <bundle_dir> --json
 For the acceptance pair, use:
 
 1. `pre-crossing` bundle:
-   - `multiwindow-drag-back-outer-sweep-after-tearoff`
+   - the helper-selected `multiwindow-drag-back-outer-sweep-after-tearoff` bundle
 2. `post-crossing` bundle:
-   - whichever of
+   - the helper-selected bundle, or whichever of
      `multiwindow-drag-back-outer-sweep-after-outer-move-pos-x` or
      `multiwindow-drag-back-outer-sweep-after-outer-move-neg-x`
      first shows the monitor crossing evidence most clearly.
@@ -96,6 +125,14 @@ Prefer the post-crossing bundle that shows:
 - `mixed_dpi_signal_observed: true`,
 - `scale_factors_seen` with at least two distinct values,
 - and the clearest `scr/scr_used/origin` + `sf_cur/sf_move` evidence for the boundary crossing.
+
+The helper currently scores post-crossing candidates by:
+
+- `mixed_dpi_signal_observed`,
+- number of distinct observed scale factors,
+- explicit `sf_cur != sf_move` divergence,
+- presence of `origin_src=platform`,
+- and whether cross-window hover evidence remained visible.
 
 If neither post-move bundle shows mixed-DPI signal evidence, do not mark the run accepted.
 Record whether:
