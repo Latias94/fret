@@ -82,6 +82,7 @@ pub(super) fn scroll_container_element<H: UiHost>(
 ) -> AnyElement {
     let layout = options.layout.clone();
     let test_id = options.test_id.clone();
+    let viewport_test_id = options.viewport_test_id.clone();
     let mut builder = crate::ui::scroll_area_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
@@ -94,6 +95,9 @@ pub(super) fn scroll_container_element<H: UiHost>(
     }
     if let Some(test_id) = test_id {
         builder = builder.test_id(test_id);
+    }
+    if let Some(test_id) = viewport_test_id {
+        builder = builder.viewport_test_id(test_id);
     }
     builder.into_element(cx)
 }
@@ -350,5 +354,45 @@ mod tests {
                 Some("imui-scroll")
             );
         });
+    }
+
+    #[test]
+    fn scroll_option_viewport_test_id_lands_on_inner_scroll_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "scroll.viewport.test-id",
+            |cx| {
+                let element = scroll_container_element(
+                    cx,
+                    None,
+                    ScrollOptions {
+                        viewport_test_id: Some(Arc::from("imui-scroll.viewport")),
+                        ..Default::default()
+                    },
+                    |ui| ui.text("scroll"),
+                );
+
+                let inner = match &element.kind {
+                    ElementKind::Container(_) => element
+                        .children
+                        .first()
+                        .expect("scroll helper should wrap an inner scroll root"),
+                    other => panic!("expected scroll helper outer container, got {other:?}"),
+                };
+
+                assert_eq!(
+                    inner
+                        .semantics_decoration
+                        .as_ref()
+                        .and_then(|decoration| decoration.test_id.as_deref()),
+                    Some("imui-scroll.viewport")
+                );
+            },
+        );
     }
 }

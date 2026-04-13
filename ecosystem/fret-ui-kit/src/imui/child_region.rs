@@ -20,6 +20,7 @@ pub(super) fn child_region_element<H: UiHost>(
         let scroll_options = options.scroll.clone();
         let test_id = options.test_id.clone();
         let content_test_id = options.content_test_id.clone();
+        let viewport_test_id = scroll_options.viewport_test_id.clone();
 
         let mut builder = crate::ui::scroll_area_build(move |cx, out| {
             let mut content = crate::ui::v_flex_build(move |cx, out| {
@@ -53,6 +54,10 @@ pub(super) fn child_region_element<H: UiHost>(
 
         if let Some(handle) = scroll_options.handle {
             builder = builder.handle(handle);
+        }
+
+        if let Some(test_id) = viewport_test_id {
+            builder = builder.viewport_test_id(test_id);
         }
 
         if let Some(test_id) = test_id {

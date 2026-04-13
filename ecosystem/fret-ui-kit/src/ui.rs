@@ -791,6 +791,7 @@ pub struct ScrollAreaBox<H, F> {
     pub(crate) show_scrollbar_x: bool,
     pub(crate) show_scrollbar_y: bool,
     pub(crate) handle: Option<ScrollHandle>,
+    pub(crate) viewport_test_id: Option<Arc<str>>,
     pub(crate) children: Option<F>,
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
@@ -804,6 +805,7 @@ pub struct ScrollAreaBoxBuild<H, B> {
     pub(crate) show_scrollbar_x: bool,
     pub(crate) show_scrollbar_y: bool,
     pub(crate) handle: Option<ScrollHandle>,
+    pub(crate) viewport_test_id: Option<Arc<str>>,
     pub(crate) build: Option<B>,
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
@@ -817,6 +819,7 @@ impl<H, F> ScrollAreaBox<H, F> {
             show_scrollbar_x: false,
             show_scrollbar_y: true,
             handle: None,
+            viewport_test_id: None,
             children: Some(children),
             _phantom: PhantomData,
         }
@@ -832,6 +835,7 @@ impl<H, B> ScrollAreaBoxBuild<H, B> {
             show_scrollbar_x: false,
             show_scrollbar_y: true,
             handle: None,
+            viewport_test_id: None,
             build: Some(build),
             _phantom: PhantomData,
         }
@@ -887,6 +891,7 @@ where
         let show_scrollbar_x = self.show_scrollbar_x;
         let show_scrollbar_y = self.show_scrollbar_y;
         let provided_handle = self.handle;
+        let viewport_test_id = self.viewport_test_id;
         let children = self.children.expect("expected scroll children closure");
         let fill_width = scroll_root_needs_fill_on_axis(axis, Axis::Horizontal, &layout);
         let fill_height = scroll_root_needs_fill_on_axis(axis, Axis::Vertical, &layout);
@@ -912,7 +917,7 @@ where
             };
             scroll_layout.overflow = Overflow::Clip;
 
-            let scroll = cx.scroll(
+            let mut scroll = cx.scroll(
                 ScrollProps {
                     layout: scroll_layout,
                     axis,
@@ -924,6 +929,9 @@ where
                     collect_ui_children(cx, children)
                 },
             );
+            if let Some(test_id) = viewport_test_id.clone() {
+                scroll = scroll.test_id(test_id);
+            }
 
             let scroll_id = scroll.id;
             let mut out = vec![scroll];
@@ -1048,6 +1056,7 @@ where
         let show_scrollbar_x = self.show_scrollbar_x;
         let show_scrollbar_y = self.show_scrollbar_y;
         let provided_handle = self.handle;
+        let viewport_test_id = self.viewport_test_id;
         let build = self.build.expect("expected scroll area build closure");
         let fill_width = scroll_root_needs_fill_on_axis(axis, Axis::Horizontal, &layout);
         let fill_height = scroll_root_needs_fill_on_axis(axis, Axis::Vertical, &layout);
@@ -1073,7 +1082,7 @@ where
             };
             scroll_layout.overflow = Overflow::Clip;
 
-            let scroll = cx.scroll(
+            let mut scroll = cx.scroll(
                 ScrollProps {
                     layout: scroll_layout,
                     axis,
@@ -1086,6 +1095,9 @@ where
                     out
                 },
             );
+            if let Some(test_id) = viewport_test_id.clone() {
+                scroll = scroll.test_id(test_id);
+            }
 
             let scroll_id = scroll.id;
             let mut out = vec![scroll];
@@ -2691,6 +2703,43 @@ mod tests {
                         props.layout.size.height,
                         Length::Auto,
                         "auto-height scroll-area wrappers should keep the inner scroll root auto-sized on the scroll axis"
+                    );
+                }
+                other => panic!("expected inner scroll root, got {other:?}"),
+            }
+        });
+    }
+
+    #[test]
+    fn scroll_area_viewport_test_id_lands_on_inner_scroll_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = scroll_area(|_cx| [text("hello")])
+                .viewport_test_id("scroll.viewport")
+                .into_element(cx);
+
+            let inner = match &el.kind {
+                ElementKind::Container(_) => el
+                    .children
+                    .first()
+                    .expect("scroll area container should wrap an inner scroll root"),
+                other => panic!("expected outer container wrapper, got {other:?}"),
+            };
+
+            match &inner.kind {
+                ElementKind::Scroll(_) => {
+                    assert_eq!(
+                        inner
+                            .semantics_decoration
+                            .as_ref()
+                            .and_then(|decoration| decoration.test_id.as_deref()),
+                        Some("scroll.viewport")
                     );
                 }
                 other => panic!("expected inner scroll root, got {other:?}"),

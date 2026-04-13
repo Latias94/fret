@@ -423,8 +423,10 @@ fn child_region_helper_stacks_content_and_forwards_scroll_options() {
             ui.child_region_with_options(
                 "imui-child-region",
                 ChildRegionOptions {
+                    layout: fret_ui_kit::LayoutRefinement::default(),
                     scroll: fret_ui_kit::imui::ScrollOptions {
                         handle: Some(handle.clone()),
+                        viewport_test_id: Some(Arc::from("imui-child-region.viewport")),
                         ..Default::default()
                     },
                     test_id: Some(Arc::from("imui-child-region")),
@@ -461,6 +463,13 @@ fn child_region_helper_stacks_content_and_forwards_scroll_options() {
         &mut services,
         bounds,
         "imui-child-region",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-child-region.viewport",
     ));
     assert!(has_test_id(
         &mut ui,

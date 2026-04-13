@@ -1304,6 +1304,11 @@ impl<H, F> UiBuilder<crate::ui::ScrollAreaBox<H, F>> {
         self.inner.handle = Some(handle);
         self
     }
+
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.inner.viewport_test_id = Some(test_id.into());
+        self
+    }
 }
 
 impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
@@ -1328,6 +1333,11 @@ impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
 
     pub fn handle(mut self, handle: ScrollHandle) -> Self {
         self.inner.handle = Some(handle);
+        self
+    }
+
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.inner.viewport_test_id = Some(test_id.into());
         self
     }
 }
