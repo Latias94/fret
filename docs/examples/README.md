@@ -106,6 +106,7 @@ Recommended starting points (Official; stable + onboarding-friendly):
 
 Lab / higher-ceiling examples (feature-gated; opt-in):
 
+- `mutation_toast_feedback_basics` (explicit submit + Sonner feedback projection)
 - `query_basics` (queries)
 - `router_basics` (routing)
 - `icons_and_assets_basics` (assets)

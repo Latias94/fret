@@ -150,6 +150,7 @@ pub(crate) fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
         "compositing_alpha_basics" => "--features cookbook-renderer",
         "drop_shadow_basics" => "--features cookbook-renderer",
         "query_basics" => "--features cookbook-query",
+        "mutation_toast_feedback_basics" => "--features cookbook-mutation",
         "router_basics" => "--features cookbook-router",
         "undo_basics" => "--features cookbook-undo",
         "async_inbox_basics" => "--features cookbook-async",

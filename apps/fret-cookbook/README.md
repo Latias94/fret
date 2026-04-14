@@ -56,6 +56,7 @@ Comparison target (reference-only; not part of the boring ladder):
 
 - Default follow-up topics: `hello_counter`, `form_basics`, `virtual_list_basics`
 - State + derived state: `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
+- Async submit + feedback: `mutation_toast_feedback_basics` (feature-gated)
 - Queries (feature-gated): `query_basics`
 - Routing (feature-gated): `router_basics`
 - Theming + assets: `theme_switching_basics`, `icons_and_assets_basics` (feature-gated)
@@ -99,6 +100,8 @@ required cookbook features for known Lab examples and print what it enabled.
     - `cargo run -p fret-cookbook --features cookbook-undo --example undo_basics`
   - Async inbox / dispatcher:
     - `cargo run -p fret-cookbook --features cookbook-async --example async_inbox_basics`
+  - Async submit + toast feedback:
+    - `cargo run -p fret-cookbook --features cookbook-mutation --example mutation_toast_feedback_basics`
   - Query basics:
     - `cargo run -p fret-cookbook --features cookbook-query --example query_basics`
   - Router basics:

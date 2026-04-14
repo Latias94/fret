@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "slug": "mutation-toast-feedback-golden-path-v1",
+  "title": "Mutation Toast Feedback Golden Path v1",
+  "status": "active",
+  "updated": "2026-04-14",
+  "scope_kind": "execution",
+  "follow_on_of": "executor-backed-mutation-surface-v1",
+  "problem": "The repo now has the correct default explicit submit owner (`fret-mutation` + `fret`), but first-contact users still do not have one small copyable example that combines authoritative mutation state with recipe-owned Sonner feedback. Without that teaching surface, users can still treat toast helpers as submit owners or fall back to raw executor/inbox plumbing for ordinary app flows.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/mutation-toast-feedback-golden-path-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/mutation-toast-feedback-golden-path-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/mutation-toast-feedback-golden-path-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md"
+    }
+  ],
+  "repro": {
+    "summary": "Open the new cookbook example first, then run the dedicated screenshot smoke so the repo keeps one copyable submit-plus-feedback proof instead of two disjoint partial examples.",
+    "commands": [
+      "cargo run -p fretboard-dev -- dev native --example mutation_toast_feedback_basics",
+      "FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/mutation-toast-feedback-basics/cookbook-mutation-toast-feedback-basics-smoke.json --dir target/fret-diag/mutation-toast-feedback-basics --session-auto --launch -- cargo run -p fret-cookbook --features cookbook-mutation,cookbook-diag --example mutation_toast_feedback_basics"
+    ]
+  },
+  "gates": [
+    {
+      "name": "cookbook-source-policy",
+      "command": "cargo nextest run -p fret-cookbook mutation_toast_feedback_example_keeps_submit_and_feedback_projection_split"
+    },
+    {
+      "name": "cookbook-example-compiles",
+      "command": "cargo check -p fret-cookbook --features cookbook-mutation --example mutation_toast_feedback_basics"
+    },
+    {
+      "name": "cookbook-diag-smoke",
+      "command": "FRET_DIAG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/mutation-toast-feedback-basics/cookbook-mutation-toast-feedback-basics-smoke.json --dir target/fret-diag/mutation-toast-feedback-basics --session-auto --launch -- cargo run -p fret-cookbook --features cookbook-mutation,cookbook-diag --example mutation_toast_feedback_basics"
+    },
+    {
+      "name": "lane-hygiene",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "skill-anchors",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/mutation-toast-feedback-golden-path-v1/DESIGN.md",
+    "docs/workstreams/mutation-toast-feedback-golden-path-v1/TODO.md",
+    "docs/workstreams/mutation-toast-feedback-golden-path-v1/MILESTONES.md",
+    "docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json",
+    "docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md",
+    "apps/fret-cookbook/Cargo.toml",
+    "apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs",
+    "apps/fret-cookbook/src/lib.rs",
+    "apps/fret-cookbook/README.md",
+    "apps/fret-cookbook/EXAMPLES.md",
+    "apps/fretboard/src/demos.rs",
+    "tools/diag-scripts/cookbook/mutation-toast-feedback-basics/cookbook-mutation-toast-feedback-basics-smoke.json",
+    "tools/diag-scripts/suites/cookbook-mutation-toast-feedback-basics/suite.json",
+    "docs/examples/README.md",
+    "docs/crate-usage-guide.md",
+    "docs/integrating-sqlite-and-sqlx.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Keep this lane active only while the copyable cookbook path, screenshot smoke, and docs discoverability remain incomplete or unstable. If future work starts changing Sonner APIs, mutation ownership, or broader async surface naming again, start a different narrow follow-on instead of widening this teaching lane."
+  }
+}

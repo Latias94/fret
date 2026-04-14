@@ -163,6 +163,12 @@ Use this as the default contract for SQLx + `fret-query`:
 
 This keeps read keys stable and avoids teaching query handles as implicit submit buttons.
 
+If the product also needs user-visible success/error chrome, keep that as a second projection:
+use `cx.data().update_after_mutation_completion(...)` to update app-owned locals or models, then
+mirror the same completion into Sonner or other recipe-owned feedback. See
+`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs` for the smallest first-party
+example of that split.
+
 ### Example: save a todo explicitly, then invalidate the read namespace
 
 ```rust

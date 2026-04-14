@@ -82,6 +82,12 @@ Example | Status | Run | Diag suite
 [`drag_basics.rs`](./examples/drag_basics.rs) | Official | `cargo run -p fretboard-dev -- dev native --example drag_basics` | `cookbook-drag-basics`
 [`hello_counter.rs`](./examples/hello_counter.rs) | Official | `cargo run -p fretboard-dev -- dev native --example hello_counter` | `cookbook-hello-counter`
 
+## Advanced — Async submit / feedback (feature-gated)
+
+Example | Status | Feature | Run | Diag suite
+--- | --- | --- | --- | ---
+[`mutation_toast_feedback_basics.rs`](./examples/mutation_toast_feedback_basics.rs) | Lab | `cookbook-mutation` | `cargo run -p fretboard-dev -- dev native --example mutation_toast_feedback_basics` | `cookbook-mutation-toast-feedback-basics`
+
 ## Comparison targets (reference-only)
 
 Example | Status | Run | Diag suite

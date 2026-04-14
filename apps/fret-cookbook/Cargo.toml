@@ -19,6 +19,7 @@ fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 time.workspace = true
+tokio = { version = "1", optional = true, default-features = false, features = ["rt-multi-thread", "time"] }
 
 # Lab/optional example dependencies (feature-gated to keep cold compile time down).
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, optional = true }
@@ -57,6 +58,7 @@ cookbook-image-assets = ["dep:fret-ui-assets"]
 # LocalState-first selector helpers used by selected cookbook examples.
 cookbook-state = ["fret/state-selector"]
 cookbook-query = ["fret/state-query"]
+cookbook-mutation = ["dep:tokio", "fret/state-mutation"]
 cookbook-router = ["fret/router"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
@@ -126,6 +128,10 @@ required-features = ["cookbook-image-assets", "cookbook-renderer"]
 [[example]]
 name = "query_basics"
 required-features = ["cookbook-query"]
+
+[[example]]
+name = "mutation_toast_feedback_basics"
+required-features = ["cookbook-mutation"]
 
 [[example]]
 name = "router_basics"

@@ -3184,6 +3184,9 @@ mod authoring_surface_policy_tests {
             INTEGRATING_SQLITE_AND_SQLX
                 .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
         );
+        assert!(INTEGRATING_SQLITE_AND_SQLX.contains(
+            "`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`"
+        ));
         assert!(
             INTEGRATING_SQLITE_AND_SQLX.contains("let save_state = save_todo.read_layout(cx);")
         );
@@ -3204,6 +3207,9 @@ mod authoring_surface_policy_tests {
             CRATE_USAGE_GUIDE
                 .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
         );
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`"
+        ));
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret::mutation::{MutationPolicy, MutationState, ...}`")
         );

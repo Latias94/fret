@@ -816,6 +816,9 @@ mutation completion. When app code needs explicit submit nouns, import them from
 `fret::mutation::{MutationPolicy, MutationState, ...}` instead of
 expecting them from `fret::app::prelude::*`.
 
+For a copyable "mutation stays authoritative, Sonner stays feedback-only" teaching surface, see
+`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`.
+
 **Advanced/manual note:** keep raw `fret-executor` + `InboxDrainer` for app/driver surfaces that
 do not have `AppUi`, or when you intentionally own custom inbox/message multiplexing instead of
 the shared mutation state machine.

@@ -43,6 +43,8 @@ mod authoring_surface_policy_tests {
     const OVERLAY_EXAMPLE: &str = include_str!("../examples/overlay_basics.rs");
     const PAYLOAD_ACTIONS_EXAMPLE: &str = include_str!("../examples/payload_actions_basics.rs");
     const QUERY_EXAMPLE: &str = include_str!("../examples/query_basics.rs");
+    const MUTATION_TOAST_FEEDBACK_EXAMPLE: &str =
+        include_str!("../examples/mutation_toast_feedback_basics.rs");
     const ROUTER_EXAMPLE: &str = include_str!("../examples/router_basics.rs");
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
@@ -354,6 +356,7 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(OVERLAY_EXAMPLE);
         assert_uses_app_surface(THEME_SWITCHING_EXAMPLE);
         assert_uses_app_surface(TOAST_EXAMPLE);
+        assert_uses_app_surface(MUTATION_TOAST_FEEDBACK_EXAMPLE);
         assert_uses_app_surface(VIRTUAL_LIST_EXAMPLE);
         assert_uses_app_surface(ASYNC_INBOX_EXAMPLE);
         assert_uses_app_surface(QUERY_EXAMPLE);
@@ -581,6 +584,26 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_ACTION_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
         assert!(!IMUI_ACTION_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
         assert!(!IMUI_ACTION_EXAMPLE.contains("availability::<act::Inc>"));
+    }
+
+    #[test]
+    fn mutation_toast_feedback_example_keeps_submit_and_feedback_projection_split() {
+        let normalized = MUTATION_TOAST_FEEDBACK_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+        assert!(MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("use fret::mutation::{"));
+        assert!(normalized.contains("cx.data().mutation_async("));
+        assert!(normalized.contains("letstate=handle.read_layout(cx);"));
+        assert!(normalized.contains("cx.data().update_after_mutation_completion("));
+        assert!(normalized.contains("handle.submit(models,window,draft)"));
+        assert!(normalized.contains("handle.retry_last(models,window)"));
+        assert!(normalized.contains("shadcn::Sonner::global(cx.app)"));
+        assert!(normalized.contains("sonner.toast_success_message("));
+        assert!(normalized.contains("sonner.toast_error_message("));
+        assert!(MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("UiActionHostAdapter"));
+        assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("toast_promise_async"));
+        assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("Executors::new("));
+        assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("Inbox::new("));
     }
 
     #[test]
@@ -1120,6 +1143,10 @@ mod authoring_surface_policy_tests {
             ("gizmo_basics", GIZMO_EXAMPLE),
             ("icons_and_assets_basics", ICONS_AND_ASSETS_EXAMPLE),
             ("markdown_and_code_basics", MARKDOWN_AND_CODE_EXAMPLE),
+            (
+                "mutation_toast_feedback_basics",
+                MUTATION_TOAST_FEEDBACK_EXAMPLE,
+            ),
             ("overlay_basics", OVERLAY_EXAMPLE),
             ("payload_actions_basics", PAYLOAD_ACTIONS_EXAMPLE),
             ("query_basics", QUERY_EXAMPLE),
@@ -1169,6 +1196,10 @@ mod authoring_surface_policy_tests {
             ("hello", HELLO_EXAMPLE),
             ("hello_counter", HELLO_COUNTER_EXAMPLE),
             ("markdown_and_code_basics", MARKDOWN_AND_CODE_EXAMPLE),
+            (
+                "mutation_toast_feedback_basics",
+                MUTATION_TOAST_FEEDBACK_EXAMPLE,
+            ),
             ("overlay_basics", OVERLAY_EXAMPLE),
             ("payload_actions_basics", PAYLOAD_ACTIONS_EXAMPLE),
             ("query_basics", QUERY_EXAMPLE),
@@ -1353,6 +1384,7 @@ mod authoring_surface_policy_tests {
             OVERLAY_EXAMPLE,
             THEME_SWITCHING_EXAMPLE,
             TOAST_EXAMPLE,
+            MUTATION_TOAST_FEEDBACK_EXAMPLE,
             VIRTUAL_LIST_EXAMPLE,
             ASYNC_INBOX_EXAMPLE,
             QUERY_EXAMPLE,
