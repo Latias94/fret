@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-interaction-showcase-tab-viewport-debug",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["imui", "showcase", "tabs", "viewport", "debug", "ui_editor"],
+    "target_hints": [
+      "Scrolls the showcase to the shell section and captures screenshot/bundle evidence before the tab click.",
+      "Use this to verify whether the tab strip is actually visible and hit-testable in the viewport."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1360.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.scroll.viewport" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "imui-interaction-showcase.scroll.viewport" },
+      "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.trigger" },
+      "delta_y": -720.0,
+      "require_fully_within_container": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1800
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "imui-showcase.tabs.scene" }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-interaction-showcase.after-scroll"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-interaction-showcase.after-scroll"
+    }
+  ]
+}

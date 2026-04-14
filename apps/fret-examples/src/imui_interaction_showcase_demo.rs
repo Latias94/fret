@@ -14,24 +14,81 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{advanced::prelude::*, FretApp};
 use fret_core::Px;
-use fret_ui::Theme;
 use fret_ui::element::AnyElement;
+use fret_ui::Invalidation;
+use fret_ui::Theme;
 use fret_ui_kit::imui::ChildRegionOptions;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, UiExt as _, ui};
+use fret_ui_kit::{ui, ColorRef, LayoutRefinement, Space, UiExt as _};
 use fret_ui_shadcn::facade as shadcn;
 
 const TEST_ID_ROOT: &str = "imui-interaction-showcase.root";
+const TEST_ID_SCROLL: &str = "imui-interaction-showcase.scroll";
+const TEST_ID_SCROLL_VIEWPORT: &str = "imui-interaction-showcase.scroll.viewport";
+const TEST_ID_HEADER: &str = "imui-interaction-showcase.header";
+const TEST_ID_HEADER_LATEST: &str = "imui-interaction-showcase.header.latest";
+const TEST_ID_HEADER_LATEST_LABEL: &str = "imui-interaction-showcase.header.latest.label";
 const TEST_ID_HERO: &str = "imui-interaction-showcase.hero";
 const TEST_ID_LAB: &str = "imui-interaction-showcase.lab";
 const TEST_ID_SHELL: &str = "imui-interaction-showcase.shell";
 const TEST_ID_TIMELINE: &str = "imui-interaction-showcase.timeline";
+const TEST_ID_PREVIEW: &str = "imui-showcase.preview";
+const TEST_ID_PREVIEW_VIEWPORT: &str = "imui-showcase.preview.viewport";
+const TEST_ID_PREVIEW_CONTENT: &str = "imui-showcase.preview.content";
+const SHOWCASE_HEADER_RAIL_WIDTH: Px = Px(332.0);
+const SHOWCASE_COMPACT_WIDTH: Px = Px(1240.0);
+const SHOWCASE_STACK_WIDTH: Px = Px(1040.0);
+const SHOWCASE_SHORT_HEIGHT: Px = Px(820.0);
+const SHOWCASE_SIDE_COLUMN_WIDTH: Px = Px(320.0);
 
 #[derive(Clone)]
 struct ShowcaseEvent {
     id: u64,
     label: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ShowcaseResponsiveLayout {
+    outer_padding: Space,
+    surface_padding: Space,
+    section_gap: Space,
+    stack_body: bool,
+    stack_header: bool,
+    side_column_width: Px,
+}
+
+impl ShowcaseResponsiveLayout {
+    fn from_viewport(viewport_width: Px, viewport_height: Px) -> Self {
+        let compact_width = viewport_width.0 < SHOWCASE_COMPACT_WIDTH.0;
+        let stack_body = viewport_width.0 < SHOWCASE_STACK_WIDTH.0;
+        let short_height = viewport_height.0 < SHOWCASE_SHORT_HEIGHT.0;
+
+        Self {
+            outer_padding: if compact_width || short_height {
+                Space::N3
+            } else {
+                Space::N4
+            },
+            surface_padding: if compact_width || short_height {
+                Space::N4
+            } else {
+                Space::N6
+            },
+            section_gap: if compact_width || short_height {
+                Space::N3
+            } else {
+                Space::N4
+            },
+            stack_body,
+            stack_header: stack_body,
+            side_column_width: if compact_width {
+                SHOWCASE_SIDE_COLUMN_WIDTH
+            } else {
+                Px(336.0)
+            },
+        }
+    }
 }
 
 struct ImUiInteractionShowcaseView;
@@ -55,6 +112,9 @@ impl View for ImUiInteractionShowcaseView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+        let responsive =
+            ShowcaseResponsiveLayout::from_viewport(viewport.size.width, viewport.size.height);
         let pulse_count = cx.state().local_init(|| 0u32);
         let secondary_pulse_count = cx.state().local_init(|| 0u32);
         let long_press_count = cx.state().local_init(|| 0u32);
@@ -100,15 +160,31 @@ impl View for ImUiInteractionShowcaseView {
         let context_toggle_value = context_toggle.layout_value(cx);
         let selected_tab_value = selected_tab.layout_value(cx);
         let timeline_value = timeline.layout_value(cx);
+        let latest_event = timeline_value.first().map(|event| event.label.clone());
+
+        let header_strip = render_showcase_header_strip(
+            cx,
+            selected_tab_value.as_deref().unwrap_or("overview"),
+            review_mode_value.clone(),
+            autosave_enabled_value,
+            latest_event.clone(),
+            responsive.stack_header,
+        );
 
         let hero = render_showcase_hero(
             cx,
             pulse_count_value,
+            secondary_pulse_count_value,
+            long_press_count_value,
             drag_count_value,
+            drag_distance_value,
             menu_open_count_value,
             tab_switch_count_value,
+            autosave_enabled_value,
+            exposure_value_value,
+            review_mode_value.clone(),
             selected_tab_value.as_deref().unwrap_or("overview"),
-            timeline_value.first().map(|event| event.label.clone()),
+            latest_event,
         );
 
         let lab = render_interaction_lab_card(
@@ -155,43 +231,255 @@ impl View for ImUiInteractionShowcaseView {
 
         let timeline_card = render_timeline_card(cx, &timeline_value);
 
-        let body = ui::h_flex(move |cx| {
-            vec![
-                ui::container(move |_cx| [lab])
-                    .w_px(Px(360.0))
-                    .flex_shrink_0()
-                    .into_element(cx),
-                ui::v_flex(move |cx| vec![shell, timeline_card])
-                    .gap(Space::N4)
-                    .flex_1()
-                    .min_w_0()
-                    .into_element(cx),
-            ]
-        })
-        .gap(Space::N4)
-        .items_stretch()
-        .w_full()
-        .flex_1()
-        .min_w_0()
-        .min_h_0();
+        let body = if responsive.stack_body {
+            ui::v_flex(move |cx| vec![hero, shell, lab, timeline_card])
+                .gap(responsive.section_gap)
+                .w_full()
+                .min_w_0()
+                .into_element(cx)
+        } else {
+            ui::h_flex(move |cx| {
+                vec![
+                    ui::v_flex(move |cx| vec![hero, shell])
+                        .gap(responsive.section_gap)
+                        .flex_1()
+                        .min_w_0()
+                        .min_h_0()
+                        .into_element(cx),
+                    ui::v_flex(move |cx| vec![lab, timeline_card])
+                        .gap(responsive.section_gap)
+                        .w_px(responsive.side_column_width)
+                        .flex_shrink_0()
+                        .min_w_0()
+                        .into_element(cx),
+                ]
+            })
+            .gap(responsive.section_gap)
+            .items_stretch()
+            .w_full()
+            .min_w_0()
+            .into_element(cx)
+        };
 
         ui::container(move |cx| {
-            vec![
-                ui::v_flex(move |cx| vec![hero, body.into_element(cx)])
-                    .gap(Space::N4)
-                    .w_full()
-                    .h_full()
-                    .into_element(cx),
-            ]
+            vec![ui::container(move |cx| {
+                vec![ui::scroll_area(move |cx| {
+                    [ui::v_flex(move |cx| vec![header_strip, body])
+                        .gap(responsive.section_gap)
+                        .w_full()
+                        .into_element(cx)]
+                })
+                .viewport_test_id(TEST_ID_SCROLL_VIEWPORT)
+                .show_scrollbar_y(true)
+                .show_scrollbar_x(false)
+                .w_full()
+                .h_full()
+                .min_h_0()
+                .into_element(cx)
+                .test_id(TEST_ID_SCROLL)]
+            })
+            .p(responsive.surface_padding)
+            .size_full()
+            .bg(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("background"),
+            ))
+            .border_1()
+            .border_color(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("border"),
+            ))
+            .rounded_md()
+            .shadow_lg()
+            .into_element(cx)]
         })
-        .p(Space::N4)
+        .p(responsive.outer_padding)
         .size_full()
         .bg(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("background"),
+            Theme::global(&*cx.app).color_token("muted"),
         ))
         .into_element(cx)
         .test_id(TEST_ID_ROOT)
         .into()
+    }
+}
+
+fn render_showcase_header_strip(
+    cx: &mut ElementContext<'_, KernelApp>,
+    active_tab: &str,
+    review_mode: Option<Arc<str>>,
+    autosave_enabled: bool,
+    latest_event: Option<Arc<str>>,
+    stack_layout: bool,
+) -> AnyElement {
+    let latest_event = latest_event.unwrap_or_else(|| Arc::from("No timeline event yet."));
+    let review_mode = review_mode.unwrap_or_else(|| Arc::from("Unassigned"));
+    let intro = ui::v_flex(move |cx| {
+        vec![
+            ui::text("IMUI interaction showcase")
+                .text_xs()
+                .font_semibold()
+                .letter_spacing_em(0.12)
+                .text_color(ColorRef::Color(
+                    Theme::global(&*cx.app).color_token("muted-foreground"),
+                ))
+                .into_element(cx),
+            ui::text("A presentable review deck for immediate-mode control flow.")
+                .text_base()
+                .font_bold()
+                .wrap(fret_core::TextWrap::Word)
+                .into_element(cx),
+            ui::text(
+                "Proof stays in `imui_response_signals_demo`; this shell is for showing the lane to humans.",
+            )
+            .text_sm()
+            .wrap(fret_core::TextWrap::Word)
+            .text_color(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("muted-foreground"),
+            ))
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N1p5)
+    .flex_1()
+    .min_w_0()
+    .into_element(cx);
+
+    let status = ui::v_flex(move |cx| {
+        vec![
+            ui::h_flex(move |cx| {
+                vec![
+                    badge(
+                        cx,
+                        format!("tab {active_tab}"),
+                        shadcn::BadgeVariant::Default,
+                    ),
+                    badge(
+                        cx,
+                        format!("mode {review_mode}"),
+                        shadcn::BadgeVariant::Secondary,
+                    ),
+                    badge(
+                        cx,
+                        if autosave_enabled {
+                            "autosave armed"
+                        } else {
+                            "autosave paused"
+                        },
+                        shadcn::BadgeVariant::Outline,
+                    ),
+                ]
+            })
+            .gap(Space::N1p5)
+            .items_center()
+            .justify_end()
+            .wrap()
+            .w_full()
+            .into_element(cx),
+            ui::v_flex(move |cx| {
+                vec![
+                    ui::text("Latest event")
+                        .text_xs()
+                        .font_semibold()
+                        .text_color(ColorRef::Color(
+                            Theme::global(&*cx.app).color_token("muted-foreground"),
+                        ))
+                        .into_element(cx),
+                    ui::text(latest_event)
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
+                        .into_element(cx)
+                        .test_id(TEST_ID_HEADER_LATEST_LABEL),
+                ]
+            })
+            .gap(Space::N1)
+            .p_3()
+            .rounded_md()
+            .border_1()
+            .border_color(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("border"),
+            ))
+            .bg(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("background"),
+            ))
+            .w_full()
+            .into_element(cx)
+            .test_id(TEST_ID_HEADER_LATEST),
+        ]
+    })
+    .gap(Space::N2)
+    .items_end()
+    .into_element(cx);
+
+    if stack_layout {
+        ui::v_flex(move |cx| {
+            vec![
+                intro,
+                ui::container(move |_cx| [status]).w_full().into_element(cx),
+            ]
+        })
+        .gap(Space::N4)
+        .items_start()
+        .p(Space::N4)
+        .w_full()
+        .border_1()
+        .border_color(ColorRef::Color(
+            Theme::global(&*cx.app).color_token("border"),
+        ))
+        .rounded_md()
+        .bg(ColorRef::Color(
+            Theme::global(&*cx.app).color_token("muted"),
+        ))
+        .shadow_sm()
+        .into_element(cx)
+        .test_id(TEST_ID_HEADER)
+    } else {
+        ui::h_flex(move |cx| {
+            vec![
+                intro,
+                ui::container(move |_cx| [status])
+                    .w_px(SHOWCASE_HEADER_RAIL_WIDTH)
+                    .max_w(SHOWCASE_HEADER_RAIL_WIDTH)
+                    .flex_shrink_0()
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N6)
+        .items_start()
+        .p(Space::N4)
+        .w_full()
+        .border_1()
+        .border_color(ColorRef::Color(
+            Theme::global(&*cx.app).color_token("border"),
+        ))
+        .rounded_md()
+        .bg(ColorRef::Color(
+            Theme::global(&*cx.app).color_token("muted"),
+        ))
+        .shadow_sm()
+        .into_element(cx)
+        .test_id(TEST_ID_HEADER)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn showcase_responsive_layout_prefers_two_columns_at_default_window() {
+        let layout = ShowcaseResponsiveLayout::from_viewport(Px(1180.0), Px(760.0));
+        assert!(!layout.stack_body);
+        assert!(!layout.stack_header);
+        assert_eq!(layout.outer_padding, Space::N3);
+        assert_eq!(layout.surface_padding, Space::N4);
+        assert_eq!(layout.side_column_width, SHOWCASE_SIDE_COLUMN_WIDTH);
+    }
+
+    #[test]
+    fn showcase_responsive_layout_stacks_on_narrow_viewports() {
+        let layout = ShowcaseResponsiveLayout::from_viewport(Px(980.0), Px(760.0));
+        assert!(layout.stack_body);
+        assert!(layout.stack_header);
+        assert_eq!(layout.section_gap, Space::N3);
     }
 }
 
@@ -263,7 +551,7 @@ fn render_interaction_lab_card(
     .wrap(fret_core::TextWrap::Word)
     .into_element(cx);
 
-    let draft_preview = ui::container(move |cx| {
+    let draft_preview = ui::v_flex(move |cx| {
         vec![
             ui::text("Current draft")
                 .text_xs()
@@ -278,6 +566,7 @@ fn render_interaction_lab_card(
                 .into_element(cx),
         ]
     })
+    .gap(Space::N1)
     .p_3()
     .rounded_md()
     .border_1()
@@ -297,8 +586,8 @@ fn render_interaction_lab_card(
             ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
                 fret_imui::imui(cx, move |ui| {
                     use fret_ui_kit::imui::{
-                        ComboModelOptions, InputTextOptions, SliderOptions, UiWriterImUiFacadeExt as _,
-                        UiWriterUiKitExt as _,
+                        ButtonOptions, ComboModelOptions, InputTextOptions, SliderOptions,
+                        UiWriterImUiFacadeExt as _, UiWriterUiKitExt as _,
                     };
 
                     let pulse_count = pulse_count.clone();
@@ -334,7 +623,13 @@ fn render_interaction_lab_card(
                     ui.add_ui(hint);
 
                     ui.separator_text("Pulse");
-                    let pulse = ui.button("Pulse interaction surface");
+                    let pulse = ui.button_with_options(
+                        "Pulse interaction surface",
+                        ButtonOptions {
+                            test_id: Some(Arc::from("imui-showcase.lab.pulse")),
+                            ..Default::default()
+                        },
+                    );
                     if pulse.clicked() {
                         let _ =
                             pulse_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
@@ -366,7 +661,13 @@ fn render_interaction_lab_card(
                         );
                     }
 
-                    let drag = ui.button("Drag to scrub the stage");
+                    let drag = ui.button_with_options(
+                        "Drag to scrub the stage",
+                        ButtonOptions {
+                            test_id: Some(Arc::from("imui-showcase.lab.drag")),
+                            ..Default::default()
+                        },
+                    );
                     if drag.drag_started() {
                         let _ =
                             drag_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
@@ -537,8 +838,8 @@ fn render_shell_showcase_card(
             ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
                 fret_imui::imui(cx, move |ui| {
                     use fret_ui_kit::imui::{
-                        BeginMenuOptions, BeginSubmenuOptions, MenuBarOptions, MenuItemOptions,
-                        TabBarOptions, TabItemOptions, UiWriterImUiFacadeExt as _,
+                        BeginMenuOptions, BeginSubmenuOptions, ButtonOptions, MenuBarOptions,
+                        MenuItemOptions, TabBarOptions, TabItemOptions, UiWriterImUiFacadeExt as _,
                         UiWriterUiKitExt as _,
                     };
 
@@ -640,7 +941,11 @@ fn render_shell_showcase_card(
                             tabs.begin_tab_item_with_options(
                                 "overview",
                                 "Overview",
-                                TabItemOptions::default(),
+                                TabItemOptions {
+                                    test_id: Some(Arc::from("imui-showcase.tabs.overview")),
+                                    panel_test_id: Some(Arc::from("imui-showcase.tabs.overview.panel")),
+                                    ..Default::default()
+                                },
                                 |ui| {
                                     ui.text(
                                         "Overview keeps the shell-level story compact: menus, tabs, and quick actions work as one visible slice.",
@@ -650,7 +955,11 @@ fn render_shell_showcase_card(
                             tabs.begin_tab_item_with_options(
                                 "scene",
                                 "Scene",
-                                TabItemOptions::default(),
+                                TabItemOptions {
+                                    test_id: Some(Arc::from("imui-showcase.tabs.scene")),
+                                    panel_test_id: Some(Arc::from("imui-showcase.tabs.scene.panel")),
+                                    ..Default::default()
+                                },
                                 |ui| {
                                     ui.text(
                                         "Scene proves per-trigger response access: click the tab, then inspect the timeline updates.",
@@ -660,7 +969,11 @@ fn render_shell_showcase_card(
                             tabs.begin_tab_item_with_options(
                                 "notes",
                                 "Notes",
-                                TabItemOptions::default(),
+                                TabItemOptions {
+                                    test_id: Some(Arc::from("imui-showcase.tabs.notes")),
+                                    panel_test_id: Some(Arc::from("imui-showcase.tabs.notes.panel")),
+                                    ..Default::default()
+                                },
                                 |ui| {
                                     ui.text(
                                         "Notes is intentionally plain. The shell chrome should make the story feel usable before recipe-level controls get fancier.",
@@ -685,7 +998,13 @@ fn render_shell_showcase_card(
                     }
 
                     ui.separator_text("Quick actions");
-                    let quick_actions = ui.button("Right-click this review surface");
+                    let quick_actions = ui.button_with_options(
+                        "Right-click this review surface",
+                        ButtonOptions {
+                            test_id: Some(Arc::from("imui-showcase.quick-actions.trigger")),
+                            ..Default::default()
+                        },
+                    );
                     ui.begin_popup_context_menu("imui-showcase.quick-actions", quick_actions, |ui| {
                         let toggle = ui.menu_item_with_options(
                             "Pin diagnostics rail",
@@ -728,11 +1047,15 @@ fn render_shell_showcase_card(
                     });
 
                     ui.child_region_with_options(
-                        "imui-showcase.preview",
+                        TEST_ID_PREVIEW,
                         ChildRegionOptions {
                             layout: LayoutRefinement::default().h_px(Px(112.0)),
-                            test_id: Some(Arc::from("imui-showcase.preview")),
-                            content_test_id: Some(Arc::from("imui-showcase.preview.content")),
+                            scroll: fret_ui_kit::imui::ScrollOptions {
+                                viewport_test_id: Some(Arc::from(TEST_ID_PREVIEW_VIEWPORT)),
+                                ..Default::default()
+                            },
+                            test_id: Some(Arc::from(TEST_ID_PREVIEW)),
+                            content_test_id: Some(Arc::from(TEST_ID_PREVIEW_CONTENT)),
                             ..Default::default()
                         },
                         |ui| {
@@ -780,36 +1103,51 @@ fn render_shell_showcase_card(
 fn render_showcase_hero(
     cx: &mut ElementContext<'_, KernelApp>,
     pulse_count: u32,
+    secondary_pulse_count: u32,
+    long_press_count: u32,
     drag_count: u32,
+    drag_distance: f32,
     menu_count: u32,
     tab_switches: u32,
+    autosave_enabled: bool,
+    exposure_value: f32,
+    review_mode: Option<Arc<str>>,
     active_tab: &str,
     latest_event: Option<Arc<str>>,
 ) -> AnyElement {
     let latest_event = latest_event.unwrap_or_else(|| Arc::from("No timeline events yet."));
+    let review_mode = review_mode.unwrap_or_else(|| Arc::from("Unassigned"));
     let body = ui::v_flex(move |cx| {
         vec![
-            ui::text("IMUI can stay immediate without looking like a diagnostics dump.")
+            ui::text("IMUI can feel direct without looking like a diagnostics dump.")
                 .text_base()
-                .font_semibold()
+                .font_bold()
+                .wrap(fret_core::TextWrap::Word)
                 .into_element(cx),
             ui::text(
-                "This showcase keeps the fast control-flow story, then lifts the shell with card rhythm, badges, and clear panel ownership.",
+                "The shell owns hierarchy and pacing. Immediate-mode still owns the fastest interaction path, but the stage now reads like a reviewable product surface instead of a status console.",
             )
             .text_sm()
-            .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
-                "muted-foreground",
-            )))
+            .text_color(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("muted-foreground"),
+            ))
             .wrap(fret_core::TextWrap::Word)
             .into_element(cx),
             ui::h_flex(move |cx| {
                 vec![
-                    badge(cx, format!("pulse {pulse_count}"), shadcn::BadgeVariant::Secondary),
-                    badge(cx, format!("drag {drag_count}"), shadcn::BadgeVariant::Outline),
-                    badge(cx, format!("menus {menu_count}"), shadcn::BadgeVariant::Outline),
                     badge(
                         cx,
-                        format!("tab switches {tab_switches}"),
+                        format!("primary {pulse_count}"),
+                        shadcn::BadgeVariant::Secondary,
+                    ),
+                    badge(
+                        cx,
+                        format!("secondary {secondary_pulse_count}"),
+                        shadcn::BadgeVariant::Outline,
+                    ),
+                    badge(
+                        cx,
+                        format!("long {long_press_count}"),
                         shadcn::BadgeVariant::Outline,
                     ),
                     badge(
@@ -824,14 +1162,14 @@ fn render_showcase_hero(
             .wrap()
             .w_full()
             .into_element(cx),
-            ui::container(move |cx| {
+            ui::v_flex(move |cx| {
                 vec![
-                    ui::text("Latest timeline event")
+                    ui::text("Current story")
                         .text_xs()
                         .font_semibold()
-                        .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
-                            "muted-foreground",
-                        )))
+                        .text_color(ColorRef::Color(
+                            Theme::global(&*cx.app).color_token("muted-foreground"),
+                        ))
                         .into_element(cx),
                     ui::text(latest_event)
                         .text_sm()
@@ -839,11 +1177,72 @@ fn render_showcase_hero(
                         .into_element(cx),
                 ]
             })
+            .gap(Space::N1)
             .p_3()
+            .rounded_md()
+            .border_1()
+            .border_color(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("border"),
+            ))
+            .bg(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("background"),
+            ))
+            .w_full()
+            .into_element(cx),
+            ui::v_flex(move |cx| {
+                vec![
+                    ui::text("Live stage")
+                        .text_xs()
+                        .font_semibold()
+                        .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
+                            "muted-foreground",
+                        )))
+                        .into_element(cx),
+                    ui::text(format!(
+                        "Review mode {review_mode}. Exposure {:.0}. Autosave {}.",
+                        exposure_value,
+                        if autosave_enabled { "armed" } else { "paused" },
+                    ))
+                    .text_sm()
+                    .wrap(fret_core::TextWrap::Word)
+                    .into_element(cx),
+                    telemetry_meter(
+                        cx,
+                        "Pulse cadence",
+                        pulse_count as f32 + secondary_pulse_count as f32,
+                        12.0,
+                        format!("{pulse_count} primary / {secondary_pulse_count} alternate"),
+                    ),
+                    telemetry_meter(
+                        cx,
+                        "Hold confidence",
+                        long_press_count as f32,
+                        8.0,
+                        format!("{long_press_count} long-press confirmations"),
+                    ),
+                    telemetry_meter(
+                        cx,
+                        "Scrub travel",
+                        drag_distance,
+                        640.0,
+                        format!("{drag_count} probes / {:.0}px travel", drag_distance),
+                    ),
+                    telemetry_meter(
+                        cx,
+                        "Shell traffic",
+                        (menu_count + tab_switches) as f32,
+                        14.0,
+                        format!("{menu_count} menu opens / {tab_switches} tab moves"),
+                    ),
+                ]
+            })
+            .gap(Space::N3)
+            .p(Space::N4)
             .rounded_md()
             .bg(ColorRef::Color(Theme::global(&*cx.app).color_token("muted")))
             .border_1()
             .border_color(ColorRef::Color(Theme::global(&*cx.app).color_token("border")))
+            .shadow_sm()
             .w_full()
             .into_element(cx),
         ]
@@ -867,24 +1266,41 @@ fn render_timeline_card(
     events: &[ShowcaseEvent],
 ) -> AnyElement {
     let mut rows = Vec::with_capacity(events.len());
-    for event in events {
+    for (index, event) in events.iter().enumerate() {
         let event_id = event.id;
         let label = event.label.clone();
-        let row = ui::h_flex(move |cx| {
-            vec![
-                shadcn::Badge::new(format!("#{event_id}"))
-                    .variant(shadcn::BadgeVariant::Outline)
-                    .into_element(cx),
-                ui::text(label)
-                    .text_sm()
-                    .wrap(fret_core::TextWrap::Word)
-                    .flex_1()
-                    .min_w_0()
-                    .into_element(cx),
-            ]
+        let row = ui::container(move |cx| {
+            vec![ui::h_flex(move |cx| {
+                vec![
+                    shadcn::Badge::new(format!("#{event_id}"))
+                        .variant(if index == 0 {
+                            shadcn::BadgeVariant::Default
+                        } else {
+                            shadcn::BadgeVariant::Outline
+                        })
+                        .into_element(cx),
+                    ui::text(label)
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
+                        .flex_1()
+                        .min_w_0()
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_start()
+            .w_full()
+            .into_element(cx)]
         })
-        .gap(Space::N2)
-        .items_start()
+        .p_3()
+        .rounded_md()
+        .border_1()
+        .border_color(ColorRef::Color(
+            Theme::global(&*cx.app).color_token("border"),
+        ))
+        .bg(ColorRef::Color(
+            Theme::global(&*cx.app).color_token("muted"),
+        ))
         .w_full()
         .into_element(cx);
         rows.push(row);
@@ -917,6 +1333,7 @@ fn showcase_card(
     let eyebrow = ui::text(eyebrow)
         .text_xs()
         .font_semibold()
+        .letter_spacing_em(0.12)
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
     let header = shadcn::CardHeader::new([
@@ -929,8 +1346,64 @@ fn showcase_card(
     shadcn::Card::new([header, content])
         .ui()
         .w_full()
+        .shadow_md()
         .into_element(cx)
         .test_id(test_id)
+}
+
+fn telemetry_meter(
+    cx: &mut ElementContext<'_, KernelApp>,
+    title: &'static str,
+    value: f32,
+    max_value: f32,
+    detail: String,
+) -> AnyElement {
+    let normalized = if max_value <= 0.0 {
+        0.0
+    } else {
+        (value / max_value).clamp(0.0, 1.0)
+    };
+    let fill_width = Px(40.0 + normalized * 164.0);
+    ui::v_flex(move |cx| {
+        vec![
+            ui::v_flex(move |cx| {
+                vec![
+                    ui::text(title).text_xs().font_semibold().into_element(cx),
+                    ui::text(detail)
+                        .text_xs()
+                        .text_color(ColorRef::Color(
+                            Theme::global(&*cx.app).color_token("muted-foreground"),
+                        ))
+                        .wrap(fret_core::TextWrap::Word)
+                        .w_full()
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N1)
+            .w_full()
+            .into_element(cx),
+            ui::container(move |cx| {
+                vec![ui::container(|_cx| Vec::<AnyElement>::new())
+                    .h_px(Px(8.0))
+                    .w_px(fill_width)
+                    .rounded_md()
+                    .bg(ColorRef::Color(
+                        Theme::global(&*cx.app).color_token("primary"),
+                    ))
+                    .into_element(cx)]
+            })
+            .h_px(Px(8.0))
+            .w_full()
+            .rounded_md()
+            .bg(ColorRef::Color(
+                Theme::global(&*cx.app).color_token("secondary"),
+            ))
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N1p5)
+    .w_full()
+    .into_element(cx)
 }
 
 fn badge(

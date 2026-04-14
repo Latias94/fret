@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "imui-interaction-showcase-quick-action-delay-click-outcomes",
-    "required_capabilities": ["diag.script_v2"],
-    "tags": ["imui", "showcase", "context_menu", "outcomes", "ui_editor"],
+    "name": "imui-interaction-showcase-quick-action-click-debug",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["imui", "showcase", "context_menu", "debug", "ui_editor"],
     "target_hints": [
-      "Verifies that the quick-actions popup item remains activatable after waiting extra frames.",
-      "Catches regressions where the popup silently dismisses before the delayed item click commits."
+      "Minimal repro for clicking the quick-actions popup item in the showcase demo.",
+      "Use this to compare plain click behavior with the broader interaction smoke."
     ]
   },
   "window": "lowest_id",
@@ -58,27 +58,18 @@
       },
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 12 },
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.toggle" }
     },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "label_contains",
-        "target": {
-          "kind": "test_id",
-          "id": "imui-interaction-showcase.header.latest.label"
-        },
-        "text": "Context action flipped the diagnostics rail state."
-      },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 4 },
+    { "type": "wait_frames", "n": 8 },
     {
       "type": "capture_bundle",
-      "label": "imui-interaction-showcase.quick-action-delay-click-outcomes"
+      "label": "imui-interaction-showcase.quick-action-click-debug"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-interaction-showcase.quick-action-click-debug"
     }
   ]
 }

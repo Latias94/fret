@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-interaction-showcase-before-tab-click-debug",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["imui", "showcase", "tabs", "menu", "debug", "ui_editor"],
+    "target_hints": [
+      "Replays the showcase flow up to the point just before clicking the Scene tab.",
+      "Use this to compare geometry after the menu opens/closes versus the simpler scroll-only viewport capture."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1360.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-showcase.lab.pulse" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.scroll.viewport" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-showcase.lab.pulse" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.header.latest.label" },
+        "text": "Primary pulse registered."
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "imui-interaction-showcase.scroll.viewport" },
+      "target": { "kind": "test_id", "id": "imui-showcase.quick-actions.trigger" },
+      "delta_y": -720.0,
+      "require_fully_within_container": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-showcase.menu.file" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-showcase.menu.staging" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "imui-showcase.tabs.scene" }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-interaction-showcase.before-tab-click"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-interaction-showcase.before-tab-click"
+    }
+  ]
+}
