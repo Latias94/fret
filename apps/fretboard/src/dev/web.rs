@@ -7,9 +7,15 @@ use crate::demos::{display_path, prompt_choose_demo, validate_web_demo, web_demo
 
 use super::{contracts::DevWebCommandArgs, resolve_bool_override};
 
-fn configure_trunk_web_command(cmd: &mut Command, web_dir: &Path, port: Option<u16>) {
+fn configure_trunk_web_command(
+    cmd: &mut Command,
+    web_dir: &Path,
+    port: Option<u16>,
+    strict_runtime: bool,
+) {
     cmd.current_dir(web_dir).args(["serve", "--no-color"]);
     cmd.env_remove("NO_COLOR");
+    configure_strict_runtime_env(cmd, strict_runtime);
 
     if let Some(port) = port {
         cmd.args(["--port", &port.to_string()]);
@@ -20,6 +26,8 @@ pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
     let port = args.port;
     let demo = args.demo;
     let choose = args.choose;
+    let strict_runtime =
+        resolve_bool_override(args.strict_runtime, args.no_strict_runtime).unwrap_or(true);
     // Dev web is primarily an interactive workflow; default to opening the browser
     // once the server is reachable. Use `--no-open` for CI or when you explicitly
     // do not want the auto-open behavior.
@@ -76,7 +84,7 @@ pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
     eprintln!("Starting Trunk dev server in `{}`", display_path(&web_dir));
 
     let mut cmd = Command::new("trunk");
-    configure_trunk_web_command(&mut cmd, &web_dir, port);
+    configure_trunk_web_command(&mut cmd, &web_dir, port, strict_runtime);
 
     let mut child = cmd.spawn().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
@@ -134,6 +142,12 @@ pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
         return Err(format!("trunk exited with status: {status}"));
     }
     Ok(())
+}
+
+fn configure_strict_runtime_env(cmd: &mut Command, strict_runtime: bool) {
+    let value = if strict_runtime { "1" } else { "0" };
+    cmd.env("FRET_STRICT_RUNTIME", value);
+    cmd.env("FRET_STRICT_RUNTIME_DEFAULT", value);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -297,7 +311,7 @@ mod tests {
         let mut cmd = Command::new("trunk");
         cmd.env("NO_COLOR", "1");
 
-        configure_trunk_web_command(&mut cmd, web_dir, Some(9001));
+        configure_trunk_web_command(&mut cmd, web_dir, Some(9001), true);
 
         let args: Vec<String> = cmd
             .get_args()
@@ -311,5 +325,12 @@ mod tests {
             .find(|(key, _)| *key == OsStr::new("NO_COLOR"))
             .expect("NO_COLOR should be explicitly removed for trunk");
         assert!(no_color.1.is_none());
+
+        let strict = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("FRET_STRICT_RUNTIME_DEFAULT"))
+            .and_then(|(_, value)| value)
+            .expect("strict runtime default env should be set");
+        assert_eq!(strict, "1");
     }
 }

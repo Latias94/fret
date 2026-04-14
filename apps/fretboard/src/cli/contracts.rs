@@ -175,6 +175,7 @@ mod tests {
         };
 
         assert_eq!(args.bin.as_deref(), Some("todo_demo"));
+        assert!(!args.no_strict_runtime);
         assert!(args.watch);
         assert_eq!(args.passthrough, vec!["--help"]);
     }
@@ -189,6 +190,7 @@ mod tests {
             "9001",
             "--demo",
             "plot_demo",
+            "--no-strict-runtime",
             "--no-open",
         ])
         .expect("dev web should parse typed args");
@@ -203,6 +205,7 @@ mod tests {
 
         assert_eq!(args.port, Some(9001));
         assert_eq!(args.demo.as_deref(), Some("plot_demo"));
+        assert!(args.no_strict_runtime);
         assert!(args.no_open);
     }
 
@@ -245,6 +248,7 @@ mod tests {
             render_command_help_path(&["dev", "native"]).expect("dev native help should render");
         assert!(help.contains("--hotpatch"));
         assert!(help.contains("--hotpatch-dx"));
+        assert!(help.contains("--no-strict-runtime"));
         assert!(help.contains("--profile"));
     }
 

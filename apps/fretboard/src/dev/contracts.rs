@@ -14,6 +14,20 @@ pub(crate) struct DevNativeCommandArgs {
     /// Cargo profile to use.
     #[arg(long = "profile", visible_alias = "cargo-profile")]
     pub profile: Option<String>,
+    /// Force strict runtime diagnostics on for the launched app.
+    #[arg(
+        long = "strict-runtime",
+        action = ArgAction::SetTrue,
+        overrides_with = "no_strict_runtime"
+    )]
+    pub strict_runtime: bool,
+    /// Disable the default strict runtime diagnostics for this dev launch.
+    #[arg(
+        long = "no-strict-runtime",
+        action = ArgAction::SetTrue,
+        overrides_with = "strict_runtime"
+    )]
+    pub no_strict_runtime: bool,
     /// Prompt to choose a demo interactively.
     #[arg(long)]
     pub choose: bool,
@@ -107,6 +121,20 @@ pub(crate) struct DevWebCommandArgs {
     /// Override the Trunk dev server port.
     #[arg(long)]
     pub port: Option<u16>,
+    /// Force strict runtime diagnostics on for the launched app.
+    #[arg(
+        long = "strict-runtime",
+        action = ArgAction::SetTrue,
+        overrides_with = "no_strict_runtime"
+    )]
+    pub strict_runtime: bool,
+    /// Disable the default strict runtime diagnostics for this dev launch.
+    #[arg(
+        long = "no-strict-runtime",
+        action = ArgAction::SetTrue,
+        overrides_with = "strict_runtime"
+    )]
+    pub no_strict_runtime: bool,
     /// Select a web demo id.
     #[arg(long)]
     pub demo: Option<String>,

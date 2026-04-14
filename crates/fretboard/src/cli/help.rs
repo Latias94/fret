@@ -5,6 +5,7 @@ const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --
   fretboard diag latest
   fretboard diag run ./diag/dialog-escape.json --launch -- cargo run --manifest-path ./Cargo.toml
   fretboard dev native --manifest-path ./Cargo.toml
+    # dev launches default to strict runtime diagnostics; add `--no-strict-runtime` to inspect recovery paths
   fretboard dev web --manifest-path ./Cargo.toml --no-open
   fretboard icons acquire iconify-collection --collection mdi --icon home --out ./iconify/mdi-home.json
   fretboard icons suggest presentation-defaults --provenance ./iconify/mdi-home.provenance.json --out ./iconify/presentation-defaults.json

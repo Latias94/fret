@@ -34,6 +34,7 @@ Unless a document says otherwise:
 - Public project-facing examples:
   - `cargo run -p fretboard -- dev native --manifest-path ./Cargo.toml`
   - `cargo run -p fretboard -- dev web --manifest-path ./Cargo.toml --no-open`
+  - `dev` launches default to strict runtime diagnostics; pass `--no-strict-runtime` when you intentionally want to inspect fallback/recovery behavior
   - `cargo run -p fretboard -- diag latest`
   - `cargo run -p fretboard -- diag run ./diag/script.json --launch -- cargo run --manifest-path ./Cargo.toml`
 - Current repo-maintainer / workspace-only commands stay on `cargo run -p fretboard-dev -- ...`:
@@ -45,6 +46,7 @@ Unless a document says otherwise:
   - maintainer-only `diag` taxonomy and catalogs (`suite`, `campaign`, `registry`, promoted script inventory)
   - Example (cookbook): `cargo run -p fretboard-dev -- dev native --example simple_todo`
   - Example (native demo bin): `cargo run -p fretboard-dev -- dev native --bin todo_demo`
+  - Maintainer `dev` launches also default to strict runtime diagnostics; use `--no-strict-runtime` only when auditing non-strict fallback paths
 - Public `dev` / `diag` implementation and the remaining hotpatch / theme posture are tracked in:
   - `docs/workstreams/fretboard-public-dev-implementation-v1/README.md`
   - `docs/workstreams/fretboard-public-app-author-surface-v1/FINAL_STATUS.md`

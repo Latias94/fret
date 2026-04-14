@@ -12,10 +12,12 @@ fn configure_trunk_web_command(
     package_root: &Path,
     port: Option<u16>,
     target_html: &Path,
+    strict_runtime: bool,
 ) {
     cmd.current_dir(package_root)
         .args(["serve", "--no-color", "--open", "false"]);
     cmd.env_remove("NO_COLOR");
+    configure_strict_runtime_env(cmd, strict_runtime);
 
     if let Some(port) = port {
         cmd.args(["--port", &port.to_string()]);
@@ -31,6 +33,8 @@ pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
         args.bin.as_deref(),
     )?;
     let port = args.port;
+    let strict_runtime =
+        resolve_bool_override(args.strict_runtime, args.no_strict_runtime).unwrap_or(true);
     let open = resolve_bool_override(args.open, args.no_open).unwrap_or(true);
     let devtools_ws_url = args.devtools_ws_url;
     let devtools_token = args.devtools_token;
@@ -81,7 +85,13 @@ pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
     );
 
     let mut cmd = Command::new("trunk");
-    configure_trunk_web_command(&mut cmd, &selected.package_root, port, target_html);
+    configure_trunk_web_command(
+        &mut cmd,
+        &selected.package_root,
+        port,
+        target_html,
+        strict_runtime,
+    );
 
     let mut child = cmd.spawn().map_err(|err| {
         if err.kind() == std::io::ErrorKind::NotFound {
@@ -141,6 +151,14 @@ pub(crate) fn run_web_contract(args: DevWebCommandArgs) -> Result<(), String> {
         return Err(format!("trunk exited with status: {status}"));
     }
     Ok(())
+}
+
+fn configure_strict_runtime_env(cmd: &mut Command, strict_runtime: bool) {
+    let value = if strict_runtime { "1" } else { "0" };
+    cmd.env("FRET_STRICT_RUNTIME", value);
+    // Browser builds do not have a normal process environment at runtime, so the dev loop also
+    // bakes the default into the wasm build.
+    cmd.env("FRET_STRICT_RUNTIME_DEFAULT", value);
 }
 
 fn write_temp_trunk_target(selected: &SelectedWebTarget) -> Result<PathBuf, String> {
@@ -503,7 +521,11 @@ fn parse_link_tag(tag: &str) -> Result<ParsedLinkTag, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_link_tag, rewrite_trunk_rust_link};
+    use std::ffi::OsStr;
+    use std::path::Path;
+    use std::process::Command;
+
+    use super::{configure_trunk_web_command, parse_link_tag, rewrite_trunk_rust_link};
 
     #[test]
     fn rewrite_trunk_rust_link_injects_href_and_data_bin() {
@@ -527,5 +549,22 @@ mod tests {
         let parsed = parse_link_tag("<link data-trunk rel='rust' data-wasm-opt='2'>")
             .expect("tag should parse");
         assert!(parsed.is_trunk_rust_link());
+    }
+
+    #[test]
+    fn configure_trunk_web_command_sets_strict_runtime_defaults() {
+        let package_root = Path::new("/tmp/fret-app");
+        let target_html = Path::new("/tmp/fret-app/index.html");
+        let mut cmd = Command::new("trunk");
+        cmd.env("NO_COLOR", "1");
+
+        configure_trunk_web_command(&mut cmd, package_root, Some(9001), target_html, true);
+
+        let strict = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("FRET_STRICT_RUNTIME_DEFAULT"))
+            .and_then(|(_, value)| value)
+            .expect("strict runtime default env should be set");
+        assert_eq!(strict, "1");
     }
 }

@@ -15,6 +15,7 @@ const ROOT_EXAMPLES: &str = r#"  fretboard-dev assets manifest write --dir asset
   fretboard-dev dev native --bin todo_demo
   fretboard-dev dev native --bin assets_demo
   fretboard-dev dev native --bin hotpatch_smoke_demo
+    # dev launches default to strict runtime diagnostics; add `--no-strict-runtime` to inspect recovery paths
   fretboard-dev dev native --demo simple-todo
   fretboard-dev dev native --demo simple-todo --hotpatch
   fretboard-dev dev native --choose

@@ -213,6 +213,8 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
     let root = workspace_root()?;
     let demos = list_native_demos_from(&root)?;
     let cookbook_examples = list_cookbook_examples_from(&root)?;
+    let strict_runtime =
+        resolve_bool_override(args.strict_runtime, args.no_strict_runtime).unwrap_or(true);
 
     let mut bin = args.bin;
     let mut demo = args.demo;
@@ -267,6 +269,7 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
 
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root).args(["run"]);
+        configure_strict_runtime_env(&mut cmd, strict_runtime);
 
         let default_profile = cfg!(windows).then_some("dev-fast");
         if let Some(profile) = cargo_profile.as_deref().or(default_profile) {
@@ -344,6 +347,7 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
 
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root).args(["run"]);
+        configure_strict_runtime_env(&mut cmd, strict_runtime);
 
         let default_profile = cfg!(windows).then_some("dev-fast");
         if let Some(profile) = cargo_profile.as_deref().or(default_profile) {
@@ -465,6 +469,7 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
 
     let mut cmd = Command::new("cargo");
     cmd.current_dir(&root);
+    configure_strict_runtime_env(&mut cmd, strict_runtime);
 
     if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() || dev_state_reset {
         cmd.env("FRET_DEV_STATE", "1");
@@ -659,6 +664,13 @@ fn capture_command_env(cmd: &Command) -> CapturedEnv {
         .get_envs()
         .filter_map(|(k, v)| Some((k.to_os_string(), v?.to_os_string())));
     CapturedEnv(pairs.collect())
+}
+
+fn configure_strict_runtime_env(cmd: &mut Command, strict_runtime: bool) {
+    cmd.env(
+        "FRET_STRICT_RUNTIME",
+        if strict_runtime { "1" } else { "0" },
+    );
 }
 
 fn apply_captured_env(cmd: &mut Command, env: &CapturedEnv) {
@@ -1176,12 +1188,36 @@ fn parse_ws_endpoint_addr(ws: &str) -> Result<(String, u16), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_ws_endpoint_addr;
+    use std::ffi::OsStr;
+    use std::process::Command;
+
+    use super::{configure_strict_runtime_env, parse_ws_endpoint_addr};
 
     #[test]
     fn parse_ws_endpoint_addr_normalizes_localhost() {
         let parsed = parse_ws_endpoint_addr("ws://localhost:8080/_dioxus")
             .expect("ws endpoint should parse");
         assert_eq!(parsed, ("127.0.0.1".to_string(), 8080));
+    }
+
+    #[test]
+    fn configure_strict_runtime_env_sets_explicit_value() {
+        let mut cmd = Command::new("cargo");
+        configure_strict_runtime_env(&mut cmd, true);
+        let strict = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("FRET_STRICT_RUNTIME"))
+            .and_then(|(_, value)| value)
+            .expect("strict runtime env should be set");
+        assert_eq!(strict, "1");
+
+        let mut cmd = Command::new("cargo");
+        configure_strict_runtime_env(&mut cmd, false);
+        let strict = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("FRET_STRICT_RUNTIME"))
+            .and_then(|(_, value)| value)
+            .expect("strict runtime env should be set");
+        assert_eq!(strict, "0");
     }
 }

@@ -61,6 +61,8 @@ Notes:
 
 - On Windows, `fretboard-dev dev native ...` defaults to `--profile dev-fast` for faster builds.
 - On other platforms (or if you want richer debug inspection), you can pass `--profile dev`.
+- `fretboard-dev dev ...` now defaults to strict runtime diagnostics so framework bugs fail fast during local iteration.
+- Use `--no-strict-runtime` only when you intentionally want to inspect fallback/recovery behavior.
 - The published `fretboard` CLI remains the public `assets` / `config` / `new` surface; repo-runner commands stay on `fretboard-dev`.
 
 ### 2) Use the built-in aliases for the common path

@@ -15,6 +15,8 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
         args.bin.as_deref(),
         args.example.as_deref(),
     )?;
+    let strict_runtime =
+        resolve_bool_override(args.strict_runtime, args.no_strict_runtime).unwrap_or(true);
     let watch = resolve_bool_override(args.watch, args.no_watch).unwrap_or(false);
     let supervise = resolve_bool_override(args.supervise, args.no_supervise).unwrap_or(watch);
     let watch_poll_ms = Duration::from_millis(args.watch_poll_ms.unwrap_or(800));
@@ -41,6 +43,7 @@ pub(crate) fn run_native_contract(args: DevNativeCommandArgs) -> Result<(), Stri
     }
 
     cmd.args([selected.kind.cargo_flag(), &selected.target_name]);
+    configure_strict_runtime_env(&mut cmd, strict_runtime);
     configure_dev_state_env(&mut cmd, watch, args.dev_state_reset);
 
     if !watch {
@@ -95,6 +98,13 @@ fn configure_dev_state_env(cmd: &mut Command, watch: bool, dev_state_reset: bool
     if dev_state_reset {
         cmd.env("FRET_DEV_STATE_RESET", "1");
     }
+}
+
+fn configure_strict_runtime_env(cmd: &mut Command, strict_runtime: bool) {
+    cmd.env(
+        "FRET_STRICT_RUNTIME",
+        if strict_runtime { "1" } else { "0" },
+    );
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -529,8 +539,13 @@ fn print_repeated_crash_guidance(opts: &RestartSupervisorOptions, reason: &str) 
 
 #[cfg(test)]
 mod tests {
-    use super::{NativeTargetKind, dev_native_exe_path, profile_output_dir};
+    use std::ffi::OsStr;
     use std::path::Path;
+    use std::process::Command;
+
+    use super::{
+        NativeTargetKind, configure_strict_runtime_env, dev_native_exe_path, profile_output_dir,
+    };
 
     #[test]
     fn profile_output_dir_maps_dev_to_debug() {
@@ -549,5 +564,26 @@ mod tests {
             None,
         );
         assert!(path.ends_with("debug/examples/simple_todo"));
+    }
+
+    #[test]
+    fn configure_strict_runtime_env_sets_explicit_value() {
+        let mut cmd = Command::new("cargo");
+        configure_strict_runtime_env(&mut cmd, true);
+        let strict = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("FRET_STRICT_RUNTIME"))
+            .and_then(|(_, value)| value)
+            .expect("strict runtime env should be set");
+        assert_eq!(strict, "1");
+
+        let mut cmd = Command::new("cargo");
+        configure_strict_runtime_env(&mut cmd, false);
+        let strict = cmd
+            .get_envs()
+            .find(|(key, _)| *key == OsStr::new("FRET_STRICT_RUNTIME"))
+            .and_then(|(_, value)| value)
+            .expect("strict runtime env should be set");
+        assert_eq!(strict, "0");
     }
 }

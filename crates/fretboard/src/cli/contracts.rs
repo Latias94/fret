@@ -220,8 +220,34 @@ mod tests {
         };
 
         assert_eq!(args.bin.as_deref(), Some("todo_demo"));
+        assert!(!args.no_strict_runtime);
         assert!(args.watch);
         assert_eq!(args.passthrough, vec!["--help"]);
+    }
+
+    #[test]
+    fn root_contract_parses_dev_web_no_strict_runtime_flag() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "dev",
+            "web",
+            "--manifest-path",
+            "./Cargo.toml",
+            "--no-strict-runtime",
+            "--no-open",
+        ])
+        .expect("dev web should parse");
+
+        let FretboardCommandContract::Dev(dev) = cli.command else {
+            panic!("expected dev command");
+        };
+
+        let DevTargetContract::Web(args) = dev.target else {
+            panic!("expected web dev target");
+        };
+
+        assert!(args.no_strict_runtime);
+        assert!(args.no_open);
     }
 
     #[test]
