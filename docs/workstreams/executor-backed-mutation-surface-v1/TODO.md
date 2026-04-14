@@ -4,12 +4,11 @@
 
 - [x] Record the baseline audit from the `api_workbench_lite` probe.
 - [x] Name the new lane as a follow-on instead of reopening the closed LocalState/write lanes.
-- [ ] Add or update the hard-contract note/ADR for the read-vs-submit split on the default app lane.
-- [ ] Decide the final shared term:
-  - `mutation`,
-  - `submission`,
-  - or another explicit app-facing term,
-  while keeping the current repo meaning ("explicit async operation", not only SQL/HTTP writes).
+- [x] Add or update the hard-contract note/ADR for the read-vs-submit split on the default app lane.
+- [x] Decide the final shared term:
+  - keep `mutation` for the mechanism/API surface,
+  - allow "explicit submit flow" as teaching vocabulary,
+  - and do not reopen a repo-wide rename unless the mechanism contract itself changes.
 
 ## M1 — Mechanism owner freeze (`fret-executor`)
 
@@ -40,10 +39,10 @@
 - [x] Keep the trigger path explicit:
   - creating/reading the handle does not start work,
   - only explicit submit starts work.
-- [ ] Decide whether the default app-facing naming should be:
-  - `mutation*`,
-  - `submit*`,
-  - or a split with mechanism nouns on `mutation` and teaching nouns on `submit`.
+- [x] Decide whether the default app-facing naming should be:
+  - mechanism nouns stay on `mutation*`,
+  - teaching copy may say "submit" / "explicit submit flow",
+  - and the repo does not pay a wide `submit*` rename churn in v1.
 - [x] Ensure the app-facing surface composes with existing `cx.actions()` ownership rather than
   silently creating a second default transaction family.
 - [x] Define the default query invalidation handoff after successful submit/mutation.
@@ -70,5 +69,5 @@
 
 ## Closure rule
 
-- [ ] Do not close this lane until the repo has one default answer for explicit async submission on
+- [x] Do not close this lane until the repo has one default answer for explicit async submission on
   the app lane, plus at least one real proof surface and one regression artifact.

@@ -54,6 +54,10 @@
     },
     {
       "role": "reference",
+      "path": "docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md"
+    },
+    {
+      "role": "reference",
       "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md"
     },
     {
@@ -125,6 +129,7 @@
     "docs/integrating-sqlite-and-sqlx.md",
     "docs/integrating-tokio-and-reqwest.md",
     "docs/crate-usage-guide.md",
+    "docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md",
     "ecosystem/fret-executor/Cargo.toml",
     "ecosystem/fret-executor/src/lib.rs",
     "ecosystem/fret-mutation/Cargo.toml",
@@ -145,7 +150,8 @@
     "docs/adr/0184-execution-and-concurrency-surface-v1.md",
     "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md",
     "docs/adr/0308-view-authoring-runtime-and-hooks-v1.md",
-    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md"
   ],
   "continue_policy": {
     "default_action": "continue",

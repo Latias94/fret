@@ -71,6 +71,14 @@
     passed and produced layout/screenshot/bundle artifacts on the same SQLite query lane,
   - so the lane now has the stronger dataflow proof plus a passing screenshot artifact, while the
     earlier timeout is treated as diagnostics timing noise rather than a framework-design failure.
+- M0 / M2 / M4 contract freeze is now explicit at the ADR layer:
+  - `docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md` freezes the default
+    app-lane split between observed reads and explicit submit flows,
+  - keeps `mutation` as the mechanism/API term while allowing "explicit submit flow" as teaching
+    vocabulary,
+  - locks mutation-to-query refresh as explicit invalidation rather than widened query freshness,
+  - and locks same-input retry/completion dedupe onto handle-owned completion identity instead of
+    app-local sequence bookkeeping.
 
 ## M0 — Baseline audit and scope freeze
 
