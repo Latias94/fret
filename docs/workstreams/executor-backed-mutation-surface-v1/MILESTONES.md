@@ -13,6 +13,10 @@ Exit when:
 Exit when:
 
 - the repo has one explicit owner decision for the shared mutation mechanism,
+- the owner split keeps `fret-executor` as substrate and moves higher-level mutation semantics into
+  a dedicated executor-family semantic crate,
+- the intended `fret` feature topology (`state-mutation` separate from `state-query`) is written
+  down,
 - the minimal state machine and policy budget are written down,
 - and the lane has not widened `fret-query` beyond read-state semantics.
 

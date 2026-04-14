@@ -7,6 +7,7 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
 
 - `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`
 - `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`
+- `docs/workstreams/executor-backed-mutation-surface-v1/M1_CONTRACT_FREEZE_2026-04-14.md`
 - `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/executor-backed-mutation-surface-v1/TODO.md`
 - `docs/workstreams/executor-backed-mutation-surface-v1/MILESTONES.md`
@@ -18,7 +19,10 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
 - `ecosystem/fret-executor/src/lib.rs`
+- `ecosystem/fret-executor/Cargo.toml`
 - `ecosystem/fret-query/src/lib.rs`
+- `ecosystem/fret-query/Cargo.toml`
+- `ecosystem/fret/Cargo.toml`
 - `ecosystem/fret/src/view.rs`
 - `ecosystem/fret-genui-core/src/executor.rs`
 - `ecosystem/fret-ui-shadcn/src/sonner.rs`

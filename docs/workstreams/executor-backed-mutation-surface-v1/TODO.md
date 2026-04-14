@@ -13,9 +13,14 @@
 
 ## M1 — Mechanism owner freeze (`fret-executor`)
 
-- [ ] Decide whether the shared mechanism lives:
-  - directly in `ecosystem/fret-executor`,
-  - or in a tightly coupled companion module that still keeps `fret-query` read-only.
+- [x] Freeze the owner split:
+  - keep `ecosystem/fret-executor` as the portable execution substrate,
+  - add the shared mutation/submission state machine in a new executor-family semantic crate,
+  - keep `fret-query` read-only.
+- [ ] Freeze the first feature topology:
+  - add `state-mutation` on `fret`,
+  - keep it separate from `state-query`,
+  - and widen `state` only after the mutation lane proves itself.
 - [ ] Define the minimal shared state machine:
   - idle,
   - running,
@@ -34,6 +39,10 @@
 - [ ] Keep the trigger path explicit:
   - creating/reading the handle does not start work,
   - only explicit submit starts work.
+- [ ] Decide whether the default app-facing naming should be:
+  - `mutation*`,
+  - `submit*`,
+  - or a split with mechanism nouns on `mutation` and teaching nouns on `submit`.
 - [ ] Ensure the app-facing surface composes with existing `cx.actions()` ownership rather than
   silently creating a second default transaction family.
 - [ ] Define the default query invalidation handoff after successful submit/mutation.

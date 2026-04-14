@@ -12,10 +12,10 @@ The contract shape does.
 | Need | Default app lane | Explicit / advanced lane | Owner |
 | --- | --- | --- | --- |
 | Observed async reads | `cx.data().query*` + `QueryHandle::read_layout(cx)` | direct `fret-query` handle/state surface | `fret-query` engine + `fret` app sugar |
-| Explicit async submit / mutation | one default app-facing mutation/submission surface; creating/reading the handle does not start work | raw inbox + executor assembly remains available | `fret-executor` mechanism + `fret` app sugar |
+| Explicit async submit / mutation | one default app-facing mutation/submission surface; creating/reading the handle does not start work | raw inbox + executor assembly remains available | executor-family mutation crate + `fret` app sugar |
 | Mutation execution substrate | hidden behind the default app-facing mutation surface | direct `Executors`, `Inbox`, `InboxDrainer`, `FutureSpawnerHandle` | `fret-executor` |
-| Completion apply | model-backed mutation state and explicit UI-thread apply | manual driver-boundary model updates remain available | `fret-executor` + app-owned models |
-| Retry / cancellation / concurrency | explicit mutation policy, separate from query freshness semantics | direct executor/manual orchestration | `fret-executor` |
+| Completion apply | model-backed mutation state and explicit UI-thread apply | manual driver-boundary model updates remain available | executor-family mutation crate + app-owned models |
+| Retry / cancellation / concurrency | explicit mutation policy, separate from query freshness semantics | direct executor/manual orchestration | executor-family mutation crate over `fret-executor` |
 | Query refresh after mutation | explicit invalidation or explicit key/epoch change after success | raw `with_query_client(...)` still valid in pure app/driver code | `fret-query` + `fret` app helpers |
 | Local UI materialization of terminal state | ordinary `LocalState<T>` / model updates above the mutation state machine | direct model choreography remains valid | existing state lanes; not reopened here |
 
@@ -52,9 +52,25 @@ Those advanced lanes should stay explicit rather than leaking back into first-co
 
 Reusable ecosystem crates should be able to:
 
-- depend directly on `fret-executor` when they need execution/inbox substrate,
+- depend directly on `fret-executor` when they only need execution/inbox substrate,
+- depend on the new executor-family mutation crate when they need explicit submit semantics without
+  query caching,
 - stay off `fret` unless they intentionally target the default app lane,
 - and keep `fret-query` usage optional when they only need mutation/submit semantics.
+
+## Feature topology target
+
+The long-term `fret` feature split should become:
+
+- `state-selector`
+- `state-query`
+- `state-mutation`
+
+with:
+
+- `state` eventually expanding to the three grouped state lanes once the mutation lane is stable,
+- mutation-specific apps able to enable only `state-mutation` without adopting query semantics,
+- and read-only apps able to stay on `state-query` without pulling submit helpers.
 
 ## Delete-ready / migration rules
 

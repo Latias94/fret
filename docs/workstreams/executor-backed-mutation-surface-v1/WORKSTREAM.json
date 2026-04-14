@@ -17,6 +17,10 @@
       "path": "docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/M1_CONTRACT_FREEZE_2026-04-14.md"
+    },
+    {
       "role": "target",
       "path": "docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md"
     },
@@ -90,6 +94,7 @@
   "evidence": [
     "docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md",
     "docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/M1_CONTRACT_FREEZE_2026-04-14.md",
     "docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md",
     "docs/workstreams/executor-backed-mutation-surface-v1/TODO.md",
     "docs/workstreams/executor-backed-mutation-surface-v1/MILESTONES.md",
@@ -98,8 +103,11 @@
     "docs/audits/postman-like-api-client-first-contact.md",
     "docs/integrating-sqlite-and-sqlx.md",
     "docs/integrating-tokio-and-reqwest.md",
+    "ecosystem/fret-executor/Cargo.toml",
     "ecosystem/fret-executor/src/lib.rs",
+    "ecosystem/fret-query/Cargo.toml",
     "ecosystem/fret-query/src/lib.rs",
+    "ecosystem/fret/Cargo.toml",
     "ecosystem/fret/src/view.rs",
     "ecosystem/fret-genui-core/src/executor.rs",
     "ecosystem/fret-ui-shadcn/src/sonner.rs",

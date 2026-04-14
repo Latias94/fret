@@ -6,6 +6,7 @@ Last updated: 2026-04-14
 Related:
 
 - `M0_BASELINE_AUDIT_2026-04-14.md`
+- `M1_CONTRACT_FREEZE_2026-04-14.md`
 - `TARGET_INTERFACE_STATE.md`
 - `TODO.md`
 - `MILESTONES.md`
@@ -158,13 +159,20 @@ Keep `fret-query` for:
 Do not teach it as the default lane for click-driven request submission, import/export, or other
 explicit one-shot operations.
 
-### 2) Add one shared mutation/submission state machine on the executor side
+### 2) Add one shared mutation/submission state machine in the executor family
 
-The shared mechanism should likely live with `fret-executor` rather than inside `fret-query`,
-because the owner split is already:
+The shared mechanism should live in a new executor-family semantic crate rather than inside
+`fret-query`, because the owner split is already:
 
 - execution/inbox/cancellation substrate -> `fret-executor`
 - read cache semantics -> `fret-query`
+
+M1 freezes a stronger version of that split:
+
+- keep `fret-executor` as the portable substrate,
+- add the higher-level mutation/submission state machine in a new crate on top of that substrate
+  (working name: `fret-mutation`),
+- and keep `fret-query` read-only.
 
 Target capabilities for the mutation mechanism:
 
@@ -207,10 +215,19 @@ The exact surface can still change, but the contract must make these truths obvi
 
 Owns:
 
-- the mutation/submission execution state machine,
-- cancellation/retry/concurrency substrate for submit-like work,
-- inbox/drainer glue,
+- inbox/drainer/task/cancellation substrate,
+- future-spawner integration,
+- wake-at-driver-boundary delivery,
 - and testable runtime-agnostic execution helpers.
+
+#### New executor-family mutation crate
+
+Owns:
+
+- the mutation/submission execution state machine,
+- typed mutation handles and terminal state semantics,
+- cancellation/retry/concurrency policy for explicit submit work,
+- and optional low-level UI adoption helpers if they prove necessary.
 
 #### `ecosystem/fret`
 
