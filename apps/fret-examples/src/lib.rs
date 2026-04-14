@@ -1039,12 +1039,15 @@ mod authoring_surface_policy_tests {
         for marker in [
             "cx.data().query_async(",
             "cx.data().mutation_async(",
+            ".take_mutation_completion(RESPONSE_APPLY_EFFECT, &response_mutation)",
             "QueryKey::<Vec<PersistedHistoryEntry>>::new(HISTORY_QUERY_NS, &())",
             "persist_history_snapshot(",
             "load_saved_history(",
             "sqlx::query(",
             "cx.data().invalidate_query_namespace_after_mutation_success(",
             "MutationConcurrencyPolicy::AllowParallelLatestWins",
+            "response_mutation.retry_last(",
+            "history_save_mutation.retry_last(",
         ] {
             assert!(
                 API_WORKBENCH_LITE_DEMO.contains(marker),
@@ -1054,6 +1057,8 @@ mod authoring_surface_policy_tests {
         assert!(!API_WORKBENCH_LITE_DEMO.contains("maybe_invalidate_saved_history_query("));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("locals.history"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("next_history_id"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("last_applied_seq"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("next_seq"));
     }
 
     #[test]

@@ -17,7 +17,7 @@ The contract shape does.
 | Completion apply | model-backed mutation state and explicit UI-thread apply | manual driver-boundary model updates remain available | executor-family mutation crate + app-owned models |
 | Retry / cancellation / concurrency | explicit mutation policy with user-invoked `retry_last(...)` replay, explicit cancellation, and separate concurrency semantics; no query-style automatic retry by default | direct executor/manual orchestration | executor-family mutation crate over `fret-executor` |
 | Query refresh after mutation | explicit invalidation or explicit key/epoch change after success | raw `with_query_client(...)` still valid in pure app/driver code | `fret-query` + `fret` app helpers |
-| Local UI materialization of terminal state | ordinary `LocalState<T>` / model updates above the mutation state machine | direct model choreography remains valid | existing state lanes; not reopened here |
+| Local UI materialization of terminal state | ordinary `LocalState<T>` / model updates above the mutation state machine, optionally gated by `take_mutation_completion(...)` for once-per-completion apply | direct model choreography remains valid | existing state lanes; not reopened here |
 
 ## Teaching posture
 

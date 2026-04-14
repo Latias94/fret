@@ -1979,6 +1979,38 @@ pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
 }
 
 #[cfg(feature = "state-mutation")]
+fn take_mutation_completion_in<H: UiHost, TIn: 'static, TOut: 'static>(
+    cx: &mut ElementContext<'_, H>,
+    effect_key: u64,
+    handle: &fret_mutation::MutationHandle<TIn, TOut>,
+) -> bool {
+    let completion_token = handle.completion_token();
+    let state = cx
+        .get_model_cloned(handle.model(), Invalidation::Layout)
+        .unwrap_or_default();
+    if !(state.is_success() || state.is_error()) {
+        return false;
+    }
+
+    let Some(completion_token) = completion_token else {
+        return false;
+    };
+
+    cx.keyed_slot_state(
+        (effect_key, handle.model().id()),
+        Option::<std::num::NonZeroU64>::default,
+        |last_seen| {
+            if *last_seen == Some(completion_token) {
+                false
+            } else {
+                *last_seen = Some(completion_token);
+                true
+            }
+        },
+    )
+}
+
+#[cfg(feature = "state-mutation")]
 fn take_mutation_success_in<H: UiHost, TIn: 'static, TOut: 'static>(
     cx: &mut ElementContext<'_, H>,
     effect_key: u64,
@@ -2159,6 +2191,21 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         fret_mutation::ui::MutationElementContextExt::use_mutation_async_local(
             self.cx.cx, policy, submit,
         )
+    }
+
+    /// Consume a mutation completion exactly once for one `(effect_key, handle)` pair on the
+    /// default app data lane.
+    ///
+    /// This covers both success and error terminal states when app code needs to materialize the
+    /// latest terminal result into ordinary `LocalState<T>` or shared models without replaying the
+    /// same completion on later renders.
+    #[cfg(feature = "state-mutation")]
+    pub fn take_mutation_completion<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+    ) -> bool {
+        take_mutation_completion_in(self.cx.cx, effect_key, handle)
     }
 
     /// Consume a mutation success exactly once for one `(effect_key, handle)` pair on the default
@@ -2389,6 +2436,17 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         fret_mutation::ui::MutationElementContextExt::use_mutation_async_local(
             self.cx, policy, submit,
         )
+    }
+
+    /// Consume a mutation completion exactly once for one `(effect_key, handle)` pair inside an
+    /// extracted `UiCx` helper.
+    #[cfg(feature = "state-mutation")]
+    pub fn take_mutation_completion<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+    ) -> bool {
+        take_mutation_completion_in(self.cx, effect_key, handle)
     }
 
     /// Consume a mutation success exactly once for one `(effect_key, handle)` pair inside an
@@ -4087,6 +4145,141 @@ mod tests {
 
     #[cfg(feature = "state-mutation")]
     #[test]
+    fn app_ui_data_take_mutation_completion_only_fires_once_per_terminal_state() {
+        fn render_frame(
+            app: &mut crate::app::App,
+            ui: &mut UiTree<crate::app::App>,
+            services: &mut FakeUiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            st: &mut AppUiRenderRootState,
+            handle_cell: &RefCell<Option<fret_mutation::MutationHandle<u8, u8>>>,
+            completions_seen: &Arc<AtomicUsize>,
+            frame_id: u64,
+        ) {
+            app.set_frame_id(FrameId(frame_id));
+            let root = render_root_with_app_ui(
+                fret_ui::declarative::RenderRootContext::new(ui, app, services, window, bounds),
+                "mutation-completion-once",
+                st,
+                |cx| {
+                    let handle = cx.data().mutation_async(
+                        fret_mutation::MutationPolicy::default(),
+                        |_token, input: Arc<u8>| async move {
+                            if *input == 0 {
+                                Err(fret_mutation::MutationError::transient("boom"))
+                            } else {
+                                Ok(*input)
+                            }
+                        },
+                    );
+                    if handle_cell.borrow().is_none() {
+                        *handle_cell.borrow_mut() = Some(handle.clone());
+                    }
+                    if cx.data().take_mutation_completion(0xF123_2000, &handle) {
+                        completions_seen.fetch_add(1, Ordering::SeqCst);
+                    }
+
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                        Vec::new()
+                    })
+                    .into()
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        let dispatcher: DispatcherHandle = Arc::new(TestDispatcher);
+        app.set_global::<DispatcherHandle>(dispatcher);
+        let spawner: fret_mutation::FutureSpawnerHandle = Arc::new(ReadyOnlySpawner);
+        app.set_global::<fret_mutation::FutureSpawnerHandle>(spawner);
+
+        let mut services = FakeUiServices;
+        let mut st = AppUiRenderRootState::default();
+        let completions_seen = Arc::new(AtomicUsize::new(0));
+        let handle_cell = RefCell::new(None::<fret_mutation::MutationHandle<u8, u8>>);
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            1,
+        );
+        assert_eq!(completions_seen.load(Ordering::SeqCst), 0);
+
+        let handle = handle_cell
+            .borrow()
+            .as_ref()
+            .expect("mutation handle should be captured")
+            .clone();
+
+        assert!(handle.submit(app.models_mut(), window, 0));
+        assert!(drain_inboxes(&mut app, window));
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            2,
+        );
+        assert_eq!(completions_seen.load(Ordering::SeqCst), 1);
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            3,
+        );
+        assert_eq!(
+            completions_seen.load(Ordering::SeqCst),
+            1,
+            "same terminal completion should not retrigger on later renders"
+        );
+
+        assert!(handle.retry_last(app.models_mut(), window));
+        assert!(drain_inboxes(&mut app, window));
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            4,
+        );
+        assert_eq!(
+            completions_seen.load(Ordering::SeqCst),
+            2,
+            "retrying the same stored input should still surface a fresh completion"
+        );
+    }
+
+    #[cfg(feature = "state-mutation")]
+    #[test]
     fn app_ui_data_take_mutation_success_only_fires_once_per_completion() {
         fn render_frame(
             app: &mut crate::app::App,
@@ -4659,6 +4852,9 @@ mod tests {
         assert!(api_source.contains("pub fn invalidate_query<T: Any + Send + Sync + 'static>("));
         assert!(
             api_source.contains("pub fn invalidate_query_namespace(self, namespace: &'static str)")
+        );
+        assert!(
+            api_source.contains("pub fn take_mutation_completion<TIn: 'static, TOut: 'static>(")
         );
         assert!(api_source.contains("pub fn take_mutation_success<TIn: 'static, TOut: 'static>("));
         assert!(api_source.contains("pub fn invalidate_query_after_mutation_success<"));

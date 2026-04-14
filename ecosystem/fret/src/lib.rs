@@ -3198,6 +3198,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`handle.submit(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.submit_action(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.retry_last(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().take_mutation_completion(...)`"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")

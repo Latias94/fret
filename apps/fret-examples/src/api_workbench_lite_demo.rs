@@ -12,10 +12,10 @@ use fret::mutation::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, MutationConcurrencyPolicy,
     MutationError, MutationHandle, MutationPolicy, MutationState,
 };
-use fret::query::{QueryError, QueryHandle, QueryKey, QueryPolicy, QueryState, QueryStatus};
+use fret::query::{QueryError, QueryHandle, QueryKey, QueryPolicy, QueryState};
 use fret::style::{ColorRef, LayoutRefinement, Space, Theme};
 use fret::{FretApp, shadcn};
-use fret_app::{CommandId, CommandMeta, CommandScope, DefaultKeybinding, KeyChord, PlatformFilter};
+use fret_app::{CommandId, CommandMeta, DefaultKeybinding, KeyChord, PlatformFilter};
 use fret_core::{KeyCode, Modifiers, Px};
 use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
@@ -27,6 +27,7 @@ const HISTORY_QUERY_NS: &str = "fret_examples.api_workbench_lite.saved_history.v
 const HISTORY_DB_PATH: &str = ".fret/api-workbench-lite/request-history.sqlite3";
 const HISTORY_KEEP_ENV: &str = "FRET_API_WORKBENCH_KEEP_HISTORY";
 const HISTORY_INVALIDATE_EFFECT: u64 = 0xAFA0_2002;
+const RESPONSE_APPLY_EFFECT: u64 = 0xAFA0_2003;
 
 const TEST_ID_ROOT: &str = "api-workbench-lite.root";
 const TEST_ID_SIDEBAR: &str = "api-workbench-lite.sidebar";
@@ -35,6 +36,7 @@ const TEST_ID_METHOD: &str = "api-workbench-lite.request.method";
 const TEST_ID_HEADERS: &str = "api-workbench-lite.request.headers";
 const TEST_ID_BODY: &str = "api-workbench-lite.request.body";
 const TEST_ID_SEND: &str = "api-workbench-lite.request.send";
+const TEST_ID_RETRY: &str = "api-workbench-lite.request.retry";
 const TEST_ID_SETTINGS_BUTTON: &str = "api-workbench-lite.settings.button";
 const TEST_ID_COMMAND_BUTTON: &str = "api-workbench-lite.command.button";
 const TEST_ID_RESPONSE_STATUS: &str = "api-workbench-lite.response.status";
@@ -51,6 +53,7 @@ const TEST_ID_HISTORY_ERROR: &str = "api-workbench-lite.history.error";
 mod act {
     fret::actions!([
         SendRequest = "api_workbench_lite.send_request.v1",
+        RetryLastRequest = "api_workbench_lite.retry_last_request.v1",
         OpenSettings = "api_workbench_lite.open_settings.v1",
         CloseSettings = "api_workbench_lite.close_settings.v1",
     ]);
@@ -88,7 +91,6 @@ struct HistoryDbGlobal {
 
 #[derive(Debug, Clone)]
 struct RequestSnapshot {
-    seq: u64,
     collection_id: Option<u8>,
     collection_label: Arc<str>,
     method: Arc<str>,
@@ -134,8 +136,6 @@ struct WorkbenchLocals {
     settings_open: LocalState<bool>,
     base_url: LocalState<String>,
     auth_token: LocalState<String>,
-    next_seq: LocalState<u64>,
-    last_applied_seq: LocalState<u64>,
     selected_collection: LocalState<Option<Arc<str>>>,
     selected_history: LocalState<Option<u64>>,
     response_status: LocalState<String>,
@@ -161,8 +161,6 @@ impl WorkbenchLocals {
             settings_open: cx.state().local_init(|| false),
             base_url: cx.state().local_init(|| "http://httpbin.org".to_string()),
             auth_token: cx.state().local_init(String::new),
-            next_seq: cx.state().local_init(|| 1u64),
-            last_applied_seq: cx.state().local_init(|| 0u64),
             selected_collection: cx
                 .state()
                 .local_init(|| Some(Arc::<str>::from(collection_key(0)))),
@@ -247,7 +245,12 @@ impl View for ApiWorkbenchLiteView {
             &history_save_mutation,
             HISTORY_QUERY_NS,
         );
-        maybe_apply_response_snapshot(cx, self.window, &locals, &mutation_state);
+        if cx
+            .data()
+            .take_mutation_completion(RESPONSE_APPLY_EFFECT, &response_mutation)
+        {
+            apply_response_snapshot(cx, self.window, &locals, &mutation_state);
+        }
 
         let status_badge = status_badge(&response_status).test_id(TEST_ID_RESPONSE_STATUS);
         let send_button = shadcn::Button::new("Send Request")
@@ -255,6 +258,11 @@ impl View for ApiWorkbenchLiteView {
             .icon(IconId::new_static("lucide.send-horizontal"))
             .action(act::SendRequest)
             .test_id(TEST_ID_SEND);
+        let retry_button = shadcn::Button::new("Retry Last")
+            .variant(shadcn::ButtonVariant::Outline)
+            .icon(IconId::new_static("lucide.rotate-cw"))
+            .action(act::RetryLastRequest)
+            .test_id(TEST_ID_RETRY);
         let settings_button = shadcn::Button::new("Environments")
             .variant(shadcn::ButtonVariant::Outline)
             .icon(IconId::new_static("lucide.settings-2"))
@@ -277,6 +285,7 @@ impl View for ApiWorkbenchLiteView {
             selected_history,
             status_badge,
             send_button,
+            retry_button,
             settings_button,
             command_button,
         );
@@ -383,6 +392,20 @@ fn bind_actions(
             )
         }
     });
+    cx.actions().models::<act::RetryLastRequest>({
+        let locals = locals.clone();
+        let response_mutation = response_mutation.clone();
+        let history_save_mutation = history_save_mutation.clone();
+        move |models| {
+            retry_last_request(
+                models,
+                window,
+                &locals,
+                &response_mutation,
+                &history_save_mutation,
+            )
+        }
+    });
 
     cx.actions().availability::<act::SendRequest>({
         let url = locals.url.clone();
@@ -391,6 +414,16 @@ fn bind_actions(
                 fret_ui::CommandAvailability::Blocked
             } else {
                 fret_ui::CommandAvailability::Available
+            }
+        }
+    });
+    cx.actions().availability::<act::RetryLastRequest>({
+        let response_mutation = response_mutation.clone();
+        move |host, _acx| {
+            if can_retry_last_request(host.models_mut(), &response_mutation) {
+                fret_ui::CommandAvailability::Available
+            } else {
+                fret_ui::CommandAvailability::Blocked
             }
         }
     });
@@ -419,10 +452,8 @@ fn submit_request(
         return false;
     }
 
-    let seq = locals.next_seq.value_in_or_default(models);
     let selected_collection = locals.selected_collection.value_in(models).flatten();
     let snapshot = RequestSnapshot {
-        seq,
         collection_id: selected_collection
             .as_deref()
             .and_then(collection_id_from_key),
@@ -446,8 +477,50 @@ fn submit_request(
     };
     let snapshot_url = snapshot.url.clone();
 
+    let mut handled = prepare_request_submission_ui(models, locals);
+    handled = history_save_mutation.submit(models, window, snapshot.clone()) || handled;
+    handled = response_mutation.submit(models, window, snapshot) || handled;
+
+    tracing::info!(url = %snapshot_url, handled, "api_workbench_lite queued request");
+
+    handled
+}
+
+fn retry_last_request(
+    models: &mut fret_runtime::ModelStore,
+    window: WindowId,
+    locals: &WorkbenchLocals,
+    response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+    history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+) -> bool {
+    if !can_retry_last_request(models, response_mutation) {
+        return false;
+    }
+
+    let mut handled = prepare_request_submission_ui(models, locals);
+    handled = history_save_mutation.retry_last(models, window) || handled;
+    handled = response_mutation.retry_last(models, window) || handled;
+    tracing::info!(handled, "api_workbench_lite retried last request");
+    handled
+}
+
+fn can_retry_last_request(
+    models: &mut fret_runtime::ModelStore,
+    response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+) -> bool {
+    models
+        .read(response_mutation.model(), |st| {
+            st.input.is_some() && !st.is_running()
+        })
+        .ok()
+        .unwrap_or(false)
+}
+
+fn prepare_request_submission_ui(
+    models: &mut fret_runtime::ModelStore,
+    locals: &WorkbenchLocals,
+) -> bool {
     let mut handled = false;
-    handled = locals.next_seq.set_in(models, seq.saturating_add(1)) || handled;
     handled = locals.selected_history.set_in(models, None) || handled;
     handled = locals
         .response_tab
@@ -466,16 +539,6 @@ fn submit_request(
         .response_headers
         .set_in(models, "Response headers will appear here.".to_string())
         || handled;
-    handled = history_save_mutation.submit(models, window, snapshot.clone()) || handled;
-    handled = response_mutation.submit(models, window, snapshot) || handled;
-
-    tracing::info!(
-        seq,
-        url = %snapshot_url,
-        handled,
-        "api_workbench_lite queued request"
-    );
-
     handled
 }
 
@@ -490,6 +553,7 @@ fn shell_frame(
     selected_history: Option<u64>,
     status_badge: impl UiChild,
     send_button: impl UiChild,
+    retry_button: impl UiChild,
     settings_button: impl UiChild,
     command_button: impl UiChild,
 ) -> AnyElement {
@@ -526,9 +590,11 @@ fn shell_frame(
                     .gap(Space::N1)
                     .flex_1()
                     .min_w_0(),
-                    ui::h_flex(|cx| ui::children![cx; command_button, settings_button, send_button])
-                        .gap(Space::N2)
-                        .items_center(),
+                    ui::h_flex(|cx| {
+                        ui::children![cx; command_button, settings_button, retry_button, send_button]
+                    })
+                    .gap(Space::N2)
+                    .items_center(),
                 ]
             }),
         ]
@@ -906,18 +972,14 @@ fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElemen
     .into_element(cx)
 }
 
-fn maybe_apply_response_snapshot(
+fn apply_response_snapshot(
     cx: &mut AppUi<'_, '_>,
     window: WindowId,
     locals: &WorkbenchLocals,
     state: &MutationState<RequestSnapshot, ResponsePayload>,
 ) {
-    let Some(snapshot) = state.input.as_deref() else {
-        return;
-    };
     let ready = state.is_success() || state.is_error();
-    let last_applied = locals.last_applied_seq.layout_value(cx);
-    if !ready || snapshot.seq <= last_applied {
+    if !ready {
         return;
     }
 
@@ -973,12 +1035,6 @@ fn maybe_apply_response_snapshot(
         .update(locals.response_headers.model(), |value: &mut String| {
             *value = headers
         });
-    let _ = cx
-        .app
-        .models_mut()
-        .update(locals.last_applied_seq.model(), |value: &mut u64| {
-            *value = snapshot.seq
-        });
     cx.app.request_redraw(window);
 }
 
@@ -1031,6 +1087,37 @@ fn install_commands(app: &mut App) {
                         KeyCode::Enter,
                         Modifiers {
                             ctrl: true,
+                            ..Modifiers::default()
+                        },
+                    ),
+                ),
+            ]),
+    );
+    app.commands_mut().register(
+        CommandId::new(act::RetryLastRequest::ID_STR),
+        CommandMeta::new("Retry last request")
+            .with_category("API Workbench")
+            .with_description("Replay the last submitted request and store a fresh history row.")
+            .with_keywords(["retry", "request", "replay", "postman"])
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::Enter,
+                        Modifiers {
+                            meta: true,
+                            shift: true,
+                            ..Modifiers::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::All,
+                    KeyChord::new(
+                        KeyCode::Enter,
+                        Modifiers {
+                            ctrl: true,
+                            shift: true,
                             ..Modifiers::default()
                         },
                     ),
@@ -1279,7 +1366,6 @@ async fn run_request(
 
     let request = snapshot.clone();
     tracing::info!(
-        seq = request.seq,
         method = %request.method,
         url = %request.url,
         "api_workbench_lite run_request started"
@@ -1291,7 +1377,6 @@ async fn run_request(
     .await
     .map_err(|_| {
         tracing::warn!(
-            seq = snapshot.seq,
             timeout_s = REQUEST_TIMEOUT.as_secs(),
             "api_workbench_lite request timed out"
         );
@@ -1306,7 +1391,6 @@ fn execute_request_blocking(snapshot: &RequestSnapshot) -> Result<ResponsePayloa
     let start = std::time::Instant::now();
 
     tracing::info!(
-        seq = snapshot.seq,
         method = %snapshot.method,
         resolved_url = %resolved_url,
         "api_workbench_lite execute_request_blocking started"

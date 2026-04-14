@@ -34,6 +34,9 @@
 - M2 now has a real default invalidation handoff on the framework surface:
   - `ecosystem/fret/src/view.rs` adds `cx.data().take_mutation_success(...)` for one-shot
     completion gating on the app lane,
+  - now also adds `cx.data().take_mutation_completion(...)` for one-shot terminal
+    success-or-error apply when app code needs to materialize the latest mutation result into
+    ordinary local/shared UI state,
   - adds `cx.data().invalidate_query_after_mutation_success(...)` and
     `cx.data().invalidate_query_namespace_after_mutation_success(...)` for explicit read-lane
     refresh after one completed mutation success,
@@ -45,6 +48,10 @@
   - `apps/fret-examples/src/api_workbench_lite_demo.rs` keeps HTTP send on one mutation lane,
   - adds SQLite-backed request history reads on `cx.data().query_async(...)`,
   - adds explicit history writes on `cx.data().mutation_async(...)`,
+  - now exposes an explicit `Retry Last Request` command/button that replays the last request and
+    persists another history row through the same mutation lane,
+  - removes demo-local request sequence bookkeeping in favor of the shared
+    `take_mutation_completion(...)` once-per-completion app helper,
   - and now invalidates the saved-history query namespace through the shared
     `invalidate_query_namespace_after_mutation_success(...)` helper instead of local render-owned
     dedupe glue.
