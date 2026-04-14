@@ -24,6 +24,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 ## Choose this vs adjacent skills
 
 - Use this skill when the main deliverable is a repro artifact, script, bundle, or triage result.
+- Use `fret-framework-consumer-audit` when the main goal is to discover broad consumer-journey friction; `fret-diag-workflow` should then supply the proof artifact for the top issue rather than own the whole audit.
 - Use `fret-shadcn-source-alignment` or `fret-material-source-alignment` when the main goal is upstream parity work.
 - Use `fret-ui-review` when the main goal is an audit, not an artifact-producing workflow.
 
@@ -166,6 +167,7 @@ Ship a result that is reviewable and reusable:
 ## Related skills
 
 - `fret-skills-playbook`
+- `fret-framework-consumer-audit`
 - `fret-ui-review`
 - `fret-shadcn-source-alignment`
 - `fret-material-source-alignment`

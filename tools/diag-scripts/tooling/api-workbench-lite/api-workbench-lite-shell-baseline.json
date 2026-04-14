@@ -1,0 +1,44 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "API workbench lite: shell baseline",
+    "tags": [
+      "tooling",
+      "api-workbench-lite",
+      "consumer-audit",
+      "postman-like",
+      "screenshot",
+      "layout"
+    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the shell to mount.",
+      "Captures the default first-contact layout before any request is sent."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "api-workbench-lite.root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1320.0, "height_px": 860.0 },
+    { "type": "wait_frames", "n": 24 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "api-workbench-lite.shell-baseline.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "api-workbench-lite.shell-baseline"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "api-workbench-lite.shell-baseline"
+    }
+  ]
+}

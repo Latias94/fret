@@ -17,6 +17,7 @@ Use this skill when the goal is to build or refactor a **cohesive app surface** 
 ## Choose this vs adjacent skills
 
 - Use this skill for **shipping a usable surface** with a clear style, shell, and gate.
+- Use `fret-framework-consumer-audit` when the main goal is to uncover framework friction by acting like a real app author; this builder skill then becomes one instrument inside that audit.
 - Use `fret-shadcn-source-alignment` when the main task is parity with shadcn/Radix.
 - Use `fret-ui-review` when the main task is auditing an existing UI.
 - Use `fret-diag-workflow` when the primary deliverable is a scripted repro or artifact.
@@ -310,6 +311,7 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 
 ## Related skills
 
+- `fret-framework-consumer-audit`
 - `fret-external-app-mode`
 - `fret-skills-playbook`
 - `fret-diag-workflow`

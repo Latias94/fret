@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
 
     if demo == "--list" || demo == "-l" {
         eprintln!(
-            "Available demos:\n  simple-todo\n  todo_demo\n  query_demo\n  query_async_tokio_demo\n  hello_counter_demo\n  async_playground_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  postprocess_theme_demo\n  genui_demo\n  markdown_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
+            "Available demos:\n  simple-todo\n  todo_demo\n  api_workbench_lite_demo\n  query_demo\n  query_async_tokio_demo\n  hello_counter_demo\n  async_playground_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  postprocess_theme_demo\n  genui_demo\n  markdown_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
         );
         return Ok(());
     }
@@ -17,6 +17,9 @@ fn main() -> anyhow::Result<()> {
             fret_examples::simple_todo_demo::run()
         }
         "todo_demo" | "todo-demo" => fret_examples::todo_demo::run(),
+        "api_workbench_lite_demo" | "api-workbench-lite-demo" => {
+            fret_examples::api_workbench_lite_demo::run()
+        }
         "query_demo" | "query-demo" => fret_examples::query_demo::run(),
         "query_async_tokio_demo" | "query-async-tokio-demo" => {
             fret_examples::query_async_tokio_demo::run()

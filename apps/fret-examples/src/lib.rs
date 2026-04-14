@@ -90,6 +90,8 @@ pub(crate) fn sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metric
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alpha_mode_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod api_workbench_lite_demo;
 pub mod area_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod assets_demo;
@@ -1486,6 +1488,7 @@ mod authoring_surface_policy_tests {
             "editor_imui::property_grid(",
             "editor_imui::text_field(",
             "editor_imui::drag_value(",
+            "editor_imui::numeric_input(",
             "editor_imui::slider(",
             "editor_imui::field_status_badge(",
             "editor_imui::checkbox(",
@@ -1601,6 +1604,7 @@ mod authoring_surface_policy_tests {
                 "use fret_ui_editor::imui as editor_imui;",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "editor_imui::property_grid(",
+                "editor_imui::numeric_input(",
                 "editor_imui::gradient_editor(",
             ],
             &[],
@@ -1633,13 +1637,13 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack() {
+    fn immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw() {
         for marker in [
             "Mounting rule for the immediate-mode lane:",
-            "`fret_imui::imui(cx, ...)`.",
-            "`fret_imui::imui_vstack(cx.elements(), ...)`.",
-            "`imui_vstack(...)` is the explicit root-host bridge",
-            "`imui_action_basics` demonstrates the nested layout-host shape; `imui_hello_demo` remains the",
+            "`fret_imui::imui(...)` is now the safe default",
+            "`fret_imui::imui_raw(cx, ...)`.",
+            "`imui_raw(...)` is the advanced seam",
+            "`imui_action_basics` demonstrates the explicit layout-host + raw shape; `imui_hello_demo`",
         ] {
             assert!(
                 EXAMPLES_DOCS_README.contains(marker),
@@ -1650,13 +1654,47 @@ mod authoring_surface_policy_tests {
         for marker in [
             "If your IMUI content already lives under an explicit layout host, prefer",
             "If you are mounting IMUI directly at the view root or under a non-layout parent, prefer",
-            "`imui_vstack(...)` is the explicit root-host bridge, not evidence that generic helper growth should",
+            "`imui_raw(...)` is the advanced explicit-layout seam, not evidence that generic helper growth",
         ] {
             assert!(
                 IMUI_ROOT_HOSTING_RULE_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the root-host teaching rule explicit: {marker}"
             );
         }
+    }
+
+    #[test]
+    fn imui_editor_proof_demo_defaults_to_imgui_like_dense_preset_for_editor_grade_launches() {
+        for marker in [
+            "const ENV_EDITOR_PRESET: &str = \"FRET_IMUI_EDITOR_PRESET\";",
+            "editor_theme_preset_from_env(ENV_EDITOR_PRESET)",
+            "EditorThemePresetV1::ImguiLikeDense",
+        ] {
+            assert!(
+                IMUI_EDITOR_PROOF_DEMO.contains(marker),
+                "imui_editor_proof_demo should default to the dense editor preset while still honoring env override: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn imui_editor_proof_demo_keeps_a_demo_owned_fixed_editor_theme() {
+        for marker in [
+            ".defaults(Defaults {",
+            "shadcn: false,",
+            "install_imui_editor_proof_theme(app);",
+            "shadcn::themes::apply_shadcn_new_york(",
+        ] {
+            assert!(
+                IMUI_EDITOR_PROOF_DEMO.contains(marker),
+                "imui_editor_proof_demo should keep a demo-owned fixed editor host theme: {marker}"
+            );
+        }
+
+        assert!(
+            !IMUI_EDITOR_PROOF_DEMO.contains("shadcn::app::install_with_theme("),
+            "imui_editor_proof_demo should not re-enter the default shadcn install lifecycle"
+        );
     }
 
     #[test]
@@ -3991,7 +4029,7 @@ mod authoring_surface_policy_tests {
                 ".selector_model_paint(&editor_gradient_stops_model,",
                 ".selector_model_paint(&m.target, |target| target)",
                 "let shared = cx.data().selector_model_paint(",
-                "(&name_model, &drag_value_model, &slider_model, &enabled_model, &shading_model, &gradient_angle_model, &gradient_stops_model,)",
+                "(&name_model, &drag_value_model, &numeric_input_model, &slider_model, &enabled_model, &shading_model, &gradient_angle_model, &gradient_stops_model,)",
             ],
             &[
                 "let query = cx.watch_model(&editor_name_assist_model)",
@@ -4012,6 +4050,7 @@ mod authoring_surface_policy_tests {
                 ".get_model_cloned(&editor_transform_outcome_model,",
                 ".get_model_cloned(&name_model, fret_ui::Invalidation::Paint)",
                 ".get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&numeric_input_model, fret_ui::Invalidation::Paint)",
                 ".get_model_copied(&slider_model, fret_ui::Invalidation::Paint)",
                 ".get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)",
                 ".get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)",

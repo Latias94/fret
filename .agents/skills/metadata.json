@@ -1,8 +1,8 @@
 {
   "name": "fret-skills",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-04-02",
+  "last_updated": "2026-04-14",
   "intents": {
     "manage_workstream_lifecycle": {
       "primary": "fret-workstream-lifecycle",
@@ -29,6 +29,15 @@
       "also_consider": [
         "fret-ui-review",
         "fret-diag-workflow"
+      ]
+    },
+    "audit_framework_consumer_experience": {
+      "primary": "fret-framework-consumer-audit",
+      "also_consider": [
+        "fret-app-ui-builder",
+        "fret-ui-review",
+        "fret-diag-workflow",
+        "fret-external-app-mode"
       ]
     },
     "review_or_audit_ui": {
@@ -77,11 +86,12 @@
       "fret-external-app-mode"
     ],
     "framework": ["fret-framework-maintainer-guide", "fret-mobile-real-device-debug"],
-    "ui": ["fret-app-ui-builder", "fret-ui-review"],
+    "ui": ["fret-framework-consumer-audit", "fret-app-ui-builder", "fret-ui-review"],
     "diagnostics": ["fret-diag-workflow", "fret-perf-optimization", "fret-perf-tracy-bridge"],
     "performance": ["fret-perf-optimization", "fret-diag-workflow", "fret-perf-tracy-bridge"],
     "parity": ["fret-shadcn-source-alignment", "fret-material-source-alignment"],
     "quality": [
+      "fret-framework-consumer-audit",
       "fret-crate-audits",
       "fret-boundary-checks",
       "fret-fixture-driven-harnesses",
@@ -182,6 +192,36 @@
       "with_state",
       "keyed",
       "Model<"
+    ],
+    "consumer_dx": [
+      "developer experience",
+      "framework friction",
+      "consumer journey",
+      "onboarding audit",
+      "example audit",
+      "api ergonomics",
+      "visual parity",
+      "screenshot audit",
+      "complex app",
+      "real app",
+      "workspace shell",
+      "editor notes",
+      "knowledge viewer",
+      "asset browser",
+      "node graph",
+      "ecosystem support",
+      "integration friction",
+      "starter template",
+      "public surface",
+      "first hour",
+      "simple-todo",
+      "开发者体验",
+      "用户视角",
+      "脚手架",
+      "框架易用性",
+      "截图对比",
+      "复杂应用",
+      "生态支持"
     ],
     "hooks": [
       "action hook",
@@ -372,7 +412,7 @@
     "local_snapshots": "Local upstream snapshots are optional and are not part of the published skills bundle."
   },
   "profiles": {
-    "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow", "fret-perf-optimization", "fret-perf-tracy-bridge"],
+    "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-framework-consumer-audit", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow", "fret-perf-optimization", "fret-perf-tracy-bridge"],
     "framework-dev": [
       "fret-repo-orientation",
       "fret-workstream-lifecycle",
@@ -380,6 +420,7 @@
       "fret-framework-maintainer-guide",
       "fret-mobile-real-device-debug",
       "fret-external-app-mode",
+      "fret-framework-consumer-audit",
       "fret-app-ui-builder",
       "fret-ui-review",
       "fret-diag-workflow",

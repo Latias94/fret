@@ -17,6 +17,7 @@ guideline-based skills (e.g. Vercel’s web interface checks), but tailored to F
 ## Choose this vs adjacent skills
 
 - Use this skill when the task is **review/audit** (produce findings + recommended fixes/gates).
+- Use `fret-framework-consumer-audit` when the task is to simulate a framework user's journey and uncover onboarding/example/API friction rather than review one existing surface.
 - Use `fret-app-ui-builder` when you want to build/refactor a UI via a golden-path workflow.
 - Use `fret-diag-workflow` when the primary deliverable is a deterministic repro + gate + bundle.
 - If a component behavior seems wrong, treat it as a framework/eco responsibility:
@@ -171,6 +172,7 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 
 ## Related skills
 
+- `fret-framework-consumer-audit`
 - `fret-app-ui-builder`
 - `fret-external-app-mode`
 - `fret-diag-workflow`

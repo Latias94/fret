@@ -162,6 +162,7 @@ Pick **one primary skill** based on intent, then pull in the adjacent ones only 
 
 - Get oriented / pick the right layer: `fret-repo-orientation` (then `fret-skills-playbook`)
 - Start, continue, or close out a workstream lane with assumptions-first resume: `fret-workstream-lifecycle`
+- Audit framework developer experience through a real consumer journey: `fret-framework-consumer-audit`
 - Build a good-looking app UI (golden path): `fret-app-ui-builder`
 - Review/audit a Fret UI: `fret-ui-review`
 - Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
@@ -178,6 +179,7 @@ Common adjacent pulls:
 
 - When building: start from `fret-app-ui-builder/references/` (recipes + mind models)
 - When auditing: use `fret-ui-review` output format (terse findings)
+- When auditing framework DX through a real user journey: start with `fret-framework-consumer-audit`, then pull `fret-app-ui-builder`, `fret-diag-workflow`, or `fret-external-app-mode` only as needed
 
 ## Skills
 
@@ -185,6 +187,7 @@ Common adjacent pulls:
 - `fret-workstream-lifecycle`: Manage the lifecycle of a workstream lane: create the minimal doc set, reopen existing lanes with an assumptions-first evidence pass, keep status explicit, decide continue vs follow-on, and close out with gates/evidence.
 - `fret-skills-playbook`: Shared conventions for execution-mode selection, goal-backward verification, layering decisions, regression gates, `test_id`/diag script style, and evidence discipline across all skills.
 - `fret-external-app-mode`: Use the skills from an external app repo (outside the mono-repo): what works without `tools/` and `fretboard`, and how to keep anchors and tooling usable via a Fret checkout.
+- `fret-framework-consumer-audit`: Audit Fret from a framework-consumer/developer-experience perspective by running a real user journey, classifying friction by owner layer, and leaving proof artifacts instead of vague complaints.
 - `fret-app-ui-builder`: Product-oriented golden path: pick a baseline style, apply token overrides, compose shadcn recipes, and leave diag/perf gates early.
 - `fret-ui-review`: Review/audit Fret UI code for framework-aligned UX correctness (tokens, focus-visible, overlays, commands gating, `test_id`, and regression gates).
 - `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, goal-backward verification, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
