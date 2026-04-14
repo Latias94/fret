@@ -801,9 +801,12 @@ requests, or tool-style actions that must not replay just because render observe
 **Default app note:** on the `fret` golden path, enable `fret`'s `state-mutation` feature and
 create handles with `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)`.
 Observe state with `handle.read_layout(cx)`, start work only with `handle.submit(...)` or
-`handle.submit_action(...)`, and invalidate affected read namespaces with
-`cx.data().invalidate_query_namespace(...)` after success. When app code needs explicit submit
-nouns, import them from `fret::mutation::{MutationPolicy, MutationState, ...}` instead of
+`handle.submit_action(...)`, and prefer
+`cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
+mutation-to-query handoff on `AppUi` / extracted `UiCx`. Keep
+`cx.data().invalidate_query_namespace(...)` for direct invalidation paths that are not driven by a
+mutation completion. When app code needs explicit submit nouns, import them from
+`fret::mutation::{MutationPolicy, MutationState, ...}` instead of
 expecting them from `fret::app::prelude::*`.
 
 **Advanced/manual note:** keep raw `fret-executor` + `InboxDrainer` for app/driver surfaces that

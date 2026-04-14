@@ -1043,7 +1043,7 @@ mod authoring_surface_policy_tests {
             "persist_history_snapshot(",
             "load_saved_history(",
             "sqlx::query(",
-            "cx.data().invalidate_query_namespace(HISTORY_QUERY_NS);",
+            "cx.data().invalidate_query_namespace_after_mutation_success(",
             "MutationConcurrencyPolicy::AllowParallelLatestWins",
         ] {
             assert!(
@@ -1051,6 +1051,7 @@ mod authoring_surface_policy_tests {
                 "api_workbench_lite_demo should keep the SQLite history proof explicit: {marker}"
             );
         }
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("maybe_invalidate_saved_history_query("));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("locals.history"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("next_history_id"));
     }

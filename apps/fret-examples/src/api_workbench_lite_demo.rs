@@ -26,6 +26,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const HISTORY_QUERY_NS: &str = "fret_examples.api_workbench_lite.saved_history.v1";
 const HISTORY_DB_PATH: &str = ".fret/api-workbench-lite/request-history.sqlite3";
 const HISTORY_KEEP_ENV: &str = "FRET_API_WORKBENCH_KEEP_HISTORY";
+const HISTORY_INVALIDATE_EFFECT: u64 = 0xAFA0_2002;
 
 const TEST_ID_ROOT: &str = "api-workbench-lite.root";
 const TEST_ID_SIDEBAR: &str = "api-workbench-lite.sidebar";
@@ -240,9 +241,12 @@ impl View for ApiWorkbenchLiteView {
         let response_status = locals.response_status.layout_value(cx);
         let history_state = history_query.read_layout(cx);
         let saved_history = history_state.data.as_deref().cloned().unwrap_or_default();
-        let history_save_state = history_save_mutation.read_layout(cx);
         let mutation_state = response_mutation.read_layout(cx);
-        maybe_invalidate_saved_history_query(cx, &history_save_state);
+        let _ = cx.data().invalidate_query_namespace_after_mutation_success(
+            HISTORY_INVALIDATE_EFFECT,
+            &history_save_mutation,
+            HISTORY_QUERY_NS,
+        );
         maybe_apply_response_snapshot(cx, self.window, &locals, &mutation_state);
 
         let status_badge = status_badge(&response_status).test_id(TEST_ID_RESPONSE_STATUS);
@@ -976,31 +980,6 @@ fn maybe_apply_response_snapshot(
             *value = snapshot.seq
         });
     cx.app.request_redraw(window);
-}
-
-fn maybe_invalidate_saved_history_query(
-    cx: &mut AppUi<'_, '_>,
-    state: &MutationState<RequestSnapshot, ()>,
-) {
-    if !state.is_success() {
-        return;
-    }
-
-    let finished_at = state.updated_at;
-    let should_invalidate =
-        cx.elements()
-            .root_state(Option::<fret_core::time::Instant>::default, |last_seen| {
-                if *last_seen == finished_at {
-                    false
-                } else {
-                    *last_seen = finished_at;
-                    true
-                }
-            });
-
-    if should_invalidate {
-        cx.data().invalidate_query_namespace(HISTORY_QUERY_NS);
-    }
 }
 
 fn install_tokio_spawner_and_history_db(app: &mut App) {

@@ -19,7 +19,8 @@ On the default `fret` app surface, prefer the grouped helpers:
 
 - `cx.data().query_async(...)` / `cx.data().query_async_local(...)` for observed reads,
 - `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)` for explicit writes,
-- `cx.data().invalidate_query_namespace(...)` after successful submit.
+- `cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
+  mutation-to-query handoff inside `AppUi` / extracted `UiCx`.
 
 Do not teach a Save/Delete/Sync flow as `query_async(...)`: queries stay on the read/cache lane,
 while writes stay on the explicit submit lane.
@@ -156,7 +157,8 @@ Use this as the default contract for SQLx + `fret-query`:
 1. Read with `cx.data().query_async(...)`.
 2. Create a write handle with `cx.data().mutation_async(...)`.
 3. Only `handle.submit(...)` starts work.
-4. After a successful submit, call `cx.data().invalidate_query_namespace("my_app.db.todos.v1")`.
+4. After a successful submit, call
+   `cx.data().invalidate_query_namespace_after_mutation_success(...)`.
 5. On the next render, active read handles refetch because the namespace is stale.
 
 This keeps read keys stable and avoids teaching query handles as implicit submit buttons.
@@ -167,8 +169,7 @@ This keeps read keys stable and avoids teaching query handles as implicit submit
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret::mutation::{MutationError, MutationPolicy, MutationState};
-use fret_core::time::Instant;
+use fret::mutation::{MutationError, MutationPolicy};
 
 #[derive(Clone)]
 struct SaveTodoInput {
@@ -176,6 +177,7 @@ struct SaveTodoInput {
 }
 
 const TODOS_NS: &str = "my_app.db.todos.v1";
+const SAVE_TODO_INVALIDATE: u64 = 0xAFA0_2001;
 
 fn render_todo_editor(cx: &mut AppUi<'_, '_>) -> Ui {
     let pool = cx
@@ -200,32 +202,13 @@ fn render_todo_editor(cx: &mut AppUi<'_, '_>) -> Ui {
     );
 
     let save_state = save_todo.read_layout(cx);
-    maybe_invalidate_todos_after_save(cx, &save_state);
+    let _ = cx.data().invalidate_query_namespace_after_mutation_success(
+        SAVE_TODO_INVALIDATE,
+        &save_todo,
+        TODOS_NS,
+    );
 
     ui::raw_text(format!("save status: {}", save_state.status.as_str())).into()
-}
-
-fn maybe_invalidate_todos_after_save(
-    cx: &mut AppUi<'_, '_>,
-    save_state: &MutationState<SaveTodoInput, ()>,
-) {
-    if !save_state.is_success() {
-        return;
-    }
-
-    let finished_at = save_state.updated_at;
-    let should_invalidate = cx.root_state(Option::<Instant>::default, |last_seen| {
-        if *last_seen == finished_at {
-            false
-        } else {
-            *last_seen = finished_at;
-            true
-        }
-    });
-
-    if should_invalidate {
-        cx.data().invalidate_query_namespace(TODOS_NS);
-    }
 }
 
 fn on_save_clicked(
@@ -238,11 +221,12 @@ fn on_save_clicked(
 }
 ```
 
-Why gate invalidation on `updated_at` (or your own monotonic token)?
+Why use the grouped success-gated helper?
 
 - `handle.read_layout(cx)` keeps the terminal success/error state visible,
 - render can happen many times after a successful submit,
-- so invalidation should fire once per completed submit, not once per frame.
+- and `cx.data().invalidate_query_namespace_after_mutation_success(...)` only fires once per
+  completed success for one `(effect_key, handle)` pair.
 
 ### wasm note
 

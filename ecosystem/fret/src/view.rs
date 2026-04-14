@@ -1978,6 +1978,34 @@ pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
+#[cfg(feature = "state-mutation")]
+fn take_mutation_success_in<H: UiHost, TIn: 'static, TOut: 'static>(
+    cx: &mut ElementContext<'_, H>,
+    effect_key: u64,
+    handle: &fret_mutation::MutationHandle<TIn, TOut>,
+) -> bool {
+    let state = cx
+        .get_model_cloned(handle.model(), Invalidation::Layout)
+        .unwrap_or_default();
+    if !state.is_success() {
+        return false;
+    }
+
+    let finished_at = state.updated_at;
+    cx.keyed_slot_state(
+        (effect_key, handle.model().id()),
+        Option::<fret_core::time::Instant>::default,
+        |last_seen| {
+            if *last_seen == finished_at {
+                false
+            } else {
+                *last_seen = finished_at;
+                true
+            }
+        },
+    )
+}
+
 impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
     /// Default LocalState-first selector path for app-facing derived values that affect layout.
     ///
@@ -2129,6 +2157,20 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         )
     }
 
+    /// Consume a mutation success exactly once for one `(effect_key, handle)` pair on the default
+    /// app data lane.
+    ///
+    /// This keeps terminal mutation state reviewable via `read_layout(cx)` while avoiding repeated
+    /// render-triggered follow-up work after the same completion.
+    #[cfg(feature = "state-mutation")]
+    pub fn take_mutation_success<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+    ) -> bool {
+        take_mutation_success_in(self.cx.cx, effect_key, handle)
+    }
+
     /// Default grouped invalidation path for app-facing query state when the caller is already on
     /// `AppUi`.
     #[cfg(feature = "state-query")]
@@ -2147,6 +2189,50 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
             client.invalidate_namespace(namespace);
         });
         self.cx.cx.app.request_redraw(self.cx.cx.window);
+    }
+
+    /// Invalidate one query key exactly once after a mutation reports success on the default app
+    /// data lane.
+    #[cfg(all(feature = "state-query", feature = "state-mutation"))]
+    pub fn invalidate_query_after_mutation_success<
+        TIn: 'static,
+        TOut: 'static,
+        T: Any + Send + Sync + 'static,
+    >(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        key: fret_query::QueryKey<T>,
+    ) -> bool {
+        if !take_mutation_success_in(self.cx.cx, effect_key, handle) {
+            return false;
+        }
+
+        let _ = fret_query::with_query_client(self.cx.cx.app, |client, app| {
+            client.invalidate(app, key);
+        });
+        self.cx.cx.app.request_redraw(self.cx.cx.window);
+        true
+    }
+
+    /// Invalidate one query namespace exactly once after a mutation reports success on the
+    /// default app data lane.
+    #[cfg(all(feature = "state-query", feature = "state-mutation"))]
+    pub fn invalidate_query_namespace_after_mutation_success<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        namespace: &'static str,
+    ) -> bool {
+        if !take_mutation_success_in(self.cx.cx, effect_key, handle) {
+            return false;
+        }
+
+        let _ = fret_query::with_query_client(self.cx.cx.app, |client, _app| {
+            client.invalidate_namespace(namespace);
+        });
+        self.cx.cx.app.request_redraw(self.cx.cx.window);
+        true
     }
 }
 
@@ -2301,6 +2387,17 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
+    /// Consume a mutation success exactly once for one `(effect_key, handle)` pair inside an
+    /// extracted `UiCx` helper.
+    #[cfg(feature = "state-mutation")]
+    pub fn take_mutation_success<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+    ) -> bool {
+        take_mutation_success_in(self.cx, effect_key, handle)
+    }
+
     /// Grouped invalidation helper for extracted `UiCx` app-facing helpers.
     #[cfg(feature = "state-query")]
     pub fn invalidate_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
@@ -2317,6 +2414,50 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
             client.invalidate_namespace(namespace);
         });
         self.cx.app.request_redraw(self.cx.window);
+    }
+
+    /// Invalidate one query key exactly once after a mutation reports success inside an extracted
+    /// `UiCx` helper.
+    #[cfg(all(feature = "state-query", feature = "state-mutation"))]
+    pub fn invalidate_query_after_mutation_success<
+        TIn: 'static,
+        TOut: 'static,
+        T: Any + Send + Sync + 'static,
+    >(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        key: fret_query::QueryKey<T>,
+    ) -> bool {
+        if !take_mutation_success_in(self.cx, effect_key, handle) {
+            return false;
+        }
+
+        let _ = fret_query::with_query_client(self.cx.app, |client, app| {
+            client.invalidate(app, key);
+        });
+        self.cx.app.request_redraw(self.cx.window);
+        true
+    }
+
+    /// Invalidate one query namespace exactly once after a mutation reports success inside an
+    /// extracted `UiCx` helper.
+    #[cfg(all(feature = "state-query", feature = "state-mutation"))]
+    pub fn invalidate_query_namespace_after_mutation_success<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        namespace: &'static str,
+    ) -> bool {
+        if !take_mutation_success_in(self.cx, effect_key, handle) {
+            return false;
+        }
+
+        let _ = fret_query::with_query_client(self.cx.app, |client, _app| {
+            client.invalidate_namespace(namespace);
+        });
+        self.cx.app.request_redraw(self.cx.window);
+        true
     }
 }
 
@@ -2563,8 +2704,8 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     /// Grouped selector/query helpers for the default app authoring surface.
     ///
     /// Discover this namespace through `cx.data()` rather than naming the returned carrier type
-    /// directly. The grouped surface owns selector helpers, query creation, and query
-    /// invalidation with the redraw shell included.
+    /// directly. The grouped surface owns selector helpers, query creation, mutation creation,
+    /// and query invalidation / mutation-success handoff helpers with the redraw shell included.
     pub fn data(&mut self) -> AppUiData<'_, 'cx, 'a, H> {
         AppUiData { cx: self }
     }
@@ -2879,6 +3020,8 @@ mod tests {
         view_init_window, view_view,
     };
     use std::any::Any;
+    #[cfg(feature = "state-mutation")]
+    use std::cell::RefCell;
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
@@ -3872,6 +4015,147 @@ mod tests {
         assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 1);
     }
 
+    #[cfg(feature = "state-mutation")]
+    #[test]
+    fn app_ui_data_take_mutation_success_only_fires_once_per_completion() {
+        fn render_frame(
+            app: &mut crate::app::App,
+            ui: &mut UiTree<crate::app::App>,
+            services: &mut FakeUiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            st: &mut AppUiRenderRootState,
+            handle_cell: &RefCell<Option<fret_mutation::MutationHandle<(), ()>>>,
+            completions_seen: &Arc<AtomicUsize>,
+            frame_id: u64,
+        ) {
+            app.set_frame_id(FrameId(frame_id));
+            let root = render_root_with_app_ui(
+                fret_ui::declarative::RenderRootContext::new(ui, app, services, window, bounds),
+                "mutation-success-once",
+                st,
+                |cx| {
+                    let handle = cx.data().mutation_async(
+                        fret_mutation::MutationPolicy::default(),
+                        |_token, _input: Arc<()>| async { Ok(()) },
+                    );
+                    if handle_cell.borrow().is_none() {
+                        *handle_cell.borrow_mut() = Some(handle.clone());
+                    }
+                    if cx.data().take_mutation_success(0xF123_2001, &handle) {
+                        completions_seen.fetch_add(1, Ordering::SeqCst);
+                    }
+
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                        Vec::new()
+                    })
+                    .into()
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+
+        let mut services = FakeUiServices;
+        let mut st = AppUiRenderRootState::default();
+        let completions_seen = Arc::new(AtomicUsize::new(0));
+        let handle_cell = RefCell::new(None::<fret_mutation::MutationHandle<(), ()>>);
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            1,
+        );
+        assert_eq!(completions_seen.load(Ordering::SeqCst), 0);
+
+        let handle = handle_cell
+            .borrow()
+            .as_ref()
+            .expect("mutation handle should be captured")
+            .clone();
+
+        let first_finished_at = fret_core::time::Instant::now();
+        let _ = app.models_mut().update(handle.model(), |state| {
+            state.status = fret_mutation::MutationStatus::Success;
+            state.input = Some(Arc::new(()));
+            state.data = Some(Arc::new(()));
+            state.error = None;
+            state.inflight = None;
+            state.updated_at = Some(first_finished_at);
+            state.last_duration = None;
+        });
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            2,
+        );
+        assert_eq!(completions_seen.load(Ordering::SeqCst), 1);
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            3,
+        );
+        assert_eq!(
+            completions_seen.load(Ordering::SeqCst),
+            1,
+            "same mutation completion should not retrigger on later renders"
+        );
+
+        let second_finished_at = fret_core::time::Instant::now();
+        let _ = app.models_mut().update(handle.model(), |state| {
+            state.status = fret_mutation::MutationStatus::Success;
+            state.input = Some(Arc::new(()));
+            state.data = Some(Arc::new(()));
+            state.error = None;
+            state.inflight = None;
+            state.updated_at = Some(second_finished_at);
+            state.last_duration = None;
+        });
+
+        render_frame(
+            &mut app,
+            &mut ui,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+            &handle_cell,
+            &completions_seen,
+            4,
+        );
+        assert_eq!(
+            completions_seen.load(Ordering::SeqCst),
+            2,
+            "a new successful completion should retrigger exactly once"
+        );
+    }
+
     #[test]
     fn raw_model_with_reuses_element_context_local_model_substrate() {
         let api_source = VIEW_RS_SOURCE
@@ -4318,6 +4602,11 @@ mod tests {
         assert!(
             api_source.contains("pub fn invalidate_query_namespace(self, namespace: &'static str)")
         );
+        assert!(api_source.contains("pub fn take_mutation_success<TIn: 'static, TOut: 'static>("));
+        assert!(api_source.contains("pub fn invalidate_query_after_mutation_success<"));
+        assert!(api_source.contains(
+            "pub fn invalidate_query_namespace_after_mutation_success<TIn: 'static, TOut: 'static>("
+        ));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
         assert!(!api_source.contains("pub trait AppActivateCxMarker"));

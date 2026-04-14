@@ -3159,6 +3159,10 @@ mod authoring_surface_policy_tests {
         assert!(
             INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().invalidate_query_namespace(...)`")
         );
+        assert!(
+            INTEGRATING_SQLITE_AND_SQLX
+                .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
+        );
     }
 
     #[test]
@@ -3176,8 +3180,13 @@ mod authoring_surface_policy_tests {
         assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`handle.submit(...)`"));
         assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`handle.submit_action(...)`"));
         assert!(
+            INTEGRATING_SQLITE_AND_SQLX
+                .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
+        );
+        assert!(
             INTEGRATING_SQLITE_AND_SQLX.contains("let save_state = save_todo.read_layout(cx);")
         );
+        assert!(!INTEGRATING_SQLITE_AND_SQLX.contains("cx.root_state(Option::<Instant>::default"));
         assert!(
             INTEGRATING_SQLITE_AND_SQLX
                 .contains("Do not teach a Save/Delete/Sync flow as `query_async(...)`")
@@ -3187,6 +3196,10 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().mutation_async_local(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.submit(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.submit_action(...)`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
+        );
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret::mutation::{MutationPolicy, MutationState, ...}`")
         );

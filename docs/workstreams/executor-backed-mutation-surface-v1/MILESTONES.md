@@ -19,16 +19,27 @@
   - `docs/integrating-tokio-and-reqwest.md` stays read-only and points explicit submit work to
     `state-mutation`,
   - `docs/integrating-sqlite-and-sqlx.md` now teaches `cx.data().mutation_async(...)` +
-    `handle.submit(...)` + `cx.data().invalidate_query_namespace(...)` as the default write path,
+    `handle.submit(...)` +
+    `cx.data().invalidate_query_namespace_after_mutation_success(...)` as the default
+    mutation-to-query handoff,
   - `docs/crate-usage-guide.md` names `fret-mutation` as the shared submit lane,
   - and `ecosystem/fret/src/lib.rs` now carries source-policy assertions that would fail if the
     first-contact docs drift back to `query_async(...)` for submit flows.
+- M2 now has a real default invalidation handoff on the framework surface:
+  - `ecosystem/fret/src/view.rs` adds `cx.data().take_mutation_success(...)` for one-shot
+    completion gating on the app lane,
+  - adds `cx.data().invalidate_query_after_mutation_success(...)` and
+    `cx.data().invalidate_query_namespace_after_mutation_success(...)` for explicit read-lane
+    refresh after one completed mutation success,
+  - and the app lane no longer needs ad hoc `root_state(...)` bookkeeping just to avoid replaying
+    invalidation on every render after success.
 - M3 now has a second real proof surface on the same product probe:
   - `apps/fret-examples/src/api_workbench_lite_demo.rs` keeps HTTP send on one mutation lane,
   - adds SQLite-backed request history reads on `cx.data().query_async(...)`,
   - adds explicit history writes on `cx.data().mutation_async(...)`,
-  - and invalidates the saved-history query namespace only after successful SQLite mutation
-    completion.
+  - and now invalidates the saved-history query namespace through the shared
+    `invalidate_query_namespace_after_mutation_success(...)` helper instead of local render-owned
+    dedupe glue.
 - The existing `api-workbench-lite` diag script now has a full SQLite-backed artifact proof:
   - the first run under
     `target/fret-diag-api-workbench-lite-sqlite-history/sessions/1776168169993-16022/`

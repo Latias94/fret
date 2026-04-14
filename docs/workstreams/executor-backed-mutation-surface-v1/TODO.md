@@ -45,7 +45,7 @@
   - or a split with mechanism nouns on `mutation` and teaching nouns on `submit`.
 - [x] Ensure the app-facing surface composes with existing `cx.actions()` ownership rather than
   silently creating a second default transaction family.
-- [ ] Define the default query invalidation handoff after successful submit/mutation.
+- [x] Define the default query invalidation handoff after successful submit/mutation.
 
 ## M3 — Proof surfaces
 
