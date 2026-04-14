@@ -9,6 +9,7 @@ Companion docs:
 - `MILESTONES.md`
 - `MIGRATION_MATRIX.md`
 - `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
+- `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -87,6 +88,11 @@ Companion docs:
     `IntoUiElementInExt` as the current explicit capability lane).
   - [x] add source-policy tests for the explicit render-authoring capability lane (`fret::app`
     reexports, `AppUi` impl, cookbook scaffold proof surface).
+  - [x] re-evaluate the highest-priority framework follow-on against the real
+    `api_workbench_lite` consumer probe after the mutation teaching lane closed.
+    Result: keep this lane active and prioritize `AppUi` / extracted-helper render-lane
+    separation before reopening storage-model or mutation-owner debates. See
+    `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
@@ -181,6 +187,8 @@ Companion docs:
   ownership or widget-contract reality.
 - [ ] Ensure the default render-authoring path no longer depends on implicit `AppUi` `Deref`
   inheritance once the narrowed `UiCx` / app-facing render surface is landed.
+- [ ] Replace raw `UiCx = ElementContext<App>` as the default helper-story export once the
+  narrowed extracted-helper render lane is ready.
 - [ ] Record a closeout audit with:
   - [ ] final target interface,
   - [ ] migration results,

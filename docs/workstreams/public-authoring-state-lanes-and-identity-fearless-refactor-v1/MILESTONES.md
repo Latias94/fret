@@ -1,6 +1,6 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Milestones
 
-Last updated: 2026-04-03
+Last updated: 2026-04-15
 
 Related:
 
@@ -8,11 +8,12 @@ Related:
 - TODO: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`
 - Migration matrix: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`
 - App-facing render gap audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
+- API workbench framework priority audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
 
-## Current status snapshot (as of 2026-04-02)
+## Current status snapshot (as of 2026-04-15)
 
 - **M0**: Met
   - the lane now exists,
@@ -52,6 +53,11 @@ Related:
     pattern at smaller scale.
   - the next remaining structural gap is therefore explicit render-authoring lane separation for
     `AppUi` and extracted helper surfaces, not a blind `Deref` deletion.
+  - the 2026-04-15 `api_workbench_lite` priority audit now freezes that judgment as the current
+    framework priority:
+    keep this lane active, treat `AppUi` / extracted-helper render-lane separation as the next
+    major refactor, and do not reopen mutation ownership or `LocalState<T>` storage from that
+    evidence alone.
   - `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md` now classifies the current Todo-derived pressure
     into:
     - keep-raw escape hatches,
@@ -219,4 +225,6 @@ Definition of done:
 - kernel identity rules are shared across declarative, recipe, and IMUI fronts,
 - the app-facing render-authoring lane no longer depends on implicit `AppUi` `Deref` / raw `UiCx`
   alias inheritance without an explicit justification,
+- the workbench/tool-app consumer probe no longer needs raw `cx.app` / raw helper-context leakage
+  to stay on the default app authoring story,
 - and the migration backlog has no uncategorized user-facing leftovers.

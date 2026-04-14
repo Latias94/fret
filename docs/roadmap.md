@@ -149,7 +149,7 @@ Tracker highlights:
 - App composition density follow-on (closeout / maintenance lane for the default app-lane composition/query shell follow-on): `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`, `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/app-composition-density-follow-on-v1/MILESTONES.md`, and `docs/workstreams/app-composition-density-follow-on-v1/TODO.md`.
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
-- Public authoring state lanes + identity contract (active pre-release lane for LocalState-first default teaching, explicit raw-model naming, kernel/facade substrate convergence, and full example migration): `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
+- Public authoring state lanes + identity contract (active pre-release lane for LocalState-first default teaching, explicit raw-model naming, kernel/facade substrate convergence, full example migration, and the remaining `AppUi` / `UiCx` render-lane closure): `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`, and `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
 - Mutation + toast feedback golden path (closed narrow closeout lane that turns the closed submit-owner decision into a copyable cookbook/diag/doc path for Postman-style save or run actions while keeping Sonner as recipe-owned feedback only): `docs/workstreams/mutation-toast-feedback-golden-path-v1/DESIGN.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/CLOSEOUT_AUDIT_2026-04-15.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json`.
 - Executor-backed mutation surface (closed narrow closeout lane for the default app-facing async submit contract; keeps `fret-query` read-focused, freezes `fret-mutation` + `fret` as the explicit submit owner, and classifies GenUI/Sonner executor-backed side flows as deliberate recipe/app-owned exceptions instead of missing shared owners): `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`, `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json`.
 
@@ -263,13 +263,16 @@ Recommended order from here:
 8. keep `executor-backed-mutation-surface-v1` closed as the current closeout record for the
    default async submit surface; start a narrower follow-on before reconsidering broader
    state/write refactors,
-9. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
+9. keep `public-authoring-state-lanes-and-identity-fearless-refactor-v1` active and treat the
+   remaining `AppUi` / `UiCx` render-authoring lane closure as the next major framework refactor
+   before reopening storage-model or mutation-owner debates,
+10. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
    wording drift,
-10. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
+11. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
    treating it as another open-ended state-surface lane,
-11. keep `local-state-facade-boundary-hardening-v1` closed unless fresh evidence shows that wording
+12. keep `local-state-facade-boundary-hardening-v1` closed unless fresh evidence shows that wording
    and current gates are no longer sufficient,
-11. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
+13. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
     proof surfaces + gates in advance.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
