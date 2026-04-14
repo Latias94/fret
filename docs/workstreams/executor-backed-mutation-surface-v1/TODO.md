@@ -55,7 +55,7 @@
 - [x] Add one second non-Todo proof surface beyond the API workbench:
   - likely SQL/SQLite mutation docs/examples,
   - or another real explicit-submit app surface.
-- [ ] Audit whether the existing GenUI and Sonner executor-backed flows should align to the shared
+- [x] Audit whether the existing GenUI and Sonner executor-backed flows should align to the shared
   contract or stay intentionally recipe-specific.
 
 ## M4 — Docs and teaching cleanup

@@ -178,22 +178,23 @@ It complements (but does not replace) ADRs:
 
 ## P0 - Async submit / mutation authoring
 
-- Active narrow follow-on for the missing default app-facing async submit lane:
+- Closed narrow closeout record for the default app-facing async submit lane:
   - `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`
   - `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`
   - `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md`
   - `docs/workstreams/executor-backed-mutation-surface-v1/TODO.md`
   - `docs/workstreams/executor-backed-mutation-surface-v1/MILESTONES.md`
   - `docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json`
-- Use `executor-backed-mutation-surface-v1` for the active implementation work exposed by the
-  `api_workbench_lite` consumer probe:
-  the repo already split read-state queries from executor-backed background work in principle, but
-  the default app-facing surface still productizes the query lane far better than the explicit
-  submit/mutation lane.
-- Keep `fret-query` as the observed read-resource lane and productize the missing explicit
-  submit/mutation contract on `fret-executor` + `fret`; do not widen query freshness/remount
-  semantics to paper over a click-driven submit flow.
+- Use `executor-backed-mutation-surface-v1` as the closeout record for the `api_workbench_lite`
+  consumer probe:
+  the repo already split read-state queries from executor-backed background work in principle, and
+  this lane now closes after productizing the missing explicit submit/mutation surface on
+  `fret-executor` + `fret`.
+- Keep `fret-query` as the observed read-resource lane and keep explicit submit/mutation on
+  `fret-mutation` + `fret`; do not widen query freshness/remount semantics to paper over a
+  click-driven submit flow.
 - Keep the older closeout lanes as inherited constraints rather than reopening them from this
   evidence alone:
   - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
@@ -203,6 +204,10 @@ It complements (but does not replace) ADRs:
   - `apps/fret-examples/src/api_workbench_lite_demo.rs`
   - `docs/audits/postman-like-api-client-first-contact.md`
   - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json`
+- The closeout also explicitly classifies the remaining executor-backed side surfaces as deliberate
+  exceptions rather than missing shared mutation owners:
+  - `ecosystem/fret-genui-core/src/executor.rs`
+  - `ecosystem/fret-ui-shadcn/src/sonner.rs`
 
 ## P0 - IME / Text Input
 

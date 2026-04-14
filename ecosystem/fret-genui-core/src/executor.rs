@@ -8,7 +8,13 @@
 //! This module is intentionally conservative:
 //! - it provides a minimal handler registry,
 //! - supports basic `confirm` gating and `onSuccess` / `onError` chaining,
+//! - is **not** the shared async submit/mutation owner,
 //! - and keeps all non-trivial policies (dialogs, async, permissions) app-owned.
+//!
+//! If a GenUI action needs authoritative async submit lifecycle semantics, the app-owned handler
+//! or dispatched command should bridge to `fret-mutation` (or another explicit app-owned owner)
+//! outside this executor instead of widening `GenUiActionExecutorV1` into a second mutation
+//! state machine.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;

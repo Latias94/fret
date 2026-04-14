@@ -875,6 +875,9 @@ impl Sonner {
     /// Notes:
     /// - This requires installing a `FutureSpawnerHandle` as a global.
     /// - Completion is applied via a queue drained during the window overlays render pass.
+    /// - This is recipe-owned feedback chrome, not an app-owned mutation state machine. If the
+    ///   task owns domain state, query invalidation, or reusable retry/completion semantics, keep
+    ///   that lifecycle on `fret-mutation` and use Sonner only to mirror status into toast UI.
     #[cfg(feature = "executor-integration")]
     pub fn toast_promise_async<T, E, Fut>(
         &self,
@@ -929,6 +932,9 @@ impl Sonner {
     /// If `loading` is `None`, no loading toast is shown and the handle's `id()` is `None` (matching
     /// Sonner's behavior where `toast.promise(promise, { success/error })` can return `{ unwrap }`
     /// without an id when no `loading` toast exists).
+    ///
+    /// This helper still remains a toast-feedback surface. It should not replace app-owned
+    /// mutation state when the underlying operation needs stable domain lifecycle ownership.
     #[cfg(feature = "executor-integration")]
     pub fn toast_promise_async_handle_with<T, E, Fut>(
         &self,

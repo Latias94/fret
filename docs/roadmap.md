@@ -150,7 +150,7 @@ Tracker highlights:
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Public authoring state lanes + identity contract (active pre-release lane for LocalState-first default teaching, explicit raw-model naming, kernel/facade substrate convergence, and full example migration): `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
-- Executor-backed mutation surface (active narrow follow-on for the missing default app-facing async submit lane; keeps `fret-query` read-focused and productizes explicit submit/mutation work on the executor/app surface instead of reopening the closed LocalState/write lanes): `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`, `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json`.
+- Executor-backed mutation surface (closed narrow closeout lane for the default app-facing async submit contract; keeps `fret-query` read-focused, freezes `fret-mutation` + `fret` as the explicit submit owner, and classifies GenUI/Sonner executor-backed side flows as deliberate recipe/app-owned exceptions instead of missing shared owners): `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`, `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json`.
 
 Current pre-release authoring cleanup sequence:
 
@@ -186,11 +186,10 @@ The next authoring-focused lane is intentionally narrower:
 11. `view-locals-authoring-fearless-refactor-v1` then closes the remaining grouped view-owned
     `LocalState<T>` organization question on the default app lane without adding new framework APIs
     or reopening storage-model design.
-12. `executor-backed-mutation-surface-v1` is now the active narrow follow-on for explicit async
-    submit/mutation on the default app lane: keep `fret-query` as the observed read-resource lane,
-    productize the missing executor-backed submit contract on `fret-executor` + `fret`, and do not
-    reopen the closed `dataflow` / `action-write` / `view-locals` lanes from `api_workbench_lite`
-    evidence alone.
+12. `executor-backed-mutation-surface-v1` now closes the explicit async submit/mutation follow-on
+    on the default app lane: keep `fret-query` as the observed read-resource lane, keep
+    `fret-mutation` + `fret` as the explicit submit owner, and do not reopen the closed
+    `dataflow` / `action-write` / `view-locals` lanes from `api_workbench_lite` evidence alone.
 
 Current execution stance on 2026-04-14:
 
@@ -211,13 +210,11 @@ Current execution stance on 2026-04-14:
 - `view-locals-authoring-fearless-refactor-v1` = closed closeout lane:
   keep the shipped `1-2 inline / 3+ bundle` rule and the no-new-API verdict; reopen only if
   fresh cross-surface evidence exceeds the closeout audit.
-- `executor-backed-mutation-surface-v1` = active narrow follow-on:
-  treat `fret-query` as read-state only, freeze one shared executor-backed submit/mutation
-  contract on `fret-executor` + `fret`, prove it on `api_workbench_lite`, and keep the closed
-  `dataflow-authoring-surface-fearless-refactor-v1`,
-  `action-write-surface-fearless-refactor-v1`, and
-  `view-locals-authoring-fearless-refactor-v1` lanes closed unless fresh evidence still exceeds
-  their audits after the submit-vs-query split is fixed.
+- `executor-backed-mutation-surface-v1` = closed closeout lane:
+  keep `fret-query` read-state only, keep `fret-mutation` + `fret` as the default explicit submit
+  contract proven on `api_workbench_lite`, keep `GenUiActionExecutorV1` and Sonner async promise
+  helpers classified as recipe/app-owned side surfaces rather than shared mutation owners, and
+  reopen only through a narrower follow-on if fresh consumer evidence exceeds this closeout.
 - `authoring-surface-and-ecosystem-fearless-refactor-v1` = closeout lane:
   keep deleting stale aliases, tightening gates, and cleaning docs, but do not reopen broad
   surface redesign here.
@@ -255,9 +252,9 @@ Recommended order from here:
    shows that the shipped grouped-locals rule is no longer sufficient,
 6. keep `selector-query-authoring-density-fearless-refactor-v1` closed unless fresh cross-surface
    evidence exceeds the shipped closeout audit,
-7. continue `executor-backed-mutation-surface-v1` as the current proof-driven async submit lane;
-   productize the missing executor-backed mutation surface before reconsidering broader state/write
-   refactors,
+7. keep `executor-backed-mutation-surface-v1` closed as the current closeout record for the
+   default async submit surface; start a narrower follow-on before reconsidering broader
+   state/write refactors,
 8. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
    wording drift,
 9. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than

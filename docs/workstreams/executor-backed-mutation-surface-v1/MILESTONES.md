@@ -79,6 +79,14 @@
   - locks mutation-to-query refresh as explicit invalidation rather than widened query freshness,
   - and locks same-input retry/completion dedupe onto handle-owned completion identity instead of
     app-local sequence bookkeeping.
+- M3 closeout audit now classifies the remaining executor-backed side surfaces:
+  - `ecosystem/fret-genui-core/src/executor.rs` stays an app-/recipe-owned action executor and
+    does not widen into a second shared mutation state machine,
+  - `ecosystem/fret-ui-shadcn/src/sonner.rs` keeps async promise helpers as recipe-owned toast
+    feedback over `ToastAsyncQueueHandle` rather than as authoritative app-domain mutation state,
+  - and `docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md`
+    closes the lane on the verdict that these are deliberate exceptions, not missing owners for
+    the shared default submit contract.
 
 ## M0 — Baseline audit and scope freeze
 

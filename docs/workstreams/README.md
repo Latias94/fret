@@ -378,7 +378,7 @@ Rule:
 - `docs/workstreams/example-suite-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-12, 9 markdown docs
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
-- `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 7 markdown docs (active narrow follow-on for productizing the missing default app-facing async submit/mutation lane in the executor family plus `fret` without reopening the closed LocalState/write closeouts)
+- `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow closeout lane for the default app-facing async submit/mutation split on `fret-mutation` + `fret`; keeps `fret-query` read-only and records why GenUI/Sonner executor-backed side flows stay recipe/app-owned exceptions)
 - `docs/workstreams/foreground-inheritance-late-binding-v2/` — first 2026-02-24, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/foreground-style-context-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-06, 3 markdown docs
 - `docs/workstreams/foundation-closure-p0/` — first 2026-01-28, latest 2026-02-11, 2 markdown docs
