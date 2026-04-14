@@ -1,6 +1,7 @@
 //! Immediate-mode text input and textarea helpers.
 
 use fret_ui::UiHost;
+use fret_ui::element::Length;
 
 use super::{InputTextOptions, ResponseExt, TextAreaOptions, UiWriterImUiFacadeExt};
 
@@ -67,6 +68,7 @@ pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             let mut props = fret_ui::element::TextInputProps::new(model.clone());
             props.enabled = enabled;
             props.focusable = enabled && options.focusable;
+            props.layout.size.width = Length::Fill;
             props.a11y_label = options.a11y_label.clone();
             props.a11y_role = options.a11y_role;
             props.test_id = options.test_id.clone();
@@ -120,6 +122,7 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
             let mut props = fret_ui::element::TextAreaProps::new(model.clone());
             props.enabled = enabled;
             props.focusable = enabled && options.focusable;
+            props.layout.size.width = Length::Fill;
             props.a11y_label = options.a11y_label.clone();
             props.test_id = options.test_id.clone();
             props.min_height = options.min_height;

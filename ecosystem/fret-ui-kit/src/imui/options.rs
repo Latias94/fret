@@ -399,6 +399,34 @@ impl Default for CheckboxOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct RadioOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    /// Exact key chord that activates the radio button while it is focused.
+    ///
+    /// This is an item-local shortcut seam. It does not participate in global shortcut ownership
+    /// arbitration.
+    pub activate_shortcut: Option<fret_runtime::KeyChord>,
+    /// Whether `activate_shortcut` should fire on repeated keydown events.
+    pub shortcut_repeat: bool,
+}
+
+impl Default for RadioOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            activate_shortcut: None,
+            shortcut_repeat: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ComboOptions {
     pub enabled: bool,
     pub focusable: bool,
@@ -428,10 +456,33 @@ impl Default for ComboOptions {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ButtonArrowDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ButtonVariant {
+    Default,
+    Small,
+    Arrow(ButtonArrowDirection),
+    Invisible { size: Size },
+}
+
+impl Default for ButtonVariant {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ButtonOptions {
     pub enabled: bool,
     pub focusable: bool,
+    pub variant: ButtonVariant,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     /// Exact key chord that activates the button while it is focused.
@@ -448,6 +499,7 @@ impl Default for ButtonOptions {
         Self {
             enabled: true,
             focusable: true,
+            variant: ButtonVariant::Default,
             a11y_label: None,
             test_id: None,
             activate_shortcut: None,
@@ -813,6 +865,11 @@ impl Default for VirtualListOptions {
 
 #[derive(Debug, Clone, Default)]
 pub struct SeparatorTextOptions {
+    pub test_id: Option<Arc<str>>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BulletTextOptions {
     pub test_id: Option<Arc<str>>,
 }
 

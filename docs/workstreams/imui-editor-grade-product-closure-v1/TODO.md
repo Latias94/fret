@@ -33,10 +33,11 @@ Last updated: 2026-04-13
       surfaces, freezes the current minimum budget as `imui_action_basics` +
       `imui_editor_proof_demo`, and rejects reference/compatibility-only surfaces as sole
       justification.
-- [x] Publish the first-open root-host teaching rule for `imui(...)` vs `imui_vstack(...)`.
+- [x] Publish the first-open mounting rule for safe-default `imui(...)` versus explicit
+      `imui_raw(...)`.
       Result: `P0_ROOT_HOSTING_RULE_2026-04-12.md` and `docs/examples/README.md` now explain the
-      nested-layout-host shape versus the explicit root-host bridge, without reopening helper
-      growth.
+      safe default for root/non-layout parents versus the advanced explicit-layout seam, without
+      reopening helper growth.
 - [x] Publish the first-open stable-identity rule for static vs dynamic IMUI collections.
       Result: `P0_STABLE_IDENTITY_RULE_2026-04-12.md` and `docs/examples/README.md` now explain
       when `ui.for_each_unkeyed(...)` is acceptable versus when `ui.for_each_keyed(...)` /
@@ -127,6 +128,12 @@ Last updated: 2026-04-13
       Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now owns the narrow
       `ResponseExt` lifecycle vocabulary slice, while this umbrella keeps phase ordering and the
       remaining cross-phase backlog read.
+- [x] If further P0/P1 pressure becomes mostly shared IMUI control affordance and compact field
+      behavior, split a narrow control-surface follow-on instead of turning showcase cleanup into
+      the umbrella lane's implementation log.
+      Result: `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` now owns the shared
+      `fret-ui-kit::imui` control-chrome rewrite for button/switch/slider/combo/input defaults,
+      while this umbrella keeps the higher-level product-closure ordering.
 - [x] If the remaining P0 pressure becomes helper-owned trigger response shape
       (menu/submenu/tab outward response) rather than public `ResponseExt` vocabulary, split that
       into its own narrow follow-on too.

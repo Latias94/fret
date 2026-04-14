@@ -184,7 +184,7 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             props.a11y = PressableA11y {
                 role: Some(role),
                 label: Some(label.clone()),
-                test_id,
+                test_id: test_id.clone(),
                 checked,
                 expanded,
                 ..Default::default()

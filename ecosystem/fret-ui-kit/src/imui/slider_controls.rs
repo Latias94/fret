@@ -2,13 +2,14 @@
 
 use std::sync::Arc;
 
-use fret_core::{KeyCode, MouseButton, Px, SemanticsOrientation, SemanticsRole};
+use fret_core::{Corners, KeyCode, MouseButton, Px, SemanticsOrientation, SemanticsRole};
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
-use fret_ui::element::{Length, PressableA11y, PressableProps};
+use fret_ui::element::{ContainerProps, Length, MainAlign, PressableA11y, PressableProps};
 
 use super::{ResponseExt, SliderOptions, UiWriterImUiFacadeExt};
+use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -30,7 +31,7 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
         props.enabled = enabled;
         props.focusable = enabled && options.focusable;
         props.layout.size.width = Length::Fill;
-        props.layout.size.height = Length::Px(Px(24.0));
+        props.layout.size.min_height = Some(Length::Px(super::control_chrome::FIELD_MIN_HEIGHT));
 
         props.a11y = PressableA11y {
             role: Some(SemanticsRole::Slider),
@@ -67,7 +68,7 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
         }
 
         let label_for_visuals = label.clone();
-        cx.pressable_with_id(props, move |cx, state, id| {
+        control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
             cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_pointer_move();
             cx.pressable_clear_on_pointer_up();
@@ -224,6 +225,7 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                     super::slider_clamp_and_snap(*v, min, max, step)
                 })
                 .unwrap_or_else(|_| super::slider_clamp_and_snap(min, min, max, step));
+            let progress = slider_progress(current, a11y_min, a11y_max);
 
             response.core.hovered = state.hovered;
             response.core.pressed = state.pressed;
@@ -254,11 +256,66 @@ pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             );
             super::sanitize_response_for_enabled(enabled, response);
 
-            vec![cx.text(Arc::from(format!("{label_for_visuals}: {current:.2}")))]
+            let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
+            let mut track = ContainerProps::default();
+            track.layout.size.width = Length::Fill;
+            track.layout.size.height = Length::Px(super::control_chrome::SLIDER_TRACK_HEIGHT);
+            track.background = Some(palette.subtle_background);
+            track.corner_radii =
+                Corners::all(Px(super::control_chrome::SLIDER_TRACK_HEIGHT.0 / 2.0));
+
+            let mut fill = ContainerProps::default();
+            fill.layout.size.width = Length::Fraction(progress);
+            fill.layout.size.height = Length::Fill;
+            fill.background = Some(palette.accent_background);
+            fill.corner_radii = track.corner_radii;
+
+            let value_badge = super::control_chrome::pill(
+                cx,
+                Arc::from(format!("{current:.2}")),
+                palette.accent_background,
+                palette.accent_foreground,
+            );
+
+            (props, chrome, move |cx| {
+                vec![
+                    cx.flex(super::control_chrome::fill_stack_props(), move |cx| {
+                        let mut out = Vec::new();
+                        out.push(cx.flex(
+                            super::control_chrome::fill_row_props(MainAlign::SpaceBetween),
+                            move |cx| {
+                                let mut row = Vec::new();
+                                if !label_for_visuals.is_empty() {
+                                    row.push(super::control_chrome::caption_text(
+                                        cx,
+                                        label_for_visuals.clone(),
+                                        palette,
+                                    ));
+                                }
+                                row.push(value_badge);
+                                row
+                            },
+                        ));
+                        out.push(
+                            cx.container(track, move |cx| vec![cx.container(fill, |_cx| vec![])]),
+                        );
+                        out
+                    }),
+                ]
+            })
         })
         .attach_semantics(a11y)
     });
 
     ui.add(element);
     response
+}
+
+fn slider_progress(current: f32, min: f32, max: f32) -> f32 {
+    let range = max - min;
+    if !range.is_finite() || range.abs() <= f32::EPSILON {
+        return 1.0;
+    }
+
+    ((current - min) / range).clamp(0.0, 1.0)
 }

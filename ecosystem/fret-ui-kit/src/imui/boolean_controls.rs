@@ -2,13 +2,54 @@
 
 use std::sync::Arc;
 
-use fret_core::{KeyCode, MouseButton, SemanticsRole};
+use fret_core::{Corners, Edges, KeyCode, MouseButton, Px, SemanticsRole};
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
-use fret_ui::element::{PressableA11y, PressableProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, PressableA11y,
+    PressableProps,
+};
 
-use super::{CheckboxOptions, ResponseExt, SwitchOptions, UiWriterImUiFacadeExt};
+use super::{CheckboxOptions, RadioOptions, ResponseExt, SwitchOptions, UiWriterImUiFacadeExt};
+use crate::declarative::chrome::control_chrome_pressable_with_id_props;
+
+fn radio_indicator<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    palette: super::control_chrome::ImUiControlPalette,
+    selected: bool,
+) -> AnyElement {
+    let mut outer = ContainerProps::default();
+    outer.layout.size.width = Length::Px(super::control_chrome::RADIO_INDICATOR_SIZE);
+    outer.layout.size.height = Length::Px(super::control_chrome::RADIO_INDICATOR_SIZE);
+    outer.border = Edges::all(Px(1.0));
+    outer.border_color = Some(if selected {
+        palette.accent_background
+    } else {
+        palette.border
+    });
+    outer.corner_radii = Corners::all(Px(999.0));
+
+    cx.container(outer, move |cx| {
+        if !selected {
+            return Vec::new();
+        }
+
+        let mut center = FlexProps::default();
+        center.layout.size.width = Length::Fill;
+        center.layout.size.height = Length::Fill;
+        center.justify = MainAlign::Center;
+        center.align = CrossAlign::Center;
+
+        let mut dot = ContainerProps::default();
+        dot.layout.size.width = Length::Px(super::control_chrome::RADIO_DOT_SIZE);
+        dot.layout.size.height = Length::Px(super::control_chrome::RADIO_DOT_SIZE);
+        dot.background = Some(palette.accent_background);
+        dot.corner_radii = Corners::all(Px(999.0));
+
+        vec![cx.flex(center, move |cx| vec![cx.container(dot, |_| Vec::new())])]
+    })
+}
 
 pub(super) fn checkbox_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -40,6 +81,8 @@ pub(super) fn checkbox_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
         let mut props = PressableProps::default();
         props.enabled = enabled;
         props.focusable = focusable;
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_height = Some(Length::Px(super::control_chrome::FIELD_MIN_HEIGHT));
         props.a11y = PressableA11y {
             role: Some(SemanticsRole::Checkbox),
             label: options.a11y_label.clone().or_else(|| Some(label.clone())),
@@ -49,7 +92,7 @@ pub(super) fn checkbox_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
         };
 
         let label_for_visuals = label.clone();
-        cx.pressable_with_id(props, move |cx, state, id| {
+        control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
             cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_pointer_move();
             cx.pressable_clear_on_pointer_up();
@@ -233,12 +276,278 @@ pub(super) fn checkbox_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
             );
             super::sanitize_response_for_enabled(enabled, response);
 
-            let prefix: Arc<str> = if value {
-                Arc::from("[x] ")
-            } else {
-                Arc::from("[ ] ")
-            };
-            vec![cx.text(Arc::from(format!("{prefix}{label_for_visuals}")))]
+            let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
+            let indicator = super::control_chrome::pill(
+                cx,
+                Arc::from(if value { "[x]" } else { "[ ]" }),
+                if value {
+                    palette.accent_background
+                } else {
+                    palette.subtle_background
+                },
+                if value {
+                    palette.accent_foreground
+                } else {
+                    palette.muted_foreground
+                },
+            );
+
+            (props, chrome, move |cx| {
+                vec![cx.flex(
+                    super::control_chrome::fill_row_props(MainAlign::Start),
+                    move |cx| {
+                        vec![
+                            indicator,
+                            super::control_chrome::fill_text(
+                                cx,
+                                label_for_visuals.clone(),
+                                palette.foreground,
+                            ),
+                        ]
+                    },
+                )]
+            })
+        })
+    });
+
+    ui.add(element);
+    response
+}
+
+pub(super) fn radio_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    selected: bool,
+    options: RadioOptions,
+) -> ResponseExt {
+    let mut response = ResponseExt::default();
+
+    let element = ui.with_cx_mut(|cx| {
+        let response = &mut response;
+        let enabled = options.enabled && !super::imui_is_disabled(cx);
+        let focusable = enabled && options.focusable;
+        let activate_shortcut = options.activate_shortcut;
+        let shortcut_repeat = options.shortcut_repeat;
+
+        let mut props = PressableProps::default();
+        props.enabled = enabled;
+        props.focusable = focusable;
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_height = Some(Length::Px(super::control_chrome::FIELD_MIN_HEIGHT));
+        props.a11y = PressableA11y {
+            role: Some(SemanticsRole::RadioButton),
+            label: options.a11y_label.clone().or_else(|| Some(label.clone())),
+            checked: Some(selected),
+            test_id: options.test_id.clone(),
+            ..Default::default()
+        };
+
+        let label_for_visuals = label.clone();
+        control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
+            cx.pressable_clear_on_pointer_down();
+            cx.pressable_clear_on_pointer_move();
+            cx.pressable_clear_on_pointer_up();
+            cx.key_clear_on_key_down_for(id);
+
+            let active_item_model = super::active_item_model_for_window(cx);
+            let active_item_model_for_down = active_item_model.clone();
+            let active_item_model_for_move = active_item_model.clone();
+            let active_item_model_for_up = active_item_model.clone();
+
+            let context_anchor_model = super::context_menu_anchor_model_for(cx, id);
+            let context_anchor_model_for_report = context_anchor_model.clone();
+            let long_press_signal_model = super::long_press_signal_model_for(cx, id);
+            let long_press_signal_model_for_down = long_press_signal_model.clone();
+            let long_press_signal_model_for_move = long_press_signal_model.clone();
+            let long_press_signal_model_for_up = long_press_signal_model.clone();
+            let lifecycle_model = super::lifecycle_session_model_for(cx, id);
+            let lifecycle_model_for_activate = lifecycle_model.clone();
+            let lifecycle_model_for_down = lifecycle_model.clone();
+            let lifecycle_model_for_up = lifecycle_model.clone();
+
+            cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
+                super::mark_lifecycle_instant_if_inactive(
+                    host,
+                    acx,
+                    &lifecycle_model_for_activate,
+                    false,
+                );
+                host.record_transient_event(acx, super::KEY_CLICKED);
+                host.notify(acx);
+            }));
+
+            if enabled {
+                let lifecycle_model_for_shortcut = lifecycle_model.clone();
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                super::mark_lifecycle_instant_if_inactive(
+                                    host,
+                                    acx,
+                                    &lifecycle_model_for_shortcut,
+                                    false,
+                                );
+                                host.record_transient_event(acx, super::KEY_CLICKED);
+                                host.notify(acx);
+                                return true;
+                            }
+                        }
+
+                        let is_menu_key = down.key == KeyCode::ContextMenu;
+                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
+                        if !(is_menu_key || is_shift_f10) {
+                            return false;
+                        }
+
+                        host.record_transient_event(acx, super::KEY_CONTEXT_MENU_REQUESTED);
+                        host.notify(acx);
+                        true
+                    }),
+                );
+            }
+
+            cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                super::mark_lifecycle_activated_on_left_pointer_down(
+                    host,
+                    acx,
+                    down.button,
+                    &lifecycle_model_for_down,
+                );
+                super::prepare_pressable_drag_on_pointer_down(
+                    host,
+                    acx,
+                    down,
+                    &active_item_model_for_down,
+                    &long_press_signal_model_for_down,
+                    super::drag_kind_for_element(acx.target),
+                );
+
+                PressablePointerDownResult::Continue
+            }));
+
+            let drag_threshold = super::drag_threshold_for(cx);
+            cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                super::handle_pressable_drag_move_with_threshold(
+                    host,
+                    acx,
+                    mv,
+                    &active_item_model_for_move,
+                    &long_press_signal_model_for_move,
+                    super::drag_kind_for_element(acx.target),
+                    drag_threshold,
+                )
+            }));
+
+            cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                super::mark_lifecycle_deactivated_on_left_pointer_up(
+                    host,
+                    acx,
+                    up.button,
+                    &lifecycle_model_for_up,
+                );
+                super::finish_pressable_drag_on_pointer_up(
+                    host,
+                    acx,
+                    up,
+                    &active_item_model_for_up,
+                    &long_press_signal_model_for_up,
+                    super::drag_kind_for_element(acx.target),
+                );
+
+                if up.is_click && up.button == MouseButton::Right {
+                    let _ = host.update_model(&context_anchor_model, |v| *v = Some(up.position));
+                    host.record_transient_event(acx, super::KEY_SECONDARY_CLICKED);
+                    host.record_transient_event(acx, super::KEY_CONTEXT_MENU_REQUESTED);
+                    host.notify(acx);
+                    return PressablePointerUpResult::SkipActivate;
+                }
+
+                if up.is_click && up.button == MouseButton::Left && up.click_count == 2 {
+                    host.record_transient_event(acx, super::KEY_DOUBLE_CLICKED);
+                    host.notify(acx);
+                }
+
+                PressablePointerUpResult::Continue
+            }));
+
+            response.core.hovered = state.hovered;
+            response.core.pressed = state.pressed;
+            response.core.focused = state.focused;
+            response.nav_highlighted =
+                state.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+            response.id = Some(id);
+            response.core.clicked = cx.take_transient_for(id, super::KEY_CLICKED);
+            response.secondary_clicked = cx.take_transient_for(id, super::KEY_SECONDARY_CLICKED);
+            response.double_clicked = cx.take_transient_for(id, super::KEY_DOUBLE_CLICKED);
+            response.long_pressed = cx.take_transient_for(id, super::KEY_LONG_PRESSED);
+            response.press_holding = cx
+                .read_model(
+                    &long_press_signal_model,
+                    fret_ui::Invalidation::Paint,
+                    |_app, value| value.holding,
+                )
+                .unwrap_or(false);
+            response.context_menu_requested =
+                cx.take_transient_for(id, super::KEY_CONTEXT_MENU_REQUESTED);
+            response.context_menu_anchor = cx
+                .read_model(
+                    &context_anchor_model_for_report,
+                    fret_ui::Invalidation::Paint,
+                    |_app, v| *v,
+                )
+                .unwrap_or(None);
+            super::populate_pressable_drag_response(cx, id, response);
+            response.core.rect = cx.last_bounds_for_element(id);
+            let hover_delay = super::install_hover_query_hooks_for_pressable(
+                cx,
+                id,
+                state.hovered_raw,
+                Some(long_press_signal_model.clone()),
+            );
+            response.pointer_hovered_raw = state.hovered_raw;
+            response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+            response.hover_stationary_met = hover_delay.stationary_met;
+            response.hover_delay_short_met = hover_delay.delay_short_met;
+            response.hover_delay_normal_met = hover_delay.delay_normal_met;
+            response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+            response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+            response.hover_blocked_by_active_item =
+                super::hover_blocked_by_active_item_for(cx, id, &active_item_model);
+            super::populate_response_lifecycle_transients(cx, id, response);
+            super::populate_response_lifecycle_from_active_state(
+                cx,
+                id,
+                state.pressed,
+                false,
+                response,
+            );
+            super::sanitize_response_for_enabled(enabled, response);
+
+            let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
+            let indicator = radio_indicator(cx, palette, selected);
+
+            (props, chrome, move |cx| {
+                vec![cx.flex(
+                    super::control_chrome::fill_row_props(MainAlign::Start),
+                    move |cx| {
+                        vec![
+                            indicator,
+                            super::control_chrome::fill_text(
+                                cx,
+                                label_for_visuals.clone(),
+                                palette.foreground,
+                            ),
+                        ]
+                    },
+                )]
+            })
         })
     });
 
@@ -267,6 +576,8 @@ pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         let mut props = PressableProps::default();
         props.enabled = enabled;
         props.focusable = enabled && options.focusable;
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_height = Some(Length::Px(super::control_chrome::FIELD_MIN_HEIGHT));
         props.a11y = crate::primitives::switch::switch_a11y(
             options.a11y_label.clone().or_else(|| Some(label.clone())),
             value,
@@ -274,7 +585,7 @@ pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         props.a11y.test_id = options.test_id.clone();
 
         let label_for_visuals = label.clone();
-        cx.pressable_with_id(props, move |cx, state, id| {
+        control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
             cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_pointer_move();
             cx.pressable_clear_on_pointer_up();
@@ -392,12 +703,37 @@ pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             );
             super::sanitize_response_for_enabled(enabled, response);
 
-            let prefix: Arc<str> = if value {
-                Arc::from("[on] ")
-            } else {
-                Arc::from("[off] ")
-            };
-            vec![cx.text(Arc::from(format!("{prefix}{label_for_visuals}")))]
+            let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
+            let state_badge = super::control_chrome::pill(
+                cx,
+                Arc::from(if value { "On" } else { "Off" }),
+                if value {
+                    palette.accent_background
+                } else {
+                    palette.subtle_background
+                },
+                if value {
+                    palette.accent_foreground
+                } else {
+                    palette.muted_foreground
+                },
+            );
+
+            (props, chrome, move |cx| {
+                vec![cx.flex(
+                    super::control_chrome::fill_row_props(MainAlign::SpaceBetween),
+                    move |cx| {
+                        vec![
+                            super::control_chrome::fill_text(
+                                cx,
+                                label_for_visuals.clone(),
+                                palette.foreground,
+                            ),
+                            state_badge,
+                        ]
+                    },
+                )]
+            })
         })
     });
 

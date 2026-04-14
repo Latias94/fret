@@ -26,7 +26,7 @@ fn ui_writer_imui_facade_ext_compiles() {
         bounds,
         "imui-ui-writer-facade-ext",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui_writer_imui_facade_ext_smoke(ui);
             })
         },
@@ -58,7 +58,7 @@ fn ui_kit_builder_can_be_rendered_from_imui() {
         bounds,
         "imui-ui-kit-bridge",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
                 let builder = fret_ui_kit::ui::text("Hello").text_sm();
@@ -68,6 +68,234 @@ fn ui_kit_builder_can_be_rendered_from_imui() {
     );
 
     assert_eq!(ui.children(root).len(), 1);
+}
+
+#[test]
+fn imui_default_mounts_with_stacked_host() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-default-stacked-host",
+        |cx| {
+            crate::imui(cx, |ui| {
+                ui.menu_item_with_options(
+                    "First",
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-default.first")),
+                        ..Default::default()
+                    },
+                );
+                ui.menu_item_with_options(
+                    "Second",
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-default.second")),
+                        ..Default::default()
+                    },
+                );
+            })
+        },
+    );
+
+    assert_eq!(ui.children(root).len(), 1);
+
+    let host = ui.children(root)[0];
+    assert_eq!(ui.children(host).len(), 2);
+
+    let host_bounds = ui.debug_node_bounds(host).expect("host bounds");
+    assert_eq!(host_bounds.size.width, bounds.size.width);
+    assert_eq!(host_bounds.size.height, bounds.size.height);
+
+    let first = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-default.first",
+    );
+    let second = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-default.second",
+    );
+    assert!(second.y.0 > first.y.0);
+}
+
+#[test]
+fn imui_raw_preserves_direct_sibling_emission() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-raw-direct-siblings",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                ui.menu_item_with_options(
+                    "First",
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-raw.first")),
+                        ..Default::default()
+                    },
+                );
+                ui.menu_item_with_options(
+                    "Second",
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-raw.second")),
+                        ..Default::default()
+                    },
+                );
+            })
+        },
+    );
+
+    assert_eq!(ui.children(root).len(), 2);
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-raw.first",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-raw.second",
+    ));
+}
+
+#[test]
+fn button_family_variants_and_radio_mount_with_expected_bounds() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-button-family-variants",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                use fret_ui_kit::imui::{
+                    ButtonArrowDirection, ButtonOptions, RadioOptions, UiWriterImUiFacadeExt as _,
+                };
+
+                let _ = ui.small_button_with_options(
+                    "Quick save",
+                    ButtonOptions {
+                        test_id: Some(Arc::from("imui-variants.small")),
+                        ..Default::default()
+                    },
+                );
+                let _ = ui.arrow_button_with_options(
+                    "imui-variants.arrow.left",
+                    ButtonArrowDirection::Left,
+                    ButtonOptions {
+                        test_id: Some(Arc::from("imui-variants.arrow.left")),
+                        ..Default::default()
+                    },
+                );
+                let _ = ui.invisible_button_with_options(
+                    "imui-variants.hotspot",
+                    Size::new(Px(48.0), Px(24.0)),
+                    ButtonOptions {
+                        a11y_label: Some(Arc::from("Timeline hotspot")),
+                        test_id: Some(Arc::from("imui-variants.hotspot")),
+                        ..Default::default()
+                    },
+                );
+                let _ = ui.radio_with_options(
+                    "Move tool",
+                    true,
+                    RadioOptions {
+                        test_id: Some(Arc::from("imui-variants.radio")),
+                        ..Default::default()
+                    },
+                );
+            })
+        },
+    );
+
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-variants.small",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-variants.arrow.left",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-variants.hotspot",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-variants.radio",
+    ));
+
+    let arrow_bounds = bounds_for_test_id(&ui, "imui-variants.arrow.left");
+    assert_eq!(arrow_bounds.size.width, arrow_bounds.size.height);
+
+    let hotspot_bounds = bounds_for_test_id(&ui, "imui-variants.hotspot");
+    assert_eq!(hotspot_bounds.size.width, Px(48.0));
+    assert_eq!(hotspot_bounds.size.height, Px(24.0));
 }
 
 #[test]
@@ -114,7 +342,7 @@ fn container_helpers_layout_horizontal_vertical_grid_and_scroll() {
         bounds,
         "imui-container-helpers-layout",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.vertical_with_options(
                     VerticalOptions {
                         gap: Px(8.0).into(),
@@ -254,7 +482,7 @@ fn menu_bar_helper_arranges_triggers_horizontally_and_stamps_menubar_semantics()
         bounds,
         "imui-menu-bar",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_bar_with_options(
                     fret_ui_kit::imui::MenuBarOptions {
                         test_id: Some(Arc::from("imui-menu-bar.root")),
@@ -324,7 +552,7 @@ fn tab_bar_helper_arranges_tabs_horizontally_and_stamps_tab_semantics() {
         bounds,
         "imui-tab-bar",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.tab_bar_with_options(
                     "workspace",
                     fret_ui_kit::imui::TabBarOptions {
@@ -419,7 +647,7 @@ fn child_region_helper_stacks_content_and_forwards_scroll_options() {
     let handle = ScrollHandle::default();
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.child_region_with_options(
                 "imui-child-region",
                 ChildRegionOptions {
@@ -539,7 +767,7 @@ fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells() {
         bounds,
         "imui-table-layout",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.table_with_options(
                     "imui-table-layout",
                     &columns,
@@ -651,7 +879,7 @@ fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row() {
         bounds,
         "imui-virtual-list",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let response = ui.virtual_list_with_options(
                     "imui-virtual-list",
                     100,
@@ -685,7 +913,7 @@ fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row() {
         bounds,
         "imui-virtual-list",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let response = ui.virtual_list_with_options(
                     "imui-virtual-list",
                     100,
@@ -741,7 +969,7 @@ fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row() {
         bounds,
         "imui-virtual-list",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let response = ui.virtual_list_with_options(
                     "imui-virtual-list",
                     100,
@@ -809,7 +1037,7 @@ fn separator_text_helper_renders_label_with_trailing_rule() {
         bounds,
         "imui-separator-text",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_item_with_options(
                     "Above",
                     MenuItemOptions {
@@ -846,6 +1074,54 @@ fn separator_text_helper_renders_label_with_trailing_rule() {
     assert!(line.origin.x.0 >= label.origin.x.0 + label.size.width.0);
     assert!(line.size.width.0 > 40.0);
     assert!(line.origin.x.0 + line.size.width.0 <= section.origin.x.0 + section.size.width.0 + 1.0);
+}
+
+#[test]
+fn bullet_text_helper_renders_indicator_before_wrapped_label() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(280.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-bullet-text",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                ui.bullet_text_with_options(
+                    "Bullet text keeps informational copy separate from pressable controls even when the line wraps.",
+                    fret_ui_kit::imui::BulletTextOptions {
+                        test_id: Some(Arc::from("imui-bullet-text.entry")),
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let entry = bounds_for_test_id(&ui, "imui-bullet-text.entry");
+    let indicator = bounds_for_test_id(&ui, "imui-bullet-text.entry.indicator");
+    let label = bounds_for_test_id(&ui, "imui-bullet-text.entry.label");
+
+    assert!(entry.size.width.0 > 160.0);
+    assert!(indicator.origin.x.0 >= entry.origin.x.0);
+    assert!(indicator.origin.x.0 + indicator.size.width.0 <= label.origin.x.0);
+    assert!(label.origin.y.0 <= indicator.origin.y.0 + Px(12.0).0);
+    assert!(label.size.height.0 > indicator.size.height.0);
 }
 // Note: `for_each_keyed` is exercised indirectly by downstream ecosystem crates. The core
 // smoke tests above focus on interaction correctness (`clicked` / `changed`).

@@ -106,6 +106,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json`
+- Active narrow IMUI control-chrome follow-on:
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/TODO.md`
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/MILESTONES.md`
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/WORKSTREAM.json`
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -133,6 +140,9 @@ It complements (but does not replace) ADRs:
   unless fresh proof exceeds their audits.
 - Use `docs/workstreams/imui-response-status-lifecycle-v1/` for the current implementation-heavy
   P0 `ResponseExt` lifecycle vocabulary work.
+- Use `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` for the current shared IMUI
+  control affordance / compact-field behavior rewrite; keep the umbrella product-closure lane as
+  the phase-ordering/status surface, not the implementation log for this control refactor.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` as the closed
   closeout record for the helper-owned menu/submenu/tab outward-response naming cleanup.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed

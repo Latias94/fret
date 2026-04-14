@@ -55,13 +55,14 @@ Current status:
   it must name two real first-party proof surfaces, and the current budget floor is the frozen
   golden pair rather than any single reference demo.
 - The first-open mounting rule is now explicit:
-  nested layout host -> `fret_imui::imui(cx, ...)`,
-  root/non-layout parent -> `fret_imui::imui_vstack(cx.elements(), ...)`.
+  root/non-layout parent -> `fret_imui::imui(cx, ...)`,
+  explicit layout host + bare sibling emission -> `fret_imui::imui_raw(cx, ...)`.
 - The first-open stable-identity rule is now explicit:
   `ui.for_each_unkeyed(...)` is only for static/order-stable lists, while dynamic collections
   should default to `ui.for_each_keyed(...)` or `ui.id(key, ...)`.
 - The current footgun audit concludes that documentation and proof-selection dominate; the only
-  credible helper-shape candidate is a narrow app-lane root-host helper.
+  credible contract fix was to collapse the old split into one safe default plus one explicit raw
+  seam.
 - The demote/delete plan is now frozen:
   `imui_hello_demo` is smoke/reference, public docs name the golden pair explicitly, and the
   source-policy gates distinguish golden/reference/compatibility roles.

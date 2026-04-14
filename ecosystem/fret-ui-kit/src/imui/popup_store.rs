@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use fret_authoring::mark_immediate_render_frame;
 use fret_core::AppWindowId;
-use fret_runtime::FrameId;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 #[derive(Clone)]
@@ -23,8 +23,6 @@ pub(super) struct PopupStoreState {
 #[derive(Default)]
 struct PopupStoreWindowState {
     by_id: HashMap<Arc<str>, PopupStoreState>,
-    prepared_frame: Option<FrameId>,
-    render_generation: u64,
 }
 
 #[derive(Default)]
@@ -32,20 +30,14 @@ struct ImUiPopupStore {
     by_window: HashMap<AppWindowId, PopupStoreWindowState>,
 }
 
-fn prepare_popup_store_for_frame<H: UiHost>(
+fn prepare_popup_store_for_generation<H: UiHost>(
     store: &mut ImUiPopupStore,
     app: &mut H,
     window: AppWindowId,
-    frame_id: FrameId,
+    render_generation: u64,
 ) {
     let state = store.by_window.entry(window).or_default();
-    if state.prepared_frame == Some(frame_id) {
-        return;
-    }
-    state.prepared_frame = Some(frame_id);
-    state.render_generation = state.render_generation.saturating_add(1);
-
-    let min_live_generation = state.render_generation.saturating_sub(1);
+    let min_live_generation = render_generation.saturating_sub(1);
     for st in state.by_id.values_mut() {
         let is_open = app.models().get_copied(&st.open).unwrap_or(false);
         if !is_open {
@@ -66,15 +58,11 @@ fn prepare_popup_store_for_frame<H: UiHost>(
 
 pub(super) fn popup_render_generation_for_window<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u64 {
     let window = cx.window;
-    let frame_id = cx.frame_id;
+    let render_generation = mark_immediate_render_frame(cx);
     cx.app
         .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
-            prepare_popup_store_for_frame(store, app, window, frame_id);
-            store
-                .by_window
-                .get(&window)
-                .map(|state| state.render_generation)
-                .unwrap_or(0)
+            prepare_popup_store_for_generation(store, app, window, render_generation);
+            render_generation
         })
 }
 
@@ -84,10 +72,10 @@ pub(super) fn with_popup_store_for_id<H: UiHost, R>(
     f: impl FnOnce(&mut PopupStoreState, &mut H) -> R,
 ) -> R {
     let window = cx.window;
-    let frame_id = cx.frame_id;
+    let render_generation = mark_immediate_render_frame(cx);
     cx.app
         .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
-            prepare_popup_store_for_frame(store, app, window, frame_id);
+            prepare_popup_store_for_generation(store, app, window, render_generation);
 
             let state = store.by_window.entry(window).or_default();
             if let Some(existing) = state.by_id.get_mut(id) {
@@ -106,9 +94,10 @@ pub(super) fn with_popup_store_for_id<H: UiHost, R>(
 }
 
 pub(super) fn drop_popup_scope_for_id<H: UiHost>(cx: &mut ElementContext<'_, H>, id: &str) {
+    let render_generation = mark_immediate_render_frame(cx);
     cx.app
         .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
-            prepare_popup_store_for_frame(store, app, cx.window, cx.frame_id);
+            prepare_popup_store_for_generation(store, app, cx.window, render_generation);
             let Some(window_state) = store.by_window.get_mut(&cx.window) else {
                 return;
             };

@@ -15,7 +15,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_authoring::UiWriter;
+use fret_authoring::{UiWriter, mark_immediate_render_frame};
 use fret_core::{Point, Px, Rect, Size};
 use fret_interaction::dpi;
 use fret_runtime::{ActionId, CommandId};
@@ -26,11 +26,13 @@ use crate::IntoUiElement;
 
 pub mod adapters;
 mod boolean_controls;
+mod bullet_text_controls;
 mod button_controls;
 mod child_region;
 mod combo_controls;
 mod combo_model_controls;
 mod containers;
+mod control_chrome;
 mod disclosure_controls;
 mod drag_drop;
 mod floating_surface;
@@ -83,10 +85,11 @@ use interaction_runtime::{
 };
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
-    BeginMenuOptions, BeginSubmenuOptions, ButtonOptions, CheckboxOptions, ChildRegionOptions,
-    CollapsingHeaderOptions, ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions,
-    GridOptions, HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions,
-    PopupMenuOptions, PopupModalOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
+    BeginMenuOptions, BeginSubmenuOptions, BulletTextOptions, ButtonArrowDirection, ButtonOptions,
+    ButtonVariant, CheckboxOptions, ChildRegionOptions, CollapsingHeaderOptions,
+    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
+    HorizontalOptions, InputTextOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,
+    PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
     SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn, TableColumnWidth,
     TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
     VerticalOptions, VirtualListOptions,
@@ -157,6 +160,10 @@ const HOVER_STATIONARY_DELAY: Duration = Duration::from_millis(150);
 const HOVER_DELAY_SHORT: Duration = Duration::from_millis(150);
 const HOVER_DELAY_NORMAL: Duration = Duration::from_millis(400);
 const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
+
+fn prepare_imui_runtime_for_frame<H: UiHost>(cx: &mut ElementContext<'_, H>) {
+    let _ = mark_immediate_render_frame(cx);
+}
 
 pub(super) fn snap_point_to_device_pixels(scale_factor: f32, p: Point) -> Point {
     dpi::snap_point_to_device_pixels(scale_factor, p)
@@ -436,6 +443,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let out = &mut *self.out;
         let build_focus = self.build_focus.clone();
         self.cx.keyed(key, |cx| {
+            prepare_imui_runtime_for_frame(cx);
             let mut ui = ImUiFacade {
                 cx,
                 out,
@@ -680,6 +688,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
                 cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
                 vec![cx.opacity(alpha, |cx| {
                     vec![cx.focus_traversal_gate(false, |cx| {
+                        prepare_imui_runtime_for_frame(cx);
                         let mut out = Vec::new();
                         let mut ui = ImUiFacade {
                             cx,
@@ -699,6 +708,62 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::button(self, label);
         let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
         self.record_focusable(resp.id, enabled);
+        resp
+    }
+
+    pub fn small_button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::small_button(self, label);
+        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        self.record_focusable(resp.id, enabled);
+        resp
+    }
+
+    pub fn small_button_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::small_button_with_options(self, label, options);
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
+    pub fn arrow_button(&mut self, id: &str, direction: ButtonArrowDirection) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::arrow_button(self, id, direction);
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
+    pub fn arrow_button_with_options(
+        &mut self,
+        id: &str,
+        direction: ButtonArrowDirection,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::arrow_button_with_options(
+            self, id, direction, options,
+        );
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
+    pub fn invisible_button(&mut self, id: &str, size: Size) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::invisible_button(self, id, size);
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
+    pub fn invisible_button_with_options(
+        &mut self,
+        id: &str,
+        size: Size,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::invisible_button_with_options(
+            self, id, size, options,
+        );
+        self.record_focusable(resp.id, resp.enabled);
         resp
     }
 
@@ -1043,6 +1108,24 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
+    pub fn radio(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
+        self.radio_with_options(label, selected, RadioOptions::default())
+    }
+
+    pub fn radio_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        selected: bool,
+        options: RadioOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::radio_with_options(self, label, selected, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
     pub fn switch_model(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -1141,6 +1224,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut result = None;
         let elements = self.with_cx_mut(|cx| {
             cx.keyed(key, |cx| {
+                prepare_imui_runtime_for_frame(cx);
                 let mut out = Vec::new();
                 let mut ui = ImUiFacade {
                     cx,
@@ -1171,6 +1255,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     ) {
         if !disabled {
             let elements = self.with_cx_mut(|cx| {
+                prepare_imui_runtime_for_frame(cx);
                 let mut out = Vec::new();
                 let mut ui = ImUiFacade {
                     cx,
@@ -1195,6 +1280,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let _guard = DisabledScopeGuard::push(depth);
 
             let build_children = |cx: &mut ElementContext<'_, H>| {
+                prepare_imui_runtime_for_frame(cx);
                 let mut out = Vec::new();
                 let mut ui = ImUiFacade {
                     cx,
@@ -1237,6 +1323,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             cx.text_props(props)
         });
         self.add(element);
+    }
+
+    fn bullet_text(&mut self, text: impl Into<Arc<str>>) {
+        self.bullet_text_with_options(text, BulletTextOptions::default());
+    }
+
+    fn bullet_text_with_options(
+        &mut self,
+        text: impl Into<Arc<str>>,
+        options: BulletTextOptions,
+    ) {
+        bullet_text_controls::bullet_text_with_options(self, text.into(), options);
     }
 
     fn separator(&mut self) {
@@ -1874,6 +1972,44 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.button_with_options(label, ButtonOptions::default())
     }
 
+    fn small_button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
+        self.small_button_with_options(label, ButtonOptions::default())
+    }
+
+    fn small_button_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        button_controls::small_button_with_options(self, label.into(), options)
+    }
+
+    fn arrow_button(&mut self, id: &str, direction: ButtonArrowDirection) -> ResponseExt {
+        self.arrow_button_with_options(id, direction, ButtonOptions::default())
+    }
+
+    fn arrow_button_with_options(
+        &mut self,
+        id: &str,
+        direction: ButtonArrowDirection,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        button_controls::arrow_button_with_options(self, id, direction, options)
+    }
+
+    fn invisible_button(&mut self, id: &str, size: Size) -> ResponseExt {
+        self.invisible_button_with_options(id, size, ButtonOptions::default())
+    }
+
+    fn invisible_button_with_options(
+        &mut self,
+        id: &str,
+        size: Size,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        button_controls::invisible_button_with_options(self, id, size, options)
+    }
+
     fn button_with_options(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -1933,6 +2069,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: CheckboxOptions,
     ) -> ResponseExt {
         boolean_controls::checkbox_model_with_options(self, label.into(), model, options)
+    }
+
+    fn radio(&mut self, label: impl Into<Arc<str>>, selected: bool) -> ResponseExt {
+        self.radio_with_options(label, selected, RadioOptions::default())
+    }
+
+    fn radio_with_options(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        selected: bool,
+        options: RadioOptions,
+    ) -> ResponseExt {
+        boolean_controls::radio_with_options(self, label.into(), selected, options)
     }
 
     fn switch_model(

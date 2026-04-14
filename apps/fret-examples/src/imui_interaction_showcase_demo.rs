@@ -14,13 +14,13 @@
 
 use std::sync::Arc;
 
-use fret::{advanced::prelude::*, FretApp};
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::Px;
-use fret_ui::element::AnyElement;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
+use fret_ui::element::AnyElement;
 use fret_ui_kit::imui::ChildRegionOptions;
-use fret_ui_kit::{ui, ColorRef, LayoutRefinement, Space, UiExt as _};
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const TEST_ID_ROOT: &str = "imui-interaction-showcase.root";
@@ -125,6 +125,8 @@ impl View for ImUiInteractionShowcaseView {
         let autosave_enabled = cx.state().local_init(|| true);
         let exposure_value = cx.state().local_init(|| 38.0f32);
         let review_mode = cx.state().local_init(|| Some(Arc::<str>::from("Studio")));
+        let tool_mode = cx.state().local_init(|| Arc::<str>::from("Move"));
+        let bookmark_slot = cx.state().local_init(|| 2u32);
         let draft_note = cx.state().local_init(|| {
             String::from("Use IMUI for fast control flow, not for raw visual dumps.")
         });
@@ -154,6 +156,8 @@ impl View for ImUiInteractionShowcaseView {
         let autosave_enabled_value = autosave_enabled.layout_value(cx);
         let exposure_value_value = exposure_value.layout_value(cx);
         let review_mode_value = review_mode.layout_value(cx);
+        let tool_mode_value = tool_mode.layout_value(cx);
+        let bookmark_slot_value = bookmark_slot.layout_value(cx);
         let draft_note_value = draft_note.layout_value(cx);
         let menu_open_count_value = menu_open_count.layout_value(cx);
         let submenu_toggle_count_value = submenu_toggle_count.layout_value(cx);
@@ -200,6 +204,8 @@ impl View for ImUiInteractionShowcaseView {
             autosave_enabled.clone(),
             exposure_value.clone(),
             review_mode.clone(),
+            tool_mode.clone(),
+            bookmark_slot.clone(),
             draft_note.clone(),
             timeline_next_id.clone(),
             timeline.clone(),
@@ -211,6 +217,8 @@ impl View for ImUiInteractionShowcaseView {
             autosave_enabled_value,
             exposure_value_value,
             review_mode_value.clone(),
+            tool_mode_value.clone(),
+            bookmark_slot_value,
             draft_note_value.clone(),
         );
 
@@ -310,34 +318,38 @@ impl View for ImUiInteractionShowcaseView {
         };
 
         ui::container(move |cx| {
-            vec![ui::container(move |cx| {
-                vec![ui::scroll_area(move |cx| {
-                    [ui::v_flex(move |cx| vec![header_strip, body])
-                        .gap(responsive.section_gap)
+            vec![
+                ui::container(move |cx| {
+                    vec![
+                        ui::scroll_area(move |cx| {
+                            [ui::v_flex(move |cx| vec![header_strip, body])
+                                .gap(responsive.section_gap)
+                                .w_full()
+                                .into_element(cx)]
+                        })
+                        .viewport_test_id(TEST_ID_SCROLL_VIEWPORT)
+                        .show_scrollbar_y(true)
+                        .show_scrollbar_x(false)
                         .w_full()
-                        .into_element(cx)]
+                        .h_full()
+                        .min_h_0()
+                        .into_element(cx)
+                        .test_id(TEST_ID_SCROLL),
+                    ]
                 })
-                .viewport_test_id(TEST_ID_SCROLL_VIEWPORT)
-                .show_scrollbar_y(true)
-                .show_scrollbar_x(false)
-                .w_full()
-                .h_full()
-                .min_h_0()
-                .into_element(cx)
-                .test_id(TEST_ID_SCROLL)]
-            })
-            .p(responsive.surface_padding)
-            .size_full()
-            .bg(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("background"),
-            ))
-            .border_1()
-            .border_color(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("border"),
-            ))
-            .rounded_md()
-            .shadow_lg()
-            .into_element(cx)]
+                .p(responsive.surface_padding)
+                .size_full()
+                .bg(ColorRef::Color(
+                    Theme::global(&*cx.app).color_token("background"),
+                ))
+                .border_1()
+                .border_color(ColorRef::Color(
+                    Theme::global(&*cx.app).color_token("border"),
+                ))
+                .rounded_md()
+                .shadow_lg()
+                .into_element(cx),
+            ]
         })
         .p(responsive.outer_padding)
         .size_full()
@@ -544,6 +556,8 @@ fn render_interaction_lab_card(
     autosave_enabled: LocalState<bool>,
     exposure_value: LocalState<f32>,
     review_mode: LocalState<Option<Arc<str>>>,
+    tool_mode: LocalState<Arc<str>>,
+    bookmark_slot: LocalState<u32>,
     draft_note: LocalState<String>,
     timeline_next_id: LocalState<u64>,
     timeline: LocalState<Vec<ShowcaseEvent>>,
@@ -555,6 +569,8 @@ fn render_interaction_lab_card(
     autosave_enabled_value: bool,
     exposure_value_value: f32,
     review_mode_value: Option<Arc<str>>,
+    tool_mode_value: Arc<str>,
+    bookmark_slot_value: u32,
     draft_note_value: String,
 ) -> AnyElement {
     let status_row = ui::h_flex(|cx| {
@@ -583,7 +599,7 @@ fn render_interaction_lab_card(
     .into_element(cx);
 
     let summary = ui::text(format!(
-        "Autosave {}. Exposure {:.0}. Review mode {}. Drag probes {} ({:.0}px).",
+        "Autosave {}. Exposure {:.0}. Review mode {}. Tool {}. Bookmark {}. Drag probes {} ({:.0}px).",
         if autosave_enabled_value {
             "armed"
         } else {
@@ -591,6 +607,8 @@ fn render_interaction_lab_card(
         },
         exposure_value_value,
         review_mode_value.as_deref().unwrap_or("none"),
+        tool_mode_value,
+        bookmark_slot_value,
         drag_count_value,
         drag_distance_value,
     ))
@@ -636,8 +654,9 @@ fn render_interaction_lab_card(
             ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
                 fret_imui::imui(cx, move |ui| {
                     use fret_ui_kit::imui::{
-                        ButtonOptions, ComboModelOptions, InputTextOptions, SliderOptions,
-                        UiWriterImUiFacadeExt as _, UiWriterUiKitExt as _,
+                        ButtonArrowDirection, ButtonOptions, ComboModelOptions, InputTextOptions,
+                        RadioOptions, SliderOptions, UiWriterImUiFacadeExt as _,
+                        UiWriterUiKitExt as _,
                     };
 
                     let pulse_count = pulse_count.clone();
@@ -648,6 +667,8 @@ fn render_interaction_lab_card(
                     let autosave_enabled = autosave_enabled.clone();
                     let exposure_value = exposure_value.clone();
                     let review_mode = review_mode.clone();
+                    let tool_mode = tool_mode.clone();
+                    let bookmark_slot = bookmark_slot.clone();
                     let draft_note = draft_note.clone();
                     let timeline_next_id = timeline_next_id.clone();
                     let timeline = timeline.clone();
@@ -671,6 +692,12 @@ fn render_interaction_lab_card(
                     .wrap(fret_core::TextWrap::Word)
                     .into_element(ui.cx_mut());
                     ui.add_ui(hint);
+                    ui.bullet_text(
+                        "Default IMUI should already distinguish explanatory copy from clickable controls.",
+                    );
+                    ui.bullet_text(
+                        "Recipe layers can restyle this surface later, but the base helper family needs to read correctly first.",
+                    );
 
                     ui.separator_text("Pulse");
                     let pulse = ui.button_with_options(
@@ -733,6 +760,111 @@ fn render_interaction_lab_card(
                         let _ = drag_distance.update_in(ui.cx_mut().app.models_mut(), |value| {
                             *value += delta.x.0.abs() + delta.y.0.abs();
                         });
+                    }
+
+                    ui.separator_text("Button family");
+                    ui.text(
+                        "Default, compact, directional, and radio surfaces should all read as deliberate controls before any recipe skin is layered on top.",
+                    );
+
+                    let quick_save = ui.small_button_with_options(
+                        "Quick save",
+                        ButtonOptions {
+                            test_id: Some(Arc::from("imui-showcase.lab.small-save")),
+                            ..Default::default()
+                        },
+                    );
+                    if quick_save.clicked() {
+                        push_showcase_event(
+                            ui.cx_mut().app,
+                            &timeline_next_id,
+                            &timeline,
+                            "Small button committed a quick-save style action.",
+                        );
+                    }
+
+                    ui.horizontal(|ui| {
+                        let previous = ui.arrow_button_with_options(
+                            "imui-showcase.lab.bookmark.prev",
+                            ButtonArrowDirection::Left,
+                            ButtonOptions {
+                                a11y_label: Some(Arc::from("Previous bookmark")),
+                                test_id: Some(Arc::from("imui-showcase.lab.bookmark.prev")),
+                                ..Default::default()
+                            },
+                        );
+                        if previous.clicked() {
+                            let next = bookmark_slot
+                                .value_in(ui.cx_mut().app.models())
+                                .unwrap_or(2)
+                                .saturating_sub(1)
+                                .max(1);
+                            let _ = bookmark_slot
+                                .set_in(ui.cx_mut().app.models_mut(), next);
+                            push_showcase_event(
+                                ui.cx_mut().app,
+                                &timeline_next_id,
+                                &timeline,
+                                Arc::<str>::from(format!("Bookmark focus moved to slot {next}.")),
+                            );
+                        }
+
+                        let current_bookmark =
+                            bookmark_slot.value_in(ui.cx_mut().app.models()).unwrap_or(2);
+                        ui.text(format!("Bookmark slot {current_bookmark}"));
+
+                        let next = ui.arrow_button_with_options(
+                            "imui-showcase.lab.bookmark.next",
+                            ButtonArrowDirection::Right,
+                            ButtonOptions {
+                                a11y_label: Some(Arc::from("Next bookmark")),
+                                test_id: Some(Arc::from("imui-showcase.lab.bookmark.next")),
+                                ..Default::default()
+                            },
+                        );
+                        if next.clicked() {
+                            let next = (bookmark_slot
+                                .value_in(ui.cx_mut().app.models())
+                                .unwrap_or(2)
+                                + 1)
+                                .min(5);
+                            let _ = bookmark_slot
+                                .set_in(ui.cx_mut().app.models_mut(), next);
+                            push_showcase_event(
+                                ui.cx_mut().app,
+                                &timeline_next_id,
+                                &timeline,
+                                Arc::<str>::from(format!("Bookmark focus moved to slot {next}.")),
+                            );
+                        }
+                    });
+
+                    let active_tool = tool_mode
+                        .value_in(ui.cx_mut().app.models())
+                        .unwrap_or_else(|| Arc::from("Move"));
+                    for candidate in ["Move", "Rotate", "Scale"] {
+                        let chosen = active_tool.as_ref() == candidate;
+                        let response = ui.radio_with_options(
+                            candidate,
+                            chosen,
+                            RadioOptions {
+                                test_id: Some(Arc::from(format!(
+                                    "imui-showcase.lab.tool.{}",
+                                    candidate.to_lowercase()
+                                ))),
+                                ..Default::default()
+                            },
+                        );
+                        if response.clicked() && !chosen {
+                            let _ = tool_mode
+                                .set_in(ui.cx_mut().app.models_mut(), Arc::from(candidate));
+                            push_showcase_event(
+                                ui.cx_mut().app,
+                                &timeline_next_id,
+                                &timeline,
+                                Arc::<str>::from(format!("Tool mode switched to {candidate}.")),
+                            );
+                        }
                     }
 
                     ui.separator_text("Controls");
@@ -1396,27 +1528,29 @@ fn render_timeline_card(
         let event_id = event.id;
         let label = event.label.clone();
         let row = ui::container(move |cx| {
-            vec![ui::h_flex(move |cx| {
-                vec![
-                    shadcn::Badge::new(format!("#{event_id}"))
-                        .variant(if index == 0 {
-                            shadcn::BadgeVariant::Default
-                        } else {
-                            shadcn::BadgeVariant::Outline
-                        })
-                        .into_element(cx),
-                    ui::text(label)
-                        .text_sm()
-                        .wrap(fret_core::TextWrap::Word)
-                        .flex_1()
-                        .min_w_0()
-                        .into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .items_start()
-            .w_full()
-            .into_element(cx)]
+            vec![
+                ui::h_flex(move |cx| {
+                    vec![
+                        shadcn::Badge::new(format!("#{event_id}"))
+                            .variant(if index == 0 {
+                                shadcn::BadgeVariant::Default
+                            } else {
+                                shadcn::BadgeVariant::Outline
+                            })
+                            .into_element(cx),
+                        ui::text(label)
+                            .text_sm()
+                            .wrap(fret_core::TextWrap::Word)
+                            .flex_1()
+                            .min_w_0()
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_start()
+                .w_full()
+                .into_element(cx),
+            ]
         })
         .p_3()
         .rounded_md()
@@ -1509,14 +1643,16 @@ fn telemetry_meter(
             .w_full()
             .into_element(cx),
             ui::container(move |cx| {
-                vec![ui::container(|_cx| Vec::<AnyElement>::new())
-                    .h_px(Px(8.0))
-                    .w_px(fill_width)
-                    .rounded_md()
-                    .bg(ColorRef::Color(
-                        Theme::global(&*cx.app).color_token("primary"),
-                    ))
-                    .into_element(cx)]
+                vec![
+                    ui::container(|_cx| Vec::<AnyElement>::new())
+                        .h_px(Px(8.0))
+                        .w_px(fill_width)
+                        .rounded_md()
+                        .bg(ColorRef::Color(
+                            Theme::global(&*cx.app).color_token("primary"),
+                        ))
+                        .into_element(cx),
+                ]
             })
             .h_px(Px(8.0))
             .w_full()

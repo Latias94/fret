@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "slug": "imui-control-chrome-fearless-refactor-v1",
+  "title": "ImUi Control Chrome Fearless Refactor v1",
+  "status": "active",
+  "updated": "2026-04-14",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "The default immediate controls in `ecosystem/fret-ui-kit::imui` still teach text-like interactive surfaces and unstable narrow-width form behavior. This lane owns a shared control-chrome refactor so button/switch/slider/combo/input surfaces become clearly interactive, survive compact editor rails, and stop forcing demos to compensate for broken defaults.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M1_IMUI_VS_IMGUI_COMPONENT_AUDIT_2026-04-14.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/control-chrome-normalization-audit-v1/control-chrome-normalization-audit-v1.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the immediate interaction showcase at the default compact editor window, then use the existing diag scripts to lock screenshot and interaction behavior while the default control surface is being rewritten.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_interaction_showcase_demo",
+      "cargo run -p fret-demo --bin imui_shadcn_adapter_demo",
+      "cargo run -p fret-demo --bin imui_response_signals_demo",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release"
+    ]
+  },
+  "gates": [
+    {
+      "name": "imui-focused-interaction-tests",
+      "command": "cargo nextest run -p fret-imui"
+    },
+    {
+      "name": "imui-kit-adapter-and-combo-smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_adapter_seam_smoke --test imui_combo_smoke"
+    },
+    {
+      "name": "imui-button-family-runtime-smoke",
+      "command": "cargo nextest run -p fret-imui button_family_variants_and_radio_mount_with_expected_bounds"
+    },
+    {
+      "name": "imui-showcase-layout-unit",
+      "command": "cargo nextest run -p fret-examples --lib showcase_responsive_layout"
+    },
+    {
+      "name": "imui-showcase-interaction-smoke",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release"
+    },
+    {
+      "name": "imui-showcase-compact-shell-smoke",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release"
+    },
+    {
+      "name": "imui-showcase-compact-layout-screenshot",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream-json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-control-chrome-fearless-refactor-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M1_IMUI_VS_IMGUI_COMPONENT_AUDIT_2026-04-14.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md",
+    "docs/workstreams/control-chrome-normalization-audit-v1/control-chrome-normalization-audit-v1.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md",
+    "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
+    "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+    "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/tests/imui_bullet_text_smoke.rs",
+    "ecosystem/fret-ui-kit/tests/imui_button_smoke.rs",
+    "ecosystem/fret-imui/src/tests/composition.rs",
+    "tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json",
+    "tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json",
+    "tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "repo-ref/imgui/imgui_demo.cpp",
+    "repo-ref/egui/crates/egui/src/widgets/button.rs",
+    "repo-ref/egui/crates/egui/src/widgets/slider.rs",
+    "repo-ref/egui/crates/egui/src/containers/combo_box.rs",
+    "repo-ref/egui/crates/egui/src/widgets/text_edit/mod.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane while the shared IMUI control chrome refactor is active. If the remaining work narrows to one control family only (for example checkbox/selectable-only parity), start a smaller follow-on instead of widening this lane again."
+  }
+}
