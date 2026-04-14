@@ -8,15 +8,20 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-pub(super) const BUTTON_MIN_HEIGHT: Px = Px(36.0);
-pub(super) const SMALL_BUTTON_MIN_HEIGHT: Px = Px(28.0);
-pub(super) const FIELD_MIN_HEIGHT: Px = Px(44.0);
-pub(super) const ARROW_BUTTON_SIZE: Px = Px(28.0);
-pub(super) const RADIO_INDICATOR_SIZE: Px = Px(16.0);
-pub(super) const RADIO_DOT_SIZE: Px = Px(8.0);
-pub(super) const STACK_GAP: Px = Px(6.0);
-pub(super) const ROW_GAP: Px = Px(10.0);
-pub(super) const SLIDER_TRACK_HEIGHT: Px = Px(8.0);
+// Dear ImGui's default style is compact and mostly square.
+// Keep Fret IMUI slightly roomier than upstream to preserve a usable hit target, but use the
+// same overall density direction instead of the old shadcn-form defaults.
+pub(super) const CONTROL_RADIUS: Px = Px(2.0);
+pub(super) const PANEL_RADIUS: Px = Px(4.0);
+pub(super) const BUTTON_MIN_HEIGHT: Px = Px(24.0);
+pub(super) const SMALL_BUTTON_MIN_HEIGHT: Px = Px(20.0);
+pub(super) const FIELD_MIN_HEIGHT: Px = Px(24.0);
+pub(super) const ARROW_BUTTON_SIZE: Px = Px(20.0);
+pub(super) const RADIO_INDICATOR_SIZE: Px = Px(14.0);
+pub(super) const RADIO_DOT_SIZE: Px = Px(6.0);
+pub(super) const STACK_GAP: Px = Px(4.0);
+pub(super) const ROW_GAP: Px = Px(8.0);
+pub(super) const SLIDER_TRACK_HEIGHT: Px = Px(4.0);
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ImUiControlPalette {
@@ -65,8 +70,10 @@ pub(super) fn button_chrome<H: UiHost>(
     let palette = ImUiControlPalette {
         background: if !enabled {
             muted
-        } else if state.pressed || state.hovered || state.focused {
+        } else if state.pressed {
             accent
+        } else if state.hovered || state.focused {
+            muted
         } else {
             secondary
         },
@@ -90,16 +97,16 @@ pub(super) fn button_chrome<H: UiHost>(
 
     let mut chrome = ContainerProps::default();
     chrome.padding = Edges {
-        left: Px(12.0),
-        right: Px(12.0),
-        top: Px(8.0),
-        bottom: Px(8.0),
+        left: Px(8.0),
+        right: Px(8.0),
+        top: Px(4.0),
+        bottom: Px(4.0),
     }
     .into();
     chrome.background = Some(palette.background);
     chrome.border = Edges::all(Px(1.0));
     chrome.border_color = Some(palette.border);
-    chrome.corner_radii = Corners::all(Px(8.0));
+    chrome.corner_radii = Corners::all(CONTROL_RADIUS);
 
     (palette, chrome)
 }
@@ -111,7 +118,9 @@ pub(super) fn field_chrome<H: UiHost>(
 ) -> (ImUiControlPalette, ContainerProps) {
     let theme = Theme::global(&*cx.app);
     let background = theme
-        .color_by_key("background")
+        .color_by_key("card")
+        .or_else(|| theme.color_by_key("muted"))
+        .or_else(|| theme.color_by_key("background"))
         .unwrap_or_else(|| theme.color_token("background"));
     let muted = theme
         .color_by_key("muted")
@@ -139,7 +148,7 @@ pub(super) fn field_chrome<H: UiHost>(
     let palette = ImUiControlPalette {
         background: if !enabled {
             muted
-        } else if state.pressed {
+        } else if state.pressed || state.hovered {
             muted
         } else {
             background
@@ -159,16 +168,16 @@ pub(super) fn field_chrome<H: UiHost>(
     let mut chrome = ContainerProps::default();
     chrome.layout.size.width = Length::Fill;
     chrome.padding = Edges {
-        left: Px(10.0),
-        right: Px(10.0),
-        top: Px(8.0),
-        bottom: Px(8.0),
+        left: Px(8.0),
+        right: Px(8.0),
+        top: Px(3.0),
+        bottom: Px(3.0),
     }
     .into();
     chrome.background = Some(palette.background);
     chrome.border = Edges::all(Px(1.0));
     chrome.border_color = Some(palette.border);
-    chrome.corner_radii = Corners::all(Px(8.0));
+    chrome.corner_radii = Corners::all(CONTROL_RADIUS);
 
     (palette, chrome)
 }
@@ -244,14 +253,14 @@ pub(super) fn pill<H: UiHost>(
 ) -> AnyElement {
     let mut chrome = ContainerProps::default();
     chrome.padding = Edges {
-        left: Px(8.0),
-        right: Px(8.0),
-        top: Px(4.0),
-        bottom: Px(4.0),
+        left: Px(6.0),
+        right: Px(6.0),
+        top: Px(2.0),
+        bottom: Px(2.0),
     }
     .into();
     chrome.background = Some(bg);
-    chrome.corner_radii = Corners::all(Px(999.0));
+    chrome.corner_radii = Corners::all(CONTROL_RADIUS);
 
     cx.container(chrome, move |cx| vec![control_text(cx, text, fg)])
 }

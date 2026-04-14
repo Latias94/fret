@@ -69,7 +69,7 @@ fn render_test_sortable_rows(
     let delivered_flag = delivered_flag.clone();
 
     move |cx| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let snapshot = items.borrow().clone();
             let mut pending_reorder: Option<(
                 Arc<str>,
@@ -175,7 +175,7 @@ fn multi_selectable_supports_plain_toggle_and_range_clicks() {
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   selected_out: &Rc<RefCell<Vec<Arc<str>>>>,
                   anchor_out: &Rc<RefCell<Option<Arc<str>>>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 for (index, item) in items.iter().enumerate() {
                     let _ = ui.multi_selectable_with_options(
@@ -349,7 +349,7 @@ fn menu_item_command_uses_command_metadata_shortcut_and_gating() {
     );
 
     let render = |cx: &mut ElementContext<'_, TestHost>, command: &CommandId| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_item_command_with_options(
                 command.clone(),
                 MenuItemOptions {
@@ -456,7 +456,7 @@ fn button_command_uses_command_metadata_and_gating() {
         .register(command.clone(), CommandMeta::new("Open Project"));
 
     let render = |cx: &mut ElementContext<'_, TestHost>, command: &CommandId| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.button_command_with_options(
                 command.clone(),
                 fret_ui_kit::imui::ButtonOptions {
@@ -559,7 +559,7 @@ fn button_activate_shortcut_is_scoped_to_focused_button() {
     let shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 ui.button_command_with_options(
                     command.clone(),
@@ -676,7 +676,7 @@ fn button_activate_shortcut_repeat_is_opt_in() {
     let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 ui.button_command_with_options(
                     default_command.clone(),
@@ -783,7 +783,7 @@ fn selectable_activate_shortcut_is_scoped_to_focused_item() {
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   target_clicked_out: &Rc<Cell<bool>>,
                   other_clicked_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 target_clicked_out.set(
                     ui.selectable_with_options(
@@ -994,7 +994,7 @@ fn selectable_activate_shortcut_preserves_popup_arrow_nav() {
     let popup_id = "imui-selectable-shortcut-popup";
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let popup_open = ui.popup_open_model(popup_id);
             let is_open = ui
                 .cx_mut()
@@ -1163,7 +1163,7 @@ fn begin_menu_helper_toggles_popup_and_closes_after_command_activate() {
     );
 
     let render = |cx: &mut ElementContext<'_, TestHost>, command: &CommandId| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-begin-menu.root")),
@@ -1298,7 +1298,7 @@ fn begin_menu_activate_shortcut_is_scoped_to_focused_trigger() {
     );
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-begin-menu-shortcut.root")),
@@ -1443,7 +1443,7 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
     let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-begin-menu-repeat.root")),
@@ -1637,7 +1637,7 @@ fn begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics() {
     let file_open_out = file_open.clone();
     let recent_open_out = recent_open.clone();
     let render = |cx: &mut ElementContext<'_, TestHost>, command: &CommandId| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-begin-submenu.root")),
@@ -1863,7 +1863,7 @@ fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger() {
     let shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-begin-submenu-shortcut.root")),
@@ -2060,7 +2060,7 @@ fn begin_submenu_activate_shortcut_repeat_is_opt_in() {
     let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-begin-submenu-repeat.root")),
@@ -2317,7 +2317,7 @@ fn menu_and_submenu_helpers_report_toggle_and_trigger_edges() {
         let submenu_opened = submenu_opened.clone();
         let submenu_clicked = submenu_clicked.clone();
 
-        crate::imui(cx, move |ui| {
+        crate::imui_raw(cx, move |ui| {
             ui.menu_bar_with_options(
                 fret_ui_kit::imui::MenuBarOptions {
                     test_id: Some(Arc::from("imui-menu-response.root")),
@@ -2473,7 +2473,7 @@ fn tab_bar_helper_switches_selected_panel_and_updates_selection_model() {
     let selected_out_render = selected_out.clone();
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.tab_bar_with_options(
                 "workspace",
                 fret_ui_kit::imui::TabBarOptions {
@@ -2644,7 +2644,7 @@ fn tab_bar_helper_reports_selected_change_and_trigger_edges() {
         let scene_selected = scene_selected.clone();
         let selected_model = selected_model.clone();
 
-        crate::imui(cx, move |ui| {
+        crate::imui_raw(cx, move |ui| {
             let tabs = ui.tab_bar_with_options(
                 "workspace",
                 fret_ui_kit::imui::TabBarOptions {
@@ -2800,7 +2800,7 @@ fn tab_item_activate_shortcut_is_scoped_to_focused_trigger() {
     );
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.tab_bar_with_options(
                 "workspace",
                 fret_ui_kit::imui::TabBarOptions {
@@ -2981,7 +2981,7 @@ fn click_sets_clicked_true_once() {
         bounds,
         "imui-click-once",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 button_id_frame1_out.set(resp.id);
                 clicked_out.set(resp.clicked());
@@ -3029,7 +3029,7 @@ fn click_sets_clicked_true_once() {
         bounds,
         "imui-click-once",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 button_id_frame2_out.set(resp.id);
                 clicked_out.set(resp.clicked());
@@ -3055,7 +3055,7 @@ fn click_sets_clicked_true_once() {
         bounds,
         "imui-click-once",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 clicked_out.set(ui.button("OK").clicked());
             })
         },
@@ -3093,7 +3093,7 @@ fn button_lifecycle_edges_follow_press_session() {
         bounds,
         "imui-button-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 activated_out.set(resp.activated());
                 deactivated_out.set(resp.deactivated());
@@ -3120,7 +3120,7 @@ fn button_lifecycle_edges_follow_press_session() {
         bounds,
         "imui-button-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 activated_out.set(resp.activated());
                 deactivated_out.set(resp.deactivated());
@@ -3146,7 +3146,7 @@ fn button_lifecycle_edges_follow_press_session() {
         bounds,
         "imui-button-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 activated_out.set(resp.activated());
                 deactivated_out.set(resp.deactivated());
@@ -3189,7 +3189,7 @@ fn menu_item_lifecycle_edges_follow_press_session() {
         bounds,
         "imui-menu-item-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.menu_item_with_options(
                     "Open",
                     MenuItemOptions {
@@ -3228,7 +3228,7 @@ fn menu_item_lifecycle_edges_follow_press_session() {
         bounds,
         "imui-menu-item-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.menu_item_with_options(
                     "Open",
                     MenuItemOptions {
@@ -3260,7 +3260,7 @@ fn menu_item_lifecycle_edges_follow_press_session() {
         bounds,
         "imui-menu-item-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.menu_item_with_options(
                     "Open",
                     MenuItemOptions {
@@ -3312,7 +3312,7 @@ fn checkbox_lifecycle_reports_edit_and_deactivated_after_edit() {
         bounds,
         "imui-checkbox-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.checkbox_model("Enabled", &model);
                 activated_out.set(resp.activated());
                 deactivated_out.set(resp.deactivated());
@@ -3343,7 +3343,7 @@ fn checkbox_lifecycle_reports_edit_and_deactivated_after_edit() {
         bounds,
         "imui-checkbox-lifecycle-edges",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.checkbox_model("Enabled", &model);
                 activated_out.set(resp.activated());
                 deactivated_out.set(resp.deactivated());
@@ -3385,7 +3385,7 @@ fn right_click_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-right-click",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 requested_out.set(resp.context_menu_requested());
                 secondary_clicked_out.set(resp.secondary_clicked());
@@ -3409,7 +3409,7 @@ fn right_click_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-right-click",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 requested_out.set(resp.context_menu_requested());
                 secondary_clicked_out.set(resp.secondary_clicked());
@@ -3430,7 +3430,7 @@ fn right_click_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-right-click",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 requested_out.set(resp.context_menu_requested());
                 secondary_clicked_out.set(resp.secondary_clicked());
@@ -3466,7 +3466,7 @@ fn double_click_sets_double_clicked_true_once() {
         bounds,
         "imui-double-click",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 double_clicked_out.set(ui.button("OK").double_clicked());
             })
         },
@@ -3486,7 +3486,7 @@ fn double_click_sets_double_clicked_true_once() {
         bounds,
         "imui-double-click",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 double_clicked_out.set(ui.button("OK").double_clicked());
             })
         },
@@ -3503,7 +3503,7 @@ fn double_click_sets_double_clicked_true_once() {
         bounds,
         "imui-double-click",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 double_clicked_out.set(ui.button("OK").double_clicked());
             })
         },
@@ -3536,7 +3536,7 @@ fn shift_f10_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(ui.button("OK").context_menu_requested());
             })
         },
@@ -3556,7 +3556,7 @@ fn shift_f10_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(ui.button("OK").context_menu_requested());
             })
         },
@@ -3584,7 +3584,7 @@ fn shift_f10_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(ui.button("OK").context_menu_requested());
             })
         },
@@ -3601,7 +3601,7 @@ fn shift_f10_sets_context_menu_requested_true_once() {
         bounds,
         "imui-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(ui.button("OK").context_menu_requested());
             })
         },
@@ -3643,7 +3643,7 @@ fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-checkbox-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.checkbox_model_with_options(
                         "Enabled",
@@ -3674,7 +3674,7 @@ fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-checkbox-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.checkbox_model_with_options(
                         "Enabled",
@@ -3713,7 +3713,7 @@ fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-checkbox-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.checkbox_model_with_options(
                         "Enabled",
@@ -3741,7 +3741,7 @@ fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-checkbox-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.checkbox_model_with_options(
                         "Enabled",
@@ -3791,7 +3791,7 @@ fn collapsing_header_activate_shortcut_is_scoped_to_focused_trigger() {
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   target_state_out: &Rc<Cell<bool>>,
                   other_state_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let _ = ui.collapsing_header_with_options(
                     "target",
@@ -4011,7 +4011,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-tree-node-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.tree_node_with_options(
                         "node",
@@ -4045,7 +4045,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-tree-node-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.tree_node_with_options(
                         "node",
@@ -4087,7 +4087,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-tree-node-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.tree_node_with_options(
                         "node",
@@ -4118,7 +4118,7 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
         bounds,
         "imui-tree-node-context-menu-shift-f10",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 requested_out.set(
                     ui.tree_node_with_options(
                         "node",
@@ -4138,6 +4138,112 @@ fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request() {
         },
     );
     assert!(!requested.get());
+}
+
+#[test]
+fn tree_node_children_stack_vertically_inside_open_parents() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-tree-node-vertical-stacking",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let _ = ui.tree_node_with_options(
+                    "scene",
+                    "Scene",
+                    fret_ui_kit::imui::TreeNodeOptions {
+                        default_open: true,
+                        test_id: Some(Arc::from("imui-tree-node-stack.scene")),
+                        content_test_id: Some(Arc::from("imui-tree-node-stack.scene.content")),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let _ = ui.tree_node_with_options(
+                            "geometry",
+                            "Geometry",
+                            fret_ui_kit::imui::TreeNodeOptions {
+                                default_open: true,
+                                level: 2,
+                                test_id: Some(Arc::from("imui-tree-node-stack.geometry")),
+                                content_test_id: Some(Arc::from(
+                                    "imui-tree-node-stack.geometry.content",
+                                )),
+                                ..Default::default()
+                            },
+                            |ui| {
+                                let _ = ui.tree_node_with_options(
+                                    "cube",
+                                    "Cube",
+                                    fret_ui_kit::imui::TreeNodeOptions {
+                                        leaf: true,
+                                        level: 3,
+                                        test_id: Some(Arc::from("imui-tree-node-stack.cube")),
+                                        ..Default::default()
+                                    },
+                                    |_ui| {},
+                                );
+                                let _ = ui.tree_node_with_options(
+                                    "key-light",
+                                    "Key light",
+                                    fret_ui_kit::imui::TreeNodeOptions {
+                                        leaf: true,
+                                        level: 3,
+                                        test_id: Some(Arc::from("imui-tree-node-stack.key-light")),
+                                        ..Default::default()
+                                    },
+                                    |_ui| {},
+                                );
+                            },
+                        );
+                        let _ = ui.tree_node_with_options(
+                            "postfx",
+                            "Post FX",
+                            fret_ui_kit::imui::TreeNodeOptions {
+                                leaf: true,
+                                level: 2,
+                                test_id: Some(Arc::from("imui-tree-node-stack.postfx")),
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let geometry_bounds = bounds_for_test_id(&ui, "imui-tree-node-stack.geometry");
+    let postfx_bounds = bounds_for_test_id(&ui, "imui-tree-node-stack.postfx");
+    let cube_bounds = bounds_for_test_id(&ui, "imui-tree-node-stack.cube");
+    let key_light_bounds = bounds_for_test_id(&ui, "imui-tree-node-stack.key-light");
+
+    assert!(
+        postfx_bounds.origin.y.0 >= geometry_bounds.origin.y.0 + geometry_bounds.size.height.0,
+        "expected Post FX to land below Geometry, got geometry={geometry_bounds:?} postfx={postfx_bounds:?}"
+    );
+    assert!(
+        key_light_bounds.origin.y.0 >= cube_bounds.origin.y.0 + cube_bounds.size.height.0,
+        "expected Key light to land below Cube, got cube={cube_bounds:?} key_light={key_light_bounds:?}"
+    );
 }
 
 #[allow(dead_code)]
@@ -4166,7 +4272,7 @@ fn holding_press_does_not_repeat_clicked() {
         bounds,
         "imui-hold-press",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 clicked_out.set(ui.button("OK").clicked());
             })
         },
@@ -4186,7 +4292,7 @@ fn holding_press_does_not_repeat_clicked() {
         bounds,
         "imui-hold-press",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 clicked_out.set(ui.button("OK").clicked());
             })
         },
@@ -4205,7 +4311,7 @@ fn holding_press_does_not_repeat_clicked() {
         bounds,
         "imui-hold-press",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 clicked_out.set(ui.button("OK").clicked());
             })
         },
@@ -4222,7 +4328,7 @@ fn holding_press_does_not_repeat_clicked() {
         bounds,
         "imui-hold-press",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 clicked_out.set(ui.button("OK").clicked());
             })
         },
@@ -4262,7 +4368,7 @@ fn drag_started_stopped_and_delta_are_consistent() {
         bounds,
         "imui-drag-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4291,7 +4397,7 @@ fn drag_started_stopped_and_delta_are_consistent() {
         bounds,
         "imui-drag-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4330,7 +4436,7 @@ fn drag_started_stopped_and_delta_are_consistent() {
         bounds,
         "imui-drag-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4369,7 +4475,7 @@ fn drag_started_stopped_and_delta_are_consistent() {
         bounds,
         "imui-drag-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4398,7 +4504,7 @@ fn drag_started_stopped_and_delta_are_consistent() {
         bounds,
         "imui-drag-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4451,7 +4557,7 @@ fn drag_threshold_metric_controls_drag_start() {
         bounds,
         "imui-drag-threshold-metric",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4490,7 +4596,7 @@ fn drag_threshold_metric_controls_drag_start() {
         bounds,
         "imui-drag-threshold-metric",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4526,7 +4632,7 @@ fn drag_threshold_metric_controls_drag_start() {
         bounds,
         "imui-drag-threshold-metric",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 started_out.set(resp.drag_started());
                 dragging_out.set(resp.dragging());
@@ -4573,7 +4679,7 @@ fn drag_drop_helper_previews_and_delivers_payload() {
         bounds,
         "imui-drag-drop-helper",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.horizontal(|ui| {
                     let source = ui.button_with_options(
                         "Asset",
@@ -4652,7 +4758,7 @@ fn drag_drop_helper_previews_and_delivers_payload() {
         bounds,
         "imui-drag-drop-helper",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.horizontal(|ui| {
                     let source = ui.button_with_options(
                         "Asset",
@@ -4716,7 +4822,7 @@ fn drag_drop_helper_previews_and_delivers_payload() {
         bounds,
         "imui-drag-drop-helper",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.horizontal(|ui| {
                     let source = ui.button_with_options(
                         "Asset",
@@ -4805,7 +4911,7 @@ fn drag_preview_ghost_follows_pointer_and_clears_on_release() {
         bounds,
         "imui-drag-preview-ghost",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let source = ui.button_with_options(
                     "Asset",
                     fret_ui_kit::imui::ButtonOptions {
@@ -4874,7 +4980,7 @@ fn drag_preview_ghost_follows_pointer_and_clears_on_release() {
         bounds,
         "imui-drag-preview-ghost",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let source = ui.button_with_options(
                     "Asset",
                     fret_ui_kit::imui::ButtonOptions {
@@ -4934,7 +5040,7 @@ fn drag_preview_ghost_follows_pointer_and_clears_on_release() {
         bounds,
         "imui-drag-preview-ghost",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let source = ui.button_with_options(
                     "Asset",
                     fret_ui_kit::imui::ButtonOptions {
@@ -4994,7 +5100,7 @@ fn cross_window_drag_preview_ghost_transfers_between_windows() {
     let mut services = FakeTextService::default();
 
     let render_scene = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let source = ui.button_with_options(
                 "Asset",
                 fret_ui_kit::imui::ButtonOptions {
@@ -5340,7 +5446,7 @@ fn long_press_sets_long_pressed_true_once_and_reports_holding() {
         bounds,
         "imui-long-press-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 long_pressed_out.set(resp.long_pressed());
                 holding_out.set(resp.press_holding());
@@ -5366,7 +5472,7 @@ fn long_press_sets_long_pressed_true_once_and_reports_holding() {
         bounds,
         "imui-long-press-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 long_pressed_out.set(resp.long_pressed());
                 holding_out.set(resp.press_holding());
@@ -5388,7 +5494,7 @@ fn long_press_sets_long_pressed_true_once_and_reports_holding() {
         bounds,
         "imui-long-press-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 long_pressed_out.set(resp.long_pressed());
                 holding_out.set(resp.press_holding());
@@ -5411,7 +5517,7 @@ fn long_press_sets_long_pressed_true_once_and_reports_holding() {
         bounds,
         "imui-long-press-signals",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 long_pressed_out.set(resp.long_pressed());
                 holding_out.set(resp.press_holding());

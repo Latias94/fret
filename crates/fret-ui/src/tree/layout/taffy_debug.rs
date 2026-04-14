@@ -33,14 +33,14 @@ fn layout_debug_node_info<H: UiHost>(
         serde_json::json!(record.instance.kind_name()),
     );
 
-    let mut effective_test_id: Option<String> = None;
+    let effective_test_id =
+        crate::declarative::frame::effective_test_id_for_record(&record).map(ToString::to_string);
     let mut effective_role: Option<String> = None;
     let mut effective_label: Option<String> = None;
 
     match &record.instance {
         crate::declarative::frame::ElementInstance::Semantics(props) => {
             effective_role = Some(format!("{:?}", props.role));
-            effective_test_id = props.test_id.as_ref().map(ToString::to_string);
             effective_label = props.label.as_ref().map(ToString::to_string);
         }
         crate::declarative::frame::ElementInstance::SemanticFlex(props) => {
@@ -53,7 +53,6 @@ fn layout_debug_node_info<H: UiHost>(
         let mut decoration_debug = serde_json::Map::new();
         if let Some(test_id) = decoration.test_id.as_ref() {
             decoration_debug.insert("test_id".to_string(), serde_json::json!(test_id.as_ref()));
-            effective_test_id = Some(test_id.to_string());
         }
         if let Some(role) = decoration.role {
             let role = format!("{role:?}");

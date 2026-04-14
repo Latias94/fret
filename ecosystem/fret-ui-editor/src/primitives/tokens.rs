@@ -56,6 +56,7 @@ impl EditorTokenKeys {
     pub const PROPERTY_PANEL_BORDER: &'static str = "editor.property.panel_border";
     pub const PROPERTY_PANEL_HEADER_BG: &'static str = "editor.property.panel_header_bg";
     pub const PROPERTY_PANEL_HEADER_BORDER: &'static str = "editor.property.panel_header_border";
+    pub const PROPERTY_PANEL_RADIUS: &'static str = "editor.property.panel_radius";
     pub const PROPERTY_GROUP_BORDER: &'static str = "editor.property.group_border";
     pub const PROPERTY_HEADER_BG: &'static str = "editor.property.header_bg";
     pub const PROPERTY_HEADER_BORDER: &'static str = "editor.property.header_border";

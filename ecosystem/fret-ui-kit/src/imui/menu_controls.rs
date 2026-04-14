@@ -87,10 +87,10 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         panel.layout.size.width = Length::Fill;
         panel.layout.size.height = Length::Auto;
         panel.padding = Edges {
-            left: Px(8.0),
-            right: Px(8.0),
-            top: Px(4.0),
-            bottom: Px(4.0),
+            left: Px(6.0),
+            right: Px(6.0),
+            top: Px(2.0),
+            bottom: Px(2.0),
         }
         .into();
 
@@ -121,7 +121,7 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 let mut row = RowProps::default();
                 row.layout.size.width = Length::Fill;
                 row.layout.size.height = Length::Auto;
-                row.gap = SpacingLength::Px(Px(8.0));
+                row.gap = SpacingLength::Px(Px(6.0));
 
                 let indicator = match (role, checked) {
                     (SemanticsRole::MenuItemCheckbox, Some(true)) => Some(Arc::from("\u{2713}")),

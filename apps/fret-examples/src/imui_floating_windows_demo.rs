@@ -35,7 +35,7 @@ impl View for ImUiFloatingWindowsView {
         let select_mode_state = cx.state().local_init(|| None::<Arc<str>>);
         let a_overlap_clicked_state = cx.state().local_init(|| false);
 
-        fret_imui::imui_vstack(cx.elements(), |ui| {
+        fret_imui::imui(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
 

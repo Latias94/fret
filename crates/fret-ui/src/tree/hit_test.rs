@@ -5,11 +5,11 @@ impl<H: UiHost> UiTree<H> {
         self.hit_test_node(root, position)
     }
 
-    pub(super) fn hit_test_layers_cached(
+    pub(super) fn hit_test_layers_cached_with_root(
         &mut self,
         layers: &[NodeId],
         position: Point,
-    ) -> Option<NodeId> {
+    ) -> Option<(NodeId, NodeId)> {
         let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
         let layers_len = layers.len() as u64;
         let (hit, elapsed) = fret_perf::measure_span(
@@ -62,7 +62,7 @@ impl<H: UiHost> UiTree<H> {
                                         self.debug_stats.hit_test_path_cache_hits.saturating_add(1);
                                 }
                                 self.hit_test_path_cache = Some(cache);
-                                return Some(hit);
+                                return Some((root, hit));
                             }
 
                             if self.debug_enabled && !bounds_tree_enabled {
@@ -73,14 +73,14 @@ impl<H: UiHost> UiTree<H> {
                             }
                             let hit = self.hit_test_layer_bounds_tree_or_fallback(root, position);
                             self.update_hit_test_path_cache(root, hit);
-                            return hit;
+                            return hit.map(|hit| (root, hit));
                         }
 
                         if let Some(hit) =
                             self.hit_test_layer_bounds_tree_or_fallback(root, position)
                         {
                             self.update_hit_test_path_cache(root, Some(hit));
-                            return Some(hit);
+                            return Some((root, hit));
                         }
                     }
 
@@ -91,7 +91,7 @@ impl<H: UiHost> UiTree<H> {
                 for &root in layers {
                     if let Some(hit) = self.hit_test_layer_bounds_tree_or_fallback(root, position) {
                         self.update_hit_test_path_cache(root, Some(hit));
-                        return Some(hit);
+                        return Some((root, hit));
                     }
                 }
 
@@ -108,13 +108,31 @@ impl<H: UiHost> UiTree<H> {
         hit
     }
 
-    pub(super) fn hit_test_layers(&self, layers: &[NodeId], position: Point) -> Option<NodeId> {
+    pub(super) fn hit_test_layers_cached(
+        &mut self,
+        layers: &[NodeId],
+        position: Point,
+    ) -> Option<NodeId> {
+        self.hit_test_layers_cached_with_root(layers, position)
+            .map(|(_root, hit)| hit)
+    }
+
+    pub(super) fn hit_test_layers_with_root(
+        &self,
+        layers: &[NodeId],
+        position: Point,
+    ) -> Option<(NodeId, NodeId)> {
         for &root in layers {
             if let Some(hit) = self.hit_test(root, position) {
-                return Some(hit);
+                return Some((root, hit));
             }
         }
         None
+    }
+
+    pub(super) fn hit_test_layers(&self, layers: &[NodeId], position: Point) -> Option<NodeId> {
+        self.hit_test_layers_with_root(layers, position)
+            .map(|(_root, hit)| hit)
     }
 
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {

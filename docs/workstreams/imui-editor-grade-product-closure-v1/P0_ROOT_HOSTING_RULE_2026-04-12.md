@@ -13,22 +13,22 @@ Related:
 
 ## Question
 
-What is the first-open teaching rule for `fret_imui::imui(...)` versus
-`fret_imui::imui_vstack(...)`?
+What is the first-open teaching rule for default `fret_imui::imui(...)` versus advanced
+`fret_imui::imui_raw(...)`?
 
 ## Short answer
 
 Use these rules:
 
 1. If your IMUI content already lives under an explicit layout host, prefer
-   `fret_imui::imui(cx, ...)`.
+   `fret_imui::imui_raw(cx, ...)`.
 2. If you are mounting IMUI directly at the view root or under a non-layout parent, prefer
-   `fret_imui::imui_vstack(cx.elements(), ...)`.
+   `fret_imui::imui(...)`.
 
 The reason is simple:
 
-- `imui(...)` emits siblings directly,
-- `imui_vstack(...)` adds the default stacked host,
+- `imui(...)` adds the default stacked host,
+- `imui_raw(...)` emits siblings directly,
 - and the stacked host exists to avoid the common "all children overlap at `(0,0)`" footgun.
 
 ## Why this is a teaching rule, not a helper-growth trigger
@@ -42,8 +42,8 @@ This note therefore freezes the default explanation first:
 - teach the two mounting shapes clearly,
 - and do not treat root-host wording friction as automatic evidence for new public helper growth.
 
-`imui_vstack(...)` is the explicit root-host bridge, not evidence that generic helper growth should
-reopen.
+`imui_raw(...)` is the advanced explicit-layout seam, not evidence that generic helper growth
+should reopen.
 
 ## Current first-party evidence
 
@@ -51,7 +51,7 @@ The current repo already contains both shapes:
 
 - nested under an explicit layout host:
   - `apps/fret-cookbook/examples/imui_action_basics.rs`
-- root-hosted with the stacked bridge:
+- root-hosted with the safe default:
   - `apps/fret-examples/src/imui_hello_demo.rs`
 
 This means the missing piece is not another helper.
@@ -65,8 +65,8 @@ The immediate-mode first-open path should now teach this in order:
    - `apps/fret-cookbook/examples/imui_action_basics.rs`
    - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 2. read the mounting rule:
-   - nested layout host -> `fret_imui::imui(cx, ...)`
-   - root or non-layout parent -> `fret_imui::imui_vstack(cx.elements(), ...)`
+   - nested layout host -> `fret_imui::imui_raw(cx, ...)`
+   - root or non-layout parent -> `fret_imui::imui(...)`
 3. treat `imui_hello_demo` as the small smoke/reference proof of the explicit root-hosted shape,
    not as the default first-contact path
 

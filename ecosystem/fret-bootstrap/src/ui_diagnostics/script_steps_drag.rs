@@ -203,7 +203,22 @@ pub(super) fn handle_drag_pointer_step(
                     return true;
                 };
 
-                let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                let start = if let Some(ui_ref) = ui.as_deref() {
+                    pointer_position_prefer_intended_hit(
+                        app,
+                        snapshot,
+                        element_runtime,
+                        ui_ref,
+                        window,
+                        node,
+                        window_bounds,
+                    )
+                } else {
+                    center_of_rect_clamped_to_rect(
+                        interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                        window_bounds,
+                    )
+                };
                 if let Some(ui) = ui.as_deref_mut() {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
@@ -778,7 +793,15 @@ pub(super) fn handle_drag_pointer_until_step(
                         svc.cfg.redact_text,
                         &mut active.selector_resolution_trace,
                     ) {
-                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        let start = center_of_rect_clamped_to_rect(
+                            interaction_bounds_for_semantics_node(
+                                element_runtime,
+                                None,
+                                window,
+                                node,
+                            ),
+                            window_bounds,
+                        );
                         let mut end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -1001,34 +1024,46 @@ pub(super) fn handle_drag_to_step(
                 &mut active.selector_resolution_trace,
             );
             if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
+                let from_bounds = interaction_bounds_for_semantics_node(
+                    element_runtime,
+                    ui.as_deref(),
+                    window,
+                    from_node,
+                );
+                let to_bounds = interaction_bounds_for_semantics_node(
+                    element_runtime,
+                    ui.as_deref(),
+                    window,
+                    to_node,
+                );
                 let start = ui
                     .as_deref()
                     .map(|ui| {
                         wheel_position_prefer_intended_hit(
                             snapshot,
+                            element_runtime,
                             ui,
+                            window,
                             from_node,
-                            from_node.bounds,
+                            from_bounds,
                             window_bounds,
                         )
                     })
-                    .unwrap_or_else(|| {
-                        center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
-                    });
+                    .unwrap_or_else(|| center_of_rect_clamped_to_rect(from_bounds, window_bounds));
                 let end = ui
                     .as_deref()
                     .map(|ui| {
                         wheel_position_prefer_intended_hit(
                             snapshot,
+                            element_runtime,
                             ui,
+                            window,
                             to_node,
-                            to_node.bounds,
+                            to_bounds,
                             window_bounds,
                         )
                     })
-                    .unwrap_or_else(|| {
-                        center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
-                    });
+                    .unwrap_or_else(|| center_of_rect_clamped_to_rect(to_bounds, window_bounds));
                 if let Some(ui) = ui {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,

@@ -23,7 +23,7 @@ fn floating_window_moves_when_dragging_title_bar() {
         bounds,
         "imui-floating-window-drag",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window("demo", "Demo", Point::new(Px(10.0), Px(10.0)), |ui| {
                     ui.text("Hello");
                 });
@@ -63,7 +63,7 @@ fn floating_window_moves_when_dragging_title_bar() {
         bounds,
         "imui-floating-window-drag",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window("demo", "Demo", Point::new(Px(10.0), Px(10.0)), |ui| {
                     ui.text("Hello");
                 });
@@ -104,7 +104,7 @@ fn floating_area_moves_when_dragging_drag_surface() {
         bounds,
         "imui-floating-area-drag",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_area("demo", Point::new(Px(10.0), Px(10.0)), |ui, area| {
                     let mut props = fret_ui::element::PointerRegionProps::default();
                     props.layout.size.width = Length::Px(Px(140.0));
@@ -159,7 +159,7 @@ fn floating_area_moves_when_dragging_drag_surface() {
         bounds,
         "imui-floating-area-drag",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_area("demo", Point::new(Px(10.0), Px(10.0)), |ui, area| {
                     let mut props = fret_ui::element::PointerRegionProps::default();
                     props.layout.size.width = Length::Px(Px(140.0));
@@ -216,7 +216,7 @@ fn floating_area_bring_to_front_updates_hit_test_order() {
         bounds,
         "imui-floating-area-z-order",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     ui.floating_area("a", Point::new(Px(10.0), Px(10.0)), |ui, area| {
                         let mut props = fret_ui::element::PointerRegionProps::default();
@@ -325,7 +325,7 @@ fn floating_area_bring_to_front_updates_hit_test_order() {
         bounds,
         "imui-floating-area-z-order",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     ui.floating_area("a", Point::new(Px(10.0), Px(10.0)), |ui, area| {
                         let mut props = fret_ui::element::PointerRegionProps::default();
@@ -433,7 +433,7 @@ fn window_wrapper_reports_position_and_size() {
         bounds,
         "imui-window-wrapper-reports-position-and-size",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -476,7 +476,7 @@ fn floating_window_close_button_sets_open_false() {
         bounds,
         "imui-floating-window-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window_with_options(
                     "demo",
                     "Demo",
@@ -527,7 +527,7 @@ fn floating_window_escape_sets_open_false_after_focusing_title_bar() {
         bounds,
         "imui-floating-window-escape",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window_with_options(
                     "demo",
                     "Demo",
@@ -592,7 +592,7 @@ fn floating_layer_bring_to_front_updates_hit_test_order() {
         bounds,
         "imui-floating-layer-z-order",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     ui.window("a", "A", Point::new(Px(10.0), Px(10.0)), |ui| {
                         let pressable = ui.cx_mut().pressable(
@@ -732,7 +732,7 @@ fn floating_layer_bring_to_front_updates_hit_test_order() {
         bounds,
         "imui-floating-layer-z-order",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     ui.window("a", "A", Point::new(Px(10.0), Px(10.0)), |ui| {
                         let pressable = ui.cx_mut().pressable(
@@ -865,7 +865,7 @@ fn floating_window_inputs_enabled_false_blocks_child_pressables() {
         bounds,
         "imui-floating-window-no-inputs",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     ui.window_with_options(
                         "demo",
@@ -932,7 +932,7 @@ fn floating_window_inputs_enabled_false_blocks_child_pressables() {
         bounds,
         "imui-floating-window-no-inputs",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     ui.window_with_options(
                         "demo",
@@ -979,7 +979,7 @@ fn floating_window_no_inputs_is_skipped_by_focus_traversal() {
         bounds,
         "imui-floating-window-no-inputs-focus-traversal",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_item_with_options(
                     "Underlay A",
                     MenuItemOptions {
@@ -1090,7 +1090,7 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
         bounds,
         "imui-floating-layer-activate-on-click-disabled",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1225,7 +1225,7 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
         bounds,
         "imui-floating-layer-activate-on-click-disabled",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1307,7 +1307,7 @@ fn floating_window_activate_on_click_can_be_disabled_for_content() {
         bounds,
         "imui-floating-layer-activate-on-click-disabled",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1386,7 +1386,7 @@ fn floating_window_focus_on_click_can_be_independent_from_z_order_activation() {
         bounds,
         "imui-floating-window-focus-without-activate",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1502,7 +1502,7 @@ fn floating_window_focus_on_click_can_be_independent_from_z_order_activation() {
         bounds,
         "imui-floating-window-focus-without-activate",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1593,7 +1593,7 @@ fn floating_window_activate_on_click_can_be_disabled_for_resize_handles() {
         bounds,
         "imui-floating-layer-activate-on-click-disabled-resize",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1668,7 +1668,7 @@ fn floating_window_activate_on_click_can_be_disabled_for_resize_handles() {
         bounds,
         "imui-floating-layer-activate-on-click-disabled-resize",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let _ = ui.window_with_options(
                         "a",
@@ -1749,7 +1749,7 @@ fn floating_window_pointer_passthrough_allows_underlay_hit_testing() {
         bounds,
         "imui-floating-window-pointer-passthrough",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let fixed = Size::new(Px(200.0), Px(120.0));
                     let _ = ui.window_with_options(
@@ -1859,7 +1859,7 @@ fn floating_window_no_inputs_allows_underlay_hit_testing() {
         bounds,
         "imui-floating-window-no-inputs-hit-test",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.floating_layer("layer", |ui| {
                     let fixed = Size::new(Px(200.0), Px(120.0));
                     let _ = ui.window_with_options(
@@ -1965,7 +1965,7 @@ fn hit_test_passthrough_keeps_focus_traversal_and_nav_highlight() {
             let overlay_nav_highlighted = overlay_nav_highlighted.clone();
             let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
             let overlay_hovered_no_nav_override = overlay_hovered_no_nav_override.clone();
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_item_with_options(
                     "Underlay",
                     MenuItemOptions {
@@ -2050,7 +2050,7 @@ fn hit_test_passthrough_keeps_focus_traversal_and_nav_highlight() {
             let overlay_nav_highlighted = overlay_nav_highlighted.clone();
             let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
             let overlay_hovered_no_nav_override = overlay_hovered_no_nav_override.clone();
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_item_with_options(
                     "Underlay",
                     MenuItemOptions {
@@ -2138,7 +2138,7 @@ fn no_inputs_is_click_through_and_skips_focus_traversal() {
         |cx| {
             let overlay_nav_highlighted = overlay_nav_highlighted.clone();
             let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_item_with_options(
                     "Underlay A",
                     MenuItemOptions {
@@ -2248,7 +2248,7 @@ fn no_inputs_is_click_through_and_skips_focus_traversal() {
         |cx| {
             let overlay_nav_highlighted = overlay_nav_highlighted.clone();
             let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.menu_item_with_options(
                     "Underlay A",
                     MenuItemOptions {
@@ -2728,7 +2728,7 @@ fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()
         bounds,
         "imui-floating-window-closable-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -2784,7 +2784,7 @@ fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()
         bounds,
         "imui-floating-window-closable-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -2834,7 +2834,7 @@ fn floating_window_movable_false_does_not_move_when_dragging_title_bar() {
         bounds,
         "imui-floating-window-movable-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -2883,7 +2883,7 @@ fn floating_window_movable_false_does_not_move_when_dragging_title_bar() {
         bounds,
         "imui-floating-window-movable-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -2929,7 +2929,7 @@ fn floating_window_resizable_false_hides_resize_handles() {
         bounds,
         "imui-floating-window-resizable-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -2985,7 +2985,7 @@ fn floating_window_collapsible_false_does_not_toggle_on_title_double_click() {
         bounds,
         "imui-floating-window-collapsible-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3024,7 +3024,7 @@ fn floating_window_collapsible_false_does_not_toggle_on_title_double_click() {
         bounds,
         "imui-floating-window-collapsible-false",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3072,7 +3072,7 @@ fn floating_window_resizes_when_dragging_corner_handle() {
         bounds,
         "imui-floating-window-resize",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3124,7 +3124,7 @@ fn floating_window_resizes_when_dragging_corner_handle() {
         bounds,
         "imui-floating-window-resize",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3182,7 +3182,7 @@ fn floating_window_resizes_from_left_updates_origin_and_width() {
         bounds,
         "imui-floating-window-resize-left",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3233,7 +3233,7 @@ fn floating_window_resizes_from_left_updates_origin_and_width() {
         bounds,
         "imui-floating-window-resize-left",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3296,7 +3296,7 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
         bounds,
         "imui-floating-window-collapse",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3353,7 +3353,7 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
         bounds,
         "imui-floating-window-collapse",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",
@@ -3428,7 +3428,7 @@ fn floating_window_title_bar_double_click_toggles_collapsed() {
         bounds,
         "imui-floating-window-collapse",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.window_with_options(
                     "demo",
                     "Demo",

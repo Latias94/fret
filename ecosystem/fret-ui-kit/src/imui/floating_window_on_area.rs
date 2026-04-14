@@ -261,7 +261,7 @@ where
         window_props.background = Some(popover);
         window_props.border = Edges::all(Px(1.0));
         window_props.border_color = Some(border);
-        window_props.corner_radii = Corners::all(Px(8.0));
+        window_props.corner_radii = Corners::all(super::control_chrome::PANEL_RADIUS);
 
         let title_for_window = title.clone();
         let open_for_window = open_model.clone();
@@ -292,8 +292,8 @@ where
                     // non-1.0 DPI when the layout engine probes min-content widths.
                     props.layout.overflow = Overflow::Clip;
                     props.padding = Edges {
-                        left: Px(8.0),
-                        right: Px(6.0),
+                        left: Px(6.0),
+                        right: Px(4.0),
                         top: Px(4.0),
                         bottom: Px(4.0),
                     }
@@ -307,8 +307,8 @@ where
                     };
                     props.border_color = Some(border);
                     props.corner_radii = Corners {
-                        top_left: Px(8.0),
-                        top_right: Px(8.0),
+                        top_left: super::control_chrome::PANEL_RADIUS,
+                        top_right: super::control_chrome::PANEL_RADIUS,
                         bottom_left: Px(0.0),
                         bottom_right: Px(0.0),
                     };
@@ -322,7 +322,7 @@ where
                         Length::Auto
                     };
                     row.layout.size.height = Length::Fill;
-                    row.gap = SpacingLength::Px(Px(6.0));
+                    row.gap = SpacingLength::Px(Px(4.0));
                     row.align = fret_ui::element::CrossAlign::Center;
 
                     let title = title_for_window.clone();
@@ -485,7 +485,7 @@ where
                                     } else {
                                         Length::Auto
                                     };
-                                    props.padding = Edges::all(Px(8.0)).into();
+                                    props.padding = Edges::all(Px(6.0)).into();
                                     props
                                 },
                                 move |cx| {
@@ -579,7 +579,7 @@ where
                     } else {
                         Length::Auto
                     };
-                    props.corner_radii = Corners::all(Px(8.0));
+                    props.corner_radii = Corners::all(super::control_chrome::PANEL_RADIUS);
                     props
                 },
                 move |_cx| vec![body],

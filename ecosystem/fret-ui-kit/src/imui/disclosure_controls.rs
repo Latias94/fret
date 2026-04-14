@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, KeyCode, MouseButton, Px, SemanticsRole};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, MouseButton, Px, SemanticsRole};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    Overflow, PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength,
+    Overflow, PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -310,16 +310,33 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     props.padding = disclosure_content_padding(&spec).into();
 
                     cx.container(props, move |cx| {
-                        let mut out = Vec::new();
-                        let mut body_ui = ImUiFacade {
-                            cx,
-                            out: &mut out,
-                            build_focus: None,
-                        };
-                        if let Some(build) = build.take() {
-                            build(&mut body_ui);
-                        }
-                        out
+                        vec![cx.column(
+                            ColumnProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Auto,
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Visible,
+                                    ..Default::default()
+                                },
+                                gap: SpacingLength::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let mut out = Vec::new();
+                                let mut body_ui = ImUiFacade {
+                                    cx,
+                                    out: &mut out,
+                                    build_focus: None,
+                                };
+                                if let Some(build) = build.take() {
+                                    build(&mut body_ui);
+                                }
+                                out
+                            },
+                        )]
                     })
                 });
                 if let Some(test_id) = spec.content_test_id.as_ref() {
@@ -404,27 +421,8 @@ fn header_row<H: UiHost>(
     state: fret_ui::element::PressableState,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
-    let selection_bg = theme.color_token("selection.background");
-    let neutral_bg = theme.color_token("popover");
+    let palette = resolve_disclosure_palette(theme, spec, state);
     let border = theme.color_token("border");
-    let background = match spec.kind {
-        DisclosureKind::CollapsingHeader => {
-            if state.pressed || state.hovered {
-                Some(selection_bg)
-            } else {
-                Some(neutral_bg)
-            }
-        }
-        DisclosureKind::TreeNode => {
-            if spec.selected {
-                Some(selection_bg)
-            } else if state.pressed || state.hovered {
-                Some(neutral_bg)
-            } else {
-                None
-            }
-        }
-    };
     let indicator: Option<Arc<str>> = if spec.leaf {
         None
     } else if open_now {
@@ -434,18 +432,18 @@ fn header_row<H: UiHost>(
     };
     let row_padding = match spec.kind {
         DisclosureKind::CollapsingHeader => Edges {
-            top: Px(6.0),
-            right: Px(8.0),
-            bottom: Px(6.0),
-            left: Px(8.0),
+            top: Px(4.0),
+            right: Px(6.0),
+            bottom: Px(4.0),
+            left: Px(6.0),
         },
         DisclosureKind::TreeNode => {
             let indent = Px(16.0 * (spec.level.saturating_sub(1) as f32));
             Edges {
                 top: Px(2.0),
-                right: Px(8.0),
+                right: Px(6.0),
                 bottom: Px(2.0),
-                left: Px(8.0 + indent.0),
+                left: Px(6.0 + indent.0),
             }
         }
     };
@@ -465,9 +463,10 @@ fn header_row<H: UiHost>(
         ..Default::default()
     };
     row_props.padding = row_padding.into();
-    row_props.background = background;
+    row_props.background = palette.background;
     row_props.border = border_edges;
     row_props.border_color = (spec.kind == DisclosureKind::CollapsingHeader).then_some(border);
+    row_props.corner_radii = Corners::all(super::control_chrome::CONTROL_RADIUS);
 
     cx.container(row_props, move |cx| {
         vec![cx.flex(
@@ -481,7 +480,7 @@ fn header_row<H: UiHost>(
                     ..Default::default()
                 },
                 direction: Axis::Horizontal,
-                gap: SpacingLength::Px(Px(6.0)),
+                gap: SpacingLength::Px(Px(4.0)),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -504,14 +503,19 @@ fn header_row<H: UiHost>(
                     move |cx| {
                         indicator
                             .as_ref()
-                            .map(|indicator| vec![cx.text(indicator.clone())])
+                            .map(|indicator| {
+                                let mut props = TextProps::new(indicator.clone());
+                                props.color = Some(palette.foreground);
+                                vec![cx.text_props(props)]
+                            })
                             .unwrap_or_default()
                     },
                 ));
 
-                let mut text_props = fret_ui::element::TextProps::new(label);
+                let mut text_props = TextProps::new(label);
                 text_props.layout.size.width = Length::Fill;
                 text_props.layout.flex.shrink = 1.0;
+                text_props.color = Some(palette.foreground);
                 out.push(cx.text_props(text_props));
                 out.push(cx.spacer(SpacerProps::default()));
                 out
@@ -520,13 +524,81 @@ fn header_row<H: UiHost>(
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DisclosurePalette {
+    background: Option<Color>,
+    foreground: Color,
+}
+
+fn resolve_disclosure_palette(
+    theme: &Theme,
+    spec: &DisclosureSpec,
+    state: fret_ui::element::PressableState,
+) -> DisclosurePalette {
+    let selected_bg = theme
+        .color_by_key("list.active.background")
+        .or_else(|| theme.color_by_key("selection.background"))
+        .unwrap_or_else(|| theme.color_token("selection.background"));
+    let hover_bg = theme
+        .color_by_key("list.hover.background")
+        .or_else(|| theme.color_by_key("accent"))
+        .unwrap_or_else(|| theme.color_token("accent"));
+    let idle_bg = theme
+        .color_by_key("card")
+        .or_else(|| theme.color_by_key("popover"))
+        .unwrap_or_else(|| theme.color_token("popover"));
+    let foreground = theme
+        .color_by_key("foreground")
+        .unwrap_or_else(|| theme.color_token("foreground"));
+    let hover_foreground = theme
+        .color_by_key("accent-foreground")
+        .or_else(|| theme.color_by_key("foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"));
+    let interactive = state.pressed || state.hovered || state.focused;
+
+    match spec.kind {
+        DisclosureKind::CollapsingHeader => {
+            if interactive {
+                DisclosurePalette {
+                    background: Some(if state.pressed { selected_bg } else { hover_bg }),
+                    foreground: hover_foreground,
+                }
+            } else {
+                DisclosurePalette {
+                    background: Some(idle_bg),
+                    foreground,
+                }
+            }
+        }
+        DisclosureKind::TreeNode => {
+            if spec.selected {
+                DisclosurePalette {
+                    background: Some(selected_bg),
+                    foreground: hover_foreground,
+                }
+            } else if interactive {
+                DisclosurePalette {
+                    background: Some(if state.pressed { selected_bg } else { hover_bg }),
+                    foreground: hover_foreground,
+                }
+            } else {
+                DisclosurePalette {
+                    background: None,
+                    foreground,
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use fret_app::App;
     use fret_authoring::UiWriter;
-    use fret_ui::element::{ElementKind, PressableProps};
+    use fret_ui::ThemeConfig;
+    use fret_ui::element::{ElementKind, PressableProps, PressableState};
 
     struct TestWriter<'cx, 'a, H: UiHost> {
         cx: &'cx mut ElementContext<'a, H>,
@@ -632,5 +704,44 @@ mod tests {
         assert_eq!(options.level, 1);
         assert!(!options.selected);
         assert!(!options.leaf);
+    }
+
+    #[test]
+    fn tree_node_hover_palette_prefers_accent_chrome_over_popover_fill() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors
+                .insert("list.active.background".to_string(), "#224466".to_string());
+            cfg.colors
+                .insert("accent".to_string(), "#335577".to_string());
+            cfg.colors
+                .insert("accent-foreground".to_string(), "#fefefe".to_string());
+            cfg.colors
+                .insert("foreground".to_string(), "#f5f6f7".to_string());
+            cfg.colors.insert("card".to_string(), "#101418".to_string());
+            theme.apply_config_patch(&cfg);
+        });
+
+        let theme = Theme::global(&app);
+        let spec = DisclosureSpec::tree_node(Arc::from("Scene"), TreeNodeOptions::default());
+
+        let hovered = resolve_disclosure_palette(
+            theme,
+            &spec,
+            PressableState {
+                hovered: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(
+            hovered.background,
+            Some(Color::from_srgb_hex_rgb(0x33_55_77))
+        );
+        assert_eq!(hovered.foreground, Color::from_srgb_hex_rgb(0xfe_fe_fe));
+
+        let idle = resolve_disclosure_palette(theme, &spec, PressableState::default());
+        assert_eq!(idle.background, None);
+        assert_eq!(idle.foreground, Color::from_srgb_hex_rgb(0xf5_f6_f7));
     }
 }

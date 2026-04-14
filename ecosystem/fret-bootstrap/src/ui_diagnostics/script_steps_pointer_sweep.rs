@@ -4,6 +4,7 @@ pub(super) fn handle_move_pointer_sweep_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
     window: AppWindowId,
+    window_bounds: Rect,
     step_index: usize,
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
@@ -123,7 +124,22 @@ pub(super) fn handle_move_pointer_sweep_step(
                 return true;
             };
 
-            let start = center_of_rect(node.bounds);
+            let start = if let Some(ui_ref) = ui.as_deref() {
+                pointer_position_prefer_intended_hit(
+                    app,
+                    snapshot,
+                    element_runtime,
+                    ui_ref,
+                    window,
+                    node,
+                    window_bounds,
+                )
+            } else {
+                center_of_rect_clamped_to_rect(
+                    interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                    window_bounds,
+                )
+            };
             if let Some(ui) = ui.as_deref_mut() {
                 record_hit_test_trace_for_selector(
                     &mut active.hit_test_trace,

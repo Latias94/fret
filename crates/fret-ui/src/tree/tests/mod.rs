@@ -218,6 +218,7 @@ mod command_availability;
 mod command_dispatch_source_trace;
 mod command_enabled_service;
 mod cursor_icon_query;
+mod descendant_via_children;
 mod dispatch_phase;
 mod dock_drag;
 mod escape_dismiss;

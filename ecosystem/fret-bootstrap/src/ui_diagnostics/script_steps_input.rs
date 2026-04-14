@@ -279,7 +279,22 @@ pub(super) fn handle_type_text_into_step(
                 state.expected_node_id = Some(node.id.data().as_ffi());
                 state.expected_test_id = node.test_id.clone();
 
-                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                let pos = if let Some(ui_ref) = ui.as_deref() {
+                    pointer_position_prefer_intended_hit(
+                        app,
+                        snapshot,
+                        element_runtime,
+                        ui_ref,
+                        window,
+                        node,
+                        window_bounds,
+                    )
+                } else {
+                    center_of_rect_clamped_to_rect(
+                        interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                        window_bounds,
+                    )
+                };
                 if let Some(ui) = ui.as_deref_mut() {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
@@ -667,7 +682,22 @@ pub(super) fn handle_paste_text_into_step(
                 state.expected_node_id = Some(node.id.data().as_ffi());
                 state.expected_test_id = node.test_id.clone();
 
-                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                let pos = if let Some(ui_ref) = ui.as_deref() {
+                    pointer_position_prefer_intended_hit(
+                        app,
+                        snapshot,
+                        element_runtime,
+                        ui_ref,
+                        window,
+                        node,
+                        window_bounds,
+                    )
+                } else {
+                    center_of_rect_clamped_to_rect(
+                        interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                        window_bounds,
+                    )
+                };
                 if let Some(ui) = ui.as_deref_mut() {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,

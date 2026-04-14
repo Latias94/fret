@@ -8,9 +8,10 @@
 //! - Do not introduce a second UI runtime: authoring must compile down to the declarative element
 //!   taxonomy mounted into `UiTree` (ADR 0028).
 
+use std::collections::HashMap;
 use std::hash::Hash;
 
-use fret_core::Rect;
+use fret_core::{AppWindowId, FrameId, Rect};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
@@ -38,6 +39,29 @@ impl Response {
         self.changed
     }
 }
+
+#[derive(Default)]
+struct ImmediateRenderGenerationStore {
+    by_window: HashMap<AppWindowId, (FrameId, u64)>,
+}
+
+#[doc(hidden)]
+pub fn mark_immediate_render_frame<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u64 {
+    let window = cx.window;
+    let frame_id = cx.frame_id;
+    cx.app.with_global_mut_untracked(
+        ImmediateRenderGenerationStore::default,
+        move |store, _app| {
+            let entry = store.by_window.entry(window).or_insert((frame_id, 1));
+            if entry.0 != frame_id {
+                entry.0 = frame_id;
+                entry.1 = entry.1.saturating_add(1);
+            }
+            entry.1
+        },
+    )
+}
+
 #[cfg(feature = "query")]
 pub mod query;
 #[cfg(feature = "selector")]

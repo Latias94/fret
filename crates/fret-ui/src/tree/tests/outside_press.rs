@@ -79,6 +79,101 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
 }
 
 #[test]
+fn outside_press_observer_trusts_authoritative_hit_layer_root() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct PassiveUnderlay;
+
+    impl<H: UiHost> Widget<H> for PassiveUnderlay {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(PassiveUnderlay);
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root(overlay_root, false);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_ctx = InputContext::default();
+    let active_layer_roots = ui.active_pointer_down_outside_layer_roots(None);
+    let mut invalidation_visited = std::collections::HashMap::new();
+    let outcome = ui.dispatch_pointer_down_outside(
+        &mut app,
+        &mut services,
+        PointerDownOutsideParams {
+            input_ctx: &input_ctx,
+            active_layer_roots: &active_layer_roots,
+            barrier_root: None,
+            base_root: base,
+            hit_layer_root: Some(overlay_root),
+            // Simulate the diagnostics/runner bug class where the hit-test winner says the
+            // pointer is inside the overlay layer, but descendant recomputation disagrees.
+            hit: Some(base),
+            event: &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        },
+        &mut invalidation_visited,
+    );
+
+    assert!(
+        !outcome.dispatched,
+        "expected authoritative hit-layer root to suppress outside-press dispatch"
+    );
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(0),
+        "expected inside click to not reach the outside-press observer"
+    );
+}
+
+#[test]
 fn outside_press_observer_respects_overlay_render_transform() {
     struct RecordObserverDown {
         observer: Model<u32>,

@@ -13,6 +13,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
+use crate::primitives::EditorTokenKeys;
 use crate::primitives::colors::{
     editor_panel_background, editor_property_group_border, editor_property_header_background,
     editor_property_header_border, editor_property_header_foreground,
@@ -115,7 +116,9 @@ impl PropertyGroup {
                 let header_border = editor_property_header_border(theme);
                 let panel_bg = editor_panel_background(theme);
                 let group_border = editor_property_group_border(theme);
-                let radius = theme.metric_token("metric.radius.sm");
+                let radius = theme
+                    .metric_by_key(EditorTokenKeys::PROPERTY_PANEL_RADIUS)
+                    .unwrap_or_else(|| theme.metric_token("metric.radius.sm"));
                 let header_fg = editor_property_header_foreground(theme);
                 (
                     metrics,

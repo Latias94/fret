@@ -220,6 +220,56 @@ pub(crate) fn inherited_text_style_for_node<H: UiHost>(
     .flatten()
 }
 
+pub(crate) fn effective_test_id_for_record(record: &ElementRecord) -> Option<&str> {
+    let instance_test_id = match &record.instance {
+        ElementInstance::Semantics(props) => props.test_id.as_deref(),
+        ElementInstance::TextInput(props) => props.test_id.as_deref(),
+        ElementInstance::TextArea(props) => props.test_id.as_deref(),
+        ElementInstance::Pressable(props) => props.a11y.test_id.as_deref(),
+        _ => None,
+    };
+
+    record
+        .semantics_decoration
+        .as_ref()
+        .and_then(|decoration| decoration.test_id.as_deref())
+        .or(instance_test_id)
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LiveTestIdMatch {
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub instance_kind: &'static str,
+}
+
+#[cfg(feature = "diagnostics")]
+pub fn live_test_id_matches_for_window<H: UiHost>(
+    app: &H,
+    window: AppWindowId,
+    test_id: &str,
+) -> Vec<LiveTestIdMatch> {
+    let Some(frame) = app.global::<ElementFrame>() else {
+        return Vec::new();
+    };
+    let Some(window_frame) = frame.windows.get(&window) else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::new();
+    for (node, record) in window_frame.instances.iter() {
+        if effective_test_id_for_record(record) == Some(test_id) {
+            out.push(LiveTestIdMatch {
+                node,
+                element: record.element,
+                instance_kind: record.instance.kind_name(),
+            });
+        }
+    }
+    out
+}
+
 #[allow(dead_code)]
 pub(crate) fn with_window_frame_mut<H: UiHost, R>(
     app: &mut H,

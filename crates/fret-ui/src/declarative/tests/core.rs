@@ -1,6 +1,7 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 use super::*;
+use fret_runtime::{GlobalsHost, PlatformCapabilities};
 
 #[test]
 fn keyed_elements_reuse_node_ids_across_reorder() {
@@ -1452,6 +1453,87 @@ fn render_dismissible_root_parent_attach_commits_window_snapshot_after_root_atta
     assert!(
         committed_snapshot.focus_is_text_input,
         "committed snapshot should observe text-input focus once the detached root is attached as a child"
+    );
+}
+
+#[test]
+fn nested_render_root_during_layout_defers_window_snapshot_publish_until_post_layout() {
+    #[derive(Debug, Default, Clone, Copy)]
+    struct NestedRenderRootSnapshotProbe {
+        saw_snapshot_during_layout: bool,
+    }
+
+    #[derive(Debug, Default)]
+    struct NestedRenderRootLayoutWidget;
+
+    impl Widget<TestHost> for NestedRenderRootLayoutWidget {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, TestHost>) -> Size {
+            let window = cx.window.expect("window");
+            let nested = render_root(
+                cx.tree,
+                cx.app,
+                cx.services,
+                window,
+                cx.bounds,
+                "nested-layout-root",
+                |el| vec![el.text("nested")],
+            );
+            cx.tree.set_children(cx.node, vec![nested]);
+
+            let saw_snapshot_during_layout = cx
+                .app
+                .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_some();
+            cx.app.with_global_mut_untracked(
+                NestedRenderRootSnapshotProbe::default,
+                |probe, _app| {
+                    probe.saw_snapshot_during_layout = saw_snapshot_during_layout;
+                },
+            );
+
+            let _ = cx.layout(nested, cx.available);
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, TestHost>) {
+            for &child in cx.children {
+                cx.paint(child, cx.bounds);
+            }
+        }
+    }
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.register_command(
+        CommandId::from("test.widget"),
+        fret_runtime::CommandMeta::new("Widget").with_scope(fret_runtime::CommandScope::Widget),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let root = ui.create_node(NestedRenderRootLayoutWidget);
+    ui.set_root(root);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let probe = app
+        .global::<NestedRenderRootSnapshotProbe>()
+        .copied()
+        .unwrap_or_default();
+    assert!(
+        !probe.saw_snapshot_during_layout,
+        "nested render_root calls during layout must defer window snapshot publication until the post-layout refine step"
+    );
+    assert!(
+        app.global::<fret_runtime::WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_some(),
+        "post-layout refine should still publish the window command availability snapshot"
     );
 }
 

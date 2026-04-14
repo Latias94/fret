@@ -1,10 +1,31 @@
 use std::hash::Hash;
 
-use fret_authoring::UiWriter;
+use fret_authoring::{UiWriter, mark_immediate_render_frame};
 use fret_ui::element::{AnyElement, ColumnProps, Elements, Length, RowProps};
 use fret_ui::{ElementContext, UiHost};
 
+/// Default IMUI mount: wraps produced siblings in a fill-sized `Column` so they stack safely.
+///
+/// This is the pit-of-success entry point for view roots and non-layout parents. Use
+/// [`imui_raw`] only when the surrounding host already owns sibling flow and you explicitly want
+/// bare element emission.
 pub fn imui<'a, H: UiHost>(
+    cx: &mut ElementContext<'a, H>,
+    f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
+) -> Elements {
+    let mut props = ColumnProps::default();
+    props.layout.size.width = Length::Fill;
+    props.layout.size.height = Length::Fill;
+
+    let element = cx.column(props, |cx| imui_raw(cx, f));
+    element.into()
+}
+
+/// Advanced IMUI mount: emits produced siblings directly without adding a host layout node.
+///
+/// Use this only when an explicit `Column`/`Row`/flex host already owns sibling flow. Calling this
+/// under a non-layout parent reintroduces the common "all children overlap at `(0,0)`" footgun.
+pub fn imui_raw<'a, H: UiHost>(
     cx: &mut ElementContext<'a, H>,
     f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
 ) -> Elements {
@@ -13,27 +34,12 @@ pub fn imui<'a, H: UiHost>(
     out.into()
 }
 
-/// Convenience entry point that wraps the produced elements in a `Column` so siblings are laid out.
-///
-/// This avoids the common "all children overlap at (0,0)" footgun when embedding multiple imui
-/// children under a non-layout parent (e.g. `Container`) or when returning multiple root children.
-pub fn imui_vstack<'a, H: UiHost>(
-    cx: &mut ElementContext<'a, H>,
-    f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
-) -> Elements {
-    let mut props = ColumnProps::default();
-    props.layout.size.width = Length::Fill;
-    props.layout.size.height = Length::Fill;
-
-    let element = cx.column(props, |cx| imui(cx, f));
-    element.into()
-}
-
 pub fn imui_build<'a, H: UiHost>(
     cx: &mut ElementContext<'a, H>,
     out: &mut Vec<AnyElement>,
     f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
 ) {
+    let _ = mark_immediate_render_frame(cx);
     let mut ui = ImUi { cx, out };
     f(&mut ui);
 }
@@ -111,12 +117,12 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
     }
 
     pub fn row(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
-        let element = self.cx.row(RowProps::default(), |cx| imui(cx, f));
+        let element = self.cx.row(RowProps::default(), |cx| imui_raw(cx, f));
         self.out.push(element);
     }
 
     pub fn column(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
-        let element = self.cx.column(ColumnProps::default(), |cx| imui(cx, f));
+        let element = self.cx.column(ColumnProps::default(), |cx| imui_raw(cx, f));
         self.out.push(element);
     }
 }

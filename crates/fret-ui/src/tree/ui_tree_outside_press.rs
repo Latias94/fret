@@ -16,12 +16,14 @@ impl<H: UiHost> UiTree<H> {
             params.barrier_root,
         );
 
-        let hit_root = hit.and_then(|hit| {
-            snapshot
-                .active_layer_roots
-                .iter()
-                .copied()
-                .find(|&root| snapshot.is_descendant(root, hit))
+        let hit_root = params.hit_layer_root.or_else(|| {
+            hit.and_then(|hit| {
+                snapshot
+                    .active_layer_roots
+                    .iter()
+                    .copied()
+                    .find(|&root| snapshot.is_descendant(root, hit))
+            })
         });
 
         let (event_pointer_id, touch_candidate): (

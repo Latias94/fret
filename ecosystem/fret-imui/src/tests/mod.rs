@@ -401,7 +401,7 @@ fn render_imui_disabled_scope_overlay_scene(
     let mut stack = fret_ui::element::StackProps::default();
     stack.layout.size.width = Length::Fill;
     let element = cx.stack_props(stack, |cx| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let under = ui.menu_item_with_options(
                 "Underlay",
                 MenuItemOptions {
@@ -442,7 +442,7 @@ fn render_imui_disabled_scope_tooltip_hover_scene(
     let mut stack = fret_ui::element::StackProps::default();
     stack.layout.size.width = Length::Fill;
     let element = cx.stack_props(stack, |cx| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.disabled_scope(true, |ui| {
                 let resp = ui.menu_item_with_options(
                     "Tooltip target",
@@ -479,7 +479,7 @@ fn render_imui_popup_modal_barrier_hover_scene(
     let mut stack = fret_ui::element::StackProps::default();
     stack.layout.size.width = Length::Fill;
     let element = cx.stack_props(stack, |cx| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let under = ui.menu_item_with_options(
                 "Underlay",
                 MenuItemOptions {
@@ -523,7 +523,7 @@ fn render_imui_shared_hover_delay_scene(
     let mut stack = fret_ui::element::StackProps::default();
     stack.layout.size.width = Length::Fill;
     let element = cx.stack_props(stack, |cx| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let a = ui.menu_item_with_options(
                 "A",
                 MenuItemOptions {
@@ -564,7 +564,7 @@ fn render_imui_active_item_blocks_hover_scene(
     let mut stack = fret_ui::element::StackProps::default();
     stack.layout.size.width = Length::Fill;
     let element = cx.stack_props(stack, |cx| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let a = ui.menu_item_with_options(
                     "A",
@@ -1065,7 +1065,7 @@ fn render_floating_layer_with_overlay(
 ) -> crate::Elements {
     overlay_id_out.set(None);
 
-    crate::imui(cx, |ui| {
+    crate::imui_raw(cx, |ui| {
         ui.floating_layer("layer", |ui| {
             let open_for_request = open.clone();
             let overlay_id_out = overlay_id_out.clone();

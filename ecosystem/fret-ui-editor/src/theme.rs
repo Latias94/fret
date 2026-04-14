@@ -188,12 +188,22 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, EditorTokenKeys::CHROME_RING, "#7faee8");
 
     color(&mut cfg, "card", "#10161e");
+    color(&mut cfg, "background", "#0c1118");
     color(&mut cfg, "muted", "#171d26");
+    color(&mut cfg, "secondary", "#1a2230");
+    color(&mut cfg, "secondary-foreground", "#edf3fa");
+    color(&mut cfg, "primary", "#355a86");
+    color(&mut cfg, "primary-foreground", "#edf3fa");
     color(&mut cfg, "border", "#2f3a48");
+    color(&mut cfg, "input", "#3b4758");
     color(&mut cfg, "foreground", "#edf3fa");
     color(&mut cfg, "muted-foreground", "#9eabbc");
     color(&mut cfg, "accent", "#355a86");
+    color(&mut cfg, "accent-foreground", "#edf3fa");
     color(&mut cfg, "ring", "#7faee8");
+    color(&mut cfg, "popover", "#131b25");
+    color(&mut cfg, "popover-foreground", "#edf3fa");
+    color(&mut cfg, "selection.background", "#315b8b");
     color(&mut cfg, EditorTokenKeys::POPUP_BG, "#131b25");
     color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#46596c");
     metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 8.0);
@@ -213,6 +223,7 @@ fn editor_theme_patch_v1() -> ThemeConfig {
         EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER,
         "#5a7087",
     );
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_RADIUS, 6.0);
     color(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_BORDER, "#33414f");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#19232e");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#384857");
@@ -295,12 +306,22 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     color(&mut cfg, EditorTokenKeys::CHROME_RING, "#6ea8e0");
 
     color(&mut cfg, "card", "#202328");
+    color(&mut cfg, "background", "#171a1f");
     color(&mut cfg, "muted", "#2a2d33");
+    color(&mut cfg, "secondary", "#2c3138");
+    color(&mut cfg, "secondary-foreground", "#e6e8eb");
+    color(&mut cfg, "primary", "#4c88c7");
+    color(&mut cfg, "primary-foreground", "#e6e8eb");
     color(&mut cfg, "border", "#454d59");
+    color(&mut cfg, "input", "#4b5563");
     color(&mut cfg, "foreground", "#e6e8eb");
     color(&mut cfg, "muted-foreground", "#acb4bf");
     color(&mut cfg, "accent", "#4c88c7");
+    color(&mut cfg, "accent-foreground", "#e6e8eb");
     color(&mut cfg, "ring", "#6ea8e0");
+    color(&mut cfg, "popover", "#24292f");
+    color(&mut cfg, "popover-foreground", "#e6e8eb");
+    color(&mut cfg, "selection.background", "#315b8b");
     color(&mut cfg, EditorTokenKeys::POPUP_BG, "#24292f");
     color(&mut cfg, EditorTokenKeys::POPUP_BORDER, "#687686");
     metric(&mut cfg, EditorTokenKeys::POPUP_RADIUS, 4.0);
@@ -320,6 +341,7 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
         EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER,
         "#728294",
     );
+    metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_RADIUS, 2.0);
     color(&mut cfg, EditorTokenKeys::PROPERTY_GROUP_BORDER, "#47515d");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BG, "#283039");
     color(&mut cfg, EditorTokenKeys::PROPERTY_HEADER_BORDER, "#56626f");
@@ -419,6 +441,14 @@ mod tests {
             theme.color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             Some(Color::from_srgb_hex_rgb(0x14_1b_24))
         );
+        assert_eq!(
+            theme.color_by_key("background"),
+            Some(Color::from_srgb_hex_rgb(0x0c_11_18))
+        );
+        assert_eq!(
+            theme.color_by_key("input"),
+            Some(Color::from_srgb_hex_rgb(0x3b_47_58))
+        );
         assert_eq!(theme.metric_by_key("component.text_field.min_height"), None);
         assert_eq!(theme.color_by_key("component.text_field.bg"), None);
         assert_eq!(
@@ -452,6 +482,10 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER),
             Some(Color::from_srgb_hex_rgb(0x3d_4d_5f))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_RADIUS),
+            Some(Px(6.0))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG),
@@ -538,6 +572,10 @@ mod tests {
             Some(Color::from_srgb_hex_rgb(0x36_41_4c))
         );
         assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::PROPERTY_PANEL_RADIUS),
+            Some(Px(2.0))
+        );
+        assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER),
             Some(Color::from_srgb_hex_rgb(0x72_82_94))
         );
@@ -578,6 +616,14 @@ mod tests {
         assert_eq!(
             theme.color_by_key("border"),
             Some(Color::from_srgb_hex_rgb(0x45_4d_59))
+        );
+        assert_eq!(
+            theme.color_by_key("background"),
+            Some(Color::from_srgb_hex_rgb(0x17_1a_1f))
+        );
+        assert_eq!(
+            theme.color_by_key("input"),
+            Some(Color::from_srgb_hex_rgb(0x4b_55_63))
         );
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),

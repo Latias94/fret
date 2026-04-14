@@ -343,14 +343,14 @@ fn selectable_row_element<H: UiHost>(
     row.layout.size.width = Length::Fill;
     row.layout.size.height = Length::Auto;
     row.padding = Edges {
-        left: Px(8.0),
-        right: Px(8.0),
-        top: Px(4.0),
-        bottom: Px(4.0),
+        left: Px(6.0),
+        right: Px(6.0),
+        top: Px(2.0),
+        bottom: Px(2.0),
     }
     .into();
     row.background = palette.bg;
-    row.corner_radii = Corners::all(Px(6.0));
+    row.corner_radii = Corners::all(super::control_chrome::CONTROL_RADIUS);
 
     cx.container(row, move |cx| {
         let mut text = TextProps::new(label.clone());

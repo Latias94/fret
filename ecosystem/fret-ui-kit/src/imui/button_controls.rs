@@ -369,13 +369,13 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     let (palette, mut chrome) =
                         super::control_chrome::button_chrome(cx, enabled, state);
                     chrome.padding = Edges {
-                        left: Px(10.0),
-                        right: Px(10.0),
-                        top: Px(4.0),
-                        bottom: Px(4.0),
+                        left: Px(8.0),
+                        right: Px(8.0),
+                        top: Px(2.0),
+                        bottom: Px(2.0),
                     }
                     .into();
-                    chrome.corner_radii = Corners::all(Px(6.0));
+                    chrome.corner_radii = Corners::all(super::control_chrome::CONTROL_RADIUS);
                     (Some(palette), chrome, label.clone(), false)
                 }
                 ButtonVariant::Arrow(direction) => {

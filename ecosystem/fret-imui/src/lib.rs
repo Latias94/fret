@@ -14,7 +14,7 @@
 pub use fret_authoring::Response;
 mod frontend;
 
-pub use frontend::{ImUi, imui, imui_build, imui_vstack};
+pub use frontend::{ImUi, imui, imui_build, imui_raw};
 
 #[cfg(test)]
 use fret_ui::element::Elements;
@@ -29,7 +29,7 @@ pub mod prelude {
     pub use crate::query::UiWriterQueryExt as _;
     #[cfg(feature = "state-selector")]
     pub use crate::selector::UiWriterSelectorExt as _;
-    pub use crate::{ImUi, Response, imui, imui_build, imui_vstack};
+    pub use crate::{ImUi, Response, imui, imui_build, imui_raw};
     pub use fret_authoring::UiWriter;
 }
 

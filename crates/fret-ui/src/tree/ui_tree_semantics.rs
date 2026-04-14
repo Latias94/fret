@@ -456,4 +456,13 @@ impl<H: UiHost> UiTree<H> {
         }
         false
     }
+
+    /// Returns `true` when `node` is reachable from `root` by following authoritative child
+    /// edges for the current frame.
+    ///
+    /// Unlike [`UiTree::is_descendant`], this does not rely on retained parent pointers, which
+    /// can be stale under view-cache / overlay reuse while the child graph is already correct.
+    pub fn is_descendant_via_children(&self, root: NodeId, node: NodeId) -> bool {
+        self.is_reachable_from_root_via_children(root, node)
+    }
 }

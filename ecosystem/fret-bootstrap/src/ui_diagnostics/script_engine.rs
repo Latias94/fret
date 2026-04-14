@@ -800,6 +800,7 @@ pub(super) fn dispatch_drive_script_step(
         step @ UiActionStepV2::ClickStable { .. } => {
             let handled = script_steps_pointer::handle_click_stable_step(
                 service,
+                app,
                 window,
                 window_bounds,
                 step_index,
@@ -856,6 +857,7 @@ pub(super) fn dispatch_drive_script_step(
         step @ UiActionStepV2::PointerDown { .. } => {
             let handled = script_steps_pointer_session::handle_pointer_down_step(
                 service,
+                app,
                 window,
                 window_bounds,
                 anchor_window,
@@ -974,6 +976,7 @@ pub(super) fn dispatch_drive_script_step(
                 service,
                 app,
                 window,
+                window_bounds,
                 step_index,
                 step,
                 element_runtime,
@@ -1160,6 +1163,7 @@ pub(super) fn dispatch_drive_script_step(
         step @ UiActionStepV2::MenuSelect { .. } => {
             let handled = script_steps_menu::handle_menu_select_step(
                 service,
+                app,
                 window,
                 window_bounds,
                 step_index,
@@ -1178,6 +1182,7 @@ pub(super) fn dispatch_drive_script_step(
         step @ UiActionStepV2::MenuSelectPath { .. } => {
             let handled = script_steps_menu::handle_menu_select_path_step(
                 service,
+                app,
                 window,
                 window_bounds,
                 step_index,

@@ -25,6 +25,7 @@ pub(super) struct PointerDownOutsideParams<'a> {
     pub(super) active_layer_roots: &'a [NodeId],
     pub(super) barrier_root: Option<NodeId>,
     pub(super) base_root: NodeId,
+    pub(super) hit_layer_root: Option<NodeId>,
     pub(super) hit: Option<NodeId>,
     pub(super) event: &'a Event,
 }

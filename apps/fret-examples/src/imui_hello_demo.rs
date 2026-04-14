@@ -29,9 +29,9 @@ impl View for ImUiHelloView {
         let count = count_state.layout_value(cx);
         let enabled = enabled_state.paint_value(cx);
 
-        // This demo mounts IMUI directly at the view root, so use the stacked root host rather
-        // than raw sibling emission under a non-layout parent.
-        fret_imui::imui_vstack(cx.elements(), |ui| {
+        // This demo mounts IMUI directly at the view root, so the default `imui(...)` entrypoint
+        // should own the stacked host for us.
+        fret_imui::imui(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
 

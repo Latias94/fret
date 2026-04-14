@@ -362,9 +362,38 @@ pub(crate) fn node_contains_in_window_frame<H: UiHost>(
     false
 }
 
+fn finish_declarative_window_snapshot_commit_after_root_render<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    root_node: NodeId,
+) {
+    let root_attached = ui.node_layer(root_node).is_some() || ui.node_parent(root_node).is_some();
+
+    if ui.layout_active() {
+        if root_attached {
+            ui.clear_declarative_window_snapshot_commit(root_node);
+        } else {
+            ui.defer_declarative_window_snapshot_commit(root_node);
+        }
+        ui.request_post_layout_window_runtime_snapshot_refine();
+        return;
+    }
+
+    if root_attached {
+        ui.clear_declarative_window_snapshot_commit(root_node);
+        ui.publish_window_runtime_snapshots(app);
+    } else {
+        ui.defer_declarative_window_snapshot_commit(root_node);
+    }
+}
+
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.
+///
+/// If a mechanism widget invokes this during an active layout pass (for example nested cached
+/// panel content), window-level runtime snapshots are deferred until the post-layout refine step
+/// to avoid re-entering widget borrows from command/input snapshot publication.
 pub fn render_root<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -898,7 +927,7 @@ where
 
             root_node
         });
-    ui.publish_window_runtime_snapshots(app);
+    finish_declarative_window_snapshot_commit_after_root_render(ui, app, root_node);
     root_node
 }
 
@@ -1371,13 +1400,7 @@ where
 
             root_node
         });
-    let root_attached = ui.node_layer(root_node).is_some() || ui.node_parent(root_node).is_some();
-    if root_attached {
-        ui.clear_declarative_window_snapshot_commit(root_node);
-        ui.publish_window_runtime_snapshots(app);
-    } else {
-        ui.defer_declarative_window_snapshot_commit(root_node);
-    }
+    finish_declarative_window_snapshot_commit_after_root_render(ui, app, root_node);
     root_node
 }
 

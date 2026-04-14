@@ -25,7 +25,7 @@ fn context_menu_popup_opens_on_right_click_and_closes_on_outside_click() {
         bounds,
         "imui-popup-context-menu",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
                     ui.text("Menu");
@@ -48,7 +48,7 @@ fn context_menu_popup_opens_on_right_click_and_closes_on_outside_click() {
         bounds,
         "imui-popup-context-menu",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
                     ui.text("Menu");
@@ -75,7 +75,7 @@ fn context_menu_popup_opens_on_right_click_and_closes_on_outside_click() {
         bounds,
         "imui-popup-context-menu",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
                     ui.text("Menu");
@@ -113,7 +113,7 @@ fn context_menu_popup_closes_if_trigger_disappears_for_a_frame() {
         bounds,
         "imui-popup-context-menu-disappear",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
                     ui.text("Menu");
@@ -140,7 +140,7 @@ fn context_menu_popup_closes_if_trigger_disappears_for_a_frame() {
         bounds,
         "imui-popup-context-menu-disappear",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
                     ui.text("Menu");
@@ -162,7 +162,7 @@ fn context_menu_popup_closes_if_trigger_disappears_for_a_frame() {
         bounds,
         "imui-popup-context-menu-disappear",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.text("Trigger disappeared");
             })
         },
@@ -179,7 +179,7 @@ fn context_menu_popup_closes_if_trigger_disappears_for_a_frame() {
         bounds,
         "imui-popup-context-menu-disappear",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |_ui| {}));
                 let model = ui.popup_open_model("ctx");
@@ -332,7 +332,7 @@ fn disabled_scope_blocks_underlay_and_suppresses_hover_and_click() {
             let mut stack = fret_ui::element::StackProps::default();
             stack.layout.size.width = Length::Fill;
             let element = cx.stack_props(stack, |cx| {
-                crate::imui(cx, |ui| {
+                crate::imui_raw(cx, |ui| {
                     let under = ui.menu_item_with_options(
                         "Underlay",
                         MenuItemOptions {
@@ -1078,7 +1078,7 @@ fn context_menu_popup_item_click_closes_popup() {
         bounds,
         "imui-popup-context-menu-item-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu_with_options(
                     "ctx",
@@ -1118,7 +1118,7 @@ fn context_menu_popup_item_click_closes_popup() {
         bounds,
         "imui-popup-context-menu-item-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu_with_options(
                     "ctx",
@@ -1174,13 +1174,238 @@ fn context_menu_popup_item_click_closes_popup() {
         bounds,
         "imui-popup-context-menu-item-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |_ui| {}));
             })
         },
     );
     assert!(!open.get());
+}
+
+#[test]
+fn context_menu_popup_item_pointer_click_reports_clicked() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let open = Rc::new(Cell::new(false));
+    let clicked = Rc::new(Cell::new(false));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  open_out: &Rc<Cell<bool>>,
+                  clicked_out: &Rc<Cell<bool>>| {
+        crate::imui_raw(cx, |ui| {
+            let resp = ui.button("OK");
+            open_out.set(ui.begin_popup_context_menu_with_options(
+                "ctx",
+                resp,
+                PopupMenuOptions {
+                    estimated_size: Size::new(Px(120.0), Px(60.0)),
+                    ..Default::default()
+                },
+                |ui| {
+                    let toggle = ui.menu_item_with_options(
+                        "Toggle",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-popup-ctx-item-toggle")),
+                            ..Default::default()
+                        },
+                    );
+                    clicked_out.set(toggle.clicked());
+                },
+            ));
+        })
+    };
+
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(!open.get());
+    assert!(!clicked.get());
+
+    let at = first_child_point(&ui, root);
+    right_click_at(&mut ui, &mut app, &mut services, at);
+
+    app.advance_frame();
+    ui.request_semantics_snapshot();
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(open.get());
+    assert!(!clicked.get());
+
+    let item_bounds = bounds_for_test_id(&ui, "imui-popup-ctx-item-toggle");
+    let click_point = Point::new(
+        Px(item_bounds.origin.x.0 + item_bounds.size.width.0 * 0.5),
+        Px(item_bounds.origin.y.0 + item_bounds.size.height.0 * 0.5),
+    );
+    click_at(&mut ui, &mut app, &mut services, click_point);
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(
+        clicked.get(),
+        "expected pointer click to set menu item clicked()"
+    );
+}
+
+#[test]
+fn context_menu_popup_item_pointer_click_still_works_after_extra_frames() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let open = Rc::new(Cell::new(false));
+    let clicked = Rc::new(Cell::new(false));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  open_out: &Rc<Cell<bool>>,
+                  clicked_out: &Rc<Cell<bool>>| {
+        crate::imui_raw(cx, |ui| {
+            let resp = ui.button("OK");
+            open_out.set(ui.begin_popup_context_menu_with_options(
+                "ctx",
+                resp,
+                PopupMenuOptions {
+                    estimated_size: Size::new(Px(120.0), Px(60.0)),
+                    ..Default::default()
+                },
+                |ui| {
+                    let toggle = ui.menu_item_with_options(
+                        "Toggle",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-popup-ctx-item-toggle-delayed")),
+                            ..Default::default()
+                        },
+                    );
+                    clicked_out.set(toggle.clicked());
+                },
+            ));
+        })
+    };
+
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked-delayed",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(!open.get());
+    assert!(!clicked.get());
+
+    let at = first_child_point(&ui, root);
+    right_click_at(&mut ui, &mut app, &mut services, at);
+
+    app.advance_frame();
+    ui.request_semantics_snapshot();
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked-delayed",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(open.get());
+    assert!(!clicked.get());
+
+    for _ in 0..2 {
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let open_out = open.clone();
+        let clicked_out = clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-item-clicked-delayed",
+            |cx| render(cx, &open_out, &clicked_out),
+        );
+        assert!(
+            open.get(),
+            "expected popup to remain open across extra frames"
+        );
+        assert!(!clicked.get());
+    }
+
+    let item_bounds = bounds_for_test_id(&ui, "imui-popup-ctx-item-toggle-delayed");
+    let click_point = Point::new(
+        Px(item_bounds.origin.x.0 + item_bounds.size.width.0 * 0.5),
+        Px(item_bounds.origin.y.0 + item_bounds.size.height.0 * 0.5),
+    );
+    click_at(&mut ui, &mut app, &mut services, click_point);
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked-delayed",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(
+        clicked.get(),
+        "expected delayed pointer click to keep working for popup items"
+    );
 }
 
 #[test]
@@ -1204,7 +1429,7 @@ fn context_menu_popup_item_pointer_click_still_works_after_idle_frames_without_r
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   open_out: &Rc<Cell<bool>>,
                   clicked_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let resp = ui.button("OK");
             open_out.set(ui.begin_popup_context_menu_with_options(
                 "ctx",
@@ -1291,6 +1516,136 @@ fn context_menu_popup_item_pointer_click_still_works_after_idle_frames_without_r
 }
 
 #[test]
+fn context_menu_popup_item_pointer_move_then_click_still_works_after_extra_frames() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let open = Rc::new(Cell::new(false));
+    let clicked = Rc::new(Cell::new(false));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  open_out: &Rc<Cell<bool>>,
+                  clicked_out: &Rc<Cell<bool>>| {
+        crate::imui_raw(cx, |ui| {
+            let resp = ui.button("OK");
+            open_out.set(ui.begin_popup_context_menu_with_options(
+                "ctx",
+                resp,
+                PopupMenuOptions {
+                    estimated_size: Size::new(Px(120.0), Px(60.0)),
+                    ..Default::default()
+                },
+                |ui| {
+                    let toggle = ui.menu_item_with_options(
+                        "Toggle",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-popup-ctx-item-toggle-move-delayed")),
+                            ..Default::default()
+                        },
+                    );
+                    clicked_out.set(toggle.clicked());
+                },
+            ));
+        })
+    };
+
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked-move-delayed",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(!open.get());
+    assert!(!clicked.get());
+
+    let at = first_child_point(&ui, root);
+    right_click_at(&mut ui, &mut app, &mut services, at);
+
+    app.advance_frame();
+    ui.request_semantics_snapshot();
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked-move-delayed",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(open.get());
+    assert!(!clicked.get());
+
+    for _ in 0..2 {
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let open_out = open.clone();
+        let clicked_out = clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-item-clicked-move-delayed",
+            |cx| render(cx, &open_out, &clicked_out),
+        );
+        assert!(
+            open.get(),
+            "expected popup to remain open across extra frames"
+        );
+        assert!(!clicked.get());
+    }
+
+    let item_bounds = bounds_for_test_id(&ui, "imui-popup-ctx-item-toggle-move-delayed");
+    let click_point = Point::new(
+        Px(item_bounds.origin.x.0 + item_bounds.size.width.0 * 0.5),
+        Px(item_bounds.origin.y.0 + item_bounds.size.height.0 * 0.5),
+    );
+    pointer_move_at(
+        &mut ui,
+        &mut app,
+        &mut services,
+        click_point,
+        MouseButtons::default(),
+    );
+    click_at(&mut ui, &mut app, &mut services, click_point);
+
+    app.advance_frame();
+    let open_out = open.clone();
+    let clicked_out = clicked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-popup-context-menu-item-clicked-move-delayed",
+        |cx| render(cx, &open_out, &clicked_out),
+    );
+    assert!(
+        clicked.get(),
+        "expected delayed pointer move + click to keep working for popup items"
+    );
+}
+
+#[test]
 fn context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigger_focus() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -1315,7 +1670,7 @@ fn context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigg
         bounds,
         "imui-popup-context-menu-keyboard-open",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu_with_options(
                     "ctx",
@@ -1373,7 +1728,7 @@ fn context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigg
         bounds,
         "imui-popup-context-menu-keyboard-open",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu_with_options(
                     "ctx",
@@ -1431,7 +1786,7 @@ fn context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigg
         bounds,
         "imui-popup-context-menu-keyboard-open",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 open_out.set(ui.begin_popup_context_menu("ctx", resp, |_ui| {}));
             })
@@ -1466,7 +1821,7 @@ fn context_menu_popup_arrow_keys_move_focus_between_items() {
         bounds,
         "imui-popup-context-menu-arrow-nav",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 let open_out = open.clone();
                 open_out.set(ui.begin_popup_context_menu_with_options(
@@ -1518,7 +1873,7 @@ fn context_menu_popup_arrow_keys_move_focus_between_items() {
         bounds,
         "imui-popup-context-menu-arrow-nav",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 let open_out = open.clone();
                 open_out.set(ui.begin_popup_context_menu_with_options(
@@ -1577,7 +1932,7 @@ fn context_menu_popup_arrow_keys_move_focus_between_items() {
         bounds,
         "imui-popup-context-menu-arrow-nav",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 let open_out = open.clone();
                 open_out.set(ui.begin_popup_context_menu_with_options(
@@ -1635,7 +1990,7 @@ fn context_menu_popup_arrow_keys_move_focus_between_items() {
         bounds,
         "imui-popup-context-menu-arrow-nav",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 let open_out = open.clone();
                 open_out.set(ui.begin_popup_context_menu_with_options(
@@ -1698,7 +2053,7 @@ fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arr
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   open_out: &Rc<Cell<bool>>,
                   clicked_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let resp = ui.button("OK");
             open_out.set(ui.begin_popup_context_menu_with_options(
                 "ctx",
@@ -1856,7 +2211,7 @@ fn menu_item_activate_shortcut_repeat_is_opt_in() {
                   open_out: &Rc<Cell<bool>>,
                   default_clicks_out: &Rc<Cell<u32>>,
                   repeat_clicks_out: &Rc<Cell<u32>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let resp = ui.button("OK");
             open_out.set(ui.begin_popup_context_menu_with_options(
                 "ctx-repeat",
@@ -2063,7 +2418,7 @@ fn menu_item_checkbox_stamps_semantics_checked_state() {
         bounds,
         "imui-menu-item-checkbox-semantics",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 let open_out = open.clone();
                 open_out.set(ui.begin_popup_context_menu_with_options(
@@ -2109,7 +2464,7 @@ fn menu_item_checkbox_stamps_semantics_checked_state() {
         bounds,
         "imui-menu-item-checkbox-semantics",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.button("OK");
                 let open_out = open.clone();
                 open_out.set(ui.begin_popup_context_menu_with_options(
@@ -2172,7 +2527,7 @@ fn drop_popup_scope_closes_and_forgets_internal_state() {
         bounds,
         "imui-drop-popup-scope",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     popup_scope_id.as_ref(),
                     "Mode",
@@ -2205,7 +2560,7 @@ fn drop_popup_scope_closes_and_forgets_internal_state() {
         bounds,
         "imui-drop-popup-scope",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     popup_scope_id.as_ref(),
                     "Mode",
@@ -2236,7 +2591,7 @@ fn drop_popup_scope_closes_and_forgets_internal_state() {
         bounds,
         "imui-drop-popup-scope",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.drop_popup_scope(popup_scope_id.as_ref());
                 let _ = ui.combo_model_with_options(
                     popup_scope_id.as_ref(),
@@ -2286,7 +2641,7 @@ fn popup_closes_after_one_frame_without_keep_alive() {
         bounds,
         "imui-popup-auto-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.open_popup_at(popup_id, anchor);
                 // Intentionally do not call `begin_popup_menu*` this frame.
             })
@@ -2304,7 +2659,7 @@ fn popup_closes_after_one_frame_without_keep_alive() {
         bounds,
         "imui-popup-auto-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let open = ui.popup_open_model(popup_id);
                 open_state_out.set(ui.cx_mut().app.models().get_copied(&open).unwrap_or(false));
             })
@@ -2326,7 +2681,7 @@ fn popup_closes_after_one_frame_without_keep_alive() {
         bounds,
         "imui-popup-auto-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 opened_out.set(ui.begin_popup_menu(popup_id, None, |_ui| {}));
                 let open = ui.popup_open_model(popup_id);
                 open_state_out.set(ui.cx_mut().app.models().get_copied(&open).unwrap_or(false));
@@ -2370,7 +2725,7 @@ fn popup_modal_default_outside_press_does_not_close_and_escape_closes() {
         bounds,
         "imui-popup-modal-default-outside",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 if bootstrap_open_out.replace(false) {
                     ui.open_popup(popup_id);
                 }
@@ -2419,7 +2774,7 @@ fn popup_modal_default_outside_press_does_not_close_and_escape_closes() {
         bounds,
         "imui-popup-modal-default-outside",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 opened_out.set(ui.begin_popup_modal_with_options(
                     popup_id,
                     None,
@@ -2466,7 +2821,7 @@ fn popup_modal_default_outside_press_does_not_close_and_escape_closes() {
         bounds,
         "imui-popup-modal-default-outside",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 opened_out.set(ui.begin_popup_modal_with_options(
                     popup_id,
                     None,
@@ -2495,7 +2850,7 @@ fn popup_modal_default_outside_press_does_not_close_and_escape_closes() {
         bounds,
         "imui-popup-modal-outside-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 opened_out.set(ui.begin_popup_modal_with_options(
                     popup_id,
                     None,
@@ -2556,7 +2911,7 @@ fn popup_modal_can_close_on_outside_press_when_enabled() {
         bounds,
         "imui-popup-modal-outside-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 if bootstrap_open_out.replace(false) {
                     ui.open_popup(popup_id);
                 }
@@ -2605,7 +2960,7 @@ fn popup_modal_can_close_on_outside_press_when_enabled() {
         bounds,
         "imui-popup-modal-outside-close",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 opened_out.set(ui.begin_popup_modal_with_options(
                     popup_id,
                     None,

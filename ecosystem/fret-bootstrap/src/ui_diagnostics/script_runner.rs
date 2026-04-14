@@ -598,27 +598,25 @@ impl UiDiagnosticsService {
             active.event_log_active_step = Some(step_index_u32);
         }
 
+        let keep_step = |candidate: u32| {
+            candidate == step_index_u32
+                || active.last_injected_step == Some(candidate)
+                || active.last_injected_pointer_source_step == Some(candidate)
+        };
+
         active
             .selector_resolution_trace
-            .retain(|e| e.step_index == step_index_u32);
-        active
-            .hit_test_trace
-            .retain(|e| e.step_index == step_index_u32);
+            .retain(|e| keep_step(e.step_index));
+        active.hit_test_trace.retain(|e| keep_step(e.step_index));
         active
             .click_stable_trace
-            .retain(|e| e.step_index == step_index_u32);
+            .retain(|e| keep_step(e.step_index));
         active
             .bounds_stable_trace
-            .retain(|e| e.step_index == step_index_u32);
-        active
-            .focus_trace
-            .retain(|e| e.step_index == step_index_u32);
-        active
-            .web_ime_trace
-            .retain(|e| e.step_index == step_index_u32);
-        active
-            .ime_event_trace
-            .retain(|e| e.step_index == step_index_u32);
+            .retain(|e| keep_step(e.step_index));
+        active.focus_trace.retain(|e| keep_step(e.step_index));
+        active.web_ime_trace.retain(|e| keep_step(e.step_index));
+        active.ime_event_trace.retain(|e| keep_step(e.step_index));
 
         (step_index_u32, step_kind)
     }

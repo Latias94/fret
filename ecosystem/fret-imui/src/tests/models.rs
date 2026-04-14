@@ -31,7 +31,7 @@ fn checkbox_changed_is_delivered_once_and_updates_model() {
         bounds,
         "imui-checkbox",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.checkbox_model("Enabled", &model).changed());
                 let now = ui
                     .cx_mut()
@@ -60,7 +60,7 @@ fn checkbox_changed_is_delivered_once_and_updates_model() {
         bounds,
         "imui-checkbox",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.checkbox_model("Enabled", &model).changed());
                 let now = ui
                     .cx_mut()
@@ -86,7 +86,7 @@ fn checkbox_changed_is_delivered_once_and_updates_model() {
         bounds,
         "imui-checkbox",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.checkbox_model("Enabled", &model).changed());
                 let now = ui
                     .cx_mut()
@@ -127,7 +127,7 @@ fn checkbox_model_activate_shortcut_is_scoped_to_focused_checkbox() {
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   target_value_out: &Rc<Cell<bool>>,
                   other_value_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let _ = ui.checkbox_model_with_options(
                     "Target",
@@ -340,7 +340,7 @@ fn input_text_model_reports_changed_once_after_text_input() {
         bounds,
         "imui-input-text",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.input_text_model(&model).changed());
                 let current = ui
                     .cx_mut()
@@ -370,7 +370,7 @@ fn input_text_model_reports_changed_once_after_text_input() {
         bounds,
         "imui-input-text",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.input_text_model(&model).changed());
                 let current = ui
                     .cx_mut()
@@ -396,7 +396,7 @@ fn input_text_model_reports_changed_once_after_text_input() {
         bounds,
         "imui-input-text",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.input_text_model(&model).changed());
                 let current = ui
                     .cx_mut()
@@ -442,7 +442,7 @@ fn textarea_model_reports_changed_once_after_text_input() {
         bounds,
         "imui-textarea",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.textarea_model(&model).changed());
                 let current = ui
                     .cx_mut()
@@ -472,7 +472,7 @@ fn textarea_model_reports_changed_once_after_text_input() {
         bounds,
         "imui-textarea",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.textarea_model(&model).changed());
                 let current = ui
                     .cx_mut()
@@ -498,7 +498,7 @@ fn textarea_model_reports_changed_once_after_text_input() {
         bounds,
         "imui-textarea",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(ui.textarea_model(&model).changed());
                 let current = ui
                     .cx_mut()
@@ -545,7 +545,7 @@ fn push_id_keeps_changed_signal_stable_after_reorder() {
         bounds,
         "imui-push-id-reorder",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.borrow_mut().clear();
                 let order_now = order_out.borrow().clone();
                 let changed_map = changed_out.clone();
@@ -591,7 +591,7 @@ fn push_id_keeps_changed_signal_stable_after_reorder() {
         bounds,
         "imui-push-id-reorder",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.borrow_mut().clear();
                 let order_now = order_out.borrow().clone();
                 let changed_map = changed_out.clone();
@@ -634,7 +634,7 @@ fn push_id_keeps_changed_signal_stable_after_reorder() {
         bounds,
         "imui-push-id-reorder",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.borrow_mut().clear();
                 let order_now = order_out.borrow().clone();
                 let changed_map = changed_out.clone();
@@ -696,7 +696,7 @@ fn switch_model_reports_changed_once_after_click() {
         bounds,
         "imui-switch",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.switch_model_with_options(
                         "Power",
@@ -735,7 +735,7 @@ fn switch_model_reports_changed_once_after_click() {
         bounds,
         "imui-switch",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.switch_model_with_options(
                         "Power",
@@ -771,7 +771,7 @@ fn switch_model_reports_changed_once_after_click() {
         bounds,
         "imui-switch",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.switch_model_with_options(
                         "Power",
@@ -828,7 +828,7 @@ fn switch_model_activate_shortcut_is_scoped_to_focused_switch() {
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   target_value_out: &Rc<Cell<bool>>,
                   other_value_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let _ = ui.switch_model_with_options(
                     "Target",
@@ -1041,7 +1041,7 @@ fn slider_f32_model_reports_changed_once_after_pointer_input() {
         bounds,
         "imui-slider",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.slider_f32_model_with_options(
                         "Volume",
@@ -1106,7 +1106,7 @@ fn slider_f32_model_reports_changed_once_after_pointer_input() {
         bounds,
         "imui-slider",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.slider_f32_model_with_options(
                         "Volume",
@@ -1145,7 +1145,7 @@ fn slider_f32_model_reports_changed_once_after_pointer_input() {
         bounds,
         "imui-slider",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.slider_f32_model_with_options(
                         "Volume",
@@ -1205,7 +1205,7 @@ fn combo_model_reports_changed_once_after_option_pick() {
         bounds,
         "imui-select",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.combo_model_with_options(
                         "imui-select-popup",
@@ -1241,7 +1241,7 @@ fn combo_model_reports_changed_once_after_option_pick() {
         bounds,
         "imui-select",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.combo_model_with_options(
                         "imui-select-popup",
@@ -1290,7 +1290,7 @@ fn combo_model_reports_changed_once_after_option_pick() {
         bounds,
         "imui-select",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.combo_model_with_options(
                         "imui-select-popup",
@@ -1322,7 +1322,7 @@ fn combo_model_reports_changed_once_after_option_pick() {
         bounds,
         "imui-select",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 changed_out.set(
                     ui.combo_model_with_options(
                         "imui-select-popup",
@@ -1389,7 +1389,7 @@ fn combo_model_lifecycle_reports_edit_on_option_pick() {
         bounds,
         "imui-select-lifecycle",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.combo_model_with_options(
                     "imui-select-lifecycle-popup",
                     "Mode",
@@ -1444,7 +1444,7 @@ fn combo_model_lifecycle_reports_edit_on_option_pick() {
         bounds,
         "imui-select-lifecycle",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.combo_model_with_options(
                     "imui-select-lifecycle-popup",
                     "Mode",
@@ -1499,7 +1499,7 @@ fn combo_model_lifecycle_reports_edit_on_option_pick() {
         bounds,
         "imui-select-lifecycle",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.combo_model_with_options(
                     "imui-select-lifecycle-popup",
                     "Mode",
@@ -1558,7 +1558,7 @@ fn combo_model_popup_escape_closes_and_restores_trigger_focus() {
         bounds,
         "imui-select-escape",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     "imui-select-escape-popup",
                     "Mode",
@@ -1593,7 +1593,7 @@ fn combo_model_popup_escape_closes_and_restores_trigger_focus() {
         bounds,
         "imui-select-escape",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     "imui-select-escape-popup",
                     "Mode",
@@ -1632,7 +1632,7 @@ fn combo_model_popup_escape_closes_and_restores_trigger_focus() {
         bounds,
         "imui-select-escape",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     "imui-select-escape-popup",
                     "Mode",
@@ -1690,7 +1690,7 @@ fn combo_model_activate_shortcut_is_scoped_to_focused_trigger() {
         bounds,
         "imui-select-shortcut",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.vertical(|ui| {
                     let _ = ui.combo_model_with_options(
                         "imui-select-shortcut-target-popup",
@@ -1736,7 +1736,7 @@ fn combo_model_activate_shortcut_is_scoped_to_focused_trigger() {
         bounds,
         "imui-select-shortcut",
         &|cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.vertical(|ui| {
                     let _ = ui.combo_model_with_options(
                         "imui-select-shortcut-target-popup",
@@ -1796,7 +1796,7 @@ fn combo_model_activate_shortcut_is_scoped_to_focused_trigger() {
         bounds,
         "imui-select-shortcut",
         &|cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 ui.vertical(|ui| {
                     let _ = ui.combo_model_with_options(
                         "imui-select-shortcut-target-popup",
@@ -1861,7 +1861,7 @@ fn combo_model_activate_shortcut_repeat_is_opt_in() {
     let repeat_model = app.models_mut().insert(None::<Arc<str>>);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let _ = ui.combo_model_with_options(
                     "imui-select-repeat-default-popup",
@@ -2064,7 +2064,7 @@ fn combo_model_popup_scope_override_controls_popup_test_id() {
         bounds,
         "imui-select-scope",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     "imui-select-popup-scope-override",
                     "Mode",
@@ -2097,7 +2097,7 @@ fn combo_model_popup_scope_override_controls_popup_test_id() {
         bounds,
         "imui-select-scope",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let _ = ui.combo_model_with_options(
                     "imui-select-popup-scope-override",
                     "Mode",
@@ -2158,7 +2158,7 @@ fn combo_popup_escape_closes_and_restores_trigger_focus() {
         bounds,
         "imui-combo-generic",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.combo_with_options(
                     "imui-combo-generic-popup",
                     "Mode",
@@ -2210,7 +2210,7 @@ fn combo_popup_escape_closes_and_restores_trigger_focus() {
         bounds,
         "imui-combo-generic",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.combo_with_options(
                     "imui-combo-generic-popup",
                     "Mode",
@@ -2266,7 +2266,7 @@ fn combo_popup_escape_closes_and_restores_trigger_focus() {
         bounds,
         "imui-combo-generic",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let resp = ui.combo_with_options(
                     "imui-combo-generic-popup",
                     "Mode",
@@ -2331,7 +2331,7 @@ fn combo_lifecycle_tracks_open_session_edges() {
                   edited_out: &Rc<Cell<bool>>,
                   after_edit_out: &Rc<Cell<bool>>,
                   open_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             let resp = ui.combo_with_options(
                 "imui-combo-lifecycle-popup",
                 "Mode",
@@ -2493,7 +2493,7 @@ fn combo_activate_shortcut_is_scoped_to_focused_trigger() {
     let render = |cx: &mut ElementContext<'_, TestHost>,
                   target_open_out: &Rc<Cell<bool>>,
                   other_open_out: &Rc<Cell<bool>>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let target = ui.combo_with_options(
                     "imui-combo-shortcut-target-popup",
@@ -2634,7 +2634,7 @@ fn combo_activate_shortcut_repeat_is_opt_in() {
     let repeat_shortcut = ctrl_shortcut(KeyCode::KeyK);
 
     let render = |cx: &mut ElementContext<'_, TestHost>| {
-        crate::imui(cx, |ui| {
+        crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let _ = ui.combo_with_options(
                     "imui-combo-repeat-default-popup",
@@ -2855,7 +2855,7 @@ fn combo_can_commit_selection_with_selectable_rows() {
         bounds,
         "imui-combo-selectable",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let current = ui
                     .cx_mut()
                     .app
@@ -2933,7 +2933,7 @@ fn combo_can_commit_selection_with_selectable_rows() {
         bounds,
         "imui-combo-selectable",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let current = ui
                     .cx_mut()
                     .app
@@ -3017,7 +3017,7 @@ fn combo_can_commit_selection_with_selectable_rows() {
         bounds,
         "imui-combo-selectable",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let current = ui
                     .cx_mut()
                     .app
@@ -3086,7 +3086,7 @@ fn combo_can_commit_selection_with_selectable_rows() {
         bounds,
         "imui-combo-selectable",
         |cx| {
-            crate::imui(cx, |ui| {
+            crate::imui_raw(cx, |ui| {
                 let current = ui
                     .cx_mut()
                     .app

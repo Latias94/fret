@@ -530,6 +530,13 @@ impl<H: UiHost> UiTree<H> {
         out
     }
 
+    pub fn debug_node_children(&self, node: NodeId) -> Vec<NodeId> {
+        self.nodes
+            .get(node)
+            .map(|n| n.children.clone())
+            .unwrap_or_default()
+    }
+
     pub fn debug_layers_in_paint_order(&self) -> Vec<UiDebugLayerInfo> {
         self.layer_order
             .iter()

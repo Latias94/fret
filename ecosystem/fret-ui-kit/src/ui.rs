@@ -735,7 +735,11 @@ where
     }
 }
 
-/// Returns a patchable container builder.
+/// Returns a patchable box/stack container builder.
+///
+/// `ui::container` owns a single layout box. Multiple children share that same box unless you add
+/// an explicit flow layout yourself, so use `ui::v_flex` / `ui::h_flex` when siblings should stack
+/// or flow rather than overlay.
 ///
 /// Usage:
 /// - `ui::container(|cx| vec![...]).px_2().into_element(cx)`

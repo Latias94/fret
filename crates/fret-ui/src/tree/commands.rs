@@ -4,6 +4,10 @@ use fret_runtime::CommandScope;
 use std::sync::Arc;
 
 impl<H: UiHost> UiTree<H> {
+    pub(crate) fn layout_active(&self) -> bool {
+        self.layout_call_depth > 0
+    }
+
     pub(crate) fn defer_declarative_window_snapshot_commit(&mut self, root: NodeId) {
         self.pending_declarative_window_snapshot_roots
             .retain(|pending| self.nodes.contains_key(*pending));
@@ -261,13 +265,11 @@ impl<H: UiHost> UiTree<H> {
         self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx);
     }
 
-    pub(in crate::tree) fn request_post_layout_window_runtime_snapshot_refine(&mut self) {
+    pub(crate) fn request_post_layout_window_runtime_snapshot_refine(&mut self) {
         self.pending_post_layout_window_runtime_snapshot_refine = true;
     }
 
-    pub(in crate::tree) fn request_post_layout_window_runtime_snapshot_refine_if_layout_active(
-        &mut self,
-    ) {
+    pub(crate) fn request_post_layout_window_runtime_snapshot_refine_if_layout_active(&mut self) {
         if self.layout_call_depth > 0 {
             self.request_post_layout_window_runtime_snapshot_refine();
         }
@@ -773,7 +775,22 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
     ) {
-        if !std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine) {
+        self.pending_declarative_window_snapshot_roots
+            .retain(|pending| self.nodes.contains_key(*pending));
+        let attached_pending = self
+            .pending_declarative_window_snapshot_roots
+            .iter()
+            .copied()
+            .filter(|&root| self.node_layer(root).is_some() || self.node_parent(root).is_some())
+            .collect::<Vec<_>>();
+        let had_attached_pending = !attached_pending.is_empty();
+        for root in attached_pending {
+            self.pending_declarative_window_snapshot_roots.remove(&root);
+        }
+
+        if !std::mem::take(&mut self.pending_post_layout_window_runtime_snapshot_refine)
+            && !had_attached_pending
+        {
             return;
         }
         self.publish_window_runtime_snapshots(app);

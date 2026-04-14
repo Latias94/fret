@@ -1,0 +1,212 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-authoring-parity-numeric-shared-models",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png", "diag.multi_window"],
+    "tags": ["ui_editor", "imui", "parity", "numeric_input", "editor", "regression"],
+    "target_hints": [
+      "Uses the first-screen authoring parity section in imui_editor_proof_demo.",
+      "Proves declarative and fret-ui-editor::imui typed numeric inputs mutate the same shared model and remain visible in the torn-out auxiliary proof window.",
+      "Waits for the second OS window, then targets that last-seen authoring window explicitly instead of relying on startup-time root window selection.",
+      "Leaves a layout sidecar so authoring-parity root-host regressions can be triaged without opening raw bundles."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_window_inner_size",
+      "window": { "kind": "last_seen" },
+      "width_px": 1180.0,
+      "height_px": 760.0
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.numeric" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.numeric" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.numeric" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.declarative.numeric" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.imui.numeric" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.numeric" },
+        "text": "0.875"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "focus",
+      "window": { "kind": "last_seen" },
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.authoring.declarative.numeric.input"
+      }
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.authoring.declarative.numeric.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "window": { "kind": "last_seen" },
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.authoring.declarative.numeric.input"
+      },
+      "text": "2.500"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.numeric" },
+        "text": "2.500"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "focus",
+      "window": { "kind": "last_seen" },
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.authoring.imui.numeric.input"
+      }
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.authoring.imui.numeric.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "window": { "kind": "last_seen" },
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.authoring.imui.numeric.input"
+      },
+      "text": "1.125"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.numeric" },
+        "text": "1.125"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_screenshot",
+      "label": "imui-editor-proof-authoring-parity-numeric-shared-models.top"
+    },
+    {
+      "type": "scroll_into_view",
+      "window": { "kind": "last_seen" },
+      "container": { "kind": "test_id", "id": "imui-editor-proof.root.viewport" },
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.numeric" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "ensure_visible",
+      "window": { "kind": "last_seen" },
+      "target": { "kind": "test_id", "id": "imui-editor-proof.authoring.shared.numeric" },
+      "within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-editor-proof-authoring-parity-numeric-shared-models.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-authoring-parity-numeric-shared-models"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-editor-proof-authoring-parity-numeric-shared-models"
+    }
+  ]
+}

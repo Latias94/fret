@@ -338,6 +338,43 @@ impl ElementRuntime {
         state.node_entry(element).map(|e| e.node)
     }
 
+    #[cfg(feature = "diagnostics")]
+    pub fn interaction_bounds_for_node(&self, window: AppWindowId, node: NodeId) -> Option<Rect> {
+        let state = self.windows.get(&window)?;
+        let element = state.element_for_node(node)?;
+        self.interaction_bounds_for_element(window, element)
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn visual_bounds_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<Rect> {
+        let state = self.windows.get(&window)?;
+        state.current_visual_bounds(element)
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn layout_bounds_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<Rect> {
+        let state = self.windows.get(&window)?;
+        state.current_bounds(element)
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn interaction_bounds_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<Rect> {
+        self.visual_bounds_for_element(window, element)
+            .or_else(|| self.layout_bounds_for_element(window, element))
+    }
+
     #[cfg(any(test, feature = "diagnostics"))]
     pub fn selectable_text_interactive_span_bounds_for_node(
         &self,

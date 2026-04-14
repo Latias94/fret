@@ -22,6 +22,7 @@ use crate::controls::{
     TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextFieldOptions,
 };
 use crate::primitives::EditorDensity;
+use crate::primitives::EditorTokenKeys;
 use crate::primitives::colors::{
     editor_panel_background, editor_panel_border, editor_panel_header_background,
     editor_panel_header_border,
@@ -154,7 +155,9 @@ impl InspectorPanel {
                 let header_border = editor_panel_header_border(theme);
                 let panel_bg = editor_panel_background(theme);
                 let panel_border = editor_panel_border(theme);
-                let radius = theme.metric_token("metric.radius.sm");
+                let radius = theme
+                    .metric_by_key(EditorTokenKeys::PROPERTY_PANEL_RADIUS)
+                    .unwrap_or_else(|| theme.metric_token("metric.radius.sm"));
                 (
                     density,
                     gap,

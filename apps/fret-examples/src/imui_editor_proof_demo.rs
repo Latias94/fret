@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::advanced::view::{UiCxDataExt as _, ViewWindowState};
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
+use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
 use fret_core::{Color, Corners, Edges, PanelKind, Px, TextAlign};
@@ -70,7 +70,11 @@ fn diag_enabled() -> bool {
 }
 
 fn selected_editor_theme_preset() -> EditorThemePresetV1 {
-    crate::editor_theme_preset_from_env(ENV_EDITOR_PRESET).unwrap_or(EditorThemePresetV1::Default)
+    // This proof demo is explicitly editor-grade, so prefer the dense imgui-inspired preset by
+    // default and keep the conservative baseline available via `FRET_IMUI_EDITOR_PRESET=default`
+    // for A/B screenshots and regression triage.
+    crate::editor_theme_preset_from_env(ENV_EDITOR_PRESET)
+        .unwrap_or(EditorThemePresetV1::ImguiLikeDense)
 }
 
 fn selected_proof_layout() -> ImUiEditorProofLayout {
@@ -225,6 +229,38 @@ fn proof_compact_readout<H: UiHost>(
     el.a11y_label(readout)
 }
 
+fn color_hex_readout(color: Option<Color>) -> String {
+    color
+        .map(|color| format!("#{:06X}", color.to_srgb_hex_rgb()))
+        .unwrap_or_else(|| "<none>".to_string())
+}
+
+fn authoring_parity_theme_diag_lines(cx: &mut UiCx<'_>) -> [String; 2] {
+    let theme = fret_ui::Theme::global(&*cx.app);
+    let scheme = match theme.color_scheme {
+        Some(fret_core::ColorScheme::Dark) => "Dark",
+        Some(fret_core::ColorScheme::Light) => "Light",
+        None => "Unknown",
+    };
+
+    [
+        format!(
+            "diag theme: scheme={scheme} bg={} card={} input={} secondary={}",
+            color_hex_readout(theme.color_by_key("background")),
+            color_hex_readout(theme.color_by_key("card")),
+            color_hex_readout(theme.color_by_key("input")),
+            color_hex_readout(theme.color_by_key("secondary")),
+        ),
+        format!(
+            "diag editor: panel={} field={} popup={} accent={}",
+            color_hex_readout(theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG)),
+            color_hex_readout(theme.color_by_key(EditorTokenKeys::TEXT_FIELD_BG)),
+            color_hex_readout(theme.color_by_key(EditorTokenKeys::POPUP_BG)),
+            color_hex_readout(theme.color_by_key(EditorTokenKeys::CHROME_ACCENT)),
+        ),
+    ]
+}
+
 fn committed_line_count_label(text: &str) -> String {
     let lines = text.lines().count();
     let noun = if lines == 1 { "line" } else { "lines" };
@@ -273,6 +309,7 @@ struct EditorTextFieldReadout {
 struct AuthoringParitySharedStateReadout {
     name_line: String,
     value_line: String,
+    numeric_line: String,
     blend_line: String,
     enabled_line: String,
     shading_line: String,
@@ -336,41 +373,41 @@ fn editor_text_assist_readout(
     dismissed_query_model: &Model<String>,
     active_item_id_model: &Model<Option<Arc<str>>>,
 ) -> EditorTextAssistReadout {
-    cx.data().selector_model_paint(
-        (query_model, dismissed_query_model, active_item_id_model),
-        move |(query, dismissed_query, active_item_id)| {
-            let controller = controller_with_active_item_id(
-                items.as_ref(),
-                &query,
-                active_item_id.as_ref(),
-                TextAssistMatchMode::Prefix,
-                false,
-            );
-            let visible_count = if query.trim().is_empty() {
-                0
-            } else {
-                controller.visible().len()
-            };
-            let expanded =
-                input_owned_text_assist_expanded(&query, &dismissed_query, visible_count);
+    let query = cx
+        .get_model_cloned(query_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let dismissed_query = cx
+        .get_model_cloned(dismissed_query_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let active_item_id = cx
+        .get_model_cloned(active_item_id_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
 
-            EditorTextAssistReadout {
-                state_label: editor_text_assist_state_label(
-                    &query,
-                    &dismissed_query,
-                    visible_count,
-                ),
-                active_label: if expanded {
-                    controller
-                        .active_match()
-                        .map(|entry| entry.label.as_ref().to_string())
-                        .unwrap_or_else(|| "None".to_string())
-                } else {
-                    "None".to_string()
-                },
-            }
+    let controller = controller_with_active_item_id(
+        items.as_ref(),
+        &query,
+        active_item_id.as_ref(),
+        TextAssistMatchMode::Prefix,
+        false,
+    );
+    let visible_count = if query.trim().is_empty() {
+        0
+    } else {
+        controller.visible().len()
+    };
+    let expanded = input_owned_text_assist_expanded(&query, &dismissed_query, visible_count);
+
+    EditorTextAssistReadout {
+        state_label: editor_text_assist_state_label(&query, &dismissed_query, visible_count),
+        active_label: if expanded {
+            controller
+                .active_match()
+                .map(|entry| entry.label.as_ref().to_string())
+                .unwrap_or_else(|| "None".to_string())
+        } else {
+            "None".to_string()
         },
-    )
+    }
 }
 
 fn editor_text_field_readout(
@@ -378,14 +415,19 @@ fn editor_text_field_readout(
     committed_model: &Model<String>,
     outcome_model: &Model<String>,
 ) -> EditorTextFieldReadout {
-    cx.data()
-        .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
-            EditorTextFieldReadout { committed, outcome }
-        })
+    EditorTextFieldReadout {
+        committed: cx
+            .get_model_cloned(committed_model, fret_ui::Invalidation::Paint)
+            .unwrap_or_default(),
+        outcome: cx
+            .get_model_cloned(outcome_model, fret_ui::Invalidation::Paint)
+            .unwrap_or_default(),
+    }
 }
 
 fn editor_string_model_readout(cx: &mut UiCx<'_>, model: &Model<String>) -> String {
-    cx.data().selector_model_paint(model, |value| value)
+    cx.get_model_cloned(model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default()
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -545,24 +587,28 @@ impl embedded::EmbeddedViewportView for ImUiEditorProofView {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let editor_preset = selected_editor_theme_preset();
-
     FretApp::new("imui-editor-proof-demo")
         .window("imui_editor_proof_demo", (1120.0, 720.0))
+        .defaults(Defaults {
+            shadcn: false,
+            ..Defaults::desktop_app()
+        })
         .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
-        .setup_with(move |app| {
+        .setup_with(|app| {
             configure_single_window_caps_if_requested(app);
-            shadcn::app::install_with_theme(
-                app,
-                EDITOR_HOST_BASE_COLOR,
-                EDITOR_HOST_DEFAULT_SCHEME,
-            );
-            fret_ui_editor::theme::install_editor_theme_preset_v1(app, editor_preset);
+            install_imui_editor_proof_theme(app);
             fret_icons_lucide::app::install(app);
             install_dock_panel_registry(app);
         })
         .run()?;
     Ok(())
+}
+
+fn install_imui_editor_proof_theme(app: &mut KernelApp) {
+    // This proof owns a fixed editor-grade baseline. Do not route it through the generic shadcn
+    // environment-sync lifecycle or the host can flip back to the OS light theme mid-run.
+    shadcn::themes::apply_shadcn_new_york(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
+    fret_ui_editor::theme::install_editor_theme_preset_v1(app, selected_editor_theme_preset());
 }
 
 fn single_window_mode_enabled() -> bool {
@@ -661,6 +707,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
     let parity_name_model = authoring_parity_name_model(cx);
     let parity_drag_value_model = authoring_parity_drag_value_model(cx);
+    let parity_numeric_input_model = authoring_parity_numeric_input_model(cx);
     let parity_slider_model = authoring_parity_slider_model(cx);
     let parity_enabled_model = authoring_parity_enabled_model(cx);
     let parity_shading_model = authoring_parity_shading_model(cx);
@@ -681,7 +728,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-        let root = fret_ui_kit::ui::v_flex_build(move |cx, out| {
+        let root_content = fret_ui_kit::ui::v_flex_build(move |cx, out| {
             fret_imui::imui_build(cx, out, |ui| {
                 if !editor_review_layout {
                     let headline = fret_ui_kit::ui::text(format!(
@@ -752,13 +799,15 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     ui.separator();
 
                     let parity_intro = fret_ui_kit::ui::text(
-                        "authoring parity proof: shared models, left declarative, right imui adapters; edit either column and verify the paired control stays in sync under the same preset",
+                        "authoring parity proof: shared models, left declarative, right imui adapters; compare drag scrub, typed numeric entry, and bounded slider surfaces, then verify each paired row stays in sync under the same preset",
                     )
                     .text_xs();
                     ui.add_ui(parity_intro);
 
                     let parity_name_model_for_surface = parity_name_model.clone();
                     let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
+                    let parity_numeric_input_model_for_surface =
+                        parity_numeric_input_model.clone();
                     let parity_slider_model_for_surface = parity_slider_model.clone();
                     let parity_enabled_model_for_surface = parity_enabled_model.clone();
                     let parity_shading_model_for_surface = parity_shading_model.clone();
@@ -773,6 +822,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             cx,
                             parity_name_model_for_surface.clone(),
                             parity_drag_value_model_for_surface.clone(),
+                            parity_numeric_input_model_for_surface.clone(),
                             parity_slider_model_for_surface.clone(),
                             parity_enabled_model_for_surface.clone(),
                             parity_shading_model_for_surface.clone(),
@@ -784,12 +834,16 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     });
 
                     let parity_state_hint =
-                        fret_ui_kit::ui::text("shared state readout: both columns should mutate the same models")
-                            .text_xs();
+                        fret_ui_kit::ui::text(
+                            "shared state readout: each declarative/imui pair should mutate the same model, while drag, typed numeric, and slider stay intentionally distinct",
+                        )
+                        .text_xs();
                     ui.add_ui(parity_state_hint);
 
                     let parity_name_model_for_state = parity_name_model.clone();
                     let parity_drag_value_model_for_state = parity_drag_value_model.clone();
+                    let parity_numeric_input_model_for_state =
+                        parity_numeric_input_model.clone();
                     let parity_slider_model_for_state = parity_slider_model.clone();
                     let parity_enabled_model_for_state = parity_enabled_model.clone();
                     let parity_shading_model_for_state = parity_shading_model.clone();
@@ -800,6 +854,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                             cx,
                             parity_name_model_for_state.clone(),
                             parity_drag_value_model_for_state.clone(),
+                            parity_numeric_input_model_for_state.clone(),
                             parity_slider_model_for_state.clone(),
                             parity_enabled_model_for_state.clone(),
                             parity_shading_model_for_state.clone(),
@@ -1816,12 +1871,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         cx,
                                         |_cx| None,
                                         move |cx| {
-                                            let stops: Vec<GradientDemoStop> = cx
-                                                .data()
-                                                .selector_model_paint(
+                                            let stops = cx
+                                                .get_model_cloned(
                                                     &editor_gradient_stops_model,
-                                                    |stops| stops,
-                                                );
+                                                    fret_ui::Invalidation::Paint,
+                                                )
+                                                .unwrap_or_default();
 
                                             let on_remove: fret_ui_editor::composites::OnGradientStopAction =
                                                 Arc::new({
@@ -2302,8 +2357,22 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                 }
             });
         })
-        .size_full();
-        ui.add_ui(root);
+        .w_full()
+        .min_w_0();
+
+        if editor_review_layout {
+            ui.add_ui(root_content.h_full().min_h_0());
+        } else {
+            ui.add_ui(
+                fret_ui_kit::ui::scroll_area(move |cx| [root_content.into_element(cx)])
+                    .viewport_test_id("imui-editor-proof.root.viewport")
+                    .show_scrollbar_y(true)
+                    .show_scrollbar_x(false)
+                    .w_full()
+                    .h_full()
+                    .min_h_0(),
+            );
+        }
         let _ = render_cross_window_drag_preview_ghosts(ui.cx_mut());
     })
 }
@@ -2312,6 +2381,7 @@ fn render_authoring_parity_surface(
     cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
+    numeric_input_model: Model<f64>,
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
@@ -2321,65 +2391,88 @@ fn render_authoring_parity_surface(
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let shading_items = authoring_parity_shading_items();
 
-    fret_ui_kit::ui::h_flex_build(move |cx, out| {
-        out.push(
-            fret_ui_kit::ui::container_build({
-                let shading_items = shading_items.clone();
-                let name_model = name_model.clone();
-                let drag_value_model = drag_value_model.clone();
-                let slider_model = slider_model.clone();
-                let enabled_model = enabled_model.clone();
-                let shading_model = shading_model.clone();
-                let gradient_angle_model = gradient_angle_model.clone();
-                let gradient_stops_model = gradient_stops_model.clone();
-                let gradient_next_id_model = gradient_next_id_model.clone();
-                move |cx, out| {
-                    out.push(
-                        render_authoring_parity_declarative_group(
-                            cx,
-                            name_model,
-                            drag_value_model,
-                            slider_model,
-                            enabled_model,
-                            shading_model,
-                            gradient_angle_model,
-                            gradient_stops_model,
-                            gradient_next_id_model,
-                            shading_items,
-                        )
-                        .into_element(cx),
-                    );
-                }
-            })
-            .basis_0()
-            .flex_1()
-            .into_element(cx),
-        );
+    fret_ui_kit::ui::v_flex_build(move |cx, out| {
+        if diag_enabled() {
+            let [theme_line, editor_line] = authoring_parity_theme_diag_lines(cx);
+            out.push(proof_compact_readout(
+                cx,
+                theme_line,
+                Some(Arc::from("imui-editor-proof.authoring.diag.theme")),
+            ));
+            out.push(proof_compact_readout(
+                cx,
+                editor_line,
+                Some(Arc::from("imui-editor-proof.authoring.diag.editor")),
+            ));
+        }
 
         out.push(
-            fret_ui_kit::ui::container_build(move |cx, out| {
+            fret_ui_kit::ui::h_flex_build(move |cx, out| {
                 out.push(
-                    render_authoring_parity_imui_group(
-                        cx,
-                        name_model,
-                        drag_value_model,
-                        slider_model,
-                        enabled_model,
-                        shading_model,
-                        gradient_angle_model,
-                        gradient_stops_model,
-                        gradient_next_id_model,
-                        shading_items,
-                    )
+                    fret_ui_kit::ui::container_build({
+                        let shading_items = shading_items.clone();
+                        let name_model = name_model.clone();
+                        let drag_value_model = drag_value_model.clone();
+                        let numeric_input_model = numeric_input_model.clone();
+                        let slider_model = slider_model.clone();
+                        let enabled_model = enabled_model.clone();
+                        let shading_model = shading_model.clone();
+                        let gradient_angle_model = gradient_angle_model.clone();
+                        let gradient_stops_model = gradient_stops_model.clone();
+                        let gradient_next_id_model = gradient_next_id_model.clone();
+                        move |cx, out| {
+                            out.push(
+                                render_authoring_parity_declarative_group(
+                                    cx,
+                                    name_model,
+                                    drag_value_model,
+                                    numeric_input_model,
+                                    slider_model,
+                                    enabled_model,
+                                    shading_model,
+                                    gradient_angle_model,
+                                    gradient_stops_model,
+                                    gradient_next_id_model,
+                                    shading_items,
+                                )
+                                .into_element(cx),
+                            );
+                        }
+                    })
+                    .basis_0()
+                    .flex_1()
+                    .into_element(cx),
+                );
+
+                out.push(
+                    fret_ui_kit::ui::container_build(move |cx, out| {
+                        out.push(
+                            render_authoring_parity_imui_group(
+                                cx,
+                                name_model,
+                                drag_value_model,
+                                numeric_input_model,
+                                slider_model,
+                                enabled_model,
+                                shading_model,
+                                gradient_angle_model,
+                                gradient_stops_model,
+                                gradient_next_id_model,
+                                shading_items,
+                            )
+                            .into_element(cx),
+                        );
+                    })
+                    .basis_0()
+                    .flex_1()
                     .into_element(cx),
                 );
             })
-            .basis_0()
-            .flex_1()
+            .gap(fret_ui_kit::Space::N3)
             .into_element(cx),
         );
     })
-    .gap(fret_ui_kit::Space::N3)
+    .gap(fret_ui_kit::Space::N2)
     .into_element(cx)
 }
 
@@ -2387,49 +2480,64 @@ fn render_authoring_parity_shared_state(
     cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
+    numeric_input_model: Model<f64>,
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
     gradient_angle_model: Model<f64>,
     gradient_stops_model: Model<Vec<GradientDemoStop>>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let shared = cx.data().selector_model_paint(
-        (
-            &name_model,
-            &drag_value_model,
-            &slider_model,
-            &enabled_model,
-            &shading_model,
-            &gradient_angle_model,
-            &gradient_stops_model,
-        ),
-        |(name, value, blend, enabled, shading, gradient_angle, gradient_stops)| {
-            AuthoringParitySharedStateReadout {
-                name_line: if name.trim().is_empty() {
-                    "shared name: <empty>".to_string()
-                } else {
-                    format!("shared name: {name}")
-                },
-                value_line: format!("shared value: {value:.3}"),
-                blend_line: format!("shared blend: {:.0}%", blend * 100.0),
-                enabled_line: format!("shared enabled: {enabled}"),
-                shading_line: match shading.as_deref() {
-                    Some("lit") => "shared mode: lit (Lit)".to_string(),
-                    Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
-                    Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
-                    Some(other) => format!("shared mode: {other}"),
-                    None => "shared mode: <none>".to_string(),
-                },
-                gradient_line: format!(
-                    "shared gradient: {} stops @ {:.0}°",
-                    gradient_stops.len(),
-                    gradient_angle
-                ),
-            }
+    let name = cx
+        .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let value = cx
+        .get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let numeric = cx
+        .get_model_copied(&numeric_input_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let blend = cx
+        .get_model_copied(&slider_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let enabled = cx
+        .get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let shading = cx
+        .get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let gradient_angle = cx
+        .get_model_copied(&gradient_angle_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+    let gradient_stops = cx
+        .get_model_cloned(&gradient_stops_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
+
+    let shared = AuthoringParitySharedStateReadout {
+        name_line: if name.trim().is_empty() {
+            "shared name: <empty>".to_string()
+        } else {
+            format!("shared name: {name}")
         },
-    );
+        value_line: format!("shared value: {value:.3}"),
+        numeric_line: format!("shared typed numeric: {numeric:.3}"),
+        blend_line: format!("shared blend: {:.0}%", blend * 100.0),
+        enabled_line: format!("shared enabled: {enabled}"),
+        shading_line: match shading.as_deref() {
+            Some("lit") => "shared mode: lit (Lit)".to_string(),
+            Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+            Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+            Some(other) => format!("shared mode: {other}"),
+            None => "shared mode: <none>".to_string(),
+        },
+        gradient_line: format!(
+            "shared gradient: {} stops @ {:.0}°",
+            gradient_stops.len(),
+            gradient_angle
+        ),
+    };
     let name_line = shared.name_line;
     let value_line = shared.value_line;
+    let numeric_line = shared.numeric_line;
     let blend_line = shared.blend_line;
     let enabled_line = shared.enabled_line;
     let shading_line = shared.shading_line;
@@ -2438,7 +2546,7 @@ fn render_authoring_parity_shared_state(
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
         let name_line_row = name_line.clone();
         let value_line_row = value_line.clone();
-        let blend_line_row = blend_line.clone();
+        let numeric_line_row = numeric_line.clone();
         out.push(
             fret_ui_kit::ui::h_flex_build(move |cx, out| {
                 out.push(
@@ -2450,8 +2558,8 @@ fn render_authoring_parity_shared_state(
                         .test_id("imui-editor-proof.authoring.shared.value"),
                 );
                 out.push(
-                    cx.text(blend_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.blend"),
+                    cx.text(numeric_line_row)
+                        .test_id("imui-editor-proof.authoring.shared.numeric"),
                 );
             })
             .gap(fret_ui_kit::Space::N3)
@@ -2459,6 +2567,10 @@ fn render_authoring_parity_shared_state(
         );
         out.push(
             fret_ui_kit::ui::h_flex_build(move |cx, out| {
+                out.push(
+                    cx.text(blend_line)
+                        .test_id("imui-editor-proof.authoring.shared.blend"),
+                );
                 out.push(
                     cx.text(enabled_line)
                         .test_id("imui-editor-proof.authoring.shared.enabled"),
@@ -2484,6 +2596,7 @@ fn render_authoring_parity_declarative_group(
     cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
+    numeric_input_model: Model<f64>,
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
@@ -2540,7 +2653,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new().options(row_cx.row_options.clone()),
-                            |cx| cx.text("Value"),
+                            |cx| cx.text("Drag value"),
                             |cx| {
                                 DragValue::from_presentation(
                                     drag_value_model.clone(),
@@ -2563,7 +2676,30 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new().options(row_cx.row_options.clone()),
-                            |cx| cx.text("Blend"),
+                            |cx| cx.text("Typed numeric"),
+                            |cx| {
+                                NumericInput::from_presentation(
+                                    numeric_input_model.clone(),
+                                    value_presentation.clone(),
+                                )
+                                .options(NumericInputOptions {
+                                    id_source: Some(Arc::from(
+                                        "authoring-parity.declarative.numeric-input",
+                                    )),
+                                    test_id: Some(Arc::from(
+                                        "imui-editor-proof.authoring.declarative.numeric",
+                                    )),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                            },
+                            |_cx| None,
+                        ));
+
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Blend slider"),
                             |cx| {
                                 Slider::from_presentation(
                                     slider_model.clone(),
@@ -2653,6 +2789,7 @@ fn render_authoring_parity_imui_group(
     cx: &mut UiCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
+    numeric_input_model: Model<f64>,
     slider_model: Model<f64>,
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
@@ -2715,7 +2852,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row(
                             cx,
-                            |cx| cx.text("Value"),
+                            |cx| cx.text("Drag value"),
                             |cx| {
                                 let value_presentation = value_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
@@ -2745,7 +2882,38 @@ fn render_authoring_parity_imui_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new().options(row_cx.row_options.clone()),
-                            |cx| cx.text("Blend"),
+                            |cx| cx.text("Typed numeric"),
+                            |cx| {
+                                let value_presentation = value_presentation.clone();
+                                render_authoring_parity_imui_host(cx, move |ui| {
+                                    editor_imui::numeric_input(
+                                        ui,
+                                        NumericInput::from_presentation(
+                                            numeric_input_model.clone(),
+                                            value_presentation.clone(),
+                                        )
+                                        .options(
+                                            NumericInputOptions {
+                                                id_source: Some(Arc::from(
+                                                    "authoring-parity.imui.numeric-input",
+                                                )),
+                                                test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.numeric",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                        ),
+                                    );
+                                })
+                                .into_element(cx)
+                            },
+                            |_cx| None,
+                        ));
+
+                        rows.push(row_cx.row_with(
+                            cx,
+                            PropertyRow::new().options(row_cx.row_options.clone()),
+                            |cx| cx.text("Blend slider"),
                             |cx| {
                                 let blend_presentation = blend_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
@@ -3194,7 +3362,9 @@ fn build_authoring_parity_gradient_editor(
     id_source: &'static str,
     test_id_prefix: &'static str,
 ) -> GradientEditor {
-    let stops: Vec<GradientDemoStop> = cx.data().selector_model_paint(&stops_model, |stops| stops);
+    let stops = cx
+        .get_model_cloned(&stops_model, fret_ui::Invalidation::Paint)
+        .unwrap_or_default();
 
     let on_remove: fret_ui_editor::composites::OnGradientStopAction = Arc::new({
         let stops_model = stops_model.clone();
@@ -3270,7 +3440,9 @@ where
     H: UiHost,
     F: for<'cx, 'a> FnOnce(&mut fret_imui::ImUi<'cx, 'a, H>) + 'static,
 {
-    fret_ui_kit::ui::container_build(move |cx, out| {
+    // Authoring-parity IMUI content can emit multiple siblings, so the proof-local host must own
+    // vertical flow explicitly instead of forwarding them through a non-layout container box.
+    fret_ui_kit::ui::v_flex_build(move |cx, out| {
         fret_imui::imui_build(cx, out, f);
     })
     .w_full()
@@ -3671,6 +3843,14 @@ fn authoring_parity_drag_value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) 
     )
 }
 
+fn authoring_parity_numeric_input_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.numeric_input",
+        |cx| cx.app.models_mut().insert(0.875_f64),
+    )
+}
+
 fn authoring_parity_slider_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
     named_demo_state(
         cx,
@@ -3821,13 +4001,13 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
             &root_name,
             move |cx| {
                 let target = embedded::models(&*cx.app, cx.window)
-                    .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
+                    .and_then(|m| cx.get_model_cloned(&m.target, fret_ui::Invalidation::Paint))
                     .unwrap_or_default();
 
                 vec![
                     fret_ui_kit::ui::container_build( move |cx, out| {
                         out.extend(
-                            fret_imui::imui_vstack(cx, move |ui| {
+                            fret_imui::imui(cx, move |ui| {
                                 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 
                                 // Dock panels can move across roots and windows, so the immediate

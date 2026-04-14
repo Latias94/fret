@@ -161,6 +161,13 @@ codegen-units = 1
 [profile.dev.package.fret-ui-gallery]
 incremental = false
 
+# `fret-examples` builds a large, diagnostics-heavy unified library that is reused by native demo
+# binaries such as `imui_interaction_showcase_demo`. Keep package-level incremental off on macOS so
+# repeated `cargo build/run -p fret-demo --bin ...` iterations do not pick up unstable incremental
+# link artifacts from the shared examples crate.
+[profile.dev.package.fret-examples]
+incremental = false
+
 # Opt-in profile for faster edit/compile iterations (especially on Windows where linking + PDBs
 # can dominate debug builds). Keep it off by default; use via `--profile dev-fast`.
 [profile.dev-fast]

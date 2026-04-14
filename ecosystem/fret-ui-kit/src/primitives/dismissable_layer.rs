@@ -152,11 +152,11 @@ pub fn focus_is_inside_layer_or_branches<H: UiHost>(
     focus: NodeId,
     branch_roots: &[NodeId],
 ) -> bool {
-    ui.is_descendant(layer_root, focus)
+    ui.is_descendant_via_children(layer_root, focus)
         || branch_roots
             .iter()
             .copied()
-            .any(|branch| ui.is_descendant(branch, focus))
+            .any(|branch| ui.is_descendant_via_children(branch, focus))
 }
 
 /// Returns true if focus changed since `last_focus` and is now outside the layer + branches.

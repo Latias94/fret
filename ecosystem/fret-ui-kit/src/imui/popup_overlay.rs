@@ -173,8 +173,8 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     panel_props.background = Some(popover);
                     panel_props.border = Edges::all(Px(1.0));
                     panel_props.border_color = Some(border);
-                    panel_props.corner_radii = Corners::all(Px(6.0));
-                    panel_props.padding = Edges::all(Px(6.0)).into();
+                    panel_props.corner_radii = Corners::all(super::control_chrome::PANEL_RADIUS);
+                    panel_props.padding = Edges::all(Px(4.0)).into();
 
                     vec![cx.container(panel_props, move |cx| {
                         let mut col = ColumnProps::default();
@@ -394,8 +394,9 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
                             panel_props.background = Some(popover);
                             panel_props.border = Edges::all(Px(1.0));
                             panel_props.border_color = Some(border);
-                            panel_props.corner_radii = Corners::all(Px(8.0));
-                            panel_props.padding = Edges::all(Px(10.0)).into();
+                            panel_props.corner_radii =
+                                Corners::all(super::control_chrome::PANEL_RADIUS);
+                            panel_props.padding = Edges::all(Px(8.0)).into();
                             panel_props.layout.size.width = Length::Fill;
                             panel_props.layout.size.height = Length::Fill;
 

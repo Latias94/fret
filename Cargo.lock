@@ -1782,6 +1782,7 @@ dependencies = [
  "fret-framework",
  "fret-icons",
  "fret-launch",
+ "fret-mutation",
  "fret-query",
  "fret-router",
  "fret-router-ui",
@@ -2506,6 +2507,18 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "wgpu",
+]
+
+[[package]]
+name = "fret-mutation"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-executor",
+ "fret-runtime",
+ "fret-ui",
+ "pollster",
 ]
 
 [[package]]

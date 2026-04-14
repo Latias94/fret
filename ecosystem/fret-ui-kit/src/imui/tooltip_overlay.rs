@@ -222,11 +222,12 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
                         overflow: Overflow::Visible,
                         ..Default::default()
                     };
-                    panel_props.padding = Edges::all(Px(6.0)).into();
+                    panel_props.padding = Edges::all(Px(4.0)).into();
                     panel_props.background = Some(theme.color_token("popover"));
                     panel_props.border = Edges::all(Px(1.0));
                     panel_props.border_color = Some(theme.color_token("border"));
-                    panel_props.corner_radii = fret_core::Corners::all(Px(6.0));
+                    panel_props.corner_radii =
+                        fret_core::Corners::all(super::control_chrome::PANEL_RADIUS);
 
                     let mut panel = cx.container(panel_props, move |cx| {
                         let mut column = ColumnProps::default();

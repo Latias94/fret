@@ -128,9 +128,9 @@ impl View for ImUiActionBasicsView {
             });
 
             let imui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                // This panel already sits inside an explicit Column host, so the nested immediate
-                // shape should emit siblings directly instead of adding another stacked root host.
-                fret_imui::imui(cx, |ui| {
+                // This panel already sits inside an explicit Column host, so use the raw entrypoint
+                // instead of asking `imui(...)` to add another stacked host.
+                fret_imui::imui_raw(cx, |ui| {
                     ui.text("IMUI");
                     ui.action_button_with_options(
                         Arc::from("Increment (imui)"),

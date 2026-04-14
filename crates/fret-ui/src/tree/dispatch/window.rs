@@ -850,11 +850,13 @@ impl<H: UiHost> UiTree<H> {
             // For now, only allow cached hit-test reuse for pointer-move events; other pointer
             // events clear the cache and rebuild it from a full hit-test pass.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(hit_test_layer_roots, pos)
+                self.hit_test_layers_cached_with_root(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(hit_test_layer_roots, pos)
+                self.hit_test_layers_cached_with_root(hit_test_layer_roots, pos)
             };
+            let hit_layer_root = hit.map(|(root, _hit)| root);
+            let hit = hit.map(|(_root, hit)| hit);
 
             if let Event::Pointer(PointerEvent::Up {
                 pointer_id,
@@ -887,15 +889,16 @@ impl<H: UiHost> UiTree<H> {
                             barrier_root,
                         );
 
-                        let hit_is_inside_layer = hit.is_some_and(|hit| {
-                            if snapshot.pre.get(layer.root).is_some()
-                                && snapshot.pre.get(hit).is_some()
-                            {
-                                snapshot.is_descendant(layer.root, hit)
-                            } else {
-                                self.is_reachable_from_root_via_children(layer.root, hit)
-                            }
-                        });
+                        let hit_is_inside_layer = hit_layer_root == Some(layer.root)
+                            || hit.is_some_and(|hit| {
+                                if snapshot.pre.get(layer.root).is_some()
+                                    && snapshot.pre.get(hit).is_some()
+                                {
+                                    snapshot.is_descendant(layer.root, hit)
+                                } else {
+                                    self.is_reachable_from_root_via_children(layer.root, hit)
+                                }
+                            });
                         let hit_is_inside_branch = hit.is_some_and(|hit| {
                             layer
                                 .pointer_down_outside_branches
@@ -1072,6 +1075,7 @@ impl<H: UiHost> UiTree<H> {
                             active_layer_roots: &active_pointer_down_outside_layers,
                             barrier_root,
                             base_root,
+                            hit_layer_root,
                             hit,
                             event,
                         },

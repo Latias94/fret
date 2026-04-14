@@ -176,7 +176,25 @@ pub(super) fn handle_click_step(
             return true;
         };
 
-        let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+        let mut pointer_trace_note = String::from("click");
+        let pos = if let Some(ui_ref) = ui.as_deref() {
+            let resolution = pointer_target_resolution_prefer_intended_hit(
+                app,
+                snapshot,
+                element_runtime,
+                ui_ref,
+                window,
+                node,
+                window_bounds,
+            );
+            pointer_trace_note = pointer_target_resolution_trace_note("click", resolution);
+            resolution.position
+        } else {
+            center_of_rect_clamped_to_rect(
+                interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                window_bounds,
+            )
+        };
         if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
@@ -188,7 +206,7 @@ pub(super) fn handle_click_step(
                 step_index as u32,
                 pos,
                 Some(node),
-                Some("click"),
+                Some(pointer_trace_note.as_str()),
                 svc.cfg.max_debug_string_bytes,
             );
         }
@@ -370,7 +388,22 @@ pub(super) fn handle_tap_step(
             return true;
         };
 
-        let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+        let pos = if let Some(ui_ref) = ui.as_deref() {
+            pointer_position_prefer_intended_hit(
+                app,
+                snapshot,
+                element_runtime,
+                ui_ref,
+                window,
+                node,
+                window_bounds,
+            )
+        } else {
+            center_of_rect_clamped_to_rect(
+                interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                window_bounds,
+            )
+        };
         if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
@@ -636,7 +669,22 @@ pub(super) fn handle_long_press_step(
         return true;
     };
 
-    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    let pos = if let Some(ui_ref) = ui.as_deref() {
+        pointer_position_prefer_intended_hit(
+            app,
+            snapshot,
+            element_runtime,
+            ui_ref,
+            window,
+            node,
+            window_bounds,
+        )
+    } else {
+        center_of_rect_clamped_to_rect(
+            interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+            window_bounds,
+        )
+    };
     if let Some(ui) = ui {
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
@@ -832,7 +880,22 @@ pub(super) fn handle_swipe_step(
         return true;
     };
 
-    let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    let start = if let Some(ui_ref) = ui.as_deref() {
+        pointer_position_prefer_intended_hit(
+            app,
+            snapshot,
+            element_runtime,
+            ui_ref,
+            window,
+            node,
+            window_bounds,
+        )
+    } else {
+        center_of_rect_clamped_to_rect(
+            interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+            window_bounds,
+        )
+    };
     let end = clamp_point_to_rect(
         Point::new(
             fret_core::Px(start.x.0 + delta_x),
@@ -1063,7 +1126,22 @@ pub(super) fn handle_pinch_step(
             return true;
         };
 
-        let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+        let pos = if let Some(ui_ref) = ui.as_deref() {
+            pointer_position_prefer_intended_hit(
+                app,
+                snapshot,
+                element_runtime,
+                ui_ref,
+                window,
+                node,
+                window_bounds,
+            )
+        } else {
+            center_of_rect_clamped_to_rect(
+                interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+                window_bounds,
+            )
+        };
         if let Some(ui) = ui {
             record_hit_test_trace_for_selector(
                 &mut active.hit_test_trace,
@@ -1130,6 +1208,7 @@ fn clamp_point_to_rect(point: Point, rect: Rect) -> Point {
 
 pub(super) fn handle_click_stable_step(
     svc: &mut UiDiagnosticsService,
+    app: &App,
     window: AppWindowId,
     window_bounds: Rect,
     step_index: usize,
@@ -1230,9 +1309,25 @@ pub(super) fn handle_click_stable_step(
             let center = match &resolved {
                 ResolvedClickStableTarget::Semantics(node) => {
                     if let Some(ui) = ui.as_deref() {
-                        pointer_position_prefer_intended_hit(snapshot, ui, node, window_bounds)
+                        pointer_position_prefer_intended_hit(
+                            app,
+                            snapshot,
+                            element_runtime,
+                            ui,
+                            window,
+                            node,
+                            window_bounds,
+                        )
                     } else {
-                        center_of_rect_clamped_to_rect(node.bounds, window_bounds)
+                        center_of_rect_clamped_to_rect(
+                            interaction_bounds_for_semantics_node(
+                                element_runtime,
+                                None,
+                                window,
+                                node,
+                            ),
+                            window_bounds,
+                        )
                     }
                 }
                 ResolvedClickStableTarget::CachedTestId { bounds, .. } => {
@@ -1333,6 +1428,11 @@ pub(super) fn handle_click_stable_step(
                             active.v2_step_state = Some(V2StepState::ClickStable(state));
                             output.request_redraw = true;
                         } else {
+                            // `click_stable` only stabilizes the target geometry. Once the
+                            // current frame already hit-tests to the intended node, dispatch
+                            // the same full click sequence as plain `click` in one frame.
+                            // Splitting hover and down/up across frames is unsafe for
+                            // transient overlay content that can rebuild on hover.
                             hit.note = Some("click_stable.click".to_string());
                             push_hit_test_trace(&mut active.hit_test_trace, hit);
                             record_overlay_placement_trace(
@@ -1551,7 +1651,14 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                         &target,
                         step_index as u32,
                         center_of_rect_clamped_to_rect(
-                            cached_test_id_bounds.unwrap_or(node.bounds),
+                            cached_test_id_bounds.unwrap_or_else(|| {
+                                interaction_bounds_for_semantics_node(
+                                    element_runtime,
+                                    Some(&*ui),
+                                    window,
+                                    node,
+                                )
+                            }),
                             window_bounds,
                         ),
                         Some(node),
@@ -1940,7 +2047,22 @@ pub(super) fn handle_wheel_step(
         return true;
     };
 
-    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    let pos = if let Some(ui_ref) = ui.as_deref() {
+        pointer_position_prefer_intended_hit(
+            app,
+            snapshot,
+            element_runtime,
+            ui_ref,
+            window,
+            node,
+            window_bounds,
+        )
+    } else {
+        center_of_rect_clamped_to_rect(
+            interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+            window_bounds,
+        )
+    };
     if let Some(ui) = ui {
         let note = format!("wheel dx={delta_x} dy={delta_y}");
         record_hit_test_trace_for_selector(
@@ -2087,7 +2209,22 @@ pub(super) fn handle_wheel_burst_step(
         return true;
     };
 
-    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    let pos = if let Some(ui_ref) = ui.as_deref() {
+        pointer_position_prefer_intended_hit(
+            app,
+            snapshot,
+            element_runtime,
+            ui_ref,
+            window,
+            node,
+            window_bounds,
+        )
+    } else {
+        center_of_rect_clamped_to_rect(
+            interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+            window_bounds,
+        )
+    };
     if let Some(ui) = ui {
         let note = format!("wheel_burst dx={delta_x} dy={delta_y} count={count}");
         record_hit_test_trace_for_selector(
@@ -2464,7 +2601,22 @@ pub(super) fn handle_move_pointer_step(
         return true;
     };
 
-    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    let pos = if let Some(ui_ref) = ui.as_deref() {
+        pointer_position_prefer_intended_hit(
+            app,
+            snapshot,
+            element_runtime,
+            ui_ref,
+            window,
+            node,
+            window_bounds,
+        )
+    } else {
+        center_of_rect_clamped_to_rect(
+            interaction_bounds_for_semantics_node(element_runtime, None, window, node),
+            window_bounds,
+        )
+    };
     if let Some(ui) = ui {
         record_hit_test_trace_for_selector(
             &mut active.hit_test_trace,
