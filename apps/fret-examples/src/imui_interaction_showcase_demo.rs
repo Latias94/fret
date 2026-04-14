@@ -187,6 +187,7 @@ impl View for ImUiInteractionShowcaseView {
             review_mode_value.clone(),
             selected_tab_value.as_deref().unwrap_or("overview"),
             latest_event,
+            responsive.compact_rows,
         );
 
         let lab = render_interaction_lab_card(
@@ -1163,9 +1164,12 @@ fn render_showcase_hero(
     review_mode: Option<Arc<str>>,
     active_tab: &str,
     latest_event: Option<Arc<str>>,
+    compact_mode: bool,
 ) -> AnyElement {
     let latest_event = latest_event.unwrap_or_else(|| Arc::from("No timeline events yet."));
     let review_mode = review_mode.unwrap_or_else(|| Arc::from("Unassigned"));
+    let compact_summary =
+        "Immediate-mode owns the control path; the shell keeps the review surface legible.";
     let body = ui::v_flex(move |cx| {
         vec![
             ui::text("IMUI can feel direct without looking like a diagnostics dump.")
@@ -1173,9 +1177,11 @@ fn render_showcase_hero(
                 .font_bold()
                 .wrap(fret_core::TextWrap::Word)
                 .into_element(cx),
-            ui::text(
-                "The shell owns hierarchy and pacing. Immediate-mode still owns the fastest interaction path, but the stage now reads like a reviewable product surface instead of a status console.",
-            )
+            ui::text(if compact_mode {
+                compact_summary
+            } else {
+                "The shell owns hierarchy and pacing. Immediate-mode still owns the fastest interaction path, but the stage now reads like a reviewable product surface instead of a status console."
+            })
             .text_sm()
             .text_color(ColorRef::Color(
                 Theme::global(&*cx.app).color_token("muted-foreground"),
@@ -1227,7 +1233,7 @@ fn render_showcase_hero(
                 ]
             })
             .gap(Space::N1)
-            .p_3()
+            .p(if compact_mode { Space::N2 } else { Space::N3 })
             .rounded_md()
             .border_1()
             .border_color(ColorRef::Color(
@@ -1238,65 +1244,136 @@ fn render_showcase_hero(
             ))
             .w_full()
             .into_element(cx),
-            ui::v_flex(move |cx| {
-                vec![
-                    ui::text("Live stage")
-                        .text_xs()
-                        .font_semibold()
-                        .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
-                            "muted-foreground",
-                        )))
+            if compact_mode {
+                ui::v_flex(move |cx| {
+                    vec![
+                        ui::text("Live stage")
+                            .text_xs()
+                            .font_semibold()
+                            .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
+                                "muted-foreground",
+                            )))
+                            .into_element(cx),
+                        ui::text(format!(
+                            "Mode {review_mode}. Exposure {:.0}. Autosave {}.",
+                            exposure_value,
+                            if autosave_enabled { "armed" } else { "paused" },
+                        ))
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
                         .into_element(cx),
-                    ui::text(format!(
-                        "Review mode {review_mode}. Exposure {:.0}. Autosave {}.",
-                        exposure_value,
-                        if autosave_enabled { "armed" } else { "paused" },
-                    ))
-                    .text_sm()
-                    .wrap(fret_core::TextWrap::Word)
-                    .into_element(cx),
-                    telemetry_meter(
-                        cx,
-                        "Pulse cadence",
-                        pulse_count as f32 + secondary_pulse_count as f32,
-                        12.0,
-                        format!("{pulse_count} primary / {secondary_pulse_count} alternate"),
-                    ),
-                    telemetry_meter(
-                        cx,
-                        "Hold confidence",
-                        long_press_count as f32,
-                        8.0,
-                        format!("{long_press_count} long-press confirmations"),
-                    ),
-                    telemetry_meter(
-                        cx,
-                        "Scrub travel",
-                        drag_distance,
-                        640.0,
-                        format!("{drag_count} probes / {:.0}px travel", drag_distance),
-                    ),
-                    telemetry_meter(
-                        cx,
-                        "Shell traffic",
-                        (menu_count + tab_switches) as f32,
-                        14.0,
-                        format!("{menu_count} menu opens / {tab_switches} tab moves"),
-                    ),
-                ]
-            })
-            .gap(Space::N3)
-            .p(Space::N4)
-            .rounded_md()
-            .bg(ColorRef::Color(Theme::global(&*cx.app).color_token("muted")))
-            .border_1()
-            .border_color(ColorRef::Color(Theme::global(&*cx.app).color_token("border")))
-            .shadow_sm()
-            .w_full()
-            .into_element(cx),
+                        ui::h_flex(move |cx| {
+                            vec![
+                                compact_metric_tile(
+                                    cx,
+                                    "Pulse",
+                                    format!("{pulse_count}/{secondary_pulse_count}"),
+                                    "primary/alt",
+                                ),
+                                compact_metric_tile(
+                                    cx,
+                                    "Hold",
+                                    format!("{long_press_count}"),
+                                    "long presses",
+                                ),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_stretch()
+                        .w_full()
+                        .into_element(cx),
+                        ui::h_flex(move |cx| {
+                            vec![
+                                compact_metric_tile(
+                                    cx,
+                                    "Travel",
+                                    format!("{:.0}px", drag_distance),
+                                    format!("{drag_count} probes"),
+                                ),
+                                compact_metric_tile(
+                                    cx,
+                                    "Shell",
+                                    format!("{}", menu_count + tab_switches),
+                                    format!("{menu_count} menus / {tab_switches} tabs"),
+                                ),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_stretch()
+                        .w_full()
+                        .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .p(Space::N3)
+                .rounded_md()
+                .bg(ColorRef::Color(Theme::global(&*cx.app).color_token("muted")))
+                .border_1()
+                .border_color(ColorRef::Color(Theme::global(&*cx.app).color_token("border")))
+                .shadow_sm()
+                .w_full()
+                .into_element(cx)
+            } else {
+                ui::v_flex(move |cx| {
+                    vec![
+                        ui::text("Live stage")
+                            .text_xs()
+                            .font_semibold()
+                            .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
+                                "muted-foreground",
+                            )))
+                            .into_element(cx),
+                        ui::text(format!(
+                            "Review mode {review_mode}. Exposure {:.0}. Autosave {}.",
+                            exposure_value,
+                            if autosave_enabled { "armed" } else { "paused" },
+                        ))
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
+                        .into_element(cx),
+                        telemetry_meter(
+                            cx,
+                            "Pulse cadence",
+                            pulse_count as f32 + secondary_pulse_count as f32,
+                            12.0,
+                            format!("{pulse_count} primary / {secondary_pulse_count} alternate"),
+                        ),
+                        telemetry_meter(
+                            cx,
+                            "Hold confidence",
+                            long_press_count as f32,
+                            8.0,
+                            format!("{long_press_count} long-press confirmations"),
+                        ),
+                        telemetry_meter(
+                            cx,
+                            "Scrub travel",
+                            drag_distance,
+                            640.0,
+                            format!("{drag_count} probes / {:.0}px travel", drag_distance),
+                        ),
+                        telemetry_meter(
+                            cx,
+                            "Shell traffic",
+                            (menu_count + tab_switches) as f32,
+                            14.0,
+                            format!("{menu_count} menu opens / {tab_switches} tab moves"),
+                        ),
+                    ]
+                })
+                .gap(Space::N3)
+                .p(Space::N4)
+                .rounded_md()
+                .bg(ColorRef::Color(Theme::global(&*cx.app).color_token("muted")))
+                .border_1()
+                .border_color(ColorRef::Color(Theme::global(&*cx.app).color_token("border")))
+                .shadow_sm()
+                .w_full()
+                .into_element(cx)
+            },
         ]
     })
-    .gap(Space::N3)
+    .gap(if compact_mode { Space::N2 } else { Space::N3 })
     .w_full()
     .into_element(cx);
 
@@ -1452,6 +1529,48 @@ fn telemetry_meter(
     })
     .gap(Space::N1p5)
     .w_full()
+    .into_element(cx)
+}
+
+fn compact_metric_tile(
+    cx: &mut ElementContext<'_, KernelApp>,
+    title: &'static str,
+    value: impl Into<Arc<str>>,
+    detail: impl Into<Arc<str>>,
+) -> AnyElement {
+    let value = value.into();
+    let detail = detail.into();
+    ui::v_flex(move |cx| {
+        vec![
+            ui::text(title)
+                .text_xs()
+                .font_semibold()
+                .text_color(ColorRef::Color(
+                    Theme::global(&*cx.app).color_token("muted-foreground"),
+                ))
+                .into_element(cx),
+            ui::text(value).text_base().font_bold().into_element(cx),
+            ui::text(detail)
+                .text_xs()
+                .wrap(fret_core::TextWrap::Word)
+                .text_color(ColorRef::Color(
+                    Theme::global(&*cx.app).color_token("muted-foreground"),
+                ))
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N0p5)
+    .p(Space::N2)
+    .rounded_md()
+    .border_1()
+    .border_color(ColorRef::Color(
+        Theme::global(&*cx.app).color_token("border"),
+    ))
+    .bg(ColorRef::Color(
+        Theme::global(&*cx.app).color_token("background"),
+    ))
+    .flex_1()
+    .min_w_0()
     .into_element(cx)
 }
 

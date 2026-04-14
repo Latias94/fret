@@ -46,7 +46,17 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "imui-showcase.lab.pulse" },
+        "target": { "kind": "test_id", "id": "imui-showcase.menu.file" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-showcase.tabs.scene" },
         "padding_px": 4.0,
         "eps_px": 0.5
       },
