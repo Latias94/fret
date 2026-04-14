@@ -84,6 +84,10 @@
       "command": "cargo nextest run -p fret-mutation --features ui"
     },
     {
+      "name": "api-workbench-sqlite-source-policy",
+      "command": "cargo nextest run -p fret-examples api_workbench_lite_demo_uses_query_for_sqlite_reads_and_mutation_for_explicit_submit"
+    },
+    {
       "name": "docs-source-policy",
       "command": "cargo nextest run -p fret docs_lock_query_reads_vs_mutation_submit_story"
     },
@@ -133,6 +137,7 @@
     "ecosystem/fret-ui-shadcn/src/sonner.rs",
     "apps/fret-examples/Cargo.toml",
     "apps/fret-examples/src/api_workbench_lite_demo.rs",
+    "apps/fret-examples/src/lib.rs",
     "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-baseline.json",
     "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json"
   ],

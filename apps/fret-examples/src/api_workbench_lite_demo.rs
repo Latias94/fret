@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,17 +9,23 @@ use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::icons::IconId;
 use fret::mutation::{
-    CancellationToken, FutureSpawner, FutureSpawnerHandle, MutationError, MutationHandle,
-    MutationPolicy, MutationState,
+    CancellationToken, FutureSpawner, FutureSpawnerHandle, MutationConcurrencyPolicy,
+    MutationError, MutationHandle, MutationPolicy, MutationState,
 };
+use fret::query::{QueryError, QueryHandle, QueryKey, QueryPolicy, QueryState, QueryStatus};
 use fret::style::{ColorRef, LayoutRefinement, Space, Theme};
 use fret::{FretApp, shadcn};
 use fret_app::{CommandId, CommandMeta, CommandScope, DefaultKeybinding, KeyChord, PlatformFilter};
 use fret_core::{KeyCode, Modifiers, Px};
 use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use sqlx::Row;
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+const HISTORY_QUERY_NS: &str = "fret_examples.api_workbench_lite.saved_history.v1";
+const HISTORY_DB_PATH: &str = ".fret/api-workbench-lite/request-history.sqlite3";
+const HISTORY_KEEP_ENV: &str = "FRET_API_WORKBENCH_KEEP_HISTORY";
 
 const TEST_ID_ROOT: &str = "api-workbench-lite.root";
 const TEST_ID_SIDEBAR: &str = "api-workbench-lite.sidebar";
@@ -37,6 +44,8 @@ const TEST_ID_SETTINGS_DIALOG: &str = "api-workbench-lite.settings.dialog";
 const TEST_ID_SETTINGS_BASE_URL: &str = "api-workbench-lite.settings.base_url";
 const TEST_ID_SETTINGS_AUTH_TOKEN: &str = "api-workbench-lite.settings.auth_token";
 const TEST_ID_HISTORY_EMPTY: &str = "api-workbench-lite.history.empty";
+const TEST_ID_HISTORY_LOADING: &str = "api-workbench-lite.history.loading";
+const TEST_ID_HISTORY_ERROR: &str = "api-workbench-lite.history.error";
 
 mod act {
     fret::actions!([
@@ -72,6 +81,11 @@ struct EnvironmentSnapshot {
 }
 
 #[derive(Debug, Clone)]
+struct HistoryDbGlobal {
+    pool: Arc<sqlx::SqlitePool>,
+}
+
+#[derive(Debug, Clone)]
 struct RequestSnapshot {
     seq: u64,
     collection_id: Option<u8>,
@@ -96,11 +110,15 @@ struct ResponsePayload {
 }
 
 #[derive(Debug, Clone)]
-struct HistoryEntry {
+struct PersistedHistoryEntry {
     id: u64,
-    snapshot: RequestSnapshot,
-    status_line: Arc<str>,
-    timing_line: Arc<str>,
+    collection_id: Option<u8>,
+    collection_label: Arc<str>,
+    method: Arc<str>,
+    url: Arc<str>,
+    headers_text: Arc<str>,
+    body: Arc<str>,
+    submitted_at_unix_ms: i64,
 }
 
 #[derive(Clone)]
@@ -117,10 +135,8 @@ struct WorkbenchLocals {
     auth_token: LocalState<String>,
     next_seq: LocalState<u64>,
     last_applied_seq: LocalState<u64>,
-    next_history_id: LocalState<u64>,
     selected_collection: LocalState<Option<Arc<str>>>,
     selected_history: LocalState<Option<u64>>,
-    history: LocalState<Vec<HistoryEntry>>,
     response_status: LocalState<String>,
     response_pretty: LocalState<String>,
     response_raw: LocalState<String>,
@@ -146,12 +162,10 @@ impl WorkbenchLocals {
             auth_token: cx.state().local_init(String::new),
             next_seq: cx.state().local_init(|| 1u64),
             last_applied_seq: cx.state().local_init(|| 0u64),
-            next_history_id: cx.state().local_init(|| 1u64),
             selected_collection: cx
                 .state()
                 .local_init(|| Some(Arc::<str>::from(collection_key(0)))),
             selected_history: cx.state().local_init(|| None::<u64>),
-            history: cx.state().local_init(Vec::new),
             response_status: cx.state().local_init(|| "Idle".to_string()),
             response_pretty: cx
                 .state()
@@ -177,22 +191,58 @@ impl View for ApiWorkbenchLiteView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let locals = WorkbenchLocals::new(cx);
+        let history_db = cx
+            .app
+            .global::<HistoryDbGlobal>()
+            .expect("HistoryDbGlobal missing")
+            .pool
+            .clone();
+        let history_db_for_query = history_db.clone();
+        let history_db_for_save = history_db.clone();
+        let history_query = cx.data().query_async(
+            QueryKey::<Vec<PersistedHistoryEntry>>::new(HISTORY_QUERY_NS, &()),
+            QueryPolicy::default(),
+            move |_token| {
+                let pool = history_db_for_query.clone();
+                async move { load_saved_history(pool).await }
+            },
+        );
+        let history_save_mutation = cx.data().mutation_async(
+            MutationPolicy {
+                concurrency: MutationConcurrencyPolicy::AllowParallelLatestWins,
+                ..MutationPolicy::default()
+            },
+            move |_token, snapshot: Arc<RequestSnapshot>| {
+                let pool = history_db_for_save.clone();
+                async move { persist_history_snapshot(pool, snapshot.as_ref()).await }
+            },
+        );
         let response_mutation = cx.data().mutation_async(
             MutationPolicy::default(),
             move |token, snapshot: Arc<RequestSnapshot>| run_request((*snapshot).clone(), token),
         );
-        bind_actions(cx, &locals, &response_mutation, self.window);
+        bind_actions(
+            cx,
+            &locals,
+            &response_mutation,
+            &history_save_mutation,
+            &history_query,
+            self.window,
+        );
 
         let theme = Theme::global(&*cx.app).snapshot();
         let method = locals
             .method
             .layout_value(cx)
             .unwrap_or_else(|| Arc::<str>::from("GET"));
-        let history = locals.history.layout_value(cx);
         let selected_collection = locals.selected_collection.layout_value(cx);
         let selected_history = locals.selected_history.layout_value(cx);
         let response_status = locals.response_status.layout_value(cx);
+        let history_state = history_query.read_layout(cx);
+        let saved_history = history_state.data.as_deref().cloned().unwrap_or_default();
+        let history_save_state = history_save_mutation.read_layout(cx);
         let mutation_state = response_mutation.read_layout(cx);
+        maybe_invalidate_saved_history_query(cx, &history_save_state);
         maybe_apply_response_snapshot(cx, self.window, &locals, &mutation_state);
 
         let status_badge = status_badge(&response_status).test_id(TEST_ID_RESPONSE_STATUS);
@@ -217,7 +267,8 @@ impl View for ApiWorkbenchLiteView {
             &locals,
             theme.clone(),
             method,
-            history,
+            &history_state,
+            saved_history,
             selected_collection,
             selected_history,
             status_badge,
@@ -303,6 +354,8 @@ fn bind_actions(
     cx: &mut AppUi<'_, '_>,
     locals: &WorkbenchLocals,
     response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+    history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+    history_query: &QueryHandle<Vec<PersistedHistoryEntry>>,
     window: WindowId,
 ) {
     cx.actions()
@@ -315,7 +368,16 @@ fn bind_actions(
     cx.actions().models::<act::SendRequest>({
         let locals = locals.clone();
         let response_mutation = response_mutation.clone();
-        move |models| submit_request(models, window, &locals, &response_mutation)
+        let history_save_mutation = history_save_mutation.clone();
+        move |models| {
+            submit_request(
+                models,
+                window,
+                &locals,
+                &response_mutation,
+                &history_save_mutation,
+            )
+        }
     });
 
     cx.actions().availability::<act::SendRequest>({
@@ -336,7 +398,8 @@ fn bind_actions(
 
     cx.actions().payload_models::<act::LoadHistory>({
         let locals = locals.clone();
-        move |models, history_id| load_history(models, &locals, history_id)
+        let history_query = history_query.clone();
+        move |models, history_id| load_history(models, &locals, &history_query, history_id)
     });
 }
 
@@ -345,6 +408,7 @@ fn submit_request(
     window: WindowId,
     locals: &WorkbenchLocals,
     response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+    history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
 ) -> bool {
     let url_value = locals.url.value_in_or_default(models);
     if url_value.trim().is_empty() {
@@ -398,6 +462,7 @@ fn submit_request(
         .response_headers
         .set_in(models, "Response headers will appear here.".to_string())
         || handled;
+    handled = history_save_mutation.submit(models, window, snapshot.clone()) || handled;
     handled = response_mutation.submit(models, window, snapshot) || handled;
 
     tracing::info!(
@@ -415,7 +480,8 @@ fn shell_frame(
     locals: &WorkbenchLocals,
     theme: fret::style::ThemeSnapshot,
     method: Arc<str>,
-    history: Vec<HistoryEntry>,
+    history_state: &QueryState<Vec<PersistedHistoryEntry>>,
+    history: Vec<PersistedHistoryEntry>,
     selected_collection: Option<Arc<str>>,
     selected_history: Option<u64>,
     status_badge: impl UiChild,
@@ -472,6 +538,7 @@ fn shell_frame(
         cx,
         locals,
         base_url,
+        history_state,
         history,
         selected_collection,
         selected_history,
@@ -522,7 +589,8 @@ fn sidebar_frame(
     cx: &mut AppUi<'_, '_>,
     locals: &WorkbenchLocals,
     base_url: String,
-    history: Vec<HistoryEntry>,
+    history_state: &QueryState<Vec<PersistedHistoryEntry>>,
+    history: Vec<PersistedHistoryEntry>,
     selected_collection: Option<Arc<str>>,
     selected_history: Option<u64>,
 ) -> AnyElement {
@@ -539,8 +607,13 @@ fn sidebar_frame(
 
     let history_group = shadcn::SidebarGroup::new([
         shadcn::SidebarGroupLabel::new("History").into_element(cx),
-        shadcn::SidebarGroupContent::new([history_menu(cx, history, selected_history)])
-            .into_element(cx),
+        shadcn::SidebarGroupContent::new([history_menu(
+            cx,
+            history_state,
+            history,
+            selected_history,
+        )])
+        .into_element(cx),
     ])
     .into_element(cx);
 
@@ -565,6 +638,11 @@ fn sidebar_frame(
                 cx;
                 ui::text("Active base URL").text_xs().font_semibold(),
                 ui::text(base_url)
+                    .text_xs()
+                    .text_color(ColorRef::Color(
+                        cx.theme_snapshot().color_token("muted-foreground"),
+                    )),
+                ui::text("SQLite-backed request history")
                     .text_xs()
                     .text_color(ColorRef::Color(
                         cx.theme_snapshot().color_token("muted-foreground"),
@@ -608,14 +686,50 @@ fn collection_buttons(
 
 fn history_menu(
     cx: &mut AppUi<'_, '_>,
-    history: Vec<HistoryEntry>,
+    history_state: &QueryState<Vec<PersistedHistoryEntry>>,
+    history: Vec<PersistedHistoryEntry>,
     selected_history: Option<u64>,
 ) -> AnyElement {
+    if history_state.is_loading() && !history_state.has_data() {
+        return ui::v_flex(|cx| {
+            ui::children![
+                cx;
+                ui::text("Loading saved requests...")
+                    .text_sm()
+                    .text_color(ColorRef::Color(
+                        cx.theme_snapshot().color_token("muted-foreground"),
+                    ))
+                    .test_id(TEST_ID_HISTORY_LOADING),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx);
+    }
+
+    if let Some(err) = history_state.error.as_ref() {
+        return ui::v_flex(|cx| {
+            ui::children![
+                cx;
+                ui::text("Saved history failed to load.")
+                    .text_sm()
+                    .font_semibold(),
+                ui::text(err.to_string())
+                    .text_sm()
+                    .text_color(ColorRef::Color(
+                        cx.theme_snapshot().color_token("muted-foreground"),
+                    ))
+                    .test_id(TEST_ID_HISTORY_ERROR),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx);
+    }
+
     if history.is_empty() {
         return ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("No requests yet.")
+                ui::text("No saved requests yet.")
                     .text_sm()
                     .text_color(ColorRef::Color(
                         cx.theme_snapshot().color_token("muted-foreground"),
@@ -629,11 +743,7 @@ fn history_menu(
 
     shadcn::SidebarMenu::new(history.into_iter().map(|entry| {
         let active = selected_history == Some(entry.id);
-        let label = format!(
-            "{} · {}",
-            entry.status_line.as_ref(),
-            short_request_label(&entry.snapshot)
-        );
+        let label = format!("{} · {}", entry.method, compact_url(entry.url.as_ref()));
         shadcn::SidebarMenuItem::new(
             shadcn::SidebarMenuButton::new(label)
                 .icon(IconId::new_static("lucide.history"))
@@ -807,7 +917,7 @@ fn maybe_apply_response_snapshot(
         return;
     }
 
-    let (status_line, pretty, raw, headers, timing_line) = if let Some(data) = state.data.as_ref() {
+    let (status_line, pretty, raw, headers) = if let Some(data) = state.data.as_ref() {
         (
             if data.is_http_error {
                 format!("HTTP {} {}", data.status_code, data.status_text)
@@ -820,7 +930,6 @@ fn maybe_apply_response_snapshot(
                 "Resolved URL: {}\n\n{}",
                 data.resolved_url, data.header_lines
             ),
-            format!("{} ms", data.duration_ms),
         )
     } else {
         let err = state
@@ -833,16 +942,7 @@ fn maybe_apply_response_snapshot(
             err.clone(),
             err.clone(),
             "No response headers captured.".to_string(),
-            "n/a".to_string(),
         )
-    };
-
-    let history_id = locals.next_history_id.layout_value(cx);
-    let entry = HistoryEntry {
-        id: history_id,
-        snapshot: snapshot.clone(),
-        status_line: Arc::from(status_line.clone()),
-        timing_line: Arc::from(timing_line.clone()),
     };
 
     let _ = cx
@@ -872,40 +972,52 @@ fn maybe_apply_response_snapshot(
     let _ = cx
         .app
         .models_mut()
-        .update(locals.history.model(), |items: &mut Vec<HistoryEntry>| {
-            items.insert(0, entry);
-            if items.len() > 8 {
-                items.truncate(8);
-            }
-        });
-    let _ = cx
-        .app
-        .models_mut()
-        .update(locals.next_history_id.model(), |value: &mut u64| {
-            *value = value.saturating_add(1);
-        });
-    let _ = cx.app.models_mut().update(
-        locals.selected_history.model(),
-        |value: &mut Option<u64>| *value = Some(history_id),
-    );
-    let _ = cx
-        .app
-        .models_mut()
         .update(locals.last_applied_seq.model(), |value: &mut u64| {
             *value = snapshot.seq
         });
     cx.app.request_redraw(window);
 }
 
-fn install_tokio_spawner(app: &mut App) {
+fn maybe_invalidate_saved_history_query(
+    cx: &mut AppUi<'_, '_>,
+    state: &MutationState<RequestSnapshot, ()>,
+) {
+    if !state.is_success() {
+        return;
+    }
+
+    let finished_at = state.updated_at;
+    let should_invalidate =
+        cx.elements()
+            .root_state(Option::<fret_core::time::Instant>::default, |last_seen| {
+                if *last_seen == finished_at {
+                    false
+                } else {
+                    *last_seen = finished_at;
+                    true
+                }
+            });
+
+    if should_invalidate {
+        cx.data().invalidate_query_namespace(HISTORY_QUERY_NS);
+    }
+}
+
+fn install_tokio_spawner_and_history_db(app: &mut App) {
     let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_time()
+        .enable_all()
         .build()
         .expect("failed to build tokio runtime");
+    let pool = rt
+        .block_on(open_history_db_pool())
+        .expect("failed to open api_workbench_lite history db");
     let rt = Arc::new(rt);
     let spawner: FutureSpawnerHandle = Arc::new(TokioHandleSpawner(rt.handle().clone()));
     app.set_global::<FutureSpawnerHandle>(spawner);
     app.set_global::<TokioRuntimeGlobal>(TokioRuntimeGlobal { _rt: rt });
+    app.set_global(HistoryDbGlobal {
+        pool: Arc::new(pool),
+    });
 }
 
 fn install_demo_theme(app: &mut App) {
@@ -976,6 +1088,206 @@ fn install_commands(app: &mut App) {
             ]),
     );
     fret_app::install_command_default_keybindings_into_keymap(app);
+}
+
+async fn open_history_db_pool() -> anyhow::Result<sqlx::SqlitePool> {
+    let path = history_db_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let connect_options = SqliteConnectOptions::new()
+        .filename(&path)
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal);
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(connect_options)
+        .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS request_history (
+            id INTEGER PRIMARY KEY,
+            submitted_at_unix_ms INTEGER NOT NULL,
+            collection_id INTEGER,
+            collection_label TEXT NOT NULL,
+            method TEXT NOT NULL,
+            url TEXT NOT NULL,
+            headers_text TEXT NOT NULL,
+            body TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_request_history_submitted_at ON request_history(submitted_at_unix_ms DESC)",
+    )
+    .execute(&pool)
+    .await?;
+
+    if !keep_history_between_runs() {
+        sqlx::query("DELETE FROM request_history")
+            .execute(&pool)
+            .await?;
+    }
+
+    tracing::info!(
+        path = %path.display(),
+        keep_history = keep_history_between_runs(),
+        "api_workbench_lite history db ready"
+    );
+
+    Ok(pool)
+}
+
+fn history_db_path() -> PathBuf {
+    PathBuf::from(HISTORY_DB_PATH)
+}
+
+fn keep_history_between_runs() -> bool {
+    std::env::var(HISTORY_KEEP_ENV)
+        .ok()
+        .map(|raw| {
+            matches!(
+                raw.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+async fn load_saved_history(
+    pool: Arc<sqlx::SqlitePool>,
+) -> Result<Vec<PersistedHistoryEntry>, QueryError> {
+    let rows = sqlx::query(
+        r#"
+        SELECT
+            id,
+            submitted_at_unix_ms,
+            collection_id,
+            collection_label,
+            method,
+            url,
+            headers_text,
+            body
+        FROM request_history
+        ORDER BY submitted_at_unix_ms DESC, id DESC
+        LIMIT 8
+        "#,
+    )
+    .fetch_all(&*pool)
+    .await
+    .map_err(sqlx_query_error)?;
+
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let collection_id_raw: Option<i64> = row
+            .try_get("collection_id")
+            .map_err(|err| QueryError::permanent(err.to_string()))?;
+        out.push(PersistedHistoryEntry {
+            id: row
+                .try_get::<i64, _>("id")
+                .map_err(|err| QueryError::permanent(err.to_string()))? as u64,
+            collection_id: collection_id_raw.and_then(|value| u8::try_from(value).ok()),
+            collection_label: Arc::from(
+                row.try_get::<String, _>("collection_label")
+                    .map_err(|err| QueryError::permanent(err.to_string()))?,
+            ),
+            method: Arc::from(
+                row.try_get::<String, _>("method")
+                    .map_err(|err| QueryError::permanent(err.to_string()))?,
+            ),
+            url: Arc::from(
+                row.try_get::<String, _>("url")
+                    .map_err(|err| QueryError::permanent(err.to_string()))?,
+            ),
+            headers_text: Arc::from(
+                row.try_get::<String, _>("headers_text")
+                    .map_err(|err| QueryError::permanent(err.to_string()))?,
+            ),
+            body: Arc::from(
+                row.try_get::<String, _>("body")
+                    .map_err(|err| QueryError::permanent(err.to_string()))?,
+            ),
+            submitted_at_unix_ms: row
+                .try_get("submitted_at_unix_ms")
+                .map_err(|err| QueryError::permanent(err.to_string()))?,
+        });
+    }
+
+    Ok(out)
+}
+
+async fn persist_history_snapshot(
+    pool: Arc<sqlx::SqlitePool>,
+    snapshot: &RequestSnapshot,
+) -> Result<(), MutationError> {
+    sqlx::query(
+        r#"
+        INSERT INTO request_history (
+            submitted_at_unix_ms,
+            collection_id,
+            collection_label,
+            method,
+            url,
+            headers_text,
+            body
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        "#,
+    )
+    .bind(current_unix_ms())
+    .bind(snapshot.collection_id.map(i64::from))
+    .bind(snapshot.collection_label.as_ref())
+    .bind(snapshot.method.as_ref())
+    .bind(snapshot.url.as_ref())
+    .bind(snapshot.headers_text.as_ref())
+    .bind(snapshot.body.as_ref())
+    .execute(&*pool)
+    .await
+    .map_err(sqlx_mutation_error)?;
+
+    Ok(())
+}
+
+fn current_unix_ms() -> i64 {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_secs(0));
+    now.as_millis().min(i64::MAX as u128) as i64
+}
+
+fn sqlx_query_error(err: sqlx::Error) -> QueryError {
+    if matches!(
+        &err,
+        sqlx::Error::Io(_)
+            | sqlx::Error::PoolTimedOut
+            | sqlx::Error::PoolClosed
+            | sqlx::Error::WorkerCrashed
+    ) || err.to_string().contains("database is locked")
+    {
+        QueryError::transient(err.to_string())
+    } else {
+        QueryError::permanent(err.to_string())
+    }
+}
+
+fn sqlx_mutation_error(err: sqlx::Error) -> MutationError {
+    if matches!(
+        &err,
+        sqlx::Error::Io(_)
+            | sqlx::Error::PoolTimedOut
+            | sqlx::Error::PoolClosed
+            | sqlx::Error::WorkerCrashed
+    ) || err.to_string().contains("database is locked")
+    {
+        MutationError::transient(err.to_string())
+    } else {
+        MutationError::permanent(err.to_string())
+    }
 }
 
 async fn run_request(
@@ -1139,27 +1451,34 @@ fn apply_collection(
     let mut handled = locals
         .selected_collection
         .set_in(models, Some(Arc::<str>::from(collection_key(preset_id))));
-    handled = locals.selected_history.set_in(models, None) && handled;
+    handled = locals.selected_history.set_in(models, None) || handled;
     handled = locals
         .method
         .set_in(models, Some(Arc::<str>::from(preset.method)))
-        && handled;
-    handled = locals.url.set_in(models, preset.url.to_string()) && handled;
-    handled = locals.headers.set_in(models, preset.headers.to_string()) && handled;
-    handled = locals.body.set_in(models, preset.body.to_string()) && handled;
+        || handled;
+    handled = locals.url.set_in(models, preset.url.to_string()) || handled;
+    handled = locals.headers.set_in(models, preset.headers.to_string()) || handled;
+    handled = locals.body.set_in(models, preset.body.to_string()) || handled;
     handled = locals
         .request_tab
         .set_in(models, Some(Arc::<str>::from("body")))
-        && handled;
+        || handled;
     handled
 }
 
 fn load_history(
     models: &mut fret_runtime::ModelStore,
     locals: &WorkbenchLocals,
+    history_query: &QueryHandle<Vec<PersistedHistoryEntry>>,
     history_id: u64,
 ) -> bool {
-    let history = locals.history.value_in_or_default(models);
+    let history = models
+        .read(history_query.model(), Clone::clone)
+        .ok()
+        .and_then(|state: QueryState<Vec<PersistedHistoryEntry>>| {
+            state.data.map(|data| (*data).clone())
+        })
+        .unwrap_or_default();
     let Some(entry) = history.iter().find(|entry| entry.id == history_id).cloned() else {
         return false;
     };
@@ -1168,24 +1487,20 @@ fn load_history(
     handled = locals.selected_collection.set_in(
         models,
         entry
-            .snapshot
             .collection_id
             .map(|id| Arc::<str>::from(collection_key(id))),
-    ) && handled;
-    handled = locals
-        .method
-        .set_in(models, Some(entry.snapshot.method.clone()))
-        && handled;
-    handled = locals.url.set_in(models, entry.snapshot.url.to_string()) && handled;
+    ) || handled;
+    handled = locals.method.set_in(models, Some(entry.method.clone())) || handled;
+    handled = locals.url.set_in(models, entry.url.to_string()) || handled;
     handled = locals
         .headers
-        .set_in(models, entry.snapshot.headers_text.to_string())
-        && handled;
-    handled = locals.body.set_in(models, entry.snapshot.body.to_string()) && handled;
+        .set_in(models, entry.headers_text.to_string())
+        || handled;
+    handled = locals.body.set_in(models, entry.body.to_string()) || handled;
     handled = locals
         .request_tab
         .set_in(models, Some(Arc::<str>::from("body")))
-        && handled;
+        || handled;
     handled
 }
 
@@ -1198,10 +1513,6 @@ fn status_badge(label: &str) -> shadcn::Badge {
         shadcn::BadgeVariant::Secondary
     };
     shadcn::Badge::new(label).variant(variant)
-}
-
-fn short_request_label(snapshot: &RequestSnapshot) -> String {
-    format!("{} {}", snapshot.method, compact_url(snapshot.url.as_ref()))
 }
 
 fn compact_url(url: &str) -> String {
@@ -1280,7 +1591,7 @@ pub fn run() -> anyhow::Result<()> {
         .window("api-workbench-lite", (1320.0, 860.0))
         .config_files(false)
         .setup((
-            install_tokio_spawner,
+            install_tokio_spawner_and_history_db,
             install_demo_theme,
             install_commands,
             fret_icons_lucide::app::install,

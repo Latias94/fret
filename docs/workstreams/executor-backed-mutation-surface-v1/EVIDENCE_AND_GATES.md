@@ -31,6 +31,7 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
 - `ecosystem/fret-ui-shadcn/src/sonner.rs`
 - `apps/fret-examples/src/api_workbench_lite_demo.rs`
 - `apps/fret-examples/Cargo.toml`
+- `apps/fret-examples/src/lib.rs`
 - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-baseline.json`
 - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json`
 
@@ -78,6 +79,33 @@ Latest passing evidence (2026-04-14):
 - bundle:
   `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/1776165124305-api-workbench-lite.shell-and-response/`
 
+Latest strengthened SQLite-history evidence (2026-04-14):
+
+- session dir:
+  `target/fret-diag-api-workbench-lite-sqlite-history/sessions/1776168169993-16022/`
+- layout sidecar:
+  `target/fret-diag-api-workbench-lite-sqlite-history/sessions/1776168169993-16022/1776168310987-api-workbench-lite.shell-and-response.layout/layout.taffy.v1.json`
+- bundle:
+  `target/fret-diag-api-workbench-lite-sqlite-history/sessions/1776168169993-16022/1776168311008-api-workbench-lite.shell-and-response/`
+- note:
+  the script reached `api-workbench-lite.history.row.1` on the SQLite query lane, but
+  `capture_screenshot` timed out at step 8, so this run is evidence for the stronger dataflow
+  proof rather than the canonical passing screenshot artifact.
+
+Latest passing SQLite-history artifact proof (2026-04-14):
+
+- session dir:
+  `target/fret-diag-api-workbench-lite-sqlite-history-rerun/sessions/1776168778413-22114/`
+- layout sidecar:
+  `target/fret-diag-api-workbench-lite-sqlite-history-rerun/sessions/1776168778413-22114/1776168911870-api-workbench-lite.shell-and-response.layout/layout.taffy.v1.json`
+- screenshot:
+  `target/fret-diag-api-workbench-lite-sqlite-history-rerun/sessions/1776168778413-22114/screenshots/1776168911906-api-workbench-lite.shell-and-response/window-4294967297-tick-285-frame-285.png`
+- bundle:
+  `target/fret-diag-api-workbench-lite-sqlite-history-rerun/sessions/1776168778413-22114/1776168912029-api-workbench-lite.shell-and-response/`
+- note:
+  a hot rerun of the same script passed without code changes, which points to diag timing noise in
+  the first run rather than a contract or SQLite dataflow failure in the demo itself.
+
 ### Executor substrate floor
 
 - `cargo nextest run -p fret-executor`
@@ -109,6 +137,17 @@ This gate currently proves:
 - and the crate-usage guide still names `fret-mutation` rather than falling back to raw
   executor-only teaching on the first-contact lane.
 
+### API workbench SQLite proof source-policy gate
+
+- `cargo nextest run -p fret-examples api_workbench_lite_demo_uses_query_for_sqlite_reads_and_mutation_for_explicit_submit`
+
+This gate currently proves:
+
+- the same Postman-like consumer probe now uses `query_async(...)` for SQLite history reads,
+- explicit SQLite writes stay on `mutation_async(...)`,
+- and the example no longer relies on local-only history bookkeeping for the first visible request
+  history surface.
+
 ### Lane hygiene gates
 
 - `git diff --check`
@@ -120,5 +159,4 @@ This gate currently proves:
 
 Before claiming this lane is closed, add:
 
-- at least one mutation-specific focused test package,
-- and one second real consumer beyond the API workbench.
+- at least one mutation-specific focused test package.

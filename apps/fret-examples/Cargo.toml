@@ -70,6 +70,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret = { path = "../../ecosystem/fret", features = ["state", "state-mutation", "ui-assets", "diagnostics", "command-palette"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "time"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
 ureq.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 fret-launch = { path = "../../crates/fret-launch", features = ["dev-state", "diag-screenshots"] }

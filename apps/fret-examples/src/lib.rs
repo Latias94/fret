@@ -268,6 +268,7 @@ mod authoring_surface_policy_tests {
 
     const ASSETS_DEMO: &str = include_str!("assets_demo.rs");
     const ASYNC_PLAYGROUND_DEMO: &str = include_str!("async_playground_demo.rs");
+    const API_WORKBENCH_LITE_DEMO: &str = include_str!("api_workbench_lite_demo.rs");
     const CJK_CONFORMANCE_DEMO: &str = include_str!("cjk_conformance_demo.rs");
     const CHART_DECLARATIVE_DEMO: &str = include_str!("chart_declarative_demo.rs");
     const COMPONENTS_GALLERY_DEMO: &str = include_str!("components_gallery.rs");
@@ -1025,6 +1026,33 @@ mod authoring_surface_policy_tests {
             );
             assert_avoids_legacy_conversion_names(src);
         }
+    }
+
+    #[test]
+    fn api_workbench_lite_demo_uses_query_for_sqlite_reads_and_mutation_for_explicit_submit() {
+        assert!(API_WORKBENCH_LITE_DEMO.contains("use fret::app::prelude::*;"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("advanced::prelude::*"));
+        assert!(
+            API_WORKBENCH_LITE_DEMO.contains("fn init(_app: &mut App, window: WindowId) -> Self")
+        );
+        assert_avoids_legacy_conversion_names(API_WORKBENCH_LITE_DEMO);
+        for marker in [
+            "cx.data().query_async(",
+            "cx.data().mutation_async(",
+            "QueryKey::<Vec<PersistedHistoryEntry>>::new(HISTORY_QUERY_NS, &())",
+            "persist_history_snapshot(",
+            "load_saved_history(",
+            "sqlx::query(",
+            "cx.data().invalidate_query_namespace(HISTORY_QUERY_NS);",
+            "MutationConcurrencyPolicy::AllowParallelLatestWins",
+        ] {
+            assert!(
+                API_WORKBENCH_LITE_DEMO.contains(marker),
+                "api_workbench_lite_demo should keep the SQLite history proof explicit: {marker}"
+            );
+        }
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("locals.history"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("next_history_id"));
     }
 
     #[test]

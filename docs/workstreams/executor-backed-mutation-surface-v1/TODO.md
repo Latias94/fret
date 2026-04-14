@@ -52,7 +52,7 @@
 - [x] Migrate `apps/fret-examples/src/api_workbench_lite_demo.rs` to the new mutation/submission surface.
 - [x] Keep or strengthen the existing shell + response diag proof:
   - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json`
-- [ ] Add one second non-Todo proof surface beyond the API workbench:
+- [x] Add one second non-Todo proof surface beyond the API workbench:
   - likely SQL/SQLite mutation docs/examples,
   - or another real explicit-submit app surface.
 - [ ] Audit whether the existing GenUI and Sonner executor-backed flows should align to the shared

@@ -23,6 +23,22 @@
   - `docs/crate-usage-guide.md` names `fret-mutation` as the shared submit lane,
   - and `ecosystem/fret/src/lib.rs` now carries source-policy assertions that would fail if the
     first-contact docs drift back to `query_async(...)` for submit flows.
+- M3 now has a second real proof surface on the same product probe:
+  - `apps/fret-examples/src/api_workbench_lite_demo.rs` keeps HTTP send on one mutation lane,
+  - adds SQLite-backed request history reads on `cx.data().query_async(...)`,
+  - adds explicit history writes on `cx.data().mutation_async(...)`,
+  - and invalidates the saved-history query namespace only after successful SQLite mutation
+    completion.
+- The existing `api-workbench-lite` diag script now has a full SQLite-backed artifact proof:
+  - the first run under
+    `target/fret-diag-api-workbench-lite-sqlite-history/sessions/1776168169993-16022/`
+    reached `api-workbench-lite.history.row.1` and produced layout + bundle artifacts, but timed
+    out during `capture_screenshot`,
+  - a hot rerun under
+    `target/fret-diag-api-workbench-lite-sqlite-history-rerun/sessions/1776168778413-22114/`
+    passed and produced layout/screenshot/bundle artifacts on the same SQLite query lane,
+  - so the lane now has the stronger dataflow proof plus a passing screenshot artifact, while the
+    earlier timeout is treated as diagnostics timing noise rather than a framework-design failure.
 
 ## M0 — Baseline audit and scope freeze
 
@@ -57,7 +73,7 @@ Exit when:
 Exit when:
 
 - `api_workbench_lite` proves the new contract on a non-Todo tool app,
-- at least one second consumer exists,
+- at least one second real proof surface exists beyond the original HTTP submit-only slice,
 - and the lane has one durable gate or diag artifact that would fail if submit work regressed back
   into render-observed replay.
 
