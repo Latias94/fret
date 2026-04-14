@@ -15,7 +15,7 @@ The contract shape does.
 | Explicit async submit / mutation | one default app-facing mutation/submission surface; creating/reading the handle does not start work | raw inbox + executor assembly remains available | executor-family mutation crate + `fret` app sugar |
 | Mutation execution substrate | hidden behind the default app-facing mutation surface | direct `Executors`, `Inbox`, `InboxDrainer`, `FutureSpawnerHandle` | `fret-executor` |
 | Completion apply | model-backed mutation state and explicit UI-thread apply | manual driver-boundary model updates remain available | executor-family mutation crate + app-owned models |
-| Retry / cancellation / concurrency | explicit mutation policy, separate from query freshness semantics | direct executor/manual orchestration | executor-family mutation crate over `fret-executor` |
+| Retry / cancellation / concurrency | explicit mutation policy with user-invoked `retry_last(...)` replay, explicit cancellation, and separate concurrency semantics; no query-style automatic retry by default | direct executor/manual orchestration | executor-family mutation crate over `fret-executor` |
 | Query refresh after mutation | explicit invalidation or explicit key/epoch change after success | raw `with_query_client(...)` still valid in pure app/driver code | `fret-query` + `fret` app helpers |
 | Local UI materialization of terminal state | ordinary `LocalState<T>` / model updates above the mutation state machine | direct model choreography remains valid | existing state lanes; not reopened here |
 

@@ -334,6 +334,26 @@ impl<TIn: 'static, TOut: 'static> MutationHandle<TIn, TOut> {
         }
     }
 
+    /// Replay the last submitted input explicitly, if this handle has one.
+    ///
+    /// This is the v1 retry surface for explicit submit work: it reuses the last stored input and
+    /// goes through the same `submit(...)` path again. It does not add query-style automatic retry
+    /// scheduling.
+    pub fn retry_last(&self, models: &mut ModelStore, window: AppWindowId) -> bool
+    where
+        TIn: Any + Clone + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+    {
+        let last_input = models
+            .read(&self.model, |st| st.input.as_deref().cloned())
+            .ok()
+            .flatten();
+        let Some(last_input) = last_input else {
+            return false;
+        };
+        self.submit(models, window, last_input)
+    }
+
     pub fn cancel(&self, models: &mut ModelStore) -> bool
     where
         TIn: Any + Send + Sync + 'static,
@@ -833,6 +853,11 @@ pub mod ui {
             TIn: Any + Send + Sync + 'static,
             TOut: Any + Send + Sync + 'static;
 
+        fn retry_last_action(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool
+        where
+            TIn: Any + Clone + Send + Sync + 'static,
+            TOut: Any + Send + Sync + 'static;
+
         fn cancel_action(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool
         where
             TIn: Any + Send + Sync + 'static,
@@ -856,6 +881,19 @@ pub mod ui {
             TOut: Any + Send + Sync + 'static,
         {
             let changed = self.submit(host.models_mut(), action_cx.window, input);
+            if changed {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            changed
+        }
+
+        fn retry_last_action(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool
+        where
+            TIn: Any + Clone + Send + Sync + 'static,
+            TOut: Any + Send + Sync + 'static,
+        {
+            let changed = self.retry_last(host.models_mut(), action_cx.window);
             if changed {
                 host.request_redraw(action_cx.window);
                 host.notify(action_cx);
@@ -994,6 +1032,79 @@ mod tests {
         assert_eq!(state.status, MutationStatus::Success);
         assert_eq!(state.data.as_deref().copied(), Some(42));
         assert!(handle.success_token().is_some());
+    }
+
+    #[test]
+    fn retry_last_replays_previous_input_explicitly() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let spawner = Arc::new(TestSpawner::default());
+        let spawner_handle: FutureSpawnerHandle = spawner.clone();
+        app.set_global::<FutureSpawnerHandle>(spawner_handle.clone());
+
+        let attempts = Arc::new(Mutex::new(Vec::<u32>::new()));
+        let attempts_for_submit = attempts.clone();
+
+        let state = app
+            .models_mut()
+            .insert(MutationState::<u32, u32>::default());
+        let runtime = MutationRuntimeHandle::Ready(
+            app.with_global_mut_untracked(MutationRuntimeRegistry::default, |registry, app| {
+                registry.runtime_for(app, &state, dispatcher.clone())
+            }),
+        );
+        let handle = MutationHandle::send(
+            state.clone(),
+            runtime,
+            Some(spawner_handle),
+            MutationPolicy::default(),
+            move |_token, input| {
+                let attempts = attempts_for_submit.clone();
+                Box::pin(async move {
+                    attempts.lock().unwrap().push(*input);
+                    if attempts.lock().unwrap().len() == 1 {
+                        Err(MutationError::transient("temporary"))
+                    } else {
+                        Ok(*input)
+                    }
+                })
+            },
+        );
+
+        assert!(
+            !handle.retry_last(app.models_mut(), AppWindowId::default()),
+            "retry_last should stay idle until one explicit submit stores input"
+        );
+
+        assert!(handle.submit(app.models_mut(), AppWindowId::default(), 7));
+        for fut in spawner.drain_send() {
+            block_on(fut);
+        }
+        assert!(drain_inboxes(&mut app, Some(AppWindowId::default())));
+
+        let first_state = state.read_ref(&app, Clone::clone).unwrap();
+        assert_eq!(first_state.status, MutationStatus::Error);
+        assert_eq!(first_state.input.as_deref().copied(), Some(7));
+
+        assert!(handle.retry_last(app.models_mut(), AppWindowId::default()));
+        for fut in spawner.drain_send() {
+            block_on(fut);
+        }
+        assert!(drain_inboxes(&mut app, Some(AppWindowId::default())));
+
+        let second_state = state.read_ref(&app, Clone::clone).unwrap();
+        assert_eq!(second_state.status, MutationStatus::Success);
+        assert_eq!(second_state.data.as_deref().copied(), Some(7));
+        assert_eq!(attempts.lock().unwrap().as_slice(), &[7, 7]);
+
+        assert!(handle.reset(app.models_mut()));
+        assert!(
+            !handle.retry_last(app.models_mut(), AppWindowId::default()),
+            "reset should clear the stored retry input"
+        );
     }
 
     #[test]

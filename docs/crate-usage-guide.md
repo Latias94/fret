@@ -792,6 +792,7 @@ app-facing `fret` facades.
 
 - model-backed `MutationState<TIn, TOut>` stored in the UI model store,
 - explicit `submit(...)` / `submit_action(...)` trigger points,
+- explicit `retry_last(...)` replay of the last stored input,
 - background completion that still applies through the driver boundary,
 - no auto-start from render observation.
 
@@ -801,7 +802,9 @@ requests, or tool-style actions that must not replay just because render observe
 **Default app note:** on the `fret` golden path, enable `fret`'s `state-mutation` feature and
 create handles with `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)`.
 Observe state with `handle.read_layout(cx)`, start work only with `handle.submit(...)` or
-`handle.submit_action(...)`, and prefer
+`handle.submit_action(...)`. For user-invoked retry/replay of the last submit input, use
+`handle.retry_last(...)` or `retry_last_action(...)` instead of query-style automatic retries by
+default. Prefer
 `cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
 mutation-to-query handoff on `AppUi` / extracted `UiCx`. Keep
 `cx.data().invalidate_query_namespace(...)` for direct invalidation paths that are not driven by a

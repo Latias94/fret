@@ -11,6 +11,12 @@
   - `cx.data().mutation_async(...)` / `mutation_async_local(...)`,
   - `MutationHandle::submit(...)`,
   - and `api_workbench_lite` wiring through the existing `cx.actions().models::<...>(...)` path.
+- M1 now freezes retry semantics on the mutation lane:
+  - `ecosystem/fret-mutation/src/lib.rs` adds `MutationHandle::retry_last(...)` and
+    `retry_last_action(...)` as the explicit replay path for the last stored submit input,
+  - the retry surface stays separate from query freshness semantics,
+  - and v1 still does **not** add query-style automatic retry scheduling to the default mutation
+    lane.
 - M3 has one durable artifact-producing proof:
   - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite-mutation --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo`
   - passed on 2026-04-14 and produced layout/screenshot/bundle artifacts under

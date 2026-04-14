@@ -73,8 +73,9 @@
 //!   those names from `fret::app::prelude::*`
 //! - enable `state-mutation` when app code needs an explicit submit/mutation lane that must not
 //!   auto-run from render observation; prefer `cx.data().mutation_async(...)` /
-//!   `cx.data().mutation_async_local(...)` plus `handle.submit(...)` or `handle.submit_action(...)`
-//!   instead of teaching click-driven submit flows through `query_async(...)`
+//!   `cx.data().mutation_async_local(...)` plus `handle.submit(...)`, `handle.submit_action(...)`,
+//!   or explicit `handle.retry_last(...)` replay instead of teaching click-driven submit flows
+//!   through `query_async(...)`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - depend on `fret-docking` directly for editor-grade docking workflows instead of expecting a
@@ -3196,6 +3197,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().mutation_async_local(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.submit(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.submit_action(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`handle.retry_last(...)`"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")

@@ -27,10 +27,11 @@
   - success,
   - error,
   - reset.
-- [ ] Define the minimal policy surface:
+- [x] Define the minimal policy surface:
   - cancellation,
-  - retry,
-  - concurrency (latest wins / keep in flight / explicit parallel).
+  - retry as explicit `retry_last(...)` replay of the last stored submit input,
+  - concurrency (latest wins / keep in flight / explicit parallel),
+  - while keeping query-style automatic retry out of the default mutation lane.
 - [x] Keep driver-boundary apply data-only and model-backed.
 
 ## M2 — App-facing surface (`fret`)
