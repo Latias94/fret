@@ -53,6 +53,7 @@ struct ShowcaseResponsiveLayout {
     outer_padding: Space,
     surface_padding: Space,
     section_gap: Space,
+    compact_rows: bool,
     stack_body: bool,
     stack_header: bool,
     side_column_width: Px,
@@ -80,6 +81,7 @@ impl ShowcaseResponsiveLayout {
             } else {
                 Space::N4
             },
+            compact_rows: compact_width && !stack_body,
             stack_body,
             stack_header: stack_body,
             side_column_width: if compact_width {
@@ -237,6 +239,51 @@ impl View for ImUiInteractionShowcaseView {
                 .w_full()
                 .min_w_0()
                 .into_element(cx)
+        } else if responsive.compact_rows {
+            ui::v_flex(move |cx| {
+                vec![
+                    ui::h_flex(move |cx| {
+                        vec![
+                            ui::container(move |_cx| [hero])
+                                .flex_1()
+                                .min_w_0()
+                                .into_element(cx),
+                            ui::container(move |_cx| [shell])
+                                .w_px(responsive.side_column_width)
+                                .flex_shrink_0()
+                                .min_w_0()
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(responsive.section_gap)
+                    .items_stretch()
+                    .w_full()
+                    .min_w_0()
+                    .into_element(cx),
+                    ui::h_flex(move |cx| {
+                        vec![
+                            ui::container(move |_cx| [timeline_card])
+                                .flex_1()
+                                .min_w_0()
+                                .into_element(cx),
+                            ui::container(move |_cx| [lab])
+                                .w_px(responsive.side_column_width)
+                                .flex_shrink_0()
+                                .min_w_0()
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(responsive.section_gap)
+                    .items_stretch()
+                    .w_full()
+                    .min_w_0()
+                    .into_element(cx),
+                ]
+            })
+            .gap(responsive.section_gap)
+            .w_full()
+            .min_w_0()
+            .into_element(cx)
         } else {
             ui::h_flex(move |cx| {
                 vec![
@@ -469,6 +516,7 @@ mod tests {
         let layout = ShowcaseResponsiveLayout::from_viewport(Px(1180.0), Px(760.0));
         assert!(!layout.stack_body);
         assert!(!layout.stack_header);
+        assert!(layout.compact_rows);
         assert_eq!(layout.outer_padding, Space::N3);
         assert_eq!(layout.surface_padding, Space::N4);
         assert_eq!(layout.side_column_width, SHOWCASE_SIDE_COLUMN_WIDTH);
@@ -479,6 +527,7 @@ mod tests {
         let layout = ShowcaseResponsiveLayout::from_viewport(Px(980.0), Px(760.0));
         assert!(layout.stack_body);
         assert!(layout.stack_header);
+        assert!(!layout.compact_rows);
         assert_eq!(layout.section_gap, Space::N3);
     }
 }

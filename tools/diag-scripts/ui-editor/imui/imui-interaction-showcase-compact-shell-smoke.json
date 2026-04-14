@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-interaction-showcase-compact-shell-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["imui", "showcase", "compact", "shell", "smoke", "ui_editor"],
+    "target_hints": [
+      "Verifies the showcase shell stays visible and clickable in the default 1180x760 window.",
+      "Covers menu opening and tab switching without relying on a roomy viewport."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1180.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-showcase.menu.file" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-showcase.tabs.scene" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-showcase.menu.file" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-showcase.menu.staging" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-showcase.tabs.scene" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-showcase.tabs.scene.panel" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_bundle",
+      "label": "imui-interaction-showcase.compact-shell"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-interaction-showcase.compact-shell"
+    }
+  ]
+}
