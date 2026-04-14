@@ -805,8 +805,10 @@ Observe state with `handle.read_layout(cx)`, start work only with `handle.submit
 `handle.submit_action(...)`. For user-invoked retry/replay of the last submit input, use
 `handle.retry_last(...)` or `retry_last_action(...)` instead of query-style automatic retries by
 default. When app code needs to materialize the latest terminal success/error exactly once into
-ordinary `LocalState<T>` or shared models, use `cx.data().take_mutation_completion(...)` instead
-of inventing request-local sequence counters. Prefer
+ordinary `LocalState<T>` or shared models, prefer
+`cx.data().update_after_mutation_completion(...)`; keep `cx.data().take_mutation_completion(...)`
+for lower-level once-only control flow that does not itself write app-owned state. Do not invent
+request-local sequence counters for same-input retries. Prefer
 `cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
 mutation-to-query handoff on `AppUi` / extracted `UiCx`. Keep
 `cx.data().invalidate_query_namespace(...)` for direct invalidation paths that are not driven by a

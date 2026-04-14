@@ -37,6 +37,9 @@
   - now also adds `cx.data().take_mutation_completion(...)` for one-shot terminal
     success-or-error apply when app code needs to materialize the latest mutation result into
     ordinary local/shared UI state,
+  - and now adds `cx.data().update_after_mutation_completion(...)` so app code can project a fresh
+    terminal mutation result into ordinary `LocalState<T>` / shared models without reopening
+    `read_layout(cx)` + manual redraw glue at each call site,
   - adds `cx.data().invalidate_query_after_mutation_success(...)` and
     `cx.data().invalidate_query_namespace_after_mutation_success(...)` for explicit read-lane
     refresh after one completed mutation success,
@@ -52,6 +55,9 @@
     persists another history row through the same mutation lane,
   - removes demo-local request sequence bookkeeping in favor of the shared
     `take_mutation_completion(...)` once-per-completion app helper,
+  - now further collapses the terminal response projection to
+    `cx.data().update_after_mutation_completion(...)` instead of app-owned
+    `read_layout(cx)` + manual redraw glue,
   - and now invalidates the saved-history query namespace through the shared
     `invalidate_query_namespace_after_mutation_success(...)` helper instead of local render-owned
     dedupe glue.

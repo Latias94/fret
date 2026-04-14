@@ -239,18 +239,19 @@ impl View for ApiWorkbenchLiteView {
         let response_status = locals.response_status.layout_value(cx);
         let history_state = history_query.read_layout(cx);
         let saved_history = history_state.data.as_deref().cloned().unwrap_or_default();
-        let mutation_state = response_mutation.read_layout(cx);
         let _ = cx.data().invalidate_query_namespace_after_mutation_success(
             HISTORY_INVALIDATE_EFFECT,
             &history_save_mutation,
             HISTORY_QUERY_NS,
         );
-        if cx
-            .data()
-            .take_mutation_completion(RESPONSE_APPLY_EFFECT, &response_mutation)
-        {
-            apply_response_snapshot(cx, self.window, &locals, &mutation_state);
-        }
+        let _ = cx.data().update_after_mutation_completion(
+            RESPONSE_APPLY_EFFECT,
+            &response_mutation,
+            {
+                let locals = locals.clone();
+                move |models, state| apply_response_snapshot(models, &locals, state)
+            },
+        );
 
         let status_badge = status_badge(&response_status).test_id(TEST_ID_RESPONSE_STATUS);
         let send_button = shadcn::Button::new("Send Request")
@@ -973,16 +974,10 @@ fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElemen
 }
 
 fn apply_response_snapshot(
-    cx: &mut AppUi<'_, '_>,
-    window: WindowId,
+    models: &mut fret_runtime::ModelStore,
     locals: &WorkbenchLocals,
-    state: &MutationState<RequestSnapshot, ResponsePayload>,
-) {
-    let ready = state.is_success() || state.is_error();
-    if !ready {
-        return;
-    }
-
+    state: MutationState<RequestSnapshot, ResponsePayload>,
+) -> bool {
     let (status_line, pretty, raw, headers) = if let Some(data) = state.data.as_ref() {
         (
             if data.is_http_error {
@@ -1011,31 +1006,12 @@ fn apply_response_snapshot(
         )
     };
 
-    let _ = cx
-        .app
-        .models_mut()
-        .update(locals.response_status.model(), |value: &mut String| {
-            *value = status_line
-        });
-    let _ = cx
-        .app
-        .models_mut()
-        .update(locals.response_pretty.model(), |value: &mut String| {
-            *value = pretty
-        });
-    let _ = cx
-        .app
-        .models_mut()
-        .update(locals.response_raw.model(), |value: &mut String| {
-            *value = raw
-        });
-    let _ = cx
-        .app
-        .models_mut()
-        .update(locals.response_headers.model(), |value: &mut String| {
-            *value = headers
-        });
-    cx.app.request_redraw(window);
+    let mut changed = false;
+    changed = locals.response_status.set_in(models, status_line) || changed;
+    changed = locals.response_pretty.set_in(models, pretty) || changed;
+    changed = locals.response_raw.set_in(models, raw) || changed;
+    changed = locals.response_headers.set_in(models, headers) || changed;
+    changed
 }
 
 fn install_tokio_spawner_and_history_db(app: &mut App) {

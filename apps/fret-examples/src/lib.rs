@@ -1039,7 +1039,8 @@ mod authoring_surface_policy_tests {
         for marker in [
             "cx.data().query_async(",
             "cx.data().mutation_async(",
-            ".take_mutation_completion(RESPONSE_APPLY_EFFECT, &response_mutation)",
+            "cx.data().update_after_mutation_completion(",
+            "move |models, state| apply_response_snapshot(models, &locals, state)",
             "QueryKey::<Vec<PersistedHistoryEntry>>::new(HISTORY_QUERY_NS, &())",
             "persist_history_snapshot(",
             "load_saved_history(",
@@ -1057,6 +1058,7 @@ mod authoring_surface_policy_tests {
         assert!(!API_WORKBENCH_LITE_DEMO.contains("maybe_invalidate_saved_history_query("));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("locals.history"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("next_history_id"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains(".take_mutation_completion("));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("last_applied_seq"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("next_seq"));
     }
