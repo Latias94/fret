@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -264,6 +265,20 @@ impl<TIn: 'static, TOut: 'static> MutationHandle<TIn, TOut> {
         &self.model
     }
 
+    /// Returns an opaque token for the current successful completion, if the handle is presently
+    /// showing a success terminal state.
+    ///
+    /// Treat this as a compare-only token for once-per-success follow-up work. It is cleared when
+    /// a new submit starts or when the mutation leaves the success state.
+    pub fn success_token(&self) -> Option<NonZeroU64> {
+        match &self.runtime {
+            MutationRuntimeHandle::Ready(runtime) => {
+                NonZeroU64::new(runtime.success_token.load(Ordering::SeqCst))
+            }
+            MutationRuntimeHandle::MissingDispatcher(_) => None,
+        }
+    }
+
     pub fn submit(&self, models: &mut ModelStore, window: AppWindowId, input: TIn) -> bool
     where
         TIn: Any + Send + Sync + 'static,
@@ -336,6 +351,9 @@ impl<TIn: 'static, TOut: 'static> MutationHandle<TIn, TOut> {
         TOut: Any + Send + Sync + 'static,
     {
         let cancelled = self.cancel(models);
+        if let MutationRuntimeHandle::Ready(runtime) = &self.runtime {
+            runtime.success_token.store(0, Ordering::SeqCst);
+        }
         let reset = models
             .update(&self.model, |st| *st = MutationState::default())
             .is_ok();
@@ -390,6 +408,9 @@ impl<TIn: 'static, TOut: 'static> MutationHandle<TIn, TOut> {
             st.updated_at = Some(Instant::now());
             st.last_duration = None;
         });
+        if let MutationRuntimeHandle::Ready(runtime) = &self.runtime {
+            runtime.success_token.store(0, Ordering::SeqCst);
+        }
     }
 }
 
@@ -399,6 +420,7 @@ struct MutationRuntime<TIn: 'static, TOut: 'static> {
     inbox: Inbox<MutationInboxMsg<TOut>>,
     tasks: Arc<Mutex<HashMap<u64, BackgroundTask>>>,
     latest_submission_id: AtomicU64,
+    success_token: AtomicU64,
     _phantom: PhantomData<fn() -> TIn>,
 }
 
@@ -412,6 +434,7 @@ impl<TIn: Any + Send + Sync + 'static, TOut: Any + Send + Sync + 'static>
             inbox: Inbox::new(Default::default()),
             tasks: Arc::new(Mutex::new(HashMap::new())),
             latest_submission_id: AtomicU64::new(0),
+            success_token: AtomicU64::new(0),
             _phantom: PhantomData,
         }
     }
@@ -528,6 +551,7 @@ impl<TIn: Any + Send + Sync + 'static, TOut: Any + Send + Sync + 'static>
         }
 
         let submission_id = self.latest_submission_id.fetch_add(1, Ordering::SeqCst) + 1;
+        self.success_token.store(0, Ordering::SeqCst);
         let applied = self
             .update_state(models, |st| {
                 st.status = MutationStatus::Running;
@@ -581,7 +605,10 @@ impl<TIn: Any + Send + Sync + 'static, TOut: Any + Send + Sync + 'static>
             st.updated_at = Some(Instant::now());
             st.last_duration = None;
         })
-        .is_some()
+        .is_some_and(|_| {
+            self.success_token.store(0, Ordering::SeqCst);
+            true
+        })
     }
 
     fn apply(&self, host: &mut dyn InboxDrainHost, msg: MutationInboxMsg<TOut>) {
@@ -594,6 +621,7 @@ impl<TIn: Any + Send + Sync + 'static, TOut: Any + Send + Sync + 'static>
             return;
         }
 
+        let mut next_success_token = 0;
         let applied = self.update_state(host.models_mut(), |st| {
             st.inflight = None;
             st.updated_at = Some(msg.finished_at);
@@ -603,14 +631,18 @@ impl<TIn: Any + Send + Sync + 'static, TOut: Any + Send + Sync + 'static>
                     st.status = MutationStatus::Success;
                     st.data = Some(Arc::new(value));
                     st.error = None;
+                    next_success_token = msg.submission_id;
                 }
                 Err(err) => {
                     st.status = MutationStatus::Error;
                     st.error = Some(err);
+                    next_success_token = 0;
                 }
             }
         });
         if applied.is_some() {
+            self.success_token
+                .store(next_success_token, Ordering::SeqCst);
             host.request_redraw(msg.window);
         }
     }
@@ -949,6 +981,7 @@ mod tests {
         );
 
         assert!(handle.submit(app.models_mut(), AppWindowId::default(), 41));
+        assert_eq!(handle.success_token(), None);
         let running = state.read_ref(&app, |s| s.clone()).unwrap();
         assert_eq!(running.status, MutationStatus::Running);
 
@@ -960,6 +993,80 @@ mod tests {
         let state = state.read_ref(&app, |s| s.clone()).unwrap();
         assert_eq!(state.status, MutationStatus::Success);
         assert_eq!(state.data.as_deref().copied(), Some(42));
+        assert!(handle.success_token().is_some());
+    }
+
+    #[test]
+    fn success_token_tracks_only_current_success_state() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let spawner = Arc::new(TestSpawner::default());
+        let spawner_handle: FutureSpawnerHandle = spawner.clone();
+        app.set_global::<FutureSpawnerHandle>(spawner_handle.clone());
+
+        let state = app
+            .models_mut()
+            .insert(MutationState::<u32, u32>::default());
+        let runtime = MutationRuntimeHandle::Ready(
+            app.with_global_mut_untracked(MutationRuntimeRegistry::default, |registry, app| {
+                registry.runtime_for(app, &state, dispatcher.clone())
+            }),
+        );
+        let handle = MutationHandle::send(
+            state,
+            runtime,
+            Some(spawner_handle),
+            MutationPolicy::default(),
+            |_token, input| {
+                Box::pin(async move {
+                    if *input == 0 {
+                        Err(MutationError::transient("boom"))
+                    } else {
+                        Ok(*input)
+                    }
+                })
+            },
+        );
+
+        assert_eq!(handle.success_token(), None);
+
+        assert!(handle.submit(app.models_mut(), AppWindowId::default(), 1));
+        assert_eq!(handle.success_token(), None);
+        for fut in spawner.drain_send() {
+            block_on(fut);
+        }
+        assert!(drain_inboxes(&mut app, Some(AppWindowId::default())));
+        let first_token = handle
+            .success_token()
+            .expect("success token should exist after success");
+
+        assert!(handle.submit(app.models_mut(), AppWindowId::default(), 0));
+        assert_eq!(handle.success_token(), None);
+        for fut in spawner.drain_send() {
+            block_on(fut);
+        }
+        assert!(drain_inboxes(&mut app, Some(AppWindowId::default())));
+        assert_eq!(
+            handle.success_token(),
+            None,
+            "error terminal state should not keep a success token"
+        );
+
+        assert!(handle.submit(app.models_mut(), AppWindowId::default(), 2));
+        for fut in spawner.drain_send() {
+            block_on(fut);
+        }
+        assert!(drain_inboxes(&mut app, Some(AppWindowId::default())));
+        let second_token = handle
+            .success_token()
+            .expect("new success should publish a fresh token");
+        assert_ne!(first_token, second_token);
+
+        assert!(handle.reset(app.models_mut()));
+        assert_eq!(handle.success_token(), None);
     }
 
     #[test]

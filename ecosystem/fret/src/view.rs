@@ -1984,6 +1984,7 @@ fn take_mutation_success_in<H: UiHost, TIn: 'static, TOut: 'static>(
     effect_key: u64,
     handle: &fret_mutation::MutationHandle<TIn, TOut>,
 ) -> bool {
+    let success_token = handle.success_token();
     let state = cx
         .get_model_cloned(handle.model(), Invalidation::Layout)
         .unwrap_or_default();
@@ -1991,15 +1992,18 @@ fn take_mutation_success_in<H: UiHost, TIn: 'static, TOut: 'static>(
         return false;
     }
 
-    let finished_at = state.updated_at;
+    let Some(success_token) = success_token else {
+        return false;
+    };
+
     cx.keyed_slot_state(
         (effect_key, handle.model().id()),
-        Option::<fret_core::time::Instant>::default,
+        Option::<std::num::NonZeroU64>::default,
         |last_seen| {
-            if *last_seen == finished_at {
+            if *last_seen == Some(success_token) {
                 false
             } else {
-                *last_seen = finished_at;
+                *last_seen = Some(success_token);
                 true
             }
         },
@@ -3022,10 +3026,16 @@ mod tests {
     use std::any::Any;
     #[cfg(feature = "state-mutation")]
     use std::cell::RefCell;
+    #[cfg(feature = "state-mutation")]
+    use std::future::Future;
+    #[cfg(feature = "state-mutation")]
+    use std::pin::Pin;
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
     };
+    #[cfg(feature = "state-mutation")]
+    use std::task::{Context, Poll, Waker};
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     use fret_core::{
         AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType, Px,
@@ -3034,6 +3044,11 @@ mod tests {
     use fret_runtime::{
         ActionId, CommandId, Effect, ModelStore, TickId, TimerToken,
         WindowPendingActionPayloadService,
+    };
+    #[cfg(feature = "state-mutation")]
+    use fret_runtime::{
+        DispatchPriority, Dispatcher, DispatcherHandle, ExecCapabilities, InboxDrainRegistry,
+        Runnable,
     };
     use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
     use fret_ui::declarative::render_root;
@@ -3097,6 +3112,61 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             false
         }
+    }
+
+    #[cfg(feature = "state-mutation")]
+    #[derive(Default)]
+    struct TestDispatcher;
+
+    #[cfg(feature = "state-mutation")]
+    impl Dispatcher for TestDispatcher {
+        fn dispatch_on_main_thread(&self, runnable: Runnable) {
+            runnable();
+        }
+
+        fn dispatch_background(&self, runnable: Runnable, _priority: DispatchPriority) {
+            runnable();
+        }
+
+        fn dispatch_after(&self, _delay: std::time::Duration, runnable: Runnable) {
+            runnable();
+        }
+
+        fn wake(&self, _window: Option<AppWindowId>) {}
+
+        fn exec_capabilities(&self) -> ExecCapabilities {
+            ExecCapabilities::default()
+        }
+    }
+
+    #[cfg(feature = "state-mutation")]
+    #[derive(Default)]
+    struct ReadyOnlySpawner;
+
+    #[cfg(feature = "state-mutation")]
+    impl fret_mutation::FutureSpawner for ReadyOnlySpawner {
+        fn spawn_send(&self, mut fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+            let mut cx = Context::from_waker(Waker::noop());
+            match fut.as_mut().poll(&mut cx) {
+                Poll::Ready(()) => {}
+                Poll::Pending => panic!("test mutation future should complete immediately"),
+            }
+        }
+
+        fn spawn_local(&self, mut fut: Pin<Box<dyn Future<Output = ()> + 'static>>) -> bool {
+            let mut cx = Context::from_waker(Waker::noop());
+            match fut.as_mut().poll(&mut cx) {
+                Poll::Ready(()) => true,
+                Poll::Pending => panic!("test mutation future should complete immediately"),
+            }
+        }
+    }
+
+    #[cfg(feature = "state-mutation")]
+    fn drain_inboxes(app: &mut crate::app::App, window: AppWindowId) -> bool {
+        app.with_global_mut_untracked(InboxDrainRegistry::default, |registry, app| {
+            registry.drain_all(app, Some(window))
+        })
     }
 
     struct DispatchAction;
@@ -4061,6 +4131,10 @@ mod tests {
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
         let mut ui = UiTree::<crate::app::App>::new();
         ui.set_window(window);
+        let dispatcher: DispatcherHandle = Arc::new(TestDispatcher);
+        app.set_global::<DispatcherHandle>(dispatcher);
+        let spawner: fret_mutation::FutureSpawnerHandle = Arc::new(ReadyOnlySpawner);
+        app.set_global::<fret_mutation::FutureSpawnerHandle>(spawner);
 
         let mut services = FakeUiServices;
         let mut st = AppUiRenderRootState::default();
@@ -4086,16 +4160,8 @@ mod tests {
             .expect("mutation handle should be captured")
             .clone();
 
-        let first_finished_at = fret_core::time::Instant::now();
-        let _ = app.models_mut().update(handle.model(), |state| {
-            state.status = fret_mutation::MutationStatus::Success;
-            state.input = Some(Arc::new(()));
-            state.data = Some(Arc::new(()));
-            state.error = None;
-            state.inflight = None;
-            state.updated_at = Some(first_finished_at);
-            state.last_duration = None;
-        });
+        assert!(handle.submit(app.models_mut(), window, ()));
+        assert!(drain_inboxes(&mut app, window));
 
         render_frame(
             &mut app,
@@ -4127,16 +4193,8 @@ mod tests {
             "same mutation completion should not retrigger on later renders"
         );
 
-        let second_finished_at = fret_core::time::Instant::now();
-        let _ = app.models_mut().update(handle.model(), |state| {
-            state.status = fret_mutation::MutationStatus::Success;
-            state.input = Some(Arc::new(()));
-            state.data = Some(Arc::new(()));
-            state.error = None;
-            state.inflight = None;
-            state.updated_at = Some(second_finished_at);
-            state.last_duration = None;
-        });
+        assert!(handle.submit(app.models_mut(), window, ()));
+        assert!(drain_inboxes(&mut app, window));
 
         render_frame(
             &mut app,

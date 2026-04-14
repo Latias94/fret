@@ -31,6 +31,8 @@
   - adds `cx.data().invalidate_query_after_mutation_success(...)` and
     `cx.data().invalidate_query_namespace_after_mutation_success(...)` for explicit read-lane
     refresh after one completed mutation success,
+  - `ecosystem/fret-mutation/src/lib.rs` now exposes a handle-owned success token so that this
+    one-shot handoff no longer depends on `MutationState.updated_at` wall-clock bookkeeping,
   - and the app lane no longer needs ad hoc `root_state(...)` bookkeeping just to avoid replaying
     invalidation on every render after success.
 - M3 now has a second real proof surface on the same product probe:
