@@ -20,6 +20,8 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
 - `ecosystem/fret-executor/src/lib.rs`
 - `ecosystem/fret-executor/Cargo.toml`
+- `ecosystem/fret-mutation/src/lib.rs`
+- `ecosystem/fret-mutation/Cargo.toml`
 - `ecosystem/fret-query/src/lib.rs`
 - `ecosystem/fret-query/Cargo.toml`
 - `ecosystem/fret/Cargo.toml`
@@ -27,6 +29,7 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
 - `ecosystem/fret-genui-core/src/executor.rs`
 - `ecosystem/fret-ui-shadcn/src/sonner.rs`
 - `apps/fret-examples/src/api_workbench_lite_demo.rs`
+- `apps/fret-examples/Cargo.toml`
 - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-baseline.json`
 - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json`
 
@@ -38,6 +41,8 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
    - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo`
 3. Current executor substrate
    - `cargo nextest run -p fret-executor`
+4. Current mutation surface floor
+   - `cargo nextest run -p fret-mutation --features ui`
 
 ## Current focused gates
 
@@ -61,6 +66,17 @@ This gate currently proves:
 - one send action leads to a reviewable terminal response state,
 - and the repo has an artifact-producing proof surface for future submit-lifecycle regressions.
 
+Latest passing evidence (2026-04-14):
+
+- session dir:
+  `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/`
+- layout sidecar:
+  `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/1776165124166-api-workbench-lite.shell-and-response.layout/layout.taffy.v1.json`
+- screenshot:
+  `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/screenshots/1776165124185-api-workbench-lite.shell-and-response/window-4294967297-tick-99-frame-98.png`
+- bundle:
+  `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/1776165124305-api-workbench-lite.shell-and-response/`
+
 ### Executor substrate floor
 
 - `cargo nextest run -p fret-executor`
@@ -69,6 +85,16 @@ This gate currently proves:
 
 - inbox delivery, wake behavior, cancellation-on-drop, and future-to-inbox bridging remain sound,
 - which is the current mechanism substrate this lane inherits.
+
+### Mutation surface floor
+
+- `cargo nextest run -p fret-mutation --features ui`
+
+This gate currently proves:
+
+- the shared mutation state machine compiles and runs independently of the `fret` facade,
+- send completions still cross the inbox boundary and materialize into success state,
+- and cancellation still returns running mutations to idle without depending on query semantics.
 
 ### Lane hygiene gates
 

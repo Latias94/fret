@@ -17,11 +17,11 @@
   - keep `ecosystem/fret-executor` as the portable execution substrate,
   - add the shared mutation/submission state machine in a new executor-family semantic crate,
   - keep `fret-query` read-only.
-- [ ] Freeze the first feature topology:
+- [x] Freeze the first feature topology:
   - add `state-mutation` on `fret`,
   - keep it separate from `state-query`,
   - and widen `state` only after the mutation lane proves itself.
-- [ ] Define the minimal shared state machine:
+- [x] Define the minimal shared state machine:
   - idle,
   - running,
   - success,
@@ -31,26 +31,26 @@
   - cancellation,
   - retry,
   - concurrency (latest wins / keep in flight / explicit parallel).
-- [ ] Keep driver-boundary apply data-only and model-backed.
+- [x] Keep driver-boundary apply data-only and model-backed.
 
 ## M2 — App-facing surface (`fret`)
 
-- [ ] Define the grouped app-facing helper surface on `AppUi` / `UiCx`.
-- [ ] Keep the trigger path explicit:
+- [x] Define the grouped app-facing helper surface on `AppUi` / `UiCx`.
+- [x] Keep the trigger path explicit:
   - creating/reading the handle does not start work,
   - only explicit submit starts work.
 - [ ] Decide whether the default app-facing naming should be:
   - `mutation*`,
   - `submit*`,
   - or a split with mechanism nouns on `mutation` and teaching nouns on `submit`.
-- [ ] Ensure the app-facing surface composes with existing `cx.actions()` ownership rather than
+- [x] Ensure the app-facing surface composes with existing `cx.actions()` ownership rather than
   silently creating a second default transaction family.
 - [ ] Define the default query invalidation handoff after successful submit/mutation.
 
 ## M3 — Proof surfaces
 
-- [ ] Migrate `apps/fret-examples/src/api_workbench_lite_demo.rs` to the new mutation/submission surface.
-- [ ] Keep or strengthen the existing shell + response diag proof:
+- [x] Migrate `apps/fret-examples/src/api_workbench_lite_demo.rs` to the new mutation/submission surface.
+- [x] Keep or strengthen the existing shell + response diag proof:
   - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json`
 - [ ] Add one second non-Todo proof surface beyond the API workbench:
   - likely SQL/SQLite mutation docs/examples,

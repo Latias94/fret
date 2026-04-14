@@ -71,6 +71,10 @@
 //!   nouns, use `fret::selector::ui::DepsBuilder`, `fret::selector::DepsSignature`, and
 //!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
 //!   those names from `fret::app::prelude::*`
+//! - enable `state-mutation` when app code needs an explicit submit/mutation lane that must not
+//!   auto-run from render observation; prefer `cx.data().mutation_async(...)` /
+//!   `cx.data().mutation_async_local(...)` plus `handle.submit(...)` or `handle.submit_action(...)`
+//!   instead of teaching click-driven submit flows through `query_async(...)`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - depend on `fret-docking` directly for editor-grade docking workflows instead of expecting a
@@ -435,6 +439,8 @@ pub mod app {
         pub use crate::app::App;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+        #[cfg(feature = "state-mutation")]
+        pub use crate::view::MutationHandleReadLayoutExt as _;
         #[cfg(feature = "state-query")]
         pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::TrackedStateExt as _;
@@ -543,6 +549,28 @@ pub mod query {
         QueryClientSnapshot, QueryError, QueryErrorKind, QueryHandle, QueryKey, QueryPolicy,
         QueryRetryOn, QueryRetryPolicy, QueryRetryState, QuerySnapshotEntry, QueryState,
         QueryStatus, with_query_client,
+    };
+}
+
+/// Optional mutation/submission integration surface for app code.
+///
+/// This keeps the explicit submit story separate from query observation:
+/// - grouped default app data uses `cx.data().mutation_async*` to create handles,
+/// - `submit(...)` starts work explicitly,
+/// - render-time observation must not replay submit work,
+/// - and `fret::mutation` keeps the semantic submit-state nouns off `fret::app::prelude::*`.
+#[cfg(feature = "state-mutation")]
+pub mod mutation {
+    /// Raw mutation-core exports for advanced or fully explicit use.
+    pub mod core {
+        pub use fret_mutation::*;
+    }
+
+    pub use fret_mutation::ui::MutationHandleActionExt;
+    pub use fret_mutation::{
+        CancellationToken, FutureSpawner, FutureSpawnerHandle, MutationConcurrencyPolicy,
+        MutationError, MutationErrorKind, MutationHandle, MutationPolicy, MutationState,
+        MutationStatus,
     };
 }
 
@@ -843,6 +871,8 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
+        #[cfg(feature = "state-mutation")]
+        pub use crate::view::MutationHandleReadLayoutExt as _;
         #[cfg(feature = "state-query")]
         pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::UiCxActionsExt as _;

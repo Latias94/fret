@@ -13,6 +13,8 @@
 //! - The view runtime is intentionally additive and lives in `ecosystem/fret` (not kernel).
 
 use std::any::Any;
+#[cfg(any(feature = "state-mutation", feature = "state-query"))]
+use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -20,8 +22,6 @@ use fret_core::AppWindowId;
 use fret_runtime::{Model, ModelStore, ModelUpdateError};
 use fret_ui::action::{ActionCx, OnActivate, OnCommand, OnCommandAvailability, UiActionHost};
 use fret_ui::{ElementContext, Invalidation, UiHost};
-#[cfg(feature = "state-query")]
-use std::future::Future;
 
 /// A stateful view object that renders into the existing declarative IR (`Ui`).
 pub trait View: 'static {
@@ -1008,6 +1008,18 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
     }
 }
 
+#[cfg(feature = "state-mutation")]
+impl<TIn: 'static, TOut: 'static> TrackedStateExt<fret_mutation::MutationState<TIn, TOut>>
+    for fret_mutation::MutationHandle<TIn, TOut>
+{
+    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+        &'watch self,
+        cx: &'watch mut AppUi<'view_cx, 'a, H>,
+    ) -> WatchedState<'watch, 'watch, 'a, H, fret_mutation::MutationState<TIn, TOut>> {
+        WatchedState::new(cx.cx, self.model())
+    }
+}
+
 /// App-facing layout-phase convenience reads for query handles on the default `fret` lane.
 ///
 /// This intentionally collapses only the repeated `layout(...).value_or_default()` fallback for the
@@ -1027,6 +1039,27 @@ impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
         &self,
         cx: &mut AppUi<'view_cx, 'a, H>,
     ) -> fret_query::QueryState<T> {
+        TrackedStateExt::layout(self, cx).value_or_default()
+    }
+}
+
+/// App-facing layout-phase convenience reads for mutation handles on the default `fret` lane.
+#[cfg(feature = "state-mutation")]
+pub trait MutationHandleReadLayoutExt<TIn: 'static, TOut: 'static> {
+    fn read_layout<'view_cx, 'a, H: UiHost>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+    ) -> fret_mutation::MutationState<TIn, TOut>;
+}
+
+#[cfg(feature = "state-mutation")]
+impl<TIn: 'static, TOut: 'static> MutationHandleReadLayoutExt<TIn, TOut>
+    for fret_mutation::MutationHandle<TIn, TOut>
+{
+    fn read_layout<'view_cx, 'a, H: UiHost>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+    ) -> fret_mutation::MutationState<TIn, TOut> {
         TrackedStateExt::layout(self, cx).value_or_default()
     }
 }
@@ -2066,6 +2099,36 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         )
     }
 
+    #[cfg(feature = "state-mutation")]
+    pub fn mutation_async<TIn, TOut, Fut>(
+        self,
+        policy: fret_mutation::MutationPolicy,
+        submit: impl Fn(fret_mutation::CancellationToken, Arc<TIn>) -> Fut + Send + Sync + 'static,
+    ) -> fret_mutation::MutationHandle<TIn, TOut>
+    where
+        TIn: Any + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<TOut, fret_mutation::MutationError>> + Send + 'static,
+    {
+        fret_mutation::ui::MutationElementContextExt::use_mutation_async(self.cx.cx, policy, submit)
+    }
+
+    #[cfg(feature = "state-mutation")]
+    pub fn mutation_async_local<TIn, TOut, Fut>(
+        self,
+        policy: fret_mutation::MutationPolicy,
+        submit: impl Fn(fret_mutation::CancellationToken, Arc<TIn>) -> Fut + 'static,
+    ) -> fret_mutation::MutationHandle<TIn, TOut>
+    where
+        TIn: Any + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<TOut, fret_mutation::MutationError>> + 'static,
+    {
+        fret_mutation::ui::MutationElementContextExt::use_mutation_async_local(
+            self.cx.cx, policy, submit,
+        )
+    }
+
     /// Default grouped invalidation path for app-facing query state when the caller is already on
     /// `AppUi`.
     #[cfg(feature = "state-query")]
@@ -2206,6 +2269,36 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
     {
         fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
+    }
+
+    #[cfg(feature = "state-mutation")]
+    pub fn mutation_async<TIn, TOut, Fut>(
+        self,
+        policy: fret_mutation::MutationPolicy,
+        submit: impl Fn(fret_mutation::CancellationToken, Arc<TIn>) -> Fut + Send + Sync + 'static,
+    ) -> fret_mutation::MutationHandle<TIn, TOut>
+    where
+        TIn: Any + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<TOut, fret_mutation::MutationError>> + Send + 'static,
+    {
+        fret_mutation::ui::MutationElementContextExt::use_mutation_async(self.cx, policy, submit)
+    }
+
+    #[cfg(feature = "state-mutation")]
+    pub fn mutation_async_local<TIn, TOut, Fut>(
+        self,
+        policy: fret_mutation::MutationPolicy,
+        submit: impl Fn(fret_mutation::CancellationToken, Arc<TIn>) -> Fut + 'static,
+    ) -> fret_mutation::MutationHandle<TIn, TOut>
+    where
+        TIn: Any + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<TOut, fret_mutation::MutationError>> + 'static,
+    {
+        fret_mutation::ui::MutationElementContextExt::use_mutation_async_local(
+            self.cx, policy, submit,
+        )
     }
 
     /// Grouped invalidation helper for extracted `UiCx` app-facing helpers.

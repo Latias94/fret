@@ -54,10 +54,11 @@
     }
   ],
   "repro": {
-    "summary": "Start from the API workbench consumer probe, then validate the executor substrate and the shell + response diagnostics proof.",
+    "summary": "Start from the API workbench consumer probe, then validate the mutation surface floor, the executor substrate, and the shell + response diagnostics proof.",
     "commands": [
       "cargo run -p fret-demo --bin api_workbench_lite_demo",
       "cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo",
+      "cargo nextest run -p fret-mutation --features ui",
       "cargo nextest run -p fret-executor"
     ]
   },
@@ -69,6 +70,10 @@
     {
       "name": "api-workbench-diag",
       "command": "cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo"
+    },
+    {
+      "name": "mutation-surface-floor",
+      "command": "cargo nextest run -p fret-mutation --features ui"
     },
     {
       "name": "executor-substrate-floor",
@@ -105,12 +110,15 @@
     "docs/integrating-tokio-and-reqwest.md",
     "ecosystem/fret-executor/Cargo.toml",
     "ecosystem/fret-executor/src/lib.rs",
+    "ecosystem/fret-mutation/Cargo.toml",
+    "ecosystem/fret-mutation/src/lib.rs",
     "ecosystem/fret-query/Cargo.toml",
     "ecosystem/fret-query/src/lib.rs",
     "ecosystem/fret/Cargo.toml",
     "ecosystem/fret/src/view.rs",
     "ecosystem/fret-genui-core/src/executor.rs",
     "ecosystem/fret-ui-shadcn/src/sonner.rs",
+    "apps/fret-examples/Cargo.toml",
     "apps/fret-examples/src/api_workbench_lite_demo.rs",
     "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-baseline.json",
     "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json"

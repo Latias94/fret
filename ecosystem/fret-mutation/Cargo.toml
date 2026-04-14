@@ -1,0 +1,27 @@
+[package]
+name = "fret-mutation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Explicit async mutation/submission state management for Fret applications."
+
+[features]
+default = []
+ui = ["dep:fret-ui"]
+tokio = ["fret-executor/tokio"]
+wasm = ["fret-executor/wasm"]
+
+[dependencies]
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-executor = { version = "0.1.0", path = "../fret-executor" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
+
+[dev-dependencies]
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+pollster.workspace = true

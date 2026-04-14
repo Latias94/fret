@@ -7,9 +7,9 @@ use fret::advanced::prelude::LocalState;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::icons::IconId;
-use fret::query::{
-    CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryError, QueryKey, QueryPolicy,
-    QueryRetryPolicy,
+use fret::mutation::{
+    CancellationToken, FutureSpawner, FutureSpawnerHandle, MutationError, MutationHandle,
+    MutationPolicy, MutationState,
 };
 use fret::style::{ColorRef, LayoutRefinement, Space, Theme};
 use fret::{FretApp, shadcn};
@@ -18,7 +18,6 @@ use fret_core::{KeyCode, Modifiers, Px};
 use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
-const QUERY_NS: &str = "fret-examples.api_workbench_lite.response.v1";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 const TEST_ID_ROOT: &str = "api-workbench-lite.root";
@@ -121,7 +120,6 @@ struct WorkbenchLocals {
     next_history_id: LocalState<u64>,
     selected_collection: LocalState<Option<Arc<str>>>,
     selected_history: LocalState<Option<u64>>,
-    submitted_request: LocalState<Option<RequestSnapshot>>,
     history: LocalState<Vec<HistoryEntry>>,
     response_status: LocalState<String>,
     response_pretty: LocalState<String>,
@@ -153,7 +151,6 @@ impl WorkbenchLocals {
                 .state()
                 .local_init(|| Some(Arc::<str>::from(collection_key(0)))),
             selected_history: cx.state().local_init(|| None::<u64>),
-            submitted_request: cx.state().local_init(|| None::<RequestSnapshot>),
             history: cx.state().local_init(Vec::new),
             response_status: cx.state().local_init(|| "Idle".to_string()),
             response_pretty: cx
@@ -180,31 +177,23 @@ impl View for ApiWorkbenchLiteView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let locals = WorkbenchLocals::new(cx);
-        bind_actions(cx, &locals);
+        let response_mutation = cx.data().mutation_async(
+            MutationPolicy::default(),
+            move |token, snapshot: Arc<RequestSnapshot>| run_request((*snapshot).clone(), token),
+        );
+        bind_actions(cx, &locals, &response_mutation, self.window);
 
         let theme = Theme::global(&*cx.app).snapshot();
         let method = locals
             .method
             .layout_value(cx)
             .unwrap_or_else(|| Arc::<str>::from("GET"));
-        let submitted_request = locals.submitted_request.layout_value(cx);
         let history = locals.history.layout_value(cx);
         let selected_collection = locals.selected_collection.layout_value(cx);
         let selected_history = locals.selected_history.layout_value(cx);
         let response_status = locals.response_status.layout_value(cx);
-
-        let query_state = submitted_request.as_ref().map(|snapshot| {
-            cx.data()
-                .query_async(response_query_key(snapshot.seq), response_query_policy(), {
-                    let snapshot = snapshot.clone();
-                    move |token| run_request(snapshot.clone(), token)
-                })
-                .read_layout(cx)
-        });
-
-        if let (Some(snapshot), Some(state)) = (submitted_request.as_ref(), query_state.as_ref()) {
-            maybe_apply_response_snapshot(cx, self.window, &locals, snapshot, state);
-        }
+        let mutation_state = response_mutation.read_layout(cx);
+        maybe_apply_response_snapshot(cx, self.window, &locals, &mutation_state);
 
         let status_badge = status_badge(&response_status).test_id(TEST_ID_RESPONSE_STATUS);
         let send_button = shadcn::Button::new("Send Request")
@@ -310,7 +299,12 @@ impl View for ApiWorkbenchLiteView {
     }
 }
 
-fn bind_actions(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) {
+fn bind_actions(
+    cx: &mut AppUi<'_, '_>,
+    locals: &WorkbenchLocals,
+    response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+    window: WindowId,
+) {
     cx.actions()
         .local(&locals.settings_open)
         .set::<act::OpenSettings>(true);
@@ -320,7 +314,8 @@ fn bind_actions(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) {
 
     cx.actions().models::<act::SendRequest>({
         let locals = locals.clone();
-        move |models| submit_request(models, &locals)
+        let response_mutation = response_mutation.clone();
+        move |models| submit_request(models, window, &locals, &response_mutation)
     });
 
     cx.actions().availability::<act::SendRequest>({
@@ -345,7 +340,12 @@ fn bind_actions(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) {
     });
 }
 
-fn submit_request(models: &mut fret_runtime::ModelStore, locals: &WorkbenchLocals) -> bool {
+fn submit_request(
+    models: &mut fret_runtime::ModelStore,
+    window: WindowId,
+    locals: &WorkbenchLocals,
+    response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+) -> bool {
     let url_value = locals.url.value_in_or_default(models);
     if url_value.trim().is_empty() {
         return false;
@@ -378,26 +378,27 @@ fn submit_request(models: &mut fret_runtime::ModelStore, locals: &WorkbenchLocal
     };
     let snapshot_url = snapshot.url.clone();
 
-    let mut handled = locals.next_seq.set_in(models, seq.saturating_add(1));
-    handled = locals.selected_history.set_in(models, None) && handled;
-    handled = locals.submitted_request.set_in(models, Some(snapshot)) && handled;
+    let mut handled = false;
+    handled = locals.next_seq.set_in(models, seq.saturating_add(1)) || handled;
+    handled = locals.selected_history.set_in(models, None) || handled;
     handled = locals
         .response_tab
         .set_in(models, Some(Arc::<str>::from("pretty")))
-        && handled;
-    handled = locals.response_status.set_in(models, "Loading".to_string()) && handled;
+        || handled;
+    handled = locals.response_status.set_in(models, "Loading".to_string()) || handled;
     handled = locals
         .response_pretty
         .set_in(models, "Sending request...".to_string())
-        && handled;
+        || handled;
     handled = locals
         .response_raw
         .set_in(models, "Sending request...".to_string())
-        && handled;
-    locals
+        || handled;
+    handled = locals
         .response_headers
         .set_in(models, "Response headers will appear here.".to_string())
-        && handled;
+        || handled;
+    handled = response_mutation.submit(models, window, snapshot) || handled;
 
     tracing::info!(
         seq,
@@ -795,9 +796,11 @@ fn maybe_apply_response_snapshot(
     cx: &mut AppUi<'_, '_>,
     window: WindowId,
     locals: &WorkbenchLocals,
-    snapshot: &RequestSnapshot,
-    state: &fret_query::QueryState<ResponsePayload>,
+    state: &MutationState<RequestSnapshot, ResponsePayload>,
 ) {
+    let Some(snapshot) = state.input.as_deref() else {
+        return;
+    };
     let ready = state.is_success() || state.is_error();
     let last_applied = locals.last_applied_seq.layout_value(cx);
     if !ready || snapshot.seq <= last_applied {
@@ -891,10 +894,6 @@ fn maybe_apply_response_snapshot(
         .update(locals.last_applied_seq.model(), |value: &mut u64| {
             *value = snapshot.seq
         });
-    let _ = cx.app.models_mut().update(
-        locals.submitted_request.model(),
-        |value: &mut Option<RequestSnapshot>| *value = None,
-    );
     cx.app.request_redraw(window);
 }
 
@@ -979,26 +978,12 @@ fn install_commands(app: &mut App) {
     fret_app::install_command_default_keybindings_into_keymap(app);
 }
 
-fn response_query_key(seq: u64) -> QueryKey<ResponsePayload> {
-    QueryKey::new(QUERY_NS, &seq)
-}
-
-fn response_query_policy() -> QueryPolicy {
-    QueryPolicy {
-        stale_time: Duration::from_secs(300),
-        cache_time: Duration::from_secs(300),
-        keep_previous_data_while_loading: true,
-        retry: QueryRetryPolicy::none(),
-        ..Default::default()
-    }
-}
-
 async fn run_request(
     snapshot: RequestSnapshot,
     token: CancellationToken,
-) -> Result<ResponsePayload, QueryError> {
+) -> Result<ResponsePayload, MutationError> {
     if token.is_cancelled() {
-        return Err(QueryError::transient("request cancelled before start"));
+        return Err(MutationError::transient("request cancelled before start"));
     }
 
     let request = snapshot.clone();
@@ -1019,13 +1004,13 @@ async fn run_request(
             timeout_s = REQUEST_TIMEOUT.as_secs(),
             "api_workbench_lite request timed out"
         );
-        QueryError::transient("request timed out")
+        MutationError::transient("request timed out")
     })?;
 
-    join_result.map_err(|err| QueryError::transient(format!("request task failed: {err}")))?
+    join_result.map_err(|err| MutationError::transient(format!("request task failed: {err}")))?
 }
 
-fn execute_request_blocking(snapshot: &RequestSnapshot) -> Result<ResponsePayload, QueryError> {
+fn execute_request_blocking(snapshot: &RequestSnapshot) -> Result<ResponsePayload, MutationError> {
     let resolved_url = resolve_url(snapshot)?;
     let start = std::time::Instant::now();
 
@@ -1052,9 +1037,7 @@ fn execute_request_blocking(snapshot: &RequestSnapshot) -> Result<ResponsePayloa
         Err(ureq::Error::Status(_, resp)) => {
             response_payload_from_ureq_response(resp, resolved_url, start.elapsed(), true)
         }
-        Err(ureq::Error::Transport(err)) => {
-            Err(QueryError::transient(err.to_string()))
-        }
+        Err(ureq::Error::Transport(err)) => Err(MutationError::transient(err.to_string())),
     }
 }
 
@@ -1063,7 +1046,7 @@ fn response_payload_from_ureq_response(
     resolved_url: String,
     duration: Duration,
     is_http_error: bool,
-) -> Result<ResponsePayload, QueryError> {
+) -> Result<ResponsePayload, MutationError> {
     let status_code = resp.status();
     let status_text = resp.status_text().to_string();
 
@@ -1077,7 +1060,7 @@ fn response_payload_from_ureq_response(
     let content_type = resp.header("Content-Type").unwrap_or_default().to_string();
     let raw_body = resp
         .into_string()
-        .map_err(|err| QueryError::transient(format!("failed to read response body: {err}")))?;
+        .map_err(|err| MutationError::transient(format!("failed to read response body: {err}")))?;
 
     Ok(ResponsePayload {
         status_code,
@@ -1091,7 +1074,9 @@ fn response_payload_from_ureq_response(
     })
 }
 
-fn parse_request_headers(snapshot: &RequestSnapshot) -> Result<Vec<(String, String)>, QueryError> {
+fn parse_request_headers(
+    snapshot: &RequestSnapshot,
+) -> Result<Vec<(String, String)>, MutationError> {
     let mut headers = Vec::new();
     for line in snapshot
         .headers_text
@@ -1100,7 +1085,7 @@ fn parse_request_headers(snapshot: &RequestSnapshot) -> Result<Vec<(String, Stri
         .filter(|line| !line.is_empty())
     {
         let Some((name, value)) = line.split_once(':') else {
-            return Err(QueryError::permanent(format!(
+            return Err(MutationError::permanent(format!(
                 "invalid header line `{line}`; expected `Name: Value`"
             )));
         };
@@ -1115,15 +1100,15 @@ fn parse_request_headers(snapshot: &RequestSnapshot) -> Result<Vec<(String, Stri
     Ok(headers)
 }
 
-fn resolve_url(snapshot: &RequestSnapshot) -> Result<String, QueryError> {
+fn resolve_url(snapshot: &RequestSnapshot) -> Result<String, MutationError> {
     let url = snapshot.url.trim();
     if url.is_empty() {
-        return Err(QueryError::permanent("request URL is empty"));
+        return Err(MutationError::permanent("request URL is empty"));
     }
 
     let resolved = url.replace("{{base_url}}", snapshot.env.base_url.trim());
     if !(resolved.starts_with("http://") || resolved.starts_with("https://")) {
-        return Err(QueryError::permanent(format!(
+        return Err(MutationError::permanent(format!(
             "resolved URL must start with http:// or https://, got `{resolved}`"
         )));
     }

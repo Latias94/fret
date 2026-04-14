@@ -1,5 +1,21 @@
 # Executor-backed Mutation Surface v1 — Milestones
 
+## Current progress (2026-04-14)
+
+- M1 implementation slice is now real code:
+  - `ecosystem/fret-mutation` owns the shared mutation state machine over `fret-executor`,
+  - `fret` exposes `state-mutation` separately from `state-query`,
+  - and driver-boundary completion applies through `ModelId` + UI-thread `update_any(...)` rather
+    than capturing main-thread model handles across the inbox boundary.
+- M2 now has a first app-facing proof:
+  - `cx.data().mutation_async(...)` / `mutation_async_local(...)`,
+  - `MutationHandle::submit(...)`,
+  - and `api_workbench_lite` wiring through the existing `cx.actions().models::<...>(...)` path.
+- M3 has one durable artifact-producing proof:
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite-mutation --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo`
+  - passed on 2026-04-14 and produced layout/screenshot/bundle artifacts under
+    `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/`.
+
 ## M0 — Baseline audit and scope freeze
 
 Exit when:
