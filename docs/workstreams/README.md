@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-13
+Catalog updated: 2026-04-14
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 232
+- Dedicated directories: 233
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -378,6 +378,7 @@ Rule:
 - `docs/workstreams/example-suite-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-12, 9 markdown docs
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
+- `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for productizing the missing default app-facing async submit/mutation lane on `fret-executor` + `fret` without reopening the closed LocalState/write closeouts)
 - `docs/workstreams/foreground-inheritance-late-binding-v2/` — first 2026-02-24, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/foreground-style-context-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-06, 3 markdown docs
 - `docs/workstreams/foundation-closure-p0/` — first 2026-01-28, latest 2026-02-11, 2 markdown docs

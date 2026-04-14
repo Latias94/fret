@@ -176,6 +176,34 @@ It complements (but does not replace) ADRs:
   lane.
 - Keep official ecosystem `imui` adapters accepting `&mut impl fret_authoring::UiWriter<H>` to avoid concrete `ImUi` coupling.
 
+## P0 - Async submit / mutation authoring
+
+- Active narrow follow-on for the missing default app-facing async submit lane:
+  - `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/TODO.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/MILESTONES.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json`
+- Use `executor-backed-mutation-surface-v1` for the active implementation work exposed by the
+  `api_workbench_lite` consumer probe:
+  the repo already split read-state queries from executor-backed background work in principle, but
+  the default app-facing surface still productizes the query lane far better than the explicit
+  submit/mutation lane.
+- Keep `fret-query` as the observed read-resource lane and productize the missing explicit
+  submit/mutation contract on `fret-executor` + `fret`; do not widen query freshness/remount
+  semantics to paper over a click-driven submit flow.
+- Keep the older closeout lanes as inherited constraints rather than reopening them from this
+  evidence alone:
+  - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
+  - `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
+  - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
+- Primary proof surface for this lane:
+  - `apps/fret-examples/src/api_workbench_lite_demo.rs`
+  - `docs/audits/postman-like-api-client-first-contact.md`
+  - `tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json`
+
 ## P0 - IME / Text Input
 
 - **Preedit-first key arbitration end-to-end (runner + routing)**

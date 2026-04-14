@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "slug": "executor-backed-mutation-surface-v1",
+  "title": "Executor-backed Mutation Surface v1",
+  "status": "active",
+  "updated": "2026-04-14",
+  "scope_kind": "execution",
+  "follow_on_of": "dataflow-authoring-surface-fearless-refactor-v1",
+  "problem": "The repo already split read-state queries from executor-backed mutations in principle, but the default app-facing surface still productizes the query lane far better than the submit/mutation lane. Real tool-app evidence now shows that first-time users can still author click-driven async submissions as render-observed queries, which replays the wrong lifecycle semantics and hides the missing executor-backed mutation contract.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md"
+    },
+    {
+      "role": "target",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/audits/postman-like-api-client-first-contact.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/integrating-sqlite-and-sqlx.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the API workbench consumer probe, then validate the executor substrate and the shell + response diagnostics proof.",
+    "commands": [
+      "cargo run -p fret-demo --bin api_workbench_lite_demo",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo",
+      "cargo nextest run -p fret-executor"
+    ]
+  },
+  "gates": [
+    {
+      "name": "api-workbench-compile",
+      "command": "cargo check -p fret-demo --bin api_workbench_lite_demo"
+    },
+    {
+      "name": "api-workbench-diag",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo"
+    },
+    {
+      "name": "executor-substrate-floor",
+      "command": "cargo nextest run -p fret-executor"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/TODO.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/MILESTONES.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json",
+    "docs/audits/postman-like-api-client-first-contact.md",
+    "docs/integrating-sqlite-and-sqlx.md",
+    "docs/integrating-tokio-and-reqwest.md",
+    "ecosystem/fret-executor/src/lib.rs",
+    "ecosystem/fret-query/src/lib.rs",
+    "ecosystem/fret/src/view.rs",
+    "ecosystem/fret-genui-core/src/executor.rs",
+    "ecosystem/fret-ui-shadcn/src/sonner.rs",
+    "apps/fret-examples/src/api_workbench_lite_demo.rs",
+    "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-baseline.json",
+    "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0184-execution-and-concurrency-surface-v1.md",
+    "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md",
+    "docs/adr/0308-view-authoring-runtime-and-hooks-v1.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until the repo has one default app-facing mutation/submission surface that is executor-backed, proofed on a real tool-app consumer, and clearly separated from `query_async(...)`. If future pressure is purely command-scope/chrome ownership or a broader LocalState redesign, start a different narrow follow-on instead of widening this folder."
+  }
+}
