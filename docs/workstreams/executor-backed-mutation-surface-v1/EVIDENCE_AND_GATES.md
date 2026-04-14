@@ -15,6 +15,7 @@ and one explicit docs/gate package instead of reopening broad state-surface deba
 - `docs/audits/postman-like-api-client-first-contact.md`
 - `docs/integrating-sqlite-and-sqlx.md`
 - `docs/integrating-tokio-and-reqwest.md`
+- `docs/crate-usage-guide.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
@@ -96,6 +97,18 @@ This gate currently proves:
 - send completions still cross the inbox boundary and materialize into success state,
 - and cancellation still returns running mutations to idle without depending on query semantics.
 
+### Docs source-policy gate
+
+- `cargo nextest run -p fret docs_lock_query_reads_vs_mutation_submit_story`
+
+This gate currently proves:
+
+- the tokio/reqwest guide stays on observed-query semantics,
+- the SQLite/SQLx guide keeps `cx.data().mutation_async(...)` + `handle.submit(...)` as the
+  default explicit write path,
+- and the crate-usage guide still names `fret-mutation` rather than falling back to raw
+  executor-only teaching on the first-contact lane.
+
 ### Lane hygiene gates
 
 - `git diff --check`
@@ -108,6 +121,4 @@ This gate currently proves:
 Before claiming this lane is closed, add:
 
 - at least one mutation-specific focused test package,
-- source-policy protection that first-contact examples do not drift back to `query_async(...)` for
-  explicit submit flows,
 - and one second real consumer beyond the API workbench.

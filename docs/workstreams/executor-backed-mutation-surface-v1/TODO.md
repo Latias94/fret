@@ -60,11 +60,11 @@
 
 ## M4 — Docs and teaching cleanup
 
-- [ ] Update `docs/integrating-tokio-and-reqwest.md` so it teaches `query_async(...)` only for
+- [x] Update `docs/integrating-tokio-and-reqwest.md` so it teaches `query_async(...)` only for
   observed reads.
-- [ ] Update `docs/integrating-sqlite-and-sqlx.md` to point at the shared mutation surface once it exists.
-- [ ] Update `docs/crate-usage-guide.md` with the final owner split and default path.
-- [ ] Add source-policy tests that prevent first-contact examples from drifting back to
+- [x] Update `docs/integrating-sqlite-and-sqlx.md` to point at the shared mutation surface once it exists.
+- [x] Update `docs/crate-usage-guide.md` with the final owner split and default path.
+- [x] Add source-policy tests that prevent first-contact examples from drifting back to
   `query_async(...)` for explicit submit flows.
 
 ## Closure rule

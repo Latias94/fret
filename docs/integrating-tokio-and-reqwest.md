@@ -13,6 +13,11 @@ boundary the same (`InboxDrainRegistry`). On the default `fret` app surface, pre
 helpers (`cx.data().query_async(...)`, `cx.data().query_async_local(...)`). The lower-level
 `fret-query/ui` helpers remain available for raw `ElementContext` surfaces.
 
+This document intentionally stays on **observed read** semantics. If the flow is click-driven
+submit work (POST/PUT/DELETE, Save, Run, Sync), do not model it as `query_async(...)`; use
+`fret`'s `state-mutation` feature plus `cx.data().mutation_async(...)` /
+`cx.data().mutation_async_local(...)` and `handle.submit(...)` instead.
+
 ## 0) Lifecycle semantics (stale != polling)
 
 `QueryPolicy.stale_time` defines **freshness** only. A query becoming stale does not automatically
@@ -148,7 +153,10 @@ fn render_local_value(cx: &mut AppUi<'_, '_>) -> Ui {
 }
 ```
 
-## 3) Mutations, invalidation, and explicit polling
+## 3) Mutation invalidation handoff and explicit polling
+
+Keep `fret-query` on the read lane. After explicit submit work finishes on the mutation lane,
+invalidate the affected query keys/namespaces so the next UI frame refetches fresh data.
 
 ### Mutation -> invalidate namespace
 

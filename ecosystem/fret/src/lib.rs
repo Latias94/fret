@@ -3162,6 +3162,38 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn docs_lock_query_reads_vs_mutation_submit_story() {
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("If the flow is click-driven"));
+        assert!(
+            INTEGRATING_TOKIO_AND_REQWEST
+                .contains("submit work (POST/PUT/DELETE, Save, Run, Sync)")
+        );
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`state-mutation`"));
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().mutation_async(...)`"));
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`handle.submit(...)`"));
+        assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().mutation_async(...)`"));
+        assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().mutation_async_local(...)`"));
+        assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`handle.submit(...)`"));
+        assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`handle.submit_action(...)`"));
+        assert!(
+            INTEGRATING_SQLITE_AND_SQLX.contains("let save_state = save_todo.read_layout(cx);")
+        );
+        assert!(
+            INTEGRATING_SQLITE_AND_SQLX
+                .contains("Do not teach a Save/Delete/Sync flow as `query_async(...)`")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("### `fret-mutation`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().mutation_async(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().mutation_async_local(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`handle.submit(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`handle.submit_action(...)`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`fret::mutation::{MutationPolicy, MutationState, ...}`")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("raw `fret-executor` + `InboxDrainer`"));
+    }
+
+    #[test]
     fn usage_docs_expose_router_as_explicit_extension_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `router` feature"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));

@@ -786,6 +786,30 @@ UiCxDataExt}` when you are intentionally not using the prelude). Enable `fret-qu
 you are working directly with low-level `ElementContext` or generic writer extensions outside the
 app-facing `fret` facades.
 
+### `fret-mutation`
+
+**What it is:** executor-backed explicit submit/mutation state for app code:
+
+- model-backed `MutationState<TIn, TOut>` stored in the UI model store,
+- explicit `submit(...)` / `submit_action(...)` trigger points,
+- background completion that still applies through the driver boundary,
+- no auto-start from render observation.
+
+**Use it when:** you have click-driven save/delete/sync flows, user-triggered POST/PUT/DELETE
+requests, or tool-style actions that must not replay just because render observed a handle.
+
+**Default app note:** on the `fret` golden path, enable `fret`'s `state-mutation` feature and
+create handles with `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)`.
+Observe state with `handle.read_layout(cx)`, start work only with `handle.submit(...)` or
+`handle.submit_action(...)`, and invalidate affected read namespaces with
+`cx.data().invalidate_query_namespace(...)` after success. When app code needs explicit submit
+nouns, import them from `fret::mutation::{MutationPolicy, MutationState, ...}` instead of
+expecting them from `fret::app::prelude::*`.
+
+**Advanced/manual note:** keep raw `fret-executor` + `InboxDrainer` for app/driver surfaces that
+do not have `AppUi`, or when you intentionally own custom inbox/message multiplexing instead of
+the shared mutation state machine.
+
 ### `fret-router` + `fret-router-ui`
 
 **What they are:** a small router core (`fret-router`) and a thin UI adoption layer (`fret-router-ui`).

@@ -6,16 +6,23 @@ Fret’s kernel intentionally stays runtime-agnostic and main-thread UI only. Pe
 the same portability rules as other background work:
 
 - run blocking/async I/O off the UI thread,
-- send **data-only** results back to the UI via an inbox drainer (ADR 0175),
+- send **data-only** results back to the UI at a driver boundary (ADR 0175),
 - apply results on the UI thread by updating `Model<T>` values.
 
 This document shows a practical “golden path” for using `sqlx` (SQLite) with:
 
-- `ecosystem/fret-query` for **read caching** (loading/error/cache/invalidate), and
-- `ecosystem/fret-executor` for **mutations** (write operations + driver-boundary apply).
+- `ecosystem/fret-query` for **read caching** (loading/error/cache/invalidate),
+- `ecosystem/fret-mutation` for **explicit submit/mutation flows** on the default app lane,
+- `ecosystem/fret-executor` only for **advanced/manual** mutation ownership.
 
-On the default `fret` app surface, prefer the grouped query helpers (`cx.data().query_async(...)`)
-instead of the raw `ElementContext` extension traits.
+On the default `fret` app surface, prefer the grouped helpers:
+
+- `cx.data().query_async(...)` / `cx.data().query_async_local(...)` for observed reads,
+- `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)` for explicit writes,
+- `cx.data().invalidate_query_namespace(...)` after successful submit.
+
+Do not teach a Save/Delete/Sync flow as `query_async(...)`: queries stay on the read/cache lane,
+while writes stay on the explicit submit lane.
 
 ## 0) Provide your DB pool as an app global
 
@@ -56,7 +63,8 @@ Lifecycle reminder (ADR 0225 semantics):
 
 - `stale_time` gates freshness only,
 - `cache_time` controls retention/GC,
-- automatic refresh should be explicit (`invalidate`/`refetch`/polling), not implied by `stale_time`.
+- automatic refresh should be explicit (`invalidate`/`refetch`/polling), not implied by
+  `stale_time`.
 
 ### Example: load a list of todos
 
@@ -127,47 +135,148 @@ Notes:
 - SQLite often produces “database is locked” under write contention; treat it as `Transient` and
   rely on retry/backoff instead of surfacing it as a hard failure.
 
-## 2) Writes: run mutations in the background, then invalidate queries
+## 2) Writes: prefer `fret-mutation` on the default app surface
 
-`fret-query` is intentionally focused on **read state**. For writes/mutations:
+`fret-query` is intentionally focused on **read state**. For click-driven write work
+(insert/update/delete, explicit Save, Sync, Run):
 
-- run the mutation on your runtime (tokio, etc.),
-- send a completion message to an inbox,
-- apply it on the UI thread (update models + trigger any follow-up invalidation/refetch).
+- create a mutation handle in render with `cx.data().mutation_async(...)` or
+  `cx.data().mutation_async_local(...)`,
+- read terminal state from `handle.read_layout(cx)`,
+- and start work only through `handle.submit(...)` or `handle.submit_action(...)`.
 
-The easiest building blocks are:
-
-- `fret_executor::Executors::spawn_future_to_inbox(...)`
-- `fret_executor::Inbox + InboxDrainer`
+Under the hood, completion still crosses the same driver boundary (`InboxDrainRegistry`) as other
+async work. The default app lane simply stops making app authors spell raw inbox plumbing for the
+common case.
 
 ### Canonical invalidation pattern (recommended)
 
 Use this as the default contract for SQLx + `fret-query`:
 
-1. Run mutation in background.
-2. Send `MutationCommitted` to inbox.
-3. At driver boundary apply, call `invalidate_namespace("my_app.db.todos.v1")`.
-4. On next render, active `cx.data().query(...)` / `cx.data().query_async(...)` handles refetch
-   because data is stale.
+1. Read with `cx.data().query_async(...)`.
+2. Create a write handle with `cx.data().mutation_async(...)`.
+3. Only `handle.submit(...)` starts work.
+4. After a successful submit, call `cx.data().invalidate_query_namespace("my_app.db.todos.v1")`.
+5. On the next render, active read handles refetch because the namespace is stale.
 
-This keeps read keys stable and avoids key churn.
+This keeps read keys stable and avoids teaching query handles as implicit submit buttons.
+
+### Example: save a todo explicitly, then invalidate the read namespace
 
 ```rust
+use std::sync::Arc;
+
+use fret::app::prelude::*;
+use fret::mutation::{MutationError, MutationPolicy, MutationState};
+use fret_core::time::Instant;
+
+#[derive(Clone)]
+struct SaveTodoInput {
+    text: String,
+}
+
 const TODOS_NS: &str = "my_app.db.todos.v1";
 
-fn on_mutation_committed(app: &mut fret_app::App, window: fret_core::AppWindowId) {
-    let _ = fret_query::with_query_client(app, |client, _app| {
-        client.invalidate_namespace(TODOS_NS);
+fn render_todo_editor(cx: &mut AppUi<'_, '_>) -> Ui {
+    let pool = cx
+        .app
+        .global::<DbPool>()
+        .expect("DbPool global missing")
+        .0
+        .clone();
+
+    let save_todo = cx.data().mutation_async(
+        MutationPolicy::default(),
+        move |_token, input: Arc<SaveTodoInput>| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query!("INSERT INTO todos(text, done) VALUES(?, 0)", input.text)
+                    .execute(&*pool)
+                    .await
+                    .map_err(|e| MutationError::transient(e.to_string()))?;
+                Ok(())
+            }
+        },
+    );
+
+    let save_state = save_todo.read_layout(cx);
+    maybe_invalidate_todos_after_save(cx, &save_state);
+
+    ui::raw_text(format!("save status: {}", save_state.status.as_str())).into()
+}
+
+fn maybe_invalidate_todos_after_save(
+    cx: &mut AppUi<'_, '_>,
+    save_state: &MutationState<SaveTodoInput, ()>,
+) {
+    if !save_state.is_success() {
+        return;
+    }
+
+    let finished_at = save_state.updated_at;
+    let should_invalidate = cx.root_state(Option::<Instant>::default, |last_seen| {
+        if *last_seen == finished_at {
+            false
+        } else {
+            *last_seen = finished_at;
+            true
+        }
     });
-    app.request_redraw(window);
+
+    if should_invalidate {
+        cx.data().invalidate_query_namespace(TODOS_NS);
+    }
+}
+
+fn on_save_clicked(
+    models: &mut fret_runtime::ModelStore,
+    window: fret::WindowId,
+    handle: &fret::mutation::MutationHandle<SaveTodoInput, ()>,
+    text: String,
+) -> bool {
+    handle.submit(models, window, SaveTodoInput { text })
 }
 ```
+
+Why gate invalidation on `updated_at` (or your own monotonic token)?
+
+- `handle.read_layout(cx)` keeps the terminal success/error state visible,
+- render can happen many times after a successful submit,
+- so invalidation should fire once per completed submit, not once per frame.
+
+### wasm note
+
+If your SQLite/WebAssembly bridge produces `!Send` futures, switch the creation site to
+`cx.data().mutation_async_local(...)`. The explicit submit contract stays the same.
+
+## 3) Advanced/manual surfaces: raw `fret-executor` + inbox drainers
+
+Drop to raw `fret_executor` primitives only when you intentionally own the lower-level surface:
+
+- you are outside the default `AppUi` lane,
+- you need custom inbox/message multiplexing,
+- or you are writing framework glue that should not depend on `fret-mutation`.
+
+The lowest-level building blocks remain:
+
+- `fret_executor::Executors::spawn_future_to_inbox(...)`
+- `fret_executor::Inbox + InboxDrainer`
+
+### Canonical invalidation pattern (advanced/manual)
+
+If you stay on raw inbox ownership, keep the same high-level contract:
+
+1. Run mutation in background.
+2. Send `MutationCommitted` to inbox.
+3. At driver-boundary apply, update a model token or queue.
+4. In UI/app code, call `invalidate_namespace("my_app.db.todos.v1")` or
+   `cx.data().invalidate_query_namespace(...)`.
 
 Important constraint: inbox drainers apply messages through `InboxDrainHost`, which is intentionally
 **not** a full `UiHost` surface. This means mutation completion should typically update a *model*
 token or queue, and the UI layer can then decide how to invalidate/refetch queries.
 
-### Recommended pattern: a `db_epoch` model token
+### Recommended raw pattern: a `db_epoch` model token
 
 Maintain a small monotonic token that changes when persistence changes:
 
@@ -192,7 +301,11 @@ enum DbMsg {
     MutationFailed,
 }
 
-fn register_db_inbox(app: &mut fret_app::App, window: fret_core::AppWindowId, db_epoch_id: ModelId) {
+fn register_db_inbox(
+    app: &mut fret_app::App,
+    window: fret_core::AppWindowId,
+    db_epoch_id: ModelId,
+) {
     let inbox = Inbox::<DbMsg>::new(Default::default());
 
     // You usually want to keep `inbox.sender()` in app/window state so event handlers can enqueue
@@ -284,7 +397,7 @@ let key = QueryKey::<Vec<TodoRow>>::new(TODOS_NS, &());
 In practice, prefer direct invalidation on mutation completion first. Add `db_epoch` only when you
 need to fan out invalidation triggers from multiple non-query subsystems.
 
-## 3) Transactions and consistency
+## 4) Transactions and consistency
 
 Guidelines:
 
@@ -295,9 +408,10 @@ Guidelines:
 - Prefer namespace invalidation for coarse correctness first; optimize later (invalidate only the
   affected keys) once keying conventions are stable.
 
-## 4) Troubleshooting
+## 5) Troubleshooting
 
 - UI freezes: you are doing a blocking DB call on the UI thread. Move it to background work.
-- Missing `FutureSpawnerHandle`: install a spawner global; see `docs/integrating-tokio-and-reqwest.md`.
-- “database is locked”: treat as `Transient`, add retry/backoff, and consider SQLite busy timeout
-  config.
+- Missing `FutureSpawnerHandle`: install a spawner global; see
+  `docs/integrating-tokio-and-reqwest.md`.
+- “database is locked”: treat it as `Transient`, add retry/backoff, and consider SQLite busy
+  timeout config.

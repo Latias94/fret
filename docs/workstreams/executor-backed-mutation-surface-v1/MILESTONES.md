@@ -15,6 +15,14 @@
   - `cargo run -p fretboard -- diag run tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json --dir target/fret-diag-api-workbench-lite-mutation --session-auto --exit-after-run --launch cargo run -p fret-demo --bin api_workbench_lite_demo`
   - passed on 2026-04-14 and produced layout/screenshot/bundle artifacts under
     `target/fret-diag-api-workbench-lite-mutation/sessions/1776164998268-90687/`.
+- M4 teaching cleanup is now locked on the default app lane:
+  - `docs/integrating-tokio-and-reqwest.md` stays read-only and points explicit submit work to
+    `state-mutation`,
+  - `docs/integrating-sqlite-and-sqlx.md` now teaches `cx.data().mutation_async(...)` +
+    `handle.submit(...)` + `cx.data().invalidate_query_namespace(...)` as the default write path,
+  - `docs/crate-usage-guide.md` names `fret-mutation` as the shared submit lane,
+  - and `ecosystem/fret/src/lib.rs` now carries source-policy assertions that would fail if the
+    first-contact docs drift back to `query_async(...)` for submit flows.
 
 ## M0 — Baseline audit and scope freeze
 

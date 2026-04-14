@@ -42,7 +42,15 @@
     },
     {
       "role": "reference",
+      "path": "docs/integrating-tokio-and-reqwest.md"
+    },
+    {
+      "role": "reference",
       "path": "docs/integrating-sqlite-and-sqlx.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/crate-usage-guide.md"
     },
     {
       "role": "reference",
@@ -74,6 +82,10 @@
     {
       "name": "mutation-surface-floor",
       "command": "cargo nextest run -p fret-mutation --features ui"
+    },
+    {
+      "name": "docs-source-policy",
+      "command": "cargo nextest run -p fret docs_lock_query_reads_vs_mutation_submit_story"
     },
     {
       "name": "executor-substrate-floor",
@@ -108,6 +120,7 @@
     "docs/audits/postman-like-api-client-first-contact.md",
     "docs/integrating-sqlite-and-sqlx.md",
     "docs/integrating-tokio-and-reqwest.md",
+    "docs/crate-usage-guide.md",
     "ecosystem/fret-executor/Cargo.toml",
     "ecosystem/fret-executor/src/lib.rs",
     "ecosystem/fret-mutation/Cargo.toml",
