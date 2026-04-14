@@ -1,7 +1,7 @@
 # Mutation Toast Feedback Golden Path v1 - TODO
 
-Status: active execution lane
-Last updated: 2026-04-14
+Status: closed closeout lane
+Last updated: 2026-04-15
 
 ## Lane setup
 
@@ -48,9 +48,12 @@ Last updated: 2026-04-14
 
 ## M3 - Closeout decision
 
-- [ ] Decide whether the lane can close after the first screenshot smoke and source/doc gates stay
+- [x] Decide whether the lane can close after the first screenshot smoke and source/doc gates stay
       green.
-- [ ] Start a different narrow follow-on instead of widening this lane if future pressure becomes:
+      Result: yes. `CLOSEOUT_AUDIT_2026-04-15.md` now records the shipped verdict and this lane is
+      closed.
+- [x] Start a different narrow follow-on instead of widening this lane if future pressure becomes:
       - query invalidation teaching depth,
       - Sonner API redesign,
       - or another broader async surface rename debate.
+      Result: `WORKSTREAM.json` now freezes `start_follow_on` as the default future action.

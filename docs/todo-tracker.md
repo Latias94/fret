@@ -178,14 +178,13 @@ It complements (but does not replace) ADRs:
 
 ## P0 - Async submit / mutation authoring
 
-- Active narrow follow-on for the copyable mutation + feedback teaching path:
+- Closed narrow closeout record for the copyable mutation + feedback teaching path:
   - `docs/workstreams/mutation-toast-feedback-golden-path-v1/DESIGN.md`
-  - `docs/workstreams/mutation-toast-feedback-golden-path-v1/TODO.md`
-  - `docs/workstreams/mutation-toast-feedback-golden-path-v1/MILESTONES.md`
+  - `docs/workstreams/mutation-toast-feedback-golden-path-v1/CLOSEOUT_AUDIT_2026-04-15.md`
   - `docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json`
 - Use `mutation-toast-feedback-golden-path-v1` for the first-party cookbook + diag + docs follow-on
-  that teaches:
+  closeout record that teaches:
   - `fret-mutation` as the authoritative submit owner,
   - app-owned locals/models as the durable projection,
   - and Sonner as feedback-only chrome.

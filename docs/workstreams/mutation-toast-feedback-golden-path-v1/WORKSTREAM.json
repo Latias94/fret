@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "mutation-toast-feedback-golden-path-v1",
   "title": "Mutation Toast Feedback Golden Path v1",
-  "status": "active",
-  "updated": "2026-04-14",
-  "scope_kind": "execution",
+  "status": "closed",
+  "updated": "2026-04-15",
+  "scope_kind": "closeout",
   "follow_on_of": "executor-backed-mutation-surface-v1",
   "problem": "The repo now has the correct default explicit submit owner (`fret-mutation` + `fret`), but first-contact users still do not have one small copyable example that combines authoritative mutation state with recipe-owned Sonner feedback. Without that teaching surface, users can still treat toast helpers as submit owners or fall back to raw executor/inbox plumbing for ordinary app flows.",
   "authoritative_docs": [
@@ -23,6 +23,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/mutation-toast-feedback-golden-path-v1/CLOSEOUT_AUDIT_2026-04-15.md"
     },
     {
       "role": "reference",
@@ -67,6 +71,7 @@
     "docs/workstreams/mutation-toast-feedback-golden-path-v1/TODO.md",
     "docs/workstreams/mutation-toast-feedback-golden-path-v1/MILESTONES.md",
     "docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/mutation-toast-feedback-golden-path-v1/CLOSEOUT_AUDIT_2026-04-15.md",
     "docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json",
     "docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md",
     "apps/fret-cookbook/Cargo.toml",
@@ -86,7 +91,7 @@
     "docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Keep this lane active only while the copyable cookbook path, screenshot smoke, and docs discoverability remain incomplete or unstable. If future work starts changing Sonner APIs, mutation ownership, or broader async surface naming again, start a different narrow follow-on instead of widening this teaching lane."
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Reuse it as the latest verdict for the copyable mutation-authority plus Sonner-feedback teaching path only. If future work shifts to broader query invalidation teaching, GenUI bridges, or Sonner API redesign, start a different narrow follow-on instead of reopening this lane."
   }
 }

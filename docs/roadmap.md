@@ -150,7 +150,7 @@ Tracker highlights:
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Public authoring state lanes + identity contract (active pre-release lane for LocalState-first default teaching, explicit raw-model naming, kernel/facade substrate convergence, and full example migration): `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
-- Mutation + toast feedback golden path (active narrow follow-on that turns the closed submit-owner decision into a copyable cookbook/diag/doc path for Postman-style save or run actions while keeping Sonner as recipe-owned feedback only): `docs/workstreams/mutation-toast-feedback-golden-path-v1/DESIGN.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/TODO.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/MILESTONES.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json`.
+- Mutation + toast feedback golden path (closed narrow closeout lane that turns the closed submit-owner decision into a copyable cookbook/diag/doc path for Postman-style save or run actions while keeping Sonner as recipe-owned feedback only): `docs/workstreams/mutation-toast-feedback-golden-path-v1/DESIGN.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/CLOSEOUT_AUDIT_2026-04-15.md`, `docs/workstreams/mutation-toast-feedback-golden-path-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/mutation-toast-feedback-golden-path-v1/WORKSTREAM.json`.
 - Executor-backed mutation surface (closed narrow closeout lane for the default app-facing async submit contract; keeps `fret-query` read-focused, freezes `fret-mutation` + `fret` as the explicit submit owner, and classifies GenUI/Sonner executor-backed side flows as deliberate recipe/app-owned exceptions instead of missing shared owners): `docs/workstreams/executor-backed-mutation-surface-v1/DESIGN.md`, `docs/workstreams/executor-backed-mutation-surface-v1/M0_BASELINE_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md`, `docs/workstreams/executor-backed-mutation-surface-v1/EVIDENCE_AND_GATES.md`, and `docs/workstreams/executor-backed-mutation-surface-v1/WORKSTREAM.json`.
 
 Current pre-release authoring cleanup sequence:
@@ -211,11 +211,11 @@ Current execution stance on 2026-04-14:
 - `view-locals-authoring-fearless-refactor-v1` = closed closeout lane:
   keep the shipped `1-2 inline / 3+ bundle` rule and the no-new-API verdict; reopen only if
   fresh cross-surface evidence exceeds the closeout audit.
-- `mutation-toast-feedback-golden-path-v1` = active narrow follow-on:
-  use this lane for the first-party copyable `fret-mutation` + Sonner feedback story only; keep
-  `fret-mutation` as the authoritative submit owner, keep app-owned locals/models as the durable
-  projection lane, keep Sonner as feedback-only chrome, and do not use this teaching lane to
-  reopen the closed executor-backed owner split.
+- `mutation-toast-feedback-golden-path-v1` = closed closeout lane:
+  keep this as the current closeout record for the first-party copyable `fret-mutation` + Sonner
+  feedback story only; keep `fret-mutation` as the authoritative submit owner, keep app-owned
+  locals/models as the durable projection lane, keep Sonner as feedback-only chrome, and start a
+  different narrow follow-on if future pressure shifts to another owner or another teaching gap.
 - `executor-backed-mutation-surface-v1` = closed closeout lane:
   keep `fret-query` read-state only, keep `fret-mutation` + `fret` as the default explicit submit
   contract proven on `api_workbench_lite`, keep `GenUiActionExecutorV1` and Sonner async promise
@@ -258,8 +258,8 @@ Recommended order from here:
    shows that the shipped grouped-locals rule is no longer sufficient,
 6. keep `selector-query-authoring-density-fearless-refactor-v1` closed unless fresh cross-surface
    evidence exceeds the shipped closeout audit,
-7. use `mutation-toast-feedback-golden-path-v1` as the active teaching-surface lane for the
-   copyable submit-plus-feedback path until the cookbook/docs/diag story is stable,
+7. keep `mutation-toast-feedback-golden-path-v1` closed as the current closeout record for the
+   copyable submit-plus-feedback teaching path; start a narrower follow-on before broadening it,
 8. keep `executor-backed-mutation-surface-v1` closed as the current closeout record for the
    default async submit surface; start a narrower follow-on before reconsidering broader
    state/write refactors,

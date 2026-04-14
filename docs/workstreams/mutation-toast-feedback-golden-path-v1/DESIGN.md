@@ -1,7 +1,11 @@
 # Mutation Toast Feedback Golden Path v1
 
-Status: active execution lane
-Last updated: 2026-04-14
+Status: closed historical design note
+Last updated: 2026-04-15
+
+Status note (2026-04-15): this document remains useful for the lane-opening rationale and owner
+split, but the shipped verdict now lives in `CLOSEOUT_AUDIT_2026-04-15.md` and `WORKSTREAM.json`.
+Read the execution framing below as historical lane setup rather than an active queue.
 
 Related:
 
@@ -9,6 +13,7 @@ Related:
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
 - `WORKSTREAM.json`
+- `CLOSEOUT_AUDIT_2026-04-15.md`
 - `docs/workstreams/executor-backed-mutation-surface-v1/CLOSEOUT_AUDIT_2026-04-14.md`
 - `docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md`
 - `apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`

@@ -1,7 +1,7 @@
 # Mutation Toast Feedback Golden Path v1 - Milestones
 
-Status: active execution lane
-Last updated: 2026-04-14
+Status: closed closeout lane
+Last updated: 2026-04-15
 
 ## M0 - Lane and owner freeze
 
@@ -66,9 +66,9 @@ Primary evidence:
 
 Current status:
 
-- In progress.
-- The script and suite are now landed.
-- The first bounded run artifact is now captured under:
+- Closed on 2026-04-15.
+- The script and suite are landed.
+- The first bounded run artifact is captured under:
   - `target/fret-diag/mutation-toast-feedback-basics/sessions/1776183542106-15688/screenshots/1776183582375-cookbook-mutation-toast-feedback-basics-smoke/window-4294967297-tick-46-frame-46.png`
   - `target/fret-diag/mutation-toast-feedback-basics/sessions/1776183542106-15688/1776183582450-cookbook-mutation-toast-feedback-basics-smoke/`
 
@@ -89,6 +89,6 @@ Primary evidence:
 
 Current status:
 
-- In progress.
-- No mechanism widening is warranted yet; the remaining work is purely evidence capture and closure
-  discipline.
+- Closed on 2026-04-15 via `CLOSEOUT_AUDIT_2026-04-15.md`.
+- No mechanism widening was warranted.
+- Future work should start as a narrower follow-on rather than reopening this teaching lane.
