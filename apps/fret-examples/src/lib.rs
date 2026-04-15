@@ -1541,6 +1541,9 @@ mod authoring_surface_policy_tests {
                 "let cx = cx.elements();",
                 "let cell_at = Arc::new(components_gallery_table_cell);",
                 "let root = render_root_with_app_ui(",
+                "let theme = cx.theme_snapshot();",
+                "let theme_name = cx.theme().name.clone();",
+                "let theme = cx.theme();",
                 "let selected = tree_state.layout(cx).read_ref(|s| s.selected).ok().flatten();",
                 "let checkbox_value = checkbox.layout(cx).copied_or(false);",
                 "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
@@ -1553,6 +1556,7 @@ mod authoring_surface_policy_tests {
                 "cx.app.models().get_copied(&checkbox).unwrap_or(false);",
                 "cx.app.models().get_cloned(&last_action);",
                 "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+                "Theme::global(&*cx.app)",
             ],
         );
     }

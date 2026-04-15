@@ -20,7 +20,7 @@ use fret_ui::element::{
     SemanticsProps, TextProps,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementContext, Theme, UiTree};
+use fret_ui::{ElementContext, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
@@ -449,7 +449,7 @@ impl ComponentsGalleryDriver {
                 }
 
                 let theme = cx.theme_snapshot();
-                let theme_name = Theme::global(&*cx.app).name.clone();
+                let theme_name = cx.theme().name.clone();
                 let selected = tree_state
                     .layout(cx)
                     .read_ref(|s| s.selected)
@@ -839,8 +839,7 @@ impl ComponentsGalleryDriver {
                                                         if selected_emoji_font.is_some()
                                                             && is_emoji_line
                                                         {
-                                                            let theme =
-                                                                Theme::global(&*cx.app);
+                                                            let theme = cx.theme();
                                                             let mut style = TextStyle::default();
                                                             if let Some(name) =
                                                                 selected_emoji_font.as_deref()
@@ -876,8 +875,7 @@ impl ComponentsGalleryDriver {
                                                             continue;
                                                         }
                                                         if let Some(name) = selected_ui_font.as_deref() {
-                                                            let theme =
-                                                                Theme::global(&*cx.app);
+                                                            let theme = cx.theme();
                                                             let mut style = TextStyle::default();
                                                             style.font = FontId::family(name);
                                                             style.size =
@@ -1062,7 +1060,8 @@ impl ComponentsGalleryDriver {
                                                 .into_element(cx);
 
                                                     let hover_card = {
-                                                    let theme = Theme::global(&*cx.app);
+                                                    let card_color = cx.theme().color_token("card");
+                                                    let border_color = cx.theme().color_token("border");
                                                     cx.container(
                                                         ContainerProps {
                                                             layout: {
@@ -1073,13 +1072,9 @@ impl ComponentsGalleryDriver {
                                                             layout
                                                         },
                                                             padding: Edges::all(Px(8.0)).into(),
-                                                            background: Some(
-                                                                theme.color_token("card"),
-                                                            ),
+                                                            background: Some(card_color),
                                                             border: Edges::all(Px(1.0)),
-                                                            border_color: Some(
-                                                                theme.color_token("border"),
-                                                            ),
+                                                            border_color: Some(border_color),
                                                             ..Default::default()
                                                         },
                                                         |cx| {

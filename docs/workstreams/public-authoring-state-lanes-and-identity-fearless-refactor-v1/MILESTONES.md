@@ -157,6 +157,11 @@ Related:
     `postprocess_theme_demo` and `liquid_glass_demo` keep
     `Theme::global(&*cx.app).snapshot()`, and source-policy gates now lock that fact as the
     intentional tail of this theme-read closure work.
+  - `components_gallery` now also distinguishes the two lanes it really owns instead of mixing
+    them implicitly:
+    ordinary theme reads use `cx.theme_snapshot()` / `cx.theme()`, while the gallery keeps
+    explicit raw state access only where it is intentionally probing lower-level retained table
+    seams (`cx.elements().slot_state(...)`, `local_model_keyed(...)`).
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

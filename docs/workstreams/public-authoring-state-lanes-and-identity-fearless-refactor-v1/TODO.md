@@ -171,6 +171,11 @@ Companion docs:
     `Theme::global(&*cx.app).snapshot()`, and `apps/fret-examples/src/lib.rs` now has a source
     policy gate that treats those two files as the intentional remaining host-global theme proofs
     instead of accidental cleanup leftovers.
+  - [x] keep `components_gallery` on the same split lane it actually needs:
+    ordinary theme reads now use `cx.theme_snapshot()` / `cx.theme()` for
+    `theme_name`, font-style token reads, and hover-card chrome, while the file still keeps its
+    explicit raw state lane (`cx.elements().slot_state(...)`, `local_model_keyed(...)`) where the
+    gallery is intentionally exercising lower-level retained table paths.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
