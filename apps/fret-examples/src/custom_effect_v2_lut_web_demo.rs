@@ -30,7 +30,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
     Length, MainAlign, Overflow, SpacerProps, SpacingLength, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
@@ -460,7 +460,7 @@ impl CustomEffectV2LutWebDriver {
         cx: &mut ElementContext<'_, App>,
         view_settings: &CustomEffectV2LutWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme().snapshot();
 
         let caps = cx.app.global::<RendererCapabilities>().cloned();
         let supported = caps.map(|c| c.custom_effect_v2_user_image).unwrap_or(false);
@@ -627,7 +627,7 @@ impl CustomEffectV2LutWebDriver {
         controls: &DemoControls,
         view_settings: &CustomEffectV2LutWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme().snapshot();
 
         let mode_value = view_settings.mode_value.clone();
         let quality_value = view_settings.quality_value.clone();
@@ -943,7 +943,7 @@ impl CustomEffectV2LutWebDriver {
     ) -> Elements {
         cx.observe_model(&show, Invalidation::Layout);
         let visible = cx.app.models().read(&show, |v| *v).unwrap_or(true);
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme().snapshot();
 
         let mut fill = LayoutStyle::default();
         fill.size.width = Length::Fill;

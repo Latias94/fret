@@ -153,6 +153,13 @@ Companion docs:
     `external_video_imports_avf_demo`, and `external_video_imports_mf_demo` now read
     `cx.theme().snapshot()` from `ElementContext`, and the direct-leaf root source-policy gate
     forbids `Theme::global(&*cx.app).snapshot()` on that batch.
+  - [x] keep the web Custom Effect V2 family on the same context-owned theme lane for ordinary
+    chrome/inspector reads:
+    `custom_effect_v2_web_demo`, `custom_effect_v2_identity_web_demo`,
+    `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo` now use
+    `cx.theme().snapshot()` from `ElementContext` for lens/inspector/root chrome token reads, and
+    the existing grouped-helper source-policy gates forbid `Theme::global(&*cx.app).snapshot()`
+    on that batch.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

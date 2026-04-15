@@ -3993,6 +3993,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_WEB_DEMO,
             &[
+                "let theme = cx.theme().snapshot();",
                 "fn view_settings(",
                 "-> CustomEffectV2WebViewSettings {",
                 "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
@@ -4015,12 +4016,14 @@ mod authoring_surface_policy_tests {
                 "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+                "Theme::global(&*cx.app).snapshot()",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
             &[
+                "let theme = cx.theme().snapshot();",
                 "fn view_settings(",
                 "-> CustomEffectV2GlassChromeWebViewSettings {",
                 "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
@@ -4043,12 +4046,14 @@ mod authoring_surface_policy_tests {
                 "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+                "Theme::global(&*cx.app).snapshot()",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
             &[
+                "let theme = cx.theme().snapshot();",
                 "fn view_settings(",
                 "-> CustomEffectV2IdentityWebViewSettings {",
                 "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
@@ -4071,12 +4076,14 @@ mod authoring_surface_policy_tests {
                 "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+                "Theme::global(&*cx.app).snapshot()",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
             &[
+                "let theme = cx.theme().snapshot();",
                 "fn view_settings(",
                 "-> CustomEffectV2LutWebViewSettings {",
                 "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
@@ -4099,6 +4106,7 @@ mod authoring_surface_policy_tests {
                 "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+                "Theme::global(&*cx.app).snapshot()",
             ],
         );
 

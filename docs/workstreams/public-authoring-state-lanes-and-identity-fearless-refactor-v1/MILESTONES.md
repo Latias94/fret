@@ -141,6 +141,12 @@ Related:
     `external_video_imports_avf_demo`, and `external_video_imports_mf_demo` use
     `cx.theme().snapshot()` on their `ElementContext` roots, and the low-level interop
     source-policy gate now forbids `Theme::global(&*cx.app).snapshot()` on that batch.
+  - the web Custom Effect V2 product-validation family now follows the same context-owned theme
+    rule for ordinary chrome and inspector reads:
+    `custom_effect_v2_web_demo`, `custom_effect_v2_identity_web_demo`,
+    `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo` use
+    `cx.theme().snapshot()` on their `ElementContext` helpers/root chrome, and the grouped-helper
+    source-policy gates now forbid `Theme::global(&*cx.app).snapshot()` on that batch.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

@@ -29,7 +29,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
     Length, MainAlign, Overflow, PositionStyle, SpacingLength, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
@@ -320,7 +320,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         label: &str,
         value: String,
     ) -> impl IntoUiElement<App> + use<> {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme().snapshot();
 
         ui::h_flex(|cx| {
             [
@@ -356,7 +356,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         cx: &mut ElementContext<'_, App>,
         view_settings: &CustomEffectV2GlassChromeWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme().snapshot();
 
         let caps = cx.app.global::<RendererCapabilities>().cloned();
         let supported = caps.map(|c| c.custom_effect_v2_user_image).unwrap_or(false);
