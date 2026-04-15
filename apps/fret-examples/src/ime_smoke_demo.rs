@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret::advanced::prelude::LocalState;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret::app::RenderContextAccess as _;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
@@ -10,9 +11,9 @@ use fret_launch::{
 use fret_runtime::{
     BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, PlatformCapabilities,
 };
+use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
-use fret_ui::{Theme, UiTree};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 pub struct ImeSmokeWindowState {
@@ -75,7 +76,7 @@ impl ImeSmokeDriver {
                     input_multi,
                     last_ime,
                 } = locals.as_ref().expect("IME locals should exist").clone();
-                let theme = Theme::global(&*cx.app).snapshot();
+                let theme = cx.theme_snapshot();
                 let last = last_ime.paint_value(cx);
 
                 let mut root_layout = LayoutStyle::default();

@@ -5,16 +5,25 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use fret::app::RenderContextAccess as _;
+use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
 };
-use fret::{FretApp, actions::CommandId, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_ui::element::{PressableA11y, PressableProps};
-use fret_ui_kit::IntoUiElement;
+use fret::{FretApp, actions::CommandId, advanced::prelude::*, shadcn};
+use fret_core::{Px, SemanticsRole};
+use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
+use fret_ui_kit::ui;
+use fret_ui_kit::{
+    ColorRef, IntoUiElement, LayoutRefinement, Space, UiExt as _, UiSupportsChrome as _,
+    UiSupportsLayout as _,
+};
 
 mod act {
     fret::actions!([
@@ -293,7 +302,7 @@ impl View for AsyncPlaygroundView {
             }
         }
 
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let header = header_bar(cx, &locals, theme.clone(), global_slow, dark).into_element(cx);
         let body = body(cx, &mut self.st, &locals, theme, global_slow, selected).into_element(cx);

@@ -1341,6 +1341,7 @@ mod authoring_surface_policy_tests {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             IME_SMOKE_DEMO,
             &[
+                "use fret::app::RenderContextAccess as _;",
                 "app_ui_root: AppUiRenderRootState,",
                 "locals: Option<ImeSmokeLocals>,",
                 "struct ImeSmokeLocals {",
@@ -1349,6 +1350,7 @@ mod authoring_surface_policy_tests {
                 "last_ime: cx.state().local_init(|| Arc::<str>::from(\"IME: <none>\")),",
                 "if locals.is_none() {",
                 "let root = render_root_with_app_ui(",
+                "let theme = cx.theme_snapshot();",
                 "let last = last_ime.paint_value(cx);",
                 "shadcn::Input::new(&input_single)",
                 "shadcn::Textarea::new(&input_multi)",
@@ -1363,6 +1365,7 @@ mod authoring_surface_policy_tests {
                 "last_ime.paint(cx).value_or_else(",
                 "input_single.clone_model()",
                 "input_multi.clone_model()",
+                "Theme::global(&*cx.app).snapshot()",
             ],
         );
     }
@@ -3532,6 +3535,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
+                "use fret::app::RenderContextAccess as _;",
                 "value: LocalState::new_in(app.models_mut(), initial.map(Arc::from)),",
                 "open: LocalState::new_in(app.models_mut(), false),",
                 "stale_time_s: LocalState::new_in(app.models_mut(), \"2\".to_string()),",
@@ -3547,6 +3551,7 @@ mod authoring_surface_policy_tests {
                 "let selected = locals.selected.layout_value(cx);",
                 "let dark = locals.dark.layout_value(cx);",
                 "let global_slow = locals.global_slow.layout_value(cx);",
+                "let theme = cx.theme_snapshot();",
                 "let namespace_input = locals.namespace_input.layout_value(cx);",
                 ".locals_with((&locals.selected, &locals.namespace_input))",
                 "cx.actions().local(&locals.dark)",
@@ -3580,6 +3585,7 @@ mod authoring_surface_policy_tests {
                 "shadcn::Tabs::new(locals.tabs.clone_model())",
                 "shadcn::Switch::new(config.keep_prev.clone_model())",
                 "shadcn::Switch::new(config.fail_mode.clone_model())",
+                "Theme::global(&*cx.app).snapshot()",
                 "config.cancel_mode.open.clone_model()",
             ],
         );

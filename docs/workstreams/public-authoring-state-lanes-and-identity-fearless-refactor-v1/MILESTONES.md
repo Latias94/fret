@@ -123,6 +123,12 @@ Related:
     `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` in their `AppUi` render
     roots, and cookbook source-policy gates now forbid `Theme::global(&*cx.app).snapshot()` on
     that promoted teaching batch.
+  - the same root-render theme-read correction now also covers the async/runtime and manual-root
+    proof surfaces without widening `fret::app::prelude::*`:
+    `async_playground_demo` and `ime_smoke_demo` import
+    `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` at their root render
+    surfaces, and `apps/fret-examples/src/lib.rs` source-policy gates now forbid
+    `Theme::global(&*cx.app).snapshot()` on both proofs.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

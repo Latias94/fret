@@ -133,6 +133,12 @@ Companion docs:
     `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` in their `AppUi` roots, and
     cookbook source-policy tests forbid `Theme::global(&*cx.app).snapshot()` on that promoted
     teaching set.
+  - [x] keep the async/runtime and manual-root proof surfaces on that same root render lane too:
+    `async_playground_demo` and `ime_smoke_demo` now import
+    `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` at their root render
+    surfaces, and `apps/fret-examples/src/lib.rs` source-policy tests forbid
+    `Theme::global(&*cx.app).snapshot()` from drifting back into either proof without widening
+    `fret::app::prelude::*`.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
