@@ -15,7 +15,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ViewportSurfaceProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme};
+use fret_ui::{ElementContext, Invalidation};
 use std::time::{Duration, Instant};
 
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
@@ -149,7 +149,7 @@ fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAv
 
     let show = cx.app.models().read(&st.show, |v| *v).unwrap_or(true);
 
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme().snapshot();
 
     let mut fill = LayoutStyle::default();
     fill.size.width = Length::Fill;

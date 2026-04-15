@@ -30,7 +30,7 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
     ViewportSurfaceProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiTree};
 
 #[cfg(target_arch = "wasm32")]
 use web_sys::wasm_bindgen::JsCast as _;
@@ -258,7 +258,7 @@ impl ExternalTextureImportsWebDriver {
         cx.observe_model(&show_model, Invalidation::Layout);
 
         let show = cx.app.models().read(&show_model, |v| *v).unwrap_or(true);
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme().snapshot();
 
         let mut fill = LayoutStyle::default();
         fill.size.width = Length::Fill;

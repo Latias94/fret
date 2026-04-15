@@ -135,6 +135,12 @@ Related:
     `markdown_demo`, and `genui_demo` use `cx.theme_snapshot()` on those ordinary surfaces, while
     renderer/theme-bridge proofs such as `postprocess_theme_demo` and `liquid_glass_demo` stay on
     their explicit advanced lane instead of being folded into the default cleanup batch.
+  - low-level interop/direct-leaf examples now also read theme snapshots from their owned element
+    context instead of reopening host-global theme access:
+    `external_texture_imports_demo`, `external_texture_imports_web_demo`,
+    `external_video_imports_avf_demo`, and `external_video_imports_mf_demo` use
+    `cx.theme().snapshot()` on their `ElementContext` roots, and the low-level interop
+    source-policy gate now forbids `Theme::global(&*cx.app).snapshot()` on that batch.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

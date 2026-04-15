@@ -17,7 +17,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ViewportSurfaceProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme};
+use fret_ui::{ElementContext, Invalidation};
 
 fn env_flag_default_false(name: &str) -> bool {
     let Ok(raw) = std::env::var(name) else {
@@ -593,7 +593,7 @@ fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImports
 
     let show = cx.app.models().read(&st.show, |v| *v).unwrap_or(true);
 
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme().snapshot();
 
     let mut fill = LayoutStyle::default();
     fill.size.width = Length::Fill;

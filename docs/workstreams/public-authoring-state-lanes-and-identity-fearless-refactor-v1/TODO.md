@@ -147,6 +147,12 @@ Companion docs:
     `apps/fret-examples/src/lib.rs` source-policy tests lock that choice without pretending
     `postprocess_theme_demo` or `liquid_glass_demo` should leave their explicit theme-bridge
     lane.
+  - [x] keep low-level direct-leaf interop roots on context-owned theme reads instead of host
+    global escape hatches:
+    `external_texture_imports_demo`, `external_texture_imports_web_demo`,
+    `external_video_imports_avf_demo`, and `external_video_imports_mf_demo` now read
+    `cx.theme().snapshot()` from `ElementContext`, and the direct-leaf root source-policy gate
+    forbids `Theme::global(&*cx.app).snapshot()` on that batch.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

@@ -1125,40 +1125,56 @@ mod authoring_surface_policy_tests {
             EXTERNAL_TEXTURE_IMPORTS_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui",
+                "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-texture-imports-root\"),",
             ],
-            &["fn external_texture_imports_root("],
+            &[
+                "fn external_texture_imports_root(",
+                "Theme::global(&*cx.app).snapshot()",
+            ],
         );
 
         assert_low_level_interop_examples_keep_direct_leaf_roots(
             EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO,
             &[
+                "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-texture-imports-web-root\"),",
                 "make_panel(cx, fret_core::ViewportFit::Contain, \"ext-tex-web-contain\")",
             ],
-            &["fn external_texture_imports_web_root("],
+            &[
+                "fn external_texture_imports_web_root(",
+                "Theme::global(&*cx.app).snapshot()",
+            ],
         );
 
         assert_low_level_interop_examples_keep_direct_leaf_roots(
             EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAvfView) -> fret::Ui",
+                "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-video-imports-avf-root\"),",
             ],
-            &["fn external_video_imports_avf_root("],
+            &[
+                "fn external_video_imports_avf_root(",
+                "Theme::global(&*cx.app).snapshot()",
+            ],
         );
 
         assert_low_level_interop_examples_keep_direct_leaf_roots(
             EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsMfView) -> fret::Ui",
+                "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-video-imports-mf-root\"),",
             ],
-            &["fn external_video_imports_mf_root("],
+            &[
+                "fn external_video_imports_mf_root(",
+                "Theme::global(&*cx.app).snapshot()",
+            ],
         );
 
         assert_low_level_interop_examples_keep_direct_leaf_roots(
