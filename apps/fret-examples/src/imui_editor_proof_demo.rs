@@ -647,11 +647,15 @@ impl View for ImUiEditorProofView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        render_view(cx.elements())
+        render_view(cx)
     }
 }
 
-fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
+fn render_view<'a, Cx>(cx: &mut Cx) -> ViewElements
+where
+    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
+{
+    let cx = cx.elements();
     let window = cx.window;
     let single = single_window_mode_enabled();
     let proof_layout = selected_proof_layout();

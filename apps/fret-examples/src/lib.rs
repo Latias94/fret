@@ -1629,6 +1629,7 @@ mod authoring_surface_policy_tests {
             "imui_hello_demo",
             IMUI_HELLO_DEMO,
             &[
+                "fret_imui::imui(cx.elements(), |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
                 "ui.checkbox_model(\"Enabled\", enabled_state.model())",
@@ -1640,6 +1641,7 @@ mod authoring_surface_policy_tests {
             "imui_floating_windows_demo",
             IMUI_FLOATING_WINDOWS_DEMO,
             &[
+                "fret_imui::imui(cx.elements(), |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
                 "ui.window_with_options(",
@@ -1652,6 +1654,7 @@ mod authoring_surface_policy_tests {
             "imui_response_signals_demo",
             IMUI_RESPONSE_SIGNALS_DEMO,
             &[
+                "fret_imui::imui(cx.elements(), |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
                 "click.secondary_clicked()",
@@ -1683,6 +1686,7 @@ mod authoring_surface_policy_tests {
             "imui_shadcn_adapter_demo",
             IMUI_SHADCN_ADAPTER_DEMO,
             &[
+                "fret_imui::imui(cx.elements(), |ui| {",
                 "UiWriterImUiFacadeExt as _",
                 "ui.combo_model_with_options(",
                 "ui.separator_text(\"Inspector snapshot\")",
@@ -1696,6 +1700,7 @@ mod authoring_surface_policy_tests {
             "imui_node_graph_demo",
             IMUI_NODE_GRAPH_DEMO,
             &[
+                "fret_imui::imui(cx.elements(), |ui| {",
                 "compatibility-oriented and should not be treated as the default downstream",
                 "Prefer the declarative node-graph surfaces for normal downstream guidance.",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
@@ -2872,14 +2877,12 @@ mod authoring_surface_policy_tests {
         assert_advanced_helpers_prefer_uicx(
             IMUI_EDITOR_PROOF_DEMO,
             &[
-                "fn render_view(cx: &mut UiCx<'_>) -> ViewElements",
                 "fn render_authoring_parity_surface(cx: &mut UiCx<'_>,",
                 "fn render_authoring_parity_shared_state(cx: &mut UiCx<'_>,",
                 "fn render_authoring_parity_declarative_group(cx: &mut UiCx<'_>,",
                 "fn render_authoring_parity_imui_group(cx: &mut UiCx<'_>,",
             ],
             &[
-                "fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements",
                 "fn render_authoring_parity_surface(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_authoring_parity_shared_state(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_authoring_parity_declarative_group(cx: &mut ElementContext<'_, KernelApp>,",
@@ -4145,6 +4148,10 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             IMUI_EDITOR_PROOF_DEMO,
             &[
+                "fn render_view<'a, Cx>(cx: &mut Cx) -> ViewElements",
+                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
+                "let cx = cx.elements();",
+                "render_view(cx)",
                 "struct EditorTextAssistReadout {",
                 "struct EditorTextFieldReadout {",
                 "struct AuthoringParitySharedStateReadout {",
@@ -4188,6 +4195,7 @@ mod authoring_surface_policy_tests {
                 ".get_model_copied(&slider_model, fret_ui::Invalidation::Paint)",
                 ".get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)",
                 ".get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)",
+                "render_view(cx.elements())",
             ],
         );
 

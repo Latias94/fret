@@ -187,6 +187,18 @@ Companion docs:
     `embedded_viewport_page(cx.elements(), ...)`,
     `hello_world_compare_root(cx.elements(), ...)`, and `render_view(cx.elements())` on this
     batch.
+  - [x] keep the same root/helper boundary rule on the editor-grade IMUI proof without widening
+    or flattening its advanced helper lane:
+    `imui_editor_proof_demo` now accepts
+    `fret::app::ElementContextAccess<'a, KernelApp>` at the outer `render_view(...)` boundary,
+    keeps the internal `UiCx` helper family unchanged, and source-policy gates now forbid the root
+    from spelling `render_view(cx.elements())`.
+  - [x] classify the remaining `AppUi`-root `cx.elements()` usage in `apps/fret-examples/src` as
+    intentional lanes rather than cleanup leftovers:
+    low-level direct-leaf demos stay locked by the interop gates, and the immediate-mode teaching
+    surfaces (`imui_hello_demo`, `imui_floating_windows_demo`, `imui_response_signals_demo`,
+    `imui_shadcn_adapter_demo`, `imui_node_graph_demo`) now explicitly require
+    `fret_imui::imui(cx.elements(), |ui| {` in source-policy tests.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

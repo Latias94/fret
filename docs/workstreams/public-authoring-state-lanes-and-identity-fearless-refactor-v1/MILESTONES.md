@@ -172,6 +172,18 @@ Related:
     gates now forbid `embedded_viewport_page(cx.elements(), ...)`,
     `hello_world_compare_root(cx.elements(), ...)`, and `render_view(cx.elements())` from
     drifting back into this batch.
+  - the same boundary closure now also covers the editor-grade IMUI proof wrapper without
+    flattening its advanced helper story:
+    `imui_editor_proof_demo` takes
+    `fret::app::ElementContextAccess<'a, KernelApp>` at the outer `render_view(...)` boundary,
+    leaves its internal `UiCx` helper family on the advanced lane, and source-policy gates now
+    forbid `render_view(cx.elements())` from drifting back into that root.
+  - with that wrapper closed, the remaining `AppUi`-root `cx.elements()` calls in
+    `apps/fret-examples/src` are now explicitly classified instead of ambiguous:
+    low-level direct-leaf surfaces stay under the interop gates, and the immediate-mode teaching
+    surfaces (`imui_hello_demo`, `imui_floating_windows_demo`, `imui_response_signals_demo`,
+    `imui_shadcn_adapter_demo`, `imui_node_graph_demo`) now explicitly lock
+    `fret_imui::imui(cx.elements(), |ui| {` as the intentional immediate-mode entry seam.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`
