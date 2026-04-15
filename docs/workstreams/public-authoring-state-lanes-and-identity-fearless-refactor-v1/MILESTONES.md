@@ -82,6 +82,12 @@ Related:
     `ElementContext` requirements are explicit `cx.elements()` escape hatches at
     `into_element(...)` / `with(...)` late-landing boundaries instead of implicit `AppUi` `Deref`
     inheritance.
+  - the cookbook first-contact scaffold now also stays on that same app-facing render lane for
+    theme reads:
+    `apps/fret-cookbook/src/scaffold.rs` uses
+    `fret::app::RenderContextAccess<'a, App>` plus `cx.theme_snapshot()` for page-shell
+    background tokens instead of reopening the raw element surface through
+    `cx.elements().theme().snapshot()`.
   - the next closure step on that same probe is now landed:
     `DirectionProvider`, `TooltipProvider`, and `SidebarProvider` expose explicit capability
     overloads (`into_element_in(...)`, `with_in(...)`, `with_elements_in(...)`) for helper-heavy

@@ -104,6 +104,11 @@ Companion docs:
     `*_in(...)` capability overloads, `SidebarInset` / `SidebarGroupContent` participate in the
     `IntoUiElement` lane, and `api_workbench_lite_demo` now uses `with_in(...)` /
     `into_element_in(...)` instead of spelling `cx.elements()`.
+  - [x] tighten the cookbook shared page-shell proof so ordinary helper theme access stays on the
+    app-facing render lane:
+    `apps/fret-cookbook/src/scaffold.rs` now accepts
+    `fret::app::RenderContextAccess<'a, App>` and uses `cx.theme_snapshot()` instead of reaching
+    through `cx.elements().theme().snapshot()` just to read background tokens.
   - [x] extend the same capability story into editor recipe composites where app-facing helper
     extraction still needed a raw editor surface:
     `InspectorPanel`, `PropertyGroup`, and `PropertyGrid` now expose `into_element_in(...)`, and

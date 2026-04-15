@@ -34,9 +34,10 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
 
 #[test]
 fn cookbook_scaffold_uses_explicit_context_access_and_late_landing_helpers() {
-    assert!(COOKBOOK_SCAFFOLD.contains("Cx: fret::app::ElementContextAccess<'a, App>"));
-    assert!(COOKBOOK_SCAFFOLD.contains("let theme = cx.elements().theme().snapshot();"));
+    assert!(COOKBOOK_SCAFFOLD.contains("Cx: fret::app::RenderContextAccess<'a, App>"));
+    assert!(COOKBOOK_SCAFFOLD.contains("let theme = cx.theme_snapshot();"));
     assert!(COOKBOOK_SCAFFOLD.contains(".into_element_in(cx)"));
     assert!(!COOKBOOK_SCAFFOLD.contains("&mut UiCx<'_>"));
     assert!(!COOKBOOK_SCAFFOLD.contains("surface.into_element(cx);"));
+    assert!(!COOKBOOK_SCAFFOLD.contains("cx.elements().theme().snapshot()"));
 }

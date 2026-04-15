@@ -722,9 +722,9 @@ mod authoring_surface_policy_tests {
     fn shared_scaffold_prefers_explicit_app_context_access_for_cookbook_page_shells() {
         assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space};"));
-        assert!(SCAFFOLD.contains("Cx: fret::app::ElementContextAccess<'a, App>"));
+        assert!(SCAFFOLD.contains("Cx: fret::app::RenderContextAccess<'a, App>"));
         assert!(SCAFFOLD.contains("B: UiChild"));
-        assert!(SCAFFOLD.contains("let theme = cx.elements().theme().snapshot();"));
+        assert!(SCAFFOLD.contains("let theme = cx.theme_snapshot();"));
         assert!(SCAFFOLD.contains("ui::single(cx, surface)"));
         assert!(SCAFFOLD.contains(".into_element_in(cx)"));
         assert!(!SCAFFOLD.contains("ui::children![cx; surface]"));
@@ -734,6 +734,7 @@ mod authoring_surface_policy_tests {
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
         assert!(!SCAFFOLD.contains("surface: AnyElement"));
         assert!(!SCAFFOLD.contains("surface.into_element(cx);"));
+        assert!(!SCAFFOLD.contains("cx.elements().theme().snapshot()"));
         assert!(!SCAFFOLD.contains("use fret::component::prelude::*;"));
     }
 
