@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::{
     FretApp,
@@ -7,9 +8,7 @@ use fret::{
     icons::{IconId, icon},
     semantics::SemanticsRole,
     shadcn,
-    style::{
-        ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme, ThemeSnapshot,
-    },
+    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, ThemeSnapshot},
 };
 use fret_core::Corners;
 use fret_ui::element::TextProps;
@@ -72,7 +71,7 @@ impl View for HelloCounterView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let count_state = cx.state().local_init(|| 0i64);
         let step_state = cx.state().local_init(|| "1".to_string());

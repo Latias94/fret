@@ -112,6 +112,12 @@ Related:
     `Theme::global(&*cx.app).snapshot()`, and their proof gates now lock that root-render
     authoring choice so those examples stop teaching raw host/theme access for ordinary app
     surfaces.
+  - the same root-render theme-read correction now also covers the default counter/query teaching
+    batch without widening `fret::app::prelude::*`:
+    `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` import
+    `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` in their `AppUi` render
+    roots, and source-policy gates now forbid `Theme::global(&*cx.app).snapshot()` on those
+    first-contact/default-facing examples.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

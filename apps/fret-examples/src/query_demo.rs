@@ -1,10 +1,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy};
-use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
+use fret::style::{ColorRef, Space, ThemeSnapshot};
 
 mod act {
     fret::actions!([
@@ -44,7 +45,7 @@ impl View for QueryDemoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let fail_mode_state = cx.state().local_init(|| false);
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {

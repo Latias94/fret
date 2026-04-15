@@ -1078,8 +1078,18 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_COUNTER_DEMO.contains(
             "fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild"
         ));
+        assert!(HELLO_COUNTER_DEMO.contains("let theme = cx.theme_snapshot();"));
         assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
+        assert!(!HELLO_COUNTER_DEMO.contains("Theme::global(&*cx.app).snapshot()"));
+    }
+
+    #[test]
+    fn default_app_examples_prefer_app_theme_snapshot_helper() {
+        for src in [HELLO_COUNTER_DEMO, QUERY_DEMO, QUERY_ASYNC_TOKIO_DEMO] {
+            assert!(src.contains("let theme = cx.theme_snapshot();"));
+            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
+        }
     }
 
     #[test]

@@ -123,6 +123,11 @@ Companion docs:
     `editor_notes_demo` and `editor_notes_device_shell_demo` now use the app-facing
     `cx.theme_snapshot()` helper, and their proof gates forbid
     `Theme::global(&*cx.app).snapshot()` from drifting back into those product surfaces.
+  - [x] apply the same app-lane theme-read cleanup to default first-contact query/counter proofs
+    without widening `fret::app::prelude::*`:
+    `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now import
+    `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` at the root render surface,
+    and source-policy tests forbid `Theme::global(&*cx.app).snapshot()` on that batch.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
