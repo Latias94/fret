@@ -9,7 +9,7 @@ use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use fret_ui_shadcn::facade as shadcn;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -337,7 +337,7 @@ fn render(
             cx.observe_model(&state.revision, Invalidation::Layout);
             cx.observe_model(&state.grid_output, Invalidation::Layout);
 
-            let theme = Theme::global(&*cx.app).snapshot();
+            let theme = cx.theme().snapshot();
             let padding = theme.metric_token("metric.padding.md");
 
             let mut root_layout = LayoutStyle::default();

@@ -160,6 +160,12 @@ Companion docs:
     `cx.theme().snapshot()` from `ElementContext` for lens/inspector/root chrome token reads, and
     the existing grouped-helper source-policy gates forbid `Theme::global(&*cx.app).snapshot()`
     on that batch.
+  - [x] keep the remaining selected `ElementContext` product/stress proofs on context-owned theme
+    reads too:
+    `canvas_datagrid_stress_demo` and `imui_interaction_showcase_demo` now use
+    `cx.theme().snapshot()`, and `apps/fret-examples/src/lib.rs` source-policy tests lock that
+    choice so the lane can distinguish real renderer/theme-bridge proofs from ordinary
+    `ElementContext` chrome reads.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

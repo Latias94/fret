@@ -17,7 +17,6 @@ use std::sync::Arc;
 use fret::{FretApp, advanced::prelude::*};
 use fret_core::Px;
 use fret_ui::Invalidation;
-use fret_ui::Theme;
 use fret_ui::element::AnyElement;
 use fret_ui_kit::imui::ChildRegionOptions;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, UiExt as _, ui};
@@ -339,13 +338,9 @@ impl View for ImUiInteractionShowcaseView {
                 })
                 .p(responsive.surface_padding)
                 .size_full()
-                .bg(ColorRef::Color(
-                    Theme::global(&*cx.app).color_token("background"),
-                ))
+                .bg(ColorRef::Color(cx.theme().color_token("background")))
                 .border_1()
-                .border_color(ColorRef::Color(
-                    Theme::global(&*cx.app).color_token("border"),
-                ))
+                .border_color(ColorRef::Color(cx.theme().color_token("border")))
                 .rounded_md()
                 .shadow_lg()
                 .into_element(cx),
@@ -353,9 +348,7 @@ impl View for ImUiInteractionShowcaseView {
         })
         .p(responsive.outer_padding)
         .size_full()
-        .bg(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("muted"),
-        ))
+        .bg(ColorRef::Color(cx.theme().color_token("muted")))
         .into_element(cx)
         .test_id(TEST_ID_ROOT)
         .into()
@@ -378,9 +371,7 @@ fn render_showcase_header_strip(
                 .text_xs()
                 .font_semibold()
                 .letter_spacing_em(0.12)
-                .text_color(ColorRef::Color(
-                    Theme::global(&*cx.app).color_token("muted-foreground"),
-                ))
+                .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                 .into_element(cx),
             ui::text("A presentable review deck for immediate-mode control flow.")
                 .text_base()
@@ -392,9 +383,7 @@ fn render_showcase_header_strip(
             )
             .text_sm()
             .wrap(fret_core::TextWrap::Word)
-            .text_color(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("muted-foreground"),
-            ))
+            .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
             .into_element(cx),
         ]
     })
@@ -439,9 +428,7 @@ fn render_showcase_header_strip(
                     ui::text("Latest event")
                         .text_xs()
                         .font_semibold()
-                        .text_color(ColorRef::Color(
-                            Theme::global(&*cx.app).color_token("muted-foreground"),
-                        ))
+                        .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                         .into_element(cx),
                     ui::text(latest_event)
                         .text_sm()
@@ -454,12 +441,8 @@ fn render_showcase_header_strip(
             .p_3()
             .rounded_md()
             .border_1()
-            .border_color(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("border"),
-            ))
-            .bg(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("background"),
-            ))
+            .border_color(ColorRef::Color(cx.theme().color_token("border")))
+            .bg(ColorRef::Color(cx.theme().color_token("background")))
             .w_full()
             .into_element(cx)
             .test_id(TEST_ID_HEADER_LATEST),
@@ -481,13 +464,9 @@ fn render_showcase_header_strip(
         .p(Space::N4)
         .w_full()
         .border_1()
-        .border_color(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("border"),
-        ))
+        .border_color(ColorRef::Color(cx.theme().color_token("border")))
         .rounded_md()
-        .bg(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("muted"),
-        ))
+        .bg(ColorRef::Color(cx.theme().color_token("muted")))
         .shadow_sm()
         .into_element(cx)
         .test_id(TEST_ID_HEADER)
@@ -507,13 +486,9 @@ fn render_showcase_header_strip(
         .p(Space::N4)
         .w_full()
         .border_1()
-        .border_color(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("border"),
-        ))
+        .border_color(ColorRef::Color(cx.theme().color_token("border")))
         .rounded_md()
-        .bg(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("muted"),
-        ))
+        .bg(ColorRef::Color(cx.theme().color_token("muted")))
         .shadow_sm()
         .into_element(cx)
         .test_id(TEST_ID_HEADER)
@@ -613,9 +588,7 @@ fn render_interaction_lab_card(
         drag_distance_value,
     ))
     .text_sm()
-    .text_color(ColorRef::Color(
-        Theme::global(&*cx.app).color_token("muted-foreground"),
-    ))
+    .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
     .wrap(fret_core::TextWrap::Word)
     .into_element(cx);
 
@@ -624,9 +597,7 @@ fn render_interaction_lab_card(
             ui::text("Current draft")
                 .text_xs()
                 .font_semibold()
-                .text_color(ColorRef::Color(
-                    Theme::global(&*cx.app).color_token("muted-foreground"),
-                ))
+                .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                 .into_element(cx),
             ui::text(draft_note_value)
                 .text_sm()
@@ -638,12 +609,8 @@ fn render_interaction_lab_card(
     .p_3()
     .rounded_md()
     .border_1()
-    .border_color(ColorRef::Color(
-        Theme::global(&*cx.app).color_token("border"),
-    ))
-    .bg(ColorRef::Color(
-        Theme::global(&*cx.app).color_token("muted"),
-    ))
+    .border_color(ColorRef::Color(cx.theme().color_token("border")))
+    .bg(ColorRef::Color(cx.theme().color_token("muted")))
     .w_full()
     .into_element(cx);
 
@@ -1315,9 +1282,7 @@ fn render_showcase_hero(
                 "The shell owns hierarchy and pacing. Immediate-mode still owns the fastest interaction path, but the stage now reads like a reviewable product surface instead of a status console."
             })
             .text_sm()
-            .text_color(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("muted-foreground"),
-            ))
+            .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
             .wrap(fret_core::TextWrap::Word)
             .into_element(cx),
             ui::h_flex(move |cx| {
@@ -1354,9 +1319,7 @@ fn render_showcase_hero(
                     ui::text("Current story")
                         .text_xs()
                         .font_semibold()
-                        .text_color(ColorRef::Color(
-                            Theme::global(&*cx.app).color_token("muted-foreground"),
-                        ))
+                        .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                         .into_element(cx),
                     ui::text(latest_event)
                         .text_sm()
@@ -1368,12 +1331,8 @@ fn render_showcase_hero(
             .p(if compact_mode { Space::N2 } else { Space::N3 })
             .rounded_md()
             .border_1()
-            .border_color(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("border"),
-            ))
-            .bg(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("background"),
-            ))
+            .border_color(ColorRef::Color(cx.theme().color_token("border")))
+            .bg(ColorRef::Color(cx.theme().color_token("background")))
             .w_full()
             .into_element(cx),
             if compact_mode {
@@ -1382,7 +1341,7 @@ fn render_showcase_hero(
                         ui::text("Live stage")
                             .text_xs()
                             .font_semibold()
-                            .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
+                            .text_color(ColorRef::Color(cx.theme().color_token(
                                 "muted-foreground",
                             )))
                             .into_element(cx),
@@ -1439,9 +1398,9 @@ fn render_showcase_hero(
                 .gap(Space::N2)
                 .p(Space::N3)
                 .rounded_md()
-                .bg(ColorRef::Color(Theme::global(&*cx.app).color_token("muted")))
+                .bg(ColorRef::Color(cx.theme().color_token("muted")))
                 .border_1()
-                .border_color(ColorRef::Color(Theme::global(&*cx.app).color_token("border")))
+                .border_color(ColorRef::Color(cx.theme().color_token("border")))
                 .shadow_sm()
                 .w_full()
                 .into_element(cx)
@@ -1451,7 +1410,7 @@ fn render_showcase_hero(
                         ui::text("Live stage")
                             .text_xs()
                             .font_semibold()
-                            .text_color(ColorRef::Color(Theme::global(&*cx.app).color_token(
+                            .text_color(ColorRef::Color(cx.theme().color_token(
                                 "muted-foreground",
                             )))
                             .into_element(cx),
@@ -1496,9 +1455,9 @@ fn render_showcase_hero(
                 .gap(Space::N3)
                 .p(Space::N4)
                 .rounded_md()
-                .bg(ColorRef::Color(Theme::global(&*cx.app).color_token("muted")))
+                .bg(ColorRef::Color(cx.theme().color_token("muted")))
                 .border_1()
-                .border_color(ColorRef::Color(Theme::global(&*cx.app).color_token("border")))
+                .border_color(ColorRef::Color(cx.theme().color_token("border")))
                 .shadow_sm()
                 .w_full()
                 .into_element(cx)
@@ -1555,12 +1514,8 @@ fn render_timeline_card(
         .p_3()
         .rounded_md()
         .border_1()
-        .border_color(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("border"),
-        ))
-        .bg(ColorRef::Color(
-            Theme::global(&*cx.app).color_token("muted"),
-        ))
+        .border_color(ColorRef::Color(cx.theme().color_token("border")))
+        .bg(ColorRef::Color(cx.theme().color_token("muted")))
         .w_full()
         .into_element(cx);
         rows.push(row);
@@ -1589,7 +1544,7 @@ fn showcase_card(
     description: &'static str,
     body: AnyElement,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme().snapshot();
     let eyebrow = ui::text(eyebrow)
         .text_xs()
         .font_semibold()
@@ -1631,9 +1586,7 @@ fn telemetry_meter(
                     ui::text(title).text_xs().font_semibold().into_element(cx),
                     ui::text(detail)
                         .text_xs()
-                        .text_color(ColorRef::Color(
-                            Theme::global(&*cx.app).color_token("muted-foreground"),
-                        ))
+                        .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                         .wrap(fret_core::TextWrap::Word)
                         .w_full()
                         .into_element(cx),
@@ -1648,18 +1601,14 @@ fn telemetry_meter(
                         .h_px(Px(8.0))
                         .w_px(fill_width)
                         .rounded_md()
-                        .bg(ColorRef::Color(
-                            Theme::global(&*cx.app).color_token("primary"),
-                        ))
+                        .bg(ColorRef::Color(cx.theme().color_token("primary")))
                         .into_element(cx),
                 ]
             })
             .h_px(Px(8.0))
             .w_full()
             .rounded_md()
-            .bg(ColorRef::Color(
-                Theme::global(&*cx.app).color_token("secondary"),
-            ))
+            .bg(ColorRef::Color(cx.theme().color_token("secondary")))
             .into_element(cx),
         ]
     })
@@ -1681,17 +1630,13 @@ fn compact_metric_tile(
             ui::text(title)
                 .text_xs()
                 .font_semibold()
-                .text_color(ColorRef::Color(
-                    Theme::global(&*cx.app).color_token("muted-foreground"),
-                ))
+                .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                 .into_element(cx),
             ui::text(value).text_base().font_bold().into_element(cx),
             ui::text(detail)
                 .text_xs()
                 .wrap(fret_core::TextWrap::Word)
-                .text_color(ColorRef::Color(
-                    Theme::global(&*cx.app).color_token("muted-foreground"),
-                ))
+                .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
                 .into_element(cx),
         ]
     })
@@ -1699,12 +1644,8 @@ fn compact_metric_tile(
     .p(Space::N2)
     .rounded_md()
     .border_1()
-    .border_color(ColorRef::Color(
-        Theme::global(&*cx.app).color_token("border"),
-    ))
-    .bg(ColorRef::Color(
-        Theme::global(&*cx.app).color_token("background"),
-    ))
+    .border_color(ColorRef::Color(cx.theme().color_token("border")))
+    .bg(ColorRef::Color(cx.theme().color_token("background")))
     .flex_1()
     .min_w_0()
     .into_element(cx)

@@ -147,6 +147,11 @@ Related:
     `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo` use
     `cx.theme().snapshot()` on their `ElementContext` helpers/root chrome, and the grouped-helper
     source-policy gates now forbid `Theme::global(&*cx.app).snapshot()` on that batch.
+  - the remaining selected `ElementContext` product/stress proofs now also stay on context-owned
+    theme reads:
+    `canvas_datagrid_stress_demo` and `imui_interaction_showcase_demo` use
+    `cx.theme().snapshot()`, and source-policy gates now keep those surfaces out of the
+    host-global theme lane too.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

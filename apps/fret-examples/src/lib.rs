@@ -269,6 +269,7 @@ mod authoring_surface_policy_tests {
     const ASSETS_DEMO: &str = include_str!("assets_demo.rs");
     const ASYNC_PLAYGROUND_DEMO: &str = include_str!("async_playground_demo.rs");
     const API_WORKBENCH_LITE_DEMO: &str = include_str!("api_workbench_lite_demo.rs");
+    const CANVAS_DATAGRID_STRESS_DEMO: &str = include_str!("canvas_datagrid_stress_demo.rs");
     const CJK_CONFORMANCE_DEMO: &str = include_str!("cjk_conformance_demo.rs");
     const CHART_DECLARATIVE_DEMO: &str = include_str!("chart_declarative_demo.rs");
     const COMPONENTS_GALLERY_DEMO: &str = include_str!("components_gallery.rs");
@@ -1102,6 +1103,14 @@ mod authoring_surface_policy_tests {
             MARKDOWN_DEMO,
         ] {
             assert!(src.contains("cx.theme_snapshot()"));
+            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
+        }
+    }
+
+    #[test]
+    fn selected_element_context_examples_prefer_context_theme_reads() {
+        for src in [CANVAS_DATAGRID_STRESS_DEMO, IMUI_INTERACTION_SHOWCASE_DEMO] {
+            assert!(src.contains("cx.theme().snapshot()"));
             assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
         }
     }
