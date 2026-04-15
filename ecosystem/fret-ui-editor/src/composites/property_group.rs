@@ -10,7 +10,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
 use crate::primitives::EditorTokenKeys;
@@ -367,6 +367,19 @@ impl PropertyGroup {
                 move |_cx| vec![root],
             )
         })
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        header_actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
+        contents: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), header_actions, contents)
     }
 }
 

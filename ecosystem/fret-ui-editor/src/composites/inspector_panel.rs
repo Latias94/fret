@@ -14,7 +14,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
     SpacerProps, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, Theme, UiHost};
 use fret_ui_kit::headless::text_assist::{InputOwnedTextAssistKeyOptions, TextAssistItem};
 
 use crate::controls::{
@@ -407,6 +407,19 @@ impl InspectorPanel {
 
             root
         })
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        toolbar: impl FnOnce(&mut ElementContext<'_, H>, &InspectorPanelCx) -> Vec<AnyElement>,
+        contents: impl FnOnce(&mut ElementContext<'_, H>, &InspectorPanelCx) -> Vec<AnyElement>,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), toolbar, contents)
     }
 }
 

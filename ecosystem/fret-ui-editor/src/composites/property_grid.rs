@@ -10,7 +10,7 @@ use fret_core::{Axis, Edges, Px};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
 
 use crate::composites::property_row::PropertyRow;
 use crate::composites::property_row::{
@@ -111,6 +111,18 @@ impl PropertyGrid {
             root = root.test_id(test_id.clone());
         }
         root
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        rows: impl FnOnce(&mut ElementContext<'_, H>, PropertyGridRowCx) -> Vec<AnyElement>,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), rows)
     }
 }
 

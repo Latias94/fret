@@ -483,8 +483,8 @@ where
             content_test_id: Some(Arc::from(TEST_ID_INSPECTOR_CONTENT)),
             ..Default::default()
         })
-        .into_element(
-            cx.elements(),
+        .into_element_in(
+            cx,
             move |cx, _panel_cx| {
                 let muted = cx.theme_snapshot().color_token("muted-foreground");
                 let subtitle_text = cx.text_props(TextProps {

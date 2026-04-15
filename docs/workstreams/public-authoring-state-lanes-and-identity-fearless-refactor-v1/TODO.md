@@ -104,6 +104,10 @@ Companion docs:
     `*_in(...)` capability overloads, `SidebarInset` / `SidebarGroupContent` participate in the
     `IntoUiElement` lane, and `api_workbench_lite_demo` now uses `with_in(...)` /
     `into_element_in(...)` instead of spelling `cx.elements()`.
+  - [x] extend the same capability story into editor recipe composites where app-facing helper
+    extraction still needed a raw editor surface:
+    `InspectorPanel`, `PropertyGroup`, and `PropertyGrid` now expose `into_element_in(...)`, and
+    `editor_notes_demo` no longer needs `cx.elements()` to mount its shell-owned inspector rail.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

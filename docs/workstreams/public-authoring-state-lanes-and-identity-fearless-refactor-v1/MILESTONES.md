@@ -89,6 +89,11 @@ Related:
     `IntoUiElement` lane as the rest of the sidebar facade, and the
     `api_workbench_lite_demo` proof no longer spells `cx.elements()` at all on the extracted
     helper path.
+  - the same lane now extends into editor-grade ecosystem composites:
+    `fret-ui-editor::{InspectorPanel, PropertyGroup, PropertyGrid}` expose
+    `into_element_in(...)` capability overloads, a new `fret-ui-editor` source-policy gate locks
+    those signatures, and `editor_notes_demo` now mounts its inspector rail through the explicit
+    helper lane instead of dropping to `cx.elements()`.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

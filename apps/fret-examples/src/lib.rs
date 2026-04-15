@@ -3581,7 +3581,7 @@ mod authoring_surface_policy_tests {
                 "Cx: fret::app::ElementContextAccess<'a, App>,",
                 ".into_element_in(cx)",
                 "fn render_inspector_panel<'a, Cx>(",
-                ".into_element(cx.elements(),",
+                ".into_element_in(cx,",
                 "let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(",
                 "(&asset.name_model, &asset.notes_model, &asset.notes_outcome_model,)",
             ],
@@ -3590,6 +3590,7 @@ mod authoring_surface_policy_tests {
                 "fn render_inspector_panel(cx: &mut AppUi<'_, '_>,",
                 ".watch_model(&asset.notes_model)",
                 ".watch_model(&asset.notes_outcome_model)",
+                "cx.elements()",
             ],
         );
 
