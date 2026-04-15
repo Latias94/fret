@@ -4739,6 +4739,46 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn genui_message_lane_uses_state_owned_model_helpers() {
+        let normalized = GENUI_DEMO.split_whitespace().collect::<String>();
+        for marker in [
+            "impl GenUiState {",
+            "fn clear_action_queue(&self, app: &mut KernelApp) {",
+            "fn queued_invocations(",
+            "fn auto_apply_enabled(&self, app: &KernelApp) -> bool {",
+            "fn auto_fix_enabled(&self, app: &KernelApp) -> bool {",
+            "fn editor_text_value(&self, app: &KernelApp) -> String {",
+            "fn stream_text_value(&self, app: &KernelApp) -> String {",
+            "fn stream_patch_only_enabled(&self, app: &KernelApp) -> bool {",
+            "let auto_apply = state.auto_apply_enabled(app);",
+            "let invocations = state.queued_invocations(app);",
+            "state.clear_action_queue(app);",
+            "let text = state.editor_text_value(app);",
+            "let auto_fix = state.auto_fix_enabled(app);",
+            "let text = state.stream_text_value(app);",
+            "let patch_only = state.stream_patch_only_enabled(app);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for legacy in [
+            "state.auto_apply_standard_actions.value_in_or(app.models(), true);",
+            "app.models().read(&state.action_queue, |q| q.invocations.clone())",
+            "state.editor_text.value_in_or_default(app.models());",
+            "state.auto_fix_on_apply.value_in_or(app.models(), true);",
+            "state.stream_text.value_in_or_default(app.models());",
+            "state.stream_patch_only.value_in_or(app.models(), false);",
+            "app.models_mut().update(&state.action_queue, |q| q.invocations.clear());",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&legacy),
+                "legacy marker still present: {legacy}"
+            );
+        }
+    }
+
+    #[test]
     fn asset_helper_entrypoints_prefer_ui_assets_capability_adapters() {
         let assets_demo = ASSETS_DEMO.split_whitespace().collect::<String>();
         assert!(assets_demo.contains(

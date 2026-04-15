@@ -246,6 +246,13 @@ Related:
     `cx.data().selector_model_layout(...)` for their render-time state bags, while their driver
     loops remain unchanged. The render-time raw `app.models()` tail is therefore further reduced
     to deliberate driver/retained owners instead of mixed stress-demo drift.
+  - the advanced/reference GenUI message lane now makes its remaining store ownership explicit at
+    the app surface too:
+    `GenUiState` owns helper methods for queue clearing, queued invocation reads, and
+    `LocalState` reads consumed by `handle_msg(...)`, so the demo no longer mixes repeated raw
+    `app.models()` calls through message handling just to reach its own state. This narrows the
+    remaining grep tail further without misclassifying the GenUI integration surface as default
+    render-lane authoring.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

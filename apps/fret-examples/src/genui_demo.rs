@@ -418,6 +418,45 @@ struct GenUiState {
     stream_error: Option<Arc<str>>,
 }
 
+impl GenUiState {
+    fn clear_action_queue(&self, app: &mut KernelApp) {
+        let _ = app
+            .models_mut()
+            .update(&self.action_queue, |q| q.invocations.clear());
+    }
+
+    fn queued_invocations(
+        &self,
+        app: &KernelApp,
+    ) -> Vec<fret_genui_core::render::GenUiActionInvocation> {
+        app.models()
+            .read(&self.action_queue, |q| q.invocations.clone())
+            .ok()
+            .unwrap_or_default()
+    }
+
+    fn auto_apply_enabled(&self, app: &KernelApp) -> bool {
+        self.auto_apply_standard_actions
+            .value_in_or(app.models(), true)
+    }
+
+    fn auto_fix_enabled(&self, app: &KernelApp) -> bool {
+        self.auto_fix_on_apply.value_in_or(app.models(), true)
+    }
+
+    fn editor_text_value(&self, app: &KernelApp) -> String {
+        self.editor_text.value_in_or_default(app.models())
+    }
+
+    fn stream_text_value(&self, app: &KernelApp) -> String {
+        self.stream_text.value_in_or_default(app.models())
+    }
+
+    fn stream_patch_only_enabled(&self, app: &KernelApp) -> bool {
+        self.stream_patch_only.value_in_or(app.models(), false)
+    }
+}
+
 const TRANSIENT_GENUI_CLEAR_ACTIONS: u64 = 0x47454E5549_0001;
 const TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS: u64 = 0x47454E5549_0002;
 const TRANSIENT_GENUI_RESET_STATE: u64 = 0x47454E5549_0003;
@@ -482,20 +521,12 @@ impl GenUiView {
     fn handle_msg(app: &mut KernelApp, state: &mut GenUiState, message: Msg) {
         match message {
             Msg::ClearActions => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.action_queue, |q| q.invocations.clear());
+                state.clear_action_queue(app);
                 state.queue_summary = None;
             }
             Msg::ApplyQueuedActions => {
-                let auto_apply = state
-                    .auto_apply_standard_actions
-                    .value_in_or(app.models(), true);
-                let invocations = app
-                    .models()
-                    .read(&state.action_queue, |q| q.invocations.clone())
-                    .ok()
-                    .unwrap_or_default();
+                let auto_apply = state.auto_apply_enabled(app);
+                let invocations = state.queued_invocations(app);
 
                 if auto_apply {
                     state.queue_summary = Some(Arc::<str>::from(
@@ -638,18 +669,14 @@ impl GenUiView {
                 state.queue_summary = Some(Arc::<str>::from(format!(
                     "applied queue via executor: applied={applied}, skipped={skipped}, errors={errors}"
                 )));
-                let _ = app
-                    .models_mut()
-                    .update(&state.action_queue, |q| q.invocations.clear());
+                state.clear_action_queue(app);
             }
             Msg::SetAutoApply(value) => {
                 let _ = state
                     .auto_apply_standard_actions
                     .set_in(app.models_mut(), value);
                 if value {
-                    let _ = app
-                        .models_mut()
-                        .update(&state.action_queue, |q| q.invocations.clear());
+                    state.clear_action_queue(app);
                     state.queue_summary = Some(Arc::<str>::from(
                         "Switched to live mode (auto-apply on). Queue cleared.",
                     ));
@@ -660,13 +687,9 @@ impl GenUiView {
                 }
             }
             Msg::AutoApplyToggled => {
-                let enabled = state
-                    .auto_apply_standard_actions
-                    .value_in_or(app.models(), true);
+                let enabled = state.auto_apply_enabled(app);
                 if enabled {
-                    let _ = app
-                        .models_mut()
-                        .update(&state.action_queue, |q| q.invocations.clear());
+                    state.clear_action_queue(app);
                     state.queue_summary = Some(Arc::<str>::from(
                         "Switched to live mode (auto-apply on). Queue cleared.",
                     ));
@@ -682,16 +705,14 @@ impl GenUiView {
                 let _ = app.models_mut().update(&state.validation_state, |v| {
                     *v = ValidationStateV1::default()
                 });
-                let _ = app
-                    .models_mut()
-                    .update(&state.action_queue, |q| q.invocations.clear());
+                state.clear_action_queue(app);
                 state.queue_summary = None;
             }
             Msg::ApplyEditorSpec => {
-                let text = state.editor_text.value_in_or_default(app.models());
+                let text = state.editor_text_value(app);
                 match serde_json::from_str::<SpecV1>(&text) {
                     Ok(spec) => {
-                        let auto_fix = state.auto_fix_on_apply.value_in_or(app.models(), true);
+                        let auto_fix = state.auto_fix_enabled(app);
                         let (spec, fixups) = maybe_auto_fix_spec(auto_fix, &spec);
                         state.spec = spec;
                         state.editor_error = None;
@@ -701,9 +722,7 @@ impl GenUiView {
                         let _ = app.models_mut().update(&state.validation_state, |v| {
                             *v = ValidationStateV1::default()
                         });
-                        let _ = app
-                            .models_mut()
-                            .update(&state.action_queue, |q| q.invocations.clear());
+                        state.clear_action_queue(app);
                         state.queue_summary = None;
 
                         if auto_fix {
@@ -726,8 +745,8 @@ impl GenUiView {
                 state.queue_summary = None;
             }
             Msg::ApplyStream => {
-                let text = state.stream_text.value_in_or_default(app.models());
-                let patch_only = state.stream_patch_only.value_in_or(app.models(), false);
+                let text = state.stream_text_value(app);
+                let patch_only = state.stream_patch_only_enabled(app);
 
                 let mut compiler = MixedSpecStreamCompiler::new(MixedStreamOptions {
                     mode: if patch_only {
@@ -759,7 +778,7 @@ impl GenUiView {
                 let value = compiler.into_result();
                 match serde_json::from_value::<SpecV1>(value) {
                     Ok(spec) => {
-                        let auto_fix = state.auto_fix_on_apply.value_in_or(app.models(), true);
+                        let auto_fix = state.auto_fix_enabled(app);
                         let (spec, fixups) = maybe_auto_fix_spec(auto_fix, &spec);
                         state.spec = spec;
                         state.editor_error = None;
@@ -776,9 +795,7 @@ impl GenUiView {
                         let _ = app.models_mut().update(&state.validation_state, |v| {
                             *v = ValidationStateV1::default()
                         });
-                        let _ = app
-                            .models_mut()
-                            .update(&state.action_queue, |q| q.invocations.clear());
+                        state.clear_action_queue(app);
                         state.queue_summary = None;
 
                         let pretty = serde_json::to_string_pretty(&state.spec)

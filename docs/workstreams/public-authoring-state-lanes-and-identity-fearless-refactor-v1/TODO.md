@@ -265,6 +265,13 @@ Companion docs:
     state through `cx.data().selector_model_layout(...)`, source-policy tests lock that choice,
     and the remaining `app.models()` grep tail is narrower driver/retained owner surface instead
     of stress-render drift.
+  - [x] make the advanced/reference GenUI message lane own its remaining local/model store reads
+    explicitly instead of mixing raw `app.models()` calls through `handle_msg(...)`:
+    `GenUiState` now owns helper methods such as `auto_apply_enabled(...)`,
+    `auto_fix_enabled(...)`, `editor_text_value(...)`, `stream_text_value(...)`,
+    `stream_patch_only_enabled(...)`, `queued_invocations(...)`, and `clear_action_queue(...)`;
+    `handle_msg(...)` routes through those helpers, and source-policy tests lock the message-lane
+    owner without pretending this advanced surface should migrate onto render-time grouped helpers.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
