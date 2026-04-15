@@ -99,6 +99,11 @@ Companion docs:
     `fret::app::RenderContextAccess<'a, App>`, `LocalState`/query/mutation read helpers work
     through that capability, and raw `ElementContext` access is spelled explicitly with
     `cx.elements()` only at late-landing builder boundaries.
+  - [x] close the first provider late-builder escape-hatch gap on that lane:
+    `DirectionProvider`, `TooltipProvider`, and `SidebarProvider` now expose explicit
+    `*_in(...)` capability overloads, `SidebarInset` / `SidebarGroupContent` participate in the
+    `IntoUiElement` lane, and `api_workbench_lite_demo` now uses `with_in(...)` /
+    `into_element_in(...)` instead of spelling `cx.elements()`.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

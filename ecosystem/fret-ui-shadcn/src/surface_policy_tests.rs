@@ -31,6 +31,7 @@ const DATA_TABLE_RECIPES_RS: &str = include_str!("data_table_recipes.rs");
 const DATE_PICKER_RS: &str = include_str!("date_picker.rs");
 const DATE_PICKER_WITH_PRESETS_RS: &str = include_str!("date_picker_with_presets.rs");
 const DATE_RANGE_PICKER_RS: &str = include_str!("date_range_picker.rs");
+const DIRECTION_RS: &str = include_str!("direction.rs");
 const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
 const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
@@ -1661,6 +1662,40 @@ fn tooltip_content_helpers_prefer_typed_build_and_text_outputs_when_slot_scope_i
         assert!(
             !normalized.contains(&marker),
             "tooltip.rs reintroduced eager `AnyElement` helper surfaces for tooltip content authoring"
+        );
+    }
+}
+
+#[test]
+fn provider_late_builders_offer_explicit_context_access_overloads() {
+    let direction = normalize_ws(DIRECTION_RS);
+    let tooltip = normalize_ws(TOOLTIP_RS);
+    let sidebar = normalize_ws(SIDEBAR_RS);
+
+    for marker in [
+        "pub fn into_element_in<'a, H: UiHost + 'a, Cx>( self, cx: &mut Cx, children: impl FnOnce(&mut ElementContext<'_, H>) -> fret_ui::element::AnyElement, ) -> fret_ui::element::AnyElement where Cx: ElementContextAccess<'a, H>,",
+        "pub fn with_in<'a, H: UiHost + 'a, Cx, I>( self, cx: &mut Cx, children: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Vec<AnyElement> where Cx: ElementContextAccess<'a, H>, I: IntoIterator<Item = AnyElement>,",
+        "pub fn with_elements_in<'a, H: UiHost + 'a, Cx, I>( self, cx: &mut Cx, children: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Elements where Cx: ElementContextAccess<'a, H>, I: IntoIterator<Item = AnyElement>,",
+    ] {
+        let marker = normalize_ws(marker);
+        assert!(
+            direction.contains(&marker),
+            "direction.rs should keep explicit context-access overloads for provider late-builders"
+        );
+    }
+
+    for marker in [
+        "pub fn with_in<'a, H: UiHost + 'a, Cx, I>( self, cx: &mut Cx, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Vec<AnyElement> where Cx: ElementContextAccess<'a, H>, I: IntoIterator<Item = AnyElement>,",
+        "pub fn with_elements_in<'a, H: UiHost + 'a, Cx, I>( self, cx: &mut Cx, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Elements where Cx: ElementContextAccess<'a, H>, I: IntoIterator<Item = AnyElement>,",
+    ] {
+        let marker = normalize_ws(marker);
+        assert!(
+            tooltip.contains(&marker),
+            "tooltip.rs should keep explicit context-access overloads for provider late-builders"
+        );
+        assert!(
+            sidebar.contains(&marker),
+            "sidebar.rs should keep explicit context-access overloads for provider late-builders"
         );
     }
 }

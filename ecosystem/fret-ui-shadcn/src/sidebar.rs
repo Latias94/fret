@@ -17,7 +17,7 @@ use fret_ui::element::{
     Length, MainAlign, OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration,
     SizeStyle, SpacerProps, VisualTransformProps,
 };
-use fret_ui::{CommandAvailability, ElementContext, Theme, UiHost};
+use fret_ui::{CommandAvailability, ElementContext, ElementContextAccess, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -762,6 +762,18 @@ impl SidebarProvider {
         self.with_elements(cx, f).into_vec()
     }
 
+    pub fn with_in<'a, H: UiHost + 'a, Cx, I>(
+        self,
+        cx: &mut Cx,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        Cx: ElementContextAccess<'a, H>,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements_in(cx, f).into_vec()
+    }
+
     pub fn with_elements<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -860,6 +872,18 @@ impl SidebarProvider {
 
             Elements::new(children)
         })
+    }
+
+    pub fn with_elements_in<'a, H: UiHost + 'a, Cx, I>(
+        self,
+        cx: &mut Cx,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        Cx: ElementContextAccess<'a, H>,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx.elements(), f)
     }
 }
 

@@ -30,7 +30,7 @@ use fret_ui::element::{
     SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, Theme, ThemeSnapshot, UiHost};
 
 use crate::overlay_motion;
 
@@ -419,6 +419,18 @@ impl TooltipProvider {
         self.with_elements(cx, f).into_vec()
     }
 
+    pub fn with_in<'a, H: UiHost + 'a, Cx, I>(
+        self,
+        cx: &mut Cx,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        Cx: ElementContextAccess<'a, H>,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements_in(cx, f).into_vec()
+    }
+
     pub fn with_elements<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -447,6 +459,18 @@ impl TooltipProvider {
                 .disable_hoverable_content(self.disable_hoverable_content),
             |cx| f(cx).into_iter().collect::<Elements>(),
         )
+    }
+
+    pub fn with_elements_in<'a, H: UiHost + 'a, Cx, I>(
+        self,
+        cx: &mut Cx,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        Cx: ElementContextAccess<'a, H>,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx.elements(), f)
     }
 }
 

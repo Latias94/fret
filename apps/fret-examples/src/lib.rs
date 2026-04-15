@@ -1039,6 +1039,11 @@ mod authoring_surface_policy_tests {
         assert!(!API_WORKBENCH_LITE_DEMO.contains("fn shell_frame(\n    cx: &mut AppUi<'_, '_>,"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("fn request_panel(cx: &mut AppUi<'_, '_>,"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("fn response_panel(cx: &mut AppUi<'_, '_>,"));
+        assert!(API_WORKBENCH_LITE_DEMO.contains(".with_in(cx, |cx| {"));
+        assert!(API_WORKBENCH_LITE_DEMO.contains(".into_element_in(cx)"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains(".with(cx.elements(), |cx| {"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains(".into_element(cx.elements())"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("cx.elements()"));
         assert_avoids_legacy_conversion_names(API_WORKBENCH_LITE_DEMO);
         for marker in [
             "cx.data().query_async(",

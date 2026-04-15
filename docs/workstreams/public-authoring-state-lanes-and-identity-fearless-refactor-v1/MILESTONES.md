@@ -82,6 +82,13 @@ Related:
     `ElementContext` requirements are explicit `cx.elements()` escape hatches at
     `into_element(...)` / `with(...)` late-landing boundaries instead of implicit `AppUi` `Deref`
     inheritance.
+  - the next closure step on that same probe is now landed:
+    `DirectionProvider`, `TooltipProvider`, and `SidebarProvider` expose explicit capability
+    overloads (`into_element_in(...)`, `with_in(...)`, `with_elements_in(...)`) for helper-heavy
+    render surfaces, `SidebarInset` / `SidebarGroupContent` now participate in the same
+    `IntoUiElement` lane as the rest of the sidebar facade, and the
+    `api_workbench_lite_demo` proof no longer spells `cx.elements()` at all on the extracted
+    helper path.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

@@ -635,14 +635,14 @@ where
     .w_full()
     .h_full()
     .items_stretch()
-    .into_element(cx.elements())])
-    .into_element(cx.elements());
+    .into_element_in(cx)])
+    .into_element_in(cx);
 
     let content = shadcn::SidebarProvider::new()
         .width(Px(300.0))
         .width_icon(Px(72.0))
         .width_mobile(Px(320.0))
-        .with(cx.elements(), |cx| {
+        .with_in(cx, |cx| {
             vec![
                 ui::h_flex(|_cx| vec![sidebar, main])
                     .gap(Space::N4)
@@ -653,9 +653,10 @@ where
             ]
         });
 
-    content.into_iter().next().unwrap_or_else(|| {
-        ui::container(|_cx| Vec::<AnyElement>::new()).into_element(cx.elements())
-    })
+    content
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| ui::container(|_cx| Vec::<AnyElement>::new()).into_element_in(cx))
 }
 
 fn sidebar_frame<'a, Cx>(
@@ -671,27 +672,27 @@ where
     Cx: fret::app::RenderContextAccess<'a, App>,
 {
     let collection_group = shadcn::SidebarGroup::new([
-        shadcn::SidebarGroupLabel::new("Collections").into_element(cx.elements()),
+        shadcn::SidebarGroupLabel::new("Collections").into_element_in(cx),
         shadcn::SidebarGroupContent::new([shadcn::SidebarMenu::new(collection_buttons(
             cx,
             selected_collection,
         ))
-        .into_element(cx.elements())])
-        .into_element(cx.elements()),
+        .into_element_in(cx)])
+        .into_element_in(cx),
     ])
-    .into_element(cx.elements());
+    .into_element_in(cx);
 
     let history_group = shadcn::SidebarGroup::new([
-        shadcn::SidebarGroupLabel::new("History").into_element(cx.elements()),
+        shadcn::SidebarGroupLabel::new("History").into_element_in(cx),
         shadcn::SidebarGroupContent::new([history_menu(
             cx,
             history_state,
             history,
             selected_history,
         )])
-        .into_element(cx.elements()),
+        .into_element_in(cx),
     ])
-    .into_element(cx.elements());
+    .into_element_in(cx);
 
     shadcn::Sidebar::new([
         shadcn::SidebarHeader::new([ui::v_flex(|cx| {
@@ -706,9 +707,9 @@ where
             ]
         })
         .gap(Space::N1)
-        .into_element(cx.elements())])
-        .into_element(cx.elements()),
-        shadcn::SidebarContent::new([collection_group, history_group]).into_element(cx.elements()),
+        .into_element_in(cx)])
+        .into_element_in(cx),
+        shadcn::SidebarContent::new([collection_group, history_group]).into_element_in(cx),
         shadcn::SidebarFooter::new([ui::v_flex(|cx| {
             ui::children![
                 cx;
@@ -726,12 +727,12 @@ where
             ]
         })
         .gap(Space::N1)
-        .into_element(cx.elements())])
-        .into_element(cx.elements()),
+        .into_element_in(cx)])
+        .into_element_in(cx),
     ])
     .collapsible(shadcn::SidebarCollapsible::Icon)
     .refine_layout(LayoutRefinement::default().h_full())
-    .into_element(cx.elements())
+    .into_element_in(cx)
     .test_id(TEST_ID_SIDEBAR)
 }
 
@@ -753,9 +754,9 @@ where
                         "api-workbench-lite.collection.{}",
                         collection_key(id)
                     ))
-                    .into_element(cx.elements()),
+                    .into_element_in(cx),
             )
-            .into_element(cx.elements())
+            .into_element_in(cx)
         })
         .collect()
 }
@@ -782,7 +783,7 @@ where
             ]
         })
         .gap(Space::N2)
-        .into_element(cx.elements());
+        .into_element_in(cx);
     }
 
     if let Some(err) = history_state.error.as_ref() {
@@ -801,7 +802,7 @@ where
             ]
         })
         .gap(Space::N2)
-        .into_element(cx.elements());
+        .into_element_in(cx);
     }
 
     if history.is_empty() {
@@ -817,7 +818,7 @@ where
             ]
         })
         .gap(Space::N2)
-        .into_element(cx.elements());
+        .into_element_in(cx);
     }
 
     shadcn::SidebarMenu::new(history.into_iter().map(|entry| {
@@ -830,11 +831,11 @@ where
                 .action(act::LoadHistory)
                 .action_payload(entry.id)
                 .test_id(format!("api-workbench-lite.history.row.{}", entry.id))
-                .into_element(cx.elements()),
+                .into_element_in(cx),
         )
-        .into_element(cx.elements())
+        .into_element_in(cx)
     }))
-    .into_element(cx.elements())
+    .into_element_in(cx)
 }
 
 fn request_panel<'a, Cx>(cx: &mut Cx, locals: &WorkbenchLocals, method: Arc<str>) -> AnyElement
@@ -873,7 +874,7 @@ where
                     .placeholder("{ ... }")
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_BODY)
-                    .into_element(cx.elements())],
+                    .into_element_in(cx)],
             ),
             shadcn::TabsItem::new(
                 "headers",
@@ -883,12 +884,12 @@ where
                     .placeholder("Content-Type: application/json")
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_HEADERS)
-                    .into_element(cx.elements())],
+                    .into_element_in(cx)],
             ),
         ])
         .ui()
         .w_full()
-        .into_element(cx.elements());
+        .into_element_in(cx);
 
     shadcn::card(|cx| {
         ui::children![
@@ -920,7 +921,7 @@ where
     .flex_1()
     .min_w_0()
     .h_full()
-    .into_element(cx.elements())
+    .into_element_in(cx)
 }
 
 fn response_panel<'a, Cx>(cx: &mut Cx, locals: &WorkbenchLocals) -> AnyElement
@@ -938,7 +939,7 @@ where
                     .disabled(true)
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_RESPONSE_PRETTY)
-                    .into_element(cx.elements())],
+                    .into_element_in(cx)],
             ),
             shadcn::TabsItem::new(
                 "raw",
@@ -948,7 +949,7 @@ where
                     .disabled(true)
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_RESPONSE_RAW)
-                    .into_element(cx.elements())],
+                    .into_element_in(cx)],
             ),
             shadcn::TabsItem::new(
                 "headers",
@@ -958,12 +959,12 @@ where
                     .disabled(true)
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_RESPONSE_HEADERS)
-                    .into_element(cx.elements())],
+                    .into_element_in(cx)],
             ),
         ])
         .ui()
         .w_full()
-        .into_element(cx.elements());
+        .into_element_in(cx);
 
     shadcn::card(|cx| {
         ui::children![
@@ -984,7 +985,7 @@ where
     .flex_1()
     .min_w_0()
     .h_full()
-    .into_element(cx.elements())
+    .into_element_in(cx)
 }
 
 fn apply_response_snapshot(

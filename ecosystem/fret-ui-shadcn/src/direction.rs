@@ -8,7 +8,7 @@
 //! `fret-ui-kit::primitives::direction`.
 
 use fret_ui::element::{AnyElement, Elements};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 use fret_ui_kit::primitives::direction as direction_prim;
 
 pub use direction_prim::LayoutDirection;
@@ -48,6 +48,19 @@ impl DirectionProvider {
         direction_prim::with_direction_provider(cx, self.dir, children)
     }
 
+    /// Explicit late-landing variant for surfaces that only expose `ElementContextAccess`.
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> fret_ui::element::AnyElement,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), children)
+    }
+
     /// Runs `children` with `dir` installed and collects multiple siblings like other provider
     /// surfaces in `fret-ui-shadcn`.
     pub fn with<H: UiHost, I>(
@@ -59,6 +72,19 @@ impl DirectionProvider {
         I: IntoIterator<Item = AnyElement>,
     {
         self.with_elements(cx, children).into_vec()
+    }
+
+    /// Explicit late-landing variant for surfaces that only expose `ElementContextAccess`.
+    pub fn with_in<'a, H: UiHost + 'a, Cx, I>(
+        self,
+        cx: &mut Cx,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        Cx: ElementContextAccess<'a, H>,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements_in(cx, children).into_vec()
     }
 
     /// Multi-child provider surface for copyable docs/snippets.
@@ -73,6 +99,19 @@ impl DirectionProvider {
         direction_prim::with_direction_provider(cx, self.dir, |cx| {
             children(cx).into_iter().collect::<Elements>()
         })
+    }
+
+    /// Explicit late-landing variant for surfaces that only expose `ElementContextAccess`.
+    pub fn with_elements_in<'a, H: UiHost + 'a, Cx, I>(
+        self,
+        cx: &mut Cx,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        Cx: ElementContextAccess<'a, H>,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx.elements(), children)
     }
 }
 
