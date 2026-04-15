@@ -831,40 +831,40 @@ impl View for GenUiView {
             .transient::<act::AutoApplyToggled>(TRANSIENT_GENUI_AUTO_APPLY_TOGGLED);
 
         if cx.effects().take_transient(TRANSIENT_GENUI_CLEAR_ACTIONS) {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ClearActions);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ClearActions);
         }
         if cx
             .effects()
             .take_transient(TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS)
         {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ApplyQueuedActions);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ApplyQueuedActions);
         }
         if cx.effects().take_transient(TRANSIENT_GENUI_RESET_STATE) {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ResetState);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ResetState);
         }
         if cx
             .effects()
             .take_transient(TRANSIENT_GENUI_APPLY_EDITOR_SPEC)
         {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ApplyEditorSpec);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ApplyEditorSpec);
         }
         if cx.effects().take_transient(TRANSIENT_GENUI_RESET_EDITOR) {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ResetEditor);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ResetEditor);
         }
         if cx.effects().take_transient(TRANSIENT_GENUI_APPLY_STREAM) {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ApplyStream);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ApplyStream);
         }
         if cx.effects().take_transient(TRANSIENT_GENUI_RESET_STREAM) {
-            Self::handle_msg(cx.app, &mut self.st, Msg::ResetStream);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ResetStream);
         }
         if cx.effects().take_transient(TRANSIENT_GENUI_ENABLE_LIVE) {
-            Self::handle_msg(cx.app, &mut self.st, Msg::SetAutoApply(true));
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::SetAutoApply(true));
         }
         if cx
             .effects()
             .take_transient(TRANSIENT_GENUI_AUTO_APPLY_TOGGLED)
         {
-            Self::handle_msg(cx.app, &mut self.st, Msg::AutoApplyToggled);
+            Self::handle_msg(cx.app_mut(), &mut self.st, Msg::AutoApplyToggled);
         }
 
         view(cx, &mut self.st)

@@ -44,11 +44,11 @@ impl View for EmbeddedViewportDemoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let window = cx.window;
+        let window = cx.window_id();
         let theme = cx.theme_snapshot();
 
-        let models = embedded::models(&*cx.app, window)
-            .unwrap_or_else(|| embedded::ensure_models(cx.app, window));
+        let models = embedded::models(cx.app(), window)
+            .unwrap_or_else(|| embedded::ensure_models(cx.app_mut(), window));
 
         let clicks = models.clicks.paint(cx).value_or_default();
         let last_input: Arc<str> = models

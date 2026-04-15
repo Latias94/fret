@@ -9,6 +9,7 @@ Related:
 - Migration matrix: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MIGRATION_MATRIX.md`
 - App-facing render gap audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - API workbench framework priority audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
+- AppUi root accessor audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -191,6 +192,16 @@ Related:
     `fret_imui::imui_in(cx, |ui| {`, while `chart_declarative_demo` and `node_graph_demo` keep
     their advanced direct-leaf ownership but no longer spell raw `cx.elements()` at the `AppUi`
     root just to enter the surface.
+  - the post-adapter follow-on is now also landed and explicitly classified:
+    selected `AppUi` roots (`embedded_viewport_demo`, `async_playground_demo`,
+    `markdown_demo`, `postprocess_theme_demo`, `genui_demo`, and
+    `hello_world_compare_demo`) now use explicit `AppUi::{app, app_mut, window_id}` accessors
+    instead of `cx.app` / `cx.window` through the `Deref` bridge when they only need host/window
+    access, and `apps/fret-examples/src/lib.rs` locks that batch with a source-policy gate.
+  - the new 2026-04-15 root-accessor audit also records the current boundary clearly:
+    this cleanup removes real compatibility syntax debt, but it still does **not** make direct
+    `AppUi` `Deref` deletion correct yet because the remaining pressure is now concentrated in
+    intentionally advanced/raw surfaces rather than one uniform default-lane mistake.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

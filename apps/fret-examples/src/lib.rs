@@ -4405,6 +4405,233 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn selected_app_ui_roots_prefer_explicit_render_context_accessors_over_deref() {
+        let embedded_render = source_slice(
+            EMBEDDED_VIEWPORT_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn embedded_viewport_page<'a, Cx, C>(",
+        );
+        let embedded_render = embedded_render.split_whitespace().collect::<String>();
+        assert!(
+            embedded_render.contains(
+                &"let window = cx.window_id();"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            embedded_render.contains(
+                &"embedded::models(cx.app(), window)"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            embedded_render.contains(
+                &"embedded::ensure_models(cx.app_mut(), window)"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !embedded_render.contains(
+                &"let window = cx.window;"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !embedded_render.contains(
+                &"embedded::models(&*cx.app, window)"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !embedded_render.contains(
+                &"embedded::ensure_models(cx.app, window)"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        let async_render = source_slice(
+            ASYNC_PLAYGROUND_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn header_bar(",
+        );
+        let async_render = async_render.split_whitespace().collect::<String>();
+        assert!(
+            async_render.contains(
+                &"apply_theme(cx.app_mut(), dark);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            async_render.contains(
+                &"with_query_client(cx.app_mut(), |client, app|"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            async_render.contains(
+                &"with_query_client(cx.app_mut(), |client, _app|"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !async_render.contains(
+                &"apply_theme(cx.app, dark);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !async_render.contains(
+                &"with_query_client(cx.app, |client, app|"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !async_render.contains(
+                &"with_query_client(cx.app, |client, _app|"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        let markdown_render = source_slice(
+            MARKDOWN_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn checkerboard_rgba8(",
+        );
+        let markdown_render = markdown_render.split_whitespace().collect::<String>();
+        assert!(
+            markdown_render.contains(
+                &"with_query_client(fret::app::RenderContextAccess::app_mut(cx), |client, _app| {"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !markdown_render.contains(
+                &"with_query_client(cx.app, |client, _app| {"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        let postprocess_render = source_slice(
+            POSTPROCESS_THEME_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn srgb(",
+        );
+        let postprocess_render = postprocess_render.split_whitespace().collect::<String>();
+        assert!(
+            postprocess_render.contains(
+                &"cx.app().global::<DemoEffect>()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !postprocess_render.contains(
+                &"cx.app.global::<DemoEffect>()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        let genui_render = source_slice(
+            GENUI_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElements {",
+        );
+        let genui_render = genui_render.split_whitespace().collect::<String>();
+        assert!(
+            genui_render.contains(
+                &"Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ClearActions);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            genui_render.contains(
+                &"Self::handle_msg(cx.app_mut(), &mut self.st, Msg::AutoApplyToggled);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !genui_render.contains(
+                &"Self::handle_msg(cx.app, &mut self.st, Msg::ClearActions);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !genui_render.contains(
+                &"Self::handle_msg(cx.app, &mut self.st, Msg::AutoApplyToggled);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        let runtime_sample_fn = source_slice(
+            HELLO_WORLD_COMPARE_DEMO,
+            "fn update_runtime_frame_sample_state(cx: &mut AppUi<'_, '_>) {",
+            "fn capture_runtime_frame_sample_json(",
+        );
+        let runtime_sample_fn = runtime_sample_fn.split_whitespace().collect::<String>();
+        assert!(
+            runtime_sample_fn.contains(
+                &"let window = cx.window_id();"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            runtime_sample_fn.contains(
+                &"state.last_frame_id = cx.app().frame_id().0;"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            runtime_sample_fn.contains(
+                &"capture_element_runtime_frame_sample(cx.app_mut(),"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !runtime_sample_fn.contains(
+                &"let window = cx.window;"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !runtime_sample_fn.contains(
+                &"state.last_frame_id = cx.app.frame_id().0;"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !runtime_sample_fn.contains(
+                &"capture_element_runtime_frame_sample(cx.app, window);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+    }
+
+    #[test]
     fn table_examples_prefer_local_state_menu_bridges_over_clone_model() {
         assert!(TABLE_DEMO.contains("table_state: LocalState<TableState>,"));
         assert!(

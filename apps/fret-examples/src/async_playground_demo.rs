@@ -282,23 +282,24 @@ impl View for AsyncPlaygroundView {
 
         if self.applied_dark != dark {
             self.applied_dark = dark;
-            apply_theme(cx.app, dark);
+            apply_theme(cx.app_mut(), dark);
         }
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED) {
             let key = query_key_for_selected(selected, &query_inputs);
-            let _ = with_query_client(cx.app, |client, app| client.invalidate(app, key));
+            let _ = with_query_client(cx.app_mut(), |client, app| client.invalidate(app, key));
         }
 
         if cx.effects().take_transient(TRANSIENT_CANCEL_SELECTED) {
             let key = query_key_for_selected(selected, &query_inputs);
-            let _ = with_query_client(cx.app, |client, app| client.cancel_inflight(app, key));
+            let _ = with_query_client(cx.app_mut(), |client, app| client.cancel_inflight(app, key));
         }
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let ns = namespace_input.trim();
             if let Some(ns) = map_namespace(ns) {
-                let _ = with_query_client(cx.app, |client, _app| client.invalidate_namespace(ns));
+                let _ =
+                    with_query_client(cx.app_mut(), |client, _app| client.invalidate_namespace(ns));
             }
         }
 

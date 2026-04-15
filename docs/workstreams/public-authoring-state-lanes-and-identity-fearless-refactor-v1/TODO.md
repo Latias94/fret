@@ -11,6 +11,7 @@ Companion docs:
 - `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md`
+- `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -212,6 +213,13 @@ Companion docs:
     `fret_node::ui::declarative::node_graph_surface_in`,
     and `NodeGraphSurfaceBinding::observe_in(...)` are now landed and first-party proof callsites
     are migrated onto that lane.
+  - [x] shrink the remaining selected `AppUi` root bridge-syntax dependence after that adapter
+    batch before reopening direct `Deref` removal:
+    `embedded_viewport_demo`, `async_playground_demo`, `markdown_demo`,
+    `postprocess_theme_demo`, `genui_demo`, and `hello_world_compare_demo` now use explicit
+    `AppUi::{app, app_mut, window_id}` accessors instead of `cx.app` / `cx.window` bridge syntax
+    at the root render surface, and `apps/fret-examples/src/lib.rs` now locks that batch with
+    `selected_app_ui_roots_prefer_explicit_render_context_accessors_over_deref`.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

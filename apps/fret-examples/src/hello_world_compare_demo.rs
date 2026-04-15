@@ -263,14 +263,14 @@ fn update_runtime_frame_sample_state(cx: &mut AppUi<'_, '_>) {
     if !runtime_sampling_enabled() {
         return;
     }
-    let window = cx.window;
+    let window = cx.window_id();
     let mut state = runtime_frame_sample_state()
         .lock()
         .unwrap_or_else(|err| err.into_inner());
     state.render_count = state.render_count.saturating_add(1);
-    state.last_frame_id = cx.app.frame_id().0;
+    state.last_frame_id = cx.app().frame_id().0;
     state.last_render_since_launch_ms = current_since_launch_ms();
-    state.element_runtime = capture_element_runtime_frame_sample(cx.app, window);
+    state.element_runtime = capture_element_runtime_frame_sample(cx.app_mut(), window);
 }
 
 fn capture_runtime_frame_sample_json(

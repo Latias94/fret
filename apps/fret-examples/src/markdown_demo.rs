@@ -339,9 +339,12 @@ $$
         let pending_anchor_state = cx.state().local_init(|| None::<Arc<str>>);
 
         if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES) {
-            let _ = with_query_client(cx.app, |client, _app| {
-                client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
-            });
+            let _ = with_query_client(
+                fret::app::RenderContextAccess::app_mut(cx),
+                |client, _app| {
+                    client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
+                },
+            );
         }
 
         cx.actions()

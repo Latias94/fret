@@ -205,7 +205,7 @@ impl View for ThemePostprocessView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
+        let Some(effect) = cx.app().global::<DemoEffect>().map(|v| v.0) else {
             return vec![
                 shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx),
             ]
