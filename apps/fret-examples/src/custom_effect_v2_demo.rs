@@ -712,7 +712,7 @@ fn inspector(
     rim_strength: f32,
     blur_radius_px: f32,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme_snapshot();
 
     let enabled_model = st.enabled.clone_model();
     let non_filterable_model = st.use_non_filterable_input.clone_model();

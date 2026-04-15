@@ -709,7 +709,7 @@ fn inspector(
     grain_strength: f32,
     grain_scale: f32,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme_snapshot();
 
     let enabled_model = st.enabled.clone_model();
     let blur_radius_state = st.blur_radius_px.clone();

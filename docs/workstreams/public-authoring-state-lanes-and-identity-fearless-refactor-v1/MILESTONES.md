@@ -129,6 +129,12 @@ Related:
     `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` at their root render
     surfaces, and `apps/fret-examples/src/lib.rs` source-policy gates now forbid
     `Theme::global(&*cx.app).snapshot()` on both proofs.
+  - selected advanced/runtime demos now also stop teaching direct app/theme global reads when the
+    code path is only ordinary chrome or inspector theme token access:
+    `embedded_viewport_demo`, `custom_effect_v1_demo`, `custom_effect_v2_demo`,
+    `markdown_demo`, and `genui_demo` use `cx.theme_snapshot()` on those ordinary surfaces, while
+    renderer/theme-bridge proofs such as `postprocess_theme_demo` and `liquid_glass_demo` stay on
+    their explicit advanced lane instead of being folded into the default cleanup batch.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

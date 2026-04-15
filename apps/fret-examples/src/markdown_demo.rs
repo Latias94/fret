@@ -427,7 +427,7 @@ $$
         let demo_svg_bytes = self.st.demo_svg_bytes.clone();
 
         components.image = Some(Arc::new(move |cx, info| {
-            let theme = Theme::global(&*cx.app).snapshot();
+            let theme = cx.theme_snapshot();
             let padding_md = theme.metric_token("metric.padding.md");
 
             let mut size = LayoutStyle::default();

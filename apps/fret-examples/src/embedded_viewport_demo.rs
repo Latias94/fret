@@ -45,7 +45,7 @@ impl View for EmbeddedViewportDemoView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let window = cx.window;
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let models = embedded::models(&*cx.app, window)
             .unwrap_or_else(|| embedded::ensure_models(cx.app, window));

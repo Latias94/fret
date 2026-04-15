@@ -139,6 +139,14 @@ Companion docs:
     surfaces, and `apps/fret-examples/src/lib.rs` source-policy tests forbid
     `Theme::global(&*cx.app).snapshot()` from drifting back into either proof without widening
     `fret::app::prelude::*`.
+  - [x] keep selected advanced/runtime ordinary chrome reads on context theme helpers when the
+    surface is not actually proving renderer/theme-bridge ownership:
+    `embedded_viewport_demo`, `custom_effect_v1_demo`, `custom_effect_v2_demo`,
+    `markdown_demo`, and `genui_demo` now use `cx.theme_snapshot()` for their ordinary
+    inspector/chrome/image-placeholder theme token reads, and
+    `apps/fret-examples/src/lib.rs` source-policy tests lock that choice without pretending
+    `postprocess_theme_demo` or `liquid_glass_demo` should leave their explicit theme-bridge
+    lane.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
