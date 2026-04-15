@@ -88,12 +88,8 @@ impl MutationToastFeedbackLocals {
     fn new(cx: &mut AppUi<'_, '_>) -> Self {
         Self {
             name: cx.state().local_init(|| "Create issue".to_string()),
-            method: cx
-                .state()
-                .local_init(|| Some(Arc::<str>::from("POST"))),
-            endpoint: cx
-                .state()
-                .local_init(|| "{{base_url}}/issues".to_string()),
+            method: cx.state().local_init(|| Some(Arc::<str>::from("POST"))),
+            endpoint: cx.state().local_init(|| "{{base_url}}/issues".to_string()),
             projection_note: cx
                 .state()
                 .local_init(|| "Submit to save the current API request preset.".to_string()),
@@ -121,14 +117,12 @@ impl View for MutationToastFeedbackBasicsView {
         bind_actions(cx, &locals, &handle, self.window);
 
         let state = handle.read_layout(cx);
-        let _ = cx.data().update_after_mutation_completion(
-            EFFECT_APPLY_PROJECTION,
-            &handle,
-            {
+        let _ = cx
+            .data()
+            .update_after_mutation_completion(EFFECT_APPLY_PROJECTION, &handle, {
                 let locals = locals.clone();
                 move |models, state| apply_save_projection(models, &locals, state)
-            },
-        );
+            });
         emit_save_feedback_toasts(cx, self.window, &handle, &state);
 
         let method_label = locals
@@ -343,10 +337,10 @@ fn submit_preset(
 ) -> bool {
     let draft = build_draft(models, locals);
     let mut handled = false;
-    handled = locals
-        .projection_note
-        .set_in(models, "Submitting the current request preset...".to_string())
-        || handled;
+    handled = locals.projection_note.set_in(
+        models,
+        "Submitting the current request preset...".to_string(),
+    ) || handled;
     handled = handle.submit(models, window, draft) || handled;
     handled
 }
@@ -429,7 +423,11 @@ fn emit_save_feedback_toasts(
 ) {
     // Keep feedback on the host-owned Sonner bridge so the mutation handle stays the
     // authoritative submit owner and the toast remains a replaceable projection.
-    if state.is_success() && cx.data().take_mutation_success(EFFECT_SUCCESS_TOAST, handle) {
+    if state.is_success()
+        && cx
+            .data()
+            .take_mutation_success(EFFECT_SUCCESS_TOAST, handle)
+    {
         let Some(saved) = state.data.as_ref() else {
             return;
         };
@@ -447,7 +445,11 @@ fn emit_save_feedback_toasts(
         return;
     }
 
-    if state.is_error() && cx.data().take_mutation_completion(EFFECT_ERROR_TOAST, handle) {
+    if state.is_error()
+        && cx
+            .data()
+            .take_mutation_completion(EFFECT_ERROR_TOAST, handle)
+    {
         let description = state
             .error
             .as_ref()
@@ -509,7 +511,10 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-mutation-toast-feedback-basics")
         .window("cookbook-mutation-toast-feedback-basics", (900.0, 640.0))
         .config_files(false)
-        .setup((install_mutation_runtime, fret_cookbook::install_cookbook_defaults))
+        .setup((
+            install_mutation_runtime,
+            fret_cookbook::install_cookbook_defaults,
+        ))
         .view::<MutationToastFeedbackBasicsView>()?
         .run()
         .map_err(anyhow::Error::from)
