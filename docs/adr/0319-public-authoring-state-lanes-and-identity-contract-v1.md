@@ -93,9 +93,17 @@ forcing ordinary builder/helper APIs behind `cx.elements()`.
 
 ### D1.2 — Extracted helper surfaces should converge on the same narrowed render-authoring lane
 
-Extracted child-builder helpers on the default app surface should ultimately consume the same
-default render-authoring lane as `AppUi`, even if the current implementation still represents
-`UiCx` as `ElementContext<App>`.
+Extracted child-builder helpers on the default app surface should converge on the same narrowed
+render-authoring lane as `AppUi`.
+
+During the current migration window:
+
+- the default teaching surface for new helper signatures is
+  `fret::app::RenderContextAccess<'a, App>`,
+- grouped app-facing helper namespaces such as `UiCxActionsExt` / `UiCxDataExt` may continue to
+  power that lane,
+- and `UiCx` should be treated only as the compatibility raw alias when an older helper still
+  intentionally wants `ElementContext<App>`.
 
 The long-term target is not “`AppUi` is narrow but `UiCx` remains a raw `ElementContext` alias”.
 The long-term target is one explicit app-facing render-authoring lane plus one explicit

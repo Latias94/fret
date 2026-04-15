@@ -124,6 +124,12 @@ next remaining gap is higher-level:
 - and extracted helper functions still use `UiCx`, which is currently a plain
   `ElementContext<App>` alias.
 
+The current closure target for new default-path helper signatures is therefore:
+
+- prefer `fret::app::RenderContextAccess<'a, App>` for ordinary extracted helper functions,
+- keep grouped app helper extensions (`UiCxActionsExt`, `UiCxDataExt`) valid on that lane,
+- and treat `UiCx` only as the compatibility raw alias while migration is still in flight.
+
 A compile audit on 2026-04-02 showed that blindly removing `AppUi`'s `Deref` is not yet the right
 end state:
 

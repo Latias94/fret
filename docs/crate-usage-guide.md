@@ -37,8 +37,10 @@ surface, lock these decisions before adding public API:
   materially shared adapter contract
 - keep reusable docs/examples aligned with the current conversion-surface target:
   app-facing teaching helpers use `Ui` / `UiChild`, pure app-facing page shells should avoid
-  carrying `UiCx` unless they really need runtime/context access, reusable generic helpers should
-  move toward the unified component conversion trait tracked in
+  carrying runtime context unless they really need it, default-path helper signatures should
+  prefer `fret::app::RenderContextAccess<'a, App>` over `UiCx`, and `UiCx` itself should stay a
+  compatibility raw alias when an older helper intentionally still wants `ElementContext<App>`;
+  reusable generic helpers should move toward the unified component conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
   `AnyElement` stays explicit
 - keep shipped resource ownership explicit:
@@ -772,7 +774,7 @@ computations.
 are intentionally staying on the lower-level tracked-read surface.
 
 **Default app invalidation note:** when query invalidation happens inside `AppUi` or extracted
-`UiCx` helpers, prefer `cx.data().invalidate_query(...)` /
+`fret::app::RenderContextAccess<'a, App>` helpers, prefer `cx.data().invalidate_query(...)` /
 `cx.data().invalidate_query_namespace(...)` so grouped app code keeps the redraw shell in one
 place. Keep `fret::query::with_query_client(...)` for pure app/driver code that does not have a
 `cx.data()` surface.
@@ -780,18 +782,21 @@ place. Keep `fret::query::with_query_client(...)` for pure app/driver code that 
 **Advanced app maintenance note:** when app-facing controls or diagnostics need explicit query
 maintenance beyond invalidation, prefer `cx.data().cancel_query(...)` plus
 `cx.data().query_snapshot()` / `cx.data().query_snapshot_entry(...)` instead of reopening raw
-query-client shell code inside `AppUi` or extracted `UiCx` helpers. Keep
+query-client shell code inside `AppUi` or extracted
+`fret::app::RenderContextAccess<'a, App>` helpers. Keep
 `fret::query::with_query_client(...)` for pure app/driver code that does not have a grouped UI
 context.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
 grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
 them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than expecting them from
-`fret::app::prelude::*`. Extracted `UiCx` helpers keep that same grouped surface through
+`fret::app::prelude::*`. Extracted helpers on the default lane should usually be generic over
+`fret::app::RenderContextAccess<'a, App>`; those helpers keep the same grouped surface through
 `UiCxActionsExt` / `UiCxDataExt` (or explicit imports from `fret::app::{UiCxActionsExt,
-UiCxDataExt}` when you are intentionally not using the prelude). Enable `fret-query/ui` only when
-you are working directly with low-level `ElementContext` or generic writer extensions outside the
-app-facing `fret` facades.
+UiCxDataExt}` when you are intentionally not using the prelude). Keep `UiCx` itself only as the
+compatibility raw alias when an older helper intentionally still wants `ElementContext<App>`.
+Enable `fret-query/ui` only when you are working directly with low-level `ElementContext` or
+generic writer extensions outside the app-facing `fret` facades.
 
 ### `fret-mutation`
 
@@ -817,7 +822,8 @@ ordinary `LocalState<T>` or shared models, prefer
 for lower-level once-only control flow that does not itself write app-owned state. Do not invent
 request-local sequence counters for same-input retries. Prefer
 `cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
-mutation-to-query handoff on `AppUi` / extracted `UiCx`. Keep
+mutation-to-query handoff on `AppUi` / extracted
+`fret::app::RenderContextAccess<'a, App>` helpers. Keep
 `cx.data().invalidate_query_namespace(...)` for direct invalidation paths that are not driven by a
 mutation completion. When app code needs explicit submit nouns, import them from
 `fret::mutation::{MutationPolicy, MutationState, ...}` instead of

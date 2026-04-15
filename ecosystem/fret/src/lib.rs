@@ -315,7 +315,12 @@ pub type AppUi<'cx, 'a, H = crate::app::App> = view::AppUi<'cx, 'a, H>;
 /// Canonical app-facing render return alias for the default authoring surface.
 pub type Ui = fret_ui::element::Elements;
 
-/// App-facing helper context alias for extracted child-builder functions on the default surface.
+/// Compatibility raw app element context alias for extracted helper functions.
+///
+/// Prefer generic `fret::app::RenderContextAccess<'a, App>` in new default-lane helper
+/// signatures so ordinary app-facing render sugar stays separate from the raw
+/// `ElementContext<App>` lane. Keep `UiCx` only during the migration window when an older helper
+/// intentionally still wants the raw element-context shape.
 pub type UiCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
 
 /// Canonical component-facing context alias for reusable component authoring.

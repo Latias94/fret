@@ -10,9 +10,14 @@ fn crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces() {
     assert!(CRATE_USAGE_GUIDE.contains("`cx.data().cancel_query(...)`"));
     assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query_snapshot_entry(...)`"));
     assert!(CRATE_USAGE_GUIDE.contains("`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`"));
-    assert!(CRATE_USAGE_GUIDE.contains("Extracted `UiCx` helpers keep that same grouped"));
+    assert!(
+        CRATE_USAGE_GUIDE
+            .contains("Extracted helpers on the default lane should usually be generic over")
+    );
+    assert!(CRATE_USAGE_GUIDE.contains("`fret::app::RenderContextAccess<'a, App>`"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxDataExt`"));
+    assert!(CRATE_USAGE_GUIDE.contains("compatibility raw alias"));
     assert!(
         CRATE_USAGE_GUIDE
             .contains("Keep `fret::query::with_query_client(...)` for pure app/driver code")

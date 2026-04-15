@@ -13,6 +13,7 @@ Companion docs:
 - `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md`
 - `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - `APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
+- `EXTRACTED_HELPER_RENDER_GUIDANCE_AUDIT_2026-04-16.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -42,9 +43,14 @@ Companion docs:
 - [ ] Freeze the default lane wording:
   - [ ] `LocalState<T>` is the only blessed first-contact local-state story,
   - [ ] keyed identity is the only taught dynamic-list/subtree rule.
-  - [ ] freeze the render-authoring wording for `AppUi` / extracted helper surfaces so the repo
+  - [x] freeze the render-authoring wording for `AppUi` / extracted helper surfaces so the repo
     can distinguish ordinary app-facing render sugar from the raw component/internal
     `ElementContext` lane.
+    - frozen posture:
+      - `AppUi` remains the root default lane,
+      - extracted helper signatures on the default lane prefer
+        `fret::app::RenderContextAccess<'a, App>`,
+      - `UiCx` is a compatibility raw alias rather than the taught default.
   - [ ] freeze the Todo-surfaced render-gap classification from
     `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`:
     - [ ] keep-raw escape hatches,

@@ -30,6 +30,10 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     assert!(VIEW_RS.contains(
         "impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {"
     ));
+    assert!(FRET_LIB_RS.contains("Compatibility raw app element context alias"));
+    assert!(FRET_LIB_RS.contains(
+        "Prefer generic `fret::app::RenderContextAccess<'a, App>` in new default-lane helper"
+    ));
 }
 
 #[test]
