@@ -16,6 +16,7 @@ Related:
 - Cookbook theme context owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
 - Model store render read owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
 - IMUI immediate LocalState bridge owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
+- App/driver raw model owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -262,6 +263,13 @@ Related:
     `LocalState::layout_value_in(ui.cx_mut())`, source-policy tests lock that bridge lane, and
     `push_showcase_event(...)` stays on raw `app.models()` as the explicit app-owned helper seam
     instead of getting flattened into the closure-local UI owner.
+  - the remaining pure app/driver-loop raw `ModelStore` reads are now frozen as an intentional
+    owner class instead of a vague grep tail:
+    embedded viewport recorders, external import frame recorders, workspace/utility command
+    handlers, and `plot_stress_demo` driver helpers now have dedicated source-policy gates that
+    keep raw `app.models()` explicit, while `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
+    records `components_gallery` as the next separate retained/component follow-on rather than
+    part of the same owner bucket.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

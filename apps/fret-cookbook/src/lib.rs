@@ -1545,4 +1545,25 @@ mod authoring_surface_policy_tests {
         utility_window_example_uses_ui_single_for_single_surface_shells();
         retained_canvas_helpers_keep_raw_landing_seams();
     }
+
+    #[test]
+    fn embedded_viewport_basics_keeps_driver_owned_raw_model_store_reads() {
+        let normalized = EMBEDDED_VIEWPORT_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "fn record_embedded_viewport(",
+            "embedded::models(app, window)",
+            "app.models().read(&m.clicks, |v| *v).ok()",
+            "diag_models(app, window)",
+            "app.models().read(&m.uv_x, |v| *v).ok()?",
+            "app.models().read(&m.uv_y, |v| *v).ok()?",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "embedded viewport cookbook proof should keep the driver-owned raw read: {marker}"
+            );
+        }
+    }
 }

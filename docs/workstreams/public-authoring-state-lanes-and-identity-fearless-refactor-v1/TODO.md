@@ -18,6 +18,7 @@ Companion docs:
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
 - `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
 - `IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
+- `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -280,6 +281,13 @@ Companion docs:
     review/tab/context state with `layout_value_in(ui.cx_mut())`, `push_showcase_event(...)`
     keeps raw `app.models()` as the app-owned helper seam, and
     `IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md` records the split.
+  - [x] freeze the remaining pure app/driver-loop raw `ModelStore` reads so future cleanup does
+    not misclassify them as render-lane debt:
+    embedded viewport recorders, external import `record_engine_frame(...)` loops, workspace/utility
+    command handlers, and `plot_stress_demo` driver helpers now have dedicated source-policy gates,
+    cookbook `embedded_viewport_basics` keeps the same explicit raw owner, and
+    `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md` records that `components_gallery` is a
+    separate retained/component follow-on rather than part of this owner class.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

@@ -412,6 +412,7 @@ mod authoring_surface_policy_tests {
     const LIQUID_GLASS_DEMO: &str = include_str!("liquid_glass_demo.rs");
     const MARKDOWN_DEMO: &str = include_str!("markdown_demo.rs");
     const NODE_GRAPH_DEMO: &str = include_str!("node_graph_demo.rs");
+    const PLOT_STRESS_DEMO: &str = include_str!("plot_stress_demo.rs");
     const POSTPROCESS_THEME_DEMO: &str = include_str!("postprocess_theme_demo.rs");
     const QUERY_ASYNC_TOKIO_DEMO: &str = include_str!("query_async_tokio_demo.rs");
     const QUERY_DEMO: &str = include_str!("query_demo.rs");
@@ -778,6 +779,28 @@ mod authoring_surface_policy_tests {
             .map(|offset| start + offset)
             .unwrap_or_else(|| panic!("missing end marker: {end_marker}"));
         &src[start..end]
+    }
+
+    fn assert_source_slice_keeps_raw_driver_owner(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "missing raw driver-owner marker: {marker}"
+            );
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "unexpected non-driver marker present: {marker}"
+            );
+        }
     }
 
     #[test]
@@ -4811,6 +4834,111 @@ mod authoring_surface_policy_tests {
                 "selected_tab.value_in(ui.cx_mut().app.models())",
                 "context_toggle.value_in(ui.cx_mut().app.models())",
             ],
+        );
+    }
+
+    #[test]
+    fn driver_owned_example_loops_keep_raw_model_store_reads() {
+        let embedded_record = source_slice(
+            EMBEDDED_VIEWPORT_DEMO,
+            "fn record_embedded_viewport(",
+            "pub fn run() -> anyhow::Result<()> {",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            embedded_record,
+            &[
+                "embedded::models(app, window)",
+                "app.models().read(&m.clicks, |v| *v).ok()",
+            ],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let texture_record = source_slice(
+            EXTERNAL_TEXTURE_IMPORTS_DEMO,
+            "fn record_engine_frame(",
+            "pub fn run() -> anyhow::Result<()> {",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            texture_record,
+            &["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let texture_web_record = source_slice(
+            EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO,
+            "fn record_engine_frame(",
+            "fn handle_event(",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            texture_web_record,
+            &["let show = app.models().read(&state.show, |v| *v).unwrap_or(true);"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let video_avf_record = source_slice(
+            EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
+            "fn record_engine_frame(",
+            "pub fn run() -> anyhow::Result<()> {",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            video_avf_record,
+            &["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let video_mf_record = source_slice(
+            EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
+            "fn record_engine_frame(",
+            "pub fn run() -> anyhow::Result<()> {",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            video_mf_record,
+            &["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let workspace_command = source_slice(
+            WORKSPACE_SHELL_DEMO,
+            "fn handle_command(",
+            "fn handle_event(",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            workspace_command,
+            &["let prompt = app.models().get_cloned(&state.dirty_close_prompt).flatten();"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let utility_command = source_slice(
+            LAUNCHER_UTILITY_WINDOW_DEMO,
+            "fn on_command(",
+            "fn on_event(",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            utility_command,
+            &["let next = !st.always_on_top.value_in_or(app.models(), false);"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let plot_animate = source_slice(
+            PLOT_STRESS_DEMO,
+            "fn maybe_animate_bounds(",
+            "fn gpu_ready(",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            plot_animate,
+            &["let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);"],
+            &["selector_model_layout(", "layout_value_in("],
+        );
+
+        let plot_render = source_slice(
+            PLOT_STRESS_DEMO,
+            "fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStressWindowState>) {",
+            "fn window_create_spec(",
+        );
+        assert_source_slice_keeps_raw_driver_owner(
+            plot_render,
+            &["let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);"],
+            &["selector_model_layout(", "layout_value_in("],
         );
     }
 
