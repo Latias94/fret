@@ -166,6 +166,11 @@ Companion docs:
     `cx.theme().snapshot()`, and `apps/fret-examples/src/lib.rs` source-policy tests lock that
     choice so the lane can distinguish real renderer/theme-bridge proofs from ordinary
     `ElementContext` chrome reads.
+  - [x] lock the remaining explicit renderer/theme-bridge lane too:
+    `postprocess_theme_demo` and `liquid_glass_demo` still keep
+    `Theme::global(&*cx.app).snapshot()`, and `apps/fret-examples/src/lib.rs` now has a source
+    policy gate that treats those two files as the intentional remaining host-global theme proofs
+    instead of accidental cleanup leftovers.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

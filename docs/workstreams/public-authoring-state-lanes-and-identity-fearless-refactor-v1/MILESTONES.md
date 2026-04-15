@@ -152,6 +152,11 @@ Related:
     `canvas_datagrid_stress_demo` and `imui_interaction_showcase_demo` use
     `cx.theme().snapshot()`, and source-policy gates now keep those surfaces out of the
     host-global theme lane too.
+  - the only remaining host-global theme reads in `apps/fret-examples/src` are now explicit
+    renderer/theme-bridge proofs, not cleanup leftovers:
+    `postprocess_theme_demo` and `liquid_glass_demo` keep
+    `Theme::global(&*cx.app).snapshot()`, and source-policy gates now lock that fact as the
+    intentional tail of this theme-read closure work.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

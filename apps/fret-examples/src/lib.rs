@@ -1116,6 +1116,13 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn renderer_theme_bridge_proofs_keep_explicit_host_theme_reads() {
+        for src in [POSTPROCESS_THEME_DEMO, LIQUID_GLASS_DEMO] {
+            assert!(src.contains("Theme::global(&*cx.app).snapshot()"));
+        }
+    }
+
+    #[test]
     fn canonical_default_app_examples_stay_local_state_first() {
         for src in [
             HELLO_COUNTER_DEMO,
