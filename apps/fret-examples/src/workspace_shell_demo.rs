@@ -78,6 +78,16 @@ fn fixed_width_fill_height(width: Px) -> LayoutStyle {
     layout
 }
 
+#[derive(Clone)]
+struct WorkspaceShellEditorRailState {
+    active_pane_label: Arc<str>,
+    active_tab_label: Arc<str>,
+    active_tab_count: usize,
+    active_dirty_count: usize,
+    two_row_pinned: bool,
+    prompt_open: bool,
+}
+
 fn workspace_shell_command_button<'a, Cx>(
     cx: &mut Cx,
     test_id: &str,
@@ -123,6 +133,148 @@ where
                 move |cx| vec![cx.text(label.clone())],
             )]
         },
+    )
+}
+
+fn workspace_shell_editor_rail<'a, Cx>(
+    cx: &mut Cx,
+    state: WorkspaceShellEditorRailState,
+) -> fret_ui::element::AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let cx = cx.elements();
+    let background = cx.theme_snapshot().color_token("background");
+    let border = cx.theme_snapshot().color_token("border");
+    let shell_group_test_id: Arc<str> = Arc::from("workspace-shell-editor-rail-group-shell");
+    let selection_group_test_id: Arc<str> =
+        Arc::from("workspace-shell-editor-rail-group-selection");
+    let WorkspaceShellEditorRailState {
+        active_pane_label,
+        active_tab_label,
+        active_tab_count,
+        active_dirty_count,
+        two_row_pinned,
+        prompt_open,
+    } = state;
+    let inspector = InspectorPanel::new(None)
+        .options(InspectorPanelOptions {
+            layout: fill_layout(),
+            title: Some(Arc::from("Editor Rail")),
+            test_id: Some(Arc::from("workspace-shell-editor-rail")),
+            header_test_id: Some(Arc::from("workspace-shell-editor-rail-header")),
+            content_test_id: Some(Arc::from("workspace-shell-editor-rail-content")),
+            ..Default::default()
+        })
+        .into_element_in(
+            cx,
+            move |cx, _panel_cx| {
+                let muted = cx.theme_snapshot().color_token("muted-foreground");
+                vec![
+                    fret_ui_kit::ui::text("Workspace shell slot + editor-owned inner panel")
+                        .text_sm()
+                        .text_color(fret_ui_kit::ColorRef::Color(muted))
+                        .into_element(cx),
+                ]
+            },
+            move |cx, _panel_cx| {
+                vec![
+                    PropertyGroup::new("Selection")
+                        .options(PropertyGroupOptions {
+                            collapsible: false,
+                            test_id: Some(selection_group_test_id),
+                            ..Default::default()
+                        })
+                        .into_element_in(
+                            cx,
+                            |_cx| None,
+                            move |cx| {
+                                vec![PropertyGrid::new().into_element_in(cx, move |cx, row_cx| {
+                                    vec![
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Active pane"),
+                                            |cx| cx.text(active_pane_label.clone()),
+                                        ),
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Active tab"),
+                                            |cx| cx.text(active_tab_label.clone()),
+                                        ),
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Tabs in pane"),
+                                            |cx| cx.text(format!("{active_tab_count}")),
+                                        ),
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Dirty tabs"),
+                                            |cx| cx.text(format!("{active_dirty_count}")),
+                                        ),
+                                    ]
+                                })]
+                            },
+                        ),
+                    PropertyGroup::new("Shell")
+                        .options(PropertyGroupOptions {
+                            collapsible: false,
+                            test_id: Some(shell_group_test_id),
+                            ..Default::default()
+                        })
+                        .into_element_in(
+                            cx,
+                            |_cx| None,
+                            move |cx| {
+                                vec![PropertyGrid::new().into_element_in(cx, move |cx, row_cx| {
+                                    vec![
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Left slot"),
+                                            |cx| cx.text("File tree rail"),
+                                        ),
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Right slot"),
+                                            |cx| cx.text("Editor rail"),
+                                        ),
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Two-row tabs"),
+                                            |cx| {
+                                                cx.text(if two_row_pinned {
+                                                    "Pinned"
+                                                } else {
+                                                    "Auto"
+                                                })
+                                            },
+                                        ),
+                                        row_cx.row(
+                                            cx,
+                                            |cx| cx.text("Dirty close prompt"),
+                                            |cx| {
+                                                cx.text(if prompt_open { "Open" } else { "Closed" })
+                                            },
+                                        ),
+                                    ]
+                                })]
+                            },
+                        ),
+                ]
+            },
+        );
+
+    cx.container(
+        ContainerProps {
+            layout: fixed_width_fill_height(Px(320.0)),
+            background: Some(background),
+            border: Edges {
+                left: Px(1.0),
+                ..Default::default()
+            },
+            border_color: Some(border),
+            ..Default::default()
+        },
+        move |_cx| vec![inspector],
     )
 }
 
@@ -565,7 +717,6 @@ impl WorkspaceShellDemoDriver {
                             )
                         });
                     let theme_for_center = theme.clone();
-                    let theme_for_right = theme.clone();
                     let window_layout_for_center = window_layout.clone();
                     let center = cx.keyed("workspace_shell.center", move |cx| {
                         let mut render_pane =
@@ -895,171 +1046,16 @@ impl WorkspaceShellDemoDriver {
                         )
                     });
                     let right = cx.keyed("workspace_shell.right", move |cx| {
-                        let theme_for_right_header = theme_for_right.clone();
-                        let theme_for_right_container = theme_for_right.clone();
-                        let shell_group_test_id: Arc<str> =
-                            Arc::from("workspace-shell-editor-rail-group-shell");
-                        let selection_group_test_id: Arc<str> =
-                            Arc::from("workspace-shell-editor-rail-group-selection");
-                        let inspector = InspectorPanel::new(None)
-                            .options(InspectorPanelOptions {
-                                layout: fill_layout(),
-                                title: Some(Arc::from("Editor Rail")),
-                                test_id: Some(Arc::from("workspace-shell-editor-rail")),
-                                header_test_id: Some(Arc::from(
-                                    "workspace-shell-editor-rail-header",
-                                )),
-                                content_test_id: Some(Arc::from(
-                                    "workspace-shell-editor-rail-content",
-                                )),
-                                ..Default::default()
-                            })
-                            .into_element(
-                                cx,
-                                move |cx, _panel_cx| {
-                                    let muted =
-                                        theme_for_right_header.color_token("muted-foreground");
-                                    vec![fret_ui_kit::ui::text(
-                                        "Workspace shell slot + editor-owned inner panel",
-                                    )
-                                    .text_sm()
-                                    .text_color(fret_ui_kit::ColorRef::Color(muted))
-                                    .into_element(cx)]
-                                },
-                                move |cx, _panel_cx| {
-                                    vec![
-                                        PropertyGroup::new("Selection")
-                                            .options(PropertyGroupOptions {
-                                                collapsible: false,
-                                                test_id: Some(selection_group_test_id.clone()),
-                                                ..Default::default()
-                                            })
-                                            .into_element(
-                                                cx,
-                                                |_cx| None,
-                                                move |cx| {
-                                                    vec![PropertyGrid::new().into_element(
-                                                        cx,
-                                                        move |cx, row_cx| {
-                                                            vec![
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| cx.text("Active pane"),
-                                                                    |cx| {
-                                                                        cx.text(
-                                                                            active_pane_label
-                                                                                .clone(),
-                                                                        )
-                                                                    },
-                                                                ),
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| cx.text("Active tab"),
-                                                                    |cx| {
-                                                                        cx.text(
-                                                                            active_tab_label
-                                                                                .clone(),
-                                                                        )
-                                                                    },
-                                                                ),
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| cx.text("Tabs in pane"),
-                                                                    |cx| {
-                                                                        cx.text(format!(
-                                                                            "{active_tab_count}"
-                                                                        ))
-                                                                    },
-                                                                ),
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| cx.text("Dirty tabs"),
-                                                                    |cx| {
-                                                                        cx.text(format!(
-                                                                            "{active_dirty_count}"
-                                                                        ))
-                                                                    },
-                                                                ),
-                                                            ]
-                                                        },
-                                                    )]
-                                                },
-                                            ),
-                                        PropertyGroup::new("Shell")
-                                            .options(PropertyGroupOptions {
-                                                collapsible: false,
-                                                test_id: Some(shell_group_test_id.clone()),
-                                                ..Default::default()
-                                            })
-                                            .into_element(
-                                                cx,
-                                                |_cx| None,
-                                                move |cx| {
-                                                    vec![PropertyGrid::new().into_element(
-                                                        cx,
-                                                        move |cx, row_cx| {
-                                                            vec![
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| cx.text("Left slot"),
-                                                                    |cx| cx.text("File tree rail"),
-                                                                ),
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| cx.text("Right slot"),
-                                                                    |cx| cx.text("Editor rail"),
-                                                                ),
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| {
-                                                                        cx.text("Two-row tabs")
-                                                                    },
-                                                                    |cx| {
-                                                                        cx.text(if two_row_pinned {
-                                                                            "Pinned"
-                                                                        } else {
-                                                                            "Auto"
-                                                                        })
-                                                                    },
-                                                                ),
-                                                                row_cx.row(
-                                                                    cx,
-                                                                    |cx| {
-                                                                        cx.text("Dirty close prompt")
-                                                                    },
-                                                                    |cx| {
-                                                                        cx.text(if prompt_open {
-                                                                            "Open"
-                                                                        } else {
-                                                                            "Closed"
-                                                                        })
-                                                                    },
-                                                                ),
-                                                            ]
-                                                        },
-                                                    )]
-                                                },
-                                            ),
-                                    ]
-                                },
-                            );
-
-                        cx.container(
-                            ContainerProps {
-                                layout: fixed_width_fill_height(Px(320.0)),
-                                background: Some(
-                                    theme_for_right_container.color_token("background"),
-                                ),
-                                border: Edges {
-                                    left: Px(1.0),
-                                    ..Default::default()
-                                },
-                                border_color: Some(
-                                    theme_for_right_container.color_token("border"),
-                                ),
-                                ..Default::default()
+                        workspace_shell_editor_rail(
+                            cx,
+                            WorkspaceShellEditorRailState {
+                                active_pane_label,
+                                active_tab_label,
+                                active_tab_count,
+                                active_dirty_count,
+                                two_row_pinned,
+                                prompt_open,
                             },
-                            move |_cx| vec![inspector],
                         )
                     });
 

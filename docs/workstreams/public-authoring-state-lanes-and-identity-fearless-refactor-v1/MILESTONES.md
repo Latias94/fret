@@ -94,6 +94,13 @@ Related:
     `into_element_in(...)` capability overloads, a new `fret-ui-editor` source-policy gate locks
     those signatures, and `editor_notes_demo` now mounts its inspector rail through the explicit
     helper lane instead of dropping to `cx.elements()`.
+  - the same capability-first helper story now also holds on the broader workspace-shell product
+    proof:
+    `workspace_shell_demo` extracts `workspace_shell_editor_rail(...)` on
+    `ElementContextAccess<'a, App>`, mounts the right-rail `InspectorPanel` / `PropertyGroup` /
+    `PropertyGrid` tree through `into_element_in(...)`, and keeps
+    `workspace_shell_command_button(...)` as the intentional raw primitive/helper exception
+    instead of mixing that low-level case into the editor-composite lane.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

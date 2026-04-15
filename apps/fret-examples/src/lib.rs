@@ -4283,6 +4283,22 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn workspace_shell_demo_prefers_capability_first_editor_rail_helpers() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WORKSPACE_SHELL_DEMO,
+            &[
+                "fn workspace_shell_editor_rail<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, App>,",
+                "workspace_shell_editor_rail(",
+                "InspectorPanel::new(None)",
+                ".into_element_in(cx,",
+                "PropertyGrid::new().into_element_in(cx,",
+            ],
+            &["fn workspace_shell_editor_rail(cx: &mut fret_ui::ElementContext<'_, App>,"],
+        );
+    }
+
+    #[test]
     fn table_examples_prefer_local_state_menu_bridges_over_clone_model() {
         assert!(TABLE_DEMO.contains("table_state: LocalState<TableState>,"));
         assert!(

@@ -108,6 +108,11 @@ Companion docs:
     extraction still needed a raw editor surface:
     `InspectorPanel`, `PropertyGroup`, and `PropertyGrid` now expose `into_element_in(...)`, and
     `editor_notes_demo` no longer needs `cx.elements()` to mount its shell-owned inspector rail.
+  - [x] prove the same lane on a shell-owned product proof instead of a smaller editor-only demo:
+    `workspace_shell_demo` now extracts `workspace_shell_editor_rail(...)` on
+    `ElementContextAccess<'a, App>`, mounts `InspectorPanel` / `PropertyGroup` / `PropertyGrid`
+    through `into_element_in(...)`, and keeps `workspace_shell_command_button(...)` as the
+    explicit raw primitive exception instead of confusing the two lanes.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
