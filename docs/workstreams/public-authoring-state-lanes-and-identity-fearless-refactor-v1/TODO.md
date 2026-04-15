@@ -12,6 +12,7 @@ Companion docs:
 - `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md`
 - `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
+- `APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -220,6 +221,13 @@ Companion docs:
     `AppUi::{app, app_mut, window_id}` accessors instead of `cx.app` / `cx.window` bridge syntax
     at the root render surface, and `apps/fret-examples/src/lib.rs` now locks that batch with
     `selected_app_ui_roots_prefer_explicit_render_context_accessors_over_deref`.
+  - [x] classify the remaining post-cleanup `Deref` pressure before arguing for any direct
+    `AppUi` `Deref` deletion:
+    `APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md` now records that the selected root
+    batch is effectively closed, `markdown_demo` no longer teaches the trait-UFCS variant at the
+    root, and the remaining grep surface is split across advanced/reference owner surfaces,
+    docking/multi-window proofs, and helper-local raw seams rather than one unfinished default
+    lane.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

@@ -10,6 +10,7 @@ Related:
 - App-facing render gap audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - API workbench framework priority audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - AppUi root accessor audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
+- AppUi Deref pressure classification audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -202,6 +203,11 @@ Related:
     this cleanup removes real compatibility syntax debt, but it still does **not** make direct
     `AppUi` `Deref` deletion correct yet because the remaining pressure is now concentrated in
     intentionally advanced/raw surfaces rather than one uniform default-lane mistake.
+  - a second 2026-04-15 follow-on audit now makes that remaining pressure more precise:
+    the selected root batch is effectively closed, `markdown_demo` no longer teaches the
+    trait-UFCS variant at the root, and the remaining direct `cx.app` / `cx.window` grep surface
+    is now classified across advanced renderer/effect owners, docking/multi-window owners, and
+    helper-local raw seams rather than one more broad `AppUi` root cleanup queue.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

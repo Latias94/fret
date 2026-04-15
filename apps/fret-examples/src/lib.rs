@@ -4512,6 +4512,13 @@ mod authoring_surface_policy_tests {
         let markdown_render = markdown_render.split_whitespace().collect::<String>();
         assert!(
             markdown_render.contains(
+                &"with_query_client(cx.app_mut(), |client, _app| {"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !markdown_render.contains(
                 &"with_query_client(fret::app::RenderContextAccess::app_mut(cx), |client, _app| {"
                     .split_whitespace()
                     .collect::<String>()
