@@ -299,7 +299,7 @@ Default helper rule on this path:
 
 - keep `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui` as the root signature,
 - if a helper body actually needs runtime/context access, prefer a helper generic over
-  `fret::app::RenderContextAccess<'a, App>` on the default lane,
+  `fret::app::AppRenderContext<'a>` on the default lane,
 - keep `UiCx` only as the compatibility raw alias when an older helper intentionally still wants
   `ElementContext<App>`,
 - if a helper is only wrapping already-typed children into page chrome, prefer

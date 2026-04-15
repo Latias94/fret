@@ -14,7 +14,7 @@ fn crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces() {
         CRATE_USAGE_GUIDE
             .contains("Extracted helpers on the default lane should usually be generic over")
     );
-    assert!(CRATE_USAGE_GUIDE.contains("`fret::app::RenderContextAccess<'a, App>`"));
+    assert!(CRATE_USAGE_GUIDE.contains("`fret::app::AppRenderContext<'a>`"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxDataExt`"));
     assert!(CRATE_USAGE_GUIDE.contains("compatibility raw alias"));

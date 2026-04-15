@@ -12,6 +12,7 @@ Related:
 - AppUi root accessor audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - AppUi Deref pressure classification audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - Extracted helper render guidance audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/EXTRACTED_HELPER_RENDER_GUIDANCE_AUDIT_2026-04-16.md`
+- App render context facade audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - UI assets capability adapter audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - Query grouped maintenance surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - Cookbook theme context owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -35,8 +36,9 @@ Related:
   - bridge/internal lane wording is now source-gated in `ecosystem/fret/src/view.rs` and
     `crates/fret-ui/src/declarative/tests/identity.rs`,
   - the `AppUi` / extracted-helper render-authoring wording is now frozen too:
-    new default-path helper signatures prefer `fret::app::RenderContextAccess<'a, App>`, while
-    `UiCx` is treated as the compatibility raw alias rather than the taught default,
+    new default-path helper signatures prefer `fret::app::AppRenderContext<'a>`,
+    `RenderContextAccess<'a, App>` remains the underlying capability, and `UiCx` is treated as
+    the compatibility raw alias rather than the taught default,
   - but the remaining default-lane wording cleanup, the Todo-surfaced render-gap classification,
     and the internal `render_pass_id` naming decision are still open.
 - **M2**: In progress

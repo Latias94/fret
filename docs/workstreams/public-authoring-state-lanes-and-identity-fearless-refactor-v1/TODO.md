@@ -14,6 +14,7 @@ Companion docs:
 - `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - `APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - `EXTRACTED_HELPER_RENDER_GUIDANCE_AUDIT_2026-04-16.md`
+- `APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -49,7 +50,8 @@ Companion docs:
     - frozen posture:
       - `AppUi` remains the root default lane,
       - extracted helper signatures on the default lane prefer
-        `fret::app::RenderContextAccess<'a, App>`,
+        `fret::app::AppRenderContext<'a>`,
+      - `RenderContextAccess<'a, App>` remains the underlying generic capability,
       - `UiCx` is a compatibility raw alias rather than the taught default.
   - [ ] freeze the Todo-surfaced render-gap classification from
     `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`:

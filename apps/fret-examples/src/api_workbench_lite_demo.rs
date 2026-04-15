@@ -559,7 +559,7 @@ fn shell_frame<'a, Cx>(
     command_button: impl UiChild,
 ) -> AnyElement
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
     let base_url = locals.base_url.layout_value(cx);
     let header = shadcn::card(|cx| {
@@ -669,7 +669,7 @@ fn sidebar_frame<'a, Cx>(
     selected_history: Option<u64>,
 ) -> AnyElement
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
     let collection_group = shadcn::SidebarGroup::new([
         shadcn::SidebarGroupLabel::new("Collections").into_element_in(cx),
@@ -738,7 +738,7 @@ where
 
 fn collection_buttons<'a, Cx>(cx: &mut Cx, selected_collection: Option<Arc<str>>) -> Vec<AnyElement>
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
     (0u8..3u8)
         .map(|id| {
@@ -768,7 +768,7 @@ fn history_menu<'a, Cx>(
     selected_history: Option<u64>,
 ) -> AnyElement
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
     if history_state.is_loading() && !history_state.has_data() {
         return ui::v_flex(|cx| {
@@ -840,7 +840,7 @@ where
 
 fn request_panel<'a, Cx>(cx: &mut Cx, locals: &WorkbenchLocals, method: Arc<str>) -> AnyElement
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
     let request_url = locals.url.layout_value(cx);
     let method_select = shadcn::Select::new(&locals.method, &locals.method_open)
@@ -926,7 +926,7 @@ where
 
 fn response_panel<'a, Cx>(cx: &mut Cx, locals: &WorkbenchLocals) -> AnyElement
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
     let response_tabs = shadcn::Tabs::new(&locals.response_tab)
         .content_fill_remaining(true)

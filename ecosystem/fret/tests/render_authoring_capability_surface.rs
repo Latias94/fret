@@ -25,20 +25,25 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     let app_slice = app_module_slice();
     let app_prelude = app_prelude_slice();
 
+    assert!(app_slice.contains("pub use crate::view::{"));
+    assert!(app_slice.contains("AppRenderContext"));
     assert!(app_slice.contains("pub use fret_ui::ElementContextAccess;"));
+    assert!(app_prelude.contains("pub use crate::app::AppRenderContext;"));
     assert!(app_prelude.contains("pub use fret_ui_kit::IntoUiElementInExt as _;"));
+    assert!(
+        VIEW_RS
+            .contains("pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App>")
+    );
     assert!(VIEW_RS.contains(
         "impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {"
     ));
     assert!(FRET_LIB_RS.contains("Compatibility raw app element context alias"));
-    assert!(FRET_LIB_RS.contains(
-        "Prefer generic `fret::app::RenderContextAccess<'a, App>` in new default-lane helper"
-    ));
+    assert!(FRET_LIB_RS.contains("Prefer `fret::app::AppRenderContext<'a>`"));
 }
 
 #[test]
 fn cookbook_scaffold_uses_explicit_context_access_and_late_landing_helpers() {
-    assert!(COOKBOOK_SCAFFOLD.contains("Cx: fret::app::RenderContextAccess<'a, App>"));
+    assert!(COOKBOOK_SCAFFOLD.contains("Cx: AppRenderContext<'a>"));
     assert!(COOKBOOK_SCAFFOLD.contains("let theme = cx.theme_snapshot();"));
     assert!(COOKBOOK_SCAFFOLD.contains(".into_element_in(cx)"));
     assert!(!COOKBOOK_SCAFFOLD.contains("&mut UiCx<'_>"));

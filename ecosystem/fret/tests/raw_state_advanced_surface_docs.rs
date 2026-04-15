@@ -50,9 +50,9 @@ fn default_docs_keep_raw_state_as_an_explicit_advanced_seam() {
 
 #[test]
 fn default_docs_prefer_render_context_access_for_new_helper_signatures() {
-    assert!(AUTHORING_GOLDEN_PATH.contains("fret::app::RenderContextAccess<'a, App>"));
-    assert!(FIRST_HOUR.contains("`fret::app::RenderContextAccess<'a, App>`"));
-    assert!(TODO_APP_GOLDEN_PATH.contains("`fret::app::RenderContextAccess<'a, App>`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("fret::app::AppRenderContext<'a>"));
+    assert!(FIRST_HOUR.contains("`fret::app::AppRenderContext<'a>`"));
+    assert!(TODO_APP_GOLDEN_PATH.contains("`fret::app::AppRenderContext<'a>`"));
     assert!(!FIRST_HOUR.contains("give it `cx: &mut UiCx<'_>`"));
     assert!(!TODO_APP_GOLDEN_PATH.contains("give a helper `&mut UiCx<'_>`"));
 }

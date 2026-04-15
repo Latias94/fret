@@ -317,10 +317,10 @@ pub type Ui = fret_ui::element::Elements;
 
 /// Compatibility raw app element context alias for extracted helper functions.
 ///
-/// Prefer generic `fret::app::RenderContextAccess<'a, App>` in new default-lane helper
-/// signatures so ordinary app-facing render sugar stays separate from the raw
-/// `ElementContext<App>` lane. Keep `UiCx` only during the migration window when an older helper
-/// intentionally still wants the raw element-context shape.
+/// Prefer `fret::app::AppRenderContext<'a>` in new default-lane helper signatures so ordinary
+/// app-facing render sugar stays separate from the raw `ElementContext<App>` lane. Keep `UiCx`
+/// only during the migration window when an older helper intentionally still wants the raw
+/// element-context shape.
 pub type UiCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
 
 /// Canonical component-facing context alias for reusable component authoring.
@@ -430,7 +430,9 @@ pub mod app {
     /// Canonical app-facing view trait on the explicit app lane.
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
-    pub use crate::view::{LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt};
+    pub use crate::view::{
+        AppRenderContext, LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt,
+    };
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
     /// This is the same underlying runtime type as the raw kernel alias exposed on
@@ -446,6 +448,7 @@ pub mod app {
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::FretApp;
         pub use crate::app::App;
+        pub use crate::app::AppRenderContext;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         #[cfg(feature = "state-mutation")]
@@ -3688,7 +3691,7 @@ mod authoring_surface_policy_tests {
     fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains(
-            "pub use crate::view::{LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt};"
+            "AppRenderContext, LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt"
         ));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }

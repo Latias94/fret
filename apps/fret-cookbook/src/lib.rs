@@ -722,7 +722,7 @@ mod authoring_surface_policy_tests {
     fn shared_scaffold_prefers_explicit_app_context_access_for_cookbook_page_shells() {
         assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space};"));
-        assert!(SCAFFOLD.contains("Cx: fret::app::RenderContextAccess<'a, App>"));
+        assert!(SCAFFOLD.contains("Cx: AppRenderContext<'a>"));
         assert!(SCAFFOLD.contains("B: UiChild"));
         assert!(SCAFFOLD.contains("let theme = cx.theme_snapshot();"));
         assert!(SCAFFOLD.contains("ui::single(cx, surface)"));

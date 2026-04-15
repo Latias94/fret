@@ -18,7 +18,7 @@ pub fn centered_page<'a, Cx, B>(
     surface: B,
 ) -> Ui
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
     B: UiChild,
 {
     let theme = cx.theme_snapshot();
@@ -49,7 +49,7 @@ pub fn centered_page_background<'a, Cx, B>(
     surface: B,
 ) -> Ui
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
     B: UiChild,
 {
     centered_page(cx, root_test_id, "background", surface)
@@ -59,7 +59,7 @@ where
 #[track_caller]
 pub fn centered_page_muted<'a, Cx, B>(cx: &mut Cx, root_test_id: &'static str, surface: B) -> Ui
 where
-    Cx: fret::app::RenderContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
     B: UiChild,
 {
     centered_page(cx, root_test_id, "muted", surface)

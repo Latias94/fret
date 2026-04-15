@@ -99,7 +99,8 @@ render-authoring lane as `AppUi`.
 During the current migration window:
 
 - the default teaching surface for new helper signatures is
-  `fret::app::RenderContextAccess<'a, App>`,
+  `fret::app::AppRenderContext<'a>`,
+- `RenderContextAccess<'a, App>` remains the underlying generic capability,
 - grouped app-facing helper namespaces such as `UiCxActionsExt` / `UiCxDataExt` may continue to
   power that lane,
 - and `UiCx` should be treated only as the compatibility raw alias when an older helper still

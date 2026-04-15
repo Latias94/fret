@@ -126,7 +126,8 @@ next remaining gap is higher-level:
 
 The current closure target for new default-path helper signatures is therefore:
 
-- prefer `fret::app::RenderContextAccess<'a, App>` for ordinary extracted helper functions,
+- prefer `fret::app::AppRenderContext<'a>` for ordinary extracted helper functions,
+- keep `RenderContextAccess<'a, App>` as the underlying generic capability,
 - keep grouped app helper extensions (`UiCxActionsExt`, `UiCxDataExt`) valid on that lane,
 - and treat `UiCx` only as the compatibility raw alias while migration is still in flight.
 
