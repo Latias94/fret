@@ -108,4 +108,15 @@ mod surface_policy_tests {
         assert!(!public_surface.contains("AssetReloadEpoch"));
         assert!(!public_surface.contains("bump_asset_reload_epoch"));
     }
+
+    #[test]
+    fn ui_context_asset_helpers_stay_under_optional_ui_module() {
+        let public_surface = public_surface();
+        assert!(!public_surface.contains("pub fn use_rgba8_image_state_in("));
+        assert!(!public_surface.contains("pub fn image_stats_in("));
+        assert!(!public_surface.contains("pub fn svg_stats_in("));
+        assert!(UI_RS.contains("pub fn use_rgba8_image_state_in<'a, H: UiHost + 'a, Cx>("));
+        assert!(UI_RS.contains("pub fn image_stats_in<'a, H: UiHost + 'a, Cx>("));
+        assert!(UI_RS.contains("pub fn svg_stats_in<'a, H: UiHost + 'a, Cx>("));
+    }
 }

@@ -13,6 +13,7 @@ Companion docs:
 - `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md`
 - `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - `APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
+- `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -228,6 +229,12 @@ Companion docs:
     root, and the remaining grep surface is split across advanced/reference owner surfaces,
     docking/multi-window proofs, and helper-local raw seams rather than one unfinished default
     lane.
+  - [x] close the first repeated helper-local asset state/stats seam on the same capability-first
+    authoring lane:
+    `fret-ui-assets::ui` now owns `use_rgba8_image_state_in(...)`, `image_stats_in(...)`, and
+    `svg_stats_in(...)`; `assets_demo`, `markdown_demo`, and cookbook
+    `assets_reload_epoch_basics` now use those adapters instead of spelling `cx.app + cx.window`
+    or `UiAssets::image_stats(&mut *cx.app)` directly just to enter the asset helper surface.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

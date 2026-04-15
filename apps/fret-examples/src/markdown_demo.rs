@@ -18,7 +18,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
-use fret_ui_assets::image_asset_state;
+use fret_ui_assets::ui::use_rgba8_image_state_in;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::{ColorRef, IntoUiElement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
@@ -508,15 +508,13 @@ $$
                                 height,
                                 rgba,
                             } => {
-                                let (_key, image, _status) =
-                                    image_asset_state::use_rgba8_image_state(
-                                        cx.app,
-                                        cx.window,
-                                        *width,
-                                        *height,
-                                        rgba.as_ref(),
-                                        ImageColorSpace::Srgb,
-                                    );
+                                let (_key, image, _status) = use_rgba8_image_state_in(
+                                    cx,
+                                    *width,
+                                    *height,
+                                    rgba.as_ref(),
+                                    ImageColorSpace::Srgb,
+                                );
 
                                 if let Some(image) = image {
                                     let mut props = ImageProps::new(image);
@@ -532,9 +530,8 @@ $$
 
             let inner = match info.src.as_ref() {
                 "fret-demo://checkerboard" => {
-                    let (_key, image, _status) = image_asset_state::use_rgba8_image_state(
-                        cx.app,
-                        cx.window,
+                    let (_key, image, _status) = use_rgba8_image_state_in(
+                        cx,
                         96,
                         96,
                         checker_rgba.as_ref(),

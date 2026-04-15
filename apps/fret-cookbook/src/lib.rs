@@ -1124,6 +1124,46 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn assets_reload_epoch_example_prefers_ui_assets_capability_adapters() {
+        let normalized = ASSETS_RELOAD_EPOCH_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+        assert!(normalized.contains(
+            &"use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _, image_stats_in, svg_stats_in,};"
+                .split_whitespace()
+                .collect::<String>()
+        ));
+        assert!(
+            normalized.contains(
+                &"let images = image_stats_in(cx);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            normalized.contains(
+                &"let svgs = svg_stats_in(cx);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !normalized.contains(
+                &"fret_ui_assets::UiAssets::image_stats(&mut *cx.app);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !normalized.contains(
+                &"fret_ui_assets::UiAssets::svg_stats(&mut *cx.app);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+    }
+
+    #[test]
     fn retained_canvas_helpers_keep_raw_landing_seams() {
         assert_intentional_raw_retained_seam(
             CHART_INTERACTIONS_EXAMPLE,

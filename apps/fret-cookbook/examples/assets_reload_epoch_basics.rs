@@ -7,7 +7,9 @@ use fret::{
     style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
-use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
+use fret_ui_assets::ui::{
+    ImageSourceElementContextExt as _, SvgAssetElementContextExt as _, image_stats_in, svg_stats_in,
+};
 use std::path::PathBuf;
 
 mod act {
@@ -108,8 +110,8 @@ impl View for AssetsReloadEpochBasicsView {
         let svg_file_state = cx.svg_source_state_from_asset_request(&self.svg_request);
         let svg_panel = render_svg_panel(cx, &theme, svg_file_state);
 
-        let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
-        let svgs = fret_ui_assets::UiAssets::svg_stats(&mut *cx.app);
+        let images = image_stats_in(cx);
+        let svgs = svg_stats_in(cx);
         let stats = shadcn::Alert::build(|cx, out| {
             out.push_ui(cx, shadcn::AlertTitle::new("Budgets + cache stats"));
             out.push_ui(

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret::advanced::kernel::core::{ImageColorSpace, SvgId};
 use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
+use fret_ui_assets::ui::{image_stats_in, svg_stats_in, use_rgba8_image_state_in};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space, ui};
@@ -141,14 +142,8 @@ where
     let cx = cx.elements();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
-    let (image_key, image, image_status) = image_asset_state::use_rgba8_image_state(
-        cx.app,
-        cx.window,
-        96,
-        96,
-        checker_rgba.as_slice(),
-        ImageColorSpace::Srgb,
-    );
+    let (image_key, image, image_status) =
+        use_rgba8_image_state_in(cx, 96, 96, checker_rgba.as_slice(), ImageColorSpace::Srgb);
     let image_error = match image_status {
         image_asset_state::ImageLoadingStatus::Error => {
             use fret_ui_assets::image_asset_cache::ImageAssetCacheHostExt as _;
@@ -169,8 +164,8 @@ where
         .copied()
         .unwrap_or_default();
 
-    let image_stats = UiAssets::image_stats(cx.app);
-    let svg_stats = UiAssets::svg_stats(cx.app);
+    let image_stats = image_stats_in(cx);
+    let svg_stats = svg_stats_in(cx);
 
     let header = shadcn::CardHeader::new([
         shadcn::CardTitle::new("UI Assets (Golden Path)").into_element(cx),

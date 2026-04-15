@@ -4639,6 +4639,79 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn asset_helper_entrypoints_prefer_ui_assets_capability_adapters() {
+        let assets_demo = ASSETS_DEMO.split_whitespace().collect::<String>();
+        assert!(assets_demo.contains(
+            &"use fret_ui_assets::ui::{image_stats_in, svg_stats_in, use_rgba8_image_state_in};"
+                .split_whitespace()
+                .collect::<String>()
+        ));
+        assert!(assets_demo.contains(
+            &"use_rgba8_image_state_in(cx, 96, 96, checker_rgba.as_slice(), ImageColorSpace::Srgb);"
+                .split_whitespace()
+                .collect::<String>()
+        ));
+        assert!(
+            assets_demo.contains(
+                &"let image_stats = image_stats_in(cx);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            assets_demo.contains(
+                &"let svg_stats = svg_stats_in(cx);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !assets_demo.contains(
+                &"image_asset_state::use_rgba8_image_state(cx.app, cx.window,"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !assets_demo.contains(
+                &"UiAssets::image_stats(cx.app);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !assets_demo.contains(
+                &"UiAssets::svg_stats(cx.app);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        let markdown_demo = MARKDOWN_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            markdown_demo.contains(
+                &"use fret_ui_assets::ui::use_rgba8_image_state_in;"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            markdown_demo.contains(
+                &"let (_key, image, _status) = use_rgba8_image_state_in(cx,"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !markdown_demo.contains(
+                &"image_asset_state::use_rgba8_image_state("
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+    }
+
+    #[test]
     fn table_examples_prefer_local_state_menu_bridges_over_clone_model() {
         assert!(TABLE_DEMO.contains("table_state: LocalState<TableState>,"));
         assert!(

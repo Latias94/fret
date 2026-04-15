@@ -10,14 +10,64 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_assets::{AssetExternalReference, AssetLoadError};
 use fret_assets::{AssetLocator, AssetRequest};
+use fret_core::{ImageColorSpace, ImageId};
 use fret_runtime::AssetReloadEpoch;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, UiHost};
 
-use crate::image_asset_cache::ImageAssetKey;
+use crate::image_asset_cache::{ImageAssetKey, ImageAssetStats};
 use crate::image_source::{
     ImageSource, ImageSourceOptions, ImageSourceState, register_asset_key_for_source,
     with_image_source_loader,
 };
+use crate::svg_asset_cache::SvgAssetStats;
+
+/// Capability-first wrapper around [`crate::image_asset_state::use_rgba8_image_state`].
+///
+/// This keeps helper-local asset-loading seams on an explicit context-access lane instead of
+/// forcing callers to spell `cx.app` + `cx.window` only to enter the image-cache helper.
+pub fn use_rgba8_image_state_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    width: u32,
+    height: u32,
+    rgba: &[u8],
+    color_space: ImageColorSpace,
+) -> (
+    ImageAssetKey,
+    Option<ImageId>,
+    crate::image_asset_state::ImageLoadingStatus,
+)
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    let cx = cx.elements();
+    crate::image_asset_state::use_rgba8_image_state(
+        cx.app,
+        cx.window,
+        width,
+        height,
+        rgba,
+        color_space,
+    )
+}
+
+/// Capability-first wrapper around [`crate::UiAssets::image_stats`].
+pub fn image_stats_in<'a, H: UiHost + 'a, Cx>(cx: &mut Cx) -> ImageAssetStats
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    let cx = cx.elements();
+    crate::UiAssets::image_stats(cx.app)
+}
+
+/// Capability-first wrapper around [`crate::UiAssets::svg_stats`].
+pub fn svg_stats_in<'a, H: UiHost + 'a, Cx>(cx: &mut Cx) -> SvgAssetStats
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    let cx = cx.elements();
+    crate::UiAssets::svg_stats(cx.app)
+}
+
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;
 
