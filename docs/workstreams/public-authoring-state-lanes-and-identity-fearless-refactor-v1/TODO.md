@@ -176,6 +176,17 @@ Companion docs:
     `theme_name`, font-style token reads, and hover-card chrome, while the file still keeps its
     explicit raw state lane (`cx.elements().slot_state(...)`, `local_model_keyed(...)`) where the
     gallery is intentionally exercising lower-level retained table paths.
+  - [x] stop ordinary root/helper seams from forcing `AppUi` call sites back onto raw
+    `ElementContext` when the helper boundary itself can own that escape hatch:
+    `embedded_viewport_demo` and `hello_world_compare_demo` now accept
+    `fret::app::ElementContextAccess<'a, KernelApp>` for their page/root helpers,
+    `assets_demo` now accepts `fret::app::RenderContextAccess<'a, KernelApp>` at
+    `render_view(...)` entry and keeps `ThemeSnapshot` on the helper lane, and
+    `image_heavy_memory_demo` now accepts `fret::app::ElementContextAccess<'a, KernelApp>` at its
+    `render_view(...)` entry; source-policy gates now forbid
+    `embedded_viewport_page(cx.elements(), ...)`,
+    `hello_world_compare_root(cx.elements(), ...)`, and `render_view(cx.elements())` on this
+    batch.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

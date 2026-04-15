@@ -162,6 +162,16 @@ Related:
     ordinary theme reads use `cx.theme_snapshot()` / `cx.theme()`, while the gallery keeps
     explicit raw state access only where it is intentionally probing lower-level retained table
     seams (`cx.elements().slot_state(...)`, `local_model_keyed(...)`).
+  - ordinary root/helper seams now also stop teaching `AppUi` call sites to drop immediately to
+    `cx.elements()` when the escape hatch belongs inside the helper boundary instead:
+    `embedded_viewport_demo` and `hello_world_compare_demo` take
+    `fret::app::ElementContextAccess<'a, KernelApp>` for their extracted page/root helpers,
+    `assets_demo` takes `fret::app::RenderContextAccess<'a, KernelApp>` at `render_view(...)`
+    entry and keeps `ThemeSnapshot` on that helper lane, and `image_heavy_memory_demo` takes
+    `fret::app::ElementContextAccess<'a, KernelApp>` at `render_view(...)` entry; source-policy
+    gates now forbid `embedded_viewport_page(cx.elements(), ...)`,
+    `hello_world_compare_root(cx.elements(), ...)`, and `render_view(cx.elements())` from
+    drifting back into this batch.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

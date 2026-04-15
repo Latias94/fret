@@ -138,19 +138,21 @@ impl View for EmbeddedViewportDemoView {
         .max_w(Px(980.0))
         .into_element(cx);
 
-        embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())
+        embedded_viewport_page(cx, theme, viewport_card, diag_enabled())
     }
 }
 
-fn embedded_viewport_page<C>(
-    cx: &mut UiCx<'_>,
+fn embedded_viewport_page<'a, Cx, C>(
+    cx: &mut Cx,
     theme: ThemeSnapshot,
     viewport_card: C,
     diag: bool,
 ) -> Ui
 where
+    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
     C: IntoUiElement<KernelApp>,
 {
+    let cx = cx.elements();
     let page = ui::container(move |cx| {
         ui::single(
             cx,

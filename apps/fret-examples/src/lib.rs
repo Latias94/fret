@@ -2813,10 +2813,15 @@ mod authoring_surface_policy_tests {
         assert_advanced_helpers_prefer_uicx(
             ASSETS_DEMO,
             &[
-                "fn render_view(cx: &mut UiCx<'_>) -> Ui",
-                "fn assets_page<C>(cx: &mut UiCx<'_>, theme: &Theme, card: C) -> Ui",
+                "fn render_view<'a, Cx>(cx: &mut Cx) -> Ui",
+                "Cx: fret::app::RenderContextAccess<'a, KernelApp>",
+                "let theme = cx.theme_snapshot();",
+                "let cx = cx.elements();",
+                "render_view(cx)",
+                "fn assets_page<C>(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui",
                 "C: IntoUiElement<KernelApp>",
                 "fn render_image_panel(",
+                "theme: &ThemeSnapshot,",
                 "stats: fret_ui_assets::image_asset_cache::ImageAssetStats,",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
                 "fn render_svg_panel(",
@@ -2824,29 +2829,14 @@ mod authoring_surface_policy_tests {
                 ") -> impl IntoUiElement<KernelApp> + use<>",
             ],
             &[
-                "fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements",
-                "let page = ui::container(|cx| {",
-                "fn render_image_panel(cx: &mut UiCx<'_>, theme: &Theme, frame: u64, image: Option<fret_core::ImageId>, status: image_asset_state::ImageLoadingStatus, error: Option<Arc<str>>, stats: fret_ui_assets::image_asset_cache::ImageAssetStats) -> AnyElement",
-                "fn render_svg_panel(cx: &mut UiCx<'_>, theme: &Theme, svg: Option<fret_core::SvgId>) -> AnyElement",
+                "fn render_view(cx: &mut UiCx<'_>) -> Ui",
+                "render_view(cx.elements())",
+                "fn assets_page<C>(cx: &mut UiCx<'_>, theme: &Theme, card: C) -> Ui",
+                "fn render_image_panel(cx: &mut UiCx<'_>, theme: &Theme,",
+                "fn render_svg_panel(cx: &mut UiCx<'_>, theme: &Theme,",
                 "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
             ],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
-            EMBEDDED_VIEWPORT_DEMO,
-            &[
-                "fn embedded_viewport_page<C>(",
-                "cx: &mut UiCx<'_>,",
-                "theme: ThemeSnapshot,",
-                "viewport_card: C,",
-                "diag: bool,",
-                ") -> Ui",
-                "C: IntoUiElement<KernelApp>,",
-                "embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())",
-                "ui::v_flex(move |cx| ui::single(cx, viewport_card))",
-            ],
-            &["ui::v_flex(move |cx| ui::children![cx; viewport_card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -2864,23 +2854,19 @@ mod authoring_surface_policy_tests {
             HELLO_WORLD_COMPARE_DEMO,
             &[
                 "let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|",
-                "fn hello_world_compare_root(",
-                "cx: &mut UiCx<'_>,",
+                "fn hello_world_compare_root<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
+                "let cx = cx.elements();",
                 "panel_bg: Color,",
                 "children: Vec<AnyElement>)",
-                ") -> Ui",
-                "hello_world_compare_root(cx.elements(), panel_bg, children)",
+                "hello_world_compare_root(cx, panel_bg, children)",
             ],
             &[
                 "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
                 "let swatch = |cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
+                "fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
+                "hello_world_compare_root(cx.elements(), panel_bg, children)",
             ],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
-            IMAGE_HEAVY_MEMORY_DEMO,
-            &["fn render_view(cx: &mut UiCx<'_>) -> Ui"],
-            &["fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> Ui"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -3641,6 +3627,18 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            EMBEDDED_VIEWPORT_DEMO,
+            &[
+                "let theme = cx.theme_snapshot();",
+                "fn embedded_viewport_page<'a, Cx, C>(",
+                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
+                "let cx = cx.elements();",
+                "embedded_viewport_page(cx, theme, viewport_card, diag_enabled())",
+            ],
+            &["embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             EDITOR_NOTES_DEMO,
             &[
                 "let theme = cx.theme_snapshot();",
@@ -3659,6 +3657,20 @@ mod authoring_surface_policy_tests {
                 ".watch_model(&asset.notes_outcome_model)",
                 "cx.elements()",
                 "Theme::global(&*cx.app).snapshot()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMAGE_HEAVY_MEMORY_DEMO,
+            &[
+                "fn render_view<'a, Cx>(cx: &mut Cx) -> Ui",
+                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
+                "let cx = cx.elements();",
+                "render_view(cx)",
+            ],
+            &[
+                "fn render_view(cx: &mut UiCx<'_>) -> Ui",
+                "render_view(cx.elements())",
             ],
         );
 

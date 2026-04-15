@@ -49,7 +49,7 @@ impl View for ImageHeavyMemoryView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        render_view(cx.elements())
+        render_view(cx)
     }
 }
 
@@ -181,7 +181,11 @@ fn upload_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Rend
     });
 }
 
-fn render_view(cx: &mut UiCx<'_>) -> Ui {
+fn render_view<'a, Cx>(cx: &mut Cx) -> Ui
+where
+    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
+{
+    let cx = cx.elements();
     let images = cx
         .app
         .with_global_mut_untracked(ImageHeavyImages::default, |g, _app| g.clone());

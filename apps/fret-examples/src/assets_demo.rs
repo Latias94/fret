@@ -58,7 +58,7 @@ impl View for AssetsDemoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        render_view(cx.elements())
+        render_view(cx)
     }
 }
 
@@ -133,8 +133,12 @@ fn on_event(
     }
 }
 
-fn render_view(cx: &mut UiCx<'_>) -> Ui {
-    let theme = cx.theme().clone();
+fn render_view<'a, Cx>(cx: &mut Cx) -> Ui
+where
+    Cx: fret::app::RenderContextAccess<'a, KernelApp>,
+{
+    let theme = cx.theme_snapshot();
+    let cx = cx.elements();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
     let (image_key, image, image_status) = image_asset_state::use_rgba8_image_state(
@@ -248,7 +252,7 @@ fn render_view(cx: &mut UiCx<'_>) -> Ui {
     assets_page(cx, &theme, card)
 }
 
-fn assets_page<C>(cx: &mut UiCx<'_>, theme: &Theme, card: C) -> Ui
+fn assets_page<C>(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui
 where
     C: IntoUiElement<KernelApp>,
 {
@@ -272,7 +276,7 @@ where
 
 fn render_image_panel(
     cx: &mut UiCx<'_>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     frame: u64,
     image: Option<fret_core::ImageId>,
     status: image_asset_state::ImageLoadingStatus,
@@ -341,7 +345,7 @@ fn render_image_panel(
 
 fn render_svg_panel(
     cx: &mut UiCx<'_>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     svg: Option<fret_core::SvgId>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let icon = if let Some(svg) = svg {

@@ -1101,11 +1101,15 @@ impl View for HelloWorldCompareView {
             children.push(swatch_row);
         }
 
-        hello_world_compare_root(cx.elements(), panel_bg, children)
+        hello_world_compare_root(cx, panel_bg, children)
     }
 }
 
-fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui {
+fn hello_world_compare_root<'a, Cx>(cx: &mut Cx, panel_bg: Color, children: Vec<AnyElement>) -> Ui
+where
+    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
+{
+    let cx = cx.elements();
     ui::v_flex(move |_cx| children)
         .w_full()
         .h_full()
