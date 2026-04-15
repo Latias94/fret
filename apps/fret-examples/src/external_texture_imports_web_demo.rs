@@ -10,6 +10,7 @@
 //! - The `ImportedViewportRenderTarget` helper records updates as runner deltas.
 
 use anyhow::Context as _;
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::{App, Effect};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::Paint;
@@ -255,9 +256,7 @@ impl ExternalTextureImportsWebDriver {
         target: fret_core::RenderTargetId,
         target_px_size: (u32, u32),
     ) -> Elements {
-        cx.observe_model(&show_model, Invalidation::Layout);
-
-        let show = cx.app.models().read(&show_model, |v| *v).unwrap_or(true);
+        let show = cx.data().selector_model_layout(&show_model, |show| show);
         let theme = cx.theme().snapshot();
 
         let mut fill = LayoutStyle::default();

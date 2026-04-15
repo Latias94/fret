@@ -808,15 +808,48 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn promoted_cookbook_examples_prefer_app_theme_snapshot_helper() {
+    fn cookbook_app_ui_examples_prefer_context_owned_theme_snapshot_helpers() {
         for src in [
             HELLO_COUNTER_EXAMPLE,
             SIMPLE_TODO_EXAMPLE,
             SIMPLE_TODO_V2_TARGET_EXAMPLE,
             DATA_TABLE_EXAMPLE,
+            UNDO_EXAMPLE,
+            VIRTUAL_LIST_EXAMPLE,
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE,
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
+            DRAG_EXAMPLE,
+            EFFECTS_LAYER_EXAMPLE,
+            DROP_SHADOW_EXAMPLE,
+            ICONS_AND_ASSETS_EXAMPLE,
+            CANVAS_PAN_ZOOM_EXAMPLE,
+            CUSTOM_V1_EXAMPLE,
         ] {
-            assert!(src.contains("use fret::app::RenderContextAccess as _;"));
-            assert!(src.contains("let theme = cx.theme_snapshot();"));
+            assert!(src.contains("cx.theme_snapshot()"));
+            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
+        }
+
+        for src in [
+            HELLO_COUNTER_EXAMPLE,
+            SIMPLE_TODO_EXAMPLE,
+            SIMPLE_TODO_V2_TARGET_EXAMPLE,
+            DATA_TABLE_EXAMPLE,
+            UNDO_EXAMPLE,
+            VIRTUAL_LIST_EXAMPLE,
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
+        ] {
+            assert!(src.contains("RenderContextAccess as _"));
+        }
+    }
+
+    #[test]
+    fn cookbook_direct_leaf_interop_examples_prefer_element_context_theme_snapshot() {
+        for src in [
+            EMBEDDED_VIEWPORT_EXAMPLE,
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
+            CHART_INTERACTIONS_EXAMPLE,
+        ] {
+            assert!(src.contains("let theme = cx.theme().snapshot();"));
             assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
         }
     }
@@ -1378,6 +1411,28 @@ mod authoring_surface_policy_tests {
             GIZMO_EXAMPLE,
             &["let model = st.model.paint_in(cx).value_or_default();"],
             &["cx.watch_model(&st.model)"],
+        );
+
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            VIRTUAL_LIST_EXAMPLE,
+            &[
+                "let items = self.items.layout(cx).value_or_default();",
+                "let items_revision = self.items.layout(cx).revision().unwrap_or(0)",
+                ".wrapping_add(mode_state.layout(cx).revision().unwrap_or(0))",
+                ".wrapping_add(tall_rows_state.layout(cx).revision().unwrap_or(0))",
+                ".wrapping_add(reversed_state.layout(cx).revision().unwrap_or(0))",
+                ".wrapping_add(index_keys_state.layout(cx).revision().unwrap_or(0))",
+                ".wrapping_add(visible_only_keys_state.layout(cx).revision().unwrap_or(0));",
+            ],
+            &[
+                "let store = cx.app.models();",
+                ".revision(&self.items)",
+                "mode_state.revision_in(store)",
+                "tall_rows_state.revision_in(store)",
+                "reversed_state.revision_in(store)",
+                "index_keys_state.revision_in(store)",
+                "visible_only_keys_state.revision_in(store)",
+            ],
         );
     }
 

@@ -941,8 +941,7 @@ impl CustomEffectV2LutWebDriver {
         show: fret_runtime::Model<bool>,
         controls: DemoControls,
     ) -> Elements {
-        cx.observe_model(&show, Invalidation::Layout);
-        let visible = cx.app.models().read(&show, |v| *v).unwrap_or(true);
+        let visible = cx.data().selector_model_layout(&show, |show| show);
         let theme = cx.theme().snapshot();
 
         let mut fill = LayoutStyle::default();

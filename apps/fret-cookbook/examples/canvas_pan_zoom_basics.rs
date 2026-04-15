@@ -65,7 +65,7 @@ impl View for CanvasPanZoomBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let view_value = self.view.paint(cx).value_or_default();
         let node_origin = self.node_origin.paint(cx).value_or_default();

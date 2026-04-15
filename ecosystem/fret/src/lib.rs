@@ -67,8 +67,11 @@
 //!   `cx.data().selector_layout(...)` for LocalState-first derived values, keep
 //!   `cx.data().query*(...)` plus `handle.read_layout(cx)` as the default query read path, and use
 //!   `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` when
-//!   app-facing query invalidation stays inside `AppUi`; when app code needs explicit state helper
-//!   nouns, use `fret::selector::ui::DepsBuilder`, `fret::selector::DepsSignature`, and
+//!   app-facing query invalidation stays inside `AppUi`; use `cx.data().cancel_query(...)` plus
+//!   `cx.data().query_snapshot()` / `cx.data().query_snapshot_entry(...)` when app-facing status
+//!   chrome needs explicit query maintenance/diagnostics without reopening raw client shell code;
+//!   when app code needs explicit state helper nouns, use `fret::selector::ui::DepsBuilder`,
+//!   `fret::selector::DepsSignature`, and
 //!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
 //!   those names from `fret::app::prelude::*`
 //! - enable `state-mutation` when app code needs an explicit submit/mutation lane that must not
@@ -2754,6 +2757,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`handle.read_layout(cx)`"));
         assert!(CRATE_README.contains("`cx.data().invalidate_query(...)`"));
         assert!(CRATE_README.contains("`cx.data().invalidate_query_namespace(...)`"));
+        assert!(CRATE_README.contains("`cx.data().cancel_query(...)`"));
+        assert!(CRATE_README.contains("`cx.data().query_snapshot_entry(...)`"));
         assert!(CRATE_README.contains("`fret::selector::ui::DepsBuilder`"));
         assert!(CRATE_README.contains("`fret::selector::DepsSignature`"));
         assert!(
@@ -3054,6 +3059,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`handle.read_layout(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query_namespace(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().cancel_query(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query_snapshot_entry(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains(
             "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
         ));
@@ -3132,6 +3139,8 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().invalidate_query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().cancel_query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query_snapshot_entry(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(
             "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
         ));

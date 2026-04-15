@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::App;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
@@ -584,14 +585,12 @@ fn on_event(
 }
 
 fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui {
-    cx.observe_model(&st.show, Invalidation::Layout);
-
     let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
     let w_px = (cx.bounds.size.width.0.max(1.0) * scale_factor).round() as u32;
     let h_px = (cx.bounds.size.height.0.max(1.0) * scale_factor).round() as u32;
     st.desired_target_px_size = (w_px.max(1).min(4096), h_px.max(1).min(4096));
 
-    let show = cx.app.models().read(&st.show, |v| *v).unwrap_or(true);
+    let show = cx.data().selector_model_layout(&st.show, |show| show);
 
     let theme = cx.theme().snapshot();
 

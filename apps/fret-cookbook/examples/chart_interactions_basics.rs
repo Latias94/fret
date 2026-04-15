@@ -304,7 +304,7 @@ fn view(
     cx: &mut ElementContext<'_, KernelApp>,
     st: &mut ChartInteractionsWindowState,
 ) -> ViewElements {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme().snapshot();
 
     let (x_span, hover_index) = {
         let x_span = (st.x_window.max - st.x_window.min).max(0.0);

@@ -777,6 +777,13 @@ are intentionally staying on the lower-level tracked-read surface.
 place. Keep `fret::query::with_query_client(...)` for pure app/driver code that does not have a
 `cx.data()` surface.
 
+**Advanced app maintenance note:** when app-facing controls or diagnostics need explicit query
+maintenance beyond invalidation, prefer `cx.data().cancel_query(...)` plus
+`cx.data().query_snapshot()` / `cx.data().query_snapshot_entry(...)` instead of reopening raw
+query-client shell code inside `AppUi` or extracted `UiCx` helpers. Keep
+`fret::query::with_query_client(...)` for pure app/driver code that does not have a grouped UI
+context.
+
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
 grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
 them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than expecting them from

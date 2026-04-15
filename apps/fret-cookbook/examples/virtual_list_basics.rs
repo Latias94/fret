@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::{
     children::UiElementSinkExt as _,
     icons::IconId,
-    style::{LayoutRefinement, Space, Theme},
+    style::{LayoutRefinement, Space},
 };
 use fret_runtime::Model;
 use fret_ui::{
@@ -92,7 +93,7 @@ impl View for VirtualListBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let mode_state = cx
             .state()
@@ -126,15 +127,16 @@ impl View for VirtualListBasicsView {
         // Virtual lists cache `index -> key` mappings and anchor bookkeeping. If the key mapping is
         // driven by more than just the items collection (e.g. `reversed`, `index_keys`), bump the
         // effective items revision when those inputs change.
-        let store = cx.app.models();
-        let items_revision = store
-            .revision(&self.items)
+        let items_revision = self
+            .items
+            .layout(cx)
+            .revision()
             .unwrap_or(0)
-            .wrapping_add(mode_state.revision_in(store).unwrap_or(0))
-            .wrapping_add(tall_rows_state.revision_in(store).unwrap_or(0))
-            .wrapping_add(reversed_state.revision_in(store).unwrap_or(0))
-            .wrapping_add(index_keys_state.revision_in(store).unwrap_or(0))
-            .wrapping_add(visible_only_keys_state.revision_in(store).unwrap_or(0));
+            .wrapping_add(mode_state.layout(cx).revision().unwrap_or(0))
+            .wrapping_add(tall_rows_state.layout(cx).revision().unwrap_or(0))
+            .wrapping_add(reversed_state.layout(cx).revision().unwrap_or(0))
+            .wrapping_add(index_keys_state.layout(cx).revision().unwrap_or(0))
+            .wrapping_add(visible_only_keys_state.layout(cx).revision().unwrap_or(0));
 
         let mut options = match view_settings.mode.as_ref() {
             MODE_FIXED => VirtualListOptions::fixed(Px(28.0), 10),

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
@@ -339,9 +339,7 @@ $$
         let pending_anchor_state = cx.state().local_init(|| None::<Arc<str>>);
 
         if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES) {
-            let _ = with_query_client(cx.app_mut(), |client, _app| {
-                client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
-            });
+            cx.data().invalidate_query_namespace(REMOTE_IMAGE_NAMESPACE);
         }
 
         cx.actions()

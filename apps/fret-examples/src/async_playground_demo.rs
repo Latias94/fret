@@ -9,7 +9,7 @@ use fret::app::RenderContextAccess as _;
 use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
-    QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
+    QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus,
 };
 use fret::{FretApp, actions::CommandId, advanced::prelude::*, shadcn};
 use fret_core::{Px, SemanticsRole};
@@ -287,19 +287,18 @@ impl View for AsyncPlaygroundView {
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED) {
             let key = query_key_for_selected(selected, &query_inputs);
-            let _ = with_query_client(cx.app_mut(), |client, app| client.invalidate(app, key));
+            cx.data().invalidate_query(key);
         }
 
         if cx.effects().take_transient(TRANSIENT_CANCEL_SELECTED) {
             let key = query_key_for_selected(selected, &query_inputs);
-            let _ = with_query_client(cx.app_mut(), |client, app| client.cancel_inflight(app, key));
+            cx.data().cancel_query(key);
         }
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let ns = namespace_input.trim();
             if let Some(ns) = map_namespace(ns) {
-                let _ =
-                    with_query_client(cx.app_mut(), |client, _app| client.invalidate_namespace(ns));
+                cx.data().invalidate_query_namespace(ns);
             }
         }
 
@@ -1168,12 +1167,7 @@ fn snapshot_entry_for_key(
     cx: &mut UiCx<'_>,
     key: QueryKey<Arc<str>>,
 ) -> Option<QuerySnapshotEntry> {
-    let type_name = std::any::type_name::<Arc<str>>();
-    with_query_client(cx.app, |client, _app| client.snapshot()).and_then(|snap| {
-        snap.entries.into_iter().find(|e| {
-            e.namespace == key.namespace() && e.hash == key.hash() && e.type_name == type_name
-        })
-    })
+    cx.data().query_snapshot_entry(key)
 }
 
 fn sleep_sync(token: &CancellationToken, dur: Duration) -> Result<(), QueryError> {

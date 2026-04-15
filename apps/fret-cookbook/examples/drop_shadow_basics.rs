@@ -46,7 +46,7 @@ fn shadow_card(
     enabled: bool,
     chain: EffectChain,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme_snapshot();
     let background = ColorRef::Color(theme.color_token("background"));
     let border = ColorRef::Color(theme.color_token("border"));
     let muted = ColorRef::Color(theme.color_token("muted"));

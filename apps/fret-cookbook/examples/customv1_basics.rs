@@ -1,3 +1,4 @@
+use fret::app::RenderContextAccess as _;
 use fret::component::prelude::{ColorRef, IntoUiElement, Radius, Space, Theme, UiExt, ui};
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
@@ -70,7 +71,7 @@ fn panel_shell<B>(
 where
     B: IntoUiElement<KernelApp>,
 {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme_snapshot();
     let body = body.into_element(cx);
 
     shadcn::card(move |cx| {
@@ -99,7 +100,7 @@ fn preview_content(
     cx: &mut UiCx<'_>,
     label: &'static str,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme_snapshot();
     let muted_foreground = ColorRef::Color(theme.color_token("muted-foreground"));
 
     let swatch = |_cx: &mut UiCx<'_>, rgb: u32| {

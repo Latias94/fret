@@ -2129,6 +2129,19 @@ fn take_mutation_success_in<H: UiHost, TIn: 'static, TOut: 'static>(
     )
 }
 
+#[cfg(feature = "state-query")]
+fn query_snapshot_entry_for_key<T: Any + Send + Sync + 'static>(
+    snapshot: fret_query::QueryClientSnapshot,
+    key: fret_query::QueryKey<T>,
+) -> Option<fret_query::QuerySnapshotEntry> {
+    let type_name = std::any::type_name::<T>();
+    snapshot.entries.into_iter().find(|entry| {
+        entry.namespace == key.namespace()
+            && entry.hash == key.hash()
+            && entry.type_name == type_name
+    })
+}
+
 impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
     /// Default LocalState-first selector path for app-facing derived values that affect layout.
     ///
@@ -2248,6 +2261,36 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         fret_query::ui::QueryElementContextExt::use_query_async_local(
             self.cx.cx, key, policy, fetch,
         )
+    }
+
+    /// Grouped query-client snapshot read for app-facing diagnostics or status chrome on `AppUi`.
+    ///
+    /// Keep raw `fret::query::with_query_client(...)` for pure app/driver code that does not have
+    /// a grouped `cx.data()` surface.
+    #[cfg(feature = "state-query")]
+    pub fn query_snapshot(self) -> Option<fret_query::QueryClientSnapshot> {
+        fret_query::with_query_client(self.cx.cx.app, |client, _app| client.snapshot())
+    }
+
+    /// Find one typed query snapshot entry on the grouped app data lane without dropping back to
+    /// raw query-client plumbing.
+    #[cfg(feature = "state-query")]
+    pub fn query_snapshot_entry<T: Any + Send + Sync + 'static>(
+        self,
+        key: fret_query::QueryKey<T>,
+    ) -> Option<fret_query::QuerySnapshotEntry> {
+        self.query_snapshot()
+            .and_then(|snapshot| query_snapshot_entry_for_key(snapshot, key))
+    }
+
+    /// Cancel one inflight query task from the grouped app data lane while keeping redraw ownership
+    /// local to `AppUi`.
+    #[cfg(feature = "state-query")]
+    pub fn cancel_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
+        let _ = fret_query::with_query_client(self.cx.cx.app, |client, app| {
+            client.cancel_inflight(app, key);
+        });
+        self.cx.cx.app.request_redraw(self.cx.cx.window);
     }
 
     #[cfg(feature = "state-mutation")]
@@ -2519,6 +2562,36 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
     {
         fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
+    }
+
+    /// Grouped query-client snapshot read for extracted `UiCx` app-facing diagnostics helpers.
+    ///
+    /// Keep raw `fret::query::with_query_client(...)` for pure app/driver code that does not have
+    /// a grouped `cx.data()` surface.
+    #[cfg(feature = "state-query")]
+    pub fn query_snapshot(self) -> Option<fret_query::QueryClientSnapshot> {
+        fret_query::with_query_client(self.cx.app, |client, _app| client.snapshot())
+    }
+
+    /// Find one typed query snapshot entry from an extracted `UiCx` helper on the grouped app
+    /// data lane.
+    #[cfg(feature = "state-query")]
+    pub fn query_snapshot_entry<T: Any + Send + Sync + 'static>(
+        self,
+        key: fret_query::QueryKey<T>,
+    ) -> Option<fret_query::QuerySnapshotEntry> {
+        self.query_snapshot()
+            .and_then(|snapshot| query_snapshot_entry_for_key(snapshot, key))
+    }
+
+    /// Cancel one inflight query task from an extracted `UiCx` helper while keeping redraw
+    /// ownership on the grouped app data lane.
+    #[cfg(feature = "state-query")]
+    pub fn cancel_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
+        let _ = fret_query::with_query_client(self.cx.app, |client, app| {
+            client.cancel_inflight(app, key);
+        });
+        self.cx.app.request_redraw(self.cx.window);
     }
 
     #[cfg(feature = "state-mutation")]
@@ -5179,6 +5252,14 @@ mod tests {
         assert!(api_source.contains("pub fn selector_model_paint<Inputs, TValue>("));
         assert!(!api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
         assert!(!api_source.contains("pub fn selector_keyed<K: Hash, Deps, TValue>("));
+        assert!(
+            api_source
+                .contains("pub fn query_snapshot(self) -> Option<fret_query::QueryClientSnapshot>")
+        );
+        assert!(
+            api_source.contains("pub fn query_snapshot_entry<T: Any + Send + Sync + 'static>(")
+        );
+        assert!(api_source.contains("pub fn cancel_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>)"));
         assert!(api_source.contains("pub fn invalidate_query<T: Any + Send + Sync + 'static>("));
         assert!(
             api_source.contains("pub fn invalidate_query_namespace(self, namespace: &'static str)")

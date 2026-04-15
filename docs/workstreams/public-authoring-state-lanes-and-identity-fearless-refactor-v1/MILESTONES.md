@@ -12,6 +12,9 @@ Related:
 - AppUi root accessor audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - AppUi Deref pressure classification audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - UI assets capability adapter audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
+- Query grouped maintenance surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
+- Cookbook theme context owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
+- Model store render read owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -215,6 +218,28 @@ Related:
     `assets_reload_epoch_basics`) now teach that lane, and the direct `fret-ui-assets`
     dependency in `fret-examples` now enables the `ui` feature explicitly so the intended
     capability surface is available without widening the `fret` facade.
+  - the grouped app-facing query maintenance lane is now closed over the remaining first-party
+    proof seams too:
+    `fret::view::{AppUiData, UiCxData}` now own `query_snapshot()`,
+    `query_snapshot_entry(...)`, and `cancel_query(...)`, `async_playground_demo` uses grouped
+    invalidation/cancel/snapshot helpers instead of raw `with_query_client(...)`, and
+    `markdown_demo` now uses grouped namespace invalidation too. The owner split is now recorded
+    explicitly in `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`:
+    grouped UI maintenance stays on `fret`, while raw `with_query_client(...)` remains the pure
+    app/driver or lower-level authoring seam.
+  - the cookbook theme-read owner split is now explicit too:
+    cookbook `AppUi` / `UiCx` ordinary token reads use `cx.theme_snapshot()`, while direct-leaf
+    `ElementContext` interop roots use `cx.theme().snapshot()`. The repo no longer teaches
+    `Theme::global(&*cx.app).snapshot()` on cookbook examples, cookbook source-policy tests lock
+    both owner classes, and `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md` records the split.
+  - the remaining render-time raw model-store read tail is now split by owner rather than grep
+    bucket:
+    cookbook `virtual_list_basics` uses tracked builder `.revision()` reads on the default
+    `AppUi` lane, direct-leaf/manual render roots (`custom_effect_v2_*_web_demo`,
+    `external_*_imports*_demo`) use `cx.data().selector_model_layout(...)` for render-time
+    visibility reads, and pure driver/app loops such as `record_engine_frame(...)` keep raw
+    `app.models().read(...)`. `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md` records why
+    this slice did not add a new framework API.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

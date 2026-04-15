@@ -203,7 +203,9 @@ The same ordered builder surface now also includes compile-time/static entries t
   LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
   `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path, plus
   `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` for grouped
-  app-lane query invalidation), plus the explicit `fret::selector::*` / `fret::query::*`
+  app-lane query invalidation, and `cx.data().cancel_query(...)` /
+  `cx.data().query_snapshot_entry(...)` for explicit app-lane query maintenance/diagnostics), plus
+  the explicit `fret::selector::*` / `fret::query::*`
   secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).

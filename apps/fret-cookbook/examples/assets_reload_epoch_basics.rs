@@ -1,10 +1,11 @@
 use fret::{
     advanced::{KernelApp, prelude::Effect},
+    app::RenderContextAccess as _,
     app::prelude::*,
     assets::{AssetBundleId, AssetLocator, AssetRequest, AssetStartupMode, AssetStartupPlan},
     children::UiElementSinkExt as _,
     component::prelude::IntoUiElement,
-    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
+    style::{ColorRef, Radius, Space, ThemeSnapshot},
 };
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
 use fret_ui_assets::ui::{
@@ -64,7 +65,7 @@ impl View for AssetsReloadEpochBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let bumps_state = cx.state().local::<u64>();
 
         cx.actions()

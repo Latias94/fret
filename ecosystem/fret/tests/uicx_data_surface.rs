@@ -39,7 +39,12 @@ fn uicx_data_ext_is_part_of_the_default_and_advanced_preludes() {
 fn helper_heavy_examples_use_grouped_data_helpers() {
     assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().query("));
     assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().selector_layout("));
+    assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().invalidate_query("));
+    assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().cancel_query("));
+    assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().invalidate_query_namespace("));
+    assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().query_snapshot_entry("));
     assert!(!ASYNC_PLAYGROUND_DEMO.contains("cx.use_query("));
+    assert!(!ASYNC_PLAYGROUND_DEMO.contains("with_query_client("));
 
     assert!(QUERY_DEMO.contains("cx.data().invalidate_query("));
     assert!(QUERY_DEMO.contains("cx.data().invalidate_query_namespace("));
@@ -52,6 +57,8 @@ fn helper_heavy_examples_use_grouped_data_helpers() {
     assert!(!QUERY_ASYNC_TOKIO_DEMO.contains("with_query_client("));
 
     assert!(MARKDOWN_DEMO.contains("cx.data().query("));
+    assert!(MARKDOWN_DEMO.contains("cx.data().invalidate_query_namespace("));
     assert!(!MARKDOWN_DEMO.contains("cx.use_query("));
     assert!(!MARKDOWN_DEMO.contains("cx.use_selector("));
+    assert!(!MARKDOWN_DEMO.contains("with_query_client("));
 }

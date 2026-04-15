@@ -73,7 +73,7 @@ fn render_image_preview(
     title: &'static str,
     image: Option<ImageId>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme_snapshot();
     let border = ColorRef::Color(theme.color_token("border"));
 
     let box_el = ui::container(move |cx| {
@@ -129,7 +129,7 @@ impl View for IconsAndAssetsBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let header = shadcn::card_header(|cx| {
             ui::children![

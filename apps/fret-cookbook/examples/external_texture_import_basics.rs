@@ -109,7 +109,7 @@ fn view(
     cx: &mut ElementContext<'_, KernelApp>,
     st: &mut ExternalTextureImportBasicsState,
 ) -> ViewElements {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let theme = cx.theme().snapshot();
 
     let preset = st.preset.paint_in(cx).value_or_default();
     let fit_value = st.fit.paint_in(cx).value_or_default();

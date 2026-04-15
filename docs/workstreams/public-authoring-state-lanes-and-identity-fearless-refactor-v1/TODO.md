@@ -14,6 +14,9 @@ Companion docs:
 - `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - `APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
+- `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
+- `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
+- `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -235,6 +238,27 @@ Companion docs:
     `svg_stats_in(...)`; `assets_demo`, `markdown_demo`, and cookbook
     `assets_reload_epoch_basics` now use those adapters instead of spelling `cx.app + cx.window`
     or `UiAssets::image_stats(&mut *cx.app)` directly just to enter the asset helper surface.
+  - [x] close the remaining grouped app-facing query maintenance seam that still forced real
+    `AppUi` / `UiCx` examples back onto raw client shell code:
+    `fret::view::{AppUiData, UiCxData}` now own `query_snapshot()`,
+    `query_snapshot_entry(...)`, and `cancel_query(...)`; `async_playground_demo` uses grouped
+    invalidation/cancel/snapshot helpers end-to-end, `markdown_demo` uses grouped namespace
+    invalidation, and `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md` records why this
+    owner stays on the `fret` app-facing lane rather than moving into `fret-query`.
+  - [x] close the remaining cookbook host-global theme snapshot tail by owner class instead of one
+    flat grep bucket:
+    ordinary `AppUi` / `UiCx` cookbook examples now use `cx.theme_snapshot()`, direct-leaf
+    `ElementContext` interop roots now use `cx.theme().snapshot()`, cookbook source-policy tests
+    lock the split, and `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md` records the owner
+    classification so future cleanup does not mix app-facing and interop lanes.
+  - [x] close the remaining render-time raw `ModelStore` reads only where an existing render-lane
+    helper already owns the story:
+    cookbook `virtual_list_basics` now uses tracked builder `.revision()` reads on `AppUi`,
+    direct-leaf/manual render roots (`custom_effect_v2_*_web_demo`,
+    `external_*_imports*_demo`) now use `cx.data().selector_model_layout(...)` for their
+    render-time `show` toggles, source-policy tests lock both owners, and
+    `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md` records why driver-side
+    `record_engine_frame(...)` reads stay on raw `app.models()`.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

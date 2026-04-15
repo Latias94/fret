@@ -699,8 +699,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         show: Model<bool>,
         controls: DemoControls,
     ) -> Elements {
-        cx.observe_model(&show, Invalidation::Layout);
-        let visible = cx.app.models().read(&show, |v| *v).unwrap_or(true);
+        let visible = cx.data().selector_model_layout(&show, |show| show);
 
         let mut fill = LayoutStyle::default();
         fill.size.width = Length::Fill;

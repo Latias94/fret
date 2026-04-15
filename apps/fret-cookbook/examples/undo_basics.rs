@@ -1,8 +1,9 @@
 use fret::actions::CommandId;
 use fret::advanced::AppUiRawActionNotifyExt as _;
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
-use fret::style::{ColorRef, Space, Theme};
+use fret::style::{ColorRef, Space};
 use fret_app::Effect;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
@@ -172,7 +173,7 @@ impl View for UndoBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let undo_cmd: CommandId = act::Undo.into();
         let redo_cmd: CommandId = act::Redo.into();
 

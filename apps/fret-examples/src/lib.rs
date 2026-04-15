@@ -1141,12 +1141,16 @@ mod authoring_surface_policy_tests {
             EXTERNAL_TEXTURE_IMPORTS_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui",
+                "use fret::advanced::view::UiCxDataExt as _;",
+                "let show = cx.data().selector_model_layout(&st.show, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-texture-imports-root\"),",
             ],
             &[
                 "fn external_texture_imports_root(",
+                "cx.observe_model(&st.show, Invalidation::Layout);",
+                "cx.app.models().read(&st.show, |v| *v).unwrap_or(true)",
                 "Theme::global(&*cx.app).snapshot()",
             ],
         );
@@ -1154,6 +1158,8 @@ mod authoring_surface_policy_tests {
         assert_low_level_interop_examples_keep_direct_leaf_roots(
             EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO,
             &[
+                "use fret::advanced::view::UiCxDataExt as _;",
+                "let show = cx.data().selector_model_layout(&show_model, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-texture-imports-web-root\"),",
@@ -1161,6 +1167,8 @@ mod authoring_surface_policy_tests {
             ],
             &[
                 "fn external_texture_imports_web_root(",
+                "cx.observe_model(&show_model, Invalidation::Layout);",
+                "cx.app.models().read(&show_model, |v| *v).unwrap_or(true)",
                 "Theme::global(&*cx.app).snapshot()",
             ],
         );
@@ -1169,12 +1177,16 @@ mod authoring_surface_policy_tests {
             EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAvfView) -> fret::Ui",
+                "use fret::advanced::view::UiCxDataExt as _;",
+                "let show = cx.data().selector_model_layout(&st.show, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-video-imports-avf-root\"),",
             ],
             &[
                 "fn external_video_imports_avf_root(",
+                "cx.observe_model(&st.show, Invalidation::Layout);",
+                "cx.app.models().read(&st.show, |v| *v).unwrap_or(true)",
                 "Theme::global(&*cx.app).snapshot()",
             ],
         );
@@ -1183,12 +1195,16 @@ mod authoring_surface_policy_tests {
             EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsMfView) -> fret::Ui",
+                "use fret::advanced::view::UiCxDataExt as _;",
+                "let show = cx.data().selector_model_layout(&st.show, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
                 ".test_id(\"external-video-imports-mf-root\"),",
             ],
             &[
                 "fn external_video_imports_mf_root(",
+                "cx.observe_model(&st.show, Invalidation::Layout);",
+                "cx.app.models().read(&st.show, |v| *v).unwrap_or(true)",
                 "Theme::global(&*cx.app).snapshot()",
             ],
         );
@@ -4470,14 +4486,21 @@ mod authoring_surface_policy_tests {
         );
         assert!(
             async_render.contains(
-                &"with_query_client(cx.app_mut(), |client, app|"
+                &"cx.data().invalidate_query(key);"
                     .split_whitespace()
                     .collect::<String>()
             )
         );
         assert!(
             async_render.contains(
-                &"with_query_client(cx.app_mut(), |client, _app|"
+                &"cx.data().cancel_query(key);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            async_render.contains(
+                &"cx.data().invalidate_query_namespace(ns);"
                     .split_whitespace()
                     .collect::<String>()
             )
@@ -4485,6 +4508,20 @@ mod authoring_surface_policy_tests {
         assert!(
             !async_render.contains(
                 &"apply_theme(cx.app, dark);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !async_render.contains(
+                &"with_query_client(cx.app_mut(), |client, app|"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !async_render.contains(
+                &"with_query_client(cx.app_mut(), |client, _app|"
                     .split_whitespace()
                     .collect::<String>()
             )
@@ -4512,24 +4549,13 @@ mod authoring_surface_policy_tests {
         let markdown_render = markdown_render.split_whitespace().collect::<String>();
         assert!(
             markdown_render.contains(
-                &"with_query_client(cx.app_mut(), |client, _app| {"
+                &"cx.data().invalidate_query_namespace(REMOTE_IMAGE_NAMESPACE);"
                     .split_whitespace()
                     .collect::<String>()
             )
         );
         assert!(
-            !markdown_render.contains(
-                &"with_query_client(fret::app::RenderContextAccess::app_mut(cx), |client, _app| {"
-                    .split_whitespace()
-                    .collect::<String>()
-            )
-        );
-        assert!(
-            !markdown_render.contains(
-                &"with_query_client(cx.app, |client, _app| {"
-                    .split_whitespace()
-                    .collect::<String>()
-            )
+            !markdown_render.contains(&"with_query_client(".split_whitespace().collect::<String>())
         );
 
         let postprocess_render = source_slice(
@@ -4636,6 +4662,43 @@ mod authoring_surface_policy_tests {
                     .collect::<String>()
             )
         );
+    }
+
+    #[test]
+    fn direct_leaf_visibility_reads_use_grouped_selector_model_layout() {
+        for src in [
+            CUSTOM_EFFECT_V2_WEB_DEMO,
+            CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
+            CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
+            CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
+            EXTERNAL_TEXTURE_IMPORTS_DEMO,
+            EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO,
+            EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
+            EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
+        ] {
+            let normalized = src.split_whitespace().collect::<String>();
+            for marker in [
+                "use fret::advanced::view::UiCxDataExt as _;",
+                "selector_model_layout(",
+            ] {
+                let marker = marker.split_whitespace().collect::<String>();
+                assert!(normalized.contains(&marker), "missing marker: {marker}");
+            }
+            for legacy in [
+                "cx.observe_model(&show, Invalidation::Layout);",
+                "cx.observe_model(&show_model, Invalidation::Layout);",
+                "cx.observe_model(&st.show, Invalidation::Layout);",
+                "cx.app.models().read(&show, |v| *v).unwrap_or(true)",
+                "cx.app.models().read(&show_model, |v| *v).unwrap_or(true)",
+                "cx.app.models().read(&st.show, |v| *v).unwrap_or(true)",
+            ] {
+                let legacy = legacy.split_whitespace().collect::<String>();
+                assert!(
+                    !normalized.contains(&legacy),
+                    "legacy marker still present: {legacy}"
+                );
+            }
+        }
     }
 
     #[test]

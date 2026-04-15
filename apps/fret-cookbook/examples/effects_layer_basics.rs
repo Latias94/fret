@@ -74,7 +74,7 @@ impl View for EffectsLayerBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let effect_kind = EffectKind::from_value(
             self.effect

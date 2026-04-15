@@ -45,7 +45,7 @@ impl View for AppOwnedBundleAssetsBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let image_state = cx.use_image_source_state_from_asset_request(&self.image_request);
         let svg_state = cx.svg_source_state_from_asset_request(&self.svg_request);
 
