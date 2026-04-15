@@ -20,6 +20,7 @@ Companion docs:
 - `IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
 - `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
 - `COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md`
+- `IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -296,6 +297,13 @@ Companion docs:
     demo-local owner helpers (`selected_theme_preset(app)`, `overlays_open(app)`), driver/event
     tree-key reads stay raw, and
     `COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md` records the three-way owner split.
+  - [x] keep the last `imui_editor_proof_demo` raw model tail on explicit app-owned helper seams
+    instead of scattering store reads through the advanced proof:
+    outliner reorder math now routes through `proof_outliner_items_snapshot(...)` and
+    `proof_outliner_order_line_for_model(...)`, dock/bootstrap target lookup routes through
+    `embedded_target_for_window(...)`, and
+    `IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md` records why this remains demo-local owner
+    code rather than a new framework surface.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

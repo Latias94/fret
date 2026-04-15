@@ -343,6 +343,24 @@ fn proof_outliner_order_line(items: &[ProofOutlinerItem]) -> String {
     format!("Order: {labels}")
 }
 
+fn proof_outliner_items_snapshot(
+    app: &KernelApp,
+    model: &Model<Vec<ProofOutlinerItem>>,
+) -> Vec<ProofOutlinerItem> {
+    app.models()
+        .read(model, |items| items.clone())
+        .unwrap_or_default()
+}
+
+fn proof_outliner_order_line_for_model(
+    app: &KernelApp,
+    model: &Model<Vec<ProofOutlinerItem>>,
+) -> String {
+    app.models()
+        .read(model, |items| proof_outliner_order_line(items))
+        .unwrap_or_else(|_| "Order: unavailable".to_string())
+}
+
 fn proof_drag_preview_card<H: UiHost>(
     title: Arc<str>,
     subtitle: Option<Arc<str>>,
@@ -3221,12 +3239,7 @@ fn render_authoring_parity_imui_group(
 
         let outliner_items_model = authoring_parity_outliner_items_model(ui.cx_mut());
         let outliner_status_model = authoring_parity_outliner_status_model(ui.cx_mut());
-        let outliner_items = ui
-            .cx_mut()
-            .app
-            .models()
-            .read(&outliner_items_model, |items| items.clone())
-            .unwrap_or_default();
+        let outliner_items = proof_outliner_items_snapshot(ui.cx_mut().app, &outliner_items_model);
         let mut pending_reorder: Option<(
             Arc<str>,
             Arc<str>,
@@ -3342,14 +3355,8 @@ fn render_authoring_parity_imui_group(
                 });
         }
 
-        let outliner_order = ui
-            .cx_mut()
-            .app
-            .models()
-            .read(&outliner_items_model, |items| {
-                proof_outliner_order_line(items)
-            })
-            .unwrap_or_else(|_| "Order: unavailable".to_string());
+        let outliner_order =
+            proof_outliner_order_line_for_model(ui.cx_mut().app, &outliner_items_model);
         let persisted_outliner_status =
             editor_string_model_readout(ui.cx_mut(), &outliner_status_model);
         let visible_outliner_status = preview_status.unwrap_or_else(|| persisted_outliner_status);
@@ -4053,6 +4060,12 @@ fn reset_dock_graph(app: &mut KernelApp, window: AppWindowId) {
     ensure_dock_graph_inner(app, window, true);
 }
 
+fn embedded_target_for_window(app: &KernelApp, window: AppWindowId) -> fret_core::RenderTargetId {
+    embedded::models(app, window)
+        .and_then(|m| app.models().read(&m.target, |v| *v).ok())
+        .unwrap_or_default()
+}
+
 fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool) {
     app.with_global_mut(DockManager::default, |dock, app| {
         let logical_window_id = app
@@ -4064,9 +4077,7 @@ fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool
             fret_core::PanelKey::with_instance("demo.viewport", logical_window_id.clone());
         let controls_panel = fret_core::PanelKey::with_instance("demo.controls", logical_window_id);
 
-        let target = embedded::models(app, window)
-            .and_then(|m| app.models().read(&m.target, |v| *v).ok())
-            .unwrap_or_default();
+        let target = embedded_target_for_window(app, window);
 
         dock.ensure_panel(&viewport_panel, || DockPanel {
             title: "Viewport".to_string(),

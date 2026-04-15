@@ -405,6 +405,9 @@ mod authoring_surface_policy_tests {
         include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
+    const IMUI_EDITOR_PROOF_APP_OWNER_AUDIT: &str = include_str!(
+        "../../../docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md"
+    );
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
     const LAUNCHER_UTILITY_WINDOW_DEMO: &str = include_str!("launcher_utility_window_demo.rs");
     const LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO: &str =
@@ -1822,6 +1825,72 @@ mod authoring_surface_policy_tests {
             ],
             &[],
         );
+    }
+
+    #[test]
+    fn imui_editor_proof_keeps_app_owned_sortable_and_dock_helpers_explicit() {
+        let normalized = IMUI_EDITOR_PROOF_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
+            "fn proof_outliner_items_snapshot(",
+            "app.models().read(model, |items| items.clone()).unwrap_or_default()",
+            "fn proof_outliner_order_line_for_model(",
+            "proof_outliner_order_line(items)",
+            "let outliner_items = proof_outliner_items_snapshot(ui.cx_mut().app, &outliner_items_model);",
+            "let outliner_order = proof_outliner_order_line_for_model(ui.cx_mut().app, &outliner_items_model);",
+            "fn embedded_target_for_window(app: &KernelApp, window: AppWindowId) -> fret_core::RenderTargetId {",
+            "let target = embedded_target_for_window(app, window);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for legacy in [
+            "ui.cx_mut().app.models().read(&outliner_items_model, |items| items.clone())",
+            "ui.cx_mut().app.models().read(&outliner_items_model, |items| { proof_outliner_order_line(items) })",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&legacy),
+                "legacy marker still present: {legacy}"
+            );
+        }
+
+        let dock_bootstrap = source_slice(
+            IMUI_EDITOR_PROOF_DEMO,
+            "fn ensure_dock_graph_inner(",
+            "struct WindowBootstrapService {",
+        )
+        .split_whitespace()
+        .collect::<String>();
+        assert!(
+            dock_bootstrap.contains(
+                &"let target = embedded_target_for_window(app, window);"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !dock_bootstrap.contains(
+                &"embedded::models(app, window).and_then(|m| app.models().read(&m.target, |v| *v).ok()).unwrap_or_default()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        for marker in [
+            "outliner reorder math and dock bootstrap still belong to explicit app-owned helpers",
+            "`proof_outliner_items_snapshot(...)`",
+            "`proof_outliner_order_line_for_model(...)`",
+            "`embedded_target_for_window(...)`",
+            "do not justify new framework surface",
+        ] {
+            assert!(
+                IMUI_EDITOR_PROOF_APP_OWNER_AUDIT.contains(marker),
+                "imui editor proof app-owner audit should remain explicit: {marker}"
+            );
+        }
     }
 
     #[test]
