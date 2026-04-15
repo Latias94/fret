@@ -64,6 +64,36 @@ struct ComponentsGalleryWindowState {
     awaiting_font_dialog: bool,
 }
 
+impl ComponentsGalleryWindowState {
+    fn selected_theme_preset(&self, app: &App) -> Option<Arc<str>> {
+        app.models().get_cloned(&self.theme_preset).flatten()
+    }
+
+    fn overlays_open(&self, app: &App) -> bool {
+        app.models().get_copied(&self.select_open).unwrap_or(false)
+            || app
+                .models()
+                .get_copied(&self.theme_preset_open)
+                .unwrap_or(false)
+            || app
+                .models()
+                .get_copied(&self.dropdown_open)
+                .unwrap_or(false)
+            || app
+                .models()
+                .get_copied(&self.context_menu_open)
+                .unwrap_or(false)
+            || app.models().get_copied(&self.popover_open).unwrap_or(false)
+            || app.models().get_copied(&self.dialog_open).unwrap_or(false)
+            || app
+                .models()
+                .get_copied(&self.alert_dialog_open)
+                .unwrap_or(false)
+            || app.models().get_copied(&self.sheet_open).unwrap_or(false)
+            || app.models().get_copied(&self.cmdk_open).unwrap_or(false)
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct ComponentsGalleryImportedFontAssetLayer {
     installed: bool,
@@ -255,7 +285,7 @@ impl ComponentsGalleryDriver {
     }
 
     fn sync_gallery_shadcn_theme(app: &mut App, state: &mut ComponentsGalleryWindowState) {
-        let preset = app.models().get_cloned(&state.theme_preset).flatten();
+        let preset = state.selected_theme_preset(app);
         if preset.as_deref() == state.applied_theme_preset.as_deref() {
             return;
         }
@@ -386,7 +416,7 @@ impl ComponentsGalleryDriver {
                                         cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
 
                                     let state_revision =
-                                        cx.app.models().revision(&table_state).unwrap_or(0);
+                                        table_state.layout(cx).revision().unwrap_or(0);
                                     let items_revision = 1 ^ state_revision.rotate_left(17);
 
                                     let mut props =
@@ -1821,30 +1851,7 @@ fn handle_event(
         _ => {}
     }
 
-    let overlays_open = app.models().get_copied(&state.select_open).unwrap_or(false)
-        || app
-            .models()
-            .get_copied(&state.theme_preset_open)
-            .unwrap_or(false)
-        || app
-            .models()
-            .get_copied(&state.dropdown_open)
-            .unwrap_or(false)
-        || app
-            .models()
-            .get_copied(&state.context_menu_open)
-            .unwrap_or(false)
-        || app
-            .models()
-            .get_copied(&state.popover_open)
-            .unwrap_or(false)
-        || app.models().get_copied(&state.dialog_open).unwrap_or(false)
-        || app
-            .models()
-            .get_copied(&state.alert_dialog_open)
-            .unwrap_or(false)
-        || app.models().get_copied(&state.sheet_open).unwrap_or(false)
-        || app.models().get_copied(&state.cmdk_open).unwrap_or(false);
+    let overlays_open = state.overlays_open(app);
 
     if overlays_open {
         state.ui.dispatch_event(app, services, event);

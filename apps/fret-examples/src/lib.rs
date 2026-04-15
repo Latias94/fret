@@ -411,6 +411,9 @@ mod authoring_surface_policy_tests {
         include_str!("launcher_utility_window_materials_demo.rs");
     const LIQUID_GLASS_DEMO: &str = include_str!("liquid_glass_demo.rs");
     const MARKDOWN_DEMO: &str = include_str!("markdown_demo.rs");
+    const COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT: &str = include_str!(
+        "../../../docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md"
+    );
     const NODE_GRAPH_DEMO: &str = include_str!("node_graph_demo.rs");
     const PLOT_STRESS_DEMO: &str = include_str!("plot_stress_demo.rs");
     const POSTPROCESS_THEME_DEMO: &str = include_str!("postprocess_theme_demo.rs");
@@ -1594,6 +1597,7 @@ mod authoring_surface_policy_tests {
                 "let theme = cx.theme_snapshot();",
                 "let theme_name = cx.theme().name.clone();",
                 "let theme = cx.theme();",
+                "let state_revision = table_state.layout(cx).revision().unwrap_or(0);",
                 "let selected = tree_state.layout(cx).read_ref(|s| s.selected).ok().flatten();",
                 "let checkbox_value = checkbox.layout(cx).copied_or(false);",
                 "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
@@ -1603,12 +1607,58 @@ mod authoring_surface_policy_tests {
                 "move |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u64>, row: &u64| {",
                 ".render_root(\"components-gallery\", |cx| {",
                 "cx.observe_model(&tree_state, Invalidation::Layout);",
+                "cx.app.models().revision(&table_state).unwrap_or(0);",
                 "cx.app.models().get_copied(&checkbox).unwrap_or(false);",
                 "cx.app.models().get_cloned(&last_action);",
                 "cx.app.models().read(&emoji_font_override, |v| v.clone())",
                 "Theme::global(&*cx.app)",
             ],
         );
+    }
+
+    #[test]
+    fn components_gallery_keeps_retained_render_and_driver_owner_split() {
+        let normalized = COMPONENTS_GALLERY_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "impl ComponentsGalleryWindowState {",
+            "fn selected_theme_preset(&self, app: &App) -> Option<Arc<str>> {",
+            "app.models().get_cloned(&self.theme_preset).flatten()",
+            "fn overlays_open(&self, app: &App) -> bool {",
+            "app.models().get_copied(&self.select_open).unwrap_or(false)",
+            "app.models().get_copied(&self.cmdk_open).unwrap_or(false)",
+            "let preset = state.selected_theme_preset(app);",
+            "let state_revision = table_state.layout(cx).revision().unwrap_or(0);",
+            "let items_revision = 1 ^ state_revision.rotate_left(17);",
+            "let items_value = app.models().get_cloned(&items).unwrap_or_default();",
+            "let tree_state_value = app.models().get_cloned(&state).unwrap_or_default();",
+            "let overlays_open = state.overlays_open(app);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for legacy in ["cx.app.models().revision(&table_state).unwrap_or(0);"] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&legacy),
+                "legacy marker still present: {legacy}"
+            );
+        }
+
+        for marker in [
+            "`components_gallery` is not one unresolved raw-model bucket anymore.",
+            "retained render owner",
+            "driver/event owner",
+            "`table_state.layout(cx).revision()`",
+            "`selected_theme_preset(app)`",
+            "`overlays_open(app)`",
+        ] {
+            assert!(
+                COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT.contains(marker),
+                "components gallery owner audit should remain explicit: {marker}"
+            );
+        }
     }
 
     #[test]

@@ -19,6 +19,7 @@ Companion docs:
 - `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
 - `IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
 - `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
+- `COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -288,6 +289,13 @@ Companion docs:
     cookbook `embedded_viewport_basics` keeps the same explicit raw owner, and
     `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md` records that `components_gallery` is a
     separate retained/component follow-on rather than part of this owner class.
+  - [x] split the remaining `components_gallery` mixed owner surface instead of treating it as one
+    more raw grep tail:
+    the retained table-torture subtree now uses `table_state.layout(cx).revision()` for its
+    render-time revision read, app/theme sync and overlay aggregation now route through explicit
+    demo-local owner helpers (`selected_theme_preset(app)`, `overlays_open(app)`), driver/event
+    tree-key reads stay raw, and
+    `COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md` records the three-way owner split.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

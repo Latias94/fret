@@ -1,6 +1,6 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Milestones
 
-Last updated: 2026-04-15
+Last updated: 2026-04-16
 
 Related:
 
@@ -17,11 +17,12 @@ Related:
 - Model store render read owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
 - IMUI immediate LocalState bridge owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
 - App/driver raw model owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
+- Components gallery owner split audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
 
-## Current status snapshot (as of 2026-04-15)
+## Current status snapshot (as of 2026-04-16)
 
 - **M0**: Met
   - the lane now exists,
@@ -270,6 +271,13 @@ Related:
     keep raw `app.models()` explicit, while `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
     records `components_gallery` as the next separate retained/component follow-on rather than
     part of the same owner bucket.
+  - the `components_gallery` follow-on is now narrowed to an explicit three-owner split instead of
+    staying as one mixed retained/component bucket:
+    the retained table-torture subtree now uses `table_state.layout(cx).revision()` for its
+    render-time revision read, app/theme sync and overlay aggregation route through explicit
+    demo-local owner helpers, and tree-key event handling stays raw app/event owner code. The
+    split is source-gated and recorded in
+    `COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md`.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`
