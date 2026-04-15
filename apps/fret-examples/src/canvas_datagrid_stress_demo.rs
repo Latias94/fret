@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
@@ -316,26 +317,26 @@ fn render(
 
     state.frame = state.frame.wrapping_add(1);
 
-    let variable = app
-        .models()
-        .read(&state.variable_sizes, |v| *v)
-        .unwrap_or(false);
-    let clamp_rows = app
-        .models()
-        .read(&state.clamp_rows, |v| *v)
-        .unwrap_or(false);
-    let revision = app.models().read(&state.revision, |v| *v).unwrap_or(1);
-
     let rows = Arc::clone(&state.rows);
     let cols = Arc::clone(&state.cols);
     let cell_texts = Arc::clone(&state.cell_texts);
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("canvas-datagrid-stress", |cx| {
-            cx.observe_model(&state.variable_sizes, Invalidation::Layout);
-            cx.observe_model(&state.clamp_rows, Invalidation::Layout);
-            cx.observe_model(&state.revision, Invalidation::Layout);
-            cx.observe_model(&state.grid_output, Invalidation::Layout);
+            let (variable, clamp_rows, revision, grid): (
+                bool,
+                bool,
+                u64,
+                shadcn::DataGridCanvasOutput,
+            ) = cx.data().selector_model_layout(
+                (
+                    &state.variable_sizes,
+                    &state.clamp_rows,
+                    &state.revision,
+                    &state.grid_output,
+                ),
+                |(variable, clamp_rows, revision, grid)| (variable, clamp_rows, revision, grid),
+            );
 
             let theme = cx.theme().snapshot();
             let padding = theme.metric_token("metric.padding.md");
@@ -344,11 +345,6 @@ fn render(
             root_layout.size.width = Length::Fill;
             root_layout.size.height = Length::Fill;
 
-            let grid = cx
-                .app
-                .models()
-                .read(&state.grid_output, |v| *v)
-                .unwrap_or_default();
             let header: Arc<str> = Arc::from(format!(
                 "CanvasDataGrid stress | rows={} cols={} visible={}x{} cells={} variable={} clamp_rows={} frame={}",
                 rows.len(),

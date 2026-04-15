@@ -240,6 +240,12 @@ Related:
     visibility reads, and pure driver/app loops such as `record_engine_frame(...)` keep raw
     `app.models().read(...)`. `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md` records why
     this slice did not add a new framework API.
+  - the same owner split now also covers the selected stress render roots that previously read
+    tracked state before entering the render tree:
+    `virtual_list_stress_demo` and `canvas_datagrid_stress_demo` now use
+    `cx.data().selector_model_layout(...)` for their render-time state bags, while their driver
+    loops remain unchanged. The render-time raw `app.models()` tail is therefore further reduced
+    to deliberate driver/retained owners instead of mixed stress-demo drift.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

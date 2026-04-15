@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
@@ -306,24 +307,19 @@ fn render(
 
     state.frame = state.frame.wrapping_add(1);
 
-    let tall_rows_enabled = app
-        .models()
-        .read(&state.tall_rows_enabled, |v| *v)
-        .unwrap_or(false);
-    let reversed = app.models().read(&state.reversed, |v| *v).unwrap_or(false);
-    let items_revision = app
-        .models()
-        .read(&state.items_revision, |v| *v)
-        .unwrap_or(0);
-
     let scroll_handle = state.scroll_handle.clone();
     let offset_y = scroll_handle.offset().y;
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("virtual-list-stress", |cx| {
-                cx.observe_model(&state.tall_rows_enabled, Invalidation::Layout);
-                cx.observe_model(&state.reversed, Invalidation::Layout);
-                cx.observe_model(&state.items_revision, Invalidation::Layout);
+                let (tall_rows_enabled, reversed, items_revision): (bool, bool, u64) = cx
+                    .data()
+                    .selector_model_layout(
+                        (&state.tall_rows_enabled, &state.reversed, &state.items_revision),
+                        |(tall_rows_enabled, reversed, items_revision)| {
+                            (tall_rows_enabled, reversed, items_revision)
+                        },
+                    );
 
                 let theme = cx.theme_snapshot();
                 let padding = theme.metric_token("metric.padding.md");

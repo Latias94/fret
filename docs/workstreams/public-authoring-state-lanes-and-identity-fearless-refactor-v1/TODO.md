@@ -259,6 +259,12 @@ Companion docs:
     render-time `show` toggles, source-policy tests lock both owners, and
     `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md` records why driver-side
     `record_engine_frame(...)` reads stay on raw `app.models()`.
+  - [x] extend the same grouped-selector render-lane cleanup to the selected stress roots that
+    were still reading tracked models before entering the render tree:
+    `virtual_list_stress_demo` and `canvas_datagrid_stress_demo` now derive their render-time
+    state through `cx.data().selector_model_layout(...)`, source-policy tests lock that choice,
+    and the remaining `app.models()` grep tail is narrower driver/retained owner surface instead
+    of stress-render drift.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

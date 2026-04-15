@@ -421,6 +421,7 @@ mod authoring_surface_policy_tests {
     const TABLE_STRESS_DEMO: &str = include_str!("table_stress_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
+    const VIRTUAL_LIST_STRESS_DEMO: &str = include_str!("virtual_list_stress_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
     const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
     const WORKSPACE_HARDENING_SHELL_DIAG_SUITE: &str = include_str!(
@@ -4691,6 +4692,42 @@ mod authoring_surface_policy_tests {
                 "cx.app.models().read(&show, |v| *v).unwrap_or(true)",
                 "cx.app.models().read(&show_model, |v| *v).unwrap_or(true)",
                 "cx.app.models().read(&st.show, |v| *v).unwrap_or(true)",
+            ] {
+                let legacy = legacy.split_whitespace().collect::<String>();
+                assert!(
+                    !normalized.contains(&legacy),
+                    "legacy marker still present: {legacy}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn stress_render_roots_use_grouped_selector_model_layout() {
+        for src in [VIRTUAL_LIST_STRESS_DEMO, CANVAS_DATAGRID_STRESS_DEMO] {
+            let normalized = src.split_whitespace().collect::<String>();
+            for marker in [
+                "use fret::advanced::view::UiCxDataExt as _;",
+                "cx.data().selector_model_layout(",
+            ] {
+                let marker = marker.split_whitespace().collect::<String>();
+                assert!(normalized.contains(&marker), "missing marker: {marker}");
+            }
+            for legacy in [
+                "cx.observe_model(&state.tall_rows_enabled, Invalidation::Layout);",
+                "cx.observe_model(&state.reversed, Invalidation::Layout);",
+                "cx.observe_model(&state.items_revision, Invalidation::Layout);",
+                "app.models().read(&state.tall_rows_enabled, |v| *v).unwrap_or(false);",
+                "app.models().read(&state.reversed, |v| *v).unwrap_or(false);",
+                "app.models().read(&state.items_revision, |v| *v).unwrap_or(0);",
+                "cx.observe_model(&state.variable_sizes, Invalidation::Layout);",
+                "cx.observe_model(&state.clamp_rows, Invalidation::Layout);",
+                "cx.observe_model(&state.revision, Invalidation::Layout);",
+                "cx.observe_model(&state.grid_output, Invalidation::Layout);",
+                "app.models().read(&state.variable_sizes, |v| *v).unwrap_or(false);",
+                "app.models().read(&state.clamp_rows, |v| *v).unwrap_or(false);",
+                "app.models().read(&state.revision, |v| *v).unwrap_or(1);",
+                "cx.app.models().read(&state.grid_output, |v| *v).unwrap_or_default();",
             ] {
                 let legacy = legacy.split_whitespace().collect::<String>();
                 assert!(
