@@ -4,7 +4,6 @@ use fret::app::prelude::*;
 use fret::{Defaults, FretApp, shadcn};
 use fret_app::{CommandId, Model};
 use fret_core::Px;
-use fret_ui::Theme;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
@@ -114,7 +113,7 @@ impl View for EditorNotesDemoView {
             .local(&selected)
             .set::<act::SelectCamera>(EditorAssetSelection::Camera);
 
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = self.asset(selected).clone();
         let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(

@@ -118,6 +118,11 @@ Companion docs:
     `ElementContextAccess<'a, App>`, mounts `InspectorPanel` / `PropertyGroup` / `PropertyGrid`
     through `into_element_in(...)`, and keeps `workspace_shell_command_button(...)` as the
     explicit raw primitive exception instead of confusing the two lanes.
+  - [x] stop teaching root render helpers to reach through `cx.app` just to read theme snapshots
+    on the editor-notes proof family:
+    `editor_notes_demo` and `editor_notes_device_shell_demo` now use the app-facing
+    `cx.theme_snapshot()` helper, and their proof gates forbid
+    `Theme::global(&*cx.app).snapshot()` from drifting back into those product surfaces.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

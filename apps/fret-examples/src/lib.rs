@@ -3577,6 +3577,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             EDITOR_NOTES_DEMO,
             &[
+                "let theme = cx.theme_snapshot();",
                 "fn selection_button<'a, Cx>(",
                 "Cx: fret::app::ElementContextAccess<'a, App>,",
                 ".into_element_in(cx)",
@@ -3591,6 +3592,7 @@ mod authoring_surface_policy_tests {
                 ".watch_model(&asset.notes_model)",
                 ".watch_model(&asset.notes_outcome_model)",
                 "cx.elements()",
+                "Theme::global(&*cx.app).snapshot()",
             ],
         );
 

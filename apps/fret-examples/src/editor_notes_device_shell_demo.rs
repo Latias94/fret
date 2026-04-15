@@ -4,7 +4,7 @@ use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};
 use fret::app::prelude::*;
 use fret::{Defaults, FretApp, shadcn};
 use fret_core::Px;
-use fret_ui::{Invalidation, Theme};
+use fret_ui::Invalidation;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
@@ -67,7 +67,7 @@ impl View for EditorNotesDeviceShellDemoView {
             .local(&selected)
             .set::<editor_notes_demo::act::SelectCamera>(EditorAssetSelection::Camera);
 
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = editor_notes_demo::editor_asset_for_selection(&self.assets, selected).clone();
         let name_value = cx

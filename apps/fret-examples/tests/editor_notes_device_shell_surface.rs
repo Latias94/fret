@@ -3,6 +3,7 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
     let source = include_str!("../src/editor_notes_device_shell_demo.rs");
 
     for needle in [
+        "let theme = cx.theme_snapshot();",
         "use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};",
         "device_shell_switch(",
         "WorkspaceFrame::new(center)",
@@ -21,6 +22,11 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
             "editor notes device shell demo should keep desktop/mobile shell ownership explicit while reusing the shared inner editor content; missing `{needle}`"
         );
     }
+
+    assert!(
+        !source.contains("Theme::global(&*cx.app).snapshot()"),
+        "editor notes device shell demo should use the app-facing theme snapshot helper instead of reading theme through cx.app",
+    );
 }
 
 #[test]

@@ -107,6 +107,11 @@ Related:
     `PropertyGrid` tree through `into_element_in(...)`, and keeps
     `workspace_shell_command_button(...)` as the intentional raw primitive/helper exception
     instead of mixing that low-level case into the editor-composite lane.
+  - the editor-notes product proofs now also keep root theme reads on the app-facing render lane:
+    `editor_notes_demo` and `editor_notes_device_shell_demo` use `cx.theme_snapshot()` instead of
+    `Theme::global(&*cx.app).snapshot()`, and their proof gates now lock that root-render
+    authoring choice so those examples stop teaching raw host/theme access for ordinary app
+    surfaces.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`
