@@ -118,6 +118,11 @@ Related:
     `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` in their `AppUi` render
     roots, and source-policy gates now forbid `Theme::global(&*cx.app).snapshot()` on those
     first-contact/default-facing examples.
+  - the promoted cookbook first-contact set now teaches the same root-render lane:
+    `hello_counter`, `simple_todo`, `simple_todo_v2_target`, and `data_table_basics` import
+    `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` in their `AppUi` render
+    roots, and cookbook source-policy gates now forbid `Theme::global(&*cx.app).snapshot()` on
+    that promoted teaching batch.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

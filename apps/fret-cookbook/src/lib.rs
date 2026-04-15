@@ -808,6 +808,20 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn promoted_cookbook_examples_prefer_app_theme_snapshot_helper() {
+        for src in [
+            HELLO_COUNTER_EXAMPLE,
+            SIMPLE_TODO_EXAMPLE,
+            SIMPLE_TODO_V2_TARGET_EXAMPLE,
+            DATA_TABLE_EXAMPLE,
+        ] {
+            assert!(src.contains("use fret::app::RenderContextAccess as _;"));
+            assert!(src.contains("let theme = cx.theme_snapshot();"));
+            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
+        }
+    }
+
+    #[test]
     fn advanced_examples_use_the_explicit_advanced_surface() {
         assert_uses_advanced_surface(DRAG_EXAMPLE);
         assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);

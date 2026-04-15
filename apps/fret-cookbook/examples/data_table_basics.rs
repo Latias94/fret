@@ -1,5 +1,6 @@
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
-use fret::style::{ColorRef, Space, Theme};
+use fret::style::{ColorRef, Space};
 use fret_runtime::Model;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use std::sync::Arc;
@@ -57,7 +58,7 @@ impl View for DataTableBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
 
         let header = shadcn::card_header(|cx| {
             ui::children![

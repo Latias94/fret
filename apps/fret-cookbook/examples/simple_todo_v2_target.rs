@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use fret::app::LocalState;
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
-use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
+use fret::style::{ColorRef, Space, ThemeSnapshot};
 use fret_ui::element::SemanticsDecoration;
 
 mod act {
@@ -128,7 +129,7 @@ impl View for SimpleTodoV2TargetView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let theme_for_rows = theme.clone();
         let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);

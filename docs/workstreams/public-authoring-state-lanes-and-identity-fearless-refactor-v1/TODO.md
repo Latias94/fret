@@ -128,6 +128,11 @@ Companion docs:
     `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now import
     `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` at the root render surface,
     and source-policy tests forbid `Theme::global(&*cx.app).snapshot()` on that batch.
+  - [x] keep the promoted cookbook first-contact examples on the same render lane too:
+    `hello_counter`, `simple_todo`, `simple_todo_v2_target`, and `data_table_basics` now import
+    `fret::app::RenderContextAccess as _`, use `cx.theme_snapshot()` in their `AppUi` roots, and
+    cookbook source-policy tests forbid `Theme::global(&*cx.app).snapshot()` on that promoted
+    teaching set.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
