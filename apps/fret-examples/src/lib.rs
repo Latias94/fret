@@ -1035,6 +1035,10 @@ mod authoring_surface_policy_tests {
         assert!(
             API_WORKBENCH_LITE_DEMO.contains("fn init(_app: &mut App, window: WindowId) -> Self")
         );
+        assert!(API_WORKBENCH_LITE_DEMO.contains("Cx: fret::app::RenderContextAccess<'a, App>,"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("fn shell_frame(\n    cx: &mut AppUi<'_, '_>,"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("fn request_panel(cx: &mut AppUi<'_, '_>,"));
+        assert!(!API_WORKBENCH_LITE_DEMO.contains("fn response_panel(cx: &mut AppUi<'_, '_>,"));
         assert_avoids_legacy_conversion_names(API_WORKBENCH_LITE_DEMO);
         for marker in [
             "cx.data().query_async(",

@@ -74,6 +74,14 @@ Related:
     now mostly deliberate raw style escape hatches plus explicit environment/responsive helpers.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
+  - the first real consumer probe is now also on that lane:
+    `api_workbench_lite_demo` extracted helpers accept
+    `fret::app::RenderContextAccess<'a, App>`, `LocalState::{layout_value, paint_value,
+    layout_read_ref, paint_read_ref}`, `QueryHandleReadLayoutExt`, `MutationHandleReadLayoutExt`,
+    and `UiCxDataExt`/`UiCxActionsExt` now work through the same capability, and the remaining raw
+    `ElementContext` requirements are explicit `cx.elements()` escape hatches at
+    `into_element(...)` / `with(...)` late-landing boundaries instead of implicit `AppUi` `Deref`
+    inheritance.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

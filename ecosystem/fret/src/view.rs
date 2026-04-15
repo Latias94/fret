@@ -255,9 +255,10 @@ impl<T> LocalState<T> {
     ///
     /// `LocalState<T>` on the app lane always owns an inserted slot, so this keeps the invalidation
     /// phase explicit without repeating fallback noise at the call site.
-    pub fn layout_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T
+    pub fn layout_value<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> T
     where
         T: Any + Clone,
+        Cx: RenderContextAccess<'a, H>,
     {
         self.layout(cx)
             .value()
@@ -271,13 +272,14 @@ impl<T> LocalState<T> {
     /// lightweight formatting) and should not clone the entire `T` just to compute that result.
     /// Keep raw `layout(cx).read_ref(...)` when you intentionally want the explicit tracked-read
     /// builder.
-    pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>(
+    pub fn layout_read_ref<'a, H: UiHost + 'a, Cx, R>(
         &self,
-        cx: &mut AppUi<'view_cx, 'a, H>,
+        cx: &mut Cx,
         f: impl FnOnce(&T) -> R,
     ) -> R
     where
         T: Any,
+        Cx: RenderContextAccess<'a, H>,
     {
         self.layout(cx)
             .read_ref(f)
@@ -289,9 +291,10 @@ impl<T> LocalState<T> {
     ///
     /// Keep raw `watch(...).paint().value_*` when you intentionally want the explicit builder; use
     /// this for ordinary initialized app locals that only need the paint-phase value.
-    pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T
+    pub fn paint_value<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> T
     where
         T: Any + Clone,
+        Cx: RenderContextAccess<'a, H>,
     {
         self.paint(cx)
             .value()
@@ -304,27 +307,29 @@ impl<T> LocalState<T> {
     /// Use this when paint-time app code only needs a projection and should not clone the whole
     /// slot. Keep raw `paint(cx).read_ref(...)` when you intentionally want the explicit
     /// tracked-read builder.
-    pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>(
+    pub fn paint_read_ref<'a, H: UiHost + 'a, Cx, R>(
         &self,
-        cx: &mut AppUi<'view_cx, 'a, H>,
+        cx: &mut Cx,
         f: impl FnOnce(&T) -> R,
     ) -> R
     where
         T: Any,
+        Cx: RenderContextAccess<'a, H>,
     {
         self.paint(cx)
             .read_ref(f)
             .expect("LocalState-first app code should always read initialized locals")
     }
 
-    pub fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+    pub fn watch<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
+        cx: &'watch mut Cx,
     ) -> WatchedState<'watch, 'watch, 'a, H, T>
     where
         T: Any,
+        Cx: RenderContextAccess<'a, H>,
     {
-        cx.watch_local(self)
+        WatchedState::new(cx.elements(), &self.model)
     }
 
     /// Observe/read this local from helper-heavy `ElementContext` surfaces.
@@ -669,6 +674,47 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
     }
 }
 
+/// Explicit render-authoring helper capability for app-facing extracted helper functions.
+///
+/// This keeps helper signatures on one named lane without forcing them to accept the full `AppUi`
+/// surface or a raw `ElementContext<'_, H>` type directly.
+pub trait RenderContextAccess<'a, H: UiHost + 'a>: fret_ui::ElementContextAccess<'a, H> {
+    fn app<'b>(&'b mut self) -> &'b H
+    where
+        'a: 'b,
+    {
+        &*self.elements().app
+    }
+
+    fn app_mut<'b>(&'b mut self) -> &'b mut H
+    where
+        'a: 'b,
+    {
+        &mut *self.elements().app
+    }
+
+    fn window_id(&mut self) -> AppWindowId {
+        self.elements().window
+    }
+
+    fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> fret_core::Rect {
+        self.elements().environment_viewport_bounds(invalidation)
+    }
+
+    fn with_theme<R>(&mut self, f: impl FnOnce(&fret_ui::Theme) -> R) -> R {
+        f(self.elements().theme())
+    }
+
+    fn theme_snapshot(&mut self) -> fret_ui::ThemeSnapshot {
+        self.with_theme(|theme| theme.snapshot())
+    }
+}
+
+impl<'a, H: UiHost + 'a, T> RenderContextAccess<'a, H> for T where
+    T: fret_ui::ElementContextAccess<'a, H>
+{
+}
+
 /// Shared read-side ergonomics for both `LocalState<T>` and explicit `Model<T>` handles.
 ///
 /// Prefer `LocalState::layout_value(...)` / `paint_value(...)` for ordinary initialized app-lane
@@ -677,48 +723,65 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
 /// `watch(cx)` when you need custom invalidation, `observe()`, `revision()`, or direct `read*()`
 /// access on the tracked-read builder.
 pub trait TrackedStateExt<T: Any> {
-    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+    fn watch<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, T>;
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
+    where
+        Cx: RenderContextAccess<'a, H>;
 
-    fn paint<'watch, 'view_cx, 'a, H: UiHost>(
+    fn paint<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
         self.watch(cx).paint()
     }
 
-    fn layout<'watch, 'view_cx, 'a, H: UiHost>(
+    fn layout<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
         self.watch(cx).layout()
     }
 
-    fn hit_test<'watch, 'view_cx, 'a, H: UiHost>(
+    fn hit_test<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
         self.watch(cx).hit_test()
     }
 }
 
 impl<T: Any> TrackedStateExt<T> for LocalState<T> {
-    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+    fn watch<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
-        cx.watch_local(self)
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
+        WatchedState::new(cx.elements(), &self.model)
     }
 }
 
 impl<T: Any> TrackedStateExt<T> for Model<T> {
-    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+    fn watch<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, T> {
-        WatchedState::new(cx.cx, self)
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
+        WatchedState::new(cx.elements(), self)
     }
 }
 
@@ -1000,11 +1063,14 @@ impl fret_ui_shadcn::facade::IntoDateVecModel for &LocalState<Vec<time::Date>> {
 
 #[cfg(feature = "state-query")]
 impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::QueryHandle<T> {
-    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+    fn watch<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, fret_query::QueryState<T>> {
-        WatchedState::new(cx.cx, self.model())
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, fret_query::QueryState<T>>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
+        WatchedState::new(cx.elements(), self.model())
     }
 }
 
@@ -1012,11 +1078,14 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
 impl<TIn: 'static, TOut: 'static> TrackedStateExt<fret_mutation::MutationState<TIn, TOut>>
     for fret_mutation::MutationHandle<TIn, TOut>
 {
-    fn watch<'watch, 'view_cx, 'a, H: UiHost>(
+    fn watch<'watch, 'a, H: UiHost + 'a, Cx>(
         &'watch self,
-        cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedState<'watch, 'watch, 'a, H, fret_mutation::MutationState<TIn, TOut>> {
-        WatchedState::new(cx.cx, self.model())
+        cx: &'watch mut Cx,
+    ) -> WatchedState<'watch, 'watch, 'a, H, fret_mutation::MutationState<TIn, TOut>>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
+        WatchedState::new(cx.elements(), self.model())
     }
 }
 
@@ -1027,18 +1096,17 @@ impl<TIn: 'static, TOut: 'static> TrackedStateExt<fret_mutation::MutationState<T
 /// (`status` / `data` / `error`) stay explicit.
 #[cfg(feature = "state-query")]
 pub trait QueryHandleReadLayoutExt<T: 'static> {
-    fn read_layout<'view_cx, 'a, H: UiHost>(
-        &self,
-        cx: &mut AppUi<'view_cx, 'a, H>,
-    ) -> fret_query::QueryState<T>;
+    fn read_layout<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> fret_query::QueryState<T>
+    where
+        Cx: RenderContextAccess<'a, H>;
 }
 
 #[cfg(feature = "state-query")]
 impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
-    fn read_layout<'view_cx, 'a, H: UiHost>(
-        &self,
-        cx: &mut AppUi<'view_cx, 'a, H>,
-    ) -> fret_query::QueryState<T> {
+    fn read_layout<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> fret_query::QueryState<T>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
         TrackedStateExt::layout(self, cx).value_or_default()
     }
 }
@@ -1046,20 +1114,25 @@ impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
 /// App-facing layout-phase convenience reads for mutation handles on the default `fret` lane.
 #[cfg(feature = "state-mutation")]
 pub trait MutationHandleReadLayoutExt<TIn: 'static, TOut: 'static> {
-    fn read_layout<'view_cx, 'a, H: UiHost>(
+    fn read_layout<'a, H: UiHost + 'a, Cx>(
         &self,
-        cx: &mut AppUi<'view_cx, 'a, H>,
-    ) -> fret_mutation::MutationState<TIn, TOut>;
+        cx: &mut Cx,
+    ) -> fret_mutation::MutationState<TIn, TOut>
+    where
+        Cx: RenderContextAccess<'a, H>;
 }
 
 #[cfg(feature = "state-mutation")]
 impl<TIn: 'static, TOut: 'static> MutationHandleReadLayoutExt<TIn, TOut>
     for fret_mutation::MutationHandle<TIn, TOut>
 {
-    fn read_layout<'view_cx, 'a, H: UiHost>(
+    fn read_layout<'a, H: UiHost + 'a, Cx>(
         &self,
-        cx: &mut AppUi<'view_cx, 'a, H>,
-    ) -> fret_mutation::MutationState<TIn, TOut> {
+        cx: &mut Cx,
+    ) -> fret_mutation::MutationState<TIn, TOut>
+    where
+        Cx: RenderContextAccess<'a, H>,
+    {
         TrackedStateExt::layout(self, cx).value_or_default()
     }
 }
@@ -2595,9 +2668,14 @@ pub trait UiCxDataExt<'a> {
     fn data(&mut self) -> UiCxData<'_, 'a>;
 }
 
-impl<'a> UiCxDataExt<'a> for ElementContext<'a, crate::app::App> {
+impl<'a, Cx> UiCxDataExt<'a> for Cx
+where
+    Cx: RenderContextAccess<'a, crate::app::App>,
+{
     fn data(&mut self) -> UiCxData<'_, 'a> {
-        UiCxData { cx: self }
+        UiCxData {
+            cx: self.elements(),
+        }
     }
 }
 
@@ -2608,9 +2686,14 @@ pub trait UiCxActionsExt<'a> {
     fn actions(&mut self) -> UiCxActions<'_, 'a>;
 }
 
-impl<'a> UiCxActionsExt<'a> for ElementContext<'a, crate::app::App> {
+impl<'a, Cx> UiCxActionsExt<'a> for Cx
+where
+    Cx: RenderContextAccess<'a, crate::app::App>,
+{
     fn actions(&mut self) -> UiCxActions<'_, 'a> {
-        UiCxActions { cx: self }
+        UiCxActions {
+            cx: self.elements(),
+        }
     }
 }
 
@@ -5019,14 +5102,16 @@ mod tests {
         assert!(
             api_source.contains("pub fn value<T: Any + Clone>(&self, local: &LocalState<T>) -> T")
         );
-        assert!(api_source.contains(
-            "pub fn layout_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
-        ));
-        assert!(api_source.contains(
-            "pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
-        ));
-        assert!(api_source.contains("pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>("));
-        assert!(api_source.contains("pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(
+            api_source
+                .contains("pub fn layout_value<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> T")
+        );
+        assert!(
+            api_source
+                .contains("pub fn paint_value<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> T")
+        );
+        assert!(api_source.contains("pub fn layout_read_ref<'a, H: UiHost + 'a, Cx, R>("));
+        assert!(api_source.contains("pub fn paint_read_ref<'a, H: UiHost + 'a, Cx, R>("));
         assert!(api_source.contains("pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
         assert!(api_source.contains("pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>("));
@@ -5053,6 +5138,7 @@ mod tests {
         assert!(
             api_source.contains("pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch")
         );
+        assert!(api_source.contains("pub trait RenderContextAccess<'a, H: UiHost + 'a>"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(!api_source.contains("pub fn watch_local<'m, T: Any>("));
@@ -5087,7 +5173,7 @@ mod tests {
         assert!(!api_source.contains("pub fn local_set<A, T>("));
         assert!(!api_source.contains("pub fn toggle_local_bool<A>("));
         assert!(!api_source.contains("pub fn payload_local_update_if<A, T>("));
-        assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
+        assert!(api_source.contains("fn read_layout<'a, H: UiHost + 'a, Cx>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
         assert!(api_source.contains("pub fn selector_model_layout<Inputs, TValue>("));
         assert!(api_source.contains("pub fn selector_model_paint<Inputs, TValue>("));

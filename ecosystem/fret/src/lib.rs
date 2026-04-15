@@ -422,7 +422,7 @@ pub mod app {
     /// Canonical app-facing view trait on the explicit app lane.
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
-    pub use crate::view::{LocalState, UiCxActionsExt, UiCxDataExt};
+    pub use crate::view::{LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt};
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
     /// This is the same underlying runtime type as the raw kernel alias exposed on
@@ -3184,9 +3184,10 @@ mod authoring_surface_policy_tests {
             INTEGRATING_SQLITE_AND_SQLX
                 .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
         );
-        assert!(INTEGRATING_SQLITE_AND_SQLX.contains(
-            "`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`"
-        ));
+        assert!(
+            INTEGRATING_SQLITE_AND_SQLX
+                .contains("`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`")
+        );
         assert!(
             INTEGRATING_SQLITE_AND_SQLX.contains("let save_state = save_todo.read_layout(cx);")
         );
@@ -3207,9 +3208,10 @@ mod authoring_surface_policy_tests {
             CRATE_USAGE_GUIDE
                 .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
         );
-        assert!(CRATE_USAGE_GUIDE.contains(
-            "`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`"
-        ));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`")
+        );
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret::mutation::{MutationPolicy, MutationState, ...}`")
         );
@@ -3671,6 +3673,9 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
+        assert!(LIB_RS.contains(
+            "pub use crate::view::{LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt};"
+        ));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }
 

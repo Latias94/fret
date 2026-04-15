@@ -93,6 +93,12 @@ Companion docs:
     Result: keep this lane active and prioritize `AppUi` / extracted-helper render-lane
     separation before reopening storage-model or mutation-owner debates. See
     `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`.
+  - [x] land the first real consumer-probe helper migration on the new render-authoring
+    capability lane:
+    `api_workbench_lite_demo` extracted helpers now accept
+    `fret::app::RenderContextAccess<'a, App>`, `LocalState`/query/mutation read helpers work
+    through that capability, and raw `ElementContext` access is spelled explicitly with
+    `cx.elements()` only at late-landing builder boundaries.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

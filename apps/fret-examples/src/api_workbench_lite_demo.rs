@@ -13,7 +13,7 @@ use fret::mutation::{
     MutationError, MutationHandle, MutationPolicy, MutationState,
 };
 use fret::query::{QueryError, QueryHandle, QueryKey, QueryPolicy, QueryState};
-use fret::style::{ColorRef, LayoutRefinement, Space, Theme};
+use fret::style::{ColorRef, LayoutRefinement, Space};
 use fret::{FretApp, shadcn};
 use fret_app::{CommandId, CommandMeta, DefaultKeybinding, KeyChord, PlatformFilter};
 use fret_core::{KeyCode, Modifiers, Px};
@@ -229,7 +229,7 @@ impl View for ApiWorkbenchLiteView {
             self.window,
         );
 
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = cx.theme_snapshot();
         let method = locals
             .method
             .layout_value(cx)
@@ -543,8 +543,8 @@ fn prepare_request_submission_ui(
     handled
 }
 
-fn shell_frame(
-    cx: &mut AppUi<'_, '_>,
+fn shell_frame<'a, Cx>(
+    cx: &mut Cx,
     locals: &WorkbenchLocals,
     theme: fret::style::ThemeSnapshot,
     method: Arc<str>,
@@ -557,7 +557,10 @@ fn shell_frame(
     retry_button: impl UiChild,
     settings_button: impl UiChild,
     command_button: impl UiChild,
-) -> AnyElement {
+) -> AnyElement
+where
+    Cx: fret::app::RenderContextAccess<'a, App>,
+{
     let base_url = locals.base_url.layout_value(cx);
     let header = shadcn::card(|cx| {
         ui::children![
@@ -632,14 +635,14 @@ fn shell_frame(
     .w_full()
     .h_full()
     .items_stretch()
-    .into_element(cx)])
-    .into_element(cx);
+    .into_element(cx.elements())])
+    .into_element(cx.elements());
 
     let content = shadcn::SidebarProvider::new()
         .width(Px(300.0))
         .width_icon(Px(72.0))
         .width_mobile(Px(320.0))
-        .with(cx, |cx| {
+        .with(cx.elements(), |cx| {
             vec![
                 ui::h_flex(|_cx| vec![sidebar, main])
                     .gap(Space::N4)
@@ -650,43 +653,45 @@ fn shell_frame(
             ]
         });
 
-    content
-        .into_iter()
-        .next()
-        .unwrap_or_else(|| ui::container(|_cx| Vec::<AnyElement>::new()).into_element(cx))
+    content.into_iter().next().unwrap_or_else(|| {
+        ui::container(|_cx| Vec::<AnyElement>::new()).into_element(cx.elements())
+    })
 }
 
-fn sidebar_frame(
-    cx: &mut AppUi<'_, '_>,
+fn sidebar_frame<'a, Cx>(
+    cx: &mut Cx,
     locals: &WorkbenchLocals,
     base_url: String,
     history_state: &QueryState<Vec<PersistedHistoryEntry>>,
     history: Vec<PersistedHistoryEntry>,
     selected_collection: Option<Arc<str>>,
     selected_history: Option<u64>,
-) -> AnyElement {
+) -> AnyElement
+where
+    Cx: fret::app::RenderContextAccess<'a, App>,
+{
     let collection_group = shadcn::SidebarGroup::new([
-        shadcn::SidebarGroupLabel::new("Collections").into_element(cx),
+        shadcn::SidebarGroupLabel::new("Collections").into_element(cx.elements()),
         shadcn::SidebarGroupContent::new([shadcn::SidebarMenu::new(collection_buttons(
             cx,
             selected_collection,
         ))
-        .into_element(cx)])
-        .into_element(cx),
+        .into_element(cx.elements())])
+        .into_element(cx.elements()),
     ])
-    .into_element(cx);
+    .into_element(cx.elements());
 
     let history_group = shadcn::SidebarGroup::new([
-        shadcn::SidebarGroupLabel::new("History").into_element(cx),
+        shadcn::SidebarGroupLabel::new("History").into_element(cx.elements()),
         shadcn::SidebarGroupContent::new([history_menu(
             cx,
             history_state,
             history,
             selected_history,
         )])
-        .into_element(cx),
+        .into_element(cx.elements()),
     ])
-    .into_element(cx);
+    .into_element(cx.elements());
 
     shadcn::Sidebar::new([
         shadcn::SidebarHeader::new([ui::v_flex(|cx| {
@@ -701,9 +706,9 @@ fn sidebar_frame(
             ]
         })
         .gap(Space::N1)
-        .into_element(cx)])
-        .into_element(cx),
-        shadcn::SidebarContent::new([collection_group, history_group]).into_element(cx),
+        .into_element(cx.elements())])
+        .into_element(cx.elements()),
+        shadcn::SidebarContent::new([collection_group, history_group]).into_element(cx.elements()),
         shadcn::SidebarFooter::new([ui::v_flex(|cx| {
             ui::children![
                 cx;
@@ -721,19 +726,19 @@ fn sidebar_frame(
             ]
         })
         .gap(Space::N1)
-        .into_element(cx)])
-        .into_element(cx),
+        .into_element(cx.elements())])
+        .into_element(cx.elements()),
     ])
     .collapsible(shadcn::SidebarCollapsible::Icon)
     .refine_layout(LayoutRefinement::default().h_full())
-    .into_element(cx)
+    .into_element(cx.elements())
     .test_id(TEST_ID_SIDEBAR)
 }
 
-fn collection_buttons(
-    cx: &mut AppUi<'_, '_>,
-    selected_collection: Option<Arc<str>>,
-) -> Vec<AnyElement> {
+fn collection_buttons<'a, Cx>(cx: &mut Cx, selected_collection: Option<Arc<str>>) -> Vec<AnyElement>
+where
+    Cx: fret::app::RenderContextAccess<'a, App>,
+{
     (0u8..3u8)
         .map(|id| {
             let preset = collection_preset(id);
@@ -748,19 +753,22 @@ fn collection_buttons(
                         "api-workbench-lite.collection.{}",
                         collection_key(id)
                     ))
-                    .into_element(cx),
+                    .into_element(cx.elements()),
             )
-            .into_element(cx)
+            .into_element(cx.elements())
         })
         .collect()
 }
 
-fn history_menu(
-    cx: &mut AppUi<'_, '_>,
+fn history_menu<'a, Cx>(
+    cx: &mut Cx,
     history_state: &QueryState<Vec<PersistedHistoryEntry>>,
     history: Vec<PersistedHistoryEntry>,
     selected_history: Option<u64>,
-) -> AnyElement {
+) -> AnyElement
+where
+    Cx: fret::app::RenderContextAccess<'a, App>,
+{
     if history_state.is_loading() && !history_state.has_data() {
         return ui::v_flex(|cx| {
             ui::children![
@@ -774,7 +782,7 @@ fn history_menu(
             ]
         })
         .gap(Space::N2)
-        .into_element(cx);
+        .into_element(cx.elements());
     }
 
     if let Some(err) = history_state.error.as_ref() {
@@ -793,7 +801,7 @@ fn history_menu(
             ]
         })
         .gap(Space::N2)
-        .into_element(cx);
+        .into_element(cx.elements());
     }
 
     if history.is_empty() {
@@ -809,7 +817,7 @@ fn history_menu(
             ]
         })
         .gap(Space::N2)
-        .into_element(cx);
+        .into_element(cx.elements());
     }
 
     shadcn::SidebarMenu::new(history.into_iter().map(|entry| {
@@ -822,14 +830,17 @@ fn history_menu(
                 .action(act::LoadHistory)
                 .action_payload(entry.id)
                 .test_id(format!("api-workbench-lite.history.row.{}", entry.id))
-                .into_element(cx),
+                .into_element(cx.elements()),
         )
-        .into_element(cx)
+        .into_element(cx.elements())
     }))
-    .into_element(cx)
+    .into_element(cx.elements())
 }
 
-fn request_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals, method: Arc<str>) -> AnyElement {
+fn request_panel<'a, Cx>(cx: &mut Cx, locals: &WorkbenchLocals, method: Arc<str>) -> AnyElement
+where
+    Cx: fret::app::RenderContextAccess<'a, App>,
+{
     let request_url = locals.url.layout_value(cx);
     let method_select = shadcn::Select::new(&locals.method, &locals.method_open)
         .a11y_label("Method")
@@ -862,7 +873,7 @@ fn request_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals, method: Arc<s
                     .placeholder("{ ... }")
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_BODY)
-                    .into_element(cx)],
+                    .into_element(cx.elements())],
             ),
             shadcn::TabsItem::new(
                 "headers",
@@ -872,12 +883,12 @@ fn request_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals, method: Arc<s
                     .placeholder("Content-Type: application/json")
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_HEADERS)
-                    .into_element(cx)],
+                    .into_element(cx.elements())],
             ),
         ])
         .ui()
         .w_full()
-        .into_element(cx);
+        .into_element(cx.elements());
 
     shadcn::card(|cx| {
         ui::children![
@@ -909,10 +920,13 @@ fn request_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals, method: Arc<s
     .flex_1()
     .min_w_0()
     .h_full()
-    .into_element(cx)
+    .into_element(cx.elements())
 }
 
-fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElement {
+fn response_panel<'a, Cx>(cx: &mut Cx, locals: &WorkbenchLocals) -> AnyElement
+where
+    Cx: fret::app::RenderContextAccess<'a, App>,
+{
     let response_tabs = shadcn::Tabs::new(&locals.response_tab)
         .content_fill_remaining(true)
         .items([
@@ -924,7 +938,7 @@ fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElemen
                     .disabled(true)
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_RESPONSE_PRETTY)
-                    .into_element(cx)],
+                    .into_element(cx.elements())],
             ),
             shadcn::TabsItem::new(
                 "raw",
@@ -934,7 +948,7 @@ fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElemen
                     .disabled(true)
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_RESPONSE_RAW)
-                    .into_element(cx)],
+                    .into_element(cx.elements())],
             ),
             shadcn::TabsItem::new(
                 "headers",
@@ -944,12 +958,12 @@ fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElemen
                     .disabled(true)
                     .min_height(Px(260.0))
                     .test_id(TEST_ID_RESPONSE_HEADERS)
-                    .into_element(cx)],
+                    .into_element(cx.elements())],
             ),
         ])
         .ui()
         .w_full()
-        .into_element(cx);
+        .into_element(cx.elements());
 
     shadcn::card(|cx| {
         ui::children![
@@ -970,7 +984,7 @@ fn response_panel(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> AnyElemen
     .flex_1()
     .min_w_0()
     .h_full()
-    .into_element(cx)
+    .into_element(cx.elements())
 }
 
 fn apply_response_snapshot(
