@@ -31,7 +31,7 @@ impl View for ImUiHelloView {
 
         // This demo mounts IMUI directly at the view root, so the default `imui(...)` entrypoint
         // should own the stacked host for us.
-        fret_imui::imui(cx.elements(), |ui| {
+        fret_imui::imui_in(cx, |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
 

@@ -7,7 +7,7 @@ use delinea::{
     AxisRange, AxisScale, ChartEngine, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
     SeriesKind, SeriesSpec, TimeAxisScale,
 };
-use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
 
 struct ChartDeclarativeView {
     engine: Model<ChartEngine>,
@@ -200,11 +200,10 @@ impl View for ChartDeclarativeView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.elements()
-            .observe_model(&self.engine, Invalidation::Paint);
+        let _ = self.engine.paint(cx).read_ref(|_| ());
 
         let mut props = ChartCanvasPanelProps::new(self.spec.clone());
         props.engine = Some(self.engine.clone());
-        chart_canvas_panel(cx.elements(), props).into()
+        chart_canvas_panel_in(cx, props).into()
     }
 }

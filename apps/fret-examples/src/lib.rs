@@ -1197,18 +1197,28 @@ mod authoring_surface_policy_tests {
             CHART_DECLARATIVE_DEMO,
             &[
                 "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui",
+                "let _ = self.engine.paint(cx).read_ref(|_| ());",
+                "chart_canvas_panel_in(cx, props).into()",
+            ],
+            &[
+                "fn chart_declarative_root(",
+                "cx.elements().observe_model(&self.engine, Invalidation::Paint);",
                 "chart_canvas_panel(cx.elements(), props).into()",
             ],
-            &["fn chart_declarative_root("],
         );
 
         assert_low_level_interop_examples_keep_direct_leaf_roots(
             NODE_GRAPH_DEMO,
             &[
                 "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui",
+                "self.surface.observe_in(cx);",
+                "node_graph_surface_in(cx, props).into()",
+            ],
+            &[
+                "fn node_graph_root(",
+                "self.surface.observe(cx.elements());",
                 "node_graph_surface(cx.elements(), props).into()",
             ],
-            &["fn node_graph_root("],
         );
     }
 
@@ -1629,7 +1639,7 @@ mod authoring_surface_policy_tests {
             "imui_hello_demo",
             IMUI_HELLO_DEMO,
             &[
-                "fret_imui::imui(cx.elements(), |ui| {",
+                "fret_imui::imui_in(cx, |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
                 "ui.checkbox_model(\"Enabled\", enabled_state.model())",
@@ -1641,7 +1651,7 @@ mod authoring_surface_policy_tests {
             "imui_floating_windows_demo",
             IMUI_FLOATING_WINDOWS_DEMO,
             &[
-                "fret_imui::imui(cx.elements(), |ui| {",
+                "fret_imui::imui_in(cx, |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
                 "ui.window_with_options(",
@@ -1654,7 +1664,7 @@ mod authoring_surface_policy_tests {
             "imui_response_signals_demo",
             IMUI_RESPONSE_SIGNALS_DEMO,
             &[
-                "fret_imui::imui(cx.elements(), |ui| {",
+                "fret_imui::imui_in(cx, |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
                 "click.secondary_clicked()",
@@ -1686,7 +1696,7 @@ mod authoring_surface_policy_tests {
             "imui_shadcn_adapter_demo",
             IMUI_SHADCN_ADAPTER_DEMO,
             &[
-                "fret_imui::imui(cx.elements(), |ui| {",
+                "fret_imui::imui_in(cx, |ui| {",
                 "UiWriterImUiFacadeExt as _",
                 "ui.combo_model_with_options(",
                 "ui.separator_text(\"Inspector snapshot\")",
@@ -1700,7 +1710,7 @@ mod authoring_surface_policy_tests {
             "imui_node_graph_demo",
             IMUI_NODE_GRAPH_DEMO,
             &[
-                "fret_imui::imui(cx.elements(), |ui| {",
+                "fret_imui::imui_in(cx, |ui| {",
                 "compatibility-oriented and should not be treated as the default downstream",
                 "Prefer the declarative node-graph surfaces for normal downstream guidance.",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",

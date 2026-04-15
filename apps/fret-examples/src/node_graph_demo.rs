@@ -10,7 +10,7 @@ use fret_node::core::{
 use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_node::ui::{
     EdgePaintOverrideV1, NodeGraphDiagnosticsConfig, NodeGraphPaintOverridesMap,
-    NodeGraphPaintOverridesRef, NodeGraphSurfaceBinding, node_graph_surface,
+    NodeGraphPaintOverridesRef, NodeGraphSurfaceBinding, node_graph_surface_in,
 };
 use serde_json::Value;
 
@@ -48,7 +48,7 @@ impl View for NodeGraphDemoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        self.surface.observe(cx.elements());
+        self.surface.observe_in(cx);
 
         let mut props = self.surface.surface_props();
         props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
@@ -59,7 +59,7 @@ impl View for NodeGraphDemoView {
                 hover_tooltip_enabled: true,
             };
         }
-        node_graph_surface(cx.elements(), props).into()
+        node_graph_surface_in(cx, props).into()
     }
 }
 

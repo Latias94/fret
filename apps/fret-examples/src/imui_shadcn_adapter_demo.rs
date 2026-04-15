@@ -40,7 +40,7 @@ impl View for ImUiShadcnAdapterView {
 
         let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
 
-        fret_imui::imui(cx.elements(), |ui| {
+        fret_imui::imui_in(cx, |ui| {
             use fret_ui_kit::imui::{
                 InputTextOptions, SliderOptions, TableColumn, TableOptions,
                 UiWriterImUiFacadeExt as _, VirtualListMeasureMode, VirtualListOptions,

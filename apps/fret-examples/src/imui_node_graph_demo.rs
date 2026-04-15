@@ -43,7 +43,7 @@ impl View for ImUiNodeGraphView {
         let view = self.view.clone();
         let editor_config = self.editor_config.clone();
 
-        fret_imui::imui(cx.elements(), |ui| {
+        fret_imui::imui_in(cx, |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
 

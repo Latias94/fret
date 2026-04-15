@@ -9,7 +9,7 @@ mod view_reducer;
 pub use super::binding::NodeGraphSurfaceBinding;
 pub use paint_only::{
     NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps, NodeGraphVisibleSubsetPortalConfig,
-    node_graph_surface,
+    node_graph_surface, node_graph_surface_in,
 };
 
 #[cfg(feature = "compat-retained-canvas")]

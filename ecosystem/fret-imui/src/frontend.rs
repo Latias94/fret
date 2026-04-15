@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use fret_authoring::{UiWriter, mark_immediate_render_frame};
 use fret_ui::element::{AnyElement, ColumnProps, Elements, Length, RowProps};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 /// Default IMUI mount: wraps produced siblings in a fill-sized `Column` so they stack safely.
 ///
@@ -21,6 +21,17 @@ pub fn imui<'a, H: UiHost>(
     element.into()
 }
 
+/// Capability-first adapter for [`imui`] when the caller only owns `ElementContextAccess`.
+pub fn imui_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
+) -> Elements
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    imui(cx.elements(), f)
+}
+
 /// Advanced IMUI mount: emits produced siblings directly without adding a host layout node.
 ///
 /// Use this only when an explicit `Column`/`Row`/flex host already owns sibling flow. Calling this
@@ -34,6 +45,17 @@ pub fn imui_raw<'a, H: UiHost>(
     out.into()
 }
 
+/// Capability-first adapter for [`imui_raw`] when the caller only owns `ElementContextAccess`.
+pub fn imui_raw_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
+) -> Elements
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    imui_raw(cx.elements(), f)
+}
+
 pub fn imui_build<'a, H: UiHost>(
     cx: &mut ElementContext<'a, H>,
     out: &mut Vec<AnyElement>,
@@ -42,6 +64,17 @@ pub fn imui_build<'a, H: UiHost>(
     let _ = mark_immediate_render_frame(cx);
     let mut ui = ImUi { cx, out };
     f(&mut ui);
+}
+
+/// Capability-first adapter for [`imui_build`] when the caller only owns `ElementContextAccess`.
+pub fn imui_build_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    out: &mut Vec<AnyElement>,
+    f: impl for<'cx> FnOnce(&mut ImUi<'cx, 'a, H>),
+) where
+    Cx: ElementContextAccess<'a, H>,
+{
+    imui_build(cx.elements(), out, f);
 }
 
 pub struct ImUi<'cx, 'a, H: UiHost> {

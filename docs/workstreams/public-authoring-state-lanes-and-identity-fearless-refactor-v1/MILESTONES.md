@@ -178,12 +178,19 @@ Related:
     `fret::app::ElementContextAccess<'a, KernelApp>` at the outer `render_view(...)` boundary,
     leaves its internal `UiCx` helper family on the advanced lane, and source-policy gates now
     forbid `render_view(cx.elements())` from drifting back into that root.
-  - with that wrapper closed, the remaining `AppUi`-root `cx.elements()` calls in
-    `apps/fret-examples/src` are now explicitly classified instead of ambiguous:
-    low-level direct-leaf surfaces stay under the interop gates, and the immediate-mode teaching
-    surfaces (`imui_hello_demo`, `imui_floating_windows_demo`, `imui_response_signals_demo`,
-    `imui_shadcn_adapter_demo`, `imui_node_graph_demo`) now explicitly lock
-    `fret_imui::imui(cx.elements(), |ui| {` as the intentional immediate-mode entry seam.
+  - the 2026-04-15 advanced-entry audit has now landed as the next framework slice rather than
+    staying a planning note:
+    `fret_imui::{imui_in, imui_raw_in, imui_build_in}`,
+    `fret_chart::declarative::chart_canvas_panel_in`,
+    `fret_node::ui::declarative::node_graph_surface_in`, and
+    `NodeGraphSurfaceBinding::observe_in(...)` now provide the capability-first caller-facing
+    adapters for the remaining advanced public entry surfaces.
+  - first-party proof callsites that only needed those entry adapters are now migrated too:
+    immediate-mode teaching surfaces (`imui_hello_demo`, `imui_floating_windows_demo`,
+    `imui_response_signals_demo`, `imui_shadcn_adapter_demo`, `imui_node_graph_demo`) now lock
+    `fret_imui::imui_in(cx, |ui| {`, while `chart_declarative_demo` and `node_graph_demo` keep
+    their advanced direct-leaf ownership but no longer spell raw `cx.elements()` at the `AppUi`
+    root just to enter the surface.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

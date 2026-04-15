@@ -1,7 +1,7 @@
 use fret_core::{Point, Rect};
 use fret_runtime::{Model, ModelStore};
 use fret_ui::action::UiActionHost;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, UiHost};
 
 use crate::core::{CanvasPoint, EdgeId, Graph, GroupId, NodeId};
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
@@ -117,6 +117,15 @@ impl NodeGraphSurfaceBinding {
 
     /// Observes the external graph/view mirrors that the declarative surface keeps in sync.
     pub fn observe<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
+        self.observe_in(cx);
+    }
+
+    /// Observes the external graph/view mirrors through a capability-first render lane.
+    pub fn observe_in<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx)
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        let cx = cx.elements();
         cx.observe_model(&self.graph, Invalidation::Paint);
         cx.observe_model(&self.view_state, Invalidation::Paint);
         cx.observe_model(&self.editor_config, Invalidation::Paint);

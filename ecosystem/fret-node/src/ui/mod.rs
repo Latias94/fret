@@ -66,7 +66,7 @@ pub use controller::{
 };
 pub use declarative::{
     NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps, NodeGraphVisibleSubsetPortalConfig,
-    node_graph_surface,
+    node_graph_surface, node_graph_surface_in,
 };
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use geometry_overrides::{

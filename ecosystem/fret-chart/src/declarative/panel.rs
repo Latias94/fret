@@ -21,7 +21,7 @@ use fret_runtime::Model;
 use fret_ui::action::OnKeyDown;
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, CanvasProps, FocusScopeProps, Length, PointerRegionProps};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 use crate::input_map::{ChartInputMap, ModifierKey};
 use crate::retained::ChartStyle;
@@ -1016,4 +1016,17 @@ pub fn chart_canvas_panel<H: UiHost>(
         cx.key_add_on_key_down_for(focus_id, on_key_down);
         vec![canvas_tool_router_panel(cx, router_props, tools, paint)]
     })
+}
+
+/// Capability-first adapter for [`chart_canvas_panel`] when the caller only owns
+/// `ElementContextAccess`.
+#[track_caller]
+pub fn chart_canvas_panel_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    props: ChartCanvasPanelProps,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    chart_canvas_panel(cx.elements(), props)
 }

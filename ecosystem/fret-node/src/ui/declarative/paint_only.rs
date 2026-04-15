@@ -13,7 +13,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
 use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsProps};
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Invalidation, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
@@ -466,3 +466,16 @@ pub fn node_graph_surface<H: UiHost + 'static>(
 #[cfg(test)]
 #[path = "paint_only/tests.rs"]
 mod tests;
+
+/// Capability-first adapter for [`node_graph_surface`] when the caller only owns
+/// `ElementContextAccess`.
+#[track_caller]
+pub fn node_graph_surface_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface(cx.elements(), props)
+}

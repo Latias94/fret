@@ -10,6 +10,7 @@ Companion docs:
 - `MIGRATION_MATRIX.md`
 - `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
 - `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
+- `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -193,12 +194,24 @@ Companion docs:
     `fret::app::ElementContextAccess<'a, KernelApp>` at the outer `render_view(...)` boundary,
     keeps the internal `UiCx` helper family unchanged, and source-policy gates now forbid the root
     from spelling `render_view(cx.elements())`.
-  - [x] classify the remaining `AppUi`-root `cx.elements()` usage in `apps/fret-examples/src` as
-    intentional lanes rather than cleanup leftovers:
-    low-level direct-leaf demos stay locked by the interop gates, and the immediate-mode teaching
-    surfaces (`imui_hello_demo`, `imui_floating_windows_demo`, `imui_response_signals_demo`,
-    `imui_shadcn_adapter_demo`, `imui_node_graph_demo`) now explicitly require
-    `fret_imui::imui(cx.elements(), |ui| {` in source-policy tests.
+  - [x] classify and then migrate the remaining `AppUi`-root advanced entry seams in
+    `apps/fret-examples/src` so they stop using raw `cx.elements()` only as an entry adapter:
+    immediate-mode teaching surfaces (`imui_hello_demo`, `imui_floating_windows_demo`,
+    `imui_response_signals_demo`, `imui_shadcn_adapter_demo`, `imui_node_graph_demo`) now
+    explicitly require `fret_imui::imui_in(cx, |ui| {`, while the advanced direct-leaf
+    chart/node demos use `chart_canvas_panel_in(cx, props)` and
+    `node_graph_surface_in(cx, props)` plus `NodeGraphSurfaceBinding::observe_in(cx)`.
+  - [x] audit the remaining intentional lanes before reopening any `AppUi` `Deref` removal work:
+    `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md` concludes that the next correct framework
+    slice is capability-first adapters for advanced public entry surfaces (`fret_imui`,
+    `fret_chart`, `fret_node`) rather than another blind `Deref` removal attempt.
+  - [x] add capability-first advanced-entry adapters for the remaining ecosystem public surfaces
+    that still forced `AppUi` roots to spell `cx.elements()` only to enter the advanced lane:
+    `fret_imui::{imui_in, imui_raw_in, imui_build_in}`,
+    `fret_chart::declarative::chart_canvas_panel_in`,
+    `fret_node::ui::declarative::node_graph_surface_in`,
+    and `NodeGraphSurfaceBinding::observe_in(...)` are now landed and first-party proof callsites
+    are migrated onto that lane.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`
