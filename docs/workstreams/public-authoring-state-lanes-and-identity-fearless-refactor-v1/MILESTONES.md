@@ -15,6 +15,7 @@ Related:
 - Query grouped maintenance surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - Cookbook theme context owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
 - Model store render read owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
+- IMUI immediate LocalState bridge owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -253,6 +254,14 @@ Related:
     `app.models()` calls through message handling just to reach its own state. This narrows the
     remaining grep tail further without misclassifying the GenUI integration surface as default
     render-lane authoring.
+  - the IMUI immediate-mode closure-local read tail is now split by owner instead of staying mixed
+    with app/driver helpers:
+    `imui_hello_demo` now reads closure-local checkbox state through
+    `enabled_state.paint_value_in(ui.cx_mut())`, `imui_interaction_showcase_demo` now reads
+    closure-local bookmark/tool/autosave/exposure/review/tab/context state through
+    `LocalState::layout_value_in(ui.cx_mut())`, source-policy tests lock that bridge lane, and
+    `push_showcase_event(...)` stays on raw `app.models()` as the explicit app-owned helper seam
+    instead of getting flattened into the closure-local UI owner.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`

@@ -4779,6 +4779,42 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn imui_immediate_mode_examples_use_local_state_bridge_reads() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_HELLO_DEMO,
+            &[
+                "let enabled = enabled_state.paint_value_in(ui.cx_mut());",
+                "checkbox_model(\"Enabled\", enabled_state.model())",
+            ],
+            &["enabled_state.value_in(ui.cx_mut().app.models())"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_INTERACTION_SHOWCASE_DEMO,
+            &[
+                "bookmark_slot.layout_value_in(ui.cx_mut())",
+                "tool_mode.layout_value_in(ui.cx_mut())",
+                "autosave_enabled.layout_value_in(ui.cx_mut())",
+                "exposure_value.layout_value_in(ui.cx_mut())",
+                "review_mode.layout_value_in(ui.cx_mut())",
+                "selected_tab.layout_value_in(ui.cx_mut())",
+                "context_toggle.layout_value_in(ui.cx_mut())",
+                "fn push_showcase_event(",
+                "let id = next_id.value_in_or_default(app.models());",
+            ],
+            &[
+                "bookmark_slot.value_in(ui.cx_mut().app.models())",
+                "tool_mode.value_in(ui.cx_mut().app.models())",
+                "autosave_enabled.value_in(ui.cx_mut().app.models())",
+                "exposure_value.value_in(ui.cx_mut().app.models())",
+                "review_mode.value_in(ui.cx_mut().app.models())",
+                "selected_tab.value_in(ui.cx_mut().app.models())",
+                "context_toggle.value_in(ui.cx_mut().app.models())",
+            ],
+        );
+    }
+
+    #[test]
     fn asset_helper_entrypoints_prefer_ui_assets_capability_adapters() {
         let assets_demo = ASSETS_DEMO.split_whitespace().collect::<String>();
         assert!(assets_demo.contains(

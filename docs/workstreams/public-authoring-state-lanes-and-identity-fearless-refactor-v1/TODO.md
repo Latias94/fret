@@ -17,6 +17,7 @@ Companion docs:
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
 - `MODEL_STORE_RENDER_READ_OWNER_AUDIT_2026-04-15.md`
+- `IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -272,6 +273,13 @@ Companion docs:
     `stream_patch_only_enabled(...)`, `queued_invocations(...)`, and `clear_action_queue(...)`;
     `handle_msg(...)` routes through those helpers, and source-policy tests lock the message-lane
     owner without pretending this advanced surface should migrate onto render-time grouped helpers.
+  - [x] close the IMUI immediate-mode closure-local raw `ModelStore` read tail without flattening
+    app/driver ownership:
+    `imui_hello_demo` now reads its checkbox status with `paint_value_in(ui.cx_mut())`,
+    `imui_interaction_showcase_demo` now reads closure-local bookmark/tool/autosave/exposure/
+    review/tab/context state with `layout_value_in(ui.cx_mut())`, `push_showcase_event(...)`
+    keeps raw `app.models()` as the app-owned helper seam, and
+    `IMUI_IMMEDIATE_LOCALSTATE_BRIDGE_OWNER_AUDIT_2026-04-15.md` records the split.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

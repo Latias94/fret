@@ -761,11 +761,7 @@ fn render_interaction_lab_card(
                             },
                         );
                         if previous.clicked() {
-                            let next = bookmark_slot
-                                .value_in(ui.cx_mut().app.models())
-                                .unwrap_or(2)
-                                .saturating_sub(1)
-                                .max(1);
+                            let next = bookmark_slot.layout_value_in(ui.cx_mut()).saturating_sub(1).max(1);
                             let _ = bookmark_slot
                                 .set_in(ui.cx_mut().app.models_mut(), next);
                             push_showcase_event(
@@ -776,8 +772,7 @@ fn render_interaction_lab_card(
                             );
                         }
 
-                        let current_bookmark =
-                            bookmark_slot.value_in(ui.cx_mut().app.models()).unwrap_or(2);
+                        let current_bookmark = bookmark_slot.layout_value_in(ui.cx_mut());
                         ui.text(format!("Bookmark slot {current_bookmark}"));
 
                         let next = ui.arrow_button_with_options(
@@ -790,11 +785,7 @@ fn render_interaction_lab_card(
                             },
                         );
                         if next.clicked() {
-                            let next = (bookmark_slot
-                                .value_in(ui.cx_mut().app.models())
-                                .unwrap_or(2)
-                                + 1)
-                                .min(5);
+                            let next = (bookmark_slot.layout_value_in(ui.cx_mut()) + 1).min(5);
                             let _ = bookmark_slot
                                 .set_in(ui.cx_mut().app.models_mut(), next);
                             push_showcase_event(
@@ -806,9 +797,7 @@ fn render_interaction_lab_card(
                         }
                     });
 
-                    let active_tool = tool_mode
-                        .value_in(ui.cx_mut().app.models())
-                        .unwrap_or_else(|| Arc::from("Move"));
+                    let active_tool = tool_mode.layout_value_in(ui.cx_mut());
                     for candidate in ["Move", "Rotate", "Scale"] {
                         let chosen = active_tool.as_ref() == candidate;
                         let response = ui.radio_with_options(
@@ -837,10 +826,7 @@ fn render_interaction_lab_card(
                     ui.separator_text("Controls");
                     let toggle = ui.switch_model("Autosave snapshots", autosave_enabled.model());
                     if toggle.changed() {
-                        let label = if autosave_enabled
-                            .value_in(ui.cx_mut().app.models())
-                            .unwrap_or_default()
-                        {
+                        let label = if autosave_enabled.layout_value_in(ui.cx_mut()) {
                             "Autosave re-armed."
                         } else {
                             "Autosave paused for experimentation."
@@ -859,9 +845,7 @@ fn render_interaction_lab_card(
                         },
                     );
                     if exposure.deactivated_after_edit() {
-                        let value = exposure_value
-                            .value_in(ui.cx_mut().app.models())
-                            .unwrap_or_default();
+                        let value = exposure_value.layout_value_in(ui.cx_mut());
                         push_showcase_event(
                             ui.cx_mut().app,
                             &timeline_next_id,
@@ -882,8 +866,7 @@ fn render_interaction_lab_card(
                     );
                     if combo.deactivated_after_edit() {
                         let mode = review_mode
-                            .value_in(ui.cx_mut().app.models())
-                            .flatten()
+                            .layout_value_in(ui.cx_mut())
                             .unwrap_or_else(|| Arc::from("none"));
                         push_showcase_event(
                             ui.cx_mut().app,
@@ -1135,8 +1118,7 @@ fn render_shell_showcase_card(
                         let _ =
                             tab_switch_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
                         let selected = selected_tab
-                            .value_in(ui.cx_mut().app.models())
-                            .flatten()
+                            .layout_value_in(ui.cx_mut())
                             .unwrap_or_else(|| Arc::from("overview"));
                         push_showcase_event(
                             ui.cx_mut().app,
@@ -1209,13 +1191,9 @@ fn render_shell_showcase_card(
                         },
                         |ui| {
                             let selected = selected_tab
-                                .value_in(ui.cx_mut().app.models())
-                                .flatten()
+                                .layout_value_in(ui.cx_mut())
                                 .unwrap_or_else(|| Arc::from("overview"));
-                            let rail_state = if context_toggle
-                                .value_in(ui.cx_mut().app.models())
-                                .unwrap_or(false)
-                            {
+                            let rail_state = if context_toggle.layout_value_in(ui.cx_mut()) {
                                 "Pinned"
                             } else {
                                 "Floating"

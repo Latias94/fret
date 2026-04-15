@@ -53,9 +53,7 @@ impl View for ImUiHelloView {
                 .checkbox_model("Enabled", enabled_state.model())
                 .changed();
             if changed {
-                let enabled = enabled_state
-                    .value_in(ui.cx_mut().app.models())
-                    .unwrap_or_default();
+                let enabled = enabled_state.paint_value_in(ui.cx_mut());
                 let toggled_line = fret_ui_kit::ui::text(format!("Toggled to: {enabled}"));
                 ui.add_ui(toggled_line);
             }
