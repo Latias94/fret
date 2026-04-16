@@ -391,15 +391,10 @@ fn editor_text_assist_readout(
     dismissed_query_model: &Model<String>,
     active_item_id_model: &Model<Option<Arc<str>>>,
 ) -> EditorTextAssistReadout {
-    let query = cx
-        .get_model_cloned(query_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let dismissed_query = cx
-        .get_model_cloned(dismissed_query_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let active_item_id = cx
-        .get_model_cloned(active_item_id_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
+    let (query, dismissed_query, active_item_id) = cx.data().selector_model_paint(
+        (query_model, dismissed_query_model, active_item_id_model),
+        |(query, dismissed_query, active_item_id)| (query, dismissed_query, active_item_id),
+    );
 
     let controller = controller_with_active_item_id(
         items.as_ref(),
@@ -433,19 +428,14 @@ fn editor_text_field_readout(
     committed_model: &Model<String>,
     outcome_model: &Model<String>,
 ) -> EditorTextFieldReadout {
-    EditorTextFieldReadout {
-        committed: cx
-            .get_model_cloned(committed_model, fret_ui::Invalidation::Paint)
-            .unwrap_or_default(),
-        outcome: cx
-            .get_model_cloned(outcome_model, fret_ui::Invalidation::Paint)
-            .unwrap_or_default(),
-    }
+    cx.data()
+        .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
+            EditorTextFieldReadout { committed, outcome }
+        })
 }
 
 fn editor_string_model_readout(cx: &mut UiCx<'_>, model: &Model<String>) -> String {
-    cx.get_model_cloned(model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default()
+    cx.data().selector_model_paint(model, |value| value)
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -1893,12 +1883,10 @@ where
                                         cx,
                                         |_cx| None,
                                         move |cx| {
-                                            let stops = cx
-                                                .get_model_cloned(
-                                                    &editor_gradient_stops_model,
-                                                    fret_ui::Invalidation::Paint,
-                                                )
-                                                .unwrap_or_default();
+                                            let stops = cx.data().selector_model_paint(
+                                                &editor_gradient_stops_model,
+                                                |stops| stops,
+                                            );
 
                                             let on_remove: fret_ui_editor::composites::OnGradientStopAction =
                                                 Arc::new({
@@ -2509,54 +2497,43 @@ fn render_authoring_parity_shared_state(
     gradient_angle_model: Model<f64>,
     gradient_stops_model: Model<Vec<GradientDemoStop>>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let name = cx
-        .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let value = cx
-        .get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let numeric = cx
-        .get_model_copied(&numeric_input_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let blend = cx
-        .get_model_copied(&slider_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let enabled = cx
-        .get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let shading = cx
-        .get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let gradient_angle = cx
-        .get_model_copied(&gradient_angle_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let gradient_stops = cx
-        .get_model_cloned(&gradient_stops_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-
-    let shared = AuthoringParitySharedStateReadout {
-        name_line: if name.trim().is_empty() {
-            "shared name: <empty>".to_string()
-        } else {
-            format!("shared name: {name}")
-        },
-        value_line: format!("shared value: {value:.3}"),
-        numeric_line: format!("shared typed numeric: {numeric:.3}"),
-        blend_line: format!("shared blend: {:.0}%", blend * 100.0),
-        enabled_line: format!("shared enabled: {enabled}"),
-        shading_line: match shading.as_deref() {
-            Some("lit") => "shared mode: lit (Lit)".to_string(),
-            Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
-            Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
-            Some(other) => format!("shared mode: {other}"),
-            None => "shared mode: <none>".to_string(),
-        },
-        gradient_line: format!(
-            "shared gradient: {} stops @ {:.0}°",
-            gradient_stops.len(),
-            gradient_angle
+    let shared = cx.data().selector_model_paint(
+        (
+            &name_model,
+            &drag_value_model,
+            &numeric_input_model,
+            &slider_model,
+            &enabled_model,
+            &shading_model,
+            &gradient_angle_model,
+            &gradient_stops_model,
         ),
-    };
+        |(name, value, numeric, blend, enabled, shading, gradient_angle, gradient_stops)| {
+            AuthoringParitySharedStateReadout {
+                name_line: if name.trim().is_empty() {
+                    "shared name: <empty>".to_string()
+                } else {
+                    format!("shared name: {name}")
+                },
+                value_line: format!("shared value: {value:.3}"),
+                numeric_line: format!("shared typed numeric: {numeric:.3}"),
+                blend_line: format!("shared blend: {:.0}%", blend * 100.0),
+                enabled_line: format!("shared enabled: {enabled}"),
+                shading_line: match shading.as_deref() {
+                    Some("lit") => "shared mode: lit (Lit)".to_string(),
+                    Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+                    Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+                    Some(other) => format!("shared mode: {other}"),
+                    None => "shared mode: <none>".to_string(),
+                },
+                gradient_line: format!(
+                    "shared gradient: {} stops @ {:.0}°",
+                    gradient_stops.len(),
+                    gradient_angle
+                ),
+            }
+        },
+    );
     let name_line = shared.name_line;
     let value_line = shared.value_line;
     let numeric_line = shared.numeric_line;
@@ -3373,9 +3350,7 @@ fn build_authoring_parity_gradient_editor(
     id_source: &'static str,
     test_id_prefix: &'static str,
 ) -> GradientEditor {
-    let stops = cx
-        .get_model_cloned(&stops_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
+    let stops = cx.data().selector_model_paint(&stops_model, |stops| stops);
 
     let on_remove: fret_ui_editor::composites::OnGradientStopAction = Arc::new({
         let stops_model = stops_model.clone();
@@ -4012,7 +3987,7 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
             &root_name,
             move |cx| {
                 let target = embedded::models(&*cx.app, cx.window)
-                    .and_then(|m| cx.get_model_cloned(&m.target, fret_ui::Invalidation::Paint))
+                    .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
                     .unwrap_or_default();
 
                 vec![

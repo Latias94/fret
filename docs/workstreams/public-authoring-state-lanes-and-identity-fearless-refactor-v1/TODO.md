@@ -25,6 +25,7 @@ Companion docs:
 - `APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
 - `COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md`
 - `IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md`
+- `IMUI_EDITOR_PROOF_GROUPED_PAINT_READ_AUDIT_2026-04-16.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ## M0 — Open the lane correctly
@@ -324,6 +325,12 @@ Companion docs:
     `embedded_target_for_window(...)`, and
     `IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md` records why this remains demo-local owner
     code rather than a new framework surface.
+  - [x] move the remaining `imui_editor_proof_demo` paint-only shared-model readouts onto the
+    grouped selector lane instead of leaving them on raw `get_model_*` helpers:
+    text assist / text field / string readouts, authoring parity shared state, gradient-stop
+    snapshots, and dock-panel embedded target reads now use `cx.data().selector_model_paint(...)`,
+    while `IMUI_EDITOR_PROOF_GROUPED_PAINT_READ_AUDIT_2026-04-16.md` records why this does not
+    reopen the app-owned reorder/bootstrap exceptions.
   - [ ] remove `AppUi` `Deref` only after ordinary render-authoring sugar has an explicit
     app-facing lane rather than falling back to `cx.elements()` everywhere.
   - [ ] audit the remaining Todo-surfaced render-authoring pressure before any future `Deref`

@@ -23,6 +23,7 @@ Related:
 - App/driver raw model owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_DRIVER_RAW_MODEL_OWNER_AUDIT_2026-04-15.md`
 - Components gallery owner split audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_2026-04-16.md`
 - IMUI editor proof app owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md`
+- IMUI editor proof grouped paint read audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_GROUPED_PAINT_READ_AUDIT_2026-04-16.md`
 - ADR 0319: `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 
 ---
@@ -297,6 +298,12 @@ Related:
     dock/bootstrap target lookup routes through `embedded_target_for_window(...)`, and
     `IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md` records why this remains advanced
     demo-local owner code rather than a framework follow-on.
+  - the remaining `imui_editor_proof_demo` paint-only readouts now also align with the grouped
+    selector lane instead of relying on raw `get_model_*` helpers:
+    text assist / text field readouts, shared authoring parity state, gradient-stop snapshots,
+    and dock-panel embedded target reads now use `cx.data().selector_model_paint(...)`, while
+    `IMUI_EDITOR_PROOF_GROUPED_PAINT_READ_AUDIT_2026-04-16.md` records why that grouped render
+    lane coexists with the still-app-owned reorder/bootstrap helpers.
 - **M3**: Met
   - first-contact docs, scaffold tests, and Todo proof surfaces now all teach the same
     LocalState-first default lane and the same explicit `AppUiRawModelExt::raw_model::<T>()`
