@@ -14,6 +14,7 @@ Related:
 - Extracted helper render guidance audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/EXTRACTED_HELPER_RENDER_GUIDANCE_AUDIT_2026-04-16.md`
 - App render context facade audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - UiCx closure concrete-type pressure audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
+- App render concrete carrier audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
 - UI assets capability adapter audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - Query grouped maintenance surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - Cookbook theme context owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -38,11 +39,13 @@ Related:
     `crates/fret-ui/src/declarative/tests/identity.rs`,
   - the `AppUi` / extracted-helper render-authoring wording is now frozen too:
     new default-path helper signatures prefer `fret::app::AppRenderContext<'a>`,
-    `RenderContextAccess<'a, App>` remains the underlying capability, and `UiCx` is treated as
-    the compatibility raw alias rather than the taught default,
-  - but a new concrete-type ergonomics question is now explicit:
-    `AppRenderContext<'a>` closes named helper signatures, while closure-heavy snippet/gallery
-    authoring still leans on concrete `UiCx` syntax,
+    closure-local / inline helper families may use `fret::app::AppRenderCx<'a>` as the concrete
+    carrier, `RenderContextAccess<'a, App>` remains the underlying capability, and `UiCx` is
+    treated as the compatibility old-name alias rather than the taught default,
+  - the concrete-type ergonomics question is now answered narrowly instead of by grep cleanup:
+    `AppRenderContext<'a>` closes named helper signatures, `AppRenderCx<'a>` closes the
+    closure-local helper story on the same app-facing lane, and `hello_world_compare_demo`
+    provides the first concrete proof,
   - but the remaining default-lane wording cleanup, the Todo-surfaced render-gap classification,
     and the internal `render_pass_id` naming decision are still open.
 - **M2**: In progress

@@ -315,13 +315,19 @@ pub type AppUi<'cx, 'a, H = crate::app::App> = view::AppUi<'cx, 'a, H>;
 /// Canonical app-facing render return alias for the default authoring surface.
 pub type Ui = fret_ui::element::Elements;
 
+/// Canonical app-facing concrete render-context alias for extracted helper ergonomics.
+///
+/// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures on the default lane.
+/// Reach for `AppRenderCx<'a>` when closure-local or inline helper families materially benefit
+/// from a concrete context carrier without reopening the raw `ElementContext<App>` spelling.
+pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
+
 /// Compatibility raw app element context alias for extracted helper functions.
 ///
-/// Prefer `fret::app::AppRenderContext<'a>` in new default-lane helper signatures so ordinary
-/// app-facing render sugar stays separate from the raw `ElementContext<App>` lane. Keep `UiCx`
-/// only during the migration window when an older helper intentionally still wants the raw
-/// element-context shape.
-pub type UiCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
+/// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures and `AppRenderCx<'a>`
+/// for concrete closure-local helper carriers on the default lane. Keep `UiCx` only as the
+/// compatibility old-name alias during the migration window.
+pub type UiCx<'a> = AppRenderCx<'a>;
 
 /// Canonical component-facing context alias for reusable component authoring.
 pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;
@@ -427,6 +433,8 @@ mod interop;
 /// Re-export the kernel facade (desktop builds).
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
+    /// Canonical app-facing concrete helper context alias for closure-local or inline helpers.
+    pub use crate::AppRenderCx;
     /// Canonical app-facing view trait on the explicit app lane.
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
@@ -449,6 +457,7 @@ pub mod app {
         pub use crate::FretApp;
         pub use crate::app::App;
         pub use crate::app::AppRenderContext;
+        pub use crate::app::AppRenderCx;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         #[cfg(feature = "state-mutation")]
@@ -878,6 +887,7 @@ pub mod advanced {
 
     /// Common imports for advanced/manual-assembly application code.
     pub mod prelude {
+        pub use crate::AppRenderCx;
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::advanced::interop::embedded_viewport::{
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
@@ -3583,7 +3593,9 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};"));
         assert!(app_prelude.contains("pub use crate::{"));
         assert!(app_prelude.contains("pub use crate::app::App;"));
+        assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
         assert!(app_prelude_exports_symbol("App"));
+        assert!(app_prelude_exports_symbol("AppRenderCx"));
         assert!(app_prelude.contains("AppUi"));
         assert!(!app_prelude_exports_symbol("KernelApp"));
         assert!(app_prelude.contains("UiChild"));
@@ -3690,6 +3702,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
+        assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
         assert!(LIB_RS.contains(
             "AppRenderContext, LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt"
         ));
@@ -3714,10 +3727,12 @@ mod authoring_surface_policy_tests {
     fn advanced_prelude_reexports_app_facing_view_aliases() {
         let advanced_prelude = advanced_prelude_source();
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
+        assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
         assert!(advanced_prelude_exports_symbol("KernelApp"));
         assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!advanced_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(advanced_prelude_exports_symbol("AppUiRawModelExt"));
+        assert!(advanced_prelude_exports_symbol("AppRenderCx"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
         assert!(advanced_prelude_exports_symbol("UiCx"));
@@ -3765,8 +3780,11 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude.contains("pub use fret_framework as kernel;"));
         assert!(LIB_RS.contains("pub type AppUi<'cx, 'a, H = crate::app::App>"));
         assert!(
-            LIB_RS.contains("pub type UiCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;")
+            LIB_RS.contains(
+                "pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;"
+            )
         );
+        assert!(LIB_RS.contains("pub type UiCx<'a> = AppRenderCx<'a>;"));
     }
 
     #[test]

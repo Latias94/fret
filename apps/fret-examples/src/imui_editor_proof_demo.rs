@@ -612,7 +612,7 @@ pub fn run() -> anyhow::Result<()> {
             ..Defaults::desktop_app()
         })
         .view_with_hooks::<ImUiEditorProofView>(configure_imui_editor_proof_driver)?
-        .setup_with(|app| {
+        .setup_with(move |app| {
             configure_single_window_caps_if_requested(app);
             install_imui_editor_proof_theme(app);
             fret_icons_lucide::app::install(app);

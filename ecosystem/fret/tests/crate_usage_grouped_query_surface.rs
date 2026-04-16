@@ -15,9 +15,10 @@ fn crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces() {
             .contains("Extracted helpers on the default lane should usually be generic over")
     );
     assert!(CRATE_USAGE_GUIDE.contains("`fret::app::AppRenderContext<'a>`"));
+    assert!(CRATE_USAGE_GUIDE.contains("`&mut fret::app::AppRenderCx<'_>`"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
     assert!(CRATE_USAGE_GUIDE.contains("`UiCxDataExt`"));
-    assert!(CRATE_USAGE_GUIDE.contains("compatibility raw alias"));
+    assert!(CRATE_USAGE_GUIDE.contains("compatibility old-name alias"));
     assert!(
         CRATE_USAGE_GUIDE
             .contains("Keep `fret::query::with_query_client(...)` for pure app/driver code")

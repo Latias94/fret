@@ -127,18 +127,18 @@ next remaining gap is higher-level:
 The current closure target for new default-path helper signatures is therefore:
 
 - prefer `fret::app::AppRenderContext<'a>` for ordinary extracted helper functions,
+- prefer `fret::app::AppRenderCx<'a>` when closure-local or inline helper families need a
+  concrete context carrier,
 - keep `RenderContextAccess<'a, App>` as the underlying generic capability,
 - keep grouped app helper extensions (`UiCxActionsExt`, `UiCxDataExt`) valid on that lane,
-- and treat `UiCx` only as the compatibility raw alias while migration is still in flight.
+- and treat `UiCx` only as the compatibility old-name alias while migration is still in flight.
 
-One pressure set remains deliberately unresolved after that façade landing:
+That closes the previously open concrete-type ergonomics question without pretending the repo can
+now delete every `UiCx` usage immediately:
 
-- closure-local helper extraction still prefers a concrete context type in ordinary Rust syntax,
-- which means `AppRenderContext<'a>` closes named function signatures but does not by itself
-  migrate closure-heavy snippet/gallery authoring away from `UiCx`,
-- so the next structural question is not just "rename more helper signatures", but whether the
-  default app lane eventually needs a concrete extracted-helper carrier beyond the compatibility
-  alias.
+- `AppRenderContext<'a>` carries the named-helper teaching surface,
+- `AppRenderCx<'a>` carries the concrete closure-local helper story on the same app-facing lane,
+- and `UiCx` remains only as the migration-era old name.
 
 A compile audit on 2026-04-02 showed that blindly removing `AppUi`'s `Deref` is not yet the right
 end state:

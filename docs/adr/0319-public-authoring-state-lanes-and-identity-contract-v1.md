@@ -100,10 +100,12 @@ During the current migration window:
 
 - the default teaching surface for new helper signatures is
   `fret::app::AppRenderContext<'a>`,
+- the default concrete carrier for closure-local or inline helper families is
+  `fret::app::AppRenderCx<'a>`,
 - `RenderContextAccess<'a, App>` remains the underlying generic capability,
 - grouped app-facing helper namespaces such as `UiCxActionsExt` / `UiCxDataExt` may continue to
   power that lane,
-- and `UiCx` should be treated only as the compatibility raw alias when an older helper still
+- and `UiCx` should be treated only as the compatibility old-name alias when an older helper still
   intentionally wants `ElementContext<App>`.
 
 The long-term target is not “`AppUi` is narrow but `UiCx` remains a raw `ElementContext` alias”.

@@ -70,6 +70,8 @@ fn advanced_prelude_stays_advanced_only_instead_of_smuggling_component_surface()
 fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     let advanced_prelude = advanced_prelude_slice();
     assert!(advanced_prelude.contains("pub use crate::advanced::*;"));
+    assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
+    assert!(advanced_prelude_exports_symbol("AppRenderCx"));
     assert!(advanced_prelude.contains("pub use crate::{AppUi, Ui, UiCx};"));
     assert!(advanced_prelude.contains("pub use fret_app::Effect;"));
     assert!(advanced_prelude.contains("pub use fret_core::{AppWindowId, Event, UiServices};"));

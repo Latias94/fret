@@ -1041,7 +1041,7 @@ impl View for HelloWorldCompareView {
                 8.0
             };
 
-        let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| {
+        let swatch = |_cx: &mut AppRenderCx<'_>, fill_rgb: u32, border_rgb: u32| {
             ui::container(|_cx| Vec::<AnyElement>::new())
                 .w_px(Px(32.0))
                 .h_px(Px(32.0))

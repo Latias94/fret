@@ -16,6 +16,7 @@ Companion docs:
 - `EXTRACTED_HELPER_RENDER_GUIDANCE_AUDIT_2026-04-16.md`
 - `APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - `UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
+- `APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -52,13 +53,17 @@ Companion docs:
       - `AppUi` remains the root default lane,
       - extracted helper signatures on the default lane prefer
         `fret::app::AppRenderContext<'a>`,
+      - closure-local / inline helper families on that lane may use
+        `fret::app::AppRenderCx<'a>` as the concrete carrier,
       - `RenderContextAccess<'a, App>` remains the underlying generic capability,
-      - `UiCx` is a compatibility raw alias rather than the taught default.
-  - [ ] classify the remaining closure-local helper pressure after the `AppRenderContext<'a>`
+      - `UiCx` is a compatibility old-name alias rather than the taught default.
+  - [x] classify the remaining closure-local helper pressure after the `AppRenderContext<'a>`
     façade landing:
-    - [ ] decide whether closure-heavy default authoring should eventually gain a concrete
+    - [x] decide whether closure-heavy default authoring should eventually gain a concrete
       app-facing helper carrier,
-    - [ ] or whether `UiCx` should remain compatibility-only for closure-local extraction while
+    - [x] `AppRenderCx<'a>` is the concrete app-facing helper carrier for closure-local /
+      inline helpers on the default lane.
+    - [x] `UiCx` remains compatibility-only as the old-name alias while
       named helper functions keep migrating to `AppRenderContext<'a>`.
   - [ ] freeze the Todo-surfaced render-gap classification from
     `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`:

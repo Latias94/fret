@@ -245,6 +245,10 @@ fn default_namespace_for_id(id: QueryId) -> &'static str {
 }
 
 pub fn run() -> anyhow::Result<()> {
+    // Keep the explicit component lane named on this advanced surface.
+    #[allow(unused_imports)]
+    use fret::component::prelude::*;
+
     FretApp::new("async-playground")
         .window("async-playground", (1180.0, 720.0))
         .config_files(false)

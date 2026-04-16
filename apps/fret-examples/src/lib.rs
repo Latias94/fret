@@ -677,6 +677,26 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_app_facing_concrete_helpers_prefer_app_render_cx(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains("AppRenderCx<'_>"));
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     fn assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
         src: &str,
         required_markers: &[&str],
@@ -3025,25 +3045,6 @@ mod authoring_surface_policy_tests {
         );
 
         assert_advanced_helpers_prefer_uicx(
-            HELLO_WORLD_COMPARE_DEMO,
-            &[
-                "let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|",
-                "fn hello_world_compare_root<'a, Cx>(",
-                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
-                "let cx = cx.elements();",
-                "panel_bg: Color,",
-                "children: Vec<AnyElement>)",
-                "hello_world_compare_root(cx, panel_bg, children)",
-            ],
-            &[
-                "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
-                "let swatch = |cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
-                "fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
-                "hello_world_compare_root(cx.elements(), panel_bg, children)",
-            ],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
             IMUI_EDITOR_PROOF_DEMO,
             &[
                 "fn render_authoring_parity_surface(cx: &mut UiCx<'_>,",
@@ -3432,6 +3433,29 @@ mod authoring_surface_policy_tests {
             &[
                 "fn catalog_item(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, selected: QueryId, id: QueryId,) -> AnyElement",
                 "out.push(catalog_item(cx, st, theme.clone(), selected, id));",
+            ],
+        );
+    }
+
+    #[test]
+    fn closure_local_app_facing_helpers_can_use_app_render_cx_alias() {
+        assert_app_facing_concrete_helpers_prefer_app_render_cx(
+            HELLO_WORLD_COMPARE_DEMO,
+            &[
+                "let swatch = |_cx: &mut AppRenderCx<'_>, fill_rgb: u32, border_rgb: u32|",
+                "fn hello_world_compare_root<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
+                "let cx = cx.elements();",
+                "panel_bg: Color,",
+                "children: Vec<AnyElement>)",
+                "hello_world_compare_root(cx, panel_bg, children)",
+            ],
+            &[
+                "let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|",
+                "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
+                "let swatch = |cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
+                "fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
+                "hello_world_compare_root(cx.elements(), panel_bg, children)",
             ],
         );
     }

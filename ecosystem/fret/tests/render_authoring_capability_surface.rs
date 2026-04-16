@@ -26,8 +26,10 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     let app_prelude = app_prelude_slice();
 
     assert!(app_slice.contains("pub use crate::view::{"));
+    assert!(app_slice.contains("pub use crate::AppRenderCx;"));
     assert!(app_slice.contains("AppRenderContext"));
     assert!(app_slice.contains("pub use fret_ui::ElementContextAccess;"));
+    assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
     assert!(app_prelude.contains("pub use crate::app::AppRenderContext;"));
     assert!(app_prelude.contains("pub use fret_ui_kit::IntoUiElementInExt as _;"));
     assert!(
@@ -37,8 +39,13 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     assert!(VIEW_RS.contains(
         "impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {"
     ));
+    assert!(
+        FRET_LIB_RS
+            .contains("pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;")
+    );
     assert!(FRET_LIB_RS.contains("Compatibility raw app element context alias"));
     assert!(FRET_LIB_RS.contains("Prefer `fret::app::AppRenderContext<'a>`"));
+    assert!(FRET_LIB_RS.contains("`AppRenderCx<'a>` when closure-local or inline helper families"));
 }
 
 #[test]
