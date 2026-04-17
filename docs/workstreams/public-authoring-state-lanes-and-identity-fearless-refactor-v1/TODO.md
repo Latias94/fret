@@ -20,6 +20,7 @@ Companion docs:
 - `UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
 - `APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
 - `RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`
+- `UICX_DEFAULT_PRELUDE_DEMOTION_AUDIT_2026-04-17.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -363,6 +364,11 @@ Companion docs:
       `TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`.
   - [x] land the first justified app-facing render-sugar replacements without widening
     `fret::app::prelude::*` or collapsing the documented `raw` lane.
+  - [x] stop teaching `UiCx` as a default import once `AppRenderCx<'a>` is the blessed concrete
+    closure-local carrier:
+    `fret::app::prelude::*` now exports `AppRenderCx` but no longer reexports `UiCx`, while the
+    compatibility alias remains available only through explicit import / advanced surfaces. See
+    `UICX_DEFAULT_PRELUDE_DEMOTION_AUDIT_2026-04-17.md`.
 
 ## M3 — Migrate first-contact docs, templates, and proof surfaces
 

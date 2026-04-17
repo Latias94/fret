@@ -1,6 +1,6 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Milestones
 
-Last updated: 2026-04-16
+Last updated: 2026-04-17
 
 Related:
 
@@ -16,6 +16,7 @@ Related:
 - UiCx closure concrete-type pressure audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
 - App render concrete carrier audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
 - render_pass_id internal naming audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`
+- UiCx default-prelude demotion audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_DEFAULT_PRELUDE_DEMOTION_AUDIT_2026-04-17.md`
 - Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
 - Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
 - UI assets capability adapter audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
@@ -112,6 +113,10 @@ Related:
     reaching through `fret_ui_kit::declarative` directly. This closes the last open
     classification ambiguity from `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md` without widening
     the default prelude or relabeling adaptive reads as raw debt.
+  - the next default-lane closure step is now landed too:
+    `fret::app::prelude::*` keeps `AppRenderCx<'a>` as the blessed concrete closure-local carrier
+    but no longer reexports `UiCx`, so the compatibility old-name alias now requires explicit
+    import / advanced-surface intent instead of arriving by default app autocomplete.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
   - the first real consumer probe is now also on that lane:

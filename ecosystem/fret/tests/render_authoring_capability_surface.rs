@@ -32,6 +32,8 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
     assert!(app_prelude.contains("pub use crate::app::AppRenderContext;"));
     assert!(app_prelude.contains("pub use fret_ui_kit::IntoUiElementInExt as _;"));
+    assert!(app_prelude.contains("pub use crate::{AppUi, Ui, UiChild, WindowId};"));
+    assert!(!app_prelude.contains("pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};"));
     assert!(
         VIEW_RS
             .contains("pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App>")

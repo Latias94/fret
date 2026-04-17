@@ -804,8 +804,8 @@ them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than ex
 `UiCxActionsExt` / `UiCxDataExt` (or explicit imports from `fret::app::{UiCxActionsExt,
 UiCxDataExt}` when you are intentionally not using the prelude). When a closure-local or inline
 helper materially benefits from a concrete context carrier, prefer `&mut fret::app::AppRenderCx<'_>`.
-Keep `UiCx` itself only as the compatibility old-name alias when an older helper intentionally
-still wants `ElementContext<App>`.
+Keep `UiCx` itself only as the compatibility old-name alias behind explicit import or on the
+advanced lane when an older helper intentionally still wants `ElementContext<App>`.
 Enable `fret-query/ui` only when you are working directly with low-level `ElementContext` or
 generic writer extensions outside the app-facing `fret` facades.
 

@@ -327,7 +327,8 @@ pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
 ///
 /// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures and `AppRenderCx<'a>`
 /// for concrete closure-local helper carriers on the default lane. Keep `UiCx` only as the
-/// compatibility old-name alias during the migration window.
+/// compatibility old-name alias behind explicit import or on the advanced lane during the
+/// migration window.
 pub type UiCx<'a> = AppRenderCx<'a>;
 
 /// Canonical component-facing context alias for reusable component authoring.
@@ -469,7 +470,7 @@ pub mod app {
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::View;
-        pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
+        pub use crate::{AppUi, Ui, UiChild, WindowId};
         pub use fret_core::Px;
         pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::IntoUiElementInExt as _;
@@ -3597,6 +3598,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
         assert!(app_prelude_exports_symbol("App"));
         assert!(app_prelude_exports_symbol("AppRenderCx"));
+        assert!(!app_prelude_exports_symbol("UiCx"));
         assert!(app_prelude.contains("AppUi"));
         assert!(!app_prelude_exports_symbol("KernelApp"));
         assert!(app_prelude.contains("UiChild"));
