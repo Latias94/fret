@@ -11,6 +11,7 @@ Related:
 - API workbench framework priority audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - AppUi root accessor audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
 - AppUi Deref pressure classification audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
+- AppUi Deref compile audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_COMPILE_AUDIT_2026-04-17.md`
 - Extracted helper render guidance audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/EXTRACTED_HELPER_RENDER_GUIDANCE_AUDIT_2026-04-16.md`
 - App render context facade audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - UiCx closure concrete-type pressure audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
@@ -85,6 +86,14 @@ Related:
     such as `theme_snapshot`, `container`, `text_props`, `flex`, and
     `environment_viewport_bounds`; `cargo check -p fret-cookbook --all-targets` showed the same
     pattern at smaller scale.
+  - the 2026-04-17 re-audit keeps the same overall verdict but with a sharper failure map:
+    current `cargo check -p fret-examples --all-targets --message-format short` still explodes
+    into roughly 150 errors, now clustered mainly around
+    `&mut ElementContext` helper signatures, stale `cx.app` field syntax, and inherited
+    `ElementContext` method families such as `text`, `container`, `flex`, `text_props`,
+    `layout_query_*`, `pointer_region`, `action_is_enabled`, and `request_animation_frame`.
+    `cargo check -p fret-cookbook --all-targets --message-format short` shows the same shape on a
+    smaller teaching-facing batch. See `APP_UI_DEREF_COMPILE_AUDIT_2026-04-17.md`.
   - the next remaining structural gap is therefore explicit render-authoring lane separation for
     `AppUi` and extracted helper surfaces, not a blind `Deref` deletion.
   - the 2026-04-15 `api_workbench_lite` priority audit now freezes that judgment as the current
