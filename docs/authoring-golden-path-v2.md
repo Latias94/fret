@@ -9,6 +9,8 @@ missing default guideline).
 
 This is the only blessed first-contact local-state story. Keep the explicit raw-model seam on the
 advanced lane instead of mixing it into default app examples.
+For dynamic lists/subtrees, keyed identity is the only default teaching rule; keep unkeyed
+iteration as an explicit static-list exception rather than a peer onboarding story.
 
 ## Mental model (keep it small)
 

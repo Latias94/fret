@@ -9,6 +9,8 @@ Companion docs:
 - `MILESTONES.md`
 - `MIGRATION_MATRIX.md`
 - `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`
+- `DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
+- `TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
 - `API_WORKBENCH_FRAMEWORK_PRIORITY_AUDIT_2026-04-15.md`
 - `ADVANCED_ENTRY_CAPABILITY_AUDIT_2026-04-15.md`
 - `APP_UI_ROOT_ACCESSOR_AUDIT_2026-04-15.md`
@@ -17,6 +19,7 @@ Companion docs:
 - `APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - `UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
 - `APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
+- `RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -44,9 +47,14 @@ Companion docs:
 
 ## M1 — Freeze the target public surface
 
-- [ ] Freeze the default lane wording:
-  - [ ] `LocalState<T>` is the only blessed first-contact local-state story,
-  - [ ] keyed identity is the only taught dynamic-list/subtree rule.
+- [x] Freeze the default lane wording:
+  - [x] `LocalState<T>` is the only blessed first-contact local-state story,
+  - [x] keyed identity is the only taught dynamic-list/subtree rule.
+    Result: the default docs (`docs/authoring-golden-path-v2.md`, `docs/first-hour.md`,
+    `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`), ADR 0319, and the
+    `fretboard` onboarding templates now all freeze the same LocalState-first + keyed-dynamic-list
+    posture, with `default_state_identity_docs.rs` as the source-policy gate. See
+    `DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`.
   - [x] freeze the render-authoring wording for `AppUi` / extracted helper surfaces so the repo
     can distinguish ordinary app-facing render sugar from the raw component/internal
     `ElementContext` lane.
@@ -66,25 +74,28 @@ Companion docs:
       inline helpers on the default lane.
     - [x] `UiCx` remains compatibility-only as the old-name alias while
       named helper functions keep migrating to `AppRenderContext<'a>`.
-  - [ ] freeze the Todo-surfaced render-gap classification from
+  - [x] freeze the Todo-surfaced render-gap classification from
     `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md`:
-    - [ ] keep-raw escape hatches,
-    - [ ] explicit non-default environment/responsive lane,
-    - [ ] missing app-facing render sugar.
-- [ ] Freeze the advanced raw-model lane wording:
+    - [x] keep-raw escape hatches,
+    - [x] explicit non-default environment/responsive lane,
+    - [x] missing app-facing render sugar.
+- [x] Freeze the advanced raw-model lane wording:
   - [x] choose the explicit model-oriented replacement name (`AppUiRawModelExt::raw_model::<T>()`),
   - [x] decide whether pre-release migration uses hard delete or a short-lived compatibility alias (`hard delete` for the old name),
   - [x] remove “generic hook” framing from the first migrated public docs.
-- [ ] Freeze the bridge/internal lane wording:
+- [x] Freeze the bridge/internal lane wording:
   - [x] classify `LocalState::{model, clone_model, *_in(...)}`
   - [x] classify `ElementContext::{slot_state, local_model, model_for, ...}`
   - [x] keep `AppUi` default-lane access to component/internal state helpers behind explicit
     `cx.elements()`
   - [x] keep explicit ownership language for helper-heavy/component/internal surfaces.
-- [ ] Freeze the diagnostics posture:
+- [x] Freeze the diagnostics posture:
   - [x] evaluation-boundary diagnostics stay internal,
   - [x] `render_pass_id` is not a public concept,
-  - [ ] decide whether the internal field name should stay as-is or be renamed to a less GPU-loaded term later.
+  - [x] keep the internal field name as-is while it remains private repeated-call bookkeeping.
+    Result: the diagnostics posture is now frozen as “evaluation-boundary diagnostics stay
+    internal, and `render_pass_id` stays a private bookkeeping name rather than a public
+    authoring term.” See `RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`.
 
 ## M2 — Converge the runtime substrate
 
@@ -343,8 +354,13 @@ Companion docs:
       instead of spelling `HoverRegionProps` plus `cx.elements()` in app-facing helpers,
     - [x] land the first helper-local rich-text sugar replacement (`ui::rich_text(...)`) instead
       of spelling `StyledTextProps` / `styled_text_props(...)` in app-facing helpers,
-    - [ ] explicit environment/responsive helpers that should stay off the default lane rather than
+    - [x] explicit environment/responsive helpers that should stay off the default lane rather than
       being mistaken for raw debt.
+      Result: `fret::env::{...}` now also carries the needed query-configuration nouns
+      (`ContainerQueryHysteresis`, `ViewportQueryHysteresis`, `ViewportOrientation`), and
+      `todo_demo` no longer needs a direct `fret_ui_kit::declarative` import for that ordinary
+      app-facing responsive slice. See
+      `TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`.
   - [x] land the first justified app-facing render-sugar replacements without widening
     `fret::app::prelude::*` or collapsing the documented `raw` lane.
 

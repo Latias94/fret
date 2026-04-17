@@ -1,6 +1,6 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Migration Matrix
 
-Last updated: 2026-04-02
+Last updated: 2026-04-16
 
 This matrix exists to prevent the lane from stopping at abstract design.
 
@@ -76,7 +76,7 @@ Every user-visible surface should end in one of these states:
 | `ecosystem/fret/src/view.rs` | `raw_model_with(...)` still carries a facade-local diagnostics shell even after model allocation converges onto kernel primitives | Migrate | M2 | Keep converging until only the justified wrapper behavior remains. |
 | `ecosystem/fret/src/view.rs` | `AppUi` still relies on `Deref` to inherit ordinary render-authoring sugar and ambient app/window access from `ElementContext`, but it now also implements the narrower `ElementContextAccess<'a, H>` capability for late-landing helper surfaces | Migrate | M2/M5 | 2026-04-02 compile audit: removing `Deref` surfaced 100 mismatched `UiCx`/`into_element(...)` style failures in `fret-examples`, 31 direct `app` field reads, and helper lookups such as `theme_snapshot`, `container`, `text_props`, `flex`, and `environment_viewport_bounds`. The first capability slice is now landed and source-gated; full `Deref` removal remains follow-on work. |
 | `ecosystem/fret-ui-kit/src/declarative/table.rs` | retained table callback seams previously forced app-facing retained cell/header helpers to accept raw `ElementContext<'_, H>` | Migrate | M2/M4 | Done 2026-04-02 for retained table surfaces: `HeaderAccessoryAt` and `CellAt` now accept `ElementContextAccess<'a, H>`, and `components_gallery` proves the app-facing usage. |
-| `crates/fret-ui/src/elements/cx.rs` | internal `render_pass_id` exists only as diagnostics substrate | Migrate | M2 | Keep internal-only; possibly rename internally later if clearer. |
+| `crates/fret-ui/src/elements/cx.rs` | internal `render_pass_id` exists only as diagnostics substrate | Migrate | M2 | Keep internal-only; the current name stays as-is while it remains private repeated-call bookkeeping, and any future replacement should come from a deeper diagnostics refactor rather than a standalone rename slice. |
 | `ecosystem/fret/src/lib.rs` | `UiCx<'a>` is still a raw `ElementContext<App>` alias rather than a narrowed extracted-helper render surface, but `fret::app::ElementContextAccess` and `IntoUiElementInExt` are now the blessed minimal explicit helper lane | Migrate | M2/M5 | Long-term target is one explicit app-facing render-authoring lane for both `AppUi` and extracted helper functions, not a split where `AppUi` is narrow but `UiCx` remains raw. The cookbook scaffold proof surface already uses the explicit capability lane. |
 | `ecosystem/fret/src/lib.rs` | advanced-lane wording must track the final raw-model rename/compat story | Migrate | M1/M3 | Keep export policy aligned with docs and tests. |
 | `apps/fret-examples/src/lib.rs` | source-policy tests now cover both the blessed default lane and the explicit advanced/reference roster | Migrate | M3/M5 | Done 2026-04-02. `advanced_reference_demos_are_explicitly_classified` locks the roster and rationale markers. |

@@ -15,6 +15,9 @@ Related:
 - App render context facade audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CONTEXT_FACADE_AUDIT_2026-04-16.md`
 - UiCx closure concrete-type pressure audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_CLOSURE_CONCRETE_TYPE_PRESSURE_AUDIT_2026-04-16.md`
 - App render concrete carrier audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
+- render_pass_id internal naming audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`
+- Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
+- Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
 - UI assets capability adapter audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - Query grouped maintenance surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - Cookbook theme context owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -34,21 +37,28 @@ Related:
   - the lane now exists,
   - ADR 0319 is written,
   - and the migration matrix explicitly includes user-facing examples.
-- **M1**: In progress
-  - target raw-model naming is frozen,
-  - bridge/internal lane wording is now source-gated in `ecosystem/fret/src/view.rs` and
-    `crates/fret-ui/src/declarative/tests/identity.rs`,
+- **M1**: Met
+  - the default-lane wording is now frozen too:
+    `LocalState<T>` is the only blessed first-contact local-state story,
+    keyed identity is the only taught dynamic-list/subtree rule for dynamic collections,
+    and the default docs plus `fretboard` onboarding templates now lock that posture with the
+    `default_state_identity_docs.rs` source-policy gate,
   - the `AppUi` / extracted-helper render-authoring wording is now frozen too:
     new default-path helper signatures prefer `fret::app::AppRenderContext<'a>`,
     closure-local / inline helper families may use `fret::app::AppRenderCx<'a>` as the concrete
     carrier, `RenderContextAccess<'a, App>` remains the underlying capability, and `UiCx` is
     treated as the compatibility old-name alias rather than the taught default,
+  - target raw-model naming is frozen,
+  - bridge/internal lane wording is now source-gated in `ecosystem/fret/src/view.rs` and
+    `crates/fret-ui/src/declarative/tests/identity.rs`,
   - the concrete-type ergonomics question is now answered narrowly instead of by grep cleanup:
     `AppRenderContext<'a>` closes named helper signatures, `AppRenderCx<'a>` closes the
     closure-local helper story on the same app-facing lane, and `hello_world_compare_demo`
     provides the first concrete proof,
-  - but the remaining default-lane wording cleanup, the Todo-surfaced render-gap classification,
-    and the internal `render_pass_id` naming decision are still open.
+  - the diagnostics posture is now frozen too:
+    evaluation-boundary diagnostics stay internal, `render_pass_id` remains a private internal
+    bookkeeping name, and the repo now explicitly chooses “no rename for now” because the term no
+    longer leaks past kernel-owned repeated-call diagnostics.
 - **M2**: In progress
   - kernel/facade substrate convergence is partially landed and the default `AppUi` lane now
     requires explicit `elements()` escape-hatch access for component/internal state helpers.
@@ -95,6 +105,13 @@ Related:
     `cx.elements()` directly. A follow-on cleanup also removes the shared footer-pill
     `ChromeRefinement` / `LayoutRefinement` helpers from `todo_demo`, so the remaining pressure is
     now mostly deliberate raw style escape hatches plus explicit environment/responsive helpers.
+  - the final Todo-derived environment/responsive follow-on is now frozen too:
+    `fret::env::{...}` exposes the query-configuration nouns needed by ordinary app code
+    (`ContainerQueryHysteresis`, `ViewportQueryHysteresis`, `ViewportOrientation`), and
+    `todo_demo` now imports its responsive/device-shell reads from that explicit lane instead of
+    reaching through `fret_ui_kit::declarative` directly. This closes the last open
+    classification ambiguity from `APP_FACING_RENDER_GAP_AUDIT_2026-04-03.md` without widening
+    the default prelude or relabeling adaptive reads as raw debt.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
   - the first real consumer probe is now also on that lane:

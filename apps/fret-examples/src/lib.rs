@@ -956,6 +956,7 @@ mod authoring_surface_policy_tests {
         let normalized = TODO_DEMO.split_whitespace().collect::<String>();
 
         assert!(TODO_DEMO.contains("use fret::app::prelude::*;"));
+        assert!(TODO_DEMO.contains("use fret::env::{"));
         assert!(!TODO_DEMO.contains("advanced::prelude::*"));
         assert!(!TODO_DEMO.contains("KernelApp"));
         assert!(!TODO_DEMO.contains("AppWindowId"));
@@ -1013,6 +1014,12 @@ mod authoring_surface_policy_tests {
             normalized
                 .contains(".test_id(TEST_ID_DRAFT).ui().shadow_sm().flex_1().min_w_0().build()")
         );
+        assert!(normalized.contains(
+            "usefret::env::{ViewportQueryHysteresis,primary_pointer_can_hover,viewport_tailwind,viewport_width_at_least,};"
+        ));
+        assert!(!normalized.contains(
+            "usefret_ui_kit::declarative::{ElementContextThemeExtas_,ViewportQueryHysteresis,primary_pointer_can_hover,viewport_tailwind,viewport_width_at_least,};"
+        ));
         assert!(normalized.contains(
             ".a11y_label(format!(\"Show{}tasks\",filter.label().to_lowercase())).test_id(test_id).refine_style(ChromeRefinement::default().rounded(Radius::Full)).refine_layout(fret_ui_kit::LayoutRefinement::default().h_px(Px(28.0)).min_h(Px(28.0)),)"
         ));

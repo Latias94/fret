@@ -49,6 +49,8 @@ Why `simple-todo`?
 - It intentionally does **not** pull in `fret-selector` or `fret-query`.
 - It is the boring default path for a first real app, while `todo` is the richer follow-up and
   `simple_todo_v2_target` remains comparison-only.
+- This is the only blessed first-contact local-state story; if a collection can
+  insert/remove/reorder, keyed identity is the default rule on day 1.
 
 ## 2) Where to edit
 

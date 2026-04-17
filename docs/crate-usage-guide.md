@@ -206,7 +206,10 @@ import them intentionally from `fret::selector::ui::DepsBuilder`,
 `fret::selector::DepsSignature`, and `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for low-level environment/responsive reads: import them intentionally from
 `fret::env::{...}` instead of treating breakpoint/media helpers as part of the default app
-vocabulary. When app code wants shared adaptive classification or explicit device-shell strategy
+vocabulary. Keep the query-configuration nouns on that same explicit lane too:
+`ContainerQueryHysteresis`, `ViewportQueryHysteresis`, and `ViewportOrientation` belong on
+`fret::env::{...}` rather than the default prelude. When app code wants shared adaptive
+classification or explicit device-shell strategy
 nouns above raw query reads, import them explicitly from `fret::adaptive::{...}` rather than
 expecting either lane from the default app vocabulary.
 When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
@@ -277,7 +280,9 @@ teaching the legacy split conversion trait names. When reusable component code n
 command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
 of expecting `CommandId` from `fret::component::prelude::*`. When reusable component code needs
 low-level environment/responsive reads, import them explicitly from `fret::env::{...}` instead of
-expecting breakpoint/media helpers from `fret::component::prelude::*`. When reusable component
+expecting breakpoint/media helpers from `fret::component::prelude::*`. Keep query-configuration
+nouns such as `ContainerQueryHysteresis`, `ViewportQueryHysteresis`, and `ViewportOrientation` on
+that same explicit lane instead of rediscovering them through kit-level wildcard imports. When reusable component
 code wants shared adaptive classification or policy nouns above raw query reads, import them
 explicitly from `fret::adaptive::{...}` instead of expecting that lane from
 `fret::component::prelude::*`. When reusable component or advanced code intentionally needs raw

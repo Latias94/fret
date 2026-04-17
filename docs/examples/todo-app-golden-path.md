@@ -117,6 +117,8 @@ Dynamic lists should use stable keys:
 
 - Prefer `ui::for_each_keyed(cx, items, |item| id, |item| row)` for list rows.
 - If a list can insert/remove/reorder, assume it needs keys.
+- Keep unkeyed iteration as an explicit exception for static, never-reordered lists rather than as
+  the default dynamic-list teaching rule.
 
 ## Minimal `Cargo.toml`
 

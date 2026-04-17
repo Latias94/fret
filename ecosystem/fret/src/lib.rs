@@ -146,20 +146,21 @@ pub mod style {
     };
 }
 
-/// Explicit environment and responsive helpers for app or component code that opts into adaptive
-/// UI logic.
+/// Explicit environment and responsive helpers/configuration nouns for app or component code that
+/// opts into adaptive UI logic.
 pub mod env {
     pub use fret_ui_kit::declarative::{
-        accent_color, container_breakpoints, container_query_region,
-        container_query_region_with_id, container_width_at_least, contrast_preference,
-        forced_colors_active, forced_colors_mode, occlusion_insets, occlusion_insets_or_zero,
-        preferred_color_scheme, prefers_dark_color_scheme, prefers_more_contrast,
-        prefers_reduced_motion, prefers_reduced_transparency, primary_pointer_can_hover,
-        primary_pointer_is_coarse, primary_pointer_type, safe_area_insets,
-        safe_area_insets_or_zero, tailwind, text_scale_factor, viewport_aspect_ratio,
-        viewport_breakpoints, viewport_height_at_least, viewport_height_breakpoints,
-        viewport_is_landscape, viewport_is_portrait, viewport_orientation, viewport_tailwind,
-        viewport_width_at_least, window_insets_padding_refinement_or_zero,
+        ContainerQueryHysteresis, ViewportOrientation, ViewportQueryHysteresis, accent_color,
+        container_breakpoints, container_query_region, container_query_region_with_id,
+        container_width_at_least, contrast_preference, forced_colors_active, forced_colors_mode,
+        occlusion_insets, occlusion_insets_or_zero, preferred_color_scheme,
+        prefers_dark_color_scheme, prefers_more_contrast, prefers_reduced_motion,
+        prefers_reduced_transparency, primary_pointer_can_hover, primary_pointer_is_coarse,
+        primary_pointer_type, safe_area_insets, safe_area_insets_or_zero, tailwind,
+        text_scale_factor, viewport_aspect_ratio, viewport_breakpoints, viewport_height_at_least,
+        viewport_height_breakpoints, viewport_is_landscape, viewport_is_portrait,
+        viewport_orientation, viewport_tailwind, viewport_width_at_least,
+        window_insets_padding_refinement_or_zero,
     };
 }
 
@@ -4017,10 +4018,14 @@ mod authoring_surface_policy_tests {
 
         assert!(root_header.contains("pub mod env {"));
         assert!(
-            root_header.contains("accent_color, container_breakpoints, container_query_region,")
+            root_header.contains(
+                "ContainerQueryHysteresis, ViewportOrientation, ViewportQueryHysteresis,"
+            )
         );
         assert!(root_header.contains("preferred_color_scheme, prefers_dark_color_scheme"));
         assert!(root_header.contains("safe_area_insets,"));
+        assert!(root_header.contains("ViewportOrientation,"));
+        assert!(root_header.contains("ViewportQueryHysteresis, viewport_aspect_ratio,"));
         assert!(root_header.contains("viewport_breakpoints, viewport_height_at_least"));
         assert!(root_header.contains("viewport_tailwind,"));
         assert!(root_header.contains("window_insets_padding_refinement_or_zero,"));

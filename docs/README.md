@@ -23,6 +23,8 @@ Default app-author surface to keep in your head:
 - `FretApp::new(...).window(...).view::<MyView>()?.run()`
 - `impl View for MyView { fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui { ... } }`
 - grouped defaults first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
+- first-contact state/identity: `LocalState<T>` for view-owned state, and
+  `ui::for_each_keyed(...)` / `ui::for_each_keyed_with_cx(...)` for dynamic collections
 
 ## Command conventions (docs)
 

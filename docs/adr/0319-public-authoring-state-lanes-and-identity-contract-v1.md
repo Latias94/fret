@@ -91,6 +91,11 @@ If the repo later removes `AppUi`'s `Deref` bridge to `ElementContext`, it must 
 ordinary app-facing render-authoring surface from the component/internal identity lane rather than
 forcing ordinary builder/helper APIs behind `cx.elements()`.
 
+Low-level environment/responsive reads are a separate explicit secondary lane on
+`fret::env::{...}`. Keep query-configuration nouns such as `ContainerQueryHysteresis`,
+`ViewportQueryHysteresis`, and `ViewportOrientation` on that same explicit lane rather than
+mistaking them for raw component/internal `ElementContext` debt or widening the default prelude.
+
 ### D1.2 — Extracted helper surfaces should converge on the same narrowed render-authoring lane
 
 Extracted child-builder helpers on the default app surface should converge on the same narrowed
@@ -121,6 +126,8 @@ The default app lane remains:
 - and explicit `Model<T>` graphs only when ownership is genuinely shared or runtime-owned.
 
 Raw model handles are not co-equal with `LocalState<T>` in first-contact materials.
+First-contact docs/templates/examples should not teach `LocalState::from_model(...)`,
+`clone_model()`, or raw `Model<T>` choreography on this lane.
 
 When a manual driver/init/hybrid surface needs a `LocalState<T>` handle before the first `AppUi`
 render, prefer `LocalState::new_in(models, value)` rather than allocating a raw `Model<T>` first
@@ -147,6 +154,10 @@ Across all authoring frontends:
 - and diagnostics should guide users toward keyed identity rather than undocumented hook-order
   folklore.
 
+On the default app lane, dynamic lists/subtrees should teach `ui::for_each_keyed(...)`,
+`ui::for_each_keyed_with_cx(...)`, or `ui.id(key, ...)` as the identity-bearing default.
+Unkeyed iteration remains an explicit exception only for static, order-stable collections.
+
 ### D5 — The kernel owns the identity/model substrate
 
 The mechanism vocabulary lives in kernel/runtime primitives such as:
@@ -160,8 +171,9 @@ semantically parallel slot/state substrate unless a remaining difference is expl
 
 Fields such as `render_pass_id` are internal diagnostics substrate only.
 
-They may exist, be renamed, or be replaced, but they must not become public authoring concepts or
-user-visible escape hatches.
+The current `render_pass_id` name is acceptable while it remains private repeated-call
+bookkeeping. It may still be replaced by a different internal mechanism later, but it must not
+become a public authoring concept or a user-visible escape hatch.
 
 ## Consequences
 

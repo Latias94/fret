@@ -2,6 +2,9 @@ use std::sync::Arc;
 
 use fret::app::LocalState;
 use fret::app::prelude::*;
+use fret::env::{
+    ViewportQueryHysteresis, primary_pointer_can_hover, viewport_tailwind, viewport_width_at_least,
+};
 use fret::icons::{IconId, icon};
 use fret::style::{ChromeRefinement, ColorRef, Radius, Space, Theme, ThemeSnapshot};
 use fret_core::scene::DashPatternV1;
@@ -11,11 +14,8 @@ use fret_core::{
 };
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::{
-    ElementContextThemeExt as _, ViewportQueryHysteresis, primary_pointer_can_hover,
-    viewport_tailwind, viewport_width_at_least,
-};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
 
 mod act {
