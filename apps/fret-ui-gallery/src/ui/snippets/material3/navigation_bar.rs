@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("navigation_bar.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::ids;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let bar = material3::NavigationBar::uncontrolled(cx, "search");
     let value = bar.value_model();
     let current = cx

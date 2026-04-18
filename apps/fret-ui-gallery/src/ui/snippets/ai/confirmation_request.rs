@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("confirmation_request.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
     let success = theme
         .color_by_key("success")

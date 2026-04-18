@@ -100,7 +100,7 @@ impl View for OverlayBasicsView {
         };
 
         let shortcut = cx
-            .app
+            .app()
             .global::<KeymapService>()
             .and_then(|svc| {
                 svc.keymap
@@ -109,7 +109,7 @@ impl View for OverlayBasicsView {
             .map(|seq| format_sequence(Platform::current(), &seq))
             .unwrap_or_else(|| "Unbound".to_string());
 
-        let dialog = shadcn::Dialog::new(&dialog_open_state).into_element(
+        let dialog = shadcn::Dialog::new(&dialog_open_state).into_element_in(
             cx,
             move |cx| {
                 let content = ui::v_flex(|cx| {

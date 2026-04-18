@@ -191,8 +191,8 @@ impl View for RouterBasicsView {
             .unwrap_or_else(|_| "<unmatched>".to_string());
 
         let location_label: Arc<str> = Arc::from(snapshot.location.to_url());
-        let can_back = self.store.can_navigate(cx.app, NavigationAction::Back);
-        let can_forward = self.store.can_navigate(cx.app, NavigationAction::Forward);
+        let can_back = self.store.can_navigate(cx.app(), NavigationAction::Back);
+        let can_forward = self.store.can_navigate(cx.app(), NavigationAction::Forward);
 
         let back = shadcn::Button::new("Back")
             .variant(shadcn::ButtonVariant::Secondary)
@@ -206,18 +206,20 @@ impl View for RouterBasicsView {
             .action(act::RouterForward)
             .test_id(TEST_ID_BTN_FORWARD);
 
-        let location = cx.text(location_label).test_id(TEST_ID_LOCATION_LABEL);
-        let typed_route = cx.text(format!("typed={typed_route_label}"));
+        let location = ui::text(location_label)
+            .into_element_in(cx)
+            .test_id(TEST_ID_LOCATION_LABEL);
+        let typed_route = ui::text(format!("typed={typed_route_label}")).into_element_in(cx);
 
         let header_row = ui::h_flex(|cx| ui::children![cx; back, forward, location, typed_route])
             .gap(Space::N2)
             .items_center()
             .wrap();
 
-        let home_label = cx.text("Home");
-        let settings_label = cx.text("Settings");
-        let user_label = cx.text("User 42");
-        let missing_label = cx.text("Missing");
+        let home_label = ui::text("Home").into_element_in(cx);
+        let settings_label = ui::text("Settings").into_element_in(cx);
+        let user_label = ui::text("User 42").into_element_in(cx);
+        let missing_label = ui::text("Missing").into_element_in(cx);
 
         let home_link = router_link_to_typed_route_with_test_id(
             cx,

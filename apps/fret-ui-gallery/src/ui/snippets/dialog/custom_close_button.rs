@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("custom_close_button.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let share_link = cx.local_model_keyed("share_link", || {
         String::from("https://ui.shadcn.com/docs/installation")

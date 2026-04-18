@@ -1,19 +1,19 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Axis;
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn panel(_cx: &mut UiCx<'_>, label: &'static str) -> impl UiChild + use<> {
+fn panel(_cx: &mut AppComponentCx<'_>, label: &'static str) -> impl UiChild + use<> {
     ui::v_flex(move |cx| vec![shadcn::raw::typography::small(label).into_element(cx)])
         .layout(LayoutRefinement::default().w_full().h_full())
         .items_center()
         .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let fractions = cx.local_model_keyed("ui-gallery-resizable-usage-fractions", || vec![0.5, 0.5]);
 
     shadcn::resizable_panel_group(cx, fractions, |cx| {

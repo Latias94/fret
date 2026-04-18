@@ -1,6 +1,6 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(in crate::ui) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_icons(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     pages::preview_icons(cx)
 }

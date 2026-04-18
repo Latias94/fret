@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
@@ -44,7 +44,7 @@ fn rotated_lucide<H: UiHost>(
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.scope(|cx| {
         let open = cx.local_model_keyed("basic_open", || false);
         let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);

@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::radio_group as snippets;
 
-pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_radio_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let description = snippets::description::render(cx);

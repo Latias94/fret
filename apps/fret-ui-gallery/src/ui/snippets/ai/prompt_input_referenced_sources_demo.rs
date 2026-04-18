@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("prompt_input_referenced_sources_demo.rs")
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sources = cx.local_model_keyed("sources", Vec::<ui_ai::AttachmentSourceDocumentData>::new);
 
     let add = shadcn::Button::new("Add referenced source")

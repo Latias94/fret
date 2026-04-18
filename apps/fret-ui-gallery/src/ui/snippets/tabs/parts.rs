@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("parts.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn panel(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     description: &'static str,
     action_label: &'static str,
@@ -37,7 +37,7 @@ fn panel(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let overview_panel = panel(
         cx,
         "Overview",

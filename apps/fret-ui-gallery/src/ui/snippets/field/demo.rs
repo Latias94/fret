@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let card_name = cx.local_model_keyed("card_name", String::new);
     let card_number = cx.local_model_keyed("card_number", String::new);
     let cvv = cx.local_model_keyed("cvv", String::new);

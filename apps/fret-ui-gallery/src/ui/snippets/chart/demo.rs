@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
@@ -18,7 +18,7 @@ enum DemoChartKind {
 }
 
 fn trending_footer(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     secondary: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
@@ -74,8 +74,8 @@ fn chart_card(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let chart_canvas = |cx: &mut UiCx<'_>, kind: DemoChartKind, test_id: Arc<str>| {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
+    let chart_canvas = |cx: &mut AppComponentCx<'_>, kind: DemoChartKind, test_id: Arc<str>| {
         use delinea::data::{Column, DataTable};
         use delinea::{
             AxisKind, AxisScale, CategoryAxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,

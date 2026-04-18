@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
 use fret_core::{Corners, Edges, Px};
 use fret_ui::Theme;
@@ -20,7 +20,7 @@ const GOAL_SERIES: [i32; 13] = [
 ];
 
 fn goal_adjust_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     goal: Model<i32>,
     adjustment: i32,
     icon: &'static str,
@@ -91,7 +91,7 @@ fn goal_chart<H: UiHost>(
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let goal_model = cx.local_model(|| 350);
     let current_goal = cx.watch_model(&goal_model).copied().unwrap_or(350);
     let theme = Theme::global(&*cx.app).snapshot();

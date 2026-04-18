@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("link.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     fret_ui_kit::ui::h_flex(|cx| {
         vec![
             // Upstream shadcn: `<Badge asChild><Link href="/">Badge</Link></Badge>`.

@@ -57,7 +57,7 @@ fn select_snippets_keep_the_default_root_lane_and_explicit_parts_adapter() {
     let rich_items = include_str!("../src/ui/snippets/select/rich_items.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)",
         ".trigger(",

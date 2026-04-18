@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("snackbar.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui_kit::ToastStore;
@@ -12,7 +12,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
 
-pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
     let store = cx.local_model_keyed("store", ToastStore::default);
 
     let host_layer = material3::SnackbarHost::new(store.clone())

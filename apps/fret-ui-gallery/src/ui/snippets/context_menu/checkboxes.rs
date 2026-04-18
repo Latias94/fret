@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("checkboxes.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
@@ -64,7 +64,7 @@ fn trigger_surface<H: UiHost>(
     .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let appearance = cx.local_model(|| AppearanceState {
         show_bookmarks_bar: true,
         show_full_urls: false,

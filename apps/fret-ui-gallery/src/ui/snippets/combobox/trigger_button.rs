@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("trigger_button.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || None::<Arc<str>>);
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);

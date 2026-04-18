@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Corners, Px};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let menu_open = cx.local_model_keyed("menu_open", || false);
     let label_value = cx.local_model_keyed("label_value", || Some(Arc::<str>::from("personal")));
 

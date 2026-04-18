@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::command as snippets;
 
-pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_command_palette(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let usage_palette = snippets::usage::render(cx);
     let docs_demo_palette = snippets::docs_demo::render(cx);
     let basic_dialog = snippets::basic::render(cx);

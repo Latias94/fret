@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -9,9 +9,9 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-fn centered_row<F>(cx: &mut UiCx<'_>, children: F) -> impl UiChild + use<F>
+fn centered_row<F>(cx: &mut AppComponentCx<'_>, children: F) -> impl UiChild + use<F>
 where
-    F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
+    F: FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>,
 {
     ui::h_flex(children)
         .gap(Space::N1)
@@ -27,7 +27,7 @@ where
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
         ui_ai::SourceItem::new("src-0", "Advances in Natural Language Processing")
             .url("https://example.com/nlp-advances")

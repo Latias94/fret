@@ -1,5 +1,5 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::snippets;
 
@@ -9,7 +9,9 @@ const MATERIAL3_BOTTOM_SHEET_INTRO: &str = "Material 3 surfaces are still migrat
 const MATERIAL3_DIALOG_INTRO: &str = "Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code). Default copyable dialog demos use `Dialog::uncontrolled(cx)` plus `open_model()` for underlay triggers; keep `Dialog::new(open)` when the app owns open state.";
 const MATERIAL3_MENU_INTRO: &str = "Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code). Default copyable menu demos use `DropdownMenu::uncontrolled(cx)` plus `open_model()` for trigger wiring; keep `DropdownMenu::new(open)` for explicit externally owned open state.";
 
-pub(in crate::ui) fn preview_material3_bottom_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_bottom_sheet(
+    cx: &mut AppComponentCx<'_>,
+) -> Vec<AnyElement> {
     let demo = snippets::material3::bottom_sheet::render(cx);
 
     render_material3_demo_page(
@@ -21,7 +23,7 @@ pub(in crate::ui) fn preview_material3_bottom_sheet(cx: &mut UiCx<'_>) -> Vec<An
 }
 
 pub(in crate::ui) fn preview_material3_dialog(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::dialog::render(cx, last_action);
@@ -35,7 +37,7 @@ pub(in crate::ui) fn preview_material3_dialog(
 }
 
 pub(in crate::ui) fn preview_material3_menu(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::menu::render(cx, last_action);
@@ -49,7 +51,7 @@ pub(in crate::ui) fn preview_material3_menu(
 }
 
 pub(in crate::ui) fn preview_material3_snackbar(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::snackbar::render(cx, last_action);
@@ -62,7 +64,7 @@ pub(in crate::ui) fn preview_material3_snackbar(
     )
 }
 
-pub(in crate::ui) fn preview_material3_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_tooltip(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::tooltip::render(cx);
 
     render_material3_demo_page(

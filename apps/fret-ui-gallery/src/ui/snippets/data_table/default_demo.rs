@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("default_demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
@@ -30,7 +30,7 @@ where
 }
 
 fn footer(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     state: Model<TableState>,
     output: Model<TableViewOutput>,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -95,7 +95,7 @@ fn footer(
     .gap(Space::N2)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let assets = cx.slot_state(
         || {
             let data: Arc<[InvoiceRow]> = Arc::from(vec![

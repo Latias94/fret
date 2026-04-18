@@ -280,7 +280,7 @@ impl View for CustomEffectV1View {
             .local(&st.grain_scale)
             .set::<act::Reset>(vec![1.0]);
 
-        view(cx, &mut st)
+        view(cx.elements(), &mut st)
     }
 }
 

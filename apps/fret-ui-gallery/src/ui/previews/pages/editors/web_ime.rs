@@ -1,6 +1,6 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout;
-use fret::UiCx;
+use fret::AppComponentCx;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
@@ -37,7 +37,7 @@ fn inject_debug_beforeinput(_input_type: &str) -> bool {
 }
 
 pub(in crate::ui) fn preview_web_ime_harness(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -87,7 +87,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
             LayoutRefinement::default().w_full(),
         ),
         |cx| {
-            let body = ui::v_flex(|cx: &mut UiCx<'_>| {
+            let body = ui::v_flex(|cx: &mut AppComponentCx<'_>| {
                 vec![
                     cx.text("Editable widgets (sanity check):"),
                     shadcn::Input::new(text_input)
@@ -289,8 +289,8 @@ pub(in crate::ui) fn preview_web_ime_harness(
                     .h_px(MetricRef::Px(Px(240.0))),
             ),
             |cx| {
-                let body = ui::v_flex(|cx: &mut UiCx<'_>| {
-                        let inject_chip = |cx: &mut UiCx<'_>,
+                let body = ui::v_flex(|cx: &mut AppComponentCx<'_>| {
+                        let inject_chip = |cx: &mut AppComponentCx<'_>,
                                            label: &'static str,
                                            input_type: &'static str,
                                            test_id: &'static str| {

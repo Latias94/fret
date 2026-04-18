@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn icon_item(value: &'static str, label: &'static str) -> shadcn::ToggleGroupItem {
@@ -50,7 +50,7 @@ fn group<H: UiHost>(
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let small = group(cx, shadcn::ToggleSize::Sm).into_element(cx);
     let large = group(cx, shadcn::ToggleSize::Lg).into_element(cx);
 

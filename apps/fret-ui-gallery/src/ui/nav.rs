@@ -1,5 +1,5 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 use fret_ui::scroll::ScrollHandle;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -141,7 +141,7 @@ pub(crate) fn nav_visibility_summary(query: &str) -> NavVisibilitySummary {
 }
 
 pub(crate) fn sidebar_view(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     selected: &str,
     query: &str,
@@ -186,7 +186,7 @@ pub(crate) fn sidebar_view(
             .into_element(cx)
     };
 
-    let push_group = |cx: &mut UiCx<'_>,
+    let push_group = |cx: &mut AppComponentCx<'_>,
                       title: &'static str,
                       items: &[&'static PageSpec],
                       nav_sections: &mut Vec<AnyElement>| {

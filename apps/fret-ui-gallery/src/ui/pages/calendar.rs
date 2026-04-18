@@ -1,11 +1,11 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::calendar as snippets;
 
 pub(super) fn preview_calendar(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {

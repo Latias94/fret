@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -10,7 +10,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn resolve_selected(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     model: &Model<Arc<str>>,
     fallback: &'static str,
 ) -> Arc<str> {
@@ -19,7 +19,7 @@ fn resolve_selected(
 }
 
 fn menu_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     selected_model: Model<Arc<str>>,
     active_value: &Arc<str>,
     value: &'static str,
@@ -45,7 +45,7 @@ fn menu_button(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let selected_model = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
     let selected_value = resolve_selected(cx, &selected_model, "playground");
 

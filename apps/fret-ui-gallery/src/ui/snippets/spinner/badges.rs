@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("badges.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let spinner = |cx: &mut UiCx<'_>| shadcn::Spinner::new().into_element(cx);
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
+    let spinner = |cx: &mut AppComponentCx<'_>| shadcn::Spinner::new().into_element(cx);
 
     ui::h_flex(|cx| {
         vec![

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("routing.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -15,7 +15,7 @@ fn page_number(label: &'static str) -> impl UiChild + use<> {
     ui::text(label).tabular_nums()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Pagination::new([shadcn::PaginationContent::new([
         shadcn::PaginationItem::new(
             shadcn::PaginationPrevious::new()

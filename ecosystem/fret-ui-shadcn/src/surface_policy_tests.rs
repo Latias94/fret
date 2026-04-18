@@ -1701,6 +1701,53 @@ fn provider_late_builders_offer_explicit_context_access_overloads() {
 }
 
 #[test]
+fn overlay_root_late_builders_offer_explicit_context_access_overloads() {
+    let dialog = normalize_ws(DIALOG_RS);
+    let alert_dialog = normalize_ws(ALERT_DIALOG_RS);
+    let sheet = normalize_ws(SHEET_RS);
+    let drawer = normalize_ws(DRAWER_RS);
+    let overlay_roots = normalize_ws(UI_BUILDER_EXT_OVERLAY_ROOTS_RS);
+
+    for marker in [
+        "pub fn build_in<'a, H: UiHost + 'a, Cx>( self, cx: &mut Cx, trigger: impl IntoUiElement<H>, content: impl IntoUiElement<H>, ) -> AnyElement where Cx: ElementContextAccess<'a, H>,",
+        "pub fn into_element_in<'a, H: UiHost + 'a, Cx>( self, cx: &mut Cx, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement where Cx: ElementContextAccess<'a, H>,",
+    ] {
+        let marker = normalize_ws(marker);
+        assert!(
+            dialog.contains(&marker),
+            "dialog.rs should keep explicit context-access overloads for root late-builders"
+        );
+        assert!(
+            alert_dialog.contains(&marker),
+            "alert_dialog.rs should keep explicit context-access overloads for root late-builders"
+        );
+        assert!(
+            drawer.contains(&marker),
+            "drawer.rs should keep explicit context-access overloads for root late-builders"
+        );
+    }
+
+    let sheet_marker = normalize_ws(
+        "pub fn into_element_in<'a, H: UiHost + 'a, Cx>( self, cx: &mut Cx, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement where Cx: ElementContextAccess<'a, H>,",
+    );
+    assert!(
+        sheet.contains(&sheet_marker),
+        "sheet.rs should keep explicit context-access overloads for root late-builders"
+    );
+
+    for marker in [
+        "fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>( self, cx: &mut Cx, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent, ) -> AnyElement where Cx: ElementContextAccess<'a, H>, TTrigger: IntoUiElement<H>, TContent: IntoUiElement<H>;",
+        "fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>( self, cx: &mut Cx, trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger, content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent, ) -> AnyElement where Cx: ElementContextAccess<'a, H>, TTrigger: IntoUiElement<H>, TContent: IntoUiElement<H>,",
+    ] {
+        let marker = normalize_ws(marker);
+        assert!(
+            overlay_roots.contains(&marker),
+            "ui_builder_ext/overlay_roots.rs should keep explicit context-access overloads for shadcn overlay root builders"
+        );
+    }
+}
+
+#[test]
 fn card_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_required() {
     let normalized = normalize_ws(CARD_RS);
     let required_markers = [

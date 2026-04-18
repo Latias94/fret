@@ -1,6 +1,6 @@
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{UiChild, AppComponentCx};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -15,7 +15,7 @@ fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let toaster_position = cx.local_model_keyed("docs_sonner_position", || {
         shadcn::ToastPosition::TopCenter
@@ -26,7 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .unwrap_or(shadcn::ToastPosition::TopCenter);
 
     let position_button =
-        |cx: &mut UiCx<'_>, label: &'static str, target: shadcn::ToastPosition| {
+        |cx: &mut AppComponentCx<'_>, label: &'static str, target: shadcn::ToastPosition| {
             let sonner = sonner.clone();
             let toaster_position = toaster_position.clone();
 

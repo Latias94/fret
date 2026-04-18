@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -14,7 +14,7 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
     let demo_value = cx.local_model_keyed("demo_value", || None::<Arc<str>>);
     let md_breakpoint_query_container =
@@ -23,7 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .get_model_copied(&md_breakpoint_query_container, Invalidation::Layout)
         .unwrap_or(false);
 
-    let list_item = |cx: &mut UiCx<'_>,
+    let list_item = |cx: &mut AppComponentCx<'_>,
                      model: Model<Option<Arc<str>>>,
                      title: &'static str,
                      description: &'static str,
@@ -81,7 +81,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)
     };
 
-    let icon_row = |cx: &mut UiCx<'_>,
+    let icon_row = |cx: &mut AppComponentCx<'_>,
                     model: Model<Option<Arc<str>>>,
                     icon: &'static str,
                     label: &'static str,

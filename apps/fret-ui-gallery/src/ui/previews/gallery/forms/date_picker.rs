@@ -1,8 +1,8 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_date_picker(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     open: Model<bool>,
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,

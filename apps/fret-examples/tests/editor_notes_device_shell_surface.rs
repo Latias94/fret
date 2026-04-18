@@ -5,10 +5,12 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
     for needle in [
         "let theme = cx.theme_snapshot();",
         "use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};",
+        "use fret_ui_kit::IntoUiElementInExt as _;",
         "device_shell_switch(",
         "WorkspaceFrame::new(center)",
         ".left(left_rail)",
         ".right(right_rail)",
+        ".into_element_in(cx)",
         "shadcn::Drawer::new(drawer_open.clone())",
         "shadcn::DrawerPart::content_with(move |cx| {",
         "editor_notes_demo::render_selection_panel(cx, selected)",
@@ -26,6 +28,16 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
     assert!(
         !source.contains("Theme::global(&*cx.app).snapshot()"),
         "editor notes device shell demo should use the app-facing theme snapshot helper instead of reading theme through cx.app",
+    );
+    assert!(
+        !source.contains(
+            "WorkspaceFrame::new(center)\n                    .left(left_rail)\n                    .right(right_rail)\n                    .background(Some(desktop_background))\n                    .into_element(cx)"
+        ),
+        "editor notes device shell demo should land desktop shell chrome through the explicit capability-first helper instead of relying on AppUi deref",
+    );
+    assert!(
+        !source.contains("                    ])\n                    .into_element(cx);"),
+        "editor notes device shell demo should keep the mobile drawer root on the explicit capability-first landing path",
     );
 }
 

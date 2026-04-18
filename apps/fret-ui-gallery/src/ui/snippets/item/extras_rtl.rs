@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("extras_rtl.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn outline_button_sm(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new(label)
@@ -18,7 +18,7 @@ fn outline_button_sm(
 }
 
 fn item_basic(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     description: &'static str,
     actions: Vec<AnyElement>,
@@ -42,7 +42,7 @@ fn item_basic(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let action = outline_button_sm(cx, "فتح").into_element(cx);
         item_basic(

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("conversation_demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_ui::Invalidation;
@@ -53,7 +53,7 @@ fn build_seeded_messages(count: usize) -> Arc<[ui_ai::AiMessage]> {
     Arc::from(seeded.into_boxed_slice())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let messages_model = cx.local_model_keyed("messages", || {
         build_seeded_messages(diag_seed_message_count())
     });
@@ -239,7 +239,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
 // region: custom_scroll_button
 #[allow(dead_code)]
-fn custom_scroll_button(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn custom_scroll_button(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui_ai::ConversationScrollButton::default().into_element_with_children(cx, |cx| {
         vec![
             ui::h_row(move |cx| {

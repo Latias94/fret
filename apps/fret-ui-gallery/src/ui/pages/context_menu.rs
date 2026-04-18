@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::context_menu as snippets;
 
-pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_context_menu(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);

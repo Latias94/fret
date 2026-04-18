@@ -326,7 +326,7 @@ impl View for CustomEffectV3View {
             .local(&st.use_non_filterable_user1)
             .set::<act::Reset>(false);
 
-        view(cx, &mut st)
+        view(cx.elements(), &mut st)
     }
 }
 

@@ -22,6 +22,22 @@ Companion docs:
 - `APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
 - `RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`
 - `UICX_DEFAULT_PRELUDE_DEMOTION_AUDIT_2026-04-17.md`
+- `APP_UI_RUNTIME_GATING_AND_FRAME_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_RAW_OWNER_CALLSITE_EXPLICITNESS_AUDIT_2026-04-17.md`
+- `APP_UI_LAYOUT_QUERY_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_OVERLAY_ROOT_CAPABILITY_SURFACE_AUDIT_2026-04-17.md`
+- `APP_UI_RAW_TEXT_AUTHORING_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_DEFAULT_TEXT_BUILDER_SURFACE_AUDIT_2026-04-17.md`
+- `APP_UI_MANUAL_FORM_RAW_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_ADVANCED_HELPER_RAW_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_MANUAL_DATE_PICKER_RAW_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_EMBEDDED_VIEWPORT_INTEROP_CAPABILITY_AUDIT_2026-04-17.md`
+- `APP_UI_FINAL_NO_DEREF_TAIL_OWNER_AUDIT_2026-04-17.md`
+- `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`
+- `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
+- `APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
+- `APP_UI_ASYNC_PLAYGROUND_HELPER_CAPABILITY_AUDIT_2026-04-17.md`
+- `APP_UI_MARKDOWN_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - `UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
 - `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md`
 - `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md`
@@ -370,6 +386,126 @@ Companion docs:
     `fret::app::prelude::*` now exports `AppRenderCx` but no longer reexports `UiCx`, while the
     compatibility alias remains available only through explicit import / advanced surfaces. See
     `UICX_DEFAULT_PRELUDE_DEMOTION_AUDIT_2026-04-17.md`.
+  - [x] land the first explicit runtime/gating slice that no longer depends on the temporary
+    `AppUi -> ElementContext` `Deref` bridge:
+    `AppUi` now owns an inherent `request_animation_frame()` helper, the explicitly imported
+    `fret::actions::ElementCommandGatingExt` trait now implements directly on `AppUi`, and the
+    owner classification for the remaining raw method-family tail is recorded in
+    `APP_UI_RUNTIME_GATING_AND_FRAME_OWNER_AUDIT_2026-04-17.md`.
+  - [x] move the already-classified raw-owner and grouped-selector tail callsites without widening
+    the framework surface:
+    `components_gallery` now enters its retained branch through `let cx = cx.elements();`,
+    cookbook `drag_basics` / `gizmo_basics` now spell `cx.elements().pointer_region(...)`,
+    `editor_notes_device_shell_demo` now uses `cx.data().selector_model_paint(...)`, and the
+    resulting no-`Deref` compile-audit reduction is recorded in
+    `APP_UI_RAW_OWNER_CALLSITE_EXPLICITNESS_AUDIT_2026-04-17.md`.
+  - [x] land the app-facing layout-query owner slice instead of forcing geometry-query authoring
+    through raw `cx.elements()`:
+    `AppUi` now owns `layout_query_bounds(...)`, `layout_query_region(...)`, and
+    `layout_query_region_with_id(...)`; the nested region-builder closure carries grouped
+    action-handler state instead of depending on implicit `Deref`; `markdown_demo` now keeps its
+    remaining mutable host bridge on `cx.app_mut().models_mut()`; and the no-`Deref` evidence is
+    recorded in `APP_UI_LAYOUT_QUERY_OWNER_AUDIT_2026-04-17.md`.
+  - [x] land the direct overlay-root capability slice instead of forcing real app roots back
+    through raw `ElementContext` entry points:
+    `Dialog`, `AlertDialog`, `Sheet`, and `Drawer` now expose explicit `*_in(...)` late-builder
+    entry points, the matching `UiBuilder` overlay adapters expose the same capability lane,
+    `WorkspaceFrame` now exposes `into_element_in(...)`, `api_workbench_lite_demo` /
+    `editor_notes_device_shell_demo` / `emoji_conformance_demo` use explicit `app()` /
+    `into_element_in(...)` accessors, and the targeted evidence is recorded in
+    `APP_UI_OVERLAY_ROOT_CAPABILITY_SURFACE_AUDIT_2026-04-17.md`.
+  - [x] classify the current raw text/builder conformance tail at the callsite instead of
+    widening `AppUi`:
+    `emoji_conformance_demo` now keeps theme/state/global reads on `AppUi`, then explicitly
+    enters `let cx = cx.elements();` for `text_props(...)` and direct
+    `into_element(...)` late-landing (`Card*`, `Separator`, `ScrollArea`); the targeted evidence
+    is recorded in `APP_UI_RAW_TEXT_AUTHORING_OWNER_AUDIT_2026-04-17.md`.
+  - [x] keep the default counter teaching surfaces on existing app-lane text builders and
+    capability-first late landing instead of reopening raw `TextProps` or `cx.elements()`:
+    `apps/fret-examples/src/hello_counter_demo.rs` and
+    `apps/fret-cookbook/examples/hello_counter.rs` now use `ui::text(...)` /
+    `ui::text_block(...)`; the demo uses `IntoUiElementInExt::into_element_in(cx)` for ordinary
+    late-landing roots; and the targeted evidence is recorded in
+    `APP_UI_DEFAULT_TEXT_BUILDER_SURFACE_AUDIT_2026-04-17.md`.
+  - [x] classify the manual `form_demo` raw layout/build tail at the callsite instead of widening
+    `AppUi`:
+    `form_demo` now keeps its `form_state` / `status` reads on `AppUi`, then explicitly enters
+    `let cx = cx.elements();` for `cx.text(...)`, direct form-control late-landing, and
+    `cx.container(...)` / `cx.flex(...)`; the targeted evidence is recorded in
+    `APP_UI_MANUAL_FORM_RAW_OWNER_AUDIT_2026-04-17.md`.
+  - [x] classify the next advanced helper/render-shell clusters at the callsite instead of
+    widening `AppUi`:
+    `postprocess_theme_demo` and `imui_interaction_showcase_demo` now keep tracked reads on
+    `AppUi`, then explicitly enter `let cx = cx.elements();` before their raw helper/render-shell
+    phase; the targeted evidence is recorded in
+    `APP_UI_ADVANCED_HELPER_RAW_OWNER_AUDIT_2026-04-17.md`.
+  - [x] classify the next manual `render_root_with_app_ui(...)` tail at the callsite instead of
+    widening `AppUi`:
+    `date_picker_demo` now keeps theme/local-state/layout reads on `AppUi`, then explicitly
+    enters `let cx = cx.elements();` before its manual header/toggle/picker/calendar/container
+    build phase; the targeted evidence is recorded in
+    `APP_UI_MANUAL_DATE_PICKER_RAW_OWNER_AUDIT_2026-04-17.md`.
+  - [x] classify the next mixed app-facing/interop root as capability-first late landing plus one
+    explicit raw seam instead of widening `AppUi` or collapsing the whole render path onto raw
+    `ElementContext`:
+    `embedded_viewport_demo` now keeps tracked reads and ordinary builders on `AppUi`, uses
+    `IntoUiElementInExt::into_element_in(cx)` plus `ui::text(...).into_element_in(cx)` for normal
+    late-landing, and keeps `cx.elements()` only at `EmbeddedViewportSurface::panel(...)`; the
+    targeted evidence is recorded in
+    `APP_UI_EMBEDDED_VIEWPORT_INTEROP_CAPABILITY_AUDIT_2026-04-17.md`.
+  - [x] keep the default Todo app root on the existing capability-first late-landing lane instead
+    of letting ordinary builders fall back to implicit `Deref`:
+    `todo_demo` now uses `into_element_in(cx)` for root-level status/progress/scroll/footer
+    landing on `AppUi`, while helper-local `ElementContext` closures keep their existing raw
+    builder usage; the targeted evidence is recorded in
+    `APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - [x] classify the next named-helper tail as app-facing capability debt instead of reopening a
+    raw-owner lane:
+    `async_playground_demo` now moves its named helpers from `UiCx<'_>` onto
+    `fret::app::AppRenderContext<'a>`, uses `IntoUiElementInExt::into_element_in(cx)` for
+    ordinary late-landing, keeps `cx.elements().pressable(...)` explicit at the one real raw
+    leaf, and records the targeted evidence in
+    `APP_UI_ASYNC_PLAYGROUND_HELPER_CAPABILITY_AUDIT_2026-04-17.md`.
+  - [x] keep the markdown app root and nested layout-query shells on the same capability-first
+    late-landing lane instead of falling back to implicit `Deref`:
+    `markdown_demo` now uses `IntoUiElementInExt::into_element_in(cx)` for `toggles`, the nested
+    `layout_query_region_with_id(...)` shell/container, `content`, and the outer page shell,
+    while the explicit image-hook raw helper remains on `UiCx<'_>`; the targeted evidence is
+    recorded in `APP_UI_MARKDOWN_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - [x] keep the editor-notes workbench root on that same capability-first late-landing lane
+    instead of letting ordinary shell rails fall back to implicit `Deref`:
+    `editor_notes_demo` now keeps its reusable panels generic on
+    `ElementContextAccess<'a, App>`, imports `IntoUiElementInExt as _`, uses
+    `into_element_in(cx)` for both rails, `WorkspaceFrame`, and the outer page shell, and records
+    the targeted evidence in `APP_UI_EDITOR_NOTES_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - [x] extend the app-facing runtime/frame lane to cover continuous frame leases instead of
+    forcing real proof surfaces back through raw scheduling helpers:
+    `AppUi` now owns `set_continuous_frames(enabled)`, `hello_world_compare_demo` calls that
+    helper directly, keeps its closure-local swatches on `AppRenderCx<'_>`, uses `ui::text(...)`
+    for the title, uses `into_element_in(cx)` for `layout_probe`, `swatch_row`, and the root
+    shell, and records the targeted evidence in
+    `APP_UI_CONTINUOUS_FRAMES_RUNTIME_OWNER_AUDIT_2026-04-17.md`.
+  - [x] keep the first-contact query proofs on that same capability-first root landing lane
+    instead of letting ordinary detail builders fall back to implicit `Deref`:
+    `query_demo` and `query_async_tokio_demo` now import `IntoUiElementInExt as _`, use
+    `into_element_in(cx)` for `status_row`, `buttons`, and `detail_body`, keep grouped
+    state/effects/data ownership on `AppUi`, and record the targeted evidence in
+    `APP_UI_QUERY_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - [x] keep the advanced raw builder triplet on explicit escape hatches instead of widening
+    `AppUi` with `container(...)` / `flex(...)` / `text(...)`:
+    `drop_shadow_demo`, `ime_smoke_demo`, and `sonner_demo` now perform app-lane
+    state/theme/grouped reads first, then enter `let cx = cx.elements();` before the advanced raw
+    builder phase, and record the targeted evidence in
+    `APP_UI_ADVANCED_RAW_BUILDER_OWNER_AUDIT_2026-04-17.md`.
+  - [x] close the remaining `fret-examples` no-`Deref` tail at the owner boundary instead of
+    widening `AppUi` again:
+    `custom_effect_v1_demo`, `custom_effect_v2_demo`, `custom_effect_v3_demo`, `genui_demo`, and
+    `liquid_glass_demo` now enter their advanced `view(...)` helpers through `cx.elements()`,
+    `components_gallery` keeps tracked reads on `AppUi` then enters `let cx = cx.elements();`
+    before the normal-branch raw builder/theme-name phase, the source-policy gates in
+    `apps/fret-examples/src/lib.rs` lock that split, and the temporary no-`Deref` spot-check now
+    leaves `fret-examples` clean. See
+    `APP_UI_FINAL_NO_DEREF_TAIL_OWNER_AUDIT_2026-04-17.md`.
 
 ## M3 — Migrate first-contact docs, templates, and proof surfaces
 
@@ -446,10 +582,28 @@ Companion docs:
 - [ ] Ensure no first-contact doc/template/example still mentions the old generic raw-model API.
 - [ ] Ensure every remaining raw-model example is explicitly advanced/reference and justified by
   ownership or widget-contract reality.
-- [ ] Ensure the default render-authoring path no longer depends on implicit `AppUi` `Deref`
-  inheritance once the narrowed `UiCx` / app-facing render surface is landed.
-- [ ] Replace raw `UiCx = ElementContext<App>` as the default helper-story export once the
-  narrowed extracted-helper render lane is ready.
+- [x] Ensure the default render-authoring path no longer depends on implicit `AppUi` `Deref`
+  inheritance once the narrowed app-facing render surface is landed.
+  Result: `ecosystem/fret/src/view.rs` no longer implements `std::ops::Deref` /
+  `std::ops::DerefMut` for `AppUi`, and the follow-on package/test proof is recorded in
+  `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`.
+- [x] Demote raw `UiCx = ElementContext<App>` from the default helper-story export surface once
+  `AppRenderCx<'a>` is the blessed concrete carrier.
+  Result: `UiCx` now remains compatibility-only behind explicit import / advanced-surface intent,
+  while `fret::app::prelude::*` keeps `AppRenderCx<'a>` as the default concrete helper carrier on
+  the app-facing lane.
+- [x] Land an explicit app-hosted component/snippet helper alias for first-party exemplar
+  surfaces.
+  Result: `ecosystem/fret/src/lib.rs` now exports `AppComponentCx<'a>`, `UiCx<'a>` remains the
+  compatibility old-name alias to that surface, and the shipped gallery/docs exemplar no longer
+  needs to teach `UiCx` as its first-party app-hosted snippet lane.
+- [x] Migrate the first-party UI Gallery snippet/page/internal-preview surface off the explicit
+  `UiCx` compatibility alias onto `AppComponentCx<'a>`.
+  Result: `apps/fret-ui-gallery/src/ui/**` plus the matching source-policy tests now use
+  `AppComponentCx<'a>`, and the migration proof is recorded in
+  `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`.
+- [ ] Audit the remaining explicit-import `UiCx` tail and either classify it as
+  advanced/compatibility-only or migrate it to `AppRenderContext<'a>` / `AppRenderCx<'a>`.
 - [ ] Record a closeout audit with:
   - [ ] final target interface,
   - [ ] migration results,

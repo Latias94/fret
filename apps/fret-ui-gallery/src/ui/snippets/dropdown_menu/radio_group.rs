@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("radio_group.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -13,7 +13,7 @@ struct PanelSettings {
     position: Option<Arc<str>>,
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let settings = cx.local_model(|| PanelSettings {
         position: Some(Arc::<str>::from("bottom")),
     });

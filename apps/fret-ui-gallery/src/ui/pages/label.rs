@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::label as snippets;
 
-pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_label(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let children = snippets::children::render(cx);
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);

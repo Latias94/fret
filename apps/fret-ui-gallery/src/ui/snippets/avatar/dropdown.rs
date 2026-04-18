@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
 use super::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Corners, Px};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -18,14 +18,14 @@ where
         .items_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
     let open = cx.local_model_keyed("open", || false);
 
     wrap_row(|cx| {
         let avatar_image_for_trigger = avatar_image;
 
-        let entries = |_cx: &mut UiCx<'_>| {
+        let entries = |_cx: &mut AppComponentCx<'_>| {
             vec![
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Profile")

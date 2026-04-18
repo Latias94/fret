@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::direction as snippets;
 
-pub(super) fn preview_direction(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_direction(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let use_direction = snippets::use_direction::render(cx);

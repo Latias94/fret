@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("select.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Corners, Edges, Point, Px, Transform2D};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow};
@@ -12,7 +12,7 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let default_select = material3::Select::uncontrolled(cx);
     let selected = default_select.value_model();
     let menu_width_floor_enabled = cx.local_model_keyed("menu_width_floor_enabled", || true);
@@ -126,7 +126,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ]
     .into();
 
-    let set_delay_button = |cx: &mut UiCx<'_>, ms: u32| {
+    let set_delay_button = |cx: &mut AppComponentCx<'_>, ms: u32| {
         let delay_model = typeahead_delay_ms.clone();
         let on_activate: OnActivate = Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&delay_model, |v| *v = ms);

@@ -67,7 +67,7 @@ fn combobox_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let normalized_basic = normalize_ws(basic);
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "shadcn::Combobox::new(value, open)",
         ".query_model(query)",
         ".trigger(shadcn::ComboboxTrigger::new().width_px(Px(200.0)))",

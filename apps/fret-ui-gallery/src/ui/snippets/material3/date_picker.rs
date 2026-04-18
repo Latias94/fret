@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("date_picker.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::action::OnActivate;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let dialog = material3::DatePickerDialog::uncontrolled(cx);
     let open = dialog.open_model();
     let month = dialog.month_model();

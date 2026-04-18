@@ -1,5 +1,5 @@
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 use fret_ui_kit::{IntoUiElement, UiBuilder};
 
 use crate::alert_dialog::AlertDialog;
@@ -49,6 +49,17 @@ pub trait DialogUiBuilderExt {
     where
         TTrigger: IntoUiElement<H>,
         TContent: IntoUiElement<H>;
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>;
 }
 
 impl DialogUiBuilderExt for UiBuilder<Dialog> {
@@ -68,6 +79,24 @@ impl DialogUiBuilderExt for UiBuilder<Dialog> {
             |cx| content(cx).into_element(cx),
         )
     }
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>,
+    {
+        self.build().into_element_in(
+            cx,
+            |cx| trigger(cx).into_element(cx),
+            |cx| content(cx).into_element(cx),
+        )
+    }
 }
 
 pub trait AlertDialogUiBuilderExt {
@@ -78,6 +107,17 @@ pub trait AlertDialogUiBuilderExt {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
     ) -> AnyElement
     where
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>;
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
         TTrigger: IntoUiElement<H>,
         TContent: IntoUiElement<H>;
 }
@@ -99,6 +139,24 @@ impl AlertDialogUiBuilderExt for UiBuilder<AlertDialog> {
             |cx| content(cx).into_element(cx),
         )
     }
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>,
+    {
+        self.build().into_element_in(
+            cx,
+            |cx| trigger(cx).into_element(cx),
+            |cx| content(cx).into_element(cx),
+        )
+    }
 }
 
 pub trait SheetUiBuilderExt {
@@ -109,6 +167,17 @@ pub trait SheetUiBuilderExt {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
     ) -> AnyElement
     where
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>;
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
         TTrigger: IntoUiElement<H>,
         TContent: IntoUiElement<H>;
 }
@@ -130,6 +199,24 @@ impl SheetUiBuilderExt for UiBuilder<Sheet> {
             |cx| content(cx).into_element(cx),
         )
     }
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>,
+    {
+        self.build().into_element_in(
+            cx,
+            |cx| trigger(cx).into_element(cx),
+            |cx| content(cx).into_element(cx),
+        )
+    }
 }
 
 pub trait DrawerUiBuilderExt {
@@ -140,6 +227,17 @@ pub trait DrawerUiBuilderExt {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
     ) -> AnyElement
     where
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>;
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
         TTrigger: IntoUiElement<H>,
         TContent: IntoUiElement<H>;
 }
@@ -156,6 +254,24 @@ impl DrawerUiBuilderExt for UiBuilder<Drawer> {
         TContent: IntoUiElement<H>,
     {
         self.build().into_element(
+            cx,
+            |cx| trigger(cx).into_element(cx),
+            |cx| content(cx).into_element(cx),
+        )
+    }
+
+    fn into_element_in<'a, H: UiHost + 'a, Cx, TTrigger, TContent>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> TTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> TContent,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        TTrigger: IntoUiElement<H>,
+        TContent: IntoUiElement<H>,
+    {
+        self.build().into_element_in(
             cx,
             |cx| trigger(cx).into_element(cx),
             |cx| content(cx).into_element(cx),

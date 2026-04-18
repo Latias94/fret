@@ -1,30 +1,30 @@
 //! Snippet-backed `MediaImage` object-fit examples for UI Gallery.
 
 use crate::demo_assets;
-use fret::UiCx;
+use fret::AppComponentCx;
 use fret_core::ImageId;
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
-pub(crate) fn square_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn square_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(&demo_assets::ui_gallery_profile_square_request())
         .image
 }
 
-pub(crate) fn wide_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn wide_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(
         &demo_assets::ui_gallery_aspect_ratio_landscape_request(),
     )
     .image
 }
 
-pub(crate) fn tall_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn tall_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(
         &demo_assets::ui_gallery_aspect_ratio_portrait_request(),
     )
     .image
 }
 
-pub(crate) fn sampling_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn sampling_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(
         &demo_assets::ui_gallery_image_object_fit_sampling_request(),
     )

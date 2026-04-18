@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("group_count.rs");
 
 // region: example
 use super::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::ImageId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -46,7 +46,7 @@ fn group_with_count<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
 
     ui::v_flex(move |cx| {

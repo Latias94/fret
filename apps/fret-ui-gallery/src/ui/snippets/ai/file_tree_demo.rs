@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("file_tree_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui_ai as ui_ai;
@@ -10,7 +10,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
 
-fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement {
+fn invisible_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {
             size: SizeStyle {
@@ -35,7 +35,7 @@ fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement {
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 

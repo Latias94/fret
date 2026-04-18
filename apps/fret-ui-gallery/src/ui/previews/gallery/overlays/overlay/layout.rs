@@ -1,12 +1,12 @@
 use super::super::super::super::super::*;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
 use super::{OverlayModels, widgets};
 
 // Typed row helpers: the diagnostics layout now composes typed widget helpers directly, while the
 // final landing stays explicit at the cached preview seam.
-fn row(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<> {
+fn row(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<> {
     ui::h_flex(move |_cx| children)
         .gap_px(gap)
         .justify_start()
@@ -15,7 +15,11 @@ fn row(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild +
         .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-fn row_end(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<> {
+fn row_end(
+    _cx: &mut AppComponentCx<'_>,
+    gap: Px,
+    children: Vec<AnyElement>,
+) -> impl UiChild + use<> {
     ui::h_flex(move |_cx| children)
         .gap_px(gap)
         .justify_end()
@@ -24,7 +28,10 @@ fn row_end(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChi
         .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub(super) fn compose_body(cx: &mut UiCx<'_>, models: OverlayModels) -> impl UiChild + use<> {
+pub(super) fn compose_body(
+    cx: &mut AppComponentCx<'_>,
+    models: OverlayModels,
+) -> impl UiChild + use<> {
     let _ = cx;
     ui::v_flex(move |cx| {
         let gap = cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));

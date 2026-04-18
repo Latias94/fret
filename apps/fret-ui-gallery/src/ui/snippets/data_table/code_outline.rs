@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("code_outline.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
@@ -42,7 +42,7 @@ fn reusable_cell_test_id(row: &PaymentRow, column_id: &str) -> Arc<str> {
 }
 
 fn reusable_view_options(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     open: Model<bool>,
     state: Model<TableState>,
     columns: Arc<[ColumnDef<PaymentRow>]>,
@@ -70,7 +70,7 @@ fn reusable_view_options(
 }
 
 fn reusable_table(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     assets: &ReusablePartsAssets,
     state: Model<TableState>,
     output: Model<TableViewOutput>,
@@ -118,7 +118,7 @@ fn reusable_table(
 }
 
 fn reusable_pagination(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     state: Model<TableState>,
     output: Model<TableViewOutput>,
 ) -> AnyElement {
@@ -128,7 +128,7 @@ fn reusable_pagination(
         .test_id("ui-gallery-data-table-reusable-pagination")
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let assets = cx.slot_state(
         || {
             let rows: Arc<[PaymentRow]> = Arc::from(vec![

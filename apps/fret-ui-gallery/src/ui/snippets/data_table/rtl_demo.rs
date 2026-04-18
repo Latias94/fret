@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("rtl_demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Theme;
@@ -82,7 +82,10 @@ const LANG_AR: Lang = Lang {
     next: "التالي",
 };
 
-fn align_inline_start<B>(cx: &mut UiCx<'_>, child: B) -> impl IntoUiElement<fret_app::App> + use<B>
+fn align_inline_start<B>(
+    cx: &mut AppComponentCx<'_>,
+    child: B,
+) -> impl IntoUiElement<fret_app::App> + use<B>
 where
     B: IntoUiElement<fret_app::App>,
 {
@@ -97,7 +100,7 @@ where
 }
 
 fn bottom_controls(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     state: Model<TableState>,
     output: Model<TableViewOutput>,
     lang: Lang,
@@ -164,7 +167,7 @@ fn bottom_controls(
     .gap(Space::N2)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let assets = cx.slot_state(
         || {
             let data: Arc<[PaymentRow]> = Arc::from(vec![

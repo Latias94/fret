@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay_stop_on_last_snap.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, TextProps};
@@ -20,7 +20,7 @@ struct SlideVisual {
 }
 
 fn slide_card(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     idx: usize,
     visual: SlideVisual,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -51,7 +51,7 @@ fn slide_card(
     shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
     let controls_shell_w = Px(max_w_xs.0 + 96.0);
 

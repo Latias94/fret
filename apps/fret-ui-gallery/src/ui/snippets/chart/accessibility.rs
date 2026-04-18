@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("accessibility.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -11,7 +11,7 @@ pub fn apply_chart_accessibility_defaults(canvas: &mut fret_chart::ChartCanvas) 
     canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         vec![
             shadcn::raw::typography::muted(

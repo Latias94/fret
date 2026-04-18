@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("file_tree_selection.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::action::ActionCx;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let selected = cx.local_model_keyed("selected", || None::<Arc<str>>);
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 
@@ -33,7 +33,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)
 }
 
-pub fn preview(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn preview(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let tree = render(cx);
 
     ui::v_flex(move |_cx| vec![tree])

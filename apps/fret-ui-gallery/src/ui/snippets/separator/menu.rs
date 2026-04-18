@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("menu.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui_kit::IntoUiElement;
@@ -33,7 +33,7 @@ fn section<H: UiHost>(
     .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let is_md = viewport_queries::viewport_width_at_least(
         cx,
         Invalidation::Layout,

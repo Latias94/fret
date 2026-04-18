@@ -48,10 +48,10 @@ fn menubar_usage_snippet_stays_full_and_copyable() {
     let source = include_str!("../src/ui/snippets/menubar/usage.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_runtime::CommandId;",
         "use fret_ui_shadcn::facade as shadcn;",
-        "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+        "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         "shadcn::MenubarTrigger::new(\"File\")",
         ".into_menu()",
         ".entries_parts(",

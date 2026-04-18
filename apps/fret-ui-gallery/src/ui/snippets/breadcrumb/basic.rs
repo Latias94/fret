@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 #[allow(unused_imports)]
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::BreadcrumbRoot::new()
         .into_element(cx, |cx| {
             vec![shadcn::BreadcrumbList::new().into_element(cx, |cx| {

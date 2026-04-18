@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("responsive_dialog.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Px, TextAlign};
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -57,7 +57,7 @@ fn profile_form<H: UiHost>(
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let desktop_open = cx.local_model_keyed("desktop_open", || false);
     let mobile_open = cx.local_model_keyed("mobile_open", || false);
     let email = cx.local_model_keyed("email", || String::from("shadcn@example.com"));

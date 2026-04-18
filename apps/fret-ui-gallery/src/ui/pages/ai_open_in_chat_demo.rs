@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_ai_open_in_chat_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_open_in_chat_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let demo = snippets::open_in_chat_demo::render(cx);
     let demo_section = DocSection::build(cx, "OpenIn", demo)
         .test_id_prefix("ui-gallery-ai-open-in-chat-demo")

@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::form as snippets;
 
-pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_forms(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let upstream_demo = snippets::upstream_demo::render(cx);
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);

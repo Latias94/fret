@@ -3,7 +3,7 @@ pub const SOURCE: &str = DOCS_SOURCE;
 pub const DOCS_SOURCE: &str = include_str!("plugin_autoplay.docs.rs.txt");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, HoverRegionProps, MainAlign};
@@ -25,7 +25,7 @@ struct SlideVisual {
 }
 
 fn slide_card(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     idx: usize,
     visual: SlideVisual,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -57,7 +57,7 @@ fn slide_card(
 }
 
 fn slide(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     idx: usize,
     visual: SlideVisual,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -65,7 +65,7 @@ fn slide(
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("title_children.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
@@ -25,7 +25,7 @@ fn rich_title_text() -> AttributedText {
     AttributedText::new(text, Arc::<[TextSpan]>::from([plain, underlined]))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_sm = LayoutRefinement::default()
         .w_full()
         .max_w(MetricRef::Px(Px(384.0)))

@@ -1,17 +1,17 @@
 pub const SOURCE: &str = include_str!("shimmer_duration_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = fret_ui::Theme::global(&*cx.app).snapshot();
     let muted = ColorRef::Color(typography::muted_foreground_color(&theme));
 
-    let item = |cx: &mut UiCx<'_>, label: &'static str, secs: f32, text: &'static str| {
+    let item = |cx: &mut AppComponentCx<'_>, label: &'static str, secs: f32, text: &'static str| {
         let muted = muted.clone();
         ui::v_stack(move |cx| {
             vec![

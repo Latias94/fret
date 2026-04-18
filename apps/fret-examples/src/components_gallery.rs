@@ -396,6 +396,7 @@ impl ComponentsGalleryDriver {
                     root_layout.size.width = Length::Fill;
                     root_layout.size.height = Length::Fill;
 
+                    let cx = cx.elements();
                     let header: Arc<str> = Arc::from(
                         "Table torture (retained host): click headers to sort; wheel scroll crosses overscan boundaries.",
                     );
@@ -479,7 +480,6 @@ impl ComponentsGalleryDriver {
                 }
 
                 let theme = cx.theme_snapshot();
-                let theme_name = cx.theme().name.clone();
                 let selected = tree_state
                     .layout(cx)
                     .read_ref(|s| s.selected)
@@ -504,6 +504,8 @@ impl ComponentsGalleryDriver {
                 let last_action_value = last_action
                     .layout(cx)
                     .value_or_else(|| Arc::<str>::from("<none>"));
+                let cx = cx.elements();
+                let theme_name = cx.theme().name.clone();
 
                 let title: Arc<str> = Arc::from("components_gallery");
                 let subtitle: Arc<str> = Arc::from(format!(

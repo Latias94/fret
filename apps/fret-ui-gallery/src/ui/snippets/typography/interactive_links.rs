@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("interactive_links.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let last_activated = cx.local_model_keyed("last_activated", || None::<Arc<str>>);
     let last_activated_now = cx
         .get_model_cloned(&last_activated, Invalidation::Paint)

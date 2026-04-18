@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("custom.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px};
@@ -43,7 +43,7 @@ fn weight_item<H: UiHost>(
     .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || Some(Arc::<str>::from("normal")));
     let current = cx
         .app

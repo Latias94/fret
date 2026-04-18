@@ -62,7 +62,7 @@ fn popover_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let rtl = include_str!("../src/ui/snippets/popover/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::Popover::new(",
         "shadcn::PopoverTrigger::build(",
@@ -116,7 +116,7 @@ fn popover_follow_up_snippets_stay_copyable_and_explicit() {
     let inline_children = include_str!("../src/ui/snippets/popover/inline_children.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         ".auto_toggle(false)",
         ".toggle_model(open.clone())",
         ".trigger_element(detached_id)",
@@ -132,7 +132,7 @@ fn popover_follow_up_snippets_stay_copyable_and_explicit() {
     }
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         ".open_on_hover(true)",
         ".hover_open_delay_frames(12)",
         ".hover_close_delay_frames(6)",

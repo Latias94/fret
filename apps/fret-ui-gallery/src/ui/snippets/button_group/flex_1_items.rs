@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("flex_1_items.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::ButtonGroup::new([
         shadcn::Button::new("Overview")
             .variant(shadcn::ButtonVariant::Outline)

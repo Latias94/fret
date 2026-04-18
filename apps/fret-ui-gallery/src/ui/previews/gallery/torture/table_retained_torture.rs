@@ -1,8 +1,8 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_table_retained_torture(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     use fret_ui_kit::headless::table::{

@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("tooltip.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let password = cx.local_model_keyed("password", String::new);
     let email = cx.local_model_keyed("email", String::new);
     let api_key = cx.local_model_keyed("api_key", String::new);
@@ -18,7 +18,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            let info_icon = |cx: &mut UiCx<'_>| icon::icon(cx, IconId::new_static("lucide.info"));
+            let info_icon =
+                |cx: &mut AppComponentCx<'_>| icon::icon(cx, IconId::new_static("lucide.info"));
 
             let password_tooltip = {
                 let button = shadcn::InputGroupButton::new("")

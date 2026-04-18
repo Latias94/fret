@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Skeleton::new()
         .refine_style(ChromeRefinement::default().rounded(Radius::Full))
         .refine_layout(

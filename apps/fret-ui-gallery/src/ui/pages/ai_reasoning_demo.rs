@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_reasoning_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let demo = snippets::reasoning_demo::render(cx);
     let hooks = snippets::reasoning_hooks::render(cx);
 
@@ -76,7 +79,7 @@ pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
     vec![body.into_element(cx)]
 }
 
-fn reasoning_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn reasoning_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Method", "Type", "Default", "Description"],

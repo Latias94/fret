@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Fret surface"],
@@ -42,7 +42,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-fn render_features(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn render_features(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::notes_block([
         "Structured container with header and scrollable content areas, matching the official AI Elements `artifact` taxonomy.",
         "Header actions keep the upstream ghost-icon + tooltip pattern while staying action-first on the Rust surface.",
@@ -53,7 +53,7 @@ fn render_features(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .test_id("ui-gallery-ai-artifact-features")
 }
 
-fn render_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn render_notes(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let _ = cx;
     doc_layout::notes_block([
         "Artifact root/header/content defaults already line up with the upstream AI Elements chrome; the main drift was the UI Gallery docs surface, not the underlying mechanism layer.",
@@ -63,7 +63,10 @@ fn render_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .test_id("ui-gallery-ai-artifact-notes")
 }
 
-pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_artifact_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let mut sections = Vec::new();
 
     #[cfg(feature = "gallery-dev")]

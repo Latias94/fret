@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{UiChild, AppComponentCx};
 use fret_core::Px;
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -14,7 +14,7 @@ fn page_number(label: &'static str) -> impl UiChild + use<> {
     ui::text(label).tabular_nums()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let rows_per_page = cx.local_model_keyed("rows_per_page", || Some(Arc::<str>::from("25")));
     let rows_per_page_open = cx.local_model_keyed("rows_per_page_open", || false);
 

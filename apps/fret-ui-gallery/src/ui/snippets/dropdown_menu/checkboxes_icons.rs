@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("checkboxes_icons.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -14,7 +14,7 @@ struct NotificationState {
     push: bool,
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let notifications = cx.local_model(|| NotificationState {
         email: true,
         sms: false,

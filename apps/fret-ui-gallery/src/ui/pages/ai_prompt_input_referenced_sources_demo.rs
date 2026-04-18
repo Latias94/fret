@@ -2,10 +2,10 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let demo = snippets::prompt_input_referenced_sources_demo::render(cx);

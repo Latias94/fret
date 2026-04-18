@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{FontWeight, Px};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -95,7 +95,7 @@ fn make_invoice_table(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     // Tuple order matches shadcn docs: (invoice, status, method, amount).
     let invoices: [(&str, &str, &str, &str); 7] = [
         ("INV001", "Paid", "Credit Card", "$250.00"),

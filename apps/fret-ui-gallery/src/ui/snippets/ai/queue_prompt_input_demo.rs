@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("queue_prompt_input_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui::element::AnyElement;
@@ -77,7 +77,7 @@ fn sample_todos() -> Vec<ui_ai::QueueTodo> {
     ]
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let todos = cx.local_model_keyed("todos", sample_todos);
 
     let text = cx.local_model_keyed("text", String::new);
@@ -285,7 +285,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 })
             };
 
-            let make_item = |cx: &mut UiCx<'_>, m: DemoModel| {
+            let make_item = |cx: &mut AppComponentCx<'_>, m: DemoModel| {
                 let is_selected = m.id == selected_now.as_ref();
 
                 let check = decl_icon::icon_with(

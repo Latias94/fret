@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("slider.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let slider_values = cx.local_model(|| vec![200.0_f32, 800.0_f32]);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
     let current_values = cx

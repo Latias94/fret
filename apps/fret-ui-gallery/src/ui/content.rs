@@ -1,8 +1,8 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(crate) fn content_view(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     selected: &str,
     models: &UiGalleryModels,
@@ -276,7 +276,7 @@ pub(crate) fn content_view(
 }
 
 fn page_preview(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     selected: &str,
     models: &UiGalleryModels,
@@ -775,7 +775,7 @@ fn page_preview(
     .test_id("ui-gallery-preview-card")
 }
 
-fn preview_ai_unwired(cx: &mut UiCx<'_>, _theme: &Theme, id: &str) -> Vec<AnyElement> {
+fn preview_ai_unwired(cx: &mut AppComponentCx<'_>, _theme: &Theme, id: &str) -> Vec<AnyElement> {
     vec![
         shadcn::Alert::new(vec![
             shadcn::AlertTitle::new("AI demo not wired").into_element(cx),

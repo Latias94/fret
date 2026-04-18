@@ -2,14 +2,14 @@ pub const SOURCE: &str = include_str!("chain_of_thought_demo.rs");
 
 // region: example
 use super::shared_preview_image_id;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let border = cx.with_theme(|theme| theme.color_token("border"));
 
     let image = shared_preview_image_id(cx)

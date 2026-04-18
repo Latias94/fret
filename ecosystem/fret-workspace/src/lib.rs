@@ -50,6 +50,11 @@ mod source_policy_tests {
         assert!(frame.contains("Left:IntoUiElement<H>"));
         assert!(frame.contains("Right:IntoUiElement<H>"));
         assert!(frame.contains("Bottom:IntoUiElement<H>"));
+        assert!(
+            frame.contains(
+                "pubfninto_element_in<'a,H:UiHost+'a,Cx>(self,cx:&mutCx)->AnyElementwhereCx:ElementContextAccess<'a,H>,Center:IntoUiElement<H>,Top:IntoUiElement<H>,Left:IntoUiElement<H>,Right:IntoUiElement<H>,Bottom:IntoUiElement<H>,"
+            )
+        );
         assert!(command_scope.contains("pubstructWorkspaceCommandScope<T=AnyElement>{"));
         assert!(command_scope.contains("T:IntoUiElement<H>"));
         assert!(pane_focus.contains("pubstructWorkspacePaneContentFocusTarget<T=AnyElement>{"));

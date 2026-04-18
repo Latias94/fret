@@ -1,8 +1,8 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_forms(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     _text_input: Model<String>,
     _text_area: Model<String>,
     _checkbox: Model<bool>,

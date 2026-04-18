@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("with_badge.rs");
 
 // region: example
 use super::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::window::ColorScheme;
 use fret_ui::Invalidation;
 use fret_ui_kit::{ColorRef, IntoUiElement};
@@ -39,7 +39,7 @@ fn avatar_with_badge<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
     let scheme = cx.environment_color_scheme(Invalidation::Paint);
     let badge_bg = match scheme.unwrap_or(ColorScheme::Light) {

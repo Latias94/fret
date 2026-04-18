@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("responsive.rs");
 use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_mode, device_shell_switch};
 use fret::children::UiElementSinkExt;
 use fret::component::prelude::Model;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -35,7 +35,10 @@ fn breadcrumb_trigger_props(trigger_test_id: Arc<str>) -> fret_ui::element::Pres
     props
 }
 
-fn render_breadcrumb_overflow_trigger(cx: &mut UiCx<'_>, trigger_test_id: Arc<str>) -> AnyElement {
+fn render_breadcrumb_overflow_trigger(
+    cx: &mut AppComponentCx<'_>,
+    trigger_test_id: Arc<str>,
+) -> AnyElement {
     cx.pressable(breadcrumb_trigger_props(trigger_test_id), move |cx, _st| {
         vec![
             bc::BreadcrumbEllipsis::new()
@@ -46,7 +49,7 @@ fn render_breadcrumb_overflow_trigger(cx: &mut UiCx<'_>, trigger_test_id: Arc<st
 }
 
 fn render_breadcrumb_overflow_drawer_trigger(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     trigger_test_id: Arc<str>,
     toggle: fret_ui::action::OnActivate,
 ) -> AnyElement {
@@ -83,7 +86,7 @@ fn breadcrumb_dropdown_entries(
 }
 
 fn render_breadcrumb_drawer_content(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     overflow_items: &[(&str, Option<&str>)],
     close: fret_ui::action::OnActivate,
 ) -> AnyElement {
@@ -137,7 +140,7 @@ fn render_breadcrumb_drawer_content(
     .test_id("ui-gallery-breadcrumb-responsive-drawer-content")
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
     let shell_policy = DeviceShellSwitchPolicy::default();
     let is_desktop = device_shell_mode(cx, Invalidation::Layout, shell_policy).is_desktop();

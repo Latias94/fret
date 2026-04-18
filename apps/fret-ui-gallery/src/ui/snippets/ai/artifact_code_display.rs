@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("artifact_code_display.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -24,7 +24,7 @@ fn status_action(
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let status = cx.local_model_keyed("status", || {
         Arc::<str>::from("Ready to run, copy, regenerate, download, or share.")
     });

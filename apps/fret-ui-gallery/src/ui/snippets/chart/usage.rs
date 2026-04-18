@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -11,7 +11,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn sample_chart_canvas(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     test_id: impl Into<Arc<str>>,
     output: Model<fret_chart::ChartCanvasOutput>,
 ) -> AnyElement {
@@ -165,22 +165,23 @@ fn sample_chart_canvas(
     })
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let output = cx.local_model_keyed("output", fret_chart::ChartCanvasOutput::default);
     let output_for_container = output.clone();
     let output_for_canvas = output.clone();
-    let section_intro = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str| {
-        ui::v_flex(|cx| {
-            vec![
-                shadcn::raw::typography::small(title).into_element(cx),
-                shadcn::raw::typography::muted(description).into_element(cx),
-            ]
-        })
-        .gap(Space::N1)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full())
-        .into_element(cx)
-    };
+    let section_intro =
+        |cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str| {
+            ui::v_flex(|cx| {
+                vec![
+                    shadcn::raw::typography::small(title).into_element(cx),
+                    shadcn::raw::typography::muted(description).into_element(cx),
+                ]
+            })
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+        };
     let config: shadcn::ChartConfig = [
         (
             Arc::<str>::from("desktop"),

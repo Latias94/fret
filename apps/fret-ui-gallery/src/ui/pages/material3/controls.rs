@@ -1,11 +1,13 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
-pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_touch_targets(
+    cx: &mut AppComponentCx<'_>,
+) -> Vec<AnyElement> {
     let demo = snippets::material3::touch_targets::render(cx);
 
     render_material3_demo_page(
@@ -16,7 +18,7 @@ pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut UiCx<'_>) -> Vec<A
     )
 }
 
-pub(in crate::ui) fn preview_material3_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_button(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::button::render(cx);
 
     render_material3_demo_page(
@@ -29,7 +31,7 @@ pub(in crate::ui) fn preview_material3_button(cx: &mut UiCx<'_>) -> Vec<AnyEleme
     )
 }
 
-pub(in crate::ui) fn preview_material3_icon_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_icon_button(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::icon_button::render(cx);
 
     render_material3_demo_page(
@@ -40,7 +42,7 @@ pub(in crate::ui) fn preview_material3_icon_button(cx: &mut UiCx<'_>) -> Vec<Any
     )
 }
 
-pub(in crate::ui) fn preview_material3_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::checkbox::render(cx);
 
     render_material3_demo_page(
@@ -51,7 +53,7 @@ pub(in crate::ui) fn preview_material3_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyEle
     )
 }
 
-pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_switch(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::switch::render(cx);
 
     render_material3_demo_page(
@@ -62,7 +64,7 @@ pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyEleme
     )
 }
 
-pub(in crate::ui) fn preview_material3_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_slider(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::slider::render(cx);
 
     render_material3_demo_page(
@@ -73,7 +75,7 @@ pub(in crate::ui) fn preview_material3_slider(cx: &mut UiCx<'_>) -> Vec<AnyEleme
     )
 }
 
-pub(in crate::ui) fn preview_material3_radio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_radio(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::radio::render(cx);
 
     render_material3_demo_page(
@@ -84,7 +86,7 @@ pub(in crate::ui) fn preview_material3_radio(cx: &mut UiCx<'_>) -> Vec<AnyElemen
     )
 }
 
-pub(in crate::ui) fn preview_material3_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_badge(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::badge::render(cx);
 
     render_material3_demo_page(
@@ -95,7 +97,9 @@ pub(in crate::ui) fn preview_material3_badge(cx: &mut UiCx<'_>) -> Vec<AnyElemen
     )
 }
 
-pub(in crate::ui) fn preview_material3_segmented_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_segmented_button(
+    cx: &mut AppComponentCx<'_>,
+) -> Vec<AnyElement> {
     let demo = snippets::material3::segmented_button::render(cx);
 
     render_material3_demo_page(

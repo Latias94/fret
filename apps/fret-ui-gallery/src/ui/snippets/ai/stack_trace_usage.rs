@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("stack_trace_usage.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let trace: Arc<str> = Arc::from(
         "TypeError: Cannot read properties of undefined (reading 'map')\n    at UserList (/app/components/UserList.tsx:15:23)\n    at renderWithHooks (node_modules/react-dom/cjs/react-dom.development.js:14985:18)\n    at beginWork (node_modules/react-dom/cjs/react-dom.development.js:19049:16)\n",
     );

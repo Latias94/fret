@@ -8,10 +8,10 @@ use fret::{
     icons::{IconId, icon},
     semantics::SemanticsRole,
     shadcn,
-    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, ThemeSnapshot},
+    style::{ChromeRefinement, ColorRef, Radius, Space, ThemeSnapshot},
 };
 use fret_core::Corners;
-use fret_ui::element::TextProps;
+use fret_ui_kit::IntoUiElementInExt as _;
 
 mod act {
     fret::actions!([
@@ -132,7 +132,7 @@ impl View for HelloCounterView {
         .h_px(Px(48.0))
         .items_center()
         .justify_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let header_inner = ui::v_flex(|cx| {
             ui::children![
@@ -146,25 +146,17 @@ impl View for HelloCounterView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let header = shadcn::CardHeader::new([header_inner]);
 
-        let count_text = cx
-            .text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::from(count.to_string()),
-                style: Some(fret_core::TextStyle {
-                    size: Px(72.0),
-                    weight: fret_core::FontWeight::BOLD,
-                    ..Default::default()
-                }),
-                color: Some(count_color),
-                align: fret_core::TextAlign::Center,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            })
+        let count_text = ui::text(count.to_string())
+            .text_size_px(Px(72.0))
+            .font_bold()
+            .text_color(ColorRef::Color(count_color))
+            .text_align(fret_core::TextAlign::Center)
+            .nowrap()
+            .into_element_in(cx)
             .test_id(TEST_ID_COUNT);
 
         let status_text: Arc<str> = Arc::from(if count == 0 {
@@ -174,16 +166,11 @@ impl View for HelloCounterView {
         } else {
             "Status: decreasing"
         });
-        let status_line = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: status_text,
-            style: None,
-            color: Some(theme.color_token("muted-foreground")),
-            align: fret_core::TextAlign::Center,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            ink_overflow: Default::default(),
-        });
+        let status_line = ui::text(status_text)
+            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+            .text_align(fret_core::TextAlign::Center)
+            .nowrap()
+            .into_element_in(cx);
 
         let step_badge =
             shadcn::Badge::new(format!("Step: {effective_step}")).variant(if step_valid {
@@ -192,25 +179,19 @@ impl View for HelloCounterView {
                 shadcn::BadgeVariant::Destructive
             });
 
-        let step_help = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::from(if step_valid {
-                "Edit step, then press Enter to increment."
-            } else {
-                "Step must be a positive integer (using 1)."
-            }),
-            style: None,
-            color: Some(theme.color_token("muted-foreground")),
-            align: fret_core::TextAlign::Center,
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            ink_overflow: Default::default(),
-        });
+        let step_help = ui::text_block(if step_valid {
+            "Edit step, then press Enter to increment."
+        } else {
+            "Step must be a positive integer (using 1)."
+        })
+        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+        .text_align(fret_core::TextAlign::Center)
+        .into_element_in(cx);
 
         let step_input = shadcn::Input::new(&step_state)
             .placeholder("Step (e.g. 1)")
             .submit_action(inc_cmd)
-            .into_element(cx)
+            .into_element_in(cx)
             .role(SemanticsRole::TextField)
             .test_id(TEST_ID_STEP_INPUT);
 
@@ -235,13 +216,13 @@ impl View for HelloCounterView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let step_row = ui::v_flex(|_cx| [step_input, presets])
             .gap(Space::N2)
             .w_full()
             .items_center()
-            .into_element(cx);
+            .into_element_in(cx);
 
         let actions = ui::h_flex(|cx| {
             [
@@ -276,24 +257,24 @@ impl View for HelloCounterView {
         })
         .gap(Space::N4)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let content_body = ui::v_flex(|cx| {
             [
                 ui::v_flex(|cx| ui::children![cx; count_text, status_line, step_badge])
                     .gap(Space::N2)
                     .items_center()
-                    .into_element(cx),
+                    .into_element_in(cx),
                 ui::v_flex(|_cx| [step_row, step_help])
                     .gap(Space::N2)
                     .w_full()
                     .items_center()
-                    .into_element(cx),
+                    .into_element_in(cx),
             ]
         })
         .gap(Space::N6)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let content = shadcn::CardContent::new([content_body]);
         let footer = shadcn::CardFooter::new([actions]);
@@ -303,7 +284,7 @@ impl View for HelloCounterView {
             .ui()
             .w_full()
             .max_w(Px(480.0))
-            .into_element(cx);
+            .into_element_in(cx);
 
         ui::single(cx, hello_counter_page(theme, card))
     }

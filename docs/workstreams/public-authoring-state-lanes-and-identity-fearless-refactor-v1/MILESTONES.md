@@ -1,6 +1,6 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Milestones
 
-Last updated: 2026-04-17
+Last updated: 2026-04-18
 
 Related:
 
@@ -18,6 +18,20 @@ Related:
 - App render concrete carrier audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_CX_CONCRETE_CARRIER_AUDIT_2026-04-16.md`
 - render_pass_id internal naming audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/RENDER_PASS_ID_INTERNAL_NAMING_AUDIT_2026-04-16.md`
 - UiCx default-prelude demotion audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_DEFAULT_PRELUDE_DEMOTION_AUDIT_2026-04-17.md`
+- AppUi runtime gating and frame owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_RUNTIME_GATING_AND_FRAME_OWNER_AUDIT_2026-04-17.md`
+- AppUi raw-owner callsite explicitness audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_RAW_OWNER_CALLSITE_EXPLICITNESS_AUDIT_2026-04-17.md`
+- AppUi layout-query owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_LAYOUT_QUERY_OWNER_AUDIT_2026-04-17.md`
+- AppUi overlay-root capability surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_OVERLAY_ROOT_CAPABILITY_SURFACE_AUDIT_2026-04-17.md`
+- AppUi raw text authoring owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_RAW_TEXT_AUTHORING_OWNER_AUDIT_2026-04-17.md`
+- AppUi default text builder surface audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEFAULT_TEXT_BUILDER_SURFACE_AUDIT_2026-04-17.md`
+- AppUi manual form raw owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_MANUAL_FORM_RAW_OWNER_AUDIT_2026-04-17.md`
+- AppUi advanced helper raw owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_ADVANCED_HELPER_RAW_OWNER_AUDIT_2026-04-17.md`
+- AppUi manual date picker raw owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_MANUAL_DATE_PICKER_RAW_OWNER_AUDIT_2026-04-17.md`
+- AppUi embedded viewport interop capability audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_EMBEDDED_VIEWPORT_INTEROP_CAPABILITY_AUDIT_2026-04-17.md`
+- AppUi final no-Deref tail owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_FINAL_NO_DEREF_TAIL_OWNER_AUDIT_2026-04-17.md`
+- AppUi Deref removal proof audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`
+- AppComponentCx UI Gallery migration audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
+- AppUi Todo root capability landing audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
 - Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
 - UI assets capability adapter audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UI_ASSETS_CAPABILITY_ADAPTER_AUDIT_2026-04-15.md`
@@ -33,7 +47,7 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-04-16)
+## Current status snapshot (as of 2026-04-17)
 
 - **M0**: Met
   - the lane now exists,
@@ -126,6 +140,177 @@ Related:
     `fret::app::prelude::*` keeps `AppRenderCx<'a>` as the blessed concrete closure-local carrier
     but no longer reexports `UiCx`, so the compatibility old-name alias now requires explicit
     import / advanced-surface intent instead of arriving by default app autocomplete.
+  - a smaller ordinary-runtime slice no longer depends on the temporary `AppUi` `Deref` bridge:
+    `ecosystem/fret/src/view.rs` now gives `AppUi` an inherent `request_animation_frame()`
+    helper, the explicit `fret::actions::ElementCommandGatingExt` import now implements directly
+    on `AppUi`, and the remaining raw method-family owner split is recorded in
+    `APP_UI_RUNTIME_GATING_AND_FRAME_OWNER_AUDIT_2026-04-17.md`.
+  - the next owner-correct callsite cleanup now also lands without widening `AppUi`:
+    `components_gallery` enters its retained branch through `let cx = cx.elements();`, cookbook
+    `drag_basics` / `gizmo_basics` now spell `cx.elements().pointer_region(...)`, and
+    `editor_notes_device_shell_demo` now uses `cx.data().selector_model_paint(...)`; the second
+    temporary no-`Deref` audit drops `fret-examples` from roughly 149 errors to 140 and removes
+    the earlier `drag_basics` / `watch_model` / retained-branch `cached_subtree_with(...)`
+    failures. See `APP_UI_RAW_OWNER_CALLSITE_EXPLICITNESS_AUDIT_2026-04-17.md`.
+  - the next app-facing geometry-query slice now also lands without widening `AppUi`
+    indiscriminately:
+    `AppUi` now owns `layout_query_bounds(...)`, `layout_query_region(...)`, and
+    `layout_query_region_with_id(...)`; the nested region-builder keeps grouped action handlers
+    alive instead of falling back to implicit `Deref`; `markdown_demo` now keeps its remaining
+    mutable host bridge on `cx.app_mut().models_mut()`; and a temporary no-`Deref` audit no
+    longer reports `layout_query_*`, `pointer_region`, `watch_model`, `cached_subtree_with(...)`,
+    `request_animation_frame`, or `action_is_enabled` in either `fret-examples` or
+    `fret-cookbook`. See `APP_UI_LAYOUT_QUERY_OWNER_AUDIT_2026-04-17.md`.
+  - the next direct late-builder slice now also lands without widening `AppUi` indiscriminately:
+    `Dialog`, `AlertDialog`, `Sheet`, and `Drawer` expose explicit `*_in(...)` entry points for
+    root late-builders, the matching `ui_builder_ext/overlay_roots.rs` adapters follow the same
+    capability story, `WorkspaceFrame` now exposes `into_element_in(...)`, and
+    `api_workbench_lite_demo` / `editor_notes_device_shell_demo` / `emoji_conformance_demo` now
+    use explicit `app()` / `into_element_in(...)` accessors on those real product-proof surfaces.
+    A temporary no-`Deref` audit drops `fret-examples` from `140` errors to `126`, removes the
+    current `api_workbench_lite_demo` / `editor_notes_device_shell_demo` failure cluster, and
+    leaves the remaining tail concentrated on `emoji_conformance_demo` plus broader raw
+    builder/text helpers. See `APP_UI_OVERLAY_ROOT_CAPABILITY_SURFACE_AUDIT_2026-04-17.md`.
+  - the next raw text/builder owner slice now also lands at the callsite instead of widening
+    `AppUi`:
+    `emoji_conformance_demo` keeps `LocalState` / `cx.app().global::<FontCatalogCache>()` reads
+    on the app lane, then enters `let cx = cx.elements();` for `text_props(...)`,
+    `Separator::new().into_element(cx)`, and the direct `Card*` / `ScrollArea` late-landing
+    proof. The source-policy gate in `apps/fret-examples/src/lib.rs` locks that split, and a
+    temporary no-`Deref` audit drops `fret-examples` from `126` errors to `111`, removes
+    `emoji_conformance_demo` from the failure tail, and leaves the remaining pressure led by
+    `form_demo`, `postprocess_theme_demo`, `hello_counter_demo`, and
+    `imui_interaction_showcase_demo`. See `APP_UI_RAW_TEXT_AUTHORING_OWNER_AUDIT_2026-04-17.md`.
+  - the next default teaching-surface text/builder slice now also lands without reopening raw
+    owner debt:
+    `hello_counter_demo` and cookbook `hello_counter` now use `ui::text(...)` /
+    `ui::text_block(...)` instead of raw `TextProps`, and the app-facing demo uses
+    `IntoUiElementInExt::into_element_in(cx)` for ordinary late-landing on `ui::h_flex(...)`,
+    `ui::v_flex(...)`, `shadcn::Input`, and `shadcn::Card`. Source-policy gates now lock that
+    teaching surface in `apps/fret-examples/src/lib.rs` and `apps/fret-cookbook/src/lib.rs`, and
+    a temporary no-`Deref` audit drops `fret-examples` from `111` errors to `101`, drops
+    `fret-cookbook` from `22` to `19`, and removes both `hello_counter` files from the failure
+    map. See `APP_UI_DEFAULT_TEXT_BUILDER_SURFACE_AUDIT_2026-04-17.md`.
+  - the next manual-root raw-owner slice now also lands without widening `AppUi`:
+    `form_demo` keeps its `form_state.layout(cx)` and `status.layout_value(cx)` reads on
+    `AppUi`, then enters `let cx = cx.elements();` for `cx.text(...)`, direct form-control
+    late-landing, and `cx.container(...)` / `cx.flex(...)`. The source-policy gate in
+    `apps/fret-examples/src/lib.rs` locks that owner split, and a temporary no-`Deref` audit
+    drops `fret-examples` from `101` errors to `88` while leaving `fret-cookbook` at `19`, with
+    `form_demo` no longer present in the failure map. See
+    `APP_UI_MANUAL_FORM_RAW_OWNER_AUDIT_2026-04-17.md`.
+  - the next advanced helper/render-shell slice now also lands without widening `AppUi`:
+    `postprocess_theme_demo` and `imui_interaction_showcase_demo` keep their tracked
+    reads/settings/global access on `AppUi`, then explicitly enter `let cx = cx.elements();` for
+    the advanced helper/render-shell phase. The source-policy gate in
+    `apps/fret-examples/src/lib.rs` locks that split, and a temporary no-`Deref` audit drops
+    `fret-examples` from `88` errors to `67` while leaving `fret-cookbook` at `19`; neither file
+    remains in the failure map. See
+    `APP_UI_ADVANCED_HELPER_RAW_OWNER_AUDIT_2026-04-17.md`.
+  - the next manual-root raw-owner follow-on now also lands without widening `AppUi`:
+    `date_picker_demo` keeps `theme_snapshot()` / `LocalState` / layout reads on `AppUi`, then
+    enters `let cx = cx.elements();` before its manual header/toggle/picker/calendar/container
+    build phase. The source-policy gates in `apps/fret-examples/src/lib.rs` lock that owner
+    split, and the follow-on temporary no-`Deref` audit removes `date_picker_demo` from the
+    failure map. See `APP_UI_MANUAL_DATE_PICKER_RAW_OWNER_AUDIT_2026-04-17.md`.
+  - the next mixed app-facing/interop root now also lands without widening `AppUi` or collapsing
+    the whole render path onto raw `ElementContext`:
+    `embedded_viewport_demo` keeps tracked reads and ordinary builders on `AppUi`, uses
+    `IntoUiElementInExt::into_element_in(cx)` plus `ui::text(...).into_element_in(cx)` for normal
+    late-landing, and keeps `cx.elements()` only at
+    `EmbeddedViewportSurface::panel(...)`. The source-policy gates in
+    `apps/fret-examples/src/lib.rs` lock that capability-first split, the same temporary
+    no-`Deref` audit removes `embedded_viewport_demo` from the failure map, and the current
+    remaining top `fret-examples` clusters are now led by `todo_demo.rs` (`8`),
+    `async_playground_demo.rs` (`6`), and `markdown_demo.rs` (`5`). See
+    `APP_UI_EMBEDDED_VIEWPORT_INTEROP_CAPABILITY_AUDIT_2026-04-17.md`.
+  - the default Todo app root now also stays on the existing capability-first late-landing lane
+    instead of reopening raw `ElementContext` or widening `AppUi`:
+    `todo_demo` now uses `into_element_in(cx)` for root-level status/progress/scroll/footer
+    landing on `AppUi`, helper-local `ElementContext` closures keep their existing raw builder
+    usage, and a no-`Deref` spot-check drops `fret-examples` from `49` to `41` previous errors
+    while removing `todo_demo` from the failure map. The current leading clusters are now
+    `async_playground_demo.rs` (`6`), `markdown_demo.rs` (`5`), `editor_notes_demo.rs` (`4`),
+    and `hello_world_compare_demo.rs` (`4`). See
+    `APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - the next `AppUi` tail is now also classified as helper-signature capability debt instead of a
+    raw-owner exception:
+    `async_playground_demo` moves its named helpers from `UiCx<'_>` to
+    `fret::app::AppRenderContext<'a>`, keeps ordinary late-landing on
+    `IntoUiElementInExt::into_element_in(cx)`, and reserves `cx.elements().pressable(...)` for
+    the one real raw leaf. The paired source-policy gates in `apps/fret-examples/src/lib.rs`
+    lock that owner split, and a no-`Deref` spot-check drops `fret-examples` from `41` to `35`
+    previous errors while removing `async_playground_demo` from the failure map. The current
+    leading clusters are now `markdown_demo.rs` (`5`), `editor_notes_demo.rs` (`4`), and
+    `hello_world_compare_demo.rs` (`4`). See
+    `APP_UI_ASYNC_PLAYGROUND_HELPER_CAPABILITY_AUDIT_2026-04-17.md`.
+  - the markdown app root now also stays on the existing capability-first landing lane instead of
+    letting ordinary root/layout-query shells fall back to implicit `Deref`:
+    `markdown_demo` keeps state/effect/layout-query ownership on `AppUi`, uses
+    `IntoUiElementInExt::into_element_in(cx)` for `toggles`, the nested
+    `layout_query_region_with_id(...)` shell/container, `content`, and the outer page shell, and
+    keeps the explicit image-hook `UiCx<'_>` helper unchanged. The paired source-policy gates in
+    `apps/fret-examples/src/lib.rs` lock that split, and a no-`Deref` spot-check drops
+    `fret-examples` from `35` to `30` previous errors while removing `markdown_demo` from the
+    failure map. The current leading clusters are now `editor_notes_demo.rs` (`4`),
+    `hello_world_compare_demo.rs` (`4`), `drop_shadow_demo.rs` (`3`), `ime_smoke_demo.rs` (`3`),
+    `query_async_tokio_demo.rs` (`3`), `query_demo.rs` (`3`), and `sonner_demo.rs` (`3`). See
+    `APP_UI_MARKDOWN_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - the editor-notes workbench proof now also stays on that same capability-first landing lane
+    instead of letting ordinary shell rails/frame/root fall back to implicit `Deref`:
+    `editor_notes_demo` keeps its reusable selection/center/inspector helpers generic on
+    `ElementContextAccess<'a, App>`, uses `IntoUiElementInExt::into_element_in(cx)` for both
+    rails, `WorkspaceFrame`, and the outer page shell, and paired source-policy gates in
+    `apps/fret-examples/src/lib.rs` lock that split. A no-`Deref` spot-check then drops
+    `fret-examples` from `30` to `26` previous errors while removing `editor_notes_demo` from the
+    failure map. The current leading clusters are now `hello_world_compare_demo.rs` (`4`),
+    `drop_shadow_demo.rs` (`3`), `ime_smoke_demo.rs` (`3`), `query_async_tokio_demo.rs` (`3`),
+    `query_demo.rs` (`3`), `sonner_demo.rs` (`3`), and `components_gallery.rs` (`2`). See
+    `APP_UI_EDITOR_NOTES_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - the app-facing runtime/frame lane now also covers continuous frame leases without reopening
+    raw helper access:
+    `AppUi` now owns `set_continuous_frames(enabled)`, `hello_world_compare_demo` keeps its
+    closure-local swatches on `AppRenderCx<'_>`, switches the title from raw `cx.text_props(...)`
+    onto `ui::text(...)`, and uses `IntoUiElementInExt::into_element_in(cx)` for the layout probe,
+    swatch row, and root shell. The paired source-policy and framework surface gates in
+    `apps/fret-examples/src/lib.rs`, `ecosystem/fret/src/view.rs`, and
+    `ecosystem/fret/tests/render_authoring_capability_surface.rs` lock that split. A no-`Deref`
+    spot-check then drops `fret-examples` from `26` to `22` previous errors while removing
+    `hello_world_compare_demo` from the failure map. The current leading clusters are now
+    `drop_shadow_demo.rs` (`3`), `ime_smoke_demo.rs` (`3`), `query_async_tokio_demo.rs` (`3`),
+    `query_demo.rs` (`3`), `sonner_demo.rs` (`3`), and `components_gallery.rs` (`2`). See
+    `APP_UI_CONTINUOUS_FRAMES_RUNTIME_OWNER_AUDIT_2026-04-17.md`.
+  - the first-contact query proofs now also stay on that same capability-first root landing lane
+    instead of letting ordinary detail builders fall back to implicit `Deref`:
+    `query_demo` and `query_async_tokio_demo` import `IntoUiElementInExt as _`, use
+    `into_element_in(cx)` for `status_row`, `buttons`, and `detail_body`, and keep grouped
+    state/effects/data ownership plus the existing `query_page(theme, card)` contract unchanged.
+    The paired source-policy gate in `apps/fret-examples/src/lib.rs` locks that split, and a
+    no-`Deref` spot-check then drops `fret-examples` from `22` to `16` previous errors while
+    removing both query demos from the failure map. The current leading clusters are now
+    `drop_shadow_demo.rs` (`3`), `ime_smoke_demo.rs` (`3`), `sonner_demo.rs` (`3`), and
+    `components_gallery.rs` (`2`). See
+    `APP_UI_QUERY_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`.
+  - the advanced raw builder triplet now also keeps its owner split explicit instead of widening
+    `AppUi`:
+    `drop_shadow_demo`, `ime_smoke_demo`, and `sonner_demo` now perform app-lane state/theme
+    reads first, then enter `let cx = cx.elements();` before `container(...)`, `flex(...)`,
+    `text(...)`, and the surrounding advanced late-landing phase. The existing raw-owner
+    source-policy gate in `apps/fret-examples/src/lib.rs` locks that choice, and a no-`Deref`
+    spot-check then drops `fret-examples` from `16` to `7` previous errors while removing the
+    whole triplet from the failure map. The current remaining failures are now only
+    `components_gallery.rs` (`2`), `custom_effect_v1_demo.rs` (`1`), `custom_effect_v2_demo.rs`
+    (`1`), `custom_effect_v3_demo.rs` (`1`), `genui_demo.rs` (`1`), and
+    `liquid_glass_demo.rs` (`1`). See
+    `APP_UI_ADVANCED_RAW_BUILDER_OWNER_AUDIT_2026-04-17.md`.
+  - the final `fret-examples` no-`Deref` tail is now also closed without widening `AppUi`:
+    `custom_effect_v1_demo`, `custom_effect_v2_demo`, `custom_effect_v3_demo`, `genui_demo`, and
+    `liquid_glass_demo` now enter their advanced `view(...)` helpers through `cx.elements()`,
+    while `components_gallery` keeps theme/model reads on `AppUi` and enters `let cx =
+    cx.elements();` only for the normal-branch raw builder/theme-name phase. The paired
+    source-policy gates in `apps/fret-examples/src/lib.rs` lock that split, and a temporary
+    no-`Deref` spot-check now takes `fret-examples` from `7` previous errors to `0`. See
+    `APP_UI_FINAL_NO_DEREF_TAIL_OWNER_AUDIT_2026-04-17.md`.
   - the cookbook scaffold proof surface and dedicated source-policy tests now lock this minimal
     capability lane so future cleanup can continue without regressing to implicit `Deref`.
   - the first real consumer probe is now also on that lane:
@@ -375,8 +560,24 @@ Related:
     `postprocess_theme_demo`, `liquid_glass_demo`, `genui_demo`, and
     `imui_floating_windows_demo` each carry top-level classification docs and are locked by the
     `advanced_reference_demos_are_explicitly_classified` gate.
-- **M5**: Planned
-  - no hard-delete or final closeout has happened yet.
+- **M5**: In progress
+  - `ecosystem/fret/src/view.rs` no longer ships `AppUi` `Deref` / `DerefMut` impls,
+  - `fret`, `fret-examples`, `fret-cookbook`, and `fret-ui-gallery` now compile in that shipped
+    no-`Deref` state,
+  - `UiCx` is now compatibility-only and no longer part of `fret::app::prelude::*`, while
+    `AppRenderCx<'a>` is the default concrete helper carrier on the app-facing lane,
+  - `ecosystem/fret/src/lib.rs` now also exposes `AppComponentCx<'a>` as the explicit app-hosted
+    component/snippet helper alias, with `UiCx<'a>` retained only as the compatibility old-name
+    alias to that lane,
+  - the shipped first-party exemplar surface now follows that naming split too:
+    `apps/fret-ui-gallery/src/ui/**` plus the matching source-policy gates use
+    `AppComponentCx<'a>` for snippets/pages/internal previews instead of teaching `UiCx<'a>` on
+    the gallery surface,
+  - and the follow-on proof is recorded in
+    `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md` and
+    `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`.
+  - final closeout and the remaining explicit-import `UiCx` compatibility-tail audit outside the
+    gallery surface are still open.
 
 Execution rule:
 
@@ -428,7 +629,7 @@ What this milestone proves:
 - the public contract is not hiding a second parallel slot model,
 - diagnostics line up with keyed render evaluation rather than whole-frame heuristics,
 - app-facing code must opt into the component/internal lane explicitly through `elements()`,
-- and the repo has evidence for the remaining `AppUi` / `UiCx` render-authoring split instead of
+- and the repo has evidence for the remaining explicit-import `UiCx` compatibility tail instead of
   guessing at it.
 - the repo can now also distinguish three different follow-on categories for Todo-surfaced
   low-level pressure:
@@ -484,8 +685,8 @@ Definition of done:
 - default app lane is stable and singular,
 - advanced raw-model lane is explicit and honestly named,
 - kernel identity rules are shared across declarative, recipe, and IMUI fronts,
-- the app-facing render-authoring lane no longer depends on implicit `AppUi` `Deref` / raw `UiCx`
-  alias inheritance without an explicit justification,
+- the app-facing render-authoring lane no longer depends on implicit `AppUi` `Deref`, and any
+  remaining `UiCx` usage is explicit, compatibility-only, and justified,
 - the workbench/tool-app consumer probe no longer needs raw `cx.app` / raw helper-context leakage
   to stay on the default app authoring story,
 - and the migration backlog has no uncategorized user-facing leftovers.

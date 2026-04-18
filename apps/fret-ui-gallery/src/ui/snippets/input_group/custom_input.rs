@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("custom_input.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui_kit::ColorRef;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn custom_textarea_control(cx: &mut UiCx<'_>, value: Model<String>) -> AnyElement {
+fn custom_textarea_control(cx: &mut AppComponentCx<'_>, value: Model<String>) -> AnyElement {
     shadcn::Textarea::new(value)
         .a11y_label("Autoresize textarea")
         .placeholder("Autoresize textarea...")
@@ -28,7 +28,7 @@ fn custom_textarea_control(cx: &mut UiCx<'_>, value: Model<String>) -> AnyElemen
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(String::new);
     let control = custom_textarea_control(cx, value.clone());
 

@@ -1,27 +1,28 @@
 pub const SOURCE: &str = include_str!("legend.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let chart_1 = cx.theme().color_token("chart-1");
     let chart_2 = cx.theme().color_token("chart-2");
     let chart_3 = cx.theme().color_token("chart-3");
 
-    let section_intro = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str| {
-        ui::v_flex(|cx| {
-            vec![
-                shadcn::raw::typography::small(title).into_element(cx),
-                shadcn::raw::typography::muted(description).into_element(cx),
-            ]
-        })
-        .gap(Space::N1)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full())
-        .into_element(cx)
-    };
+    let section_intro =
+        |cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str| {
+            ui::v_flex(|cx| {
+                vec![
+                    shadcn::raw::typography::small(title).into_element(cx),
+                    shadcn::raw::typography::muted(description).into_element(cx),
+                ]
+            })
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+        };
 
     let colors_config: shadcn::ChartConfig = [
         (

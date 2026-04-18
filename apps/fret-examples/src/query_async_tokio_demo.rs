@@ -10,6 +10,7 @@ use fret::query::{
     QueryRetryPolicy,
 };
 use fret::style::{ColorRef, Space, ThemeSnapshot};
+use fret_ui_kit::IntoUiElementInExt as _;
 
 mod act {
     fret::actions!([
@@ -165,7 +166,7 @@ impl View for QueryAsyncTokioDemoView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let buttons = ui::h_row(|cx| {
             ui::children![cx;
@@ -182,7 +183,7 @@ impl View for QueryAsyncTokioDemoView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let detail_body = ui::v_flex(|cx| {
             ui::children![cx;
@@ -192,7 +193,7 @@ impl View for QueryAsyncTokioDemoView {
             ]
         })
         .gap(Space::N2)
-        .into_element(cx);
+        .into_element_in(cx);
 
         let card = shadcn::card(|cx| {
             ui::children![cx;

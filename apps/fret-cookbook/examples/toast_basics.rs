@@ -26,7 +26,7 @@ impl View for ToastBasicsView {
         // Toast actions stay on the advanced helper because Sonner dispatch is a host-owned
         // imperative integration: the handler needs `UiActionHost` + window, and the default
         // model/transient teaching paths do not expose that host surface directly.
-        let sonner = shadcn::Sonner::global(cx.app);
+        let sonner = shadcn::Sonner::global(cx.app_mut());
 
         cx.on_action_notify::<act::DefaultToast>({
             let sonner = sonner.clone();
@@ -104,7 +104,7 @@ impl View for ToastBasicsView {
         let mut root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
         // `Toaster` is layout-neutral but must be in the tree so toast layer + store are installed.
-        root.push(shadcn::Toaster::new().into_element(cx));
+        root.push(shadcn::Toaster::new().into_element(cx.elements()));
         root.into()
     }
 }

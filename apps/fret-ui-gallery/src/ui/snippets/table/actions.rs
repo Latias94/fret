@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("actions.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::FontWeight;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -53,7 +53,7 @@ fn action_row(
     .test_id(row_test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open_1 = cx.local_model_keyed("actions_open_1", || false);
     let open_2 = cx.local_model_keyed("actions_open_2", || false);
     let open_3 = cx.local_model_keyed("actions_open_3", || false);

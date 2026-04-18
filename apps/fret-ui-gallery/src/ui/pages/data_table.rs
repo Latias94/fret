@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::data_table as snippets;
 
-pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_data_table(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let default_demo = snippets::default_demo::render(cx);
     let basic_demo = snippets::basic_demo::render(cx);
     let guide_demo = snippets::guide_demo::render(cx);

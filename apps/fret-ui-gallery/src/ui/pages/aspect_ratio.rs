@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::aspect_ratio as snippets;
 
-pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_aspect_ratio(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let wide_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
     let square_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
     let tall_image = Some(cx.local_model(|| None::<fret_core::ImageId>));

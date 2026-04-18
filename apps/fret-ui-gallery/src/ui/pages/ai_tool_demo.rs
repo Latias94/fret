@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn tool_state_mapping_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn tool_state_mapping_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["ToolStatus", "Badge", "Typical surface", "Notes"],
@@ -44,7 +44,7 @@ fn tool_state_mapping_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-fn tool_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn tool_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Method", "Type", "Default", "Description"],
@@ -124,7 +124,7 @@ fn tool_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-pub(super) fn preview_ai_tool_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_tool_demo(cx: &mut AppComponentCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let usage = snippets::tool_demo::render(cx);
     let state_mapping = tool_state_mapping_table(cx).test_id("ui-gallery-ai-tool-demo-states");
     let props = tool_props_table(cx).test_id("ui-gallery-ai-tool-demo-props");

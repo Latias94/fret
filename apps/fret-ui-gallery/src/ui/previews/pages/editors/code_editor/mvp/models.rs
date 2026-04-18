@@ -1,5 +1,5 @@
 use super::prelude::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 #[derive(Clone)]
 pub(super) struct CodeEditorMvpHandles {
@@ -16,7 +16,7 @@ pub(super) struct CodeEditorMvpHandles {
 
 impl CodeEditorMvpHandles {
     #[track_caller]
-    pub(super) fn get(cx: &mut UiCx<'_>) -> Self {
+    pub(super) fn get(cx: &mut AppComponentCx<'_>) -> Self {
         cx.slot_state(
             || CodeEditorMvpHandles {
                 main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
@@ -73,7 +73,7 @@ pub(super) struct CodeEditorMvpAppliedFlags {
 }
 
 #[track_caller]
-pub(super) fn applied_flags(cx: &mut UiCx<'_>) -> Rc<Cell<CodeEditorMvpAppliedFlags>> {
+pub(super) fn applied_flags(cx: &mut AppComponentCx<'_>) -> Rc<Cell<CodeEditorMvpAppliedFlags>> {
     cx.slot_state(
         || Rc::new(Cell::new(CodeEditorMvpAppliedFlags::default())),
         |v| v.clone(),

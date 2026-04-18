@@ -19,6 +19,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::ui::use_rgba8_image_state_in;
+use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::{ColorRef, IntoUiElement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
@@ -214,7 +215,7 @@ impl MarkdownDemoView {
                 .set_offset(Point::new(prev.x, Px(prev.y.0 + delta_y)));
         }
 
-        let _ = pending_anchor.set_in(cx.app.models_mut(), None);
+        let _ = pending_anchor.set_in(cx.app_mut().models_mut(), None);
     }
 }
 
@@ -605,7 +606,7 @@ $$
         .gap(Space::N3)
         .wrap()
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let mut scroll_viewport: Option<fret_ui::GlobalElementId> = None;
         let scroll = cx.layout_query_region_with_id(
@@ -621,10 +622,10 @@ $$
                 })
                 .w_full()
                 .padding_px(padding_md)
-                .into_element(cx)])
+                .into_element_in(cx)])
                 .scroll_handle(self.st.scroll.clone())
                 .refine_layout(LayoutRefinement::default().w_full().flex_1())
-                .into_element(cx);
+                .into_element_in(cx);
                 vec![scroll]
             },
         );
@@ -641,7 +642,7 @@ $$
         .h_full()
         .gap(Space::N3)
         .padding_px(padding_md)
-        .into_element(cx);
+        .into_element_in(cx);
 
         self.maybe_scroll_pending_anchor(cx, &pending_anchor_state, scroll_viewport, padding_md);
 
@@ -649,7 +650,7 @@ $$
             .bg(ColorRef::Color(theme.color_token("background")))
             .w_full()
             .h_full()
-            .into_element(cx)
+            .into_element_in(cx)
             .into()
     }
 }

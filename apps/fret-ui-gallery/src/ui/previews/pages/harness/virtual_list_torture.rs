@@ -1,9 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_virtual_list_torture(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     virtual_list_torture_jump: Model<String>,
     virtual_list_torture_edit_row: Model<Option<u64>>,
@@ -225,7 +225,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                 if retained_host {
                     let theme = theme.clone();
                     let key_at = Arc::new(|i| i as fret_ui::ItemKey);
-                    let row = Arc::new(move |cx: &mut UiCx<'_>, index: usize| {
+                    let row = Arc::new(move |cx: &mut AppComponentCx<'_>, index: usize| {
                         let zebra = (index % 2) == 0;
                         let background = if zebra {
                             theme.color_token("muted")
@@ -334,9 +334,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                 let row_cache = row_cache;
 
                 let key_at = Arc::new(|i| i as fret_ui::ItemKey);
-                let row = Arc::new(move |cx: &mut UiCx<'_>, index: usize| {
+                let row = Arc::new(move |cx: &mut AppComponentCx<'_>, index: usize| {
                     let index_u64 = index as u64;
-                    let row = |cx: &mut UiCx<'_>| {
+                    let row = |cx: &mut AppComponentCx<'_>| {
                         let editing_row = cx
                             .get_model_copied(&edit_row, Invalidation::Layout)
                             .flatten();
@@ -449,7 +449,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                     |i| i as fret_ui::ItemKey,
                     |cx, index| {
                         let index_u64 = index as u64;
-                        let row = |cx: &mut UiCx<'_>| {
+                        let row = |cx: &mut AppComponentCx<'_>| {
                             let editing_row = cx
                                 .get_model_copied(
                                     &virtual_list_torture_edit_row,

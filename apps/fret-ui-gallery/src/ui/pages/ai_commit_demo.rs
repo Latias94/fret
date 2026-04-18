@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn file_status_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn file_status_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Status", "Label", "Color"],
@@ -18,7 +18,7 @@ fn file_status_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Key inputs", "Notes"],
@@ -103,7 +103,10 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_commit_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let demo = snippets::commit_demo::render(cx);
     let custom_children = snippets::commit_custom_children::render(cx);
     let features = doc_layout::notes_block([

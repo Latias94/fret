@@ -5,6 +5,7 @@ use fret::app::prelude::*;
 use fret::{Defaults, FretApp, shadcn};
 use fret_core::Px;
 use fret_ui::Invalidation;
+use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
@@ -70,18 +71,14 @@ impl View for EditorNotesDeviceShellDemoView {
         let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = editor_notes_demo::editor_asset_for_selection(&self.assets, selected).clone();
-        let name_value = cx
-            .watch_model(&asset.name_model)
-            .paint()
-            .cloned_or_default();
-        let committed_notes = cx
-            .watch_model(&asset.notes_model)
-            .paint()
-            .cloned_or_default();
-        let notes_outcome = cx
-            .watch_model(&asset.notes_outcome_model)
-            .paint()
-            .cloned_or_default();
+        let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(
+            (
+                &asset.name_model,
+                &asset.notes_model,
+                &asset.notes_outcome_model,
+            ),
+            |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
+        );
         let committed_label = editor_notes_demo::committed_line_count_label(&committed_notes);
         let desktop_background = theme.color_token("background");
 
@@ -122,20 +119,20 @@ impl View for EditorNotesDeviceShellDemoView {
                     .w_px(Px(256.0))
                     .flex_shrink_0()
                     .h_full()
-                    .into_element(cx)
+                    .into_element_in(cx)
                     .test_id(TEST_ID_LEFT_RAIL);
                 let right_rail = ui::container(|_cx| [inspector])
                     .w_px(Px(360.0))
                     .flex_shrink_0()
                     .h_full()
-                    .into_element(cx)
+                    .into_element_in(cx)
                     .test_id(TEST_ID_RIGHT_RAIL);
 
                 WorkspaceFrame::new(center)
                     .left(left_rail)
                     .right(right_rail)
                     .background(Some(desktop_background))
-                    .into_element(cx)
+                    .into_element_in(cx)
             },
             move |cx| {
                 let center = editor_notes_demo::render_center_panel(
@@ -221,29 +218,29 @@ impl View for EditorNotesDeviceShellDemoView {
                                 .into_element(cx)
                         }),
                     ])
-                    .into_element(cx);
+                    .into_element_in(cx);
 
                 let mobile_header = ui::h_flex(|cx| {
                     let muted = cx.theme_snapshot().color_token("muted-foreground");
                     ui::children![
                         cx;
                         ui::v_flex(|cx| {
-                            ui::children![
+                                ui::children![
                                 cx;
                                 ui::text("Compact device shell")
                                     .text_base()
                                     .font_semibold()
-                                    .into_element(cx),
+                                    .into_element_in(cx),
                                 ui::text("Keep the center surface visible and move auxiliary panels behind a drawer trigger.")
                                     .text_sm()
                                     .text_color(ColorRef::Color(muted))
                                     .wrap(fret_core::TextWrap::Word)
-                                    .into_element(cx),
+                                    .into_element_in(cx),
                             ]
                         })
                         .gap(Space::N1)
                         .min_w_0()
-                        .into_element(cx),
+                        .into_element_in(cx),
                         drawer,
                     ]
                 })
@@ -251,27 +248,27 @@ impl View for EditorNotesDeviceShellDemoView {
                 .w_full()
                 .items_center()
                 .justify_between()
-                .into_element(cx)
+                .into_element_in(cx)
                 .test_id(TEST_ID_MOBILE_HEADER);
 
                 let center_region = ui::container(|_cx| [center])
                     .flex_1()
                     .min_h_0()
                     .w_full()
-                    .into_element(cx);
+                    .into_element_in(cx);
 
                 ui::v_flex(|_cx| [mobile_header, center_region])
                     .gap(Space::N4)
                     .items_stretch()
                     .size_full()
-                    .into_element(cx)
+                    .into_element_in(cx)
             },
         );
 
         ui::container(|_cx| [shell])
             .p(Space::N4)
             .size_full()
-            .into_element(cx)
+            .into_element_in(cx)
             .test_id(TEST_ID_ROOT)
             .into()
     }

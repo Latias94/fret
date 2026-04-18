@@ -3,7 +3,7 @@ pub const SOURCE: &str = DOCS_SOURCE;
 pub const DOCS_SOURCE: &str = include_str!("rtl.docs.rs.txt");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Edges, LayoutDirection};
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -20,7 +20,7 @@ struct SlideVisual {
 }
 
 fn slide_card(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     idx: usize,
     visual: SlideVisual,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -52,7 +52,7 @@ fn slide_card(
 }
 
 fn slide(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     idx: usize,
     visual: SlideVisual,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -60,7 +60,7 @@ fn slide(
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
     let controls_shell_w = Px(max_w_xs.0 + 96.0);
     let dir = LayoutDirection::Rtl;

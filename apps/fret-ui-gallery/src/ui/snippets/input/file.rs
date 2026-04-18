@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("file.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_INPUT_PICTURE_BROWSE: &str = "ui_gallery.input.picture.browse";
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let file_value = cx.local_model(String::new);
     let picture_id = "ui-gallery-input-file-picture";
 

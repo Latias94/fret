@@ -56,11 +56,11 @@ impl View for ThemeSwitchingBasicsView {
             None => true,
         };
         if applied_mismatch {
-            apply_scheme(&mut *cx.app, scheme.as_ref());
+            apply_scheme(cx.app_mut(), scheme.as_ref());
             self.applied_scheme = Some(scheme.clone());
-            cx.app.request_redraw(self.window);
-            cx.app
-                .push_effect(Effect::RequestAnimationFrame(self.window));
+            let app = cx.app_mut();
+            app.request_redraw(self.window);
+            app.push_effect(Effect::RequestAnimationFrame(self.window));
         }
 
         let scheme_label = match scheme.as_ref() {
@@ -90,10 +90,10 @@ impl View for ThemeSwitchingBasicsView {
 
         let scheme_toggle = shadcn::ToggleGroup::single(&scheme_state)
             .items([
-                shadcn::ToggleGroupItem::new(SCHEME_LIGHT, [cx.text("Light")])
+                shadcn::ToggleGroupItem::new(SCHEME_LIGHT, [ui::text("Light").into_element_in(cx)])
                     .a11y_label("Light")
                     .test_id(TEST_ID_TOGGLE_LIGHT),
-                shadcn::ToggleGroupItem::new(SCHEME_DARK, [cx.text("Dark")])
+                shadcn::ToggleGroupItem::new(SCHEME_DARK, [ui::text("Dark").into_element_in(cx)])
                     .a11y_label("Dark")
                     .test_id(TEST_ID_TOGGLE_DARK),
             ])

@@ -2,12 +2,12 @@ pub const SOURCE: &str = include_str!("outside_press.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("outside_press_open", || false);
     let probe_activations = cx.local_model_keyed("outside_press_probe_activations", || 0u32);
     let probe_count = cx.watch_model(&probe_activations).copied().unwrap_or(0);

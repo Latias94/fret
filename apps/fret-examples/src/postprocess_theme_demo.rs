@@ -23,7 +23,7 @@ use fret_ui::element::{
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::ui;
-use fret_ui_kit::{IntoUiElement, Space};
+use fret_ui_kit::{IntoUiElement, IntoUiElementInExt as _, Space};
 
 mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
@@ -207,7 +207,7 @@ impl View for ThemePostprocessView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let Some(effect) = cx.app().global::<DemoEffect>().map(|v| v.0) else {
             return vec![
-                shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx),
+                shadcn::raw::typography::h3("Custom effects unavailable").into_element_in(cx),
             ]
             .into();
         };
@@ -223,13 +223,40 @@ impl View for ThemePostprocessView {
             },
         );
 
+        cx.actions().local(&st.enabled).set::<act::Reset>(true);
+        cx.actions().local(&st.compare).set::<act::Reset>(true);
+        cx.actions()
+            .local(&st.theme)
+            .set::<act::Reset>(Some(Arc::<str>::from("cyberpunk")));
+        cx.actions()
+            .local(&st.chromatic_offset_px)
+            .set::<act::Reset>(vec![4.0]);
+        cx.actions()
+            .local(&st.scanline_strength)
+            .set::<act::Reset>(vec![0.32]);
+        cx.actions()
+            .local(&st.scanline_spacing_px)
+            .set::<act::Reset>(vec![3.0]);
+        cx.actions()
+            .local(&st.vignette_strength)
+            .set::<act::Reset>(vec![0.6]);
+        cx.actions()
+            .local(&st.grain_strength)
+            .set::<act::Reset>(vec![0.12]);
+        cx.actions()
+            .local(&st.grain_scale)
+            .set::<act::Reset>(vec![1.5]);
+        cx.actions()
+            .local(&st.retro_pixel_scale)
+            .set::<act::Reset>(vec![10.0]);
+        cx.actions().local(&st.retro_dither).set::<act::Reset>(true);
+        let cx = cx.elements();
         let chromatic_offset_px = watch_first_f32(cx, &st.chromatic_offset_px, 2.0);
         let scanline_strength = watch_first_f32(cx, &st.scanline_strength, 0.18);
         let scanline_spacing_px = watch_first_f32(cx, &st.scanline_spacing_px, 3.0);
         let vignette_strength = watch_first_f32(cx, &st.vignette_strength, 0.35);
         let grain_strength = watch_first_f32(cx, &st.grain_strength, 0.06);
         let grain_scale = watch_first_f32(cx, &st.grain_scale, 1.5);
-
         let retro_pixel_scale = watch_first_f32(cx, &st.retro_pixel_scale, 10.0);
 
         let inspector = inspector(
@@ -261,34 +288,6 @@ impl View for ThemePostprocessView {
             retro_pixel_scale,
             view_settings.retro_dither,
         );
-
-        cx.actions().local(&st.enabled).set::<act::Reset>(true);
-        cx.actions().local(&st.compare).set::<act::Reset>(true);
-        cx.actions()
-            .local(&st.theme)
-            .set::<act::Reset>(Some(Arc::<str>::from("cyberpunk")));
-        cx.actions()
-            .local(&st.chromatic_offset_px)
-            .set::<act::Reset>(vec![4.0]);
-        cx.actions()
-            .local(&st.scanline_strength)
-            .set::<act::Reset>(vec![0.32]);
-        cx.actions()
-            .local(&st.scanline_spacing_px)
-            .set::<act::Reset>(vec![3.0]);
-        cx.actions()
-            .local(&st.vignette_strength)
-            .set::<act::Reset>(vec![0.6]);
-        cx.actions()
-            .local(&st.grain_strength)
-            .set::<act::Reset>(vec![0.12]);
-        cx.actions()
-            .local(&st.grain_scale)
-            .set::<act::Reset>(vec![1.5]);
-        cx.actions()
-            .local(&st.retro_pixel_scale)
-            .set::<act::Reset>(vec![10.0]);
-        cx.actions().local(&st.retro_dither).set::<act::Reset>(true);
 
         let root = ui::h_flex(move |cx| {
             let inspector = inspector.into_element(cx);

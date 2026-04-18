@@ -1,11 +1,11 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 use fret_core::scene::TextOutlineV1;
 
 pub(in crate::ui) fn preview_text_outline_stroke(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     #[derive(Clone, Copy, PartialEq)]
@@ -53,7 +53,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
             .gap(Space::N2).into_element(cx);
 
     fn toggle_button(
-        cx: &mut UiCx<'_>,
+        cx: &mut AppComponentCx<'_>,
         label: &'static str,
         value: bool,
         test_id: &'static str,

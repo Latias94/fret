@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("prompt_input_tooltip_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let simple = ui_ai::PromptInputButton::new("Search the web")
         .icon(IconId::new("lucide.globe"))
         .tooltip(ui_ai::PromptInputButtonTooltip::new("Search the web"))

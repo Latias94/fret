@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_ai_chat_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_chat_demo(cx: &mut AppComponentCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
     let demo = snippets::chat_demo::render(cx);
 
     let body = crate::ui::doc_layout::render_doc_page_after(

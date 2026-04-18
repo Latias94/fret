@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("button.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let sizes_with_icons = |cx: &mut UiCx<'_>, variant: material3::ButtonVariant| {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
+    let sizes_with_icons = |cx: &mut AppComponentCx<'_>, variant: material3::ButtonVariant| {
         ui::h_row(move |cx| {
             vec![
                 material3::Button::new("XS")
@@ -54,7 +54,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     };
 
     let variant_row =
-        |cx: &mut UiCx<'_>, variant: material3::ButtonVariant, label: &'static str| {
+        |cx: &mut AppComponentCx<'_>, variant: material3::ButtonVariant, label: &'static str| {
             let (hover_container, hover_label) = cx.with_theme(|theme| {
                 (
                     theme.color_token("md.sys.color.tertiary-container"),

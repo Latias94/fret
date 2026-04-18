@@ -5,7 +5,7 @@ use super::fixed_today;
 use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};
 use fret::children::UiElementSinkExt;
 use fret::component::prelude::Model;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
 use fret_ui_headless::calendar::CalendarMonth;
@@ -13,7 +13,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
 fn render_calendar_dropdown_content(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> AnyElement {
@@ -23,7 +23,7 @@ fn render_calendar_dropdown_content(
         .into_element(cx)
 }
 
-fn render_dropdown_trigger(cx: &mut UiCx<'_>, open: Model<bool>) -> AnyElement {
+fn render_dropdown_trigger(cx: &mut AppComponentCx<'_>, open: Model<bool>) -> AnyElement {
     shadcn::Button::new("Pick a date")
         .variant(shadcn::ButtonVariant::Outline)
         .toggle_model(open)
@@ -32,7 +32,7 @@ fn render_dropdown_trigger(cx: &mut UiCx<'_>, open: Model<bool>) -> AnyElement {
         .test_id("ui-gallery-date-picker-dropdowns-trigger")
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let today = fixed_today();
 
     let open = cx.local_model_keyed("open", || false);

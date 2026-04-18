@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_checkpoint_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let demo = snippets::checkpoint_demo::render(cx);
     let features = doc_layout::notes_block([
         "Simple flex layout with icon, trigger, and separator",
@@ -77,7 +80,7 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
     vec![body.into_element(cx)]
 }
 
-fn checkpoint_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn checkpoint_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Method", "Type", "Default", "Description"],

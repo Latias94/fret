@@ -42,7 +42,7 @@ fn separator_snippets_stay_docs_aligned_and_copyable() {
     let rtl = include_str!("../src/ui/snippets/separator/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "\"shadcn/ui\"",
         "\"The Foundation for your Design System\"",

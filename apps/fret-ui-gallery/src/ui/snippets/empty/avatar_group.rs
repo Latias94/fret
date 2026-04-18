@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("avatar_group.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let invite_icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.user-plus"));
     let invite_text = cx.text("Invite Members");
     let invite_button = shadcn::Button::new("Invite Members")

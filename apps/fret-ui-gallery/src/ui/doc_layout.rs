@@ -1,5 +1,5 @@
 use super::*;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::facade as shadcn;
 
@@ -54,7 +54,11 @@ impl DocSection {
         }
     }
 
-    pub(in crate::ui) fn build<P>(cx: &mut UiCx<'_>, title: &'static str, preview: P) -> Self
+    pub(in crate::ui) fn build<P>(
+        cx: &mut AppComponentCx<'_>,
+        title: &'static str,
+        preview: P,
+    ) -> Self
     where
         P: IntoUiElement<fret_app::App>,
     {
@@ -63,7 +67,7 @@ impl DocSection {
 
     /// Marks a section as a Fret-only diagnostics harness while keeping the shared doc scaffold.
     pub(in crate::ui) fn build_diagnostics<P>(
-        cx: &mut UiCx<'_>,
+        cx: &mut AppComponentCx<'_>,
         title: &'static str,
         preview: P,
     ) -> Self
@@ -151,7 +155,7 @@ impl DocSection {
 // `Vec<AnyElement>` internally before centering the final shell, but callers now keep the final
 // landing explicit at the page surface.
 pub(in crate::ui) fn render_doc_page(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
 ) -> impl UiChild + use<> {
@@ -162,17 +166,17 @@ pub(in crate::ui) fn render_doc_page(
 pub(in crate::ui) fn render_doc_page_after(
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
 ) -> impl UiChild + use<> {
     render_doc_page_raw(cx as *mut _, intro, sections)
 }
 
 fn render_doc_page_raw(
-    cx: *mut UiCx<'_>,
+    cx: *mut AppComponentCx<'_>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
 ) -> impl UiChild + use<> {
-    // SAFETY: callers pass the current page-building `UiCx`; this helper does not retain the
+    // SAFETY: callers pass the current page-building `AppComponentCx`; this helper does not retain the
     // pointer beyond the call and only dereferences it after all other arguments are evaluated.
     let cx = unsafe { &mut *cx };
     let max_section_w = sections
@@ -212,7 +216,7 @@ fn render_doc_page_raw(
 // into the shared doc page scaffold, but the explicit landing now lives at the preview-page call
 // site rather than on this helper signature.
 pub(in crate::ui) fn wrap_preview_page(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     intro: Option<&'static str>,
     section_title: &'static str,
     elements: Vec<AnyElement>,
@@ -226,14 +230,14 @@ pub(in crate::ui) fn wrap_preview_page_after(
     intro: Option<&'static str>,
     section_title: &'static str,
     elements: Vec<AnyElement>,
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
 ) -> impl UiChild + use<> {
     wrap_preview_page_raw(cx as *mut _, intro, section_title, elements)
 }
 
 #[cfg(any(feature = "gallery-dev", feature = "gallery-web-ime-harness"))]
 fn wrap_preview_page_raw(
-    cx: *mut UiCx<'_>,
+    cx: *mut AppComponentCx<'_>,
     intro: Option<&'static str>,
     section_title: &'static str,
     elements: Vec<AnyElement>,
@@ -259,14 +263,14 @@ fn wrap_preview_page_raw(
 /// toggles/buttons.
 #[cfg(feature = "gallery-dev")]
 pub(in crate::ui) fn wrap_row<F>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     gap: Space,
     align: fret_ui::element::CrossAlign,
     children: F,
 ) -> impl UiChild + use<F>
 where
-    F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
+    F: FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>,
 {
     let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
     let layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
@@ -287,13 +291,13 @@ where
 
 #[cfg(feature = "gallery-dev")]
 pub(in crate::ui) fn wrap_controls_row<F>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     gap: Space,
     children: F,
 ) -> impl UiChild + use<F>
 where
-    F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
+    F: FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>,
 {
     wrap_row(
         cx,
@@ -304,7 +308,10 @@ where
     )
 }
 
-pub(in crate::ui) fn muted_full_width<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T>
+pub(in crate::ui) fn muted_full_width<T>(
+    cx: &mut AppComponentCx<'_>,
+    text: T,
+) -> impl UiChild + use<T>
 where
     T: Into<Arc<str>>,
 {
@@ -339,7 +346,7 @@ where
 
 #[allow(dead_code)]
 pub(in crate::ui) fn text_table<const N: usize, I>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     headers: [&'static str; N],
     rows: I,
     border_bottom: bool,
@@ -388,7 +395,7 @@ where
     .into_element(cx)
 }
 
-fn muted_inline<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T>
+fn muted_inline<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T>
 where
     T: Into<Arc<str>>,
 {
@@ -424,7 +431,7 @@ where
 {
     let lines = lines.into_iter().map(Into::into).collect::<Vec<Arc<str>>>();
 
-    fn muted_flex_1_min_w_0<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T>
+    fn muted_flex_1_min_w_0<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T>
     where
         T: Into<Arc<str>>,
     {
@@ -484,7 +491,7 @@ where
 
 // Typed icon relay: the shared icon facade still lands a concrete icon leaf internally, but
 // doc-layout callers no longer need to spell that raw detail on their own helper signatures.
-pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl UiChild + use<> {
+pub(in crate::ui) fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> impl UiChild + use<> {
     shadcn::raw::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
@@ -492,7 +499,7 @@ pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl UiChild +
 // Intentional raw boundary: gap placeholders are assembled as concrete alert content because the
 // helper returns a title/content pair for doc-page section registration.
 pub(in crate::ui) fn gap_card(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     details: &'static str,
     test_id: &'static str,
@@ -511,7 +518,7 @@ pub(in crate::ui) fn gap_card(
 
 // Typed section wrapper: section assembly still adds test ids, shells, and optional semantics
 // after the preview/code content lands, but callers now keep the final landing explicit.
-fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> impl UiChild + use<> {
+fn render_section(cx: &mut AppComponentCx<'_>, section: DocSection) -> impl UiChild + use<> {
     let DocSection {
         title,
         title_test_id,
@@ -618,7 +625,7 @@ fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> impl UiChild + use<
 }
 
 fn demo_shell<B>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     max_w: Px,
     body: B,
 ) -> impl IntoUiElement<fret_app::App> + use<B>
@@ -686,7 +693,7 @@ fn slugify_for_test_id(input: &str) -> String {
 // Typed tabs wrapper: `TabsItem` still stores concrete landed panel content after the preview/code
 // surfaces receive test-id decoration, but callers no longer need to see a raw return type.
 fn preview_code_tabs(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     test_id_prefix: Option<&str>,
     preview: AnyElement,
     max_w: Px,
@@ -726,7 +733,7 @@ fn preview_code_tabs(
 // Typed code-block wrapper: the code-block shell still owns concrete child vectors for the copy
 // affordance, optional header, and scroll area before the card wrapper lands.
 fn code_block_shell(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     test_id_prefix: Option<&str>,
     max_w: Px,
     block: DocCodeBlock,
@@ -859,7 +866,7 @@ fn slice_code_region(code: &str, region: &str) -> Option<String> {
 
 // Typed title helper: section titles may still receive decoration after landing, but the helper
 // itself stays on the typed lane.
-fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> impl UiChild + use<> {
+fn section_title(cx: &mut AppComponentCx<'_>, title: &'static str) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app);
     let style = fret_core::TextStyle {
         font: fret_core::FontId::default(),

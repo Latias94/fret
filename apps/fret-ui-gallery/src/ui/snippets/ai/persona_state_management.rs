@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("persona_state_management.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
@@ -41,7 +41,7 @@ fn state_item(
         ))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let state_model = cx.local_model_keyed("state", || {
         Some(Arc::<str>::from(ui_ai::PersonaState::Idle.as_str()))
     });

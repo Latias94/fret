@@ -1,12 +1,12 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
 pub(in crate::ui) fn preview_material3_gallery(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let _ = last_action;
@@ -22,7 +22,7 @@ pub(in crate::ui) fn preview_material3_gallery(
 }
 
 pub(in crate::ui) fn preview_material3_state_matrix(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::state_matrix::render(cx, last_action);

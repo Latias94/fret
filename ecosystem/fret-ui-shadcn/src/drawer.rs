@@ -15,7 +15,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
     PointerRegionProps, RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, GlobalElementId, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
@@ -1469,6 +1469,19 @@ impl Drawer {
         )
     }
 
+    #[track_caller]
+    pub fn build_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.build(cx.elements(), trigger, content)
+    }
+
     pub fn overlay_component(mut self, overlay: DrawerOverlay) -> Self {
         if let Some(color) = overlay.color {
             self.inner = self.inner.overlay_color(color);
@@ -2224,6 +2237,19 @@ impl Drawer {
                 move |_cx| vec![content_root],
             )
         })
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), trigger, content)
     }
 }
 

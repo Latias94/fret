@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -48,7 +48,7 @@ fn card<H: UiHost>(
     .test_id(root_test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let entries = [
         (
             shadcn::HoverCardSide::Left,

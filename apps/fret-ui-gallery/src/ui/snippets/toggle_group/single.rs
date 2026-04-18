@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("single.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn icon_item(value: &'static str, label: &'static str) -> shadcn::ToggleGroupItem {
@@ -16,7 +16,7 @@ fn icon_item(value: &'static str, label: &'static str) -> shadcn::ToggleGroupIte
     .a11y_label(label)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::ToggleGroup::single_uncontrolled(Option::<&'static str>::None)
         .items([
             icon_item("bold", "Toggle bold"),

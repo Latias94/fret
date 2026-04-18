@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("voice_selector_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
@@ -91,7 +91,7 @@ fn demo_voice(id: &str) -> DemoVoice {
         .expect("demo voice metadata should exist for every selector voice")
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let value = cx.local_model_keyed("value", || None::<Arc<str>>);
     let playing = cx.local_model_keyed("playing", || None::<Arc<str>>);

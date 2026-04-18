@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("model_selector_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
@@ -57,7 +57,7 @@ const MODELS: &[DemoModel] = &[
     },
 ];
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("openai-gpt-4o"));
@@ -110,7 +110,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
     };
 
-    let make_item = |cx: &mut UiCx<'_>, model: DemoModel| {
+    let make_item = |cx: &mut AppComponentCx<'_>, model: DemoModel| {
         let is_selected = model.id == selected_now.as_ref();
 
         let check = icon::icon_with(

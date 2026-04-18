@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -25,7 +25,7 @@ fn tag_row(tag: Arc<str>) -> impl IntoUiElement<fret_app::App> + use<> {
     .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let tags: Vec<Arc<str>> = (1..=50)
         .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{}", 51 - idx)))
         .collect();

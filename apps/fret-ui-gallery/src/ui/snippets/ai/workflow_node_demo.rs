@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("workflow_node_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -9,7 +9,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let node = ui_ai::WorkflowNode::new([
         ui_ai::WorkflowNodeHeader::new([ui_ai::WorkflowNodeTitle::new("Summarize")
             .into_element(cx)

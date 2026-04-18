@@ -1,9 +1,9 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 use fret_ui_shadcn::facade as shadcn;
 
 pub(in crate::ui) fn preview_data_grid(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     selected_row: Model<Option<u64>>,
 ) -> Vec<AnyElement> {
     let selected = cx

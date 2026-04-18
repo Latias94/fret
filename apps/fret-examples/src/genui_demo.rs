@@ -884,7 +884,7 @@ impl View for GenUiView {
             Self::handle_msg(cx.app_mut(), &mut self.st, Msg::AutoApplyToggled);
         }
 
-        view(cx, &mut self.st)
+        view(cx.elements(), &mut self.st)
     }
 }
 

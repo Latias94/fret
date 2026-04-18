@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("snippet_composable.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons_lucide::generated_ids::lucide::CLIPBOARD;
 use fret_ui_ai as ui_ai;
@@ -9,7 +9,7 @@ use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::icon as decl_icon;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let command: Arc<str> =
         Arc::from("cargo run -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery");
 

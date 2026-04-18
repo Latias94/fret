@@ -1,10 +1,10 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
-use fret::UiCx;
+use fret::AppComponentCx;
 use fret_ui::element::ContainerProps;
 
 pub(in crate::ui) fn preview_ui_kit_list_torture(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     let selection = cx.local_model_keyed("selection", || Option::<usize>::None);

@@ -1,9 +1,9 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::resizable as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let vertical = snippets::vertical::render(cx);

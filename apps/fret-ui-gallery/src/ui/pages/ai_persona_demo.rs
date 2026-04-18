@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn states_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes_block([
         "`idle` is the resting state when the assistant is present but inactive.",
         "`listening` is the active intake state, typically paired with microphone capture or live input.",
@@ -14,7 +14,7 @@ fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ])
 }
 
-fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["API", "Inputs", "Notes"],
@@ -59,7 +59,7 @@ fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-fn features_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn features_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes_block([
         "Six visual variants and five high-level states stay aligned with the official AI Elements taxonomy.",
         "Default output remains `obsidian` at 64px so the basic example stays close to upstream `<Persona state=\"...\" />` usage.",
@@ -69,7 +69,7 @@ fn features_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ])
 }
 
-fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn lifecycle_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::notes_block([
         "Upstream AI Elements binds `Persona` to Rive/WebGL2, includes a React Strict Mode guard, and exposes load / ready / play / pause / stop callbacks.",
         "Fret intentionally keeps animation-engine IO and lifecycle ownership app-side, so `fret-ui-ai::Persona` stays a self-drawn shell instead of pretending the Rive callback surface already exists.",
@@ -78,7 +78,10 @@ fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ])
 }
 
-pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_persona_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let interactive = snippets::persona_demo::render(cx);
     let variants = snippets::persona_variants::render(cx);
     let basic = snippets::persona_basic::render(cx);

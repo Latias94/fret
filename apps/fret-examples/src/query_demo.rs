@@ -6,6 +6,7 @@ use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy};
 use fret::style::{ColorRef, Space, ThemeSnapshot};
+use fret_ui_kit::IntoUiElementInExt as _;
 
 mod act {
     fret::actions!([
@@ -130,7 +131,7 @@ impl View for QueryDemoView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let buttons = ui::h_row(|cx| {
             ui::children![cx;
@@ -147,7 +148,7 @@ impl View for QueryDemoView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
         let detail_body = ui::v_flex_build(|cx, out| {
             out.push_ui(cx, ui::raw_text(info_line));
@@ -172,7 +173,7 @@ impl View for QueryDemoView {
             }
         })
         .gap(Space::N2)
-        .into_element(cx);
+        .into_element_in(cx);
 
         let card = shadcn::card(|cx| {
             ui::children![cx;

@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_ai_terminal_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_terminal_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let demo = snippets::terminal_demo::render(cx);
     let demo_section = DocSection::build(cx, "Terminal", demo)
         .test_id_prefix("ui-gallery-ai-terminal-demo")

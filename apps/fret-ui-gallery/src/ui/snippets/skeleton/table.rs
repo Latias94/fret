@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -30,7 +30,7 @@ fn row<H: UiHost>() -> impl IntoUiElement<H> + use<H> {
     .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| (0..3).map(|_| row().into_element(cx)).collect::<Vec<_>>())
         .gap(Space::N2)
         .layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))

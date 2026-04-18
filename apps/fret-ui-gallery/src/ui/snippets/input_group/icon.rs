@@ -1,18 +1,19 @@
 pub const SOURCE: &str = include_str!("icon.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let search = cx.local_model_keyed("search", String::new);
     let email = cx.local_model_keyed("email", String::new);
     let card = cx.local_model_keyed("card", String::new);
     let favorite = cx.local_model_keyed("favorite", String::new);
 
-    let icon = |cx: &mut UiCx<'_>, id: &'static str| icon::icon(cx, IconId::new_static(id));
+    let icon =
+        |cx: &mut AppComponentCx<'_>, id: &'static str| icon::icon(cx, IconId::new_static(id));
     let max_w = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
     let search_group = shadcn::InputGroup::new(search)

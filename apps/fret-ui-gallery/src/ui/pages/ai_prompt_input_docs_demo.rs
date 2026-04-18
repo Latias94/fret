@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     crate::ui::doc_layout::text_table(
         cx,
         ["Surface", "Notes"],
@@ -39,7 +39,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 
 pub(super) fn preview_ai_prompt_input_docs_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let demo = snippets::prompt_input_docs_demo::render(cx);

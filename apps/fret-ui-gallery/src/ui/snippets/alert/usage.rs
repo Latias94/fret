@@ -2,10 +2,10 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret::children::UiElementSinkExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Alert::build(|cx, out| {
         let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert"));
         out.push_ui(cx, icon);

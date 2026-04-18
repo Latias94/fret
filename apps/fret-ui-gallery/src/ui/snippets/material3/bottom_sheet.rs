@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("bottom_sheet.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::action::OnActivate;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sheet =
         material3::ModalBottomSheet::uncontrolled(cx).test_id("ui-gallery-material3-bottom-sheet");
     let open = sheet.open_model();
@@ -27,7 +27,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
     };
 
-    let underlay = move |cx: &mut UiCx<'_>| {
+    let underlay = move |cx: &mut AppComponentCx<'_>| {
         ui::v_stack(move |cx| {
             let docked = material3::DockedBottomSheet::new()
                 .variant(material3::DockedBottomSheetVariant::Standard)

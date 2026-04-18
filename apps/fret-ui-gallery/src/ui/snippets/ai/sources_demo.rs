@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("sources_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_markdown::OnLinkActivate;
 use fret_ui_ai as ui_ai;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let on_open_url: OnLinkActivate = Arc::new(move |_host, _acx, _reason, link| {
         tracing::info!("sources_demo open_url: {}", link.href.as_ref());
     });

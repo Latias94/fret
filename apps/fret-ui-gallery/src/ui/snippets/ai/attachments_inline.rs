@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("attachments_inline.rs");
 
 // region: example
 use super::attachment_landscape_image_id;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
@@ -12,7 +12,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 use std::sync::Arc;
 
-fn demo_items(cx: &mut UiCx<'_>) -> Vec<ui_ai::AttachmentData> {
+fn demo_items(cx: &mut AppComponentCx<'_>) -> Vec<ui_ai::AttachmentData> {
     let mut image = ui_ai::AttachmentFileData::new("att-image")
         .filename("mountain-landscape.jpg")
         .media_type("image/jpeg");
@@ -39,7 +39,7 @@ fn demo_items(cx: &mut UiCx<'_>) -> Vec<ui_ai::AttachmentData> {
     ]
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let removed_ids = cx.local_model_keyed("removed_ids", Vec::<Arc<str>>::new);
 
     let hidden = cx

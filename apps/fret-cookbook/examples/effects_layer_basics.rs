@@ -82,6 +82,9 @@ impl View for EffectsLayerBasicsView {
                 .value_or(Some(Arc::<str>::from(EffectKind::None.as_str())))
                 .as_deref(),
         );
+        // This example intentionally demonstrates manual/effects-level builder composition.
+        // Keep tracked reads on `AppUi`, then switch to the raw element lane explicitly.
+        let cx = cx.elements();
 
         let chain = match effect_kind {
             EffectKind::None => EffectChain::EMPTY,
@@ -155,19 +158,19 @@ impl View for EffectsLayerBasicsView {
             .items([
                 shadcn::ToggleGroupItem::new(
                     EffectKind::None.as_str(),
-                    [cx.text(EffectKind::None.label())],
+                    [ui::text(EffectKind::None.label()).into_element(cx)],
                 )
                 .a11y_label(EffectKind::None.a11y_label())
                 .test_id(EffectKind::None.test_id()),
                 shadcn::ToggleGroupItem::new(
                     EffectKind::Pixelate.as_str(),
-                    [cx.text(EffectKind::Pixelate.label())],
+                    [ui::text(EffectKind::Pixelate.label()).into_element(cx)],
                 )
                 .a11y_label(EffectKind::Pixelate.a11y_label())
                 .test_id(EffectKind::Pixelate.test_id()),
                 shadcn::ToggleGroupItem::new(
                     EffectKind::Blur.as_str(),
-                    [cx.text(EffectKind::Blur.label())],
+                    [ui::text(EffectKind::Blur.label()).into_element(cx)],
                 )
                 .a11y_label(EffectKind::Blur.a11y_label())
                 .test_id(EffectKind::Blur.test_id()),

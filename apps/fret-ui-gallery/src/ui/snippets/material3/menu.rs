@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("menu.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::action::OnActivate;
 use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
@@ -11,7 +11,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[rustfmt::skip]
 pub fn render(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> impl UiChild + use<> {
     let dropdown = material3::DropdownMenu::uncontrolled(cx)

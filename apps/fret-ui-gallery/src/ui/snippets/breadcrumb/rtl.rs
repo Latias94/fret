@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
@@ -22,7 +22,7 @@ fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElemen
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
 
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {

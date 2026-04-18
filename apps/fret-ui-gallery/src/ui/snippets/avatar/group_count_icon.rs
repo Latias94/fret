@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("group_count_icon.rs");
 
 // region: example
 use super::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{ImageId, Px};
 use fret_ui::Theme;
 use fret_ui_kit::{ColorRef, IntoUiElement};
@@ -38,7 +38,7 @@ fn avatar_with_image<H: UiHost>(
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
 
     let avatars = (0..2)

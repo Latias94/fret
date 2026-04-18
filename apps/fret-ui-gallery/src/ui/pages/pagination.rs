@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::pagination as snippets;
 
-pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_pagination(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let simple = snippets::simple::render(cx);

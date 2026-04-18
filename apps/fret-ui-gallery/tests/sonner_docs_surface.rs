@@ -57,7 +57,7 @@ fn sonner_docs_snippets_stay_copyable_and_message_oriented() {
     let setup = include_str!("../src/ui/snippets/sonner/setup.docs.rs.txt");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "let sonner = shadcn::Sonner::global(&mut *cx.app);",
         "let toaster = shadcn::Toaster::new().into_element(cx);",
@@ -128,7 +128,7 @@ fn sonner_docs_snippets_stay_copyable_and_message_oriented() {
     }
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "shadcn::Toaster::new()",
         ".position(shadcn::ToastPosition::TopCenter)",
     ] {

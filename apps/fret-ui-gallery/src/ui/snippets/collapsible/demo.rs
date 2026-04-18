@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -28,7 +28,7 @@ fn repository_item<H: UiHost>(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     // Mirrors the official shadcn/ui v4 `collapsible-demo.tsx` repository list example.
     cx.scope(|cx| {
         let open = cx.local_model_keyed("demo_open", || false);

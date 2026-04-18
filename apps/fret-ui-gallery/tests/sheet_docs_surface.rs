@@ -51,7 +51,7 @@ fn sheet_snippets_keep_the_default_root_lane_and_docs_aligned_followups() {
     let normalized_side = normalize_ws(side);
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "shadcn::Sheet::new_controllable(cx, None, false)",
         ".children([",
         "shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(",

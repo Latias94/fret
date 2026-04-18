@@ -70,7 +70,7 @@ fn toggle_group_snippets_stay_copyable_and_upstream_example_aligned() {
     let label = include_str!("../src/ui/snippets/toggle_group/label.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         ".variant(shadcn::ToggleVariant::Outline)",
         "ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())",

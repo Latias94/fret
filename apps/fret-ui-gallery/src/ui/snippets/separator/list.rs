@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("list.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -23,7 +23,7 @@ fn row<H: UiHost>(
     .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         vec![
             row(cx, "Item 1", "Value 1").into_element(cx),

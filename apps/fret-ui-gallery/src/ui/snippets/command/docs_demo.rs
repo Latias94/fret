@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("docs_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let query = cx.local_model(String::new);
     let noop: fret_ui::action::OnActivate = Arc::new(|_host, _action_cx, _reason| {});
 

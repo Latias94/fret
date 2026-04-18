@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("environment_variables_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -35,7 +35,7 @@ const VARIABLES: &[Variable] = &[
     },
 ];
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let env = ui_ai::EnvironmentVariables::new()
         .default_show_values(false)
         .test_id_root("ui-ai-env-vars-root")

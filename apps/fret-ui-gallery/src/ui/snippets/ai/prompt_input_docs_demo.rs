@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 // region: example
 use super::shared_preview_image_id;
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui::Invalidation;
@@ -45,7 +45,7 @@ fn model_name(model_id: &str) -> Arc<str> {
         .unwrap_or_else(|| Arc::<str>::from(model_id.to_owned()))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let messages = cx.local_model_keyed("messages", Vec::<ui_ai::AiMessage>::new);
     let next_message_id = cx.local_model_keyed("next_message_id", || 1u64);
     let text = cx.local_model_keyed("text", String::new);

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("suggestions_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_icons_lucide::generated_ids::lucide;
 use fret_ui::element::SemanticsProps;
@@ -12,7 +12,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let clicked = cx.local_model_keyed("clicked", || false);
     let prompt = cx.local_model_keyed("prompt", String::new);
 
@@ -127,7 +127,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 // endregion: example
 
 // region: custom_children_example
-pub fn render_custom_children(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render_custom_children(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sparkles = decl_icon::icon_with(cx, lucide::SPARKLES, Some(Px(16.0)), None);
     let globe = decl_icon::icon_with(cx, lucide::GLOBE, Some(Px(16.0)), None);
 

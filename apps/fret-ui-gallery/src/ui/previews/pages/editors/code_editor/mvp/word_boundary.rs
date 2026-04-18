@@ -1,9 +1,9 @@
 use super::prelude::*;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
 pub(super) fn word_boundary_controls(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     word_handle: code_editor::CodeEditorHandle,
     word_fixture_loaded: Rc<Cell<bool>>,
     word_idx: Rc<Cell<usize>>,
@@ -218,7 +218,7 @@ pub(super) fn word_boundary_controls(
 }
 
 pub(super) fn word_boundary_debug_view(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     word_handle: code_editor::CodeEditorHandle,
     word_debug: Rc<std::cell::RefCell<String>>,

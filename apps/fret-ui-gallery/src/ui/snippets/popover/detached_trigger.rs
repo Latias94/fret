@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("detached_trigger.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn hidden_internal_trigger(cx: &mut UiCx<'_>) -> AnyElement {
+fn hidden_internal_trigger(cx: &mut AppComponentCx<'_>) -> AnyElement {
     ui::v_flex(|_cx| Vec::<AnyElement>::new())
         .layout(
             LayoutRefinement::default()
@@ -17,7 +17,7 @@ fn hidden_internal_trigger(cx: &mut UiCx<'_>) -> AnyElement {
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("detached_open", || false);
 
     let detached_trigger = shadcn::PopoverTrigger::new(

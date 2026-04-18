@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::facade as shadcn;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.keyed("ui_gallery.dropdown_menu.demo", |cx| {
         super::preview_frame_with(cx, |cx| {
             shadcn::DropdownMenu::uncontrolled(cx)

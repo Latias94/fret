@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::carousel as snippets;
 
-pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_carousel(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.carousel_page", |cx| {
         let demo = snippets::demo::render(cx);
         let loop_carousel = snippets::loop_carousel::render(cx);

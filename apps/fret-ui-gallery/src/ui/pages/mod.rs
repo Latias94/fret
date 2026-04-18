@@ -1,5 +1,5 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 mod accordion;
 #[cfg(feature = "gallery-dev")]
@@ -190,213 +190,288 @@ mod toggle_group;
 mod tooltip;
 mod typography;
 
-pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_alert(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     alert::preview_alert(cx)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_attachments_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_attachments_demo::preview_ai_attachments_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_audio_player_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_audio_player_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_audio_player_demo::preview_ai_audio_player_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_agent_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_agent_demo::preview_ai_agent_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_artifact_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_artifact_demo::preview_ai_artifact_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_canvas_world_layer_spike(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_canvas_world_layer_spike::preview_ai_canvas_world_layer_spike(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_chat_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_chat_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_chat_demo::preview_ai_chat_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_checkpoint_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_checkpoint_demo::preview_ai_checkpoint_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
 pub(super) fn preview_ai_chain_of_thought_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_chain_of_thought_demo::preview_ai_chain_of_thought_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_code_block_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_code_block_demo::preview_ai_code_block_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_commit_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_commit_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_commit_demo::preview_ai_commit_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_commit_large_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_commit_large_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_commit_large_demo::preview_ai_commit_large_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_confirmation_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_confirmation_demo::preview_ai_confirmation_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_conversation_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_conversation_demo::preview_ai_conversation_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_context_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_context_demo::preview_ai_context_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_file_tree_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_file_tree_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_file_tree_demo::preview_ai_file_tree_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_image_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_image_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_image_demo::preview_ai_image_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_snippet_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_snippet_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_snippet_demo::preview_ai_snippet_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
 pub(super) fn preview_ai_environment_variables_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_environment_variables_demo::preview_ai_environment_variables_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_message_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_message_demo::preview_ai_message_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_message_branch_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_message_branch_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_message_branch_demo::preview_ai_message_branch_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_open_in_chat_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_open_in_chat_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_open_in_chat_demo::preview_ai_open_in_chat_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_persona_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_persona_demo::preview_ai_persona_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_plan_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_plan_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_plan_demo::preview_ai_plan_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_schema_display_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_schema_display_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_schema_display_demo::preview_ai_schema_display_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_queue_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_queue_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_queue_demo::preview_ai_queue_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_terminal_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_terminal_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_terminal_demo::preview_ai_terminal_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_stack_trace_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_stack_trace_demo::preview_ai_stack_trace_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_stack_trace_large_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_stack_trace_large_demo::preview_ai_stack_trace_large_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_tool_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_tool_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_tool_demo::preview_ai_tool_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_reasoning_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_reasoning_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_reasoning_demo::preview_ai_reasoning_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_shimmer_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_shimmer_demo::preview_ai_shimmer_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_suggestions_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_suggestions_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_suggestions_demo::preview_ai_suggestions_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_task_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_task_demo(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     ai_task_demo::preview_ai_task_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_test_results_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_test_results_demo::preview_ai_test_results_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_test_results_large_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_test_results_large_demo::preview_ai_test_results_large_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_transcription_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_transcription_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_transcription_demo::preview_ai_transcription_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_transcript_torture(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_transcript_torture(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_transcript_torture::preview_ai_transcript_torture(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_provider_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_prompt_input_provider_demo::preview_ai_prompt_input_provider_demo(cx, theme)
@@ -404,7 +479,7 @@ pub(super) fn preview_ai_prompt_input_provider_demo(
 
 #[cfg(feature = "gallery-ai")]
 pub(super) fn preview_ai_prompt_input_docs_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_prompt_input_docs_demo::preview_ai_prompt_input_docs_demo(cx, theme)
@@ -412,7 +487,7 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_action_menu_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_prompt_input_action_menu_demo::preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -420,7 +495,7 @@ pub(super) fn preview_ai_prompt_input_action_menu_demo(
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_prompt_input_referenced_sources_demo::preview_ai_prompt_input_referenced_sources_demo(
@@ -429,102 +504,144 @@ pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
 }
 
 #[cfg(feature = "gallery-ai")]
-pub(super) fn preview_ai_package_info_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_package_info_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_package_info_demo::preview_ai_package_info_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_model_selector_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_model_selector_demo::preview_ai_model_selector_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_mic_selector_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_mic_selector_demo::preview_ai_mic_selector_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_voice_selector_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_voice_selector_demo::preview_ai_voice_selector_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_inline_citation_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_inline_citation_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_inline_citation_demo::preview_ai_inline_citation_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_sources_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_sources_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_sources_demo::preview_ai_sources_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_speech_input_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_speech_input_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_speech_input_demo::preview_ai_speech_input_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_sandbox_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_sandbox_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_sandbox_demo::preview_ai_sandbox_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_web_preview_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_web_preview_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_web_preview_demo::preview_ai_web_preview_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_toolbar_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_workflow_toolbar_demo::preview_ai_workflow_toolbar_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_workflow_panel_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_workflow_panel_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_workflow_panel_demo::preview_ai_workflow_panel_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_connection_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_workflow_connection_demo::preview_ai_workflow_connection_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_workflow_chrome_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_workflow_chrome_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_workflow_chrome_demo::preview_ai_workflow_chrome_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_controls_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_workflow_controls_demo::preview_ai_workflow_controls_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_workflow_canvas_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_workflow_canvas_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_workflow_canvas_demo::preview_ai_workflow_canvas_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_workflow_node_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_workflow_node_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_workflow_node_demo::preview_ai_workflow_node_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_ai_workflow_edge_demo(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_workflow_edge_demo(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_workflow_edge_demo::preview_ai_workflow_edge_demo(cx, theme)
 }
 
 #[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_node_graph_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_workflow_node_graph_demo::preview_ai_workflow_node_graph_demo(cx, theme)
@@ -532,7 +649,7 @@ pub(super) fn preview_ai_workflow_node_graph_demo(
 
 #[cfg(feature = "gallery-ai")]
 pub(super) fn preview_ai_by_id(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     id: &str,
 ) -> Option<Vec<AnyElement>> {
@@ -642,80 +759,80 @@ pub(super) fn preview_ai_by_id(
 }
 
 pub(super) fn preview_accordion(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
     accordion::preview_accordion(cx, value)
 }
 
-pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_avatar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     avatar::preview_avatar(cx)
 }
 
-pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_button(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     button::preview_button(cx)
 }
 
-pub(super) fn preview_button_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_button_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     button_group::preview_button_group(cx)
 }
 
 pub(super) fn preview_calendar(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
     calendar::preview_calendar(cx, month, selected)
 }
 
-pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_alert_dialog(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     alert_dialog::preview_alert_dialog(cx)
 }
 
-pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_aspect_ratio(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     aspect_ratio::preview_aspect_ratio(cx)
 }
 
-pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_card(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     card::preview_card(cx)
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_icons(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     icons::preview_icons(cx)
 }
 
-pub(super) fn preview_image_object_fit(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_image_object_fit(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     image_object_fit::preview_image_object_fit(cx)
 }
 
-pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_badge(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     badge::preview_badge(cx)
 }
 
-pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_breadcrumb(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     breadcrumb::preview_breadcrumb(cx)
 }
 
-pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     checkbox::preview_checkbox(cx)
 }
 
-pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_carousel(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     carousel::preview_carousel(cx)
 }
 
 #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
-pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_chart(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     chart::preview_chart(cx)
 }
 
-pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_collapsible(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     collapsible::preview_collapsible(cx)
 }
 
 pub(super) fn preview_combobox(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Model<String>,
@@ -723,123 +840,123 @@ pub(super) fn preview_combobox(
     combobox::preview_combobox(cx, value, open, query)
 }
 
-pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_command_palette(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     command::preview_command_palette(cx)
 }
 
-pub(super) fn preview_toast(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_toast(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     toast::preview_toast(cx)
 }
 
-pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_context_menu(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     context_menu::preview_context_menu(cx)
 }
 
-pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_data_table(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     data_table::preview_data_table(cx)
 }
-pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_date_picker(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     date_picker::preview_date_picker(cx)
 }
 
-pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_dialog(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     dialog::preview_dialog(cx)
 }
 
-pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_popover(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     popover::preview_popover(cx)
 }
 
-pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_progress(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     progress::preview_progress(cx)
 }
 
-pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_sheet(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     sheet::preview_sheet(cx)
 }
 
-pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_field(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     field::preview_field(cx)
 }
 
-pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_forms(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     form::preview_forms(cx)
 }
 
-pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_hover_card(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     hover_card::preview_hover_card(cx)
 }
 
-pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_input(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     input::preview_input(cx)
 }
 
-pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_input_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     input_group::preview_input_group(cx)
 }
 
-pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_input_otp(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     input_otp::preview_input_otp(cx)
 }
 
-pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_item(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     item::preview_item(cx)
 }
 
-pub(super) fn preview_kbd(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_kbd(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     kbd::preview_kbd(cx)
 }
 
-pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_select(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     select::preview_select(cx)
 }
 
-pub(super) fn preview_direction(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_direction(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     direction::preview_direction(cx)
 }
 
-pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_label(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     label::preview_label(cx)
 }
 
-pub(super) fn preview_menubar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_menubar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     menubar::preview_menubar(cx)
 }
 
-pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_native_select(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     native_select::preview_native_select(cx)
 }
 
-pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_navigation_menu(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     navigation_menu::preview_navigation_menu(cx)
 }
 
-pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_radio_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     radio_group::preview_radio_group(cx)
 }
 
-pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     resizable::preview_resizable(cx)
 }
 
-pub(super) fn preview_pagination(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_pagination(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     pagination::preview_pagination(cx)
 }
 
-pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_scroll_area(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     scroll_area::preview_scroll_area(cx)
 }
 
-pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_separator(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     separator::preview_separator(cx)
 }
 
-pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_sidebar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     sidebar::preview_sidebar(cx)
 }
 
 pub(super) fn preview_motion_presets(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     motion_preset: Model<Option<Arc<str>>>,
     motion_preset_open: Model<bool>,
 ) -> Vec<AnyElement> {
@@ -847,66 +964,66 @@ pub(super) fn preview_motion_presets(
 }
 
 #[cfg(feature = "gallery-dev")]
-pub(super) fn preview_shadcn_extras(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_shadcn_extras(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     shadcn_extras::preview_shadcn_extras(cx)
 }
 
-pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_skeleton(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     skeleton::preview_skeleton(cx)
 }
 
-pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_slider(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     slider::preview_slider(cx)
 }
 
-pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     sonner::preview_sonner(cx)
 }
 
-pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_tabs(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     tabs::preview_tabs(cx)
 }
 
-pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_table(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     table::preview_table(cx)
 }
 
-pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_spinner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     spinner::preview_spinner(cx)
 }
 
-pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_switch(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     switch::preview_switch(cx)
 }
 
-pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     textarea::preview_textarea(cx)
 }
 
-pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_drawer(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     drawer::preview_drawer(cx)
 }
 
-pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_dropdown_menu(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     dropdown_menu::preview_dropdown_menu(cx)
 }
 
-pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_empty(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     empty::preview_empty(cx)
 }
 
-pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_toggle(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     toggle::preview_toggle(cx)
 }
 
-pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     toggle_group::preview_toggle_group(cx)
 }
 
-pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_tooltip(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     tooltip::preview_tooltip(cx)
 }
 
-pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_typography(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     typography::preview_typography(cx)
 }

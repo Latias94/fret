@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let title = "الأبعاد";
         let description = "تعيين الأبعاد للطبقة.";
-        let popover = |cx: &mut UiCx<'_>,
+        let popover = |cx: &mut AppComponentCx<'_>,
                        popover_test_id: &'static str,
                        trigger_test_id: &'static str,
                        label: &'static str,

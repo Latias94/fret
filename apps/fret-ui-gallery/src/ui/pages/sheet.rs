@@ -1,7 +1,7 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_sheet(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     use crate::ui::doc_layout::{self, DocSection};
     use crate::ui::snippets::sheet as snippets;
 

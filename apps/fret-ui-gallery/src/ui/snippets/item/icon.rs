@@ -1,16 +1,19 @@
 pub const SOURCE: &str = include_str!("icon.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+fn icon(
+    cx: &mut AppComponentCx<'_>,
+    id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn item_icon(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     icon_id: &'static str,
     title: &'static str,
     description: &'static str,
@@ -43,7 +46,7 @@ fn item_icon(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()

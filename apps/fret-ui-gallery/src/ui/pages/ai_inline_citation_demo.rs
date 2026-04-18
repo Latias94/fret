@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Surface", "Notes"],
@@ -39,7 +39,7 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 
 pub(super) fn preview_ai_inline_citation_demo(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let usage = snippets::inline_citation_demo::render(cx);

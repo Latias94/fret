@@ -1,9 +1,9 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     use std::cell::RefCell;

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("badge_icon.rs");
 
 // region: example
 use super::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::{ColorRef, IntoUiElement};
@@ -33,7 +33,7 @@ fn icon<H: UiHost>(
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
 
     wrap_row(|cx| {

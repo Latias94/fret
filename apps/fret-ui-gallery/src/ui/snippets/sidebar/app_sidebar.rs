@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("app_sidebar.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
@@ -172,17 +172,21 @@ const PROJECTS: &[ProjectSpec] = &[
     },
 ];
 
-fn sidebar_icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
+fn sidebar_icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement {
     shadcn::raw::icon::icon(cx, IconId::new_static(id)).into_element(cx)
 }
 
-fn avatar_badge(cx: &mut UiCx<'_>, initials: &'static str) -> AnyElement {
+fn avatar_badge(cx: &mut AppComponentCx<'_>, initials: &'static str) -> AnyElement {
     shadcn::Avatar::new([shadcn::AvatarFallback::new(initials).into_element(cx)])
         .size(shadcn::AvatarSize::Default)
         .into_element(cx)
 }
 
-fn trailing_chevron(cx: &mut UiCx<'_>, icon_id: &'static str, test_id: &'static str) -> AnyElement {
+fn trailing_chevron(
+    cx: &mut AppComponentCx<'_>,
+    icon_id: &'static str,
+    test_id: &'static str,
+) -> AnyElement {
     let auto_margin = match shadcn::use_direction(cx, None) {
         shadcn::LayoutDirection::Rtl => LayoutRefinement::default().mr_auto().flex_shrink_0(),
         shadcn::LayoutDirection::Ltr => LayoutRefinement::default().ml_auto().flex_shrink_0(),
@@ -195,7 +199,7 @@ fn trailing_chevron(cx: &mut UiCx<'_>, icon_id: &'static str, test_id: &'static 
 }
 
 fn copy_stack(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: impl Into<Arc<str>>,
     subtitle: impl Into<Arc<str>>,
     root_test_id: Option<&'static str>,
@@ -296,7 +300,7 @@ fn set_selected_model(
 }
 
 fn team_switcher(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     active_team: Model<usize>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
@@ -377,7 +381,7 @@ fn team_switcher(
 }
 
 fn nav_main(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     selected: Model<Arc<str>>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
@@ -457,7 +461,7 @@ fn nav_main(
 }
 
 fn project_groups(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     selected: Model<Arc<str>>,
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
@@ -544,7 +548,7 @@ fn project_groups(
     shadcn::SidebarGroup::new(children).into_element(cx)
 }
 
-fn nav_user(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
+fn nav_user(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
     let sidebar_ctx = shadcn::use_sidebar(cx).expect("sidebar context");
     let side = if sidebar_ctx.is_mobile {
         shadcn::DropdownMenuSide::Bottom
@@ -614,7 +618,7 @@ fn nav_user(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
 }
 
 fn app_sidebar(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     active_team: Model<usize>,
     selected: Model<Arc<str>>,
     last_action: Model<Arc<str>>,
@@ -641,7 +645,11 @@ fn app_sidebar(
     .into_element(cx)
 }
 
-fn shell_card(cx: &mut UiCx<'_>, title: &'static str, body: impl Into<Arc<str>>) -> AnyElement {
+fn shell_card(
+    cx: &mut AppComponentCx<'_>,
+    title: &'static str,
+    body: impl Into<Arc<str>>,
+) -> AnyElement {
     let body = body.into();
     shadcn::card(|cx| {
         ui::children![
@@ -654,7 +662,7 @@ fn shell_card(cx: &mut UiCx<'_>, title: &'static str, body: impl Into<Arc<str>>)
     .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.scope(|cx| {
         let active_team = cx.local_model_keyed("active_team", || 0usize);
         let selected = cx.local_model_keyed("selected", || Arc::<str>::from("history"));

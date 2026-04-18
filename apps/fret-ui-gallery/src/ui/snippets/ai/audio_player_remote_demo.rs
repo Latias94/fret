@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("audio_player_remote_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 const REMOTE_AUDIO_URL: &str = "https://ejiidnob33g9ap1r.public.blob.vercel-storage.com/ElevenLabs_2025-11-10T22_07_46_Hayden_pvc_sp108_s50_sb75_se0_b_m2.mp3";
 
 fn render_demo_audio_player(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     element: ui_ai::AudioPlayerElement,
     model_key: &'static str,
     test_prefix: &'static str,
@@ -135,7 +135,7 @@ fn render_demo_audio_player(
     .into_element(cx)
 }
 
-pub fn render_remote_audio(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render_remote_audio(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     render_demo_audio_player(
         cx,
         ui_ai::AudioPlayerElement::new().src(REMOTE_AUDIO_URL),

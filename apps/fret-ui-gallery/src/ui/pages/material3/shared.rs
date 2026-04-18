@@ -1,5 +1,5 @@
 use super::*;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 
 use crate::ui::doc_layout::{self, DocSection};
@@ -8,7 +8,7 @@ pub(super) const MATERIAL3_INTRO: &str =
     "Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code).";
 
 pub(super) fn render_material3_demo_page<D>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     intro: Option<&'static str>,
     demo: D,
     source: &'static str,
@@ -24,12 +24,12 @@ where
 }
 
 pub(in crate::ui) fn material3_scoped_page<'a, I, F>(
-    cx: &mut UiCx<'a>,
+    cx: &mut AppComponentCx<'a>,
     material3_expressive: Model<bool>,
     content: F,
 ) -> Vec<AnyElement>
 where
-    F: for<'b> FnOnce(&mut UiCx<'b>) -> I,
+    F: for<'b> FnOnce(&mut AppComponentCx<'b>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
     let enabled = cx
@@ -54,7 +54,7 @@ where
 }
 
 pub(in crate::ui) fn material3_variant_toggle_row(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     material3_expressive: Model<bool>,
 ) -> impl UiChild + use<> {
     let enabled = cx

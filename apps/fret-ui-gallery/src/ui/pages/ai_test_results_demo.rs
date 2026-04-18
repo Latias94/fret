@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn status_colors_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Status", "Color", "Use case"],
@@ -18,7 +18,7 @@ fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Key inputs", "Notes"],
@@ -103,7 +103,10 @@ fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-pub(super) fn preview_ai_test_results_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_test_results_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let usage = snippets::test_results_demo::render(cx);
     let features = crate::ui::doc_layout::notes_block([
         "Summary statistics (passed/failed/skipped)",

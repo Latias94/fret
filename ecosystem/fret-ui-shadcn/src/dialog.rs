@@ -13,7 +13,10 @@ use fret_ui::element::{
     OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
     SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
+use fret_ui::{
+    ElementContext, ElementContextAccess, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot,
+    UiHost,
+};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
@@ -617,6 +620,19 @@ impl Dialog {
     }
 
     #[track_caller]
+    pub fn build_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.build(cx.elements(), trigger, content)
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -887,6 +903,19 @@ impl Dialog {
             let content_element = content_element_for_trigger.get().or(prev_content_element);
             radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
         })
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), trigger, content)
     }
 
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.

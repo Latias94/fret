@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("queue_demo.rs");
 
 // region: example
 use super::shared_preview_image_id;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::ImageId;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -33,7 +33,7 @@ struct DemoTodo {
     completed: bool,
 }
 
-fn demo_queue_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+fn demo_queue_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     shared_preview_image_id(cx)
 }
 
@@ -123,7 +123,7 @@ fn default_todos() -> Vec<DemoTodo> {
     ]
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let messages = cx.local_model_keyed("messages", default_messages);
     let todos = cx.local_model_keyed("todos", default_todos);
     let action_revision = cx.local_model_keyed("action_revision", || 0_u64);

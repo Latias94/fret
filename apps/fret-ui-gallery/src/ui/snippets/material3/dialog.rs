@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("dialog.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui_kit::{ColorRef, WidgetStateProperty};
@@ -12,7 +12,7 @@ use fret_ui_shadcn::prelude::*;
 
 #[rustfmt::skip]
 pub fn render(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     last_action: Model<Arc<str>>,
 ) -> impl UiChild + use<> {
     let default_dialog = material3::Dialog::uncontrolled(cx);
@@ -104,7 +104,7 @@ pub fn render(
         })
     };
 
-    let build_dialog = |cx: &mut UiCx<'_>,
+    let build_dialog = |cx: &mut AppComponentCx<'_>,
                         mut dialog: material3::Dialog,
                         style: Option<material3::DialogStyle>,
                         id_prefix: &'static str,

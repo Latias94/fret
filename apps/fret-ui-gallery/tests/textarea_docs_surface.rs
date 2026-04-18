@@ -101,7 +101,7 @@ fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
     }
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "shadcn::Textarea::new(value)",
         ".a11y_label(\"Message\")",
         ".placeholder(\"Type your message here.\")",

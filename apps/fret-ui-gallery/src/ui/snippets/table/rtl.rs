@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{FontWeight, Px};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -94,7 +94,7 @@ fn make_invoice_table(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
         let rows: [(&str, &str, &str, &str); 7] = [
             ("INV001", "مدفوع", "بطاقة ائتمانية", "$250.00"),

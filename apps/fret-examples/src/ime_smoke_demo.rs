@@ -78,6 +78,7 @@ impl ImeSmokeDriver {
                 } = locals.as_ref().expect("IME locals should exist").clone();
                 let theme = cx.theme_snapshot();
                 let last = last_ime.paint_value(cx);
+                let cx = cx.elements();
 
                 let mut root_layout = LayoutStyle::default();
                 root_layout.size.width = Length::Fill;

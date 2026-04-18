@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_shimmer_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let usage = snippets::shimmer_demo::render(cx);
     let durations = snippets::shimmer_duration_demo::render(cx);
     let elements = snippets::shimmer_elements_demo::render(cx);
@@ -71,7 +74,7 @@ pub(super) fn preview_ai_shimmer_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     vec![body.into_element(cx)]
 }
 
-fn shimmer_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn shimmer_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Prop", "Type", "Default", "Description"],

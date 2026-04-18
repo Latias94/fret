@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("week_numbers.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
@@ -26,7 +26,7 @@ fn today_from_env_or_now() -> Date {
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
     let week_number_initial =
         time::Date::from_calendar_date(today.year(), time::Month::January, 12)

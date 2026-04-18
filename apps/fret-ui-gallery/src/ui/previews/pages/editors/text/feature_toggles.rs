@@ -1,10 +1,10 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
 pub(in crate::ui) fn preview_text_feature_toggles(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -38,7 +38,7 @@ pub(in crate::ui) fn preview_text_feature_toggles(
     .gap(Space::N2);
 
     fn toggle_button(
-        cx: &mut UiCx<'_>,
+        cx: &mut AppComponentCx<'_>,
         label: &'static str,
         value: bool,
         test_id: &'static str,
@@ -105,7 +105,7 @@ pub(in crate::ui) fn preview_text_feature_toggles(
     };
 
     fn sample_text(
-        cx: &mut UiCx<'_>,
+        cx: &mut AppComponentCx<'_>,
         theme: &Theme,
         label: &'static str,
         text: &'static str,

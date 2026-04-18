@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("commit_custom_children.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let hash: Arc<str> = Arc::from("9f8e7d6c5b4a3210feedbeefcafe123456789abc");
     let short_hash: Arc<str> = Arc::from(hash.chars().take(7).collect::<String>());
     let timestamp = SystemTime::now()

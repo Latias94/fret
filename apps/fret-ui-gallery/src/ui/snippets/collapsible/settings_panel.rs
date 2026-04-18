@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("settings_panel.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -21,7 +21,7 @@ fn radius_input<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("settings_open", || false);
     let radius_x = cx.local_model_keyed("radius_x", || String::from("0"));
     let radius_y = cx.local_model_keyed("radius_y", || String::from("0"));

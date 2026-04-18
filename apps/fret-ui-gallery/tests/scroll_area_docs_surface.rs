@@ -49,7 +49,7 @@ fn scroll_area_usage_snippet_keeps_wrapper_chrome_and_copyable_root_lane() {
     let source = include_str!("../src/ui/snippets/scroll_area/usage.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "let area = shadcn::ScrollArea::new([content])",
         ".refine_layout(LayoutRefinement::default().w_full().h_full())",

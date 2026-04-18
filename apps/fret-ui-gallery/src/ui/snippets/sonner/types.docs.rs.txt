@@ -1,13 +1,13 @@
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{UiChild, AppComponentCx};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::AnyElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn type_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
     on_activate: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static,
 ) -> AnyElement {
@@ -17,7 +17,7 @@ fn type_button(
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let pending_promise = cx.local_model_keyed("docs_sonner_pending_promise", || {
         None::<shadcn::ToastId>

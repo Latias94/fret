@@ -55,7 +55,7 @@ fn tooltip_snippets_stay_copyable_and_docs_aligned() {
     let keyboard_focus = include_str!("../src/ui/snippets/tooltip/keyboard_focus.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::TooltipProvider::new()",
         "shadcn::TooltipTrigger::build(",

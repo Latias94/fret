@@ -325,7 +325,7 @@ impl View for TodoDemoView {
             ui::text("Add a task to get started")
                 .text_sm()
                 .text_color(ColorRef::Color(muted_foreground))
-                .into_element(cx)
+                .into_element_in(cx)
         } else if active_count == 0 {
             ui::h_flex(|cx| {
                 ui::children![
@@ -344,13 +344,13 @@ impl View for TodoDemoView {
             })
             .gap(Space::N1)
             .items_center()
-            .into_element(cx)
+            .into_element_in(cx)
         } else {
             let task_label = if active_count == 1 { "task" } else { "tasks" };
             ui::text(format!("{active_count} {task_label} left"))
                 .text_sm()
                 .text_color(ColorRef::Color(muted_foreground))
-                .into_element(cx)
+                .into_element_in(cx)
         };
 
         let title_block = ui::v_flex(|cx| {
@@ -402,7 +402,7 @@ impl View for TodoDemoView {
             })
             .gap(Space::N1p5)
             .w_full()
-            .into_element(cx)
+            .into_element_in(cx)
         });
 
         let header = ui::v_flex(|cx| {
@@ -510,7 +510,7 @@ impl View for TodoDemoView {
         .w_full()
         .items_stretch();
 
-        let rows = shadcn::ScrollArea::new([rows_body.into_element(cx)])
+        let rows = shadcn::ScrollArea::new([rows_body.into_element_in(cx)])
             .viewport_test_id(TEST_ID_ROWS)
             .ui()
             .w_full()
@@ -518,7 +518,7 @@ impl View for TodoDemoView {
             .flex_1()
             .min_h_0()
             .build()
-            .into_element(cx);
+            .into_element_in(cx);
 
         let rows_section = ui::container(|cx| ui::single(cx, rows))
             .px(responsive.section_padding_x)
@@ -562,7 +562,7 @@ impl View for TodoDemoView {
             .gap(Space::N2)
             .items_stretch()
             .w_full()
-            .into_element(cx)
+            .into_element_in(cx)
         } else {
             ui::h_flex(|cx| {
                 let mut children = vec![filters];
@@ -575,7 +575,7 @@ impl View for TodoDemoView {
             .items_center()
             .justify_between()
             .w_full()
-            .into_element(cx)
+            .into_element_in(cx)
         };
 
         let card_min_height = if responsive.fill_card_height {

@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("outline.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
     let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.cloud"));
 

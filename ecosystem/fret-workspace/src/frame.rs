@@ -2,7 +2,7 @@ use fret_core::{Color, Edges, Px};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, Overflow,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
 use fret_ui_kit::IntoUiElement;
 
 use crate::theme_tokens::{
@@ -238,6 +238,19 @@ impl<Center, Top, Left, Right, Bottom> WorkspaceFrame<Center, Top, Left, Right, 
                 )]
             },
         )
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(self, cx: &mut Cx) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        Center: IntoUiElement<H>,
+        Top: IntoUiElement<H>,
+        Left: IntoUiElement<H>,
+        Right: IntoUiElement<H>,
+        Bottom: IntoUiElement<H>,
+    {
+        self.into_element(cx.elements())
     }
 }
 

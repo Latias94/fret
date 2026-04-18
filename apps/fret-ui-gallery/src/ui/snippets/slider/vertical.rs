@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("vertical.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::primitives::slider::SliderOrientation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::h_flex(|cx| {
         vec![
             shadcn::Slider::new_controllable(cx, None, || vec![50.0])

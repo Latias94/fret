@@ -377,6 +377,10 @@ mod authoring_surface_policy_tests {
         );
         assert!(HELLO_COUNTER_EXAMPLE.contains("let count = count_state.layout_value(cx);"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("let step_text = step_state.layout_value(cx);"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("ui::text(count.to_string())"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("ui::text(status_text)"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("ui::text_block(if step_valid {"));
+        assert!(!HELLO_COUNTER_EXAMPLE.contains("cx.text_props("));
 
         assert!(TEXT_INPUT_EXAMPLE.contains(".locals_with((&text_state, &submitted_count_state))"));
         assert!(
@@ -597,7 +601,7 @@ mod authoring_surface_policy_tests {
         assert!(normalized.contains("cx.data().update_after_mutation_completion("));
         assert!(normalized.contains("handle.submit(models,window,draft)"));
         assert!(normalized.contains("handle.retry_last(models,window)"));
-        assert!(normalized.contains("shadcn::Sonner::global(cx.app)"));
+        assert!(normalized.contains("shadcn::Sonner::global(cx.app())"));
         assert!(normalized.contains("sonner.toast_success_message("));
         assert!(normalized.contains("sonner.toast_error_message("));
         assert!(MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("UiActionHostAdapter"));
@@ -959,7 +963,7 @@ mod authoring_surface_policy_tests {
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("app::prelude::*"));
         assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("advanced::prelude::*"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::bump_asset_reload_epoch"));
-        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::asset_reload_epoch(&*cx.app)"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::asset_reload_epoch(cx.app())"));
         assert!(
             !ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
         );
@@ -1210,6 +1214,17 @@ mod authoring_surface_policy_tests {
                 "fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> impl IntoUiElement<KernelApp>",
             ],
         );
+    }
+
+    #[test]
+    fn advanced_interaction_examples_keep_pointer_region_on_explicit_elements_escape_hatch() {
+        let drag = DRAG_EXAMPLE.split_whitespace().collect::<String>();
+        assert!(drag.contains("letdraggable=cx.elements().pointer_region(region,|cx|{"));
+        assert!(!drag.contains("letdraggable=cx.pointer_region(region,|cx|{"));
+
+        let gizmo = GIZMO_EXAMPLE.split_whitespace().collect::<String>();
+        assert!(gizmo.contains("cx.elements().pointer_region(pointer,|cx|{"));
+        assert!(!gizmo.contains("cx.pointer_region(pointer,|cx|{"));
     }
 
     #[test]

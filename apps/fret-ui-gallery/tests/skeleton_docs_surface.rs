@@ -50,7 +50,7 @@ fn skeleton_snippets_stay_copyable_and_docs_aligned() {
     let card = include_str!("../src/ui/snippets/skeleton/card.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::Skeleton::new()",
         ".refine_style(ChromeRefinement::default().rounded(Radius::Full))",
@@ -65,7 +65,7 @@ fn skeleton_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         ".w_px(Px(48.0))",
         ".w_px(Px(250.0))",
         ".w_px(Px(200.0))",
@@ -78,7 +78,7 @@ fn skeleton_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "shadcn::card(",
         "shadcn::card_header(",
         "shadcn::card_content(",

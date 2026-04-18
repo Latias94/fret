@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("notes.rs");
 
 // region: example
 use super::last_action_model;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[allow(dead_code)]
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let last_action = last_action_model(cx);
     let last = cx
         .app

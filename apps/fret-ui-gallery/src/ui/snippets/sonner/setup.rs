@@ -3,10 +3,10 @@ pub const DOCS_SOURCE: &str = include_str!("setup.docs.rs.txt");
 pub const SOURCE: &str = include_str!("setup.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let intro = ui::v_flex(|cx| {
         vec![
             shadcn::raw::typography::muted("Mount a `Toaster` once per window.").into_element(cx),

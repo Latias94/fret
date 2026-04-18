@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("theming.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn token_chip(cx: &mut UiCx<'_>, token: &'static str) -> AnyElement {
+fn token_chip(cx: &mut AppComponentCx<'_>, token: &'static str) -> AnyElement {
     let props = decl_style::container_props(
         &cx.theme().snapshot(),
         ChromeRefinement::default()
@@ -30,7 +30,7 @@ fn token_chip(cx: &mut UiCx<'_>, token: &'static str) -> AnyElement {
     })
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         vec![
             ui::h_flex(|cx| {

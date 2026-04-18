@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("message_demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui_ai as ui_ai;
@@ -10,7 +10,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let last_action_model = cx.local_model_keyed("last_action", || None::<Arc<str>>);
     let last_action = cx
         .get_model_cloned(&last_action_model, Invalidation::Paint)

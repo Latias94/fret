@@ -3,14 +3,14 @@ pub const SOURCE: &str = include_str!("autocomplete.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);
     let value = outlined_autocomplete.query_model();
     let dialog = material3::Dialog::uncontrolled(cx);

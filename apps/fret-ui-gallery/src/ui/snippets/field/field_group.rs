@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("field_group.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let responses_push = cx.local_model_keyed("responses_push", || true);
     let tasks_push = cx.local_model_keyed("tasks_push", || false);
     let tasks_email = cx.local_model_keyed("tasks_email", || false);

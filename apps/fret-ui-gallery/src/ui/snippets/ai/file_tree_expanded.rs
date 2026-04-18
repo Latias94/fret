@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("file_tree_expanded.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui_ai::FileTree::new([ui_ai::FileTreeFolder::new("src", "src")
         .children([
             ui_ai::FileTreeFolder::new("src/components", "components")
@@ -29,7 +29,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .into_element(cx)
 }
 
-pub fn preview(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn preview(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let tree = render(cx);
 
     ui::v_flex(move |_cx| vec![tree])

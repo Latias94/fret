@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("deprecated.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -17,7 +17,7 @@ where
         .justify_center()
 }
 
-pub fn render(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let deprecated_card = shadcn::card(|cx| {
         ui::children![
             cx;

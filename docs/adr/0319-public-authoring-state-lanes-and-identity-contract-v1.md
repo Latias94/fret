@@ -87,14 +87,37 @@ must require an explicit `cx.elements()` escape hatch from app-facing code.
 
 This ADR does not require deleting broad render-authoring sugar in one step.
 
-If the repo later removes `AppUi`'s `Deref` bridge to `ElementContext`, it must first separate the
-ordinary app-facing render-authoring surface from the component/internal identity lane rather than
-forcing ordinary builder/helper APIs behind `cx.elements()`.
+That separation is now part of the shipped contract: `AppUi` no longer exposes a `Deref` bridge
+to `ElementContext`, and ordinary builder/helper APIs are expected to close over explicit
+app-facing capability lanes (`AppRenderContext<'a>`, `AppRenderCx<'a>`, `into_element_in(...)`)
+rather than forcing default-path code through `cx.elements()`.
 
 Low-level environment/responsive reads are a separate explicit secondary lane on
 `fret::env::{...}`. Keep query-configuration nouns such as `ContainerQueryHysteresis`,
 `ViewportQueryHysteresis`, and `ViewportOrientation` on that same explicit lane rather than
 mistaking them for raw component/internal `ElementContext` debt or widening the default prelude.
+
+Small explicit runtime/command helpers may still live on the ordinary `AppUi` lane when they do
+not reopen the broader component/internal substrate. In particular, frame-driven progression such
+as `request_animation_frame()` and explicitly imported command-gating reads/dispatch
+(`fret::actions::ElementCommandGatingExt`) belong on the app-facing lane rather than depending on
+implicit `AppUi -> ElementContext` inheritance.
+Committed geometry-query helpers may also live on that app-facing lane when they only observe or
+create named layout-query regions rather than exposing raw identity/state primitives. In
+particular, `layout_query_bounds(...)`, `layout_query_region(...)`, and
+`layout_query_region_with_id(...)` are part of the ordinary app authoring surface, not the
+component/internal state lane. Likewise, direct late-builder roots that only need to land
+authored trigger/content children should expose explicit capability-first `*_in(...)` entry points
+instead of forcing app-facing code back through raw `ElementContext` or implicit `AppUi ->
+ElementContext` inheritance.
+Conversely, low-level raw text/leaf authoring that still depends on `ElementContext` primitives
+such as `text_props(...)` or direct raw `into_element(...)` landing remains on the explicit
+`cx.elements()` lane until the repo commits a narrower app-facing alternative.
+Manual `render_root_with_app_ui(...)` proofs that still own a raw layout/build phase should keep
+tracked reads on `AppUi` first and then enter `cx.elements()` explicitly for that phase rather
+than widening the default façade. Mixed app-facing/interop roots may instead keep ordinary
+late-landing on the existing capability-first lane (`into_element_in(...)`) and reserve
+`cx.elements()` only for the genuinely raw interop seam.
 
 ### D1.2 — Extracted helper surfaces should converge on the same narrowed render-authoring lane
 
@@ -107,15 +130,23 @@ During the current migration window:
   `fret::app::AppRenderContext<'a>`,
 - the default concrete carrier for closure-local or inline helper families is
   `fret::app::AppRenderCx<'a>`,
+- app-hosted component/snippet helpers that deliberately target the default `fret::app::App`
+  host should prefer `AppComponentCx<'a>`,
 - `RenderContextAccess<'a, App>` remains the underlying generic capability,
 - grouped app-facing helper namespaces such as `UiCxActionsExt` / `UiCxDataExt` may continue to
   power that lane,
 - and `UiCx` should be treated only as the compatibility old-name alias when an older helper still
-  intentionally wants `ElementContext<App>`.
+  has not migrated to `AppRenderContext<'a>`, `AppRenderCx<'a>`, or `AppComponentCx<'a>`.
+
+Named helper families that only need grouped state/query access plus ordinary late-landing should
+migrate from `UiCx` to `fret::app::AppRenderContext<'a>` rather than widening `AppUi` again or
+silently reclassifying the whole surface as raw-owner authoring.
 
 The long-term target is not “`AppUi` is narrow but `UiCx` remains a raw `ElementContext` alias”.
 The long-term target is one explicit app-facing render-authoring lane plus one explicit
 component/internal identity lane.
+In the shipped default prelude, `UiCx` is no longer reexported; reaching for it requires explicit
+import / advanced-surface intent.
 
 ### D2 — `LocalState<T>` remains the only blessed first-contact local-state story
 

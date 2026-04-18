@@ -1,16 +1,16 @@
 pub const SOURCE: &str = include_str!("badge.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Corners, Px};
 use fret_ui::element::{AnyElement, ContainerProps, Length};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
-        let anchor = |cx: &mut UiCx<'_>, size: Px, test_id: &'static str| {
+        let anchor = |cx: &mut AppComponentCx<'_>, size: Px, test_id: &'static str| {
             let mut props = ContainerProps::default();
             props.layout.size.width = Length::Px(size);
             props.layout.size.height = Length::Px(size);

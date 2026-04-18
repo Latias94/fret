@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::IconId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
@@ -9,7 +9,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn state_row(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     text: Arc<str>,
     test_id: Arc<str>,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -27,7 +27,7 @@ fn state_row(
 }
 
 fn state_rows(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     value: &Model<Option<Arc<str>>>,
     query: &Model<String>,
     test_id_prefix: &'static str,
@@ -56,7 +56,7 @@ fn state_rows(
     .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || None::<Arc<str>>);
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);

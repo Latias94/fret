@@ -2,13 +2,13 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use super::{default_month, fixed_today, format_date_ppp_en};
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::FontWeight;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let today = fixed_today();
     let month = cx.local_model_keyed("month", || default_month(today));
     let selected = cx.local_model_keyed("selected", || None::<Date>);

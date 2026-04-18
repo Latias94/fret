@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("compact_builder.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -10,7 +10,10 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
+fn slide_card(
+    cx: &mut AppComponentCx<'_>,
+    idx: usize,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -38,12 +41,12 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App
     shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
-fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
+fn slide(cx: &mut AppComponentCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
     let card = slide_card(cx, idx).into_element(cx);
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let items = (1..=3)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx).into_element(cx)))
         .collect::<Vec<_>>();

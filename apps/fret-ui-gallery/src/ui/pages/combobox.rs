@@ -1,11 +1,11 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::combobox as snippets;
 
 pub(super) fn preview_combobox(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Model<String>,

@@ -240,6 +240,7 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
             let disable_outside_days_value = disable_outside_days.layout_value(cx);
             let disable_weekends_value = disable_weekends.layout_value(cx);
             let disabled_value = disabled.layout_value(cx);
+            let cx = cx.elements();
 
             let header = ui::h_row(|cx| {
                 [

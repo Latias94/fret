@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("rich_title.rs");
 
 // region: example
 use fret::children::UiElementSinkExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
@@ -27,7 +27,7 @@ fn rich_title_text() -> AttributedText {
     AttributedText::new(text, Arc::<[TextSpan]>::from([plain, underlined, suffix]))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::alert(|cx| {
         ui::children![
             cx;

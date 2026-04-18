@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("basic_demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Theme;
@@ -33,7 +33,7 @@ struct PaymentRow {
 }
 
 fn bind_selection_actions(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     state: Model<TableState>,
     data: Arc<[PaymentRow]>,
     columns: Arc<[ColumnDef<PaymentRow>]>,
@@ -92,7 +92,7 @@ where
 }
 
 fn bottom_controls(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     state: Model<TableState>,
     output: Model<TableViewOutput>,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -157,7 +157,7 @@ fn bottom_controls(
     .gap(Space::N2)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
         let assets = cx.slot_state(
             || {

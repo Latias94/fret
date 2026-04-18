@@ -2,7 +2,7 @@
 pub const SOURCE: &str = include_str!("gallery.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
@@ -12,12 +12,15 @@ use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+fn icon(
+    cx: &mut AppComponentCx<'_>,
+    id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn icon_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     icon_id: &'static str,
     variant: shadcn::ButtonVariant,
     test_id: Arc<str>,
@@ -32,7 +35,7 @@ fn icon_button(
 }
 
 fn outline_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new(label)
@@ -41,7 +44,7 @@ fn outline_button(
 }
 
 fn outline_button_sm(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     shadcn::Button::new(label)
@@ -51,7 +54,7 @@ fn outline_button_sm(
 }
 
 fn item_basic(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     variant: shadcn::ItemVariant,
     title: &'static str,
     description: Option<&'static str>,
@@ -76,7 +79,7 @@ fn item_basic(
 }
 
 fn item_icon(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     variant: shadcn::ItemVariant,
     icon_id: &'static str,
     title: &'static str,
@@ -109,7 +112,7 @@ fn item_icon(
 }
 
 fn item_avatar(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     username: &'static str,
     message: &'static str,
     initials: &'static str,
@@ -142,7 +145,7 @@ fn item_avatar(
 }
 
 fn item_team(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     test_id: &'static str,
     action_test_id: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -185,7 +188,7 @@ fn item_team(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let download_progress = cx.local_model_keyed("download_progress", || 50.0);

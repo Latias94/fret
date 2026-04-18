@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("destructive.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use std::sync::Arc;
 
 use fret_core::window::ColorScheme;
@@ -69,7 +69,7 @@ fn destructive_description_props(settings_color: fret_core::Color) -> Selectable
     props
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
 
     shadcn::AlertDialog::new(open)

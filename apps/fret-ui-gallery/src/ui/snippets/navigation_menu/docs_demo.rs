@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("docs_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -14,7 +14,7 @@ const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 fn list_item(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     muted_foreground: Color,
     model: Model<Option<Arc<str>>>,
     title: &'static str,
@@ -74,7 +74,7 @@ fn list_item(
 }
 
 fn icon_row(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     model: Model<Option<Arc<str>>>,
     icon: &'static str,
     label: &'static str,
@@ -95,7 +95,7 @@ fn icon_row(
 }
 
 fn featured_home_link(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     muted_background: Color,
     muted_foreground: Color,
     model: Model<Option<Arc<str>>>,
@@ -157,7 +157,7 @@ fn featured_home_link(
 }
 
 fn text_link(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     model: Model<Option<Arc<str>>>,
     label: &'static str,
     test_id: &'static str,
@@ -169,7 +169,7 @@ fn text_link(
         .action(command)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let muted_background = cx.with_theme(|theme| theme.color_token("muted"));
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
     let demo_value = cx.local_model(|| None::<Arc<str>>);

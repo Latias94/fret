@@ -1,22 +1,22 @@
 pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let demo_name = cx.local_model_keyed("demo_name", || String::from("Pedro Duarte"));
     let demo_username = cx.local_model_keyed("demo_username", || String::from("@peduarte"));
 
-    let side_sheet = |cx: &mut UiCx<'_>,
+    let side_sheet = |cx: &mut AppComponentCx<'_>,
                       id: &'static str,
                       label: &'static str,
                       side: shadcn::SheetSide| {
         let name_model = demo_name.clone();
         let username_model = demo_username.clone();
 
-        let row = |cx: &mut UiCx<'_>,
+        let row = |cx: &mut AppComponentCx<'_>,
                    label: &'static str,
                    model: Model<String>,
                    input_test_id: String| {
@@ -99,7 +99,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     // Match upstream demo layout: a strict 2x2 grid of side triggers.
     ui::v_flex(|cx| {
-        let row = |cx: &mut UiCx<'_>,
+        let row = |cx: &mut AppComponentCx<'_>,
                    a: (&'static str, &'static str, shadcn::SheetSide),
                    b: (&'static str, &'static str, shadcn::SheetSide)| {
             let (id_a, label_a, side_a) = a;

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("label.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -14,7 +14,7 @@ where
         .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.keyed("ui_gallery.progress.label", |cx| {
         let label_row = ui::h_flex(|cx| {
             vec![

@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("icons.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::tabs_uncontrolled(cx, Some("preview"), |cx| {
         [
             shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())

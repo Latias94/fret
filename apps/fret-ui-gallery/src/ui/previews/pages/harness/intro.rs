@@ -1,9 +1,13 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
-fn card(cx: &mut UiCx<'_>, title: &'static str, desc: &'static str) -> impl UiChild + use<> {
+fn card(
+    cx: &mut AppComponentCx<'_>,
+    title: &'static str,
+    desc: &'static str,
+) -> impl UiChild + use<> {
     shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new(title).into_element(cx),
@@ -14,7 +18,7 @@ fn card(cx: &mut UiCx<'_>, title: &'static str, desc: &'static str) -> impl UiCh
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
 }
 
-pub(in crate::ui) fn preview_intro(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_intro(cx: &mut AppComponentCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     let grid = ui::h_flex(|cx| {
         ui::children![cx;
             card(

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("audio_player_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
@@ -15,7 +15,7 @@ fn demo_speech_data() -> ui_ai::AudioPlayerSpeechData {
 }
 
 fn render_demo_audio_player(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     element: ui_ai::AudioPlayerElement,
     model_key: &'static str,
     test_prefix: &'static str,
@@ -137,7 +137,7 @@ fn render_demo_audio_player(
     .into_element(cx)
 }
 
-pub fn render_speech_result(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render_speech_result(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     render_demo_audio_player(
         cx,
         ui_ai::AudioPlayerElement::new().speech_data(demo_speech_data()),

@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("snippet_plain.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::LayoutRefinement;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui_ai::Snippet::with_code(Arc::<str>::from("git clone https://github.com/user/repo"))
         .test_id("ui-ai-snippet-plain-root")
         .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))

@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("chain_of_thought_composable.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::FontWeight;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::{Items, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui_ai::ChainOfThought::new()
         .default_open(true)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())

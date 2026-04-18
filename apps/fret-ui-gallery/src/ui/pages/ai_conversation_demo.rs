@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_conversation_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let demo = snippets::conversation_demo::render(cx);
     let features = doc_layout::notes_block([
         "Automatic stick-to-bottom behavior when new messages arrive and the reader is already near the tail.",
@@ -84,7 +87,7 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     vec![body.into_element(cx)]
 }
 
-fn conversation_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn conversation_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Method", "Type", "Default", "Description"],

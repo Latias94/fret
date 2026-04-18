@@ -14,7 +14,7 @@ use fret_ui_editor::controls::{
     TextFieldOutcome,
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::{ColorRef, Space};
+use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};
 use fret_workspace::WorkspaceFrame;
 
 const ENV_EDITOR_PRESET: &str = "FRET_EDITOR_NOTES_DEMO_PRESET";
@@ -146,24 +146,24 @@ impl View for EditorNotesDemoView {
             .w_px(Px(256.0))
             .flex_shrink_0()
             .h_full()
-            .into_element(cx)
+            .into_element_in(cx)
             .test_id(TEST_ID_LEFT_RAIL);
         let right_rail = ui::container(|_cx| [inspector])
             .w_px(Px(360.0))
             .flex_shrink_0()
             .h_full()
-            .into_element(cx)
+            .into_element_in(cx)
             .test_id(TEST_ID_RIGHT_RAIL);
         let frame = WorkspaceFrame::new(center)
             .left(left_rail)
             .right(right_rail)
             .background(Some(theme.color_token("background")))
-            .into_element(cx);
+            .into_element_in(cx);
 
         ui::container(|_cx| [frame])
             .p(Space::N4)
             .size_full()
-            .into_element(cx)
+            .into_element_in(cx)
             .test_id(TEST_ID_ROOT)
             .into()
     }

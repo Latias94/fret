@@ -5,10 +5,9 @@ use fret::app::prelude::*;
 use fret::{
     icons::{IconId, icon},
     semantics::SemanticsRole,
-    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap},
+    style::{ChromeRefinement, ColorRef, Radius, Space},
 };
-use fret_core::{Corners, FontWeight, TextAlign};
-use fret_ui::element::TextProps;
+use fret_core::{Corners, TextAlign};
 
 mod act {
     fret::actions!([
@@ -135,21 +134,12 @@ impl View for HelloCounterView {
             ]
         });
 
-        let count_text = cx
-            .text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::from(count.to_string()),
-                style: Some(fret_core::TextStyle {
-                    size: Px(72.0),
-                    weight: FontWeight::BOLD,
-                    ..Default::default()
-                }),
-                color: Some(count_color),
-                align: TextAlign::Center,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            })
+        let count_text = ui::text(count.to_string())
+            .text_size_px(Px(72.0))
+            .font_bold()
+            .text_color(ColorRef::Color(count_color))
+            .text_align(TextAlign::Center)
+            .nowrap()
             .test_id(TEST_ID_COUNT);
 
         let status_text: Arc<str> = Arc::from(if count == 0 {
@@ -159,16 +149,10 @@ impl View for HelloCounterView {
         } else {
             "Status: decreasing"
         });
-        let status_line = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: status_text,
-            style: None,
-            color: Some(theme.color_token("muted-foreground")),
-            align: TextAlign::Center,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            ink_overflow: Default::default(),
-        });
+        let status_line = ui::text(status_text)
+            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+            .text_align(TextAlign::Center)
+            .nowrap();
 
         let step_badge =
             shadcn::Badge::new(format!("Step: {effective_step}")).variant(if step_valid {
@@ -177,20 +161,13 @@ impl View for HelloCounterView {
                 shadcn::BadgeVariant::Destructive
             });
 
-        let step_help = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::from(if step_valid {
-                "Edit step, then press Enter to increment."
-            } else {
-                "Step must be a positive integer (using 1)."
-            }),
-            style: None,
-            color: Some(theme.color_token("muted-foreground")),
-            align: TextAlign::Center,
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            ink_overflow: Default::default(),
-        });
+        let step_help = ui::text_block(if step_valid {
+            "Edit step, then press Enter to increment."
+        } else {
+            "Step must be a positive integer (using 1)."
+        })
+        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+        .text_align(TextAlign::Center);
 
         let step_input = shadcn::Input::new(&step_state)
             .placeholder("Step (e.g. 1)")

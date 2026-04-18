@@ -1,12 +1,12 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::table as snippets;
 
 const TABLE_PAGE_INTRO: &str = "Preview mirrors the shadcn Table docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Footer`, `Actions`, `Data Table`, `RTL`, and `API Reference`; `Children (Fret)` and `Notes` stay as focused follow-ups for the composable-children decision and remaining public-surface guidance.";
 
-pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_table(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let footer = snippets::footer::render(cx);

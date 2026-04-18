@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("field_association.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || Some(Arc::<str>::from("dark")));
     let open = cx.local_model_keyed("open", || false);
 

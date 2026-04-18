@@ -12,7 +12,10 @@ use fret_ui::element::{
     LayoutStyle, Length, MainAlign, RenderTransformProps, SemanticFlexProps, SemanticsDecoration,
     SizeStyle, SpacingEdges,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
+use fret_ui::{
+    ElementContext, ElementContextAccess, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot,
+    UiHost,
+};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
@@ -345,6 +348,19 @@ impl AlertDialog {
         )
     }
 
+    #[track_caller]
+    pub fn build_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl IntoUiElement<H>,
+        content: impl IntoUiElement<H>,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.build(cx.elements(), trigger, content)
+    }
+
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
     ///
     /// This is a thin adapter over [`AlertDialog::into_element`] that accepts shadcn-style parts
@@ -593,6 +609,19 @@ impl AlertDialog {
             let content_element = content_element_for_trigger.get().or(prev_content_element);
             radix_alert_dialog::apply_alert_dialog_trigger_a11y(trigger, is_open, content_element)
         })
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), trigger, content)
     }
 }
 

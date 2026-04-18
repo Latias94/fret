@@ -136,6 +136,7 @@ impl View for DropShadowDemoView {
 
         let enabled = enabled_state.layout_value(cx);
         let stress = stress_state.layout_value(cx);
+        let cx = cx.elements();
 
         let stage = cx.container(
             ContainerProps {

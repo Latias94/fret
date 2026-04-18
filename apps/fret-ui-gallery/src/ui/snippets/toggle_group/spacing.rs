@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("spacing.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn item<H: UiHost>(
@@ -17,7 +17,7 @@ fn item<H: UiHost>(
     .a11y_label(format!("Toggle {}", value))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())
         .variant(shadcn::ToggleVariant::Outline)
         .size(shadcn::ToggleSize::Sm)

@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("checkbox.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let hard_disks = cx.local_model_keyed("hard_disks", || true);
     let external_disks = cx.local_model_keyed("external_disks", || false);
     let cds_dvds = cx.local_model_keyed("cds_dvds", || false);

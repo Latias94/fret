@@ -1,10 +1,14 @@
 use super::super::*;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::avatar as snippets;
 
-fn avatar_api_table<I>(cx: &mut UiCx<'_>, title: &'static str, rows: I) -> impl UiChild + use<I>
+fn avatar_api_table<I>(
+    cx: &mut AppComponentCx<'_>,
+    title: &'static str,
+    rows: I,
+) -> impl UiChild + use<I>
 where
     I: IntoIterator<Item = [&'static str; 3]>,
 {
@@ -19,7 +23,7 @@ where
         .into_element(cx)
 }
 
-fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn avatar_api_reference(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar = avatar_api_table(
         cx,
         "Avatar",
@@ -144,7 +148,7 @@ fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)
 }
 
-pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_avatar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);

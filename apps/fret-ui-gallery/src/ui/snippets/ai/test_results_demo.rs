@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("test_results_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Edges, Px};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 
-fn progress_section(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn progress_section(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).clone();
     let progress = ui_ai::TestResultsProgress::from_context()
         .test_id("ui-ai-test-results-progress")
@@ -30,9 +30,9 @@ fn progress_section(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     cx.container(props, move |_cx| vec![progress])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let summary = ui_ai::TestResultsSummaryData::new(12, 2, 1, 15).duration_ms(3245);
-    let test_parts = |cx: &mut UiCx<'_>| {
+    let test_parts = |cx: &mut AppComponentCx<'_>| {
         ui::children![
             cx;
             ui_ai::TestStatus::from_context().into_element(cx),

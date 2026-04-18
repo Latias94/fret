@@ -1,11 +1,11 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::diagnostics::scroll_area as diagnostics;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::scroll_area as snippets;
 
-pub(super) fn preview_scroll_area(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_scroll_area(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let horizontal = snippets::horizontal::render(cx);

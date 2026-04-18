@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("structure.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn sidebar_icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement {
+fn sidebar_icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement {
     shadcn::raw::icon::icon(cx, IconId::new_static(id)).into_element(cx)
 }
 
@@ -24,7 +24,7 @@ fn set_text_model(model: Model<Arc<str>>, value: &'static str) -> OnActivate {
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let search = cx.local_model_keyed("search", String::new);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("overview"));
     let last_action = cx.local_model_keyed("last_action", || Arc::<str>::from("none"));

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("hijri.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -27,7 +27,7 @@ fn today_from_env_or_now() -> Date {
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
     let month = cx.local_model_keyed("month", || SolarHijriMonth::from_gregorian(today));
     let selected = cx.local_model_keyed("selected", || Some(today));

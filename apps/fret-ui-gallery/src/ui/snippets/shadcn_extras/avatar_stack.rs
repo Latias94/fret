@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("avatar_stack.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn stack<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str) -> AnyElement {
@@ -18,7 +18,7 @@ fn stack<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str) -> An
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     fret_ui_kit::ui::h_flex(|cx| {
         vec![
             fret_ui_kit::ui::v_flex(|cx| {

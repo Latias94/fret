@@ -43,7 +43,7 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     let notes = include_str!("../src/ui/snippets/resizable/notes.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "let fractions = cx.local_model_keyed(\"ui-gallery-resizable-usage-fractions\", || vec![0.5, 0.5]);",
         "shadcn::resizable_panel_group(cx, fractions, |cx| {",

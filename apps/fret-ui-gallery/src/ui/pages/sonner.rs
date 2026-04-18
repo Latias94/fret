@@ -1,9 +1,12 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::sonner as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-fn prose_block<const N: usize>(cx: &mut UiCx<'_>, lines: [&'static str; N]) -> AnyElement {
+fn prose_block<const N: usize>(
+    cx: &mut AppComponentCx<'_>,
+    lines: [&'static str; N],
+) -> AnyElement {
     ui::v_flex(move |cx| {
         lines
             .into_iter()
@@ -16,7 +19,7 @@ fn prose_block<const N: usize>(cx: &mut UiCx<'_>, lines: [&'static str; N]) -> A
     .into_element(cx)
 }
 
-pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let usage = snippets::usage::render(cx);
     let demo = snippets::demo::render(cx);
     let about = prose_block(

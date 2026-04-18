@@ -5,6 +5,7 @@ use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::ViewportFit;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
+use fret_ui_kit::IntoUiElementInExt as _;
 
 const DEFAULT_VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const SIZE_PRESET_640: &str = "640x360";
@@ -73,22 +74,31 @@ impl View for EmbeddedViewportDemoView {
             ]
         })
         .gap(Space::N1)
-        .into_element(cx);
+        .into_element_in(cx);
 
         let size_controls = shadcn::ToggleGroup::single(&size_preset_state)
             .deselectable(false)
             .variant(shadcn::ToggleVariant::Outline)
             .spacing(Space::N2)
             .items([
-                shadcn::ToggleGroupItem::new(SIZE_PRESET_640, [cx.text("640×360")])
-                    .a11y_label("Viewport size 640 by 360"),
-                shadcn::ToggleGroupItem::new(SIZE_PRESET_960, [cx.text("960×540")])
-                    .a11y_label("Viewport size 960 by 540"),
-                shadcn::ToggleGroupItem::new(SIZE_PRESET_1280, [cx.text("1280×720")])
-                    .a11y_label("Viewport size 1280 by 720"),
+                shadcn::ToggleGroupItem::new(
+                    SIZE_PRESET_640,
+                    [ui::text("640×360").into_element_in(cx)],
+                )
+                .a11y_label("Viewport size 640 by 360"),
+                shadcn::ToggleGroupItem::new(
+                    SIZE_PRESET_960,
+                    [ui::text("960×540").into_element_in(cx)],
+                )
+                .a11y_label("Viewport size 960 by 540"),
+                shadcn::ToggleGroupItem::new(
+                    SIZE_PRESET_1280,
+                    [ui::text("1280×720").into_element_in(cx)],
+                )
+                .a11y_label("Viewport size 1280 by 720"),
             ])
             .refine_layout(LayoutRefinement::default().flex_none())
-            .into_element(cx);
+            .into_element_in(cx);
 
         let info = ui::v_flex(|cx| {
             ui::children![
@@ -105,12 +115,12 @@ impl View for EmbeddedViewportDemoView {
             ]
         })
         .gap(Space::N1)
-        .into_element(cx);
+        .into_element_in(cx);
 
         let viewport = self
             .embedded
             .panel(
-                cx,
+                cx.elements(),
                 embedded::EmbeddedViewportPanelProps {
                     fit: ViewportFit::Contain,
                     opacity: 1.0,
@@ -130,13 +140,13 @@ impl View for EmbeddedViewportDemoView {
                     .border_color(ColorRef::Color(theme.color_token("border")))
                     .w_full()
                     .h_px(Px(420.0))
-                    .into_element(cx),
+                    .into_element_in(cx),
             ]),
         ])
         .ui()
         .w_full()
         .max_w(Px(980.0))
-        .into_element(cx);
+        .into_element_in(cx);
 
         embedded_viewport_page(cx, theme, viewport_card, diag_enabled())
     }

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("conformance_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -15,7 +15,7 @@ fn base_items() -> Vec<shadcn::ComboboxItem> {
 }
 
 pub fn render(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Model<String>,

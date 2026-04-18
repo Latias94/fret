@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("guide_demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
@@ -39,7 +39,7 @@ struct DemoProcessTableAssets {
 }
 
 fn bind_selection_actions(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     state: Model<TableState>,
     data: Arc<[DemoProcessRow]>,
     columns: Arc<[ColumnDef<DemoProcessRow>]>,
@@ -97,7 +97,7 @@ where
         .justify_end()
 }
 
-fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let _ = cx;
     ui::v_flex(move |cx| {
         let assets = cx.slot_state(
@@ -525,7 +525,7 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     guide_demo_content(cx)
         .into_element(cx)
         .test_id("ui-gallery-data-table-guide-demo")

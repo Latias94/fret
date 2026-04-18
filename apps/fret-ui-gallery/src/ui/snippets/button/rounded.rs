@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rounded.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -16,7 +16,7 @@ where
         .items_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     wrap_row(|cx| {
         vec![
             shadcn::Button::new("Get Started")

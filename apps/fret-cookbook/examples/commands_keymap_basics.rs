@@ -84,7 +84,7 @@ impl View for CommandsKeymapBasicsView {
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };
 
         let shortcut = cx
-            .app
+            .app()
             .global::<KeymapService>()
             .and_then(|svc| {
                 svc.keymap
@@ -145,12 +145,12 @@ impl View for CommandsKeymapBasicsView {
         .gap(Space::N3)
         .w_full();
 
-        let panel_state_text = cx
-            .text(format!(
-                "Panel: {}",
-                if panel_open { "Open" } else { "Closed" }
-            ))
-            .test_id(TEST_ID_PANEL_STATE);
+        let panel_state_text = ui::text(format!(
+            "Panel: {}",
+            if panel_open { "Open" } else { "Closed" }
+        ))
+        .into_element_in(cx)
+        .test_id(TEST_ID_PANEL_STATE);
         let panel_open_indicator = shadcn::Switch::from_checked(panel_open)
             .disabled(true)
             .test_id(TEST_ID_PANEL_OPEN);

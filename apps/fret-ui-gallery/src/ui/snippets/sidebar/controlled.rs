@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("controlled.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -19,7 +19,7 @@ fn resolve_selected<H: UiHost>(
 }
 
 fn menu_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     selected_model: Model<Arc<str>>,
     active_value: &Arc<str>,
     value: &'static str,
@@ -45,7 +45,7 @@ fn menu_button(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || true);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("design-engineering"));
 

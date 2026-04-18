@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("persona_demo.rs");
 use fret::app::UiCxActionsExt as _;
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
@@ -56,13 +56,16 @@ fn state_item(
         .test_id(format!("ui-ai-persona-demo-state-{}", state.as_str()))
 }
 
-fn variant_item(cx: &mut UiCx<'_>, variant: ui_ai::PersonaVariant) -> shadcn::ToggleGroupItem {
+fn variant_item(
+    cx: &mut AppComponentCx<'_>,
+    variant: ui_ai::PersonaVariant,
+) -> shadcn::ToggleGroupItem {
     shadcn::ToggleGroupItem::new(variant.as_str(), [cx.text(variant.label())])
         .a11y_label(variant.label())
         .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let state_model = cx.local_model_keyed("state", || {
         Some(Arc::<str>::from(ui_ai::PersonaState::Idle.as_str()))
     });

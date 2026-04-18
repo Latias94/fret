@@ -264,7 +264,7 @@ impl View for CustomEffectV2View {
             .set::<act::Reset>(vec![10.0]);
         cx.actions().local(&st.debug_input).set::<act::Reset>(false);
 
-        view(cx, &mut st)
+        view(cx.elements(), &mut st)
     }
 }
 

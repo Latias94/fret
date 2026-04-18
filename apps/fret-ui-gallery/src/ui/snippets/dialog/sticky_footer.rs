@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("sticky_footer.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -35,7 +35,7 @@ fn lorem_block<H: UiHost>(
     .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
 
     shadcn::Dialog::new(open.clone())

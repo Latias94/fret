@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::primitives::checkbox::CheckedState;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -32,7 +32,7 @@ fn table_row<H: UiHost>(
     .border_bottom(true)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let table_row_1 = cx.local_model_keyed("table_row_1", || true);
     let table_row_2 = cx.local_model_keyed("table_row_2", || false);
     let table_row_3 = cx.local_model_keyed("table_row_3", || false);

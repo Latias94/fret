@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let email = cx.local_model_keyed("direction_demo_email", String::new);
     let password = cx.local_model_keyed("direction_demo_password", String::new);
     let max_w_sm = LayoutRefinement::default()

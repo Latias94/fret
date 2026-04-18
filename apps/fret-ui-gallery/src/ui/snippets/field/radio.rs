@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
     let monthly_id = "ui-gallery-field-radio-monthly";
     let yearly_id = "ui-gallery-field-radio-yearly";

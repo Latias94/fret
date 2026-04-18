@@ -1,5 +1,5 @@
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{UiChild, AppComponentCx};
 use fret_core::Edges;
 use fret_runtime::Model;
 use fret_ui::Theme;
@@ -10,7 +10,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
+fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
     let theme = Theme::global(&*cx.app).clone();
 
     let number = ui::text(format!("{idx}"))
@@ -39,7 +39,7 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App
 }
 
 fn hover_pause_overlay(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     autoplay_api: Model<Option<shadcn::CarouselAutoplayApi>>,
 ) -> AnyElement {
     cx.hover_region(
@@ -75,7 +75,7 @@ fn hover_pause_overlay(
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
     let autoplay = shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
         .pause_on_hover(false)

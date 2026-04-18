@@ -2,10 +2,10 @@ pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
 use super::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::facade as shadcn;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
     let image = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
     let fallback = shadcn::AvatarFallback::new("CN")

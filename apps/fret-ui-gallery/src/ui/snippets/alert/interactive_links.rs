@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("interactive_links.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use std::sync::Arc;
 
 use fret_core::{
@@ -99,7 +99,7 @@ fn interactive_link<H: UiHost + 'static>(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let last_link = cx.local_model_keyed("last_link", || None::<Arc<str>>);
 
     let last_link_value = cx

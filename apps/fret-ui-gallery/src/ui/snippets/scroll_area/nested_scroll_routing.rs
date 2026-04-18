@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("nested_scroll_routing.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::ScrollHandle;
@@ -28,7 +28,7 @@ fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElemen
     ui::container_props(props, |_cx| Vec::<AnyElement>::new())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.named("ui-gallery.scroll_area.nested_scroll_routing", |cx| {
         #[derive(Clone)]
         struct NestedScrollRoutingHandles {

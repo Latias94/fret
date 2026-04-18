@@ -56,7 +56,7 @@ fn hover_card_snippets_stay_copyable_and_docs_aligned() {
     let children = include_str!("../src/ui/snippets/hover_card/children.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::HoverCard::new(",
         "shadcn::HoverCardTrigger::build(ui::raw_text(\"Hover\"))",

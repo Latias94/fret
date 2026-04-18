@@ -3,15 +3,15 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
-use fret_core::{AppWindowId, Color, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
+use fret_core::{AppWindowId, Color, Px, TextAlign};
 use fret_render::{Renderer, RendererPerfFrameStore, WgpuContext};
 use fret_runtime::{
     RunnerFrameDriveDiagnosticsStore, RunnerPresentDiagnosticsStore,
     RunnerSurfaceConfigDiagnosticsStore, WindowGlobalChangeDiagnosticsStore,
     WindowRedrawRequestDiagnosticsStore,
 };
-use fret_ui::element::{AnyElement, TextProps};
-use fret_ui_kit::declarative::scheduling::set_continuous_frames;
+use fret_ui::element::AnyElement;
+use fret_ui_kit::IntoUiElementInExt as _;
 #[cfg(target_os = "macos")]
 use objc2_metal::MTLDevice as _;
 use serde_json::json;
@@ -1018,7 +1018,7 @@ impl View for HelloWorldCompareView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());
+        cx.set_continuous_frames(self.flags.uses_continuous_frames_lease());
         if self.flags.uses_animation_frame_loop() {
             cx.request_animation_frame();
             self.frame_tick = self.frame_tick.wrapping_add(1);
@@ -1055,24 +1055,17 @@ impl View for HelloWorldCompareView {
             .h_px(Px(layout_probe_height_px))
             .bg(ColorRef::Color(panel_bg))
             .rounded(Radius::Md)
-            .into_element(cx);
+            .into_element_in(cx);
 
         let title = (!self.flags.no_text).then(|| {
-            cx.text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::from("Hello, World!"),
-                style: Some(TextStyle {
-                    size: Px(24.0),
-                    weight: FontWeight::SEMIBOLD,
-                    ..Default::default()
-                }),
-                color: Some(title_color),
-                align: TextAlign::Center,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            })
-            .test_id(TEST_ID_TITLE)
+            ui::text("Hello, World!")
+                .text_size_px(Px(24.0))
+                .font_semibold()
+                .text_color(ColorRef::Color(title_color))
+                .text_align(TextAlign::Center)
+                .nowrap()
+                .into_element_in(cx)
+                .test_id(TEST_ID_TITLE)
         });
 
         let swatch_row = (!self.flags.no_swatches).then(|| {
@@ -1088,7 +1081,7 @@ impl View for HelloWorldCompareView {
             })
             .gap(Space::N2)
             .items_center()
-            .into_element(cx)
+            .into_element_in(cx)
             .test_id(TEST_ID_SWATCH_ROW)
         });
 
@@ -1109,7 +1102,6 @@ fn hello_world_compare_root<'a, Cx>(cx: &mut Cx, panel_bg: Color, children: Vec<
 where
     Cx: fret::app::ElementContextAccess<'a, KernelApp>,
 {
-    let cx = cx.elements();
     ui::v_flex(move |_cx| children)
         .w_full()
         .h_full()
@@ -1117,7 +1109,7 @@ where
         .items_center()
         .justify_center()
         .bg(ColorRef::Color(panel_bg))
-        .into_element(cx)
+        .into_element_in(cx)
         .test_id(TEST_ID_ROOT)
         .into()
 }

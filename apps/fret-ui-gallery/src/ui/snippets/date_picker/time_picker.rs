@@ -2,11 +2,11 @@ pub const SOURCE: &str = include_str!("time_picker.rs");
 
 // region: example
 use super::{default_month, fixed_today};
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let today = fixed_today();
     let date_open = cx.local_model_keyed("date_open", || false);
     let date_month = cx.local_model_keyed("date_month", || default_month(today));

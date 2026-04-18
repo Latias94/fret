@@ -2,9 +2,9 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Part", "Method", "Description"],
@@ -49,7 +49,10 @@ fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     )
 }
 
-pub(super) fn preview_ai_web_preview_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_web_preview_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let usage = snippets::web_preview_demo::render(cx);
     let composable = snippets::web_preview_demo::render_composable_children(cx);
     let features = doc_layout::notes_block([

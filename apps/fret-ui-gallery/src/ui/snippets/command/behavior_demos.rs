@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("behavior_demos.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let noop: fret_ui::action::OnActivate = Arc::new(|_host, _action_cx, _reason| {});
     let behavior_query = cx.local_model_keyed("behavior_query", String::new);
     let behavior_disable_pointer_selection =

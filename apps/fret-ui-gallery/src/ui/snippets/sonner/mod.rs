@@ -1,4 +1,4 @@
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
@@ -9,13 +9,13 @@ use std::sync::Arc;
 
 pub(crate) const LOCAL_TOASTER_ID: &str = "ui-gallery-sonner-local";
 
-pub(crate) fn last_action_model(cx: &mut UiCx<'_>) -> Model<Arc<str>> {
+pub(crate) fn last_action_model(cx: &mut AppComponentCx<'_>) -> Model<Arc<str>> {
     cx.local_model_keyed("ui-gallery-sonner-last-action", || {
         Arc::<str>::from("<none>")
     })
 }
 
-pub(crate) fn position_model(cx: &mut UiCx<'_>) -> Model<shadcn::ToastPosition> {
+pub(crate) fn position_model(cx: &mut AppComponentCx<'_>) -> Model<shadcn::ToastPosition> {
     cx.local_model_keyed("ui-gallery-sonner-position", || {
         shadcn::ToastPosition::TopCenter
     })
@@ -54,7 +54,7 @@ pub(crate) fn message_request(
     request
 }
 
-pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub(crate) fn local_toaster(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let position = position_model(cx);
     let position = cx
         .get_model_copied(&position, Invalidation::Layout)
@@ -111,7 +111,7 @@ pub(crate) fn preview_stack<H: UiHost>(
     )
 }
 
-pub(crate) fn preview_note(cx: &mut UiCx<'_>, text: impl Into<Arc<str>>) -> AnyElement {
+pub(crate) fn preview_note(cx: &mut AppComponentCx<'_>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
     ui::h_flex(move |cx| [shadcn::raw::typography::muted(text.clone()).into_element(cx)])
         .items_center()

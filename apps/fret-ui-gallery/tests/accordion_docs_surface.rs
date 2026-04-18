@@ -55,7 +55,7 @@ fn accordion_usage_snippet_stays_copyable_and_children_oriented() {
     let usage = include_str!("../src/ui/snippets/accordion/usage.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::AccordionRoot::single_uncontrolled(Some(\"item-1\"))",
         ".children([shadcn::AccordionItemPart::new(\"item-1\")",

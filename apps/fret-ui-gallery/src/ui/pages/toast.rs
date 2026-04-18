@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::toast as snippets;
 
-pub(super) fn preview_toast(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_toast(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let deprecated = snippets::deprecated::render(cx);
     let deprecated = DocSection::build(cx, "Deprecated", deprecated)
         .description("Toast is deprecated in upstream shadcn/ui docs. Prefer Sonner.")

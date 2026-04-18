@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("code_block_usage.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -9,7 +9,7 @@ use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).clone();
     let muted_fg = theme.color_token("muted-foreground");
     let code = Arc::<str>::from(

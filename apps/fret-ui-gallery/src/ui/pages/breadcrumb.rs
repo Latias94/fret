@@ -1,12 +1,12 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::breadcrumb as snippets;
 
 const BREADCRUMB_PAGE_INTRO: &str = "Preview mirrors the shadcn Breadcrumb docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Custom Separator`, `Dropdown`, `Collapsed`, `Link Component`, `RTL`, and `API Reference`. `Responsive` and `Notes` stay as focused Fret follow-ups.";
 
-pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_breadcrumb(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);

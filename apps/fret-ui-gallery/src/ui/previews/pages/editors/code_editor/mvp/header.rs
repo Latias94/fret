@@ -1,9 +1,9 @@
 use super::{gates, models::CodeEditorMvpHandles, prelude::*, word_boundary};
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
 pub(super) fn build_header(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     syntax_enabled: bool,

@@ -62,7 +62,7 @@ fn alert_demo_snippet_matches_upstream_docs_surface_and_keeps_link_logic_in_extr
     );
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "fn bullet_row(text: &'static str) -> impl UiChild + use<>",
         "shadcn::AlertTitle::new(\"Success! Your changes have been saved\")",

@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("mapping.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{ImageId, ViewportFit};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn image_cell(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
     source: Option<ImageId>,
     fit: ViewportFit,
@@ -32,7 +32,11 @@ fn image_cell(
     .layout(LayoutRefinement::default())
 }
 
-fn row(cx: &mut UiCx<'_>, title: &'static str, image: Option<ImageId>) -> impl UiChild + use<> {
+fn row(
+    cx: &mut AppComponentCx<'_>,
+    title: &'static str,
+    image: Option<ImageId>,
+) -> impl UiChild + use<> {
     let stretch = image_cell(cx, "Stretch", image.clone(), ViewportFit::Stretch);
     let contain = image_cell(cx, "Contain", image.clone(), ViewportFit::Contain);
     let cover = image_cell(cx, "Cover", image, ViewportFit::Cover);
@@ -61,7 +65,7 @@ fn row(cx: &mut UiCx<'_>, title: &'static str, image: Option<ImageId>) -> impl U
     .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let square_image = super::square_image(cx);
     let wide_image = super::wide_image(cx);
     let tall_image = super::tall_image(cx);

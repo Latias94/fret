@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let group = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
     let group_value = group.value_model();
     let standalone = material3::Radio::uncontrolled(cx, false);

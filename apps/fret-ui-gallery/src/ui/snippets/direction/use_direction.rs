@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("use_direction.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn direction_row<H: UiHost>(
@@ -31,7 +31,7 @@ fn direction_row<H: UiHost>(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_stack(|cx| {
         vec![
             direction_row(

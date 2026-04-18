@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("attachments_usage.rs");
 
 // region: example
 use super::attachment_landscape_image_id;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
@@ -13,7 +13,7 @@ use fret_ui_shadcn::prelude::*;
 
 #[rustfmt::skip]
 fn render_grid_attachment(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     data: ui_ai::AttachmentData,
 ) -> impl UiChild + use<> {
     ui_ai::Attachment::new(data)
@@ -47,7 +47,7 @@ fn render_grid_attachment(
         })
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let mut image = ui_ai::AttachmentFileData::new("usage-image")
         .filename("mountain-landscape.jpg")
         .media_type("image/jpeg");

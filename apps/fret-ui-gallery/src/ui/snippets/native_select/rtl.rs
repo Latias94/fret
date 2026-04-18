@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let value = cx.local_model_keyed("ui-gallery-native-select-rtl-value", || None::<Arc<str>>);
         let open = cx.local_model_keyed("ui-gallery-native-select-rtl-open", || false);

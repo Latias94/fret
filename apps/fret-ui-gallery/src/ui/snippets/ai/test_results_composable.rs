@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("test_results_composable.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Edges, Px};
 use fret_ui::Theme;
 use fret_ui::element::AnyElement;
@@ -9,7 +9,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 
-fn progress_section(cx: &mut UiCx<'_>) -> AnyElement {
+fn progress_section(cx: &mut AppComponentCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     let progress = ui_ai::TestResultsProgress::from_context()
         .children([
@@ -34,7 +34,7 @@ fn progress_section(cx: &mut UiCx<'_>) -> AnyElement {
     cx.container(props, move |_cx| vec![progress])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let summary = ui_ai::TestResultsSummaryData::new(12, 2, 1, 15).duration_ms(3245);
 
     let auth_suite = ui_ai::TestSuite::named("Authentication", ui_ai::TestStatusKind::Failed)

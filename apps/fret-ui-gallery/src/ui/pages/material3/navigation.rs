@@ -1,11 +1,11 @@
 use super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
-pub(in crate::ui) fn preview_material3_top_app_bar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_top_app_bar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::top_app_bar::render(cx);
 
     render_material3_demo_page(
@@ -16,7 +16,7 @@ pub(in crate::ui) fn preview_material3_top_app_bar(cx: &mut UiCx<'_>) -> Vec<Any
     )
 }
 
-pub(in crate::ui) fn preview_material3_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_tabs(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::tabs::render(cx);
 
     render_material3_demo_page(
@@ -27,7 +27,7 @@ pub(in crate::ui) fn preview_material3_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement
     )
 }
 
-pub(in crate::ui) fn preview_material3_list(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_list(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::material3::list::render(cx);
 
     render_material3_demo_page(
@@ -38,7 +38,9 @@ pub(in crate::ui) fn preview_material3_list(cx: &mut UiCx<'_>) -> Vec<AnyElement
     )
 }
 
-pub(in crate::ui) fn preview_material3_navigation_bar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_navigation_bar(
+    cx: &mut AppComponentCx<'_>,
+) -> Vec<AnyElement> {
     let demo = snippets::material3::navigation_bar::render(cx);
 
     render_material3_demo_page(
@@ -49,7 +51,9 @@ pub(in crate::ui) fn preview_material3_navigation_bar(cx: &mut UiCx<'_>) -> Vec<
     )
 }
 
-pub(in crate::ui) fn preview_material3_navigation_rail(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_navigation_rail(
+    cx: &mut AppComponentCx<'_>,
+) -> Vec<AnyElement> {
     let demo = snippets::material3::navigation_rail::render(cx);
 
     render_material3_demo_page(
@@ -60,7 +64,9 @@ pub(in crate::ui) fn preview_material3_navigation_rail(cx: &mut UiCx<'_>) -> Vec
     )
 }
 
-pub(in crate::ui) fn preview_material3_navigation_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_material3_navigation_drawer(
+    cx: &mut AppComponentCx<'_>,
+) -> Vec<AnyElement> {
     let demo = snippets::material3::navigation_drawer::render(cx);
 
     render_material3_demo_page(
@@ -72,7 +78,7 @@ pub(in crate::ui) fn preview_material3_navigation_drawer(cx: &mut UiCx<'_>) -> V
 }
 
 pub(in crate::ui) fn preview_material3_modal_navigation_drawer(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::modal_navigation_drawer::render(cx);
 

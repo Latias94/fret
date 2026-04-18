@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("fieldset.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let monthly_id = "ui-gallery-radio-group-fieldset-monthly";
     let yearly_id = "ui-gallery-radio-group-fieldset-yearly";
     let lifetime_id = "ui-gallery-radio-group-fieldset-lifetime";

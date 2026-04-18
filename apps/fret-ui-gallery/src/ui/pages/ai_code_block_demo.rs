@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection, DocTabsSizing};
 use crate::ui::snippets::ai as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_code_block_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let usage = snippets::code_block_usage::render(cx);
     let language_selector = snippets::code_block_demo::render(cx);
     let about = doc_layout::notes_block([

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("image_demo.rs");
 
 // region: example
 use super::shared_preview_image_id;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let image_id = shared_preview_image_id(cx);
     let status_line = cx
         .text(format!("image_ready={}", image_id.is_some()))

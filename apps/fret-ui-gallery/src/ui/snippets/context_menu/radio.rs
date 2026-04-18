@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
@@ -58,7 +58,7 @@ fn trigger_surface<H: UiHost>(
     .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let selected_person = cx.local_model(|| Some(Arc::<str>::from("pedro")));
     let selected_person_now = cx.watch_model(&selected_person).layout().cloned().flatten();
     let selected_theme = cx.local_model(|| Some(Arc::<str>::from("light")));

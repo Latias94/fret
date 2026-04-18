@@ -653,7 +653,7 @@ impl View for LiquidGlassView {
         );
         st.bind_actions(cx);
 
-        view(cx, &mut st)
+        view(cx.elements(), &mut st)
     }
 }
 

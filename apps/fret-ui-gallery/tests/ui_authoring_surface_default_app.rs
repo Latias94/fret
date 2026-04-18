@@ -2,7 +2,21 @@ mod support;
 
 use std::collections::BTreeSet;
 
-use support::{assert_default_app_surface, manifest_path, read, read_path, rust_sources};
+use support::{
+    assert_default_app_surface, manifest_path, read, read_path, rust_sources,
+    source_contains_equivalent_marker,
+};
+
+fn canonicalize_rust_fragment(fragment: &str) -> String {
+    let mut canonical = fragment.split_whitespace().collect::<String>();
+    loop {
+        let next = canonical.replace(",)", ")");
+        if next == canonical {
+            return next;
+        }
+        canonical = next;
+    }
+}
 
 fn assert_curated_default_app_paths(
     relative_paths: &[&str],
@@ -24,17 +38,22 @@ fn assert_selected_page_helpers_prefer_ui_child(
     let path = manifest_path(relative_path);
     let source = read_path(&path);
     let normalized = source.split_whitespace().collect::<String>();
+    let canonical = canonicalize_rust_fragment(&source);
 
     assert!(
-        normalized.contains("usefret::{UiChild,UiCx};"),
-        "{} should import UiChild alongside UiCx on the page surface",
+        source_contains_equivalent_marker(
+            &source,
+            &normalized,
+            "use fret::{UiChild, AppComponentCx};"
+        ),
+        "{} should import UiChild alongside AppComponentCx on the page surface",
         path.display()
     );
 
     for marker in required_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            normalized.contains(&marker),
+            canonical.contains(&marker),
             "{} is missing marker `{}`",
             path.display(),
             marker
@@ -42,9 +61,9 @@ fn assert_selected_page_helpers_prefer_ui_child(
     }
 
     for marker in forbidden_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            !normalized.contains(&marker),
+            !canonical.contains(&marker),
             "{} reintroduced legacy page helper marker `{}`",
             path.display(),
             marker
@@ -59,12 +78,12 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
 ) {
     let path = manifest_path(relative_path);
     let source = read_path(&path);
-    let normalized = source.split_whitespace().collect::<String>();
+    let canonical = canonicalize_rust_fragment(&source);
 
     for marker in required_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            normalized.contains(&marker),
+            canonical.contains(&marker),
             "{} is missing marker `{}`",
             path.display(),
             marker
@@ -72,9 +91,9 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
     }
 
     for marker in forbidden_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            !normalized.contains(&marker),
+            !canonical.contains(&marker),
             "{} reintroduced legacy helper marker `{}`",
             path.display(),
             marker
@@ -85,19 +104,19 @@ fn assert_selected_generic_helpers_prefer_into_ui_element(
 fn assert_normalized_markers_present(relative_path: &str, required_markers: &[&str]) -> String {
     let path = manifest_path(relative_path);
     let source = read_path(&path);
-    let normalized = source.split_whitespace().collect::<String>();
+    let canonical = canonicalize_rust_fragment(&source);
 
     for marker in required_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            normalized.contains(&marker),
+            canonical.contains(&marker),
             "{} is missing marker `{}`",
             path.display(),
             marker
         );
     }
 
-    normalized
+    canonical
 }
 
 fn assert_normalized_chain_reaches(
@@ -107,8 +126,8 @@ fn assert_normalized_chain_reaches(
     required_suffix: &str,
 ) {
     let path = manifest_path(relative_path);
-    let chain_start = chain_start.split_whitespace().collect::<String>();
-    let required_suffix = required_suffix.split_whitespace().collect::<String>();
+    let chain_start = canonicalize_rust_fragment(chain_start);
+    let required_suffix = canonicalize_rust_fragment(required_suffix);
     let start_index = normalized.find(&chain_start).unwrap_or_else(|| {
         panic!(
             "{} is missing chain start `{}`",
@@ -132,12 +151,12 @@ fn assert_material3_snippet_prefers_copyable_root(
 ) {
     let path = manifest_path(relative_path);
     let source = read_path(&path);
-    let normalized = source.split_whitespace().collect::<String>();
+    let canonical = canonicalize_rust_fragment(&source);
 
     for marker in required_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            normalized.contains(&marker),
+            canonical.contains(&marker),
             "{} is missing Material 3 overlay authoring marker `{}`",
             path.display(),
             marker
@@ -145,9 +164,9 @@ fn assert_material3_snippet_prefers_copyable_root(
     }
 
     for marker in forbidden_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            !normalized.contains(&marker),
+            !canonical.contains(&marker),
             "{} reintroduced legacy Material 3 overlay teaching marker `{}`",
             path.display(),
             marker
@@ -162,22 +181,22 @@ fn assert_selected_snippets_prefer_grouped_uicx_listeners(
 ) {
     let path = manifest_path(relative_path);
     let source = read_path(&path);
-    let normalized = source.split_whitespace().collect::<String>();
+    let canonical = canonicalize_rust_fragment(&source);
 
     for marker in required_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            normalized.contains(&marker),
-            "{} is missing grouped UiCx listener marker `{}`",
+            canonical.contains(&marker),
+            "{} is missing grouped AppComponentCx listener marker `{}`",
             path.display(),
             marker
         );
     }
 
     for marker in forbidden_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            !normalized.contains(&marker),
+            !canonical.contains(&marker),
             "{} reintroduced forbidden activation import marker `{}`",
             path.display(),
             marker
@@ -188,12 +207,12 @@ fn assert_selected_snippets_prefer_grouped_uicx_listeners(
 fn assert_sources_absent(relative_root: &str, forbidden_markers: &[&str]) {
     for path in rust_sources(relative_root) {
         let source = read_path(&path);
-        let normalized = source.split_whitespace().collect::<String>();
+        let canonical = canonicalize_rust_fragment(&source);
 
         for marker in forbidden_markers {
-            let marker = marker.split_whitespace().collect::<String>();
+            let marker = canonicalize_rust_fragment(marker);
             assert!(
-                !normalized.contains(&marker),
+                !canonical.contains(&marker),
                 "{} reintroduced forbidden source marker `{}`",
                 path.display(),
                 marker
@@ -205,12 +224,12 @@ fn assert_sources_absent(relative_root: &str, forbidden_markers: &[&str]) {
 fn assert_sources_absent_normalized(relative_root: &str, forbidden_markers: &[&str]) {
     for path in rust_sources(relative_root) {
         let source = read_path(&path);
-        let normalized = source.split_whitespace().collect::<String>();
+        let canonical = canonicalize_rust_fragment(&source);
 
         for marker in forbidden_markers {
-            let marker = marker.split_whitespace().collect::<String>();
+            let marker = canonicalize_rust_fragment(marker);
             assert!(
-                !normalized.contains(&marker),
+                !canonical.contains(&marker),
                 "{} reintroduced forbidden normalized source marker `{}`",
                 path.display(),
                 marker
@@ -232,6 +251,7 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     assert!(action_first_view.contains("use fret::advanced::prelude::*;"));
     assert!(action_first_view.contains("use fret::component::prelude::*;"));
     assert!(action_first_view.contains("use fret::app::App;"));
+    assert!(action_first_view.contains("use fret_ui_kit::IntoUiElementInExt as _;"));
     assert!(action_first_view.contains("fn init(_app: &mut App, _window: AppWindowId) -> Self"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, App>"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, KernelApp>"));
@@ -239,10 +259,14 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     assert!(action_first_view.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
     assert!(action_first_view.contains("cx.state().local::<u32>()"));
     assert!(action_first_view.contains("cx.actions().models::<act::Ping>"));
+    assert!(action_first_view.contains(".into_element_in(cx)"));
     assert!(action_first_view_normalized.contains(
         "cx.actions().availability::<act::Ping>(|_host,_acx|CommandAvailability::Available);"
     ));
-    assert!(action_first_view.contains("pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>"));
+    assert!(
+        action_first_view
+            .contains("pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>")
+    );
     assert!(action_first_view.contains("let last_action = super::last_action_model(cx);"));
     assert!(!action_first_view.contains("KernelApp"));
     assert!(!action_first_view.contains("ElementContext<'_, App>"));
@@ -255,7 +279,7 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
 fn copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots() {
     assert_sources_absent(
         "src/ui/snippets",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
     assert_sources_absent_normalized(
         "src/ui/snippets",
@@ -394,7 +418,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
             let marker = marker.split_whitespace().collect::<String>();
             assert!(
                 normalized.contains(&marker),
-                "{} is missing grouped UiCx listener marker `{}`",
+                "{} is missing grouped AppComponentCx listener marker `{}`",
                 path.display(),
                 marker
             );
@@ -466,7 +490,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
             let marker = marker.split_whitespace().collect::<String>();
             assert!(
                 normalized.contains(&marker),
-                "{} is missing grouped UiCx action marker `{}`",
+                "{} is missing grouped AppComponentCx action marker `{}`",
                 path.display(),
                 marker
             );
@@ -479,7 +503,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
         );
         assert!(
             !normalized.contains(".listen("),
-            "{} should stay on grouped `UiCx` actions + widget `.action(...)` instead of AppActivate `.listen(...)`",
+            "{} should stay on grouped `AppComponentCx` actions + widget `.action(...)` instead of AppActivate `.listen(...)`",
             path.display()
         );
     }
@@ -513,15 +537,15 @@ fn progress_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/progress/demo.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/progress",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -540,8 +564,8 @@ fn badge_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/badge/variants.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -616,8 +640,8 @@ fn aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/aspect_ratio/rtl.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -671,8 +695,8 @@ fn context_menu_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/context_menu/rtl.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -1057,8 +1081,8 @@ fn dropdown_menu_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/dropdown_menu/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -1640,8 +1664,8 @@ fn menubar_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/menubar/with_icons.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -1702,8 +1726,8 @@ fn button_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/button/variants.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -1855,8 +1879,8 @@ fn button_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/button_group/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -1958,8 +1982,8 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input_group/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2112,8 +2136,8 @@ fn input_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input/rtl.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2255,8 +2279,8 @@ fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/field/validation_and_errors.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2323,8 +2347,8 @@ fn textarea_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/textarea/with_text.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2382,8 +2406,8 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input_otp/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2502,8 +2526,8 @@ fn select_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/select/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2625,8 +2649,8 @@ fn calendar_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/calendar/week_numbers.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2700,8 +2724,8 @@ fn alert_dialog_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/alert_dialog/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2759,8 +2783,8 @@ fn dialog_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/dialog/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -2811,8 +2835,8 @@ fn drawer_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/drawer/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -3042,8 +3066,8 @@ fn sheet_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/sheet/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -3172,8 +3196,8 @@ fn spinner_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/spinner/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -3229,8 +3253,8 @@ fn form_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/form/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -3917,8 +3941,8 @@ fn empty_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/empty/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -3970,8 +3994,8 @@ fn breadcrumb_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/breadcrumb/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4088,8 +4112,8 @@ fn collapsible_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/collapsible/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4139,8 +4163,8 @@ fn skeleton_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/skeleton/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4193,8 +4217,8 @@ fn pagination_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/pagination/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4249,8 +4273,8 @@ fn alert_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/alert/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4312,8 +4336,8 @@ fn sidebar_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/sidebar/use_sidebar.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4362,8 +4386,8 @@ fn label_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/label/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4406,8 +4430,8 @@ fn kbd_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/kbd/tooltip.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4475,8 +4499,8 @@ fn icons_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/icons/spinner.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4517,8 +4541,8 @@ fn sonner_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/sonner/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4561,8 +4585,8 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn sonner_local_toaster_prefers_ui_child_over_anyelement() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/snippets/sonner/mod.rs",
-        &["pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub(crate) fn local_toaster(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["pub(crate) fn local_toaster(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -4586,8 +4610,8 @@ fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/date_picker/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4711,8 +4735,8 @@ fn avatar_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/avatar/with_badge.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4762,7 +4786,7 @@ fn avatar_page_api_reference_lists_family_parts_and_builder_lanes() {
     assert_normalized_markers_present(
         "src/ui/pages/avatar.rs",
         &[
-            "fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn avatar_api_reference(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             "avatar_api_table(cx, \"Avatar\",",
             "avatar_api_table(cx, \"AvatarImage\",",
             "avatar_api_table(cx, \"AvatarFallback\",",
@@ -4791,8 +4815,8 @@ fn command_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/command/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4890,8 +4914,8 @@ fn popover_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/popover/with_form.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -4939,8 +4963,8 @@ fn hover_card_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/hover_card/usage.rs",
         ],
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "pub fn render(cx: &mut UiCx<'_>,",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "pub fn render(cx: &mut AppComponentCx<'_>,",
         ],
         "app-facing snippet surface",
     );
@@ -5010,8 +5034,8 @@ fn tooltip_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/tooltip/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -5107,9 +5131,9 @@ fn combobox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/combobox/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "pub fn render(cx: &mut UiCx<'_>, value: Model<Option<Arc<str>>>, open: Model<bool>, query: Model<String>,) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "pub fn render(cx: &mut AppComponentCx<'_>, value: Model<Option<Arc<str>>>, open: Model<bool>, query: Model<String>,) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -5175,15 +5199,15 @@ fn toast_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &["src/ui/snippets/toast/deprecated.rs"],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/toast",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5212,15 +5236,15 @@ fn slider_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/slider/vertical.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/slider",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5237,15 +5261,15 @@ fn native_select_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/native_select/with_groups.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/native_select",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5260,15 +5284,15 @@ fn navigation_menu_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface()
             "src/ui/snippets/navigation_menu/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/navigation_menu",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5291,12 +5315,12 @@ fn selected_navigation_menu_snippet_helpers_prefer_into_ui_element_over_anyeleme
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/navigation_menu/docs_demo.rs",
         &[
-            "fn list_item(cx: &mut UiCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn icon_row(cx: &mut UiCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn list_item(cx: &mut AppComponentCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn icon_row(cx: &mut AppComponentCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn list_item(cx: &mut UiCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
-            "fn icon_row(cx: &mut UiCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
+            "fn list_item(cx: &mut AppComponentCx<'_>, muted_foreground: Color, model: Model<Option<Arc<str>>>, title: &'static str, description: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
+            "fn icon_row(cx: &mut AppComponentCx<'_>, model: Model<Option<Arc<str>>>, icon: &'static str, label: &'static str, test_id: &'static str, command: &'static str,) -> AnyElement",
         ],
     );
 }
@@ -5333,8 +5357,8 @@ fn scroll_area_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/scroll_area/rtl.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -5428,15 +5452,15 @@ fn chart_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/chart/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/chart",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5577,7 +5601,7 @@ fn motion_preset_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/motion_presets/token_snapshot.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
+            "use fret::{UiChild, AppComponentCx};",
             "pub fn render",
             "-> impl UiChild + use<",
         ],
@@ -5622,8 +5646,8 @@ fn carousel_snippets_prefer_ui_cx_on_the_default_app_surface() {
             &path,
             &source,
             &[
-                "use fret::{UiChild, UiCx};",
-                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+                "use fret::{UiChild, AppComponentCx};",
+                "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             ],
             "app-facing snippet surface",
         );
@@ -5631,7 +5655,7 @@ fn carousel_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/carousel",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5708,8 +5732,8 @@ fn item_snippets_prefer_ui_cx_on_the_default_app_surface() {
             &path,
             &source,
             &[
-                "use fret::{UiChild, UiCx};",
-                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+                "use fret::{UiChild, AppComponentCx};",
+                "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             ],
             "app-facing snippet surface",
         );
@@ -5717,7 +5741,7 @@ fn item_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/item",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -5780,15 +5804,15 @@ fn tabs_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/tabs/vertical_line.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/tabs",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -6058,8 +6082,8 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/card/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -6067,8 +6091,8 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_sources_absent(
         "src/ui/snippets/card",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
-            "pub fn render(cx: &mut UiCx<'_>,",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement",
+            "pub fn render(cx: &mut AppComponentCx<'_>,",
         ],
     );
 }
@@ -6137,8 +6161,8 @@ fn image_object_fit_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/image_object_fit/sampling.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -6175,12 +6199,12 @@ fn selected_card_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/card/meeting_notes.rs",
         &[
-            "fn marker(cx: &mut UiCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item(cx: &mut UiCx<'_>, n: &'static str, content: &'static str, test_id: Option<&'static str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn marker(cx: &mut AppComponentCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item(cx: &mut AppComponentCx<'_>, n: &'static str, content: &'static str, test_id: Option<&'static str>,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn marker(cx: &mut UiCx<'_>, text: &'static str) -> AnyElement",
-            "fn item(cx: &mut UiCx<'_>, n: &'static str, content: &'static str, test_id: Option<&'static str>,) -> AnyElement",
+            "fn marker(cx: &mut AppComponentCx<'_>, text: &'static str) -> AnyElement",
+            "fn item(cx: &mut AppComponentCx<'_>, n: &'static str, content: &'static str, test_id: Option<&'static str>,) -> AnyElement",
         ],
     );
 
@@ -6190,20 +6214,20 @@ fn selected_card_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "fn cell<T>(test_id: &'static str, card: T) -> impl IntoUiElement<fret_app::App> + use<T> where T: IntoUiElement<fret_app::App>",
         ],
         &[
-            "fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> AnyElement",
-            "fn cell(cx: &mut UiCx<'_>, test_id: &'static str, card: shadcn::Card,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn cell(cx: &mut AppComponentCx<'_>, test_id: &'static str, card: shadcn::Card,) -> AnyElement",
+            "fn cell(cx: &mut AppComponentCx<'_>, test_id: &'static str, card: shadcn::Card,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/card/demo.rs",
         &[
-            "fn email_field(email: Model<String>) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn password_field(password: Model<String>) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn email_field(cx: &mut AppComponentCx<'_>, email: Model<String>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn password_field(cx: &mut AppComponentCx<'_>, password: Model<String>,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn email_field(email: Model<String>) -> AnyElement",
-            "fn password_field(password: Model<String>) -> AnyElement",
+            "fn email_field(cx: &mut AppComponentCx<'_>, email: Model<String>,) -> AnyElement",
+            "fn password_field(cx: &mut AppComponentCx<'_>, password: Model<String>,) -> AnyElement",
         ],
     );
 }
@@ -6266,8 +6290,8 @@ fn data_table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/data_table/rtl_demo.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -6306,8 +6330,8 @@ fn table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             &path,
             &source,
             &[
-                "use fret::{UiChild, UiCx};",
-                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+                "use fret::{UiChild, AppComponentCx};",
+                "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             ],
             "app-facing snippet surface",
         );
@@ -6316,7 +6340,7 @@ fn table_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_sources_absent(
         "src/ui/snippets/table",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> AnyElement",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement",
             "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
         ],
     );
@@ -6363,16 +6387,16 @@ fn remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface() 
             &path,
             &source,
             &[
-                "use fret::{UiChild, UiCx};",
-                "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+                "use fret::{UiChild, AppComponentCx};",
+                "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             ],
             "app-facing snippet surface",
         );
 
         let normalized = source.split_whitespace().collect::<String>();
         assert!(
-            !normalized.contains("pubfnrender(cx:&mutUiCx<'_>)->AnyElement"),
-            "{} reintroduced `UiCx -> AnyElement` on the default app surface",
+            !normalized.contains("pubfnrender(cx:&mutAppComponentCx<'_>)->AnyElement"),
+            "{} reintroduced `AppComponentCx -> AnyElement` on the default app surface",
             path.display()
         );
     }
@@ -6419,7 +6443,7 @@ fn curated_ai_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
         assert_default_app_surface(
             &path,
             &source,
-            &["cx: &mut UiCx<'_>"],
+            &["cx: &mut AppComponentCx<'_>"],
             "app-facing page surface",
         );
     }
@@ -6454,87 +6478,87 @@ fn selected_ai_doc_page_helpers_prefer_uichild_over_anyelement() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_persona_demo.rs",
         &[
-            "fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "fn props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn states_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "fn props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "fn lifecycle_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         &[
-            "fn states_notes(cx: &mut UiCx<'_>) -> AnyElement",
-            "fn props_table(cx: &mut UiCx<'_>) -> AnyElement",
-            "fn lifecycle_notes(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn states_notes(cx: &mut AppComponentCx<'_>) -> AnyElement",
+            "fn props_table(cx: &mut AppComponentCx<'_>) -> AnyElement",
+            "fn lifecycle_notes(cx: &mut AppComponentCx<'_>) -> AnyElement",
         ],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_commit_demo.rs",
         &[
-            "fn file_status_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn file_status_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "fn parts_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         &[
-            "fn file_status_table(cx: &mut UiCx<'_>) -> AnyElement",
-            "fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn file_status_table(cx: &mut AppComponentCx<'_>) -> AnyElement",
+            "fn parts_props_table(cx: &mut AppComponentCx<'_>) -> AnyElement",
         ],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_context_demo.rs",
-        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_model_selector_demo.rs",
-        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_voice_selector_demo.rs",
-        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_mic_selector_demo.rs",
-        &["fn parts_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn parts_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn parts_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_checkpoint_demo.rs",
-        &["fn checkpoint_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn checkpoint_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn checkpoint_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn checkpoint_props_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_shimmer_demo.rs",
-        &["fn shimmer_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn shimmer_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn shimmer_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn shimmer_props_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_test_results_demo.rs",
         &[
-            "fn status_colors_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "fn parts_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn status_colors_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "fn parts_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         &[
-            "fn status_colors_table(cx: &mut UiCx<'_>) -> AnyElement",
-            "fn parts_props_table(cx: &mut UiCx<'_>) -> AnyElement",
+            "fn status_colors_table(cx: &mut AppComponentCx<'_>) -> AnyElement",
+            "fn parts_props_table(cx: &mut AppComponentCx<'_>) -> AnyElement",
         ],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_artifact_demo.rs",
-        &["fn render_notes(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn render_notes(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn render_notes(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn render_notes(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/ai_chain_of_thought_demo.rs",
-        &["fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["fn chain_of_thought_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn chain_of_thought_props_table(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -6543,10 +6567,10 @@ fn selected_material3_page_helpers_prefer_uichild_over_anyelement() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/pages/material3/shared.rs",
         &[
-            "fn material3_variant_toggle_row(cx: &mut UiCx<'_>, material3_expressive: Model<bool>,) -> impl UiChild + use<>",
+            "fn material3_variant_toggle_row(cx: &mut AppComponentCx<'_>, material3_expressive: Model<bool>,) -> impl UiChild + use<>",
         ],
         &[
-            "fn material3_variant_toggle_row(cx: &mut UiCx<'_>, material3_expressive: Model<bool>,) -> AnyElement",
+            "fn material3_variant_toggle_row(cx: &mut AppComponentCx<'_>, material3_expressive: Model<bool>,) -> AnyElement",
         ],
     );
 }
@@ -6556,10 +6580,10 @@ fn selected_material3_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/material3/shared.rs",
         &[
-            "fn render_material3_demo_page<D>(cx: &mut UiCx<'_>, intro: Option<&'static str>, demo: D, source: &'static str,) -> Vec<AnyElement> where D: IntoUiElement<fret_app::App>",
+            "fn render_material3_demo_page<D>(cx: &mut AppComponentCx<'_>, intro: Option<&'static str>, demo: D, source: &'static str,) -> Vec<AnyElement> where D: IntoUiElement<fret_app::App>",
         ],
         &[
-            "fn render_material3_demo_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, demo: AnyElement, source: &'static str,) -> Vec<AnyElement>",
+            "fn render_material3_demo_page(cx: &mut AppComponentCx<'_>, intro: Option<&'static str>, demo: AnyElement, source: &'static str,) -> Vec<AnyElement>",
         ],
     );
 }
@@ -6710,8 +6734,8 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_previews() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/ai_persona_demo.rs",
         &[
-            "fn states_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "fn lifecycle_notes(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn states_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "fn lifecycle_notes(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             "crate::ui::doc_layout::notes_block([",
             "let states = states_notes(cx);",
             "let props = props_table(cx);",
@@ -6892,7 +6916,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/avatar.rs",
         &[
-            "fn avatar_api_reference(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "fn avatar_api_reference(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             "let notes = doc_layout::notes_block([",
             "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Notes\", notes)",
@@ -7952,9 +7976,11 @@ fn selected_combobox_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn state_row(cx: &mut UiCx<'_>, text: Arc<str>, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn state_row(cx: &mut AppComponentCx<'_>, text: Arc<str>, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
             ],
-            &["fn state_row(cx: &mut UiCx<'_>, text: Arc<str>, test_id: Arc<str>) -> AnyElement"],
+            &[
+                "fn state_row(cx: &mut AppComponentCx<'_>, text: Arc<str>, test_id: Arc<str>) -> AnyElement",
+            ],
         );
     }
 }
@@ -7969,10 +7995,10 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn state_rows(cx: &mut UiCx<'_>, value: &Model<Option<Arc<str>>>, query: &Model<String>, test_id_prefix: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn state_rows(cx: &mut AppComponentCx<'_>, value: &Model<Option<Arc<str>>>, query: &Model<String>, test_id_prefix: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
             ],
             &[
-                "fn state_rows(cx: &mut UiCx<'_>, value: &Model<Option<Arc<str>>>, query: &Model<String>, test_id_prefix: &'static str,) -> AnyElement",
+                "fn state_rows(cx: &mut AppComponentCx<'_>, value: &Model<Option<Arc<str>>>, query: &Model<String>, test_id_prefix: &'static str,) -> AnyElement",
             ],
         );
     }
@@ -8002,7 +8028,7 @@ fn selected_pagination_page_number_helpers_prefer_ui_child_over_host_bound_into_
         "src/ui/snippets/pagination/demo.rs",
         &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
         &[
-            "let page_number = |cx: &mut UiCx<'_>, label: &'static str| {",
+            "let page_number = |cx: &mut AppComponentCx<'_>, label: &'static str| {",
             "fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)",
         ],
     );
@@ -8123,12 +8149,12 @@ fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
-                "fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn slide(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
             ],
             &[
-                "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
-                "fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
+                "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
+                "fn slide(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
             ],
         );
     }
@@ -8136,9 +8162,11 @@ fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/carousel/options.rs",
         &[
-            "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
-        &["fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement"],
+        &[
+            "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
+        ],
     );
 
     for relative_path in [
@@ -8150,41 +8178,43 @@ fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
             ],
-            &["fn slide_card(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement"],
+            &[
+                "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement",
+            ],
         );
     }
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs",
         &[
-            "fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
-        &["fn slide(cx: &mut UiCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement"],
+        &["fn slide(cx: &mut AppComponentCx<'_>, idx: usize, visual: SlideVisual) -> AnyElement"],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/carousel/usage.rs",
         &[
-            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide(cx: &mut AppComponentCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
-            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+            "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize) -> AnyElement",
+            "fn slide(cx: &mut AppComponentCx<'_>, idx: usize) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/carousel/compact_builder.rs",
         &[
-            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide(cx: &mut AppComponentCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
-            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+            "fn slide_card(cx: &mut AppComponentCx<'_>, idx: usize) -> AnyElement",
+            "fn slide(cx: &mut AppComponentCx<'_>, idx: usize) -> AnyElement",
         ],
     );
 }
@@ -8506,11 +8536,11 @@ fn selected_popover_demo_helpers_prefer_ui_child_over_host_bound_into_ui_element
         "src/ui/snippets/popover/demo.rs",
         &[
             "fn centered<B>(body: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
-            "fn row(label: &'static str, model: Model<String>) -> impl UiChild + use<>",
+            "fn row(label: &'static str, model: Model<String>, input_test_id: &'static str,) -> impl UiChild + use<>",
         ],
         &[
             "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
-            "fn row<H: UiHost>(label: &'static str, model: Model<String>) -> impl IntoUiElement<H> + use<H>",
+            "fn row<H: UiHost>(label: &'static str, model: Model<String>, input_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
     );
 }
@@ -8638,52 +8668,52 @@ fn selected_data_table_snippet_helpers_prefer_into_ui_element_over_anyelement() 
             &[
                 "fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
             ],
-            &["fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement"],
+            &["fn align_end(cx: &mut AppComponentCx<'_>, child: AnyElement) -> AnyElement"],
         );
     }
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/data_table/default_demo.rs",
         &[
-            "fn footer(cx: &mut UiCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn footer(cx: &mut AppComponentCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn footer(cx: &mut UiCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> AnyElement",
+            "fn footer(cx: &mut AppComponentCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/data_table/basic_demo.rs",
         &[
-            "fn bottom_controls(cx: &mut UiCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn bottom_controls(cx: &mut AppComponentCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn bottom_controls(cx: &mut UiCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> AnyElement",
+            "fn bottom_controls(cx: &mut AppComponentCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/data_table/rtl_demo.rs",
         &[
-            "fn bottom_controls(cx: &mut UiCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>, lang: Lang,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn bottom_controls(cx: &mut AppComponentCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>, lang: Lang,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn bottom_controls(cx: &mut UiCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>, lang: Lang,) -> AnyElement",
+            "fn bottom_controls(cx: &mut AppComponentCx<'_>, state: Model<TableState>, output: Model<TableViewOutput>, lang: Lang,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/data_table/rtl_demo.rs",
         &[
-            "fn align_inline_start<B>(cx: &mut UiCx<'_>, child: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
+            "fn align_inline_start<B>(cx: &mut AppComponentCx<'_>, child: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
         ],
-        &["fn align_inline_start(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement"],
+        &["fn align_inline_start(cx: &mut AppComponentCx<'_>, child: AnyElement) -> AnyElement"],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/data_table/guide_demo.rs",
-        &["fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
-        &["fn guide_demo_content(cx: &mut UiCx<'_>) -> Vec<AnyElement>"],
+        &["fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
+        &["fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement>"],
     );
 }
 
@@ -9027,7 +9057,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn centered<B>(cx: &mut UiCx<'_>, body: B) -> impl UiChild + use<B> where B: UiChild",
+                "fn centered<B>(cx: &mut AppComponentCx<'_>, body: B) -> impl UiChild + use<B> where B: UiChild",
             ],
             &[
                 "fn centered<H: UiHost, B>(body: B) -> impl IntoUiElement<H> + use<H, B> where B: IntoUiElement<H>",
@@ -9044,7 +9074,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
-            &["pub fn preview(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+            &["pub fn preview(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
             &[
                 "pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>,) -> impl IntoUiElement<H> + use<H>",
                 "pub fn preview<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement",
@@ -9054,7 +9084,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/test_results_demo.rs",
-        &["fn progress_section(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn progress_section(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>"],
         &[
             "fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
             "fn progress_section<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
@@ -9064,7 +9094,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/attachments_usage.rs",
         &[
-            "fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData,) -> impl UiChild + use<>",
+            "fn render_grid_attachment(cx: &mut AppComponentCx<'_>, data: ui_ai::AttachmentData,) -> impl UiChild + use<>",
         ],
         &[
             "fn render_grid_attachment<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, data: ui_ai::AttachmentData,) -> impl IntoUiElement<H> + use<H>",
@@ -9074,7 +9104,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/file_tree_demo.rs",
-        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement"],
+        &["fn invisible_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement"],
         &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
@@ -9083,7 +9113,7 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/file_tree_large.rs",
-        &["fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement"],
+        &["fn invisible_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement"],
         &[
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             "fn invisible_marker<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str,) -> AnyElement",
@@ -9093,8 +9123,8 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/ai/speech_input_demo.rs",
         &[
-            "fn body_text(cx: &mut UiCx<'_>, text: impl Into<Arc<str>>, style: TextStyle, color: Color, align: TextAlign,) -> impl UiChild + use<>",
-            "fn clear_action(cx: &mut UiCx<'_>, transcript: Model<String>) -> impl UiChild + use<>",
+            "fn body_text<T>(cx: &mut AppComponentCx<'_>, text: T, style: TextStyle, color: Color, align: TextAlign,) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn clear_action(cx: &mut AppComponentCx<'_>, transcript: Model<String>) -> impl UiChild + use<>",
         ],
         &[
             "fn body_text<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>, style: TextStyle, color: Color, align: TextAlign,) -> AnyElement",
@@ -9107,9 +9137,9 @@ fn selected_ai_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/ai/attachments_list.rs",
     ] {
         let helper = if relative_path.ends_with("attachments_grid.rs") {
-            "fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>, remove_test_id: Option<&'static str>,) -> impl UiChild + use<>"
+            "fn render_grid_attachment(cx: &mut AppComponentCx<'_>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>, remove_test_id: Option<&'static str>,) -> impl UiChild + use<>"
         } else {
-            "fn render_list_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>,) -> impl UiChild + use<>"
+            "fn render_list_attachment(cx: &mut AppComponentCx<'_>, data: ui_ai::AttachmentData, on_remove: ui_ai::OnAttachmentRemove, test_id: Option<&'static str>,) -> impl UiChild + use<>"
         };
 
         let old_helper = if relative_path.ends_with("attachments_grid.rs") {
@@ -9203,8 +9233,8 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle_group/vertical.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -9274,8 +9304,8 @@ fn switch_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/switch/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -9393,8 +9423,8 @@ fn checkbox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/checkbox/with_title.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -9511,15 +9541,15 @@ fn toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle/with_text.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/toggle",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -9660,15 +9690,15 @@ fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/radio_group/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/radio_group",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -9832,15 +9862,15 @@ fn resizable_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/resizable/vertical.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/resizable",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -9870,7 +9900,7 @@ fn selected_resizable_usage_helper_prefers_ui_child_over_host_bound_into_ui_elem
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/snippets/resizable/usage.rs",
         &[
-            "fn panel(_cx: &mut UiCx<'_>, label: &'static str) -> impl UiChild + use<>",
+            "fn panel(_cx: &mut AppComponentCx<'_>, label: &'static str) -> impl UiChild + use<>",
             "shadcn::resizable_panel_group(",
         ],
         &[
@@ -9896,15 +9926,15 @@ fn accordion_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/accordion/usage.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
 
     assert_sources_absent(
         "src/ui/snippets/accordion",
-        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+        &["pub fn render(cx: &mut AppComponentCx<'_>) -> AnyElement"],
     );
 }
 
@@ -9992,11 +10022,11 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/demo.rs",
         &[
-            "fn goal_adjust_button(cx: &mut UiCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> shadcn::Button",
+            "fn goal_adjust_button(cx: &mut AppComponentCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> shadcn::Button",
             "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn goal_adjust_button(cx: &mut UiCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
+            "fn goal_adjust_button(cx: &mut AppComponentCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
             "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElement",
         ],
     );
@@ -10087,8 +10117,8 @@ fn separator_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/separator/vertical.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -10144,8 +10174,8 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/typography/rtl.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -10258,8 +10288,8 @@ fn shadcn_extras_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/shadcn_extras/ticker.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
     );
@@ -10309,10 +10339,10 @@ fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> shadcn::SidebarMenuButton",
+                "fn menu_button(cx: &mut AppComponentCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> shadcn::SidebarMenuButton",
             ],
             &[
-                "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
+                "fn menu_button(cx: &mut AppComponentCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
             ],
         );
     }
@@ -10320,10 +10350,10 @@ fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/sidebar/rtl.rs",
         &[
-            "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn menu_button(cx: &mut AppComponentCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
+            "fn menu_button(cx: &mut AppComponentCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
         ],
     );
 }
@@ -10442,24 +10472,24 @@ fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/item/avatar.rs",
         &[
-            "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn icon_button(cx: &mut AppComponentCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_team(cx: &mut AppComponentCx<'_>, test_id: &'static str, action_test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> AnyElement",
-            "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
+            "fn icon_button(cx: &mut AppComponentCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: &'static str,) -> AnyElement",
+            "fn item_team(cx: &mut AppComponentCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/item/icon.rs",
         &[
-            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_icon(cx: &mut UiCx<'_>, icon_id: &'static str, title: &'static str, description: &'static str, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_icon(cx: &mut AppComponentCx<'_>, icon_id: &'static str, title: &'static str, description: &'static str, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement",
-            "fn item_icon(cx: &mut UiCx<'_>, icon_id: &'static str, title: &'static str, description: &'static str, test_id: &'static str,) -> AnyElement",
+            "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement",
+            "fn item_icon(cx: &mut AppComponentCx<'_>, icon_id: &'static str, title: &'static str, description: &'static str, test_id: &'static str,) -> AnyElement",
         ],
     );
 
@@ -10471,45 +10501,45 @@ fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+                "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
             ],
-            &["fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement"],
+            &["fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement"],
         );
     }
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/item/extras_rtl.rs",
         &[
-            "fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_basic(cx: &mut UiCx<'_>, title: &'static str, description: &'static str, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn outline_button_sm(cx: &mut AppComponentCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_basic(cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement",
-            "fn item_basic(cx: &mut UiCx<'_>, title: &'static str, description: &'static str, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
+            "fn outline_button_sm(cx: &mut AppComponentCx<'_>, label: &'static str) -> AnyElement",
+            "fn item_basic(cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/item/gallery.rs",
         &[
-            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn outline_button(cx: &mut UiCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_basic(cx: &mut UiCx<'_>, variant: shadcn::ItemVariant, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_icon(cx: &mut UiCx<'_>, variant: shadcn::ItemVariant, icon_id: &'static str, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_avatar(cx: &mut UiCx<'_>, username: &'static str, message: &'static str, initials: &'static str, test_id: Arc<str>, add_action_test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
-            "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn icon_button(cx: &mut AppComponentCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn outline_button(cx: &mut AppComponentCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn outline_button_sm(cx: &mut AppComponentCx<'_>, label: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_basic(cx: &mut AppComponentCx<'_>, variant: shadcn::ItemVariant, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_icon(cx: &mut AppComponentCx<'_>, variant: shadcn::ItemVariant, icon_id: &'static str, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_avatar(cx: &mut AppComponentCx<'_>, username: &'static str, message: &'static str, initials: &'static str, test_id: Arc<str>, add_action_test_id: Arc<str>,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn item_team(cx: &mut AppComponentCx<'_>, test_id: &'static str, action_test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement",
-            "fn icon_button(cx: &mut UiCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: Arc<str>,) -> AnyElement",
-            "fn outline_button(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement",
-            "fn outline_button_sm(cx: &mut UiCx<'_>, label: &'static str) -> AnyElement",
-            "fn item_basic(cx: &mut UiCx<'_>, variant: shadcn::ItemVariant, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
-            "fn item_icon(cx: &mut UiCx<'_>, variant: shadcn::ItemVariant, icon_id: &'static str, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
-            "fn item_avatar(cx: &mut UiCx<'_>, username: &'static str, message: &'static str, initials: &'static str, test_id: Arc<str>, add_action_test_id: Arc<str>,) -> AnyElement",
-            "fn item_team(cx: &mut UiCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
+            "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement",
+            "fn icon_button(cx: &mut AppComponentCx<'_>, icon_id: &'static str, variant: shadcn::ButtonVariant, test_id: Arc<str>,) -> AnyElement",
+            "fn outline_button(cx: &mut AppComponentCx<'_>, label: &'static str) -> AnyElement",
+            "fn outline_button_sm(cx: &mut AppComponentCx<'_>, label: &'static str) -> AnyElement",
+            "fn item_basic(cx: &mut AppComponentCx<'_>, variant: shadcn::ItemVariant, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
+            "fn item_icon(cx: &mut AppComponentCx<'_>, variant: shadcn::ItemVariant, icon_id: &'static str, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
+            "fn item_avatar(cx: &mut AppComponentCx<'_>, username: &'static str, message: &'static str, initials: &'static str, test_id: Arc<str>, add_action_test_id: Arc<str>,) -> AnyElement",
+            "fn item_team(cx: &mut AppComponentCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
         ],
     );
 }
@@ -10650,7 +10680,7 @@ fn selected_toast_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "shadcn::card_footer(",
         ],
         &[
-            "fn centered(cx: &mut UiCx<'_>, body: AnyElement) -> AnyElement",
+            "fn centered(cx: &mut AppComponentCx<'_>, body: AnyElement) -> AnyElement",
             "shadcn::Card::new(",
             "shadcn::CardHeader::new(",
             "shadcn::CardContent::new(",
@@ -10681,7 +10711,7 @@ fn selected_chart_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/chart/demo.rs",
         &[
-            "fn trending_footer(cx: &mut UiCx<'_>, secondary: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn trending_footer(cx: &mut AppComponentCx<'_>, secondary: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
             "fn chart_card(title: &'static str, description: &'static str, canvas: AnyElement, footer_secondary: &'static str, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
             "shadcn::card(",
             "shadcn::card_header(",
@@ -10689,7 +10719,7 @@ fn selected_chart_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "shadcn::card_footer(",
         ],
         &[
-            "fn trending_footer(cx: &mut UiCx<'_>, secondary: &'static str,) -> AnyElement",
+            "fn trending_footer(cx: &mut AppComponentCx<'_>, secondary: &'static str,) -> AnyElement",
             "fn chart_card(title: &'static str, description: &'static str, canvas: AnyElement, footer_secondary: &'static str, test_id: &'static str,) -> AnyElement",
             "shadcn::Card::new(",
             "shadcn::CardHeader::new(",
@@ -10713,11 +10743,10 @@ fn selected_alert_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/alert/demo.rs",
-        &[
-            "fn interactive_link_text<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, text: &'static str, underlined_fragment: &'static str, href: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
-        ],
+        &["fn bullet_row(text: &'static str) -> impl UiChild + use<>"],
         &[
             "fn interactive_link_text<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, text: &'static str, underlined_fragment: &'static str, href: &'static str, test_id: &'static str,) -> AnyElement",
+            "fn bullet_row(text: &'static str) -> AnyElement",
         ],
     );
 }
@@ -10785,8 +10814,8 @@ fn selected_motion_presets_snippet_helpers_prefer_into_ui_element_over_anyelemen
             "fn panel(title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
         &[
-            "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str) -> AnyElement",
-            "fn panel(cx: &mut UiCx<'_>, title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn panel(cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str) -> AnyElement",
+            "fn panel(cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
         ],
     );
 }
@@ -10810,7 +10839,7 @@ fn non_ai_leaf_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
         assert_default_app_surface(
             &path,
             &source,
-            &["cx: &mut UiCx<'_>"],
+            &["cx: &mut AppComponentCx<'_>"],
             "app-facing page surface",
         );
     }
@@ -10823,7 +10852,7 @@ fn pages_mod_router_prefers_ui_cx_on_the_default_app_surface() {
     assert_default_app_surface(
         &path,
         &source,
-        &["cx: &mut UiCx<'_>"],
+        &["cx: &mut AppComponentCx<'_>"],
         "app-facing page surface",
     );
 }
@@ -10839,7 +10868,7 @@ fn material3_doc_pages_prefer_ui_cx_on_the_default_app_surface() {
         assert_default_app_surface(
             &path,
             &source,
-            &["cx: &mut UiCx<'_>", "cx: &mut UiCx<'a>"],
+            &["cx: &mut AppComponentCx<'_>", "cx: &mut AppComponentCx<'a>"],
             "app-facing Material 3 page surface",
         );
     }
@@ -10860,8 +10889,8 @@ fn material3_controls_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/material3/touch_targets.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing Material 3 controls snippet surface",
     );
@@ -10894,8 +10923,8 @@ fn material3_inputs_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/material3/time_picker.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing Material 3 inputs snippet surface",
     );
@@ -10923,8 +10952,8 @@ fn material3_navigation_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/material3/top_app_bar.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing Material 3 navigation snippet surface",
     );
@@ -10955,9 +10984,9 @@ fn material3_overlay_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/material3/tooltip.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
+            "use fret::{UiChild, AppComponentCx};",
             "pub fn render(",
-            "cx: &mut UiCx<'_>",
+            "cx: &mut AppComponentCx<'_>",
             "-> impl UiChild + use<>",
         ],
         "app-facing Material 3 overlay snippet surface",
@@ -10986,9 +11015,9 @@ fn material3_composite_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/material3/state_matrix.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
+            "use fret::{UiChild, AppComponentCx};",
             "pub fn render(",
-            "cx: &mut UiCx<'_>",
+            "cx: &mut AppComponentCx<'_>",
             "-> impl UiChild + use<>",
         ],
         "app-facing Material 3 composite snippet surface",
@@ -11107,8 +11136,8 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/ai/workflow_toolbar_demo.rs",
         ],
         &[
-            "use fret::{UiChild, UiCx};",
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
+            "use fret::{UiChild, AppComponentCx};",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing AI leaf snippet surface",
     );
@@ -11495,7 +11524,7 @@ fn selected_ai_snippet_helpers_prefer_typed_children_over_anyelement() {
         &[
             "fn item<B>(label: &'static str, el: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
         ],
-        &["let item = |cx: &mut UiCx<'_>, label: &'static str, el: AnyElement| {"],
+        &["let item = |cx: &mut AppComponentCx<'_>, label: &'static str, el: AnyElement| {"],
     );
 }
 
@@ -11528,7 +11557,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
         &[
-            "pub fn render( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> impl UiChild + use<> {",
+            "pub fn render( cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>, ) -> impl UiChild + use<> {",
             "material3::DropdownMenu::uncontrolled(cx)",
             "let open = dropdown.open_model();",
         ],
@@ -11541,7 +11570,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/dialog.rs",
         &[
-            "pub fn render( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> impl UiChild + use<> {",
+            "pub fn render( cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>, ) -> impl UiChild + use<> {",
             "let default_dialog = material3::Dialog::uncontrolled(cx);",
             "let open = default_dialog.open_model();",
             "material3::Select::uncontrolled(cx)",
@@ -11550,15 +11579,15 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, last_action: Model<Arc<str>>, ) -> AnyElement {",
             "let open = cx.local_model_keyed(\"open\", || false);",
             "let selected = cx.local_model_keyed(\"selected\", || None::<Arc<str>>);",
-            "let build_dialog = |cx: &mut UiCx<'_>, mut dialog: material3::Dialog, style: Option<material3::DialogStyle>, id_prefix: &'static str, open_action: OnActivate, close_action: OnActivate, confirm_action: OnActivate| -> AnyElement {",
-            "let build_container = |cx: &mut UiCx<'_>, dialog: AnyElement| -> AnyElement {",
+            "let build_dialog = |cx: &mut AppComponentCx<'_>, mut dialog: material3::Dialog, style: Option<material3::DialogStyle>, id_prefix: &'static str, open_action: OnActivate, close_action: OnActivate, confirm_action: OnActivate| -> AnyElement {",
+            "let build_container = |cx: &mut AppComponentCx<'_>, dialog: AnyElement| -> AnyElement {",
         ],
     );
 
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/bottom_sheet.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "material3::ModalBottomSheet::uncontrolled(cx)",
             "let open = sheet.open_model();",
         ],
@@ -11571,7 +11600,7 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/state_matrix.rs",
         &[
-            "fn render_search_view(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+            "fn render_search_view(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
             "material3::SearchView::uncontrolled(cx)",
         ],
         &[
@@ -11599,7 +11628,7 @@ fn material3_autocomplete_snippet_prefers_uncontrolled_query_and_dialog_roots() 
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/autocomplete.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);",
             "let value = outlined_autocomplete.query_model();",
             "let dialog = material3::Dialog::uncontrolled(cx);",
@@ -11627,7 +11656,7 @@ fn material3_select_snippet_prefers_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/select.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let default_select = material3::Select::uncontrolled(cx);",
             "let selected = default_select.value_model();",
             "let overridden = material3::Select::new(selected.clone())",
@@ -11651,7 +11680,7 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/date_picker.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let dialog = material3::DatePickerDialog::uncontrolled(cx);",
             "let open = dialog.open_model();",
             "let month = dialog.month_model();",
@@ -11666,7 +11695,7 @@ fn material3_date_and_time_picker_snippets_prefer_uncontrolled_dialog_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/time_picker.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let dialog = material3::TimePickerDialog::uncontrolled(cx);",
             "let open = dialog.open_model();",
             "let selected = dialog.selected_model();",
@@ -11683,7 +11712,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/checkbox.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let checkbox = material3::Checkbox::uncontrolled(cx, false);",
             "let checked = checkbox.checked_model();",
             "let tristate = material3::Checkbox::uncontrolled_optional(cx, None);",
@@ -11698,7 +11727,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/switch.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let default_switch = material3::Switch::uncontrolled(cx, false);",
             "let selected = default_switch.selected_model();",
             "let icons_both_root = material3::Switch::uncontrolled(cx, false);",
@@ -11728,7 +11757,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/slider.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let slider = material3::Slider::uncontrolled(cx, 0.3);",
             "let value = slider.value_model();",
         ],
@@ -11740,7 +11769,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/tabs.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let tabs = material3::Tabs::uncontrolled(cx, \"overview\");",
             "let value = tabs.value_model();",
         ],
@@ -11752,7 +11781,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/list.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let list = material3::List::uncontrolled(cx, \"alpha\");",
             "let value = list.value_model();",
         ],
@@ -11764,7 +11793,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/navigation_bar.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let bar = material3::NavigationBar::uncontrolled(cx, \"search\");",
             "let value = bar.value_model();",
         ],
@@ -11776,7 +11805,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/navigation_rail.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let rail = material3::NavigationRail::uncontrolled(cx, \"search\");",
             "let value = rail.value_model();",
         ],
@@ -11788,7 +11817,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/navigation_drawer.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let drawer = material3::NavigationDrawer::uncontrolled(cx, \"search\");",
             "let value = drawer.value_model();",
         ],
@@ -11800,7 +11829,7 @@ fn material3_selection_and_field_snippets_prefer_uncontrolled_value_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/text_field.rs",
         &[
-            "pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {",
+            "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {",
             "let demo_field = material3::TextField::uncontrolled(cx);",
             "let value = demo_field.value_model();",
             "let disabled_toggle = material3::Switch::uncontrolled(cx, false);",
@@ -11834,7 +11863,7 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
             "material3_switch: Model<bool>,",
             "material3_radio_value: Model<Option<Arc<str>>>,",
             "material3_tabs_value: Model<Arc<str>>,",
-            "let target_overlay = |cx: &mut UiCx<'_>, label: &'static str, chrome: Option<Size>, child: AnyElement| {",
+            "let target_overlay = |cx: &mut AppComponentCx<'_>, label: &'static str, chrome: Option<Size>, child: AnyElement| {",
         ],
     );
 
@@ -11904,25 +11933,25 @@ fn material3_pages_do_not_route_demo_only_runtime_models() {
         (
             "src/ui/pages/material3/controls.rs",
             vec![
-                "pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_radio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_switch(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_slider(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_radio(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
             ],
             vec![
-                "pub(in crate::ui) fn preview_material3_touch_targets( cx: &mut UiCx<'_>, material3_checkbox: Model<bool>, material3_switch: Model<bool>, material3_radio_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_checkbox( cx: &mut UiCx<'_>, checked: Model<bool>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_switch( cx: &mut UiCx<'_>, selected: Model<bool>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_slider( cx: &mut UiCx<'_>, value: Model<f32>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_radio( cx: &mut UiCx<'_>, group_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_touch_targets( cx: &mut AppComponentCx<'_>, material3_checkbox: Model<bool>, material3_switch: Model<bool>, material3_radio_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_checkbox( cx: &mut AppComponentCx<'_>, checked: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_switch( cx: &mut AppComponentCx<'_>, selected: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_slider( cx: &mut AppComponentCx<'_>, value: Model<f32>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_radio( cx: &mut AppComponentCx<'_>, group_value: Model<Option<Arc<str>>>, ) -> Vec<AnyElement> {",
             ],
         ),
         (
             "src/ui/pages/material3/gallery.rs",
             vec![
-                "pub(in crate::ui) fn preview_material3_gallery( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_state_matrix( cx: &mut UiCx<'_>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_gallery( cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_state_matrix( cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>, ) -> Vec<AnyElement> {",
             ],
             vec![
                 "material3_checkbox: Model<bool>,",
@@ -11936,12 +11965,12 @@ fn material3_pages_do_not_route_demo_only_runtime_models() {
         (
             "src/ui/pages/material3/inputs.rs",
             vec![
-                "pub(in crate::ui) fn preview_material3_autocomplete(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_text_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_autocomplete(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_text_field(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {",
             ],
             vec![
-                "pub(in crate::ui) fn preview_material3_autocomplete( cx: &mut UiCx<'_>, disabled: Model<bool>, error: Model<bool>, ) -> Vec<AnyElement> {",
-                "pub(in crate::ui) fn preview_material3_text_field( cx: &mut UiCx<'_>, disabled: Model<bool>, error: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_autocomplete( cx: &mut AppComponentCx<'_>, disabled: Model<bool>, error: Model<bool>, ) -> Vec<AnyElement> {",
+                "pub(in crate::ui) fn preview_material3_text_field( cx: &mut AppComponentCx<'_>, disabled: Model<bool>, error: Model<bool>, ) -> Vec<AnyElement> {",
             ],
         ),
         (
@@ -12022,10 +12051,10 @@ fn material3_pages_do_not_route_demo_only_runtime_models() {
     ] {
         let path = manifest_path(relative_path);
         let source = read_path(&path);
-        let normalized = source.split_whitespace().collect::<String>();
+        let normalized = canonicalize_rust_fragment(&source);
 
         for marker in required_markers {
-            let marker = marker.split_whitespace().collect::<String>();
+            let marker = canonicalize_rust_fragment(marker);
             assert!(
                 normalized.contains(&marker),
                 "{} is missing Material 3 choice-control authoring marker `{}`",
@@ -12035,7 +12064,7 @@ fn material3_pages_do_not_route_demo_only_runtime_models() {
         }
 
         for marker in forbidden_markers {
-            let marker = marker.split_whitespace().collect::<String>();
+            let marker = canonicalize_rust_fragment(marker);
             assert!(
                 !normalized.contains(&marker),
                 "{} reintroduced demo-only Material 3 choice-control state marker `{}`",
@@ -12050,7 +12079,7 @@ fn material3_pages_do_not_route_demo_only_runtime_models() {
 fn gallery_ui_shell_helpers_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &["src/ui/content.rs", "src/ui/nav.rs"],
-        &["cx: &mut UiCx<'_>"],
+        &["cx: &mut AppComponentCx<'_>"],
         "app-facing gallery shell helper surface",
     );
 }
@@ -12060,23 +12089,25 @@ fn gallery_internal_wrapper_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/doc_layout.rs",
         &[
-            "fn build<P>(cx: &mut UiCx<'_>, title: &'static str, preview: P) -> Self where P: IntoUiElement<fret_app::App>",
+            "fn build<P>(cx: &mut AppComponentCx<'_>, title: &'static str, preview: P) -> Self where P: IntoUiElement<fret_app::App>",
             "fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T> where I: IntoIterator<Item = T>, T: Into<Arc<str>>",
-            "fn demo_shell<B>(cx: &mut UiCx<'_>, max_w: Px, body: B,) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
+            "fn demo_shell<B>(cx: &mut AppComponentCx<'_>, max_w: Px, body: B,) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
         ],
         &[
-            "fn demo_shell(cx: &mut UiCx<'_>, max_w: Px, body: AnyElement) -> AnyElement",
-            "fn notes_block<I, T>(cx: &mut UiCx<'_>, lines: I) -> AnyElement",
-            "fn notes<I, T>(cx: &mut UiCx<'_>, lines: I) -> AnyElement",
+            "fn demo_shell(cx: &mut AppComponentCx<'_>, max_w: Px, body: AnyElement) -> AnyElement",
+            "fn notes_block<I, T>(cx: &mut AppComponentCx<'_>, lines: I) -> AnyElement",
+            "fn notes<I, T>(cx: &mut AppComponentCx<'_>, lines: I) -> AnyElement",
         ],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/previews/pages/editors/code_editor/mvp/gates.rs",
         &[
-            "fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
+            "fn gate_panel<B>(cx: &mut AppComponentCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
         ],
-        &["fn gate_panel(cx: &mut UiCx<'_>, theme: &Theme, child: AnyElement) -> AnyElement"],
+        &[
+            "fn gate_panel(cx: &mut AppComponentCx<'_>, theme: &Theme, child: AnyElement) -> AnyElement",
+        ],
     );
 }
 
@@ -12085,34 +12116,34 @@ fn gallery_doc_layout_app_helpers_prefer_ui_child_over_anyelement() {
     assert_selected_page_helpers_prefer_ui_child(
         "src/ui/doc_layout.rs",
         &[
-            "fn render_doc_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, sections: Vec<DocSection>,) -> impl UiChild + use<>",
-            "fn wrap_preview_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, section_title: &'static str, elements: Vec<AnyElement>,) -> impl UiChild + use<>",
-            "fn wrap_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
-            "fn wrap_controls_row<F>(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>",
-            "fn text_table<const N: usize, I>(cx: &mut UiCx<'_>, headers: [&'static str; N], rows: I, border_bottom: bool,) -> impl UiChild + use<N, I> where I: IntoIterator<Item = [&'static str; N]>",
-            "fn muted_full_width<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
-            "fn muted_inline<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
-            "fn muted_flex_1_min_w_0<T>(cx: &mut UiCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
-            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl UiChild + use<>",
-            "fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> impl UiChild + use<>",
-            "fn preview_code_tabs(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, preview: AnyElement, max_w: Px, code: DocCodeBlock, #[cfg(feature = \"gallery-ai\")] tabs_sizing: DocTabsSizing, #[cfg(not(feature = \"gallery-ai\"))] _tabs_sizing: DocTabsSizing, shell: bool,) -> impl UiChild + use<>",
-            "fn code_block_shell(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, max_w: Px, block: DocCodeBlock, shell: bool,) -> impl UiChild + use<>",
-            "fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> impl UiChild + use<>",
+            "fn render_doc_page(cx: &mut AppComponentCx<'_>, intro: Option<&'static str>, sections: Vec<DocSection>,) -> impl UiChild + use<>",
+            "fn wrap_preview_page(cx: &mut AppComponentCx<'_>, intro: Option<&'static str>, section_title: &'static str, elements: Vec<AnyElement>,) -> impl UiChild + use<>",
+            "fn wrap_row<F>(cx: &mut AppComponentCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>",
+            "fn wrap_controls_row<F>(cx: &mut AppComponentCx<'_>, theme: &Theme, gap: Space, children: F,) -> impl UiChild + use<F> where F: FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>",
+            "fn text_table<const N: usize, I>(cx: &mut AppComponentCx<'_>, headers: [&'static str; N], rows: I, border_bottom: bool,) -> impl UiChild + use<N, I> where I: IntoIterator<Item = [&'static str; N]>",
+            "fn muted_full_width<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn muted_inline<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn muted_flex_1_min_w_0<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T> where T: Into<Arc<str>>",
+            "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> impl UiChild + use<>",
+            "fn render_section(cx: &mut AppComponentCx<'_>, section: DocSection) -> impl UiChild + use<>",
+            "fn preview_code_tabs(cx: &mut AppComponentCx<'_>, test_id_prefix: Option<&str>, preview: AnyElement, max_w: Px, code: DocCodeBlock, #[cfg(feature = \"gallery-ai\")] tabs_sizing: DocTabsSizing, #[cfg(not(feature = \"gallery-ai\"))] _tabs_sizing: DocTabsSizing, shell: bool,) -> impl UiChild + use<>",
+            "fn code_block_shell(cx: &mut AppComponentCx<'_>, test_id_prefix: Option<&str>, max_w: Px, block: DocCodeBlock, shell: bool,) -> impl UiChild + use<>",
+            "fn section_title(cx: &mut AppComponentCx<'_>, title: &'static str) -> impl UiChild + use<>",
         ],
         &[
-            "fn render_doc_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, sections: Vec<DocSection>,) -> AnyElement",
-            "fn wrap_preview_page(cx: &mut UiCx<'_>, intro: Option<&'static str>, section_title: &'static str, elements: Vec<AnyElement>,) -> AnyElement",
-            "fn wrap_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
-            "fn wrap_controls_row(cx: &mut UiCx<'_>, theme: &Theme, gap: Space, children: impl FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
-            "fn text_table<const N: usize>(cx: &mut UiCx<'_>, headers: [&'static str; N], rows: impl IntoIterator<Item = [&'static str; N]>, border_bottom: bool,) -> AnyElement",
+            "fn render_doc_page(cx: &mut AppComponentCx<'_>, intro: Option<&'static str>, sections: Vec<DocSection>,) -> AnyElement",
+            "fn wrap_preview_page(cx: &mut AppComponentCx<'_>, intro: Option<&'static str>, section_title: &'static str, elements: Vec<AnyElement>,) -> AnyElement",
+            "fn wrap_row(cx: &mut AppComponentCx<'_>, theme: &Theme, gap: Space, align: fret_ui::element::CrossAlign, children: impl FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
+            "fn wrap_controls_row(cx: &mut AppComponentCx<'_>, theme: &Theme, gap: Space, children: impl FnOnce(&mut AppComponentCx<'_>) -> Vec<AnyElement>,) -> AnyElement",
+            "fn text_table<const N: usize>(cx: &mut AppComponentCx<'_>, headers: [&'static str; N], rows: impl IntoIterator<Item = [&'static str; N]>, border_bottom: bool,) -> AnyElement",
             "fn muted_full_width<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
             "fn muted_inline<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
             "fn muted_flex_1_min_w_0<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
-            "fn icon(cx: &mut UiCx<'_>, id: &'static str) -> AnyElement",
-            "fn render_section(cx: &mut UiCx<'_>, section: DocSection) -> AnyElement",
-            "fn preview_code_tabs(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, preview: AnyElement, max_w: Px, code: DocCodeBlock, #[cfg(feature = \"gallery-ai\")] tabs_sizing: DocTabsSizing, #[cfg(not(feature = \"gallery-ai\"))] _tabs_sizing: DocTabsSizing, shell: bool,) -> AnyElement",
-            "fn code_block_shell(cx: &mut UiCx<'_>, test_id_prefix: Option<&str>, max_w: Px, block: DocCodeBlock, shell: bool,) -> AnyElement",
-            "fn section_title(cx: &mut UiCx<'_>, title: &'static str) -> AnyElement",
+            "fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement",
+            "fn render_section(cx: &mut AppComponentCx<'_>, section: DocSection) -> AnyElement",
+            "fn preview_code_tabs(cx: &mut AppComponentCx<'_>, test_id_prefix: Option<&str>, preview: AnyElement, max_w: Px, code: DocCodeBlock, #[cfg(feature = \"gallery-ai\")] tabs_sizing: DocTabsSizing, #[cfg(not(feature = \"gallery-ai\"))] _tabs_sizing: DocTabsSizing, shell: bool,) -> AnyElement",
+            "fn code_block_shell(cx: &mut AppComponentCx<'_>, test_id_prefix: Option<&str>, max_w: Px, block: DocCodeBlock, shell: bool,) -> AnyElement",
+            "fn section_title(cx: &mut AppComponentCx<'_>, title: &'static str) -> AnyElement",
         ],
     );
 }

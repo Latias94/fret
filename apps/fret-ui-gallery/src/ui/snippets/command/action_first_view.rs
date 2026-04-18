@@ -10,9 +10,10 @@ use std::sync::Arc;
 use fret::advanced::prelude::*;
 use fret::app::App;
 use fret::component::prelude::*;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_runtime::Model;
 use fret_ui::CommandAvailability;
+use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_shadcn::facade as shadcn;
 
 mod act {
@@ -72,14 +73,14 @@ impl View for ActionFirstViewRuntimeDemo {
             ]
         })
         .gap(Space::N2)
-        .into_element(cx)
+        .into_element_in(cx)
         .test_id("ui-gallery-command-action-first-view-runtime")
         .into()
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let last_action = super::last_action_model(cx);
     cx.named("ui-gallery.command.action_first.view_runtime", move |cx| {
         let view_state_slot = cx.slot_id();
@@ -140,7 +141,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
         ui::v_flex(|cx| {
             [

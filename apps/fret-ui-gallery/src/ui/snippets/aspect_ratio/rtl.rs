@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -72,7 +72,7 @@ fn ratio_example<H: UiHost>(
 }
 
 #[allow(dead_code)]
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
         ratio_example(
             cx,

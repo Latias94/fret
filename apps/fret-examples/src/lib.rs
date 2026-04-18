@@ -409,6 +409,7 @@ mod authoring_surface_policy_tests {
         "../../../docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md"
     );
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
+    const EDITOR_NOTES_DEVICE_SHELL_DEMO: &str = include_str!("editor_notes_device_shell_demo.rs");
     const LAUNCHER_UTILITY_WINDOW_DEMO: &str = include_str!("launcher_utility_window_demo.rs");
     const LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO: &str =
         include_str!("launcher_utility_window_materials_demo.rs");
@@ -663,7 +664,6 @@ mod authoring_surface_policy_tests {
         forbidden_markers: &[&str],
     ) {
         let normalized = src.split_whitespace().collect::<String>();
-        assert!(normalized.contains("UiCx<'_>"));
         for marker in required_markers {
             let marker = marker.split_whitespace().collect::<String>();
             assert!(normalized.contains(&marker), "missing marker: {marker}");
@@ -684,6 +684,26 @@ mod authoring_surface_policy_tests {
     ) {
         let normalized = src.split_whitespace().collect::<String>();
         assert!(normalized.contains("AppRenderCx<'_>"));
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
+    fn assert_app_facing_generic_helpers_prefer_app_render_context(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains("AppRenderContext<'a>"));
         for marker in required_markers {
             let marker = marker.split_whitespace().collect::<String>();
             assert!(normalized.contains(&marker), "missing marker: {marker}");
@@ -1037,6 +1057,114 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn todo_demo_prefers_capability_first_landing_for_root_builders() {
+        let render = source_slice(
+            TODO_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn todo_page(",
+        );
+        let render = render.split_whitespace().collect::<String>();
+
+        for marker in [
+            "ui::text(\"Add a task to get started\").text_sm().text_color(ColorRef::Color(muted_foreground)).into_element_in(cx)",
+            ".gap(Space::N1).items_center().into_element_in(cx)",
+            "ui::text(format!(\"{active_count} {task_label} left\")).text_sm().text_color(ColorRef::Color(muted_foreground)).into_element_in(cx)",
+            ".gap(Space::N1p5).w_full().into_element_in(cx)",
+            "shadcn::ScrollArea::new([rows_body.into_element_in(cx)])",
+            ".min_h_0().build().into_element_in(cx);",
+            "let footer = if responsive.stack_footer {",
+            "children }).gap(Space::N2).items_stretch().w_full().into_element_in(cx)",
+            "children }).gap(Space::N3).items_center().justify_between().w_full().into_element_in(cx)",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                render.contains(&marker),
+                "todo demo should keep the capability-first root marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "ui::text(\"Add a task to get started\").text_sm().text_color(ColorRef::Color(muted_foreground)).into_element(cx)",
+            ".gap(Space::N1).items_center().into_element(cx)",
+            "ui::text(format!(\"{active_count} {task_label} left\")).text_sm().text_color(ColorRef::Color(muted_foreground)).into_element(cx)",
+            ".gap(Space::N1p5).w_full().into_element(cx)",
+            "shadcn::ScrollArea::new([rows_body.into_element(cx)])",
+            ".min_h_0().build().into_element(cx);",
+            "children }).gap(Space::N2).items_stretch().w_full().into_element(cx)",
+            "children }).gap(Space::N3).items_center().justify_between().w_full().into_element(cx)",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !render.contains(&legacy),
+                "todo demo should stay off the legacy root marker: {legacy}",
+            );
+        }
+    }
+
+    #[test]
+    fn async_playground_demo_prefers_app_render_context_helpers_and_root_capability_landing() {
+        assert_app_facing_generic_helpers_prefer_app_render_context(
+            ASYNC_PLAYGROUND_DEMO,
+            &[
+                "use fret::app::{AppRenderContext, RenderContextAccess as _};",
+                "use fret_ui_kit::IntoUiElementInExt as _;",
+                "fn tracked_query_inputs<'a, Cx>(",
+                "fn header_bar<'a, Cx>(",
+                "fn body<'a, Cx>(",
+                "fn query_panel_for_mode<'a, Cx>(",
+                "fn status_badge<'a, Cx>(",
+                "Cx: AppRenderContext<'a>,",
+                "cx.elements().pressable(",
+                "let state = handle.read_layout(cx);",
+                "locals.tabs.layout_read_ref(cx, |tab| match tab.as_deref() {",
+                "config.fail_mode.layout_value(cx)",
+            ],
+            &[
+                "fn tracked_query_inputs(cx: &mut UiCx<'_>,",
+                "fn header_bar(cx: &mut UiCx<'_>,",
+                "fn body(cx: &mut UiCx<'_>,",
+                "fn query_panel_for_mode(cx: &mut UiCx<'_>,",
+                "fn status_badge(cx: &mut UiCx<'_>,",
+                "handle.layout_query(cx).value_or_default()",
+                "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
+                "config.fail_mode.layout_value_in(cx)",
+            ],
+        );
+
+        let render = source_slice(
+            ASYNC_PLAYGROUND_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn header_bar<'a, Cx>(",
+        );
+        let render = render.split_whitespace().collect::<String>();
+
+        for marker in [
+            "let query_inputs = tracked_query_inputs(cx, &locals);",
+            "let header = header_bar(cx, &locals, theme.clone(), global_slow, dark);",
+            "let body = body(cx, &mut self.st, &locals, theme, global_slow, selected);",
+            "ui::v_flex(|_cx| [header, body]).w_full().h_full().into_element_in(cx).into()",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                render.contains(&marker),
+                "async playground should keep the capability-first root marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "let header = header_bar(cx, &locals, theme.clone(), global_slow, dark).into_element(cx);",
+            "let body = body(cx, &mut self.st, &locals, theme, global_slow, selected).into_element(cx);",
+            "ui::v_flex(|_cx| [header, body]).w_full().h_full().into_element(cx).into()",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !render.contains(&legacy),
+                "async playground should stay off the legacy root marker: {legacy}",
+            );
+        }
+    }
+
+    #[test]
     fn simple_todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
@@ -1087,6 +1215,45 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn query_demos_prefer_capability_first_landing_for_root_detail_builders() {
+        let query_demo = QUERY_DEMO.split_whitespace().collect::<String>();
+        let query_async = QUERY_ASYNC_TOKIO_DEMO
+            .split_whitespace()
+            .collect::<String>();
+
+        for marker in [
+            "use fret_ui_kit::IntoUiElementInExt as _;",
+            "}).gap(Space::N2).items_center().into_element_in(cx);",
+            "}).gap(Space::N2).into_element_in(cx);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                query_demo.contains(&marker),
+                "query demo should keep the capability-first landing marker: {marker}",
+            );
+            assert!(
+                query_async.contains(&marker),
+                "query async tokio demo should keep the capability-first landing marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "}).gap(Space::N2).items_center().into_element(cx);",
+            "}).gap(Space::N2).into_element(cx);",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !query_demo.contains(&legacy),
+                "query demo should stay off the legacy landing marker: {legacy}",
+            );
+            assert!(
+                !query_async.contains(&legacy),
+                "query async tokio demo should stay off the legacy landing marker: {legacy}",
+            );
+        }
+    }
+
+    #[test]
     fn api_workbench_lite_demo_uses_query_for_sqlite_reads_and_mutation_for_explicit_submit() {
         assert!(API_WORKBENCH_LITE_DEMO.contains("use fret::app::prelude::*;"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("advanced::prelude::*"));
@@ -1097,6 +1264,37 @@ mod authoring_surface_policy_tests {
         assert!(!API_WORKBENCH_LITE_DEMO.contains("fn shell_frame(\n    cx: &mut AppUi<'_, '_>,"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("fn request_panel(cx: &mut AppUi<'_, '_>,"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("fn response_panel(cx: &mut AppUi<'_, '_>,"));
+        let api_workbench = API_WORKBENCH_LITE_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            api_workbench.contains(
+                &"cx.app().global::<HistoryDbGlobal>()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !api_workbench.contains(
+                &"cx.app.global::<HistoryDbGlobal>()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            api_workbench.contains(
+                &"shadcn::Dialog::new(&locals.settings_open).into_element_in("
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !api_workbench.contains(
+                &"shadcn::Dialog::new(&locals.settings_open).into_element("
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
         assert!(API_WORKBENCH_LITE_DEMO.contains(".with_in(cx, |cx| {"));
         assert!(API_WORKBENCH_LITE_DEMO.contains(".into_element_in(cx)"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains(".with(cx.elements(), |cx| {"));
@@ -1140,6 +1338,39 @@ mod authoring_surface_policy_tests {
         assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
         assert!(!HELLO_COUNTER_DEMO.contains("Theme::global(&*cx.app).snapshot()"));
+    }
+
+    #[test]
+    fn hello_counter_demo_prefers_app_lane_text_builders_and_capability_first_landing() {
+        let hello_counter = HELLO_COUNTER_DEMO.split_whitespace().collect::<String>();
+        for marker in [
+            "use fret_ui_kit::IntoUiElementInExt as _;",
+            "ui::text(count.to_string())",
+            "ui::text(status_text)",
+            "ui::text_block(if step_valid {",
+            ".submit_action(inc_cmd).into_element_in(cx)",
+            ".max_w(Px(480.0)).into_element_in(cx)",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                hello_counter.contains(&marker),
+                "hello counter demo should keep the app-lane marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "let count_text = cx.text_props(",
+            "let status_line = cx.text_props(",
+            "let step_help = cx.text_props(",
+            ".submit_action(inc_cmd).into_element(cx)",
+            ".max_w(Px(480.0)).into_element(cx)",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !hello_counter.contains(&legacy),
+                "hello counter demo should stay off legacy raw marker: {legacy}",
+            );
+        }
     }
 
     #[test]
@@ -1426,6 +1657,7 @@ mod authoring_surface_policy_tests {
                 "let open_value = open.layout_value(cx);",
                 "let selected_value = selected.layout_value(cx);",
                 "let month_label: Arc<str> = month.layout(cx).read_ref(",
+                "let cx = cx.elements();",
             ],
             &[
                 "open: Model<bool>,",
@@ -1687,6 +1919,322 @@ mod authoring_surface_policy_tests {
             assert!(
                 COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT.contains(marker),
                 "components gallery owner audit should remain explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn selected_raw_owner_examples_keep_escape_hatches_explicit() {
+        let components_gallery = COMPONENTS_GALLERY_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            components_gallery.contains("letcx=cx.elements();"),
+            "components gallery retained branch should spell the raw retained owner explicitly",
+        );
+        assert!(
+            components_gallery.contains(
+                &"let theme = cx.theme_snapshot();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "components gallery should keep theme snapshot reads on AppUi before entering the raw builder phase",
+        );
+        assert!(
+            components_gallery.contains(
+                &"let last_action_value = last_action.layout(cx).value_or_else(|| Arc::<str>::from(\"<none>\"));
+                let cx = cx.elements();
+                let theme_name = cx.theme().name.clone();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "components gallery should keep AppUi tracked reads ahead of an explicit raw builder phase",
+        );
+
+        assert!(EDITOR_NOTES_DEVICE_SHELL_DEMO.contains(
+            "let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint("
+        ));
+        for legacy in [
+            ".watch_model(&asset.name_model)",
+            ".watch_model(&asset.notes_model)",
+            ".watch_model(&asset.notes_outcome_model)",
+        ] {
+            assert!(
+                !EDITOR_NOTES_DEVICE_SHELL_DEMO.contains(legacy),
+                "editor notes device shell should stay off legacy watch_model reads: {legacy}",
+            );
+        }
+
+        let emoji_conformance = EMOJI_CONFORMANCE_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            emoji_conformance.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "emoji conformance should keep raw text/builder authoring on an explicit elements lane",
+        );
+
+        let form_demo = FORM_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            form_demo.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "form demo should keep manual raw builder/container authoring on an explicit elements lane",
+        );
+
+        let date_picker_demo = DATE_PICKER_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            date_picker_demo.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "date picker demo should keep manual raw builder/container authoring on an explicit elements lane",
+        );
+
+        let imui_interaction_showcase = IMUI_INTERACTION_SHOWCASE_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            imui_interaction_showcase.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "imui interaction showcase should keep advanced shell helper rendering on an explicit elements lane",
+        );
+
+        let postprocess_theme = POSTPROCESS_THEME_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            postprocess_theme.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "postprocess theme demo should keep advanced renderer/theme helper rendering on an explicit elements lane",
+        );
+        assert!(
+            postprocess_theme.contains(
+                &"shadcn::raw::typography::h3(\"Custom effects unavailable\").into_element_in(cx)"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "postprocess theme demo should keep the unavailable fallback on the capability-first landing lane",
+        );
+
+        let drop_shadow_demo = DROP_SHADOW_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            drop_shadow_demo.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "drop shadow demo should keep advanced container/effect authoring on an explicit elements lane",
+        );
+
+        let ime_smoke_demo = IME_SMOKE_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            ime_smoke_demo.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "ime smoke demo should keep manual container/flex/text authoring on an explicit elements lane",
+        );
+
+        let sonner_demo = SONNER_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            sonner_demo.contains(
+                &"let cx = cx.elements();"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "sonner demo should keep manual flex/text/toaster authoring on an explicit elements lane",
+        );
+
+        for (label, src) in [
+            ("custom effect v1", CUSTOM_EFFECT_V1_DEMO),
+            ("custom effect v2", CUSTOM_EFFECT_V2_DEMO),
+            ("custom effect v3", CUSTOM_EFFECT_V3_DEMO),
+            ("liquid glass", LIQUID_GLASS_DEMO),
+        ] {
+            let normalized = src.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(
+                    &"view(cx.elements(), &mut st)"
+                        .split_whitespace()
+                        .collect::<String>()
+                ),
+                "{label} should enter its advanced raw view helper through an explicit elements lane",
+            );
+            assert!(
+                !normalized.contains(&"view(cx, &mut st)".split_whitespace().collect::<String>()),
+                "{label} should not rely on implicit AppUi -> ElementContext coercion",
+            );
+        }
+
+        let genui_demo = GENUI_DEMO.split_whitespace().collect::<String>();
+        assert!(
+            genui_demo.contains(
+                &"view(cx.elements(), &mut self.st)"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "genui demo should enter its advanced raw view helper through an explicit elements lane",
+        );
+        assert!(
+            !genui_demo.contains(
+                &"view(cx, &mut self.st)"
+                    .split_whitespace()
+                    .collect::<String>()
+            ),
+            "genui demo should not rely on implicit AppUi -> ElementContext coercion",
+        );
+    }
+
+    #[test]
+    fn markdown_demo_keeps_layout_query_authoring_on_app_ui_lane() {
+        let markdown_demo = MARKDOWN_DEMO.split_whitespace().collect::<String>();
+        for marker in [
+            "cx.layout_query_bounds(anchor_id, Invalidation::Layout)",
+            "cx.layout_query_bounds(viewport_region, Invalidation::Layout)",
+            "cx.layout_query_region_with_id(props, move |_cx, id| {",
+            "let scroll = cx.layout_query_region_with_id(",
+            "pending_anchor.set_in(cx.app_mut().models_mut(), None);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                markdown_demo.contains(&marker),
+                "markdown demo should keep app-lane layout-query marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "pending_anchor.set_in(cx.app.models_mut(), None);",
+            "cx.elements().layout_query_bounds(",
+            "cx.elements().layout_query_region_with_id(",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !markdown_demo.contains(&legacy),
+                "markdown demo should not regress to legacy layout-query authoring: {legacy}",
+            );
+        }
+    }
+
+    #[test]
+    fn markdown_demo_prefers_capability_first_landing_for_root_and_layout_query_shells() {
+        let markdown_demo = MARKDOWN_DEMO.split_whitespace().collect::<String>();
+
+        for marker in [
+            "use fret_ui_kit::IntoUiElementInExt as _;",
+            "}).gap(Space::N3).wrap().items_center().into_element_in(cx);",
+            "}).w_full().padding_px(padding_md).into_element_in(cx)])",
+            ".refine_layout(LayoutRefinement::default().w_full().flex_1()).into_element_in(cx);",
+            "}).w_full().h_full().gap(Space::N3).padding_px(padding_md).into_element_in(cx);",
+            "ui::container(|_cx| [content]).bg(ColorRef::Color(theme.color_token(\"background\"))).w_full().h_full().into_element_in(cx).into()",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                markdown_demo.contains(&marker),
+                "markdown demo should keep the capability-first landing marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "}).gap(Space::N3).wrap().items_center().into_element(cx);",
+            "}).w_full().padding_px(padding_md).into_element(cx)])",
+            ".refine_layout(LayoutRefinement::default().w_full().flex_1()).into_element(cx);",
+            "}).w_full().h_full().gap(Space::N3).padding_px(padding_md).into_element(cx);",
+            "}).bg(ColorRef::Color(theme.color_token(\"background\"))).w_full().h_full().into_element(cx).into()",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !markdown_demo.contains(&legacy),
+                "markdown demo should stay off the legacy landing marker: {legacy}",
+            );
+        }
+    }
+
+    #[test]
+    fn editor_notes_demo_keeps_reusable_panels_on_generic_element_context_access() {
+        let editor_notes_demo = EDITOR_NOTES_DEMO.split_whitespace().collect::<String>();
+
+        for marker in [
+            "fn selection_button<'a, Cx>(",
+            "pub(crate) fn render_selection_panel<'a, Cx>(",
+            "pub(crate) fn render_center_panel<'a, Cx>(",
+            "pub(crate) fn render_inspector_panel<'a, Cx>(",
+            "Cx: fret::app::ElementContextAccess<'a, App>,",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                editor_notes_demo.contains(&marker),
+                "editor notes demo should keep the generic reusable-panel marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            "fn selection_button(cx: &mut AppUi<'_, '_>,",
+            "fn render_selection_panel(cx: &mut AppUi<'_, '_>,",
+            "fn render_center_panel(cx: &mut AppUi<'_, '_>,",
+            "fn render_inspector_panel(cx: &mut AppUi<'_, '_>,",
+            "fn render_selection_panel(cx: &mut UiCx<'_>,",
+            "fn render_center_panel(cx: &mut UiCx<'_>,",
+            "fn render_inspector_panel(cx: &mut UiCx<'_>,",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !editor_notes_demo.contains(&legacy),
+                "editor notes demo should stay off the legacy panel-owner marker: {legacy}",
+            );
+        }
+    }
+
+    #[test]
+    fn editor_notes_demo_prefers_capability_first_landing_for_workspace_shell_root() {
+        assert!(
+            EDITOR_NOTES_DEMO
+                .contains("use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};")
+        );
+
+        let render = source_slice(
+            EDITOR_NOTES_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "impl EditorNotesDemoView {",
+        );
+        let render = render.split_whitespace().collect::<String>();
+
+        for marker in [
+            ".h_full().into_element_in(cx).test_id(TEST_ID_LEFT_RAIL);",
+            ".h_full().into_element_in(cx).test_id(TEST_ID_RIGHT_RAIL);",
+            ".background(Some(theme.color_token(\"background\"))).into_element_in(cx);",
+            "ui::container(|_cx| [frame]).p(Space::N4).size_full().into_element_in(cx).test_id(TEST_ID_ROOT).into()",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                render.contains(&marker),
+                "editor notes demo should keep the capability-first root marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            ".h_full().into_element(cx).test_id(TEST_ID_LEFT_RAIL);",
+            ".h_full().into_element(cx).test_id(TEST_ID_RIGHT_RAIL);",
+            ".background(Some(theme.color_token(\"background\"))).into_element(cx);",
+            "ui::container(|_cx| [frame]).p(Space::N4).size_full().into_element(cx).test_id(TEST_ID_ROOT).into()",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !render.contains(&legacy),
+                "editor notes demo should stay off the legacy root marker: {legacy}",
             );
         }
     }
@@ -3207,53 +3755,51 @@ mod authoring_surface_policy_tests {
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_app_facing_generic_helpers_prefer_app_render_context(
             ASYNC_PLAYGROUND_DEMO,
             &[
+                "use fret::app::{AppRenderContext, RenderContextAccess as _};",
+                "use fret_ui_kit::IntoUiElementInExt as _;",
+                "fn header_bar<'a, Cx>(",
+                "fn body<'a, Cx>(",
+                "fn catalog_panel<'a, Cx>(",
+                "fn catalog_item<'a, Cx>(",
+                "fn main_panel<'a, Cx>(",
+                "fn inspector_panel<'a, Cx>(",
+                "fn policy_editor<'a, Cx>(",
+                "fn query_panel_for_mode<'a, Cx>(",
+                "fn query_inputs_row<'a, Cx>(",
+                "fn query_result_view<'a, Cx>(",
+                "fn active_mode<'a, Cx>(",
+                "fn query_policy<'a, Cx>(",
+                "fn query_fail_mode<'a, Cx>(",
+                "fn tracked_query_inputs<'a, Cx>(",
+                "fn query_key_for_id<'a, Cx>(",
+                "fn status_badge<'a, Cx>(",
+                "fn snapshot_entry_for_key<'a, Cx>(",
+                "Cx: AppRenderContext<'a>,",
+                "cx.elements().pressable(",
+                "let state = handle.read_layout(cx);",
+            ],
+            &[
                 "fn header_bar(cx: &mut UiCx<'_>,",
-                "dark: bool,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
                 "fn body(cx: &mut UiCx<'_>,",
-                "selected: QueryId,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
                 "fn catalog_panel(cx: &mut UiCx<'_>,",
-                "selected: QueryId,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
+                "fn catalog_item(cx: &mut UiCx<'_>,",
                 "fn main_panel(cx: &mut UiCx<'_>,",
-                "global_slow: bool,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
                 "fn inspector_panel(cx: &mut UiCx<'_>,",
                 "fn policy_editor(cx: &mut UiCx<'_>,",
                 "fn query_panel_for_mode(cx: &mut UiCx<'_>,",
-                "mode: FetchMode,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
                 "fn query_inputs_row(cx: &mut UiCx<'_>,",
                 "fn query_result_view(cx: &mut UiCx<'_>,",
-                "fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode",
-                "fn status_badge(",
-                "diag: Option<&QueryDiag>",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
+                "fn active_mode(cx: &mut UiCx<'_>,",
+                "fn query_policy(cx: &mut UiCx<'_>,",
+                "fn query_fail_mode(cx: &mut UiCx<'_>,",
+                "fn tracked_query_inputs(cx: &mut UiCx<'_>,",
+                "fn query_key_for_id(cx: &mut UiCx<'_>,",
+                "fn status_badge(cx: &mut UiCx<'_>,",
                 "fn snapshot_entry_for_key(cx: &mut UiCx<'_>,",
-            ],
-            &[
-                "fn header_bar(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn header_bar(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, global_slow: bool, dark: bool,) -> AnyElement",
-                "fn body(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn body(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, global_slow: bool, selected: QueryId,) -> AnyElement",
-                "fn catalog_panel(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn catalog_panel(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, selected: QueryId,) -> AnyElement",
-                "fn main_panel(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn main_panel(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, global_slow: bool, selected: QueryId,) -> AnyElement",
-                "fn inspector_panel(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, selected: QueryId,) -> AnyElement",
-                "fn policy_editor(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, id: QueryId,) -> AnyElement",
-                "fn query_panel_for_mode(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn query_panel_for_mode(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, global_slow: bool, selected: QueryId, mode: FetchMode,) -> AnyElement",
-                "fn query_inputs_row(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, id: QueryId,) -> AnyElement",
-                "fn query_result_view(cx: &mut UiCx<'_>, theme: ThemeSnapshot, id: QueryId, key: QueryKey<Arc<str>>, state: &QueryState<Arc<str>>, snap: Option<&QuerySnapshotEntry>, policy: &QueryPolicy,) -> AnyElement",
-                "fn active_mode(cx: &mut ElementContext<'_, KernelApp>, locals: &AsyncPlaygroundLocals) -> FetchMode",
-                "fn status_badge(cx: &mut UiCx<'_>, diag: Option<&QueryDiag>) -> AnyElement",
-                "fn status_badge(cx: &mut ElementContext<'_, KernelApp>, diag: Option<&QueryDiag>) -> AnyElement",
-                "fn snapshot_entry_for_key(cx: &mut ElementContext<'_, KernelApp>,",
+                "handle.layout_query(cx).value_or_default()",
             ],
         );
 
@@ -3428,20 +3974,6 @@ mod authoring_surface_policy_tests {
                 "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
             ],
         );
-
-        assert_advanced_helpers_prefer_uicx(
-            ASYNC_PLAYGROUND_DEMO,
-            &[
-                "fn catalog_item(",
-                "id: QueryId,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
-                "out.push(catalog_item(cx, st, theme.clone(), selected, id).into_element(cx));",
-            ],
-            &[
-                "fn catalog_item(cx: &mut UiCx<'_>, st: &mut AsyncPlaygroundState, theme: ThemeSnapshot, selected: QueryId, id: QueryId,) -> AnyElement",
-                "out.push(catalog_item(cx, st, theme.clone(), selected, id));",
-            ],
-        );
     }
 
     #[test]
@@ -3449,19 +3981,30 @@ mod authoring_surface_policy_tests {
         assert_app_facing_concrete_helpers_prefer_app_render_cx(
             HELLO_WORLD_COMPARE_DEMO,
             &[
+                "use fret_ui_kit::IntoUiElementInExt as _;",
+                "cx.set_continuous_frames(self.flags.uses_continuous_frames_lease());",
                 "let swatch = |_cx: &mut AppRenderCx<'_>, fill_rgb: u32, border_rgb: u32|",
                 "fn hello_world_compare_root<'a, Cx>(",
                 "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
-                "let cx = cx.elements();",
+                "ui::text(\"Hello, World!\")",
+                ".text_size_px(Px(24.0))",
+                ".font_semibold()",
+                ".text_align(TextAlign::Center)",
+                ".nowrap()",
+                ".into_element_in(cx)",
                 "panel_bg: Color,",
                 "children: Vec<AnyElement>)",
                 "hello_world_compare_root(cx, panel_bg, children)",
             ],
             &[
+                "set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());",
                 "let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|",
                 "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
                 "let swatch = |cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
                 "fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
+                "let cx = cx.elements();",
+                "cx.text_props(TextProps {",
+                ".into_element(cx)",
                 "hello_world_compare_root(cx.elements(), panel_bg, children)",
             ],
         );
@@ -3642,6 +4185,49 @@ mod authoring_surface_policy_tests {
             )
         );
         assert!(!normalized.contains(&"PickSize640".split_whitespace().collect::<String>()));
+    }
+
+    #[test]
+    fn embedded_viewport_demo_prefers_capability_first_landing_with_explicit_panel_owner() {
+        assert!(EMBEDDED_VIEWPORT_DEMO.contains("use fret_ui_kit::IntoUiElementInExt as _;"));
+
+        let render = source_slice(
+            EMBEDDED_VIEWPORT_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn embedded_viewport_page<'a, Cx, C>(",
+        );
+        let render = render.split_whitespace().collect::<String>();
+
+        for marker in [
+            ".gap(Space::N1).into_element_in(cx);",
+            "[ui::text(\"640×360\").into_element_in(cx)]",
+            "[ui::text(\"960×540\").into_element_in(cx)]",
+            "[ui::text(\"1280×720\").into_element_in(cx)]",
+            ".refine_layout(LayoutRefinement::default().flex_none()).into_element_in(cx);",
+            ".panel(cx.elements(), embedded::EmbeddedViewportPanelProps {",
+            ".max_w(Px(980.0)).into_element_in(cx);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                render.contains(&marker),
+                "embedded viewport demo should keep the capability-first/app-lane marker: {marker}",
+            );
+        }
+
+        for legacy in [
+            ".gap(Space::N1).into_element(cx);",
+            "[cx.text(\"640×360\")]",
+            "[cx.text(\"960×540\")]",
+            "[cx.text(\"1280×720\")]",
+            ".panel(cx, embedded::EmbeddedViewportPanelProps {",
+            ".max_w(Px(980.0)).into_element(cx);",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !render.contains(&legacy),
+                "embedded viewport demo should stay off the legacy marker: {legacy}",
+            );
+        }
     }
 
     #[test]
@@ -4116,11 +4702,13 @@ mod authoring_surface_policy_tests {
             &[
                 "let selected = locals.selected.layout_value(cx);",
                 "let dark = locals.dark.layout_value(cx);",
-                "fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {",
+                "fn tracked_query_inputs<'a, Cx>(cx: &mut Cx, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs",
+                "Cx: AppRenderContext<'a>,",
                 "let query_inputs = tracked_query_inputs(cx, &locals);",
-                "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
+                "locals.tabs.layout_read_ref(cx, |tab| match tab.as_deref() {",
                 "let policy_settings: QueryPolicySettings = cx.data().selector_layout(",
-                "config.fail_mode.layout_value_in(cx)",
+                "let state = handle.read_layout(cx);",
+                "config.fail_mode.layout_value(cx)",
             ],
             &[
                 "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
@@ -4135,10 +4723,11 @@ mod authoring_surface_policy_tests {
                 "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
                 "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
                 "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
-                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
+                "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
                 "let policy_settings: QueryPolicySettings = cx.data().selector(",
                 "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
                 "config.fail_mode.layout_in(cx).value_or_default()",
+                "handle.layout_query(cx).value_or_default()",
             ],
         );
 
@@ -4648,7 +5237,7 @@ mod authoring_surface_policy_tests {
         let async_render = source_slice(
             ASYNC_PLAYGROUND_DEMO,
             "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
-            "fn header_bar(",
+            "fn header_bar<'a, Cx>(",
         );
         let async_render = async_render.split_whitespace().collect::<String>();
         assert!(
@@ -4730,6 +5319,62 @@ mod authoring_surface_policy_tests {
         );
         assert!(
             !markdown_render.contains(&"with_query_client(".split_whitespace().collect::<String>())
+        );
+
+        let api_workbench_render = source_slice(
+            API_WORKBENCH_LITE_DEMO,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn bind_actions(",
+        );
+        let api_workbench_render = api_workbench_render.split_whitespace().collect::<String>();
+        assert!(
+            api_workbench_render.contains(
+                &"cx.app().global::<HistoryDbGlobal>()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            api_workbench_render.contains(
+                &"shadcn::Dialog::new(&locals.settings_open).into_element_in("
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !api_workbench_render.contains(
+                &"cx.app.global::<HistoryDbGlobal>()"
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+        assert!(
+            !api_workbench_render.contains(
+                &"shadcn::Dialog::new(&locals.settings_open).into_element("
+                    .split_whitespace()
+                    .collect::<String>()
+            )
+        );
+
+        assert!(
+            EMOJI_CONFORMANCE_DEMO
+                .split_whitespace()
+                .collect::<String>()
+                .contains(
+                    &"cx.app().global::<FontCatalogCache>()"
+                        .split_whitespace()
+                        .collect::<String>()
+                )
+        );
+        assert!(
+            !EMOJI_CONFORMANCE_DEMO
+                .split_whitespace()
+                .collect::<String>()
+                .contains(
+                    &"cx.app.global::<FontCatalogCache>()"
+                        .split_whitespace()
+                        .collect::<String>()
+                )
         );
 
         let postprocess_render = source_slice(

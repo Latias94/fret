@@ -320,19 +320,27 @@ pub type Ui = fret_ui::element::Elements;
 ///
 /// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures on the default lane.
 /// Reach for `AppRenderCx<'a>` when closure-local or inline helper families materially benefit
-/// from a concrete context carrier without reopening the raw `ElementContext<App>` spelling.
+/// from a concrete context carrier without reopening the raw `ElementContext<App>` spelling. Use
+/// `AppComponentCx<'a>` instead when the helper is component-shaped but intentionally app-hosted.
 pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;
+
+/// Canonical component-facing context alias for reusable component authoring.
+pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;
+
+/// Canonical app-hosted component/snippet context alias.
+///
+/// Use this for first-party examples, gallery snippets, and app-local components that deliberately
+/// target the default `fret::app::App` host. Use `ComponentCx<'a, H>` when the component should
+/// stay host-generic, and `AppRenderCx<'a>` / `AppRenderContext<'a>` for app render helpers.
+pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;
 
 /// Compatibility raw app element context alias for extracted helper functions.
 ///
 /// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures and `AppRenderCx<'a>`
-/// for concrete closure-local helper carriers on the default lane. Keep `UiCx` only as the
-/// compatibility old-name alias behind explicit import or on the advanced lane during the
-/// migration window.
-pub type UiCx<'a> = AppRenderCx<'a>;
-
-/// Canonical component-facing context alias for reusable component authoring.
-pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;
+/// for concrete closure-local helper carriers on the default lane. Prefer `AppComponentCx<'a>` for
+/// app-hosted snippets/components. Keep `UiCx` only as the compatibility old-name alias behind
+/// explicit import or on the advanced lane during the migration window.
+pub type UiCx<'a> = AppComponentCx<'a>;
 
 /// App-facing child return alias for extracted helper functions on the default surface.
 pub trait UiChild: fret_ui_kit::IntoUiElement<crate::app::App> {}
@@ -435,6 +443,8 @@ mod interop;
 /// Re-export the kernel facade (desktop builds).
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
+    /// Canonical app-hosted component/snippet context alias.
+    pub use crate::AppComponentCx;
     /// Canonical app-facing concrete helper context alias for closure-local or inline helpers.
     pub use crate::AppRenderCx;
     /// Canonical app-facing view trait on the explicit app lane.
@@ -3598,6 +3608,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
         assert!(app_prelude_exports_symbol("App"));
         assert!(app_prelude_exports_symbol("AppRenderCx"));
+        assert!(!app_prelude_exports_symbol("AppComponentCx"));
         assert!(!app_prelude_exports_symbol("UiCx"));
         assert!(app_prelude.contains("AppUi"));
         assert!(!app_prelude_exports_symbol("KernelApp"));
@@ -3705,6 +3716,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
+        assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
         assert!(LIB_RS.contains(
             "AppRenderContext, LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt"
@@ -3787,7 +3799,9 @@ mod authoring_surface_policy_tests {
                 "pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;"
             )
         );
-        assert!(LIB_RS.contains("pub type UiCx<'a> = AppRenderCx<'a>;"));
+        assert!(LIB_RS.contains("pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;"));
+        assert!(LIB_RS.contains("pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;"));
+        assert!(LIB_RS.contains("pub type UiCx<'a> = AppComponentCx<'a>;"));
     }
 
     #[test]
@@ -4016,19 +4030,22 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn root_surface_exposes_explicit_env_module() {
-        let root_header = root_surface_header_source();
+        let root_header = root_surface_header_source()
+            .split_whitespace()
+            .collect::<String>();
 
-        assert!(root_header.contains("pub mod env {"));
+        assert!(root_header.contains("pubmodenv{"));
         assert!(
-            root_header.contains(
-                "ContainerQueryHysteresis, ViewportOrientation, ViewportQueryHysteresis,"
-            )
+            root_header
+                .contains("ContainerQueryHysteresis,ViewportOrientation,ViewportQueryHysteresis,")
         );
-        assert!(root_header.contains("preferred_color_scheme, prefers_dark_color_scheme"));
+        assert!(root_header.contains("preferred_color_scheme,"));
+        assert!(root_header.contains("prefers_dark_color_scheme,"));
         assert!(root_header.contains("safe_area_insets,"));
         assert!(root_header.contains("ViewportOrientation,"));
-        assert!(root_header.contains("ViewportQueryHysteresis, viewport_aspect_ratio,"));
-        assert!(root_header.contains("viewport_breakpoints, viewport_height_at_least"));
+        assert!(root_header.contains("ViewportQueryHysteresis,"));
+        assert!(root_header.contains("viewport_aspect_ratio,"));
+        assert!(root_header.contains("viewport_breakpoints,viewport_height_at_least"));
         assert!(root_header.contains("viewport_tailwind,"));
         assert!(root_header.contains("window_insets_padding_refinement_or_zero,"));
     }
@@ -4305,6 +4322,7 @@ mod authoring_surface_policy_tests {
     fn component_prelude_omits_app_runtime_and_recipe_specific_surfaces() {
         assert!(!component_prelude_exports_symbol("FretApp"));
         assert!(!component_prelude_exports_symbol("App"));
+        assert!(!component_prelude_exports_symbol("AppComponentCx"));
         assert!(!component_prelude_exports_symbol("AppUi"));
         assert!(!component_prelude_exports_symbol("Ui"));
         assert!(!component_prelude_exports_symbol("UiCx"));

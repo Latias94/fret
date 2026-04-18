@@ -1,10 +1,10 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
 pub(in crate::ui) fn preview_text_mixed_script_fallback(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     let _ = crate::driver::ensure_ui_gallery_default_profile_fonts_present(cx.app, cx.window);
@@ -20,7 +20,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
             .gap(Space::N2).into_element(cx);
 
     fn sample_row(
-        cx: &mut UiCx<'_>,
+        cx: &mut AppComponentCx<'_>,
         theme: &Theme,
         label: &'static str,
         sample: &'static str,

@@ -3,12 +3,12 @@ pub const SOURCE: &str = include_str!("composable_shell.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let query = cx.local_model_keyed("query", String::new);
     let last_action = super::last_action_model(cx);
     let last_action_value = cx

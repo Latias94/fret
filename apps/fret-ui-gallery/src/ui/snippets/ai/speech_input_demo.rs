@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("speech_input_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{
     AttributedText, Color, DecorationLineStyle, FontWeight, Px, SemanticsRole, TextAlign,
     TextOverflow, TextPaintStyle, TextSpan, TextStyle, TextWrap, TimerToken, UnderlineStyle,
@@ -28,7 +28,7 @@ const TRANSCRIPT_SAMPLES: &[&str] = &[
 ];
 
 fn speech_models(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
 ) -> (
     Model<bool>,
     Model<bool>,
@@ -74,7 +74,7 @@ fn fill_text_layout() -> LayoutStyle {
 }
 
 fn body_text<T>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     text: T,
     style: TextStyle,
     color: Color,
@@ -110,7 +110,7 @@ fn underlined_text(text: Arc<str>) -> AttributedText {
     AttributedText::new(text, spans)
 }
 
-fn clear_action(cx: &mut UiCx<'_>, transcript: Model<String>) -> impl UiChild + use<> {
+fn clear_action(cx: &mut AppComponentCx<'_>, transcript: Model<String>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app);
     let muted = muted_fg(theme);
     let foreground = theme.color_token("foreground");
@@ -160,7 +160,7 @@ fn clear_action(cx: &mut UiCx<'_>, transcript: Model<String>) -> impl UiChild + 
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let (listening, processing, transcript, next_sample, timer_token) = speech_models(cx);
 
     cx.keyed("ui-gallery.ai.speech-input.demo", move |cx| {

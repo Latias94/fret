@@ -65,7 +65,7 @@ fn slider_snippets_stay_copyable_and_upstream_example_aligned() {
     }
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::facade as shadcn;",
         "let values = cx.local_model_keyed(\"ui-gallery-slider-usage-values\", || vec![33.0]);",
         "shadcn::slider(values)",

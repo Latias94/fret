@@ -53,7 +53,7 @@ fn toggle_snippets_stay_copyable_and_docs_aligned() {
     let rtl = include_str!("../src/ui/snippets/toggle/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::toggle_uncontrolled(cx, false, |cx| ui::children![cx; ui::text(\"Toggle\")])",
         ".a11y_label(\"Toggle formatting\")",

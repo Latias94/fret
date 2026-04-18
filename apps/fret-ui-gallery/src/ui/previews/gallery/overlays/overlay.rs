@@ -1,5 +1,5 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 mod flags;
 mod layout;
@@ -20,7 +20,7 @@ struct OverlayModels {
 }
 
 pub(in crate::ui) fn preview_overlay(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
     dialog_glass_open: Model<bool>,

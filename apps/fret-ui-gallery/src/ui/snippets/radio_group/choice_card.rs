@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("choice_card.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
     let starter_id = "ui-gallery-radio-group-choice-card-starter";
     let pro_id = "ui-gallery-radio-group-choice-card-pro";

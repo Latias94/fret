@@ -1,15 +1,15 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let chart_1 = cx.theme().color_token("chart-1");
     let chart_2 = cx.theme().color_token("chart-2");
     let chart_3 = cx.theme().color_token("chart-3");
 
-    let tooltip = |cx: &mut UiCx<'_>,
+    let tooltip = |cx: &mut AppComponentCx<'_>,
                    label: &'static str,
                    indicator: shadcn::ChartTooltipIndicator,
                    hide_label: bool,
@@ -30,7 +30,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .test_id(test_id)
     };
 
-    let legend = |cx: &mut UiCx<'_>,
+    let legend = |cx: &mut AppComponentCx<'_>,
                   align: shadcn::ChartLegendVerticalAlign,
                   wrap: bool,
                   hide_icon: bool,

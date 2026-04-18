@@ -7,7 +7,7 @@ use super::{
     last_action_model, position_model, preview_controls_row, preview_note, preview_stack, request,
 };
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui_kit::IntoUiElement;
@@ -32,7 +32,7 @@ fn toast_position_key(position: shadcn::ToastPosition) -> &'static str {
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let last_action = last_action_model(cx);
     let sonner_position = position_model(cx);
@@ -41,7 +41,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .get_model_copied(&sonner_position, Invalidation::Layout)
         .unwrap_or(shadcn::ToastPosition::TopCenter);
 
-    let action_button = |cx: &mut UiCx<'_>,
+    let action_button = |cx: &mut AppComponentCx<'_>,
                          label: &'static str,
                          test_id: &'static str,
                          target: shadcn::ToastPosition| {

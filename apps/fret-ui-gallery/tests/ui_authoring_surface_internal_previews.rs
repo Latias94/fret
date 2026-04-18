@@ -1,6 +1,34 @@
 mod support;
 
-use support::{assert_internal_preview_surface, manifest_path, read_path, rust_sources};
+use std::path::Path;
+
+use support::{
+    assert_internal_preview_surface, manifest_path, read_path, rust_sources,
+    source_contains_equivalent_marker,
+};
+
+fn canonicalize_rust_fragment(fragment: &str) -> String {
+    let mut canonical = fragment.split_whitespace().collect::<String>();
+    loop {
+        let next = canonical.replace(",)", ")");
+        if next == canonical {
+            return next;
+        }
+        canonical = next;
+    }
+}
+
+fn assert_imports_ui_child_with_app_component(path: &Path, source: &str, normalized: &str) {
+    assert!(
+        source_contains_equivalent_marker(
+            source,
+            normalized,
+            "use fret::{UiChild, AppComponentCx};"
+        ),
+        "{} should import UiChild with AppComponentCx",
+        path.display(),
+    );
+}
 
 fn assert_internal_preview_dir(
     relative_dir: &str,
@@ -46,10 +74,10 @@ fn assert_curated_internal_preview_paths(
 fn assert_normalized_markers_present(relative_path: &str, required_markers: &[&str]) -> String {
     let path = manifest_path(relative_path);
     let source = read_path(&path);
-    let normalized = source.split_whitespace().collect::<String>();
+    let normalized = canonicalize_rust_fragment(&source);
 
     for marker in required_markers {
-        let marker = marker.split_whitespace().collect::<String>();
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
             normalized.contains(&marker),
             "{} is missing marker `{}`",
@@ -112,7 +140,7 @@ fn magic_preview_prefers_ui_cx_on_the_internal_gallery_surface() {
         &path,
         &source,
         &["cx: &mut"],
-        &["cx: &mut UiCx<'_>"],
+        &["cx: &mut AppComponentCx<'_>"],
         &[],
         "internal gallery preview surface",
     );
@@ -124,10 +152,10 @@ fn component_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         "src/ui/previews/pages/components",
         &["cx: &mut", "FnOnce(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal component preview surface",
@@ -148,13 +176,16 @@ fn internal_preview_registry_entries_remain_explicit_vec_anyelement_boundaries()
     );
     let normalized = magic_source.split_whitespace().collect::<String>();
     assert!(
-        normalized
-            .contains("pub(incrate::ui)fnpreview_magic_lens(cx:&mutUiCx<'_>)->Vec<AnyElement>{"),
+        normalized.contains(
+            "pub(incrate::ui)fnpreview_magic_lens(cx:&mutAppComponentCx<'_>)->Vec<AnyElement>{"
+        ),
         "{} should keep magic preview registry entries on the explicit `Vec<AnyElement>` seam",
         magic.display()
     );
     assert!(
-        !normalized.contains("pub(incrate::ui)fnpreview_magic_lens(cx:&mutUiCx<'_>)->AnyElement{"),
+        !normalized.contains(
+            "pub(incrate::ui)fnpreview_magic_lens(cx:&mutAppComponentCx<'_>)->AnyElement{"
+        ),
         "{} should not regress magic preview registry entries to `AnyElement`",
         magic.display()
     );
@@ -173,10 +204,10 @@ fn harness_preview_shells_prefer_ui_cx_on_the_internal_gallery_surface() {
         ],
         &["cx: &mut", "FnOnce(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal harness preview surface",
@@ -194,7 +225,7 @@ fn wrap_preview_page_callers_land_the_typed_preview_shell_explicitly() {
     );
     assert!(
         !normalized.contains(
-            "pub(incrate::ui)fnwrap_preview_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->AnyElement{"
+            "pub(incrate::ui)fnwrap_preview_page(cx:&mutAppComponentCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->AnyElement{"
         ),
         "src/ui/doc_layout.rs should keep wrap_preview_page on the typed internal preview lane",
     );
@@ -280,10 +311,10 @@ fn internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams() {
     let normalized = source.split_whitespace().collect::<String>();
 
     for marker in [
-        "pub(incrate::ui)fnrender_doc_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,sections:Vec<DocSection>,)->implUiChild+use<>",
+        "pub(incrate::ui)fnrender_doc_page(cx:&mutAppComponentCx<'_>,intro:Option<&'staticstr>,sections:Vec<DocSection>,)->implUiChild+use<>",
         "letmutout:Vec<AnyElement>=Vec::with_capacity(sections.len()+1);",
-        "pub(incrate::ui)fnwrap_preview_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->implUiChild+use<>",
-        "FnOnce(&mutUiCx<'_>)->Vec<AnyElement>",
+        "pub(incrate::ui)fnwrap_preview_page(cx:&mutAppComponentCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->implUiChild+use<>",
+        "FnOnce(&mutAppComponentCx<'_>)->Vec<AnyElement>",
     ] {
         assert!(
             normalized.contains(marker),
@@ -294,7 +325,7 @@ fn internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams() {
 
     assert_eq!(
         normalized
-            .matches("FnOnce(&mutUiCx<'_>)->Vec<AnyElement>")
+            .matches("FnOnce(&mutAppComponentCx<'_>)->Vec<AnyElement>")
             .count(),
         2,
         "{} should keep exactly the audited wrap-row closure seams on Vec<AnyElement>",
@@ -324,14 +355,14 @@ fn internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams() {
     );
     assert!(
         !normalized.contains(
-            "pub(incrate::ui)fnrender_doc_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,sections:Vec<DocSection>,)->AnyElement"
+            "pub(incrate::ui)fnrender_doc_page(cx:&mutAppComponentCx<'_>,intro:Option<&'staticstr>,sections:Vec<DocSection>,)->AnyElement"
         ),
         "{} should not regress render_doc_page back to AnyElement",
         path.display()
     );
     assert!(
         !normalized.contains(
-            "pub(incrate::ui)fnwrap_preview_page(cx:&mutUiCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->AnyElement"
+            "pub(incrate::ui)fnwrap_preview_page(cx:&mutAppComponentCx<'_>,intro:Option<&'staticstr>,section_title:&'staticstr,elements:Vec<AnyElement>,)->AnyElement"
         ),
         "{} should not regress wrap_preview_page back to AnyElement",
         path.display()
@@ -344,10 +375,10 @@ fn gallery_atom_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         "src/ui/previews/gallery/atoms",
         &["cx: &mut", "FnOnce(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal atom preview surface",
@@ -360,10 +391,10 @@ fn gallery_form_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         "src/ui/previews/gallery/forms",
         &["cx: &mut", "FnOnce(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal form preview surface",
@@ -376,10 +407,10 @@ fn gallery_data_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         "src/ui/previews/gallery/data",
         &["cx: &mut", "FnOnce(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
         ],
         &["ElementContext<'_, H>", "ElementContext<'a, H>"],
         "internal data preview surface",
@@ -392,10 +423,10 @@ fn gallery_overlay_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface(
         "src/ui/previews/gallery/overlays",
         &["cx: &mut", "FnOnce(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal overlay preview surface",
@@ -427,9 +458,9 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
     let layout_normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/layout.rs",
         &[
-            "fn row(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
-            "fn row_end(_cx: &mut UiCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
-            "pub(super) fn compose_body(cx: &mut UiCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
+            "fn row(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
+            "fn row_end(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
+            "pub(super) fn compose_body(cx: &mut AppComponentCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
         ],
     );
     assert_eq!(
@@ -445,19 +476,19 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
     let widgets_normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/widgets.rs",
         &[
-            "pub(super) fn overlay_reset(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn dropdown(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn context_menu(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn context_menu_edge(_cx: &mut UiCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
-            "pub(super) fn underlay(_cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "pub(super) fn hover_card(cx: &mut UiCx<'_>) -> impl UiChild + use<>",
-            "pub(super) fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn dialog_glass(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn alert_dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn sheet(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn overlay_reset(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn dropdown(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn context_menu(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn context_menu_edge(_cx: &mut AppComponentCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
+            "pub(super) fn underlay(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn tooltip(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn hover_card(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn popover(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn dialog(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn dialog_glass(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn alert_dialog(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn sheet(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn portal_geometry(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
         ],
     );
     assert_eq!(
@@ -480,8 +511,8 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
     let flags_normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/flags.rs",
         &[
-            "pub(super) fn last_action_status(cx: &mut UiCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
-            "pub(super) fn status_flags(cx: &mut UiCx<'_>, models: &OverlayModels) -> Vec<AnyElement>",
+            "pub(super) fn last_action_status(cx: &mut AppComponentCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
+            "pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> Vec<AnyElement>",
         ],
     );
     assert_eq!(
@@ -499,176 +530,206 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
 
 #[test]
 fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
-    let header_source = read_path(&manifest_path(
-        "src/ui/previews/pages/editors/code_editor/mvp/header.rs",
-    ));
-    let header_normalized = header_source.split_whitespace().collect::<String>();
-    assert!(
-        header_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/editors/code_editor/mvp/header.rs should import UiChild with UiCx",
+    let header_path = manifest_path("src/ui/previews/pages/editors/code_editor/mvp/header.rs");
+    let header_source = read_path(&header_path);
+    let header_normalized = canonicalize_rust_fragment(&header_source);
+    assert_imports_ui_child_with_app_component(&header_path, &header_source, &header_normalized);
+    let build_header_marker = canonicalize_rust_fragment(
+        "pub(super)fnbuild_header(cx:&mutAppComponentCx<'_>,theme:&Theme,syntax_rust:Model<bool>,syntax_enabled:bool,boundary_identifier:Model<bool>,boundary_identifier_enabled:bool,soft_wrap:Model<bool>,soft_wrap_enabled:bool,set_identifier_mode:fret_ui::action::OnActivate,set_unicode_mode:fret_ui::action::OnActivate,handles:&CodeEditorMvpHandles,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,)->implUiChild+use<>",
     );
     assert!(
-        header_normalized.contains(
-            "pub(super)fnbuild_header(cx:&mutUiCx<'_>,theme:&Theme,syntax_rust:Model<bool>,syntax_enabled:bool,boundary_identifier:Model<bool>,boundary_identifier_enabled:bool,soft_wrap:Model<bool>,soft_wrap_enabled:bool,set_identifier_mode:fret_ui::action::OnActivate,set_unicode_mode:fret_ui::action::OnActivate,handles:&CodeEditorMvpHandles,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,)->implUiChild+use<>"
-        ),
-        "src/ui/previews/pages/editors/code_editor/mvp/header.rs should keep build_header on the typed helper lane",
+        header_normalized.contains(&build_header_marker),
+        "{} should keep build_header on the typed helper lane",
+        header_path.display(),
+    );
+    let build_header_forbidden = canonicalize_rust_fragment(
+        "pub(super)fnbuild_header(cx:&mutAppComponentCx<'_>,theme:&Theme,syntax_rust:Model<bool>,syntax_enabled:bool,boundary_identifier:Model<bool>,boundary_identifier_enabled:bool,soft_wrap:Model<bool>,soft_wrap_enabled:bool,set_identifier_mode:fret_ui::action::OnActivate,set_unicode_mode:fret_ui::action::OnActivate,handles:&CodeEditorMvpHandles,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,)->AnyElement",
     );
     assert!(
-        !header_normalized.contains(
-            "pub(super)fnbuild_header(cx:&mutUiCx<'_>,theme:&Theme,syntax_rust:Model<bool>,syntax_enabled:bool,boundary_identifier:Model<bool>,boundary_identifier_enabled:bool,soft_wrap:Model<bool>,soft_wrap_enabled:bool,set_identifier_mode:fret_ui::action::OnActivate,set_unicode_mode:fret_ui::action::OnActivate,handles:&CodeEditorMvpHandles,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,)->AnyElement"
-        ),
-        "src/ui/previews/pages/editors/code_editor/mvp/header.rs should not regress build_header back to AnyElement",
+        !header_normalized.contains(&build_header_forbidden),
+        "{} should not regress build_header back to AnyElement",
+        header_path.display(),
     );
 
-    let word_boundary_source = read_path(&manifest_path(
-        "src/ui/previews/pages/editors/code_editor/mvp/word_boundary.rs",
-    ));
-    let word_boundary_normalized = word_boundary_source.split_whitespace().collect::<String>();
-    assert!(
-        word_boundary_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/editors/code_editor/mvp/word_boundary.rs should import UiChild with UiCx",
+    let word_boundary_path =
+        manifest_path("src/ui/previews/pages/editors/code_editor/mvp/word_boundary.rs");
+    let word_boundary_source = read_path(&word_boundary_path);
+    let word_boundary_normalized = canonicalize_rust_fragment(&word_boundary_source);
+    assert_imports_ui_child_with_app_component(
+        &word_boundary_path,
+        &word_boundary_source,
+        &word_boundary_normalized,
     );
     for marker in [
-        "pub(super)fnword_boundary_controls(cx:&mutUiCx<'_>,word_handle:code_editor::CodeEditorHandle,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,boundary_identifier:Model<bool>,)->implUiChild+use<>",
-        "pub(super)fnword_boundary_debug_view(cx:&mutUiCx<'_>,theme:&Theme,word_handle:code_editor::CodeEditorHandle,word_debug:Rc<std::cell::RefCell<String>>,)->implUiChild+use<>",
+        "pub(super)fnword_boundary_controls(cx:&mutAppComponentCx<'_>,word_handle:code_editor::CodeEditorHandle,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,boundary_identifier:Model<bool>,)->implUiChild+use<>",
+        "pub(super)fnword_boundary_debug_view(cx:&mutAppComponentCx<'_>,theme:&Theme,word_handle:code_editor::CodeEditorHandle,word_debug:Rc<std::cell::RefCell<String>>,)->implUiChild+use<>",
     ] {
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            word_boundary_normalized.contains(marker),
-            "src/ui/previews/pages/editors/code_editor/mvp/word_boundary.rs is missing typed helper marker `{marker}`",
+            word_boundary_normalized.contains(&marker),
+            "{} is missing typed helper marker `{marker}`",
+            word_boundary_path.display(),
         );
     }
     for marker in [
-        "pub(super)fnword_boundary_controls(cx:&mutUiCx<'_>,word_handle:code_editor::CodeEditorHandle,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,boundary_identifier:Model<bool>,)->AnyElement",
-        "pub(super)fnword_boundary_debug_view(cx:&mutUiCx<'_>,theme:&Theme,word_handle:code_editor::CodeEditorHandle,word_debug:Rc<std::cell::RefCell<String>>,)->AnyElement",
+        "pub(super)fnword_boundary_controls(cx:&mutAppComponentCx<'_>,word_handle:code_editor::CodeEditorHandle,word_fixture_loaded:Rc<Cell<bool>>,word_idx:Rc<Cell<usize>>,word_debug:Rc<std::cell::RefCell<String>>,boundary_identifier:Model<bool>,)->AnyElement",
+        "pub(super)fnword_boundary_debug_view(cx:&mutAppComponentCx<'_>,theme:&Theme,word_handle:code_editor::CodeEditorHandle,word_debug:Rc<std::cell::RefCell<String>>,)->AnyElement",
     ] {
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            !word_boundary_normalized.contains(marker),
-            "src/ui/previews/pages/editors/code_editor/mvp/word_boundary.rs regressed helper marker `{marker}`",
+            !word_boundary_normalized.contains(&marker),
+            "{} regressed helper marker `{marker}`",
+            word_boundary_path.display(),
         );
     }
 
-    let gates_source = read_path(&manifest_path(
-        "src/ui/previews/pages/editors/code_editor/mvp/gates.rs",
-    ));
-    let gates_normalized = gates_source.split_whitespace().collect::<String>();
-    assert!(
-        gates_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/editors/code_editor/mvp/gates.rs should import UiChild with UiCx",
-    );
+    let gates_path = manifest_path("src/ui/previews/pages/editors/code_editor/mvp/gates.rs");
+    let gates_source = read_path(&gates_path);
+    let gates_normalized = canonicalize_rust_fragment(&gates_source);
+    assert_imports_ui_child_with_app_component(&gates_path, &gates_source, &gates_normalized);
     for marker in [
-        "fngate_panel<B>(cx:&mutUiCx<'_>,theme:&Theme,child:B)->implUiChild+use<B>",
-        "pub(super)fnword_boundary_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
-        "pub(super)fnword_boundary_soft_wrap_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
-        "pub(super)fna11y_selection_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
-        "pub(super)fna11y_composition_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
-        "pub(super)fna11y_selection_wrap_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
-        "pub(super)fna11y_composition_wrap_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
-        "pub(super)fna11y_composition_drag_gate(cx:&mutUiCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "fngate_panel<B>(cx:&mutAppComponentCx<'_>,theme:&Theme,child:B)->implUiChild+use<B>",
+        "pub(super)fnword_boundary_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "pub(super)fnword_boundary_soft_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "pub(super)fna11y_selection_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "pub(super)fna11y_composition_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "pub(super)fna11y_selection_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "pub(super)fna11y_composition_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "pub(super)fna11y_composition_drag_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
     ] {
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            gates_normalized.contains(marker),
-            "src/ui/previews/pages/editors/code_editor/mvp/gates.rs is missing typed helper marker `{marker}`",
+            gates_normalized.contains(&marker),
+            "{} is missing typed helper marker `{marker}`",
+            gates_path.display(),
         );
     }
     assert!(
         !gates_normalized.contains("->AnyElement"),
-        "src/ui/previews/pages/editors/code_editor/mvp/gates.rs should not regress gate helpers back to AnyElement",
+        "{} should not regress gate helpers back to AnyElement",
+        gates_path.display(),
     );
 }
 
 #[test]
 fn selected_internal_preview_helpers_prefer_typed_outputs() {
-    let harness_intro = read_path(&manifest_path("src/ui/previews/pages/harness/intro.rs"));
-    let harness_intro_normalized = harness_intro.split_whitespace().collect::<String>();
-    assert!(
-        harness_intro_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/harness/intro.rs should import UiChild with UiCx",
+    let harness_intro_path = manifest_path("src/ui/previews/pages/harness/intro.rs");
+    let harness_intro = read_path(&harness_intro_path);
+    let harness_intro_normalized = canonicalize_rust_fragment(&harness_intro);
+    assert_imports_ui_child_with_app_component(
+        &harness_intro_path,
+        &harness_intro,
+        &harness_intro_normalized,
     );
     assert!(
         harness_intro_normalized.contains(
-            "fncard(cx:&mutUiCx<'_>,title:&'staticstr,desc:&'staticstr)->implUiChild+use<>"
+            "fncard(cx:&mutAppComponentCx<'_>,title:&'staticstr,desc:&'staticstr)->implUiChild+use<>"
         ),
-        "src/ui/previews/pages/harness/intro.rs should keep card on the typed helper lane",
+        "{} should keep card on the typed helper lane",
+        harness_intro_path.display(),
     );
     assert!(
         !harness_intro_normalized.contains("->AnyElement"),
-        "src/ui/previews/pages/harness/intro.rs should not regress card back to AnyElement",
+        "{} should not regress card back to AnyElement",
+        harness_intro_path.display(),
     );
     assert!(
         harness_intro_normalized.contains("DocSection::build(cx,\"Overview\",preview)"),
-        "src/ui/previews/pages/harness/intro.rs should keep overview registration on DocSection::build(cx, ...)",
+        "{} should keep overview registration on DocSection::build(cx, ...)",
+        harness_intro_path.display(),
     );
     assert!(
         !harness_intro_normalized.contains("DocSection::new(\"Overview\",preview)"),
-        "src/ui/previews/pages/harness/intro.rs should not regress overview registration to DocSection::new(...)",
+        "{} should not regress overview registration to DocSection::new(...)",
+        harness_intro_path.display(),
     );
 
-    let outline_stroke = read_path(&manifest_path(
-        "src/ui/previews/pages/editors/text/outline_stroke.rs",
-    ));
-    let outline_stroke_normalized = outline_stroke.split_whitespace().collect::<String>();
-    assert!(
-        outline_stroke_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/editors/text/outline_stroke.rs should import UiChild with UiCx",
+    let outline_stroke_path = manifest_path("src/ui/previews/pages/editors/text/outline_stroke.rs");
+    let outline_stroke = read_path(&outline_stroke_path);
+    let outline_stroke_normalized = canonicalize_rust_fragment(&outline_stroke);
+    assert_imports_ui_child_with_app_component(
+        &outline_stroke_path,
+        &outline_stroke,
+        &outline_stroke_normalized,
+    );
+    let outline_toggle_marker = canonicalize_rust_fragment(
+        "fntoggle_button(cx:&mutAppComponentCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->implUiChild+use<>",
     );
     assert!(
-        outline_stroke_normalized.contains(
-            "fntoggle_button(cx:&mutUiCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->implUiChild+use<>"
-        ),
-        "src/ui/previews/pages/editors/text/outline_stroke.rs should keep toggle_button on the typed helper lane",
+        outline_stroke_normalized.contains(&outline_toggle_marker),
+        "{} should keep toggle_button on the typed helper lane",
+        outline_stroke_path.display(),
+    );
+    let outline_toggle_forbidden = canonicalize_rust_fragment(
+        "fntoggle_button(cx:&mutAppComponentCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->AnyElement",
     );
     assert!(
-        !outline_stroke_normalized.contains(
-            "fntoggle_button(cx:&mutUiCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->AnyElement"
-        ),
-        "src/ui/previews/pages/editors/text/outline_stroke.rs should not regress toggle_button back to AnyElement",
-    );
-
-    let mixed_script = read_path(&manifest_path(
-        "src/ui/previews/pages/editors/text/mixed_script_fallback.rs",
-    ));
-    let mixed_script_normalized = mixed_script.split_whitespace().collect::<String>();
-    assert!(
-        mixed_script_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/editors/text/mixed_script_fallback.rs should import UiChild with UiCx",
-    );
-    assert!(
-        mixed_script_normalized.contains(
-            "fnsample_row(cx:&mutUiCx<'_>,theme:&Theme,label:&'staticstr,sample:&'staticstr,test_id:&'staticstr,)->implUiChild+use<>"
-        ),
-        "src/ui/previews/pages/editors/text/mixed_script_fallback.rs should keep sample_row on the typed helper lane",
-    );
-    assert!(
-        !mixed_script_normalized.contains(
-            "fnsample_row(cx:&mutUiCx<'_>,theme:&Theme,label:&'staticstr,sample:&'staticstr,test_id:&'staticstr,)->AnyElement"
-        ),
-        "src/ui/previews/pages/editors/text/mixed_script_fallback.rs should not regress sample_row back to AnyElement",
+        !outline_stroke_normalized.contains(&outline_toggle_forbidden),
+        "{} should not regress toggle_button back to AnyElement",
+        outline_stroke_path.display(),
     );
 
-    let feature_toggles = read_path(&manifest_path(
-        "src/ui/previews/pages/editors/text/feature_toggles.rs",
-    ));
-    let feature_toggles_normalized = feature_toggles.split_whitespace().collect::<String>();
+    let mixed_script_path =
+        manifest_path("src/ui/previews/pages/editors/text/mixed_script_fallback.rs");
+    let mixed_script = read_path(&mixed_script_path);
+    let mixed_script_normalized = canonicalize_rust_fragment(&mixed_script);
+    assert_imports_ui_child_with_app_component(
+        &mixed_script_path,
+        &mixed_script,
+        &mixed_script_normalized,
+    );
+    let mixed_script_marker = canonicalize_rust_fragment(
+        "fnsample_row(cx:&mutAppComponentCx<'_>,theme:&Theme,label:&'staticstr,sample:&'staticstr,test_id:&'staticstr,)->implUiChild+use<>",
+    );
     assert!(
-        feature_toggles_normalized.contains("usefret::UiChild;usefret::UiCx;"),
-        "src/ui/previews/pages/editors/text/feature_toggles.rs should import UiChild with UiCx",
+        mixed_script_normalized.contains(&mixed_script_marker),
+        "{} should keep sample_row on the typed helper lane",
+        mixed_script_path.display(),
+    );
+    let mixed_script_forbidden = canonicalize_rust_fragment(
+        "fnsample_row(cx:&mutAppComponentCx<'_>,theme:&Theme,label:&'staticstr,sample:&'staticstr,test_id:&'staticstr,)->AnyElement",
+    );
+    assert!(
+        !mixed_script_normalized.contains(&mixed_script_forbidden),
+        "{} should not regress sample_row back to AnyElement",
+        mixed_script_path.display(),
+    );
+
+    let feature_toggles_path =
+        manifest_path("src/ui/previews/pages/editors/text/feature_toggles.rs");
+    let feature_toggles = read_path(&feature_toggles_path);
+    let feature_toggles_normalized = canonicalize_rust_fragment(&feature_toggles);
+    assert_imports_ui_child_with_app_component(
+        &feature_toggles_path,
+        &feature_toggles,
+        &feature_toggles_normalized,
     );
     for marker in [
-        "fntoggle_button(cx:&mutUiCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->implUiChild+use<>",
-        "fnsample_text(cx:&mutUiCx<'_>,theme:&Theme,label:&'staticstr,text:&'staticstr,features:Option<fret_core::TextShapingStyle>,test_id:&'staticstr,)->implUiChild+use<>",
+        "fntoggle_button(cx:&mutAppComponentCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->implUiChild+use<>",
+        "fnsample_text(cx:&mutAppComponentCx<'_>,theme:&Theme,label:&'staticstr,text:&'staticstr,features:Option<fret_core::TextShapingStyle>,test_id:&'staticstr,)->implUiChild+use<>",
     ] {
+        let marker = canonicalize_rust_fragment(marker);
         assert!(
-            feature_toggles_normalized.contains(marker),
-            "src/ui/previews/pages/editors/text/feature_toggles.rs is missing typed helper marker `{marker}`",
+            feature_toggles_normalized.contains(&marker),
+            "{} is missing typed helper marker `{marker}`",
+            feature_toggles_path.display(),
         );
     }
-    assert!(
-        !feature_toggles_normalized.contains("fntoggle_button(cx:&mutUiCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->AnyElement"),
-        "src/ui/previews/pages/editors/text/feature_toggles.rs should not regress toggle_button back to AnyElement",
+    let feature_toggle_forbidden = canonicalize_rust_fragment(
+        "fntoggle_button(cx:&mutAppComponentCx<'_>,label:&'staticstr,value:bool,test_id:&'staticstr,on_activate:fret_ui::action::OnActivate,)->AnyElement",
     );
     assert!(
-        !feature_toggles_normalized.contains("fnsample_text(cx:&mutUiCx<'_>,theme:&Theme,label:&'staticstr,text:&'staticstr,features:Option<fret_core::TextShapingStyle>,test_id:&'staticstr,)->AnyElement"),
-        "src/ui/previews/pages/editors/text/feature_toggles.rs should not regress sample_text back to AnyElement",
+        !feature_toggles_normalized.contains(&feature_toggle_forbidden),
+        "{} should not regress toggle_button back to AnyElement",
+        feature_toggles_path.display(),
+    );
+    let sample_text_forbidden = canonicalize_rust_fragment(
+        "fnsample_text(cx:&mutAppComponentCx<'_>,theme:&Theme,label:&'staticstr,text:&'staticstr,features:Option<fret_core::TextShapingStyle>,test_id:&'staticstr,)->AnyElement",
+    );
+    assert!(
+        !feature_toggles_normalized.contains(&sample_text_forbidden),
+        "{} should not regress sample_text back to AnyElement",
+        feature_toggles_path.display(),
     );
 }
 
@@ -747,12 +808,12 @@ fn editor_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         "src/ui/previews/pages/editors",
         &["cx: &mut", "FnOnce(&mut", "Fn(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
-            "Fn(&mut UiCx<'_>)",
-            "Fn(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
+            "Fn(&mut AppComponentCx<'_>)",
+            "Fn(&mut AppComponentCx<'a>)",
         ],
         &["ElementContext<'_, H>", "ElementContext<'a, H>"],
         "internal editor preview surface",
@@ -765,12 +826,12 @@ fn page_torture_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
         "src/ui/previews/pages/torture",
         &["cx: &mut", "FnOnce(&mut", "Fn(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
-            "Fn(&mut UiCx<'_>)",
-            "Fn(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
+            "Fn(&mut AppComponentCx<'_>)",
+            "Fn(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal torture preview surface",
@@ -783,12 +844,12 @@ fn gallery_torture_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface(
         "src/ui/previews/gallery/torture",
         &["cx: &mut", "FnOnce(&mut", "Fn(&mut"],
         &[
-            "cx: &mut UiCx<'_>",
-            "cx: &mut UiCx<'a>",
-            "FnOnce(&mut UiCx<'_>)",
-            "FnOnce(&mut UiCx<'a>)",
-            "Fn(&mut UiCx<'_>)",
-            "Fn(&mut UiCx<'a>)",
+            "cx: &mut AppComponentCx<'_>",
+            "cx: &mut AppComponentCx<'a>",
+            "FnOnce(&mut AppComponentCx<'_>)",
+            "FnOnce(&mut AppComponentCx<'a>)",
+            "Fn(&mut AppComponentCx<'_>)",
+            "Fn(&mut AppComponentCx<'a>)",
         ],
         &[],
         "internal gallery torture preview surface",

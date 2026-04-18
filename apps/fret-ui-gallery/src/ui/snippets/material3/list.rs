@@ -3,19 +3,19 @@ pub const SOURCE: &str = include_str!("list.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::ids;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let list = material3::List::uncontrolled(cx, "alpha");
     let value = list.value_model();
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let build_list = |cx: &mut UiCx<'_>, id_prefix: &str| {
+    let build_list = |cx: &mut AppComponentCx<'_>, id_prefix: &str| {
         material3::List::new(value.clone())
             .a11y_label("Material 3 List")
             .test_id(format!("{id_prefix}-list"))

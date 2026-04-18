@@ -166,6 +166,7 @@ impl View for ImUiInteractionShowcaseView {
         let selected_tab_value = selected_tab.layout_value(cx);
         let timeline_value = timeline.layout_value(cx);
         let latest_event = timeline_value.first().map(|event| event.label.clone());
+        let cx = cx.elements();
 
         let header_strip = render_showcase_header_strip(
             cx,

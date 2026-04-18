@@ -1,19 +1,19 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()
         .max_w(MetricRef::Px(Px(448.0)));
 
-    let icon = |cx: &mut UiCx<'_>, id: &'static str| {
+    let icon = |cx: &mut AppComponentCx<'_>, id: &'static str| {
         let icon_id = fret_icons::IconId::new_static(id);
         match id {
             // shadcn/ui v4 demo: `BadgeCheckIcon className="size-5"`.

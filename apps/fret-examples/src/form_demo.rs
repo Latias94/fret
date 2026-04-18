@@ -275,6 +275,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
             let mut root_layout = LayoutStyle::default();
             root_layout.size.width = Length::Fill;
             root_layout.size.height = Length::Fill;
+            let cx = cx.elements();
 
             let header = ui::h_row(|cx| {
                 [

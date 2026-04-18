@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("sizes.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let size_3 = shadcn::Spinner::new()
         .refine_layout(LayoutRefinement::default().w_px(Px(12.0)).h_px(Px(12.0)))
         .into_element(cx)

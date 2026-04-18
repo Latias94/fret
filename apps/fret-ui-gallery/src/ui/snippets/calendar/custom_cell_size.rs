@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("custom_cell_size.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
@@ -29,7 +29,7 @@ fn today_from_env_or_now() -> Date {
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
     let range_start = Date::from_calendar_date(today.year(), time::Month::December, 8)
         .expect("valid custom cell size start date");

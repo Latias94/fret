@@ -76,14 +76,14 @@ impl View for AssetsReloadEpochBasicsView {
 
         let bumps = bumps_state.layout(cx).value_or(0);
         if bumps != self.applied_bumps {
-            fret::assets::bump_asset_reload_epoch(&mut *cx.app);
+            fret::assets::bump_asset_reload_epoch(cx.app_mut());
             self.applied_bumps = bumps;
-            cx.app.request_redraw(self.window);
-            cx.app
-                .push_effect(Effect::RequestAnimationFrame(self.window));
+            let app = cx.app_mut();
+            app.request_redraw(self.window);
+            app.push_effect(Effect::RequestAnimationFrame(self.window));
         }
 
-        let epoch = fret::assets::asset_reload_epoch(&*cx.app)
+        let epoch = fret::assets::asset_reload_epoch(cx.app())
             .map(|v| v.0)
             .unwrap_or(0);
 

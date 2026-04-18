@@ -1,40 +1,41 @@
 pub const SOURCE: &str = include_str!("grid.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     use fret_icons::ids;
 
-    let icon_cell = |cx: &mut UiCx<'_>, label: &'static str, icon_id: fret_icons::IconId| {
-        let row = ui::h_flex(|cx| {
-            vec![
-                icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
-                cx.text(label),
-            ]
-        })
-        .layout(LayoutRefinement::default().w_full())
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+    let icon_cell =
+        |cx: &mut AppComponentCx<'_>, label: &'static str, icon_id: fret_icons::IconId| {
+            let row = ui::h_flex(|cx| {
+                vec![
+                    icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
+                    cx.text(label),
+                ]
+            })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-        let theme = Theme::global(&*cx.app);
-        cx.container(
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .rounded(Radius::Md)
-                    .border_1()
-                    .p(Space::N3),
-                LayoutRefinement::default().w_full(),
-            ),
-            |_cx| [row],
-        )
-    };
+            let theme = Theme::global(&*cx.app);
+            cx.container(
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .rounded(Radius::Md)
+                        .border_1()
+                        .p(Space::N3),
+                    LayoutRefinement::default().w_full(),
+                ),
+                |_cx| [row],
+            )
+        };
 
     ui::v_flex(|cx| {
         vec![

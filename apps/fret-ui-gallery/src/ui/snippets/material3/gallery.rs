@@ -3,13 +3,13 @@ pub const SOURCE: &str = include_str!("gallery.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::ids;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
     let material3_checkbox = checkbox_root.checked_model();
     let switch_root = material3::Switch::uncontrolled(cx, false);

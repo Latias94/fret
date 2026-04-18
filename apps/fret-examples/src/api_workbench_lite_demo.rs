@@ -191,7 +191,7 @@ impl View for ApiWorkbenchLiteView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let locals = WorkbenchLocals::new(cx);
         let history_db = cx
-            .app
+            .app()
             .global::<HistoryDbGlobal>()
             .expect("HistoryDbGlobal missing")
             .pool
@@ -292,7 +292,7 @@ impl View for ApiWorkbenchLiteView {
         );
 
         let settings_open_for_close = locals.settings_open.clone();
-        let dialog = shadcn::Dialog::new(&locals.settings_open).into_element(
+        let dialog = shadcn::Dialog::new(&locals.settings_open).into_element_in(
             cx,
             move |_cx| shell,
             move |cx| {

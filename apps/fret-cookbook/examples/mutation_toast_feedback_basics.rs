@@ -139,13 +139,13 @@ impl View for MutationToastFeedbackBasicsView {
 
         let method_toggle = shadcn::ToggleGroup::single(&locals.method)
             .items([
-                shadcn::ToggleGroupItem::new("GET", [cx.text("GET")])
+                shadcn::ToggleGroupItem::new("GET", [ui::text("GET").into_element_in(cx)])
                     .a11y_label("GET")
                     .test_id("cookbook.mutation_toast_feedback_basics.method.get"),
-                shadcn::ToggleGroupItem::new("POST", [cx.text("POST")])
+                shadcn::ToggleGroupItem::new("POST", [ui::text("POST").into_element_in(cx)])
                     .a11y_label("POST")
                     .test_id("cookbook.mutation_toast_feedback_basics.method.post"),
-                shadcn::ToggleGroupItem::new("PATCH", [cx.text("PATCH")])
+                shadcn::ToggleGroupItem::new("PATCH", [ui::text("PATCH").into_element_in(cx)])
                     .a11y_label("PATCH")
                     .test_id("cookbook.mutation_toast_feedback_basics.method.patch"),
             ])
@@ -306,7 +306,7 @@ impl View for MutationToastFeedbackBasicsView {
 
         // Keep the toaster mounted in-tree so feedback projection remains a replaceable recipe
         // concern above the authoritative mutation state.
-        root.push(shadcn::Toaster::new().into_element(cx));
+        root.push(shadcn::Toaster::new().into_element(cx.elements()));
         root.into()
     }
 }
@@ -431,8 +431,8 @@ fn emit_save_feedback_toasts(
         let Some(saved) = state.data.as_ref() else {
             return;
         };
-        let sonner = shadcn::Sonner::global(cx.app);
-        let mut host = UiActionHostAdapter { app: &mut *cx.app };
+        let sonner = shadcn::Sonner::global(cx.app());
+        let mut host = UiActionHostAdapter { app: cx.app_mut() };
         sonner.toast_success_message(
             &mut host,
             window,
@@ -455,8 +455,8 @@ fn emit_save_feedback_toasts(
             .as_ref()
             .map(ToString::to_string)
             .unwrap_or_else(|| "Unknown save failure".to_string());
-        let sonner = shadcn::Sonner::global(cx.app);
-        let mut host = UiActionHostAdapter { app: &mut *cx.app };
+        let sonner = shadcn::Sonner::global(cx.app());
+        let mut host = UiActionHostAdapter { app: cx.app_mut() };
         sonner.toast_error_message(
             &mut host,
             window,

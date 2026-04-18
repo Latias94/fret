@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("controlled.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -14,7 +14,7 @@ where
         .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let values = cx.local_model(|| vec![50.0]);
 
     cx.keyed("ui_gallery.progress.controlled", |cx| {

@@ -26,6 +26,7 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     let app_prelude = app_prelude_slice();
 
     assert!(app_slice.contains("pub use crate::view::{"));
+    assert!(app_slice.contains("pub use crate::AppComponentCx;"));
     assert!(app_slice.contains("pub use crate::AppRenderCx;"));
     assert!(app_slice.contains("AppRenderContext"));
     assert!(app_slice.contains("pub use fret_ui::ElementContextAccess;"));
@@ -41,13 +42,32 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     assert!(VIEW_RS.contains(
         "impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {"
     ));
+    assert!(VIEW_RS.contains(
+        "impl<'cx, 'a, H: UiHost> fret_ui_kit::command::ElementCommandGatingExt for AppUi<'cx, 'a, H> {"
+    ));
+    assert!(VIEW_RS.contains(
+        "pub fn request_animation_frame(&mut self) {\n        self.cx.request_animation_frame();\n    }"
+    ));
+    assert!(VIEW_RS.contains(
+        "pub fn set_continuous_frames(&mut self, enabled: bool) {\n        fret_ui_kit::declarative::scheduling::set_continuous_frames(self.cx, enabled);\n    }"
+    ));
+    assert!(VIEW_RS.contains("pub fn layout_query_bounds("));
+    assert!(VIEW_RS.contains("pub fn layout_query_region_with_id<I>("));
+    assert!(VIEW_RS.contains("pub fn layout_query_region<I>("));
+    assert!(VIEW_RS.contains(
+        "let mut carried_action_handlers = Some(std::mem::take(&mut self.action_handlers));"
+    ));
     assert!(
         FRET_LIB_RS
             .contains("pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;")
     );
+    assert!(
+        FRET_LIB_RS.contains("pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;")
+    );
     assert!(FRET_LIB_RS.contains("Compatibility raw app element context alias"));
     assert!(FRET_LIB_RS.contains("Prefer `fret::app::AppRenderContext<'a>`"));
     assert!(FRET_LIB_RS.contains("`AppRenderCx<'a>` when closure-local or inline helper families"));
+    assert!(FRET_LIB_RS.contains("Prefer `AppComponentCx<'a>` for"));
 }
 
 #[test]

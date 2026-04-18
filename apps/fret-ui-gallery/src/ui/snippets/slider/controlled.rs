@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("controlled.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let controlled_values =
         cx.local_model_keyed("ui-gallery-slider-controlled-values", || vec![0.3, 0.7]);
     let control_id = ControlId::from("ui-gallery-slider-controlled-temperature");

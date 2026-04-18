@@ -1,10 +1,10 @@
 //! Snippet-backed `Command` examples for UI Gallery.
 
-use fret::UiCx;
+use fret::AppComponentCx;
 use fret_runtime::Model;
 use std::sync::Arc;
 
-pub(crate) fn last_action_model(cx: &mut UiCx<'_>) -> Model<Arc<str>> {
+pub(crate) fn last_action_model(cx: &mut AppComponentCx<'_>) -> Model<Arc<str>> {
     cx.local_model_keyed("ui-gallery-command-last-action", || {
         Arc::<str>::from("<none>")
     })

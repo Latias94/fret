@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("meeting_notes.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{ImageColorSpace, ImageId};
 use fret_ui::Theme;
 use fret_ui_assets::ImageSource;
@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn demo_avatar_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
+fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     let source = ImageSource::rgba8(
         4,
         4,
@@ -26,7 +26,10 @@ fn demo_avatar_image(cx: &mut UiCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state(&source).image
 }
 
-fn marker(cx: &mut UiCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+fn marker(
+    cx: &mut AppComponentCx<'_>,
+    text: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     ui::text(text)
         .text_sm()
         .w_space(Space::N4)
@@ -35,7 +38,7 @@ fn marker(cx: &mut UiCx<'_>, text: &'static str) -> impl IntoUiElement<fret_app:
 }
 
 fn item(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     n: &'static str,
     content: &'static str,
     test_id: Option<&'static str>,
@@ -61,7 +64,7 @@ fn item(
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let max_w_sm = LayoutRefinement::default()

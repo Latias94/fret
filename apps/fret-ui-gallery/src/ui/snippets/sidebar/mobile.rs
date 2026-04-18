@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -18,7 +18,7 @@ fn resolve_selected<H: UiHost>(
 }
 
 fn menu_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     selected_model: Model<Arc<str>>,
     active_value: &Arc<str>,
     value: &'static str,
@@ -44,7 +44,7 @@ fn menu_button(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open_mobile = cx.local_model_keyed("open_mobile", || false);
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("playground"));
 

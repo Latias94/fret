@@ -1,10 +1,10 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::image_object_fit as snippets;
 
-pub(super) fn preview_image_object_fit(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_image_object_fit(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let mapping = snippets::mapping::render(cx);
     let sampling = snippets::sampling::render(cx);
 

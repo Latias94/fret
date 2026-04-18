@@ -606,7 +606,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState)
         pointer.layout.size.width = Length::Fill;
         pointer.layout.size.height = Length::Fill;
 
-        cx.pointer_region(pointer, |cx| {
+        cx.elements().pointer_region(pointer, |cx| {
             cx.pointer_region_on_pointer_down(on_pointer_down);
             cx.pointer_region_on_pointer_move(on_pointer_move);
             cx.pointer_region_on_pointer_up(on_pointer_up);

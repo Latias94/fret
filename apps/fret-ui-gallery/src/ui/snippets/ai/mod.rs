@@ -1,10 +1,10 @@
-use fret::UiCx;
+use fret::AppComponentCx;
 use fret_core::ImageId;
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 use crate::demo_assets;
 
-pub(crate) fn shared_preview_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn shared_preview_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(
         &demo_assets::ui_gallery_shared_media_preview_request(),
     )
@@ -12,7 +12,7 @@ pub(crate) fn shared_preview_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
 }
 
 #[cfg(any(test, feature = "gallery-dev"))]
-pub(crate) fn attachment_landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn attachment_landscape_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(
         &demo_assets::ui_gallery_ai_attachment_landscape_request(),
     )
@@ -20,7 +20,7 @@ pub(crate) fn attachment_landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId
 }
 
 #[cfg(any(test, feature = "gallery-dev"))]
-pub(crate) fn attachment_portrait_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
+pub(crate) fn attachment_portrait_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(
         &demo_assets::ui_gallery_ai_attachment_portrait_request(),
     )

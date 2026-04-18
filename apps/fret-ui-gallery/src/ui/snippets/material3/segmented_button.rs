@@ -4,11 +4,11 @@ pub const SOURCE: &str = include_str!("segmented_button.rs");
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let single_value = cx.local_model_keyed("single_value", || Arc::<str>::from("alpha"));
     let multi_value = cx.local_model_keyed("multi_value", || {
         [Arc::<str>::from("alpha")]

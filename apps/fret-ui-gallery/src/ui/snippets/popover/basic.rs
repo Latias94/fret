@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -14,7 +14,7 @@ where
         .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::PopoverContent::build(cx, |cx| {
         [shadcn::PopoverHeader::new([
             shadcn::PopoverTitle::new("Dimensions").into_element(cx),

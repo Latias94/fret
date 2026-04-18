@@ -2,10 +2,10 @@ pub const SOURCE: &str = include_str!("overlay_demo.rs");
 
 // region: example
 use fret::children::UiElementSinkExt;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))

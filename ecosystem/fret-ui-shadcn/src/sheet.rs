@@ -11,7 +11,10 @@ use fret_ui::element::{
     PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
-use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
+use fret_ui::{
+    ElementContext, ElementContextAccess, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot,
+    UiHost,
+};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{
@@ -1001,6 +1004,19 @@ impl Sheet {
 
             trigger
         })
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'a, Cx>(
+        self,
+        cx: &mut Cx,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.into_element(cx.elements(), trigger, content)
     }
 
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.

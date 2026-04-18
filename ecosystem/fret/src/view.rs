@@ -2797,6 +2797,58 @@ impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a,
     }
 }
 
+impl<'cx, 'a, H: UiHost> fret_ui_kit::command::ElementCommandGatingExt for AppUi<'cx, 'a, H> {
+    fn command_is_enabled(&self, command: &fret_runtime::CommandId) -> bool {
+        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::command_is_enabled(
+            &*self.cx, command,
+        )
+    }
+
+    fn command_is_enabled_with_fallback_input_context(
+        &self,
+        command: &fret_runtime::CommandId,
+        fallback_input_ctx: fret_runtime::InputContext,
+    ) -> bool {
+        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::command_is_enabled_with_fallback_input_context(
+            &*self.cx,
+            command,
+            fallback_input_ctx,
+        )
+    }
+
+    fn dispatch_command_if_enabled(&mut self, command: fret_runtime::CommandId) -> bool {
+        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::dispatch_command_if_enabled(
+            self.cx,
+            command,
+        )
+    }
+
+    fn dispatch_command_if_enabled_with_fallback_input_context(
+        &mut self,
+        command: fret_runtime::CommandId,
+        fallback_input_ctx: fret_runtime::InputContext,
+    ) -> bool {
+        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::dispatch_command_if_enabled_with_fallback_input_context(
+            self.cx,
+            command,
+            fallback_input_ctx,
+        )
+    }
+
+    fn action_is_enabled(&self, action: &fret_runtime::ActionId) -> bool {
+        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::action_is_enabled(
+            &*self.cx, action,
+        )
+    }
+
+    fn dispatch_action_if_enabled(&mut self, action: fret_runtime::ActionId) -> bool {
+        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::dispatch_action_if_enabled(
+            self.cx,
+            action,
+        )
+    }
+}
+
 impl<'cx, 'a, H: UiHost> fret_ui_kit::declarative::ElementContextThemeExt for AppUi<'cx, 'a, H> {
     fn with_theme<R>(&mut self, f: impl FnOnce(&fret_ui::Theme) -> R) -> R {
         f(self.cx.theme())
@@ -2843,6 +2895,84 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     /// Read the current window id without reopening the broader `ElementContext` surface.
     pub fn window_id(&self) -> AppWindowId {
         self.cx.window
+    }
+
+    /// Request the next animation frame from the default app-facing render lane.
+    ///
+    /// Use this for frame-driven progression that must continue without fresh input events.
+    pub fn request_animation_frame(&mut self) {
+        self.cx.request_animation_frame();
+    }
+
+    /// Toggle the continuous-frames lease for the current view root without reopening
+    /// `ElementContext`.
+    ///
+    /// Use this for app-facing surfaces that need ongoing frame delivery while a mode remains
+    /// active. Advanced/component code can still opt into the lower-level helper directly.
+    pub fn set_continuous_frames(&mut self, enabled: bool) {
+        fret_ui_kit::declarative::scheduling::set_continuous_frames(self.cx, enabled);
+    }
+
+    /// Observe the committed bounds for a layout-query region from the default app-facing lane.
+    pub fn layout_query_bounds(
+        &mut self,
+        region: fret_ui::GlobalElementId,
+        invalidation: Invalidation,
+    ) -> Option<fret_core::Rect> {
+        self.cx.layout_query_bounds(region, invalidation)
+    }
+
+    /// Create a layout-query region on the default app-facing render lane and pass its region id.
+    ///
+    /// The nested builder keeps the same grouped action-registration surface as the outer `AppUi`
+    /// scope instead of reopening the raw `ElementContext` lane.
+    #[track_caller]
+    pub fn layout_query_region_with_id<I>(
+        &mut self,
+        props: fret_ui::element::LayoutQueryRegionProps,
+        f: impl for<'b> FnOnce(&mut AppUi<'b, 'a, H>, fret_ui::GlobalElementId) -> I,
+    ) -> fret_ui::element::AnyElement
+    where
+        I: IntoIterator<Item = fret_ui::element::AnyElement>,
+    {
+        let action_root = self.action_root;
+        let mut carried_action_handlers = Some(std::mem::take(&mut self.action_handlers));
+        let mut carried_action_handlers_used = self.action_handlers_used;
+
+        let out = self.cx.layout_query_region_with_id(props, |cx, id| {
+            let action_handlers = carried_action_handlers
+                .take()
+                .expect("AppUi layout_query_region_with_id should carry handlers once");
+            let mut nested = AppUi {
+                cx,
+                action_root,
+                action_handlers,
+                action_handlers_used: carried_action_handlers_used,
+            };
+            let built = f(&mut nested, id);
+            carried_action_handlers = Some(nested.action_handlers);
+            carried_action_handlers_used = nested.action_handlers_used;
+            built
+        });
+
+        self.action_handlers = carried_action_handlers
+            .take()
+            .expect("AppUi layout_query_region_with_id should restore handlers");
+        self.action_handlers_used = carried_action_handlers_used;
+        out
+    }
+
+    /// Create a layout-query region on the default app-facing render lane.
+    #[track_caller]
+    pub fn layout_query_region<I>(
+        &mut self,
+        props: fret_ui::element::LayoutQueryRegionProps,
+        f: impl for<'b> FnOnce(&mut AppUi<'b, 'a, H>) -> I,
+    ) -> fret_ui::element::AnyElement
+    where
+        I: IntoIterator<Item = fret_ui::element::AnyElement>,
+    {
+        self.layout_query_region_with_id(props, |cx, _id| f(cx))
     }
 
     /// Read the committed viewport bounds from the default app-facing render lane.
@@ -3124,22 +3254,10 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     }
 }
 
-// Temporary compatibility bridge while the repo still separates the app-facing render-authoring
-// lane from raw `ElementContext` mostly by documentation/barriers rather than by a dedicated
-// extracted-helper surface. See ADR 0319 + the corresponding workstream before widening this.
-impl<'cx, 'a, H: UiHost> std::ops::Deref for AppUi<'cx, 'a, H> {
-    type Target = ElementContext<'a, H>;
-
-    fn deref(&self) -> &Self::Target {
-        self.cx
-    }
-}
-
-impl<'cx, 'a, H: UiHost> std::ops::DerefMut for AppUi<'cx, 'a, H> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.cx
-    }
-}
+// `AppUi` intentionally does not implement `Deref<Target = ElementContext<...>>`.
+// Keep the default app-facing render-authoring lane separate from raw `ElementContext` so
+// advanced/manual builder ownership stays explicit at `cx.elements()`. See ADR 0319 and the
+// corresponding workstream before widening this boundary again.
 
 #[doc(hidden)]
 pub struct ViewWindowState<V: View> {
@@ -3624,6 +3742,7 @@ mod tests {
             props.layout.size.width = Length::Fill;
             props.layout.size.height = Length::Fill;
 
+            let cx = cx.elements();
             cx.container(props, |_cx| Vec::new()).into()
         }
     }
@@ -3731,6 +3850,8 @@ mod tests {
 
             let viewport = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
             let compact = viewport.size.width.0 < 560.0;
+
+            let cx = cx.elements();
 
             let filters = crate::shadcn::ToggleGroup::single(self.filter.clone())
                 .deselectable(false)
@@ -3859,6 +3980,7 @@ mod tests {
                 props.layout.size.width = Length::Fill;
                 props.layout.size.height = Length::Fill;
 
+                let cx = cx.elements();
                 cx.container(props, |_cx| Vec::new()).into()
             },
         );
@@ -3945,6 +4067,7 @@ mod tests {
                 let paint_len = local.paint_read_ref(cx, |values| values.len());
                 assert_eq!(layout_len, 3);
                 assert_eq!(paint_len, 3);
+                let cx = cx.elements();
                 cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
                     Vec::new()
                 })
@@ -5229,6 +5352,19 @@ mod tests {
         assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
         assert!(api_source.contains("pub(crate) fn new("));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains(
+            "impl<'cx, 'a, H: UiHost> fret_ui_kit::command::ElementCommandGatingExt for AppUi<'cx, 'a, H> {"
+        ));
+        assert!(api_source.contains(
+            "pub fn request_animation_frame(&mut self) {\n        self.cx.request_animation_frame();\n    }"
+        ));
+        assert!(api_source.contains("pub fn layout_query_bounds("));
+        assert!(api_source.contains("pub fn layout_query_region_with_id<I>("));
+        assert!(api_source.contains("pub fn layout_query_region<I>("));
+        assert!(api_source.contains(
+            "let mut carried_action_handlers = Some(std::mem::take(&mut self.action_handlers));"
+        ));
+        assert!(api_source.contains("self.cx.layout_query_region_with_id(props, |cx, id| {"));
         assert!(api_source.contains("pub fn scope<R>(&mut self, _f: impl FnOnce(&mut Self) -> R)"));
         assert!(
             api_source.contains(
@@ -5501,15 +5637,52 @@ mod tests {
     }
 
     #[test]
-    fn app_ui_deref_is_marked_as_temporary_render_authoring_bridge() {
+    fn app_ui_keeps_raw_element_lane_explicit() {
         let api_source = VIEW_RS_SOURCE
             .split("\nmod tests {")
             .next()
             .expect("view.rs test module marker should exist");
-        assert!(
-            api_source.contains("Temporary compatibility bridge while the repo still separates")
-        );
+        assert!(api_source.contains(
+            "`AppUi` intentionally does not implement `Deref<Target = ElementContext<...>>`."
+        ));
         assert!(api_source.contains("app-facing render-authoring"));
         assert!(api_source.contains("raw `ElementContext`"));
+        assert!(!api_source.contains("std::ops::Deref for AppUi"));
+        assert!(!api_source.contains("std::ops::DerefMut for AppUi"));
+    }
+
+    #[test]
+    fn app_ui_keeps_command_gating_and_animation_frame_surface_without_deref() {
+        fn assert_command_gating_impl<T: fret_ui_kit::command::ElementCommandGatingExt>() {}
+
+        assert_command_gating_impl::<crate::AppUi<'static, 'static>>();
+
+        let _request_animation_frame: fn(&mut crate::AppUi<'static, 'static>) =
+            crate::AppUi::request_animation_frame;
+        let _set_continuous_frames: fn(&mut crate::AppUi<'static, 'static>, bool) =
+            crate::AppUi::set_continuous_frames;
+        let _layout_query_bounds: fn(
+            &mut crate::AppUi<'static, 'static>,
+            fret_ui::GlobalElementId,
+            fret_ui::Invalidation,
+        ) -> Option<fret_core::Rect> = crate::AppUi::layout_query_bounds;
+        let _layout_query_region_with_id: fn(
+            &mut crate::AppUi<'static, 'static>,
+            fret_ui::element::LayoutQueryRegionProps,
+            for<'b> fn(
+                &mut crate::AppUi<'b, 'static>,
+                fret_ui::GlobalElementId,
+            ) -> std::vec::Vec<fret_ui::element::AnyElement>,
+        ) -> fret_ui::element::AnyElement = crate::AppUi::layout_query_region_with_id::<
+            std::vec::Vec<fret_ui::element::AnyElement>,
+        >;
+        let _layout_query_region: fn(
+            &mut crate::AppUi<'static, 'static>,
+            fret_ui::element::LayoutQueryRegionProps,
+            for<'b> fn(
+                &mut crate::AppUi<'b, 'static>,
+            ) -> std::vec::Vec<fret_ui::element::AnyElement>,
+        ) -> fret_ui::element::AnyElement =
+            crate::AppUi::layout_query_region::<std::vec::Vec<fret_ui::element::AnyElement>>;
     }
 }

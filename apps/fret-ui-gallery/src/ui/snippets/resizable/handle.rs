@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("handle.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Axis;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -40,7 +40,7 @@ fn panel<H: UiHost>(
     ui::container_props(props, move |_cx| [body])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let fractions =
         cx.local_model_keyed("ui-gallery-resizable-handle-fractions", || vec![0.25, 0.75]);
 

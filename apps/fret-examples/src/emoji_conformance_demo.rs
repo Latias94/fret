@@ -115,13 +115,14 @@ impl EmojiConformanceDriver {
                 let theme = cx.theme_snapshot();
 
                 let available_fonts = cx
-                    .app
+                    .app()
                     .global::<FontCatalogCache>()
                     .cloned()
                     .unwrap_or_default()
                     .families_arc();
 
                 let selected_emoji_font = emoji_font_override.layout_value(cx);
+                let cx = cx.elements();
 
                 let mut items: Vec<shadcn::SelectItem> = Vec::new();
                 let mut seen: HashSet<Arc<str>> = HashSet::new();

@@ -1,16 +1,18 @@
 pub const SOURCE: &str = include_str!("icon_button.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_icons::ids;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let toggle_checked = cx.local_model_keyed("toggle_checked", || false);
 
-    let row = |cx: &mut UiCx<'_>, variant: material3::IconButtonVariant, label: &'static str| {
+    let row = |cx: &mut AppComponentCx<'_>,
+               variant: material3::IconButtonVariant,
+               label: &'static str| {
         ui::h_row(move |cx| {
             let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
             let override_style = material3::IconButtonStyle::default()

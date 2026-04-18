@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("shimmer_elements_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::IntoUiElement;
@@ -24,7 +24,7 @@ where
     .items_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let heading_style = TextStyle {
         font: FontId::ui(),
         size: Px(24.0),

@@ -56,7 +56,7 @@ fn spinner_snippets_stay_copyable_and_docs_aligned() {
     let input_group = include_str!("../src/ui/snippets/spinner/input_group.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::Spinner::new()",
         ".test_id(\"ui-gallery-spinner-usage\")",

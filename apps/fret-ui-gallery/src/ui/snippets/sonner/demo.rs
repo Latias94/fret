@@ -5,7 +5,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use super::{last_action_model, message_request, preview_controls_row, preview_frame};
 use fret::app::UiCxActionsExt as _;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui_kit::IntoUiElement;
@@ -19,7 +19,7 @@ fn wrap_controls_row<H: UiHost>(
     preview_controls_row::<H>(gap, children)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
 
     let sonner = shadcn::Sonner::global(&mut *cx.app);

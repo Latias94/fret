@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("invalid.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CONTROL_ID: &str = "ui-gallery-input-otp-invalid-control";
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(|| String::from("000000"));
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 

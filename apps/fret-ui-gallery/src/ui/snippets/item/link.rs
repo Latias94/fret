@@ -1,18 +1,21 @@
 pub const SOURCE: &str = include_str!("link.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
-fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
+fn icon(
+    cx: &mut AppComponentCx<'_>,
+    id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
     icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()

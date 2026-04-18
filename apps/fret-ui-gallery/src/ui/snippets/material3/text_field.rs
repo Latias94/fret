@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("text_field.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let demo_field = material3::TextField::uncontrolled(cx);
     let value = demo_field.value_model();
     let disabled_toggle = material3::Switch::uncontrolled(cx, false);

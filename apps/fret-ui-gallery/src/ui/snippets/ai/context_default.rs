@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("context_default.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::{LayoutRefinement, ui};
 
-fn centered<B>(cx: &mut UiCx<'_>, body: B) -> impl UiChild + use<B>
+fn centered<B>(cx: &mut AppComponentCx<'_>, body: B) -> impl UiChild + use<B>
 where
     B: UiChild,
 {
@@ -15,7 +15,7 @@ where
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let usage = ui_ai::ContextUsage {
         input_tokens: Some(32_000),
         output_tokens: Some(8_000),

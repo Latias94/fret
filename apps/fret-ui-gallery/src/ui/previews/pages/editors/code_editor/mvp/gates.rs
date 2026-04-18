@@ -1,9 +1,9 @@
 use super::prelude::*;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 use fret_ui_kit::IntoUiElement;
 
-fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B>
+fn gate_panel<B>(cx: &mut AppComponentCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B>
 where
     B: IntoUiElement<fret_app::App>,
 {
@@ -23,7 +23,7 @@ where
 }
 
 pub(super) fn word_boundary_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {
@@ -38,7 +38,7 @@ pub(super) fn word_boundary_gate(
 }
 
 pub(super) fn word_boundary_soft_wrap_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {
@@ -53,7 +53,7 @@ pub(super) fn word_boundary_soft_wrap_gate(
 }
 
 pub(super) fn a11y_selection_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {
@@ -68,7 +68,7 @@ pub(super) fn a11y_selection_gate(
 }
 
 pub(super) fn a11y_composition_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {
@@ -235,7 +235,7 @@ pub(super) fn a11y_composition_gate(
 }
 
 pub(super) fn a11y_selection_wrap_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {
@@ -250,7 +250,7 @@ pub(super) fn a11y_selection_wrap_gate(
 }
 
 pub(super) fn a11y_composition_wrap_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {
@@ -341,7 +341,7 @@ pub(super) fn a11y_composition_wrap_gate(
 }
 
 pub(super) fn a11y_composition_drag_gate(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
 ) -> impl UiChild + use<> {

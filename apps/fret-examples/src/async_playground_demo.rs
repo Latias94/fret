@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::app::RenderContextAccess as _;
+use fret::app::{AppRenderContext, RenderContextAccess as _};
 use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
@@ -14,6 +14,7 @@ use fret::query::{
 use fret::{FretApp, actions::CommandId, advanced::prelude::*, shadcn};
 use fret_core::{Px, SemanticsRole};
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
+use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -21,8 +22,7 @@ use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ColorRef, IntoUiElement, LayoutRefinement, Space, UiExt as _, UiSupportsChrome as _,
-    UiSupportsLayout as _,
+    ColorRef, LayoutRefinement, Space, UiExt as _, UiSupportsChrome as _, UiSupportsLayout as _,
 };
 
 mod act {
@@ -308,8 +308,8 @@ impl View for AsyncPlaygroundView {
 
         let theme = cx.theme_snapshot();
 
-        let header = header_bar(cx, &locals, theme.clone(), global_slow, dark).into_element(cx);
-        let body = body(cx, &mut self.st, &locals, theme, global_slow, selected).into_element(cx);
+        let header = header_bar(cx, &locals, theme.clone(), global_slow, dark);
+        let body = body(cx, &mut self.st, &locals, theme, global_slow, selected);
 
         cx.actions()
             .locals_with((&locals.selected, &locals.namespace_input))
@@ -366,50 +366,53 @@ impl View for AsyncPlaygroundView {
         ui::v_flex(|_cx| [header, body])
             .w_full()
             .h_full()
-            .into_element(cx)
+            .into_element_in(cx)
             .into()
     }
 }
 
-fn header_bar(
-    cx: &mut UiCx<'_>,
+fn header_bar<'a, Cx>(
+    cx: &mut Cx,
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     dark: bool,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let title = ui::text("Async Playground")
         .text_sm()
         .font_semibold()
         .truncate()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let slow_label = ui::text("Slow network (x2)")
         .text_sm()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element(cx);
+        .into_element_in(cx);
     let slow_switch = shadcn::Switch::new(&locals.global_slow)
         .a11y_label("Simulate slow network")
-        .into_element(cx);
+        .into_element_in(cx);
     let slow_row = ui::h_flex(|_cx| [slow_label, slow_switch])
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let theme_btn = shadcn::Button::new(if dark { "Light" } else { "Dark" })
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::ButtonSize::Sm)
         .action(act::ToggleTheme)
-        .into_element(cx);
+        .into_element_in(cx);
 
     let right = ui::h_flex(|_cx| [slow_row, theme_btn])
         .gap(Space::N4)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
         .flex_grow(1.0)
-        .into_element(cx);
+        .into_element_in(cx);
 
     ui::h_flex(|_cx| [title, spacer, right])
         .px(Space::N6)
@@ -417,61 +420,67 @@ fn header_bar(
         .bg(ColorRef::Color(theme.color_token("card")))
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
-        .into_element(cx)
+        .into_element_in(cx)
         .test_id(format!("async-playground.header.slow={global_slow}"))
 }
 
-fn body(
-    cx: &mut UiCx<'_>,
+fn body<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
-    let left = catalog_panel(cx, st, theme.clone(), selected).into_element(cx);
-    let mid = main_panel(cx, st, locals, theme.clone(), global_slow, selected).into_element(cx);
-    let right = inspector_panel(cx, st, locals, theme, selected).into_element(cx);
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    let left = catalog_panel(cx, st, theme.clone(), selected);
+    let mid = main_panel(cx, st, locals, theme.clone(), global_slow, selected);
+    let right = inspector_panel(cx, st, locals, theme, selected);
 
     let sep_1 = shadcn::Separator::new()
         .orientation(SeparatorOrientation::Vertical)
         .flex_stretch_cross_axis(true)
-        .into_element(cx);
+        .into_element_in(cx);
     let sep_2 = shadcn::Separator::new()
         .orientation(SeparatorOrientation::Vertical)
         .flex_stretch_cross_axis(true)
-        .into_element(cx);
+        .into_element_in(cx);
 
     ui::h_flex(|_cx| [left, sep_1, mid, sep_2, right])
         .w_full()
         .h_full()
         .items_stretch()
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn catalog_panel(
-    cx: &mut UiCx<'_>,
+fn catalog_panel<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let catalog_scroll = st.catalog_scroll.clone();
     let header = ui::text("Catalog")
         .font_semibold()
         .text_sm()
-        .into_element(cx);
+        .into_element_in(cx);
     let header_row = ui::container(|_cx| vec![header])
         .px(Space::N4)
         .py(Space::N3)
         .bg(ColorRef::Color(theme.color_token("card")))
-        .into_element(cx);
+        .into_element_in(cx);
 
     let list = shadcn::ScrollArea::build(|cx, out| {
         out.push_ui(
             cx,
             ui::v_flex_build(|cx, out| {
                 for id in QueryId::ALL {
-                    out.push(catalog_item(cx, st, theme.clone(), selected, id).into_element(cx));
+                    out.push(catalog_item(cx, st, theme.clone(), selected, id));
                 }
             })
             .gap(Space::N1)
@@ -483,22 +492,25 @@ fn catalog_panel(
     .scroll_handle(catalog_scroll)
     .type_(ScrollAreaType::Hover)
     .refine_layout(LayoutRefinement::default().size_full())
-    .into_element(cx);
+    .into_element_in(cx);
 
     ui::v_flex(|_cx| [header_row, list])
         .w_px(Px(288.0))
         .h_full()
         .bg(ColorRef::Color(theme.color_token("muted")))
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn catalog_item(
-    cx: &mut UiCx<'_>,
+fn catalog_item<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
     id: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let selected = selected == id;
     let select_cmd = select_command_for_id(id);
     let diag = st.last_diag.get(&id).cloned();
@@ -507,7 +519,7 @@ fn catalog_item(
     let bg_selected = theme.color_token("background");
     let bg_hover = theme.color_token("card");
 
-    cx.pressable(
+    cx.elements().pressable(
         PressableProps {
             enabled: true,
             a11y: PressableA11y {
@@ -534,7 +546,6 @@ fn catalog_item(
                 .truncate()
                 .into_element(cx);
             let badge = status_badge(cx, diag.as_ref());
-            let badge = badge.into_element(cx);
 
             let row = ui::h_flex(|cx| {
                 let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
@@ -568,35 +579,38 @@ fn select_command_for_id(id: QueryId) -> CommandId {
     }
 }
 
-fn main_panel(
-    cx: &mut UiCx<'_>,
+fn main_panel<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let mode = active_mode(cx, locals);
 
     let title = ui::text(selected.label())
         .font_semibold()
         .text_sm()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let cancel = shadcn::Button::new("Cancel")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .action(act::CancelSelected)
-        .into_element(cx);
+        .into_element_in(cx);
     let invalidate = shadcn::Button::new("Invalidate")
         .variant(shadcn::ButtonVariant::Default)
         .size(shadcn::ButtonSize::Sm)
         .action(act::InvalidateSelected)
-        .into_element(cx);
+        .into_element_in(cx);
     let actions = ui::h_flex(|_cx| [cancel, invalidate])
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let header_row = ui::h_flex(|cx| {
         let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
@@ -609,18 +623,18 @@ fn main_panel(
     .bg(ColorRef::Color(theme.color_token("card")))
     .border_color(ColorRef::Color(theme.color_token("border")))
     .items_center()
-    .into_element(cx);
+    .into_element_in(cx);
 
     let callout = shadcn::Alert::new([
-        shadcn::AlertTitle::new("Stale != Polling").into_element(cx),
+        shadcn::AlertTitle::new("Stale != Polling").into_element_in(cx),
         shadcn::AlertDescription::new(Arc::<str>::from(
             "Stale-by-time does not automatically refetch. Refetch happens on (re)mount, or when explicitly invalidated.",
         ))
-        .into_element(cx),
+        .into_element_in(cx),
     ])
     .ui()
     .w_full()
-    .into_element(cx);
+    .into_element_in(cx);
 
     let sync_panel = if mode == FetchMode::Sync {
         query_panel_for_mode(
@@ -632,11 +646,10 @@ fn main_panel(
             selected,
             FetchMode::Sync,
         )
-        .into_element(cx)
     } else {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
-            .into_element(cx)
+            .into_element_in(cx)
     };
     let async_panel = if mode == FetchMode::Async {
         query_panel_for_mode(
@@ -648,11 +661,10 @@ fn main_panel(
             selected,
             FetchMode::Async,
         )
-        .into_element(cx)
     } else {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
-            .into_element(cx)
+            .into_element_in(cx)
     };
 
     let tabs = shadcn::Tabs::new(&locals.tabs)
@@ -663,7 +675,7 @@ fn main_panel(
         ])
         .ui()
         .w_full()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let content = ui::v_flex(|_cx| [callout, tabs])
         .gap(Space::N3)
@@ -671,27 +683,30 @@ fn main_panel(
         .w_full()
         .h_full()
         .items_stretch()
-        .into_element(cx);
+        .into_element_in(cx);
 
     let scroll = shadcn::ScrollArea::new([content])
         .type_(ScrollAreaType::Hover)
         .refine_layout(LayoutRefinement::default().size_full())
-        .into_element(cx);
+        .into_element_in(cx);
 
     ui::v_flex(|_cx| [header_row, scroll])
         .flex_grow(1.0)
         .h_full()
         .bg(ColorRef::Color(theme.color_token("background")))
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn inspector_panel(
-    cx: &mut UiCx<'_>,
+fn inspector_panel<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     selected: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let policy = query_policy(cx, st, selected);
     let key = query_key_for_id(cx, locals, selected);
     let snap = snapshot_entry_for_key(cx, key);
@@ -730,9 +745,9 @@ fn inspector_panel(
     .gap(Space::N1)
     .w_full()
     .items_stretch()
-    .into_element(cx);
+    .into_element_in(cx);
 
-    let policy_editor = policy_editor(cx, st, theme.clone(), selected).into_element(cx);
+    let policy_editor = policy_editor(cx, st, theme.clone(), selected);
 
     let ns_row = ui::h_flex(|cx| {
         let input = shadcn::Input::new(&locals.namespace_input)
@@ -749,66 +764,69 @@ fn inspector_panel(
     .gap(Space::N2)
     .items_center()
     .w_full()
-    .into_element(cx);
+    .into_element_in(cx);
 
     let card = shadcn::Card::new([
         shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Inspector").into_element(cx),
+            shadcn::CardTitle::new("Inspector").into_element_in(cx),
             shadcn::CardDescription::new(Arc::<str>::from(
                 "Snapshot + policy controls (selected query only).",
             ))
-            .into_element(cx),
+            .into_element_in(cx),
         ])
-        .into_element(cx),
-        shadcn::CardContent::new([summary, ns_row, policy_editor]).into_element(cx),
+        .into_element_in(cx),
+        shadcn::CardContent::new([summary, ns_row, policy_editor]).into_element_in(cx),
     ])
     .ui()
     .w_full()
-    .into_element(cx);
+    .into_element_in(cx);
 
     let scroll = shadcn::ScrollArea::new([card])
         .scroll_handle(st.inspector_scroll.clone())
         .type_(ScrollAreaType::Hover)
         .refine_layout(LayoutRefinement::default().size_full())
-        .into_element(cx);
+        .into_element_in(cx);
 
     ui::v_flex(|_cx| [scroll])
         .w_px(Px(320.0))
         .h_full()
         .bg(ColorRef::Color(theme.color_token("muted")))
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn policy_editor(
-    cx: &mut UiCx<'_>,
+fn policy_editor<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     id: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let config = st.configs.get(&id).expect("missing config");
 
     let stale = shadcn::Input::new(&config.stale_time_s)
         .placeholder("stale_time (s)")
-        .into_element(cx);
+        .into_element_in(cx);
     let cache = shadcn::Input::new(&config.cache_time_s)
         .placeholder("cache_time (s)")
-        .into_element(cx);
+        .into_element_in(cx);
 
     let keep_prev_label = ui::text("keepPreviousDataWhileLoading")
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element(cx);
+        .into_element_in(cx);
     let keep_prev = shadcn::Switch::new(&config.keep_prev)
         .a11y_label("Keep previous data while loading")
-        .into_element(cx);
+        .into_element_in(cx);
 
     let fail_label = ui::text("fail mode")
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element(cx);
+        .into_element_in(cx);
     let fail = shadcn::Switch::new(&config.fail_mode)
         .a11y_label("Force failures")
-        .into_element(cx);
+        .into_element_in(cx);
 
     let cancel_mode = shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)
         .a11y_label("Cancel mode")
@@ -817,7 +835,7 @@ fn policy_editor(
             shadcn::SelectItem::new("cancel", "Cancel inflight"),
             shadcn::SelectItem::new("keep", "Keep inflight"),
         ])
-        .into_element(cx);
+        .into_element_in(cx);
 
     ui::v_flex(|cx| {
         [
@@ -837,18 +855,21 @@ fn policy_editor(
         ]
     })
     .gap(Space::N2)
-    .into_element(cx)
+    .into_element_in(cx)
 }
 
-fn query_panel_for_mode(
-    cx: &mut UiCx<'_>,
+fn query_panel_for_mode<'a, Cx>(
+    cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
     mode: FetchMode,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let id = selected;
     let policy = query_policy(cx, st, id);
     let fail_mode = query_fail_mode(cx, st, id);
@@ -885,27 +906,29 @@ fn query_panel_for_mode(
         }
     };
 
-    let state = handle.layout_query(cx).value_or_default();
+    let state = handle.read_layout(cx);
 
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());
 
-    let inputs = query_inputs_row(cx, locals, theme.clone(), id).into_element(cx);
-    let view =
-        query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy).into_element(cx);
+    let inputs = query_inputs_row(cx, locals, theme.clone(), id);
+    let view = query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy);
     ui::v_flex(|_cx| [inputs, view])
         .gap(Space::N4)
         .w_full()
         .items_stretch()
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn query_inputs_row(
-    cx: &mut UiCx<'_>,
+fn query_inputs_row<'a, Cx>(
+    cx: &mut Cx,
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     id: QueryId,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let mut children: Vec<AnyElement> = Vec::new();
     children.push(
         ui::text(match id {
@@ -915,7 +938,7 @@ fn query_inputs_row(
         })
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element(cx),
+        .into_element_in(cx),
     );
 
     match id {
@@ -924,7 +947,7 @@ fn query_inputs_row(
                 shadcn::Input::new(&locals.search_input)
                     .placeholder("Search query…")
                     .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
+                    .into_element_in(cx),
             );
         }
         QueryId::Stock => {
@@ -932,7 +955,7 @@ fn query_inputs_row(
                 shadcn::Input::new(&locals.stock_symbol)
                     .placeholder("Symbol…")
                     .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
+                    .into_element_in(cx),
             );
         }
         QueryId::Tip | QueryId::Status => {}
@@ -942,18 +965,21 @@ fn query_inputs_row(
         .gap(Space::N2)
         .w_full()
         .items_stretch()
-        .into_element(cx)
+        .into_element_in(cx)
 }
 
-fn query_result_view(
-    cx: &mut UiCx<'_>,
+fn query_result_view<'a, Cx>(
+    cx: &mut Cx,
     theme: ThemeSnapshot,
     id: QueryId,
     key: QueryKey<Arc<str>>,
     state: &QueryState<Arc<str>>,
     snap: Option<&QuerySnapshotEntry>,
     policy: &QueryPolicy,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let stale = snap.map(|s| s.stale).unwrap_or(false);
     let badge = status_badge(
         cx,
@@ -962,7 +988,6 @@ fn query_result_view(
             ..QueryDiag::from_state(state)
         }),
     );
-    let badge = badge.into_element(cx);
 
     let meta = ui::h_flex(|cx| {
         let left = ui::text(id.namespace())
@@ -976,12 +1001,12 @@ fn query_result_view(
         [left, right]
     })
     .justify_between()
-    .into_element(cx);
+    .into_element_in(cx);
 
     let body = match state.status {
         QueryStatus::Idle => ui::text("Idle (not fetched yet).")
             .text_sm()
-            .into_element(cx),
+            .into_element_in(cx),
         QueryStatus::Loading => {
             let kept = policy.keep_previous_data_while_loading && state.is_refreshing();
             ui::text(if kept {
@@ -990,7 +1015,7 @@ fn query_result_view(
                 "Loading…"
             })
             .text_sm()
-            .into_element(cx)
+            .into_element_in(cx)
         }
         QueryStatus::Error => {
             let msg = state
@@ -999,11 +1024,11 @@ fn query_result_view(
                 .map(|e| e.message().clone())
                 .unwrap_or_else(|| Arc::from("<no error message>"));
             shadcn::Alert::new([
-                shadcn::AlertTitle::new("Query error").into_element(cx),
-                shadcn::AlertDescription::new(msg).into_element(cx),
+                shadcn::AlertTitle::new("Query error").into_element_in(cx),
+                shadcn::AlertDescription::new(msg).into_element_in(cx),
             ])
             .variant(shadcn::AlertVariant::Destructive)
-            .into_element(cx)
+            .into_element_in(cx)
         }
         QueryStatus::Success => ui::text(
             state
@@ -1013,7 +1038,7 @@ fn query_result_view(
                 .unwrap_or_else(|| Arc::from("<no data>")),
         )
         .text_sm()
-        .into_element(cx),
+        .into_element_in(cx),
     };
 
     let header = ui::h_flex(|cx| {
@@ -1027,27 +1052,31 @@ fn query_result_view(
         [title, spacer, badge]
     })
     .items_center()
-    .into_element(cx);
+    .into_element_in(cx);
 
     shadcn::Card::new([
-        shadcn::CardHeader::new([header, meta]).into_element(cx),
-        shadcn::CardContent::new([body]).into_element(cx),
+        shadcn::CardHeader::new([header, meta]).into_element_in(cx),
+        shadcn::CardContent::new([body]).into_element_in(cx),
     ])
     .ui()
     .w_full()
-    .into_element(cx)
+    .into_element_in(cx)
 }
 
-fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode {
-    locals
-        .tabs
-        .layout_read_ref_in(cx, |tab| match tab.as_deref() {
-            Some("sync") => FetchMode::Sync,
-            _ => FetchMode::Async,
-        })
+fn active_mode<'a, Cx>(cx: &mut Cx, locals: &AsyncPlaygroundLocals) -> FetchMode
+where
+    Cx: AppRenderContext<'a>,
+{
+    locals.tabs.layout_read_ref(cx, |tab| match tab.as_deref() {
+        Some("sync") => FetchMode::Sync,
+        _ => FetchMode::Async,
+    })
 }
 
-fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
+fn query_policy<'a, Cx>(cx: &mut Cx, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy
+where
+    Cx: AppRenderContext<'a>,
+{
     let config = st.configs.get(&id).expect("missing config");
     let policy_settings: QueryPolicySettings = cx.data().selector_layout(
         (
@@ -1078,9 +1107,12 @@ fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> Qu
     }
 }
 
-fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
+fn query_fail_mode<'a, Cx>(cx: &mut Cx, st: &AsyncPlaygroundState, id: QueryId) -> bool
+where
+    Cx: AppRenderContext<'a>,
+{
     let config = st.configs.get(&id).expect("missing config");
-    config.fail_mode.layout_value_in(cx)
+    config.fail_mode.layout_value(cx)
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
@@ -1095,18 +1127,24 @@ fn query_key_for_selected(selected: QueryId, query_inputs: &QueryKeyInputs) -> Q
     )
 }
 
-fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {
+fn tracked_query_inputs<'a, Cx>(cx: &mut Cx, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs
+where
+    Cx: AppRenderContext<'a>,
+{
     cx.data().selector_layout(
         (&locals.search_input, &locals.stock_symbol),
         |(search, symbol)| QueryKeyInputs { search, symbol },
     )
 }
 
-fn query_key_for_id(
-    cx: &mut UiCx<'_>,
+fn query_key_for_id<'a, Cx>(
+    cx: &mut Cx,
     locals: &AsyncPlaygroundLocals,
     id: QueryId,
-) -> QueryKey<Arc<str>> {
+) -> QueryKey<Arc<str>>
+where
+    Cx: AppRenderContext<'a>,
+{
     let query_inputs = tracked_query_inputs(cx, locals);
     query_key_for_params(id, query_inputs.search, query_inputs.symbol)
 }
@@ -1141,14 +1179,14 @@ fn observe_query_diag(
     st.last_diag.insert(id, diag);
 }
 
-fn status_badge(
-    cx: &mut UiCx<'_>,
-    diag: Option<&QueryDiag>,
-) -> impl IntoUiElement<KernelApp> + use<> {
+fn status_badge<'a, Cx>(cx: &mut Cx, diag: Option<&QueryDiag>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
     let Some(diag) = diag else {
         return shadcn::Badge::new("Not mounted")
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx);
+            .into_element_in(cx);
     };
 
     let mut label = diag.status.as_str().to_string();
@@ -1164,13 +1202,18 @@ fn status_badge(
         shadcn::BadgeVariant::Secondary
     };
 
-    shadcn::Badge::new(label).variant(variant).into_element(cx)
+    shadcn::Badge::new(label)
+        .variant(variant)
+        .into_element_in(cx)
 }
 
-fn snapshot_entry_for_key(
-    cx: &mut UiCx<'_>,
+fn snapshot_entry_for_key<'a, Cx>(
+    cx: &mut Cx,
     key: QueryKey<Arc<str>>,
-) -> Option<QuerySnapshotEntry> {
+) -> Option<QuerySnapshotEntry>
+where
+    Cx: AppRenderContext<'a>,
+{
     cx.data().query_snapshot_entry(key)
 }
 

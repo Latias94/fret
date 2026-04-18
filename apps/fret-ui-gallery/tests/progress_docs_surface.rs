@@ -40,7 +40,7 @@ fn progress_snippets_stay_copyable_and_docs_aligned() {
     let rtl = include_str!("../src/ui/snippets/progress/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::Progress::from_value(33.0)",
         ".a11y_label(\"Progress\")",

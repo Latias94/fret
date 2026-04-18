@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("file_tree.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
@@ -325,7 +325,7 @@ fn render_items<H: UiHost>(
     items.iter().map(|item| render_item(cx, item)).collect()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let tabs = shadcn::TabsRoot::uncontrolled(Some("explorer"))
         .list(
             shadcn::TabsList::new()

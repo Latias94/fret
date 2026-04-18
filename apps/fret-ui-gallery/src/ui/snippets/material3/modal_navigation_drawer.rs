@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("modal_navigation_drawer.rs");
 // region: example
 use std::sync::Arc;
 
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui::action::OnActivate;
@@ -11,7 +11,7 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let modal = material3::ModalNavigationDrawer::uncontrolled(cx);
     let open = modal.open_model();
     let value = cx.local_model_keyed("value", || Arc::<str>::from("search"));

@@ -2,10 +2,10 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use super::super::avatar::demo_image;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     // Align with upstream shadcn/ui HoverCard demo composition:
     // - trigger: link-style button (`@nextjs`)
     // - content: `w-80` (320px), avatar + text block

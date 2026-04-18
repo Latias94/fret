@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("message_branch_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
@@ -10,10 +10,10 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).clone();
 
-    let branch = move |cx: &mut UiCx<'_>, index: usize, label: &'static str| {
+    let branch = move |cx: &mut AppComponentCx<'_>, index: usize, label: &'static str| {
         let theme = theme.clone();
         ui::v_flex(move |cx| {
             vec![

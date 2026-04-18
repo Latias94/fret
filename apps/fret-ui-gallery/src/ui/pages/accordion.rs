@@ -1,11 +1,11 @@
 use super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::accordion as snippets;
 
 pub(super) fn preview_accordion(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
     let _ = value;

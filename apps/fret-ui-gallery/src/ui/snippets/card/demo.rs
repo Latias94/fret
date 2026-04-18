@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::SemanticsRole;
 use fret_ui::Theme;
 use fret_ui::element::{AnyElement, CrossAlign, GridProps, PressableKeyActivation, PressableProps};
@@ -11,7 +11,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn supporting_link(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
     layout: LayoutRefinement,
     test_id: &'static str,
@@ -38,7 +38,7 @@ fn supporting_link(
 }
 
 fn email_field(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     email: Model<String>,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -67,7 +67,7 @@ fn email_field(
 }
 
 fn password_field(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     password: Model<String>,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -107,7 +107,7 @@ fn password_field(
     )
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let email = cx.local_model_keyed("email", String::new);
     let password = cx.local_model_keyed("password", String::new);
 

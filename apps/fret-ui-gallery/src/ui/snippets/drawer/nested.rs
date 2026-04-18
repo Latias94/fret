@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("nested.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Drawer::new_controllable(cx, None, false)
         .children([
             shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(

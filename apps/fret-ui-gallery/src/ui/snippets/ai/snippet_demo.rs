@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("snippet_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::LayoutRefinement;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let snippet_code: Arc<str> = Arc::from("npx ai-elements add snippet");
 
     ui_ai::Snippet::with_code(snippet_code)

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("prompt_input_cursor_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
@@ -19,7 +19,7 @@ const RECENT_TABS: &[&str] = &[
 ];
 
 fn source_item(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     filename: &'static str,
     test_id: &'static str,
@@ -50,7 +50,7 @@ fn source_item(
 }
 
 fn path_item(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     path: &'static str,
     test_id: &'static str,
 ) -> ui_ai::PromptInputTabItem {
@@ -64,7 +64,7 @@ fn path_item(
     .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let on_submit: ui_ai::OnPromptInputSubmit = Arc::new(|_host, _action_cx, _message, _reason| {});
 
     let files_menu = ui_ai::PromptInputCommand::new()

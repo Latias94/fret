@@ -62,7 +62,7 @@ fn ui_snippets_do_not_import_ui_gallery_internals() {
             panic!(
                 "UI Gallery snippet references gallery-only glue ({pattern}): {}\n\
                  Snippets are the copy/paste surface. Prefer user-facing imports like:\n\
-                 - `use fret::UiCx;`\n\
+                 - `use fret::AppComponentCx;`\n\
                  - `use fret_ui_shadcn::{{facade as shadcn, prelude::*}};`\n\
                  - self-contained demo assets via `fret_ui_assets::ImageSource::rgba8(...)`\n\
                  and inline any stable command ids as `const CMD_*: &str = ...`.\n\

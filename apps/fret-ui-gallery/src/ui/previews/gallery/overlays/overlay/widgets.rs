@@ -1,6 +1,6 @@
 use super::super::super::super::super::*;
+use fret::AppComponentCx;
 use fret::UiChild;
-use fret::UiCx;
 
 use super::OverlayModels;
 use fret_core::Color;
@@ -8,7 +8,10 @@ use fret_core::Color;
 // Typed helper shells: these helpers may still lower to overlay/provider roots internally because
 // the current shadcn root APIs land concrete elements, but the gallery preview no longer stores a
 // landed widget inventory just to lay them out.
-pub(super) fn overlay_reset(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn overlay_reset(
+    _cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     use fret_ui::action::OnActivate;
 
     let dropdown_open = models.dropdown_open.clone();
@@ -47,7 +50,10 @@ pub(super) fn overlay_reset(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl 
         .on_activate(on_activate)
 }
 
-pub(super) fn dropdown(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn dropdown(
+    _cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     let dropdown_open = models.dropdown_open.clone();
 
     shadcn::DropdownMenu::from_open(dropdown_open.clone())
@@ -92,7 +98,10 @@ pub(super) fn dropdown(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChi
         })
 }
 
-pub(super) fn context_menu(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn context_menu(
+    _cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     let context_menu_open = models.context_menu_open.clone();
 
     shadcn::ContextMenu::from_open(context_menu_open)
@@ -119,7 +128,7 @@ pub(super) fn context_menu(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl U
 }
 
 pub(super) fn context_menu_edge(
-    _cx: &mut UiCx<'_>,
+    _cx: &mut AppComponentCx<'_>,
     models: &OverlayModels,
 ) -> impl UiChild + use<> {
     let context_menu_edge_open = models.context_menu_edge_open.clone();
@@ -154,13 +163,13 @@ pub(super) fn context_menu_edge(
         })
 }
 
-pub(super) fn underlay(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub(super) fn underlay(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Button::new("Underlay (outside-press target)")
         .variant(shadcn::ButtonVariant::Secondary)
         .test_id("ui-gallery-overlay-underlay")
 }
 
-pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub(super) fn tooltip(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     use std::time::Duration;
 
     let tooltip_a_content = shadcn::TooltipContent::build(cx, |_cx| {
@@ -219,7 +228,7 @@ pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .expect("tooltip provider returns one root element")
 }
 
-pub(super) fn hover_card(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub(super) fn hover_card(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     use std::time::Duration;
 
     let hover_card_content = shadcn::HoverCardContent::new(vec![
@@ -241,7 +250,7 @@ pub(super) fn hover_card(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .into_element(cx)
 }
 
-pub(super) fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn popover(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
     use fret_ui::action::OnDismissRequest;
 
     let popover_open = models.popover_open.clone();
@@ -304,7 +313,7 @@ pub(super) fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild
         )
 }
 
-pub(super) fn dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn dialog(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
     let dialog_open = models.dialog_open.clone();
     let dialog_open_for_trigger = dialog_open.clone();
 
@@ -367,7 +376,10 @@ pub(super) fn dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild
         })
 }
 
-pub(super) fn dialog_glass(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn dialog_glass(
+    _cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     let dialog_open = models.dialog_glass_open.clone();
     let dialog_open_for_trigger = dialog_open.clone();
 
@@ -441,7 +453,10 @@ pub(super) fn dialog_glass(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl U
         })
 }
 
-pub(super) fn alert_dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn alert_dialog(
+    _cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     let alert_dialog_open = models.alert_dialog_open.clone();
     let alert_dialog_open_for_trigger = alert_dialog_open.clone();
 
@@ -476,7 +491,7 @@ pub(super) fn alert_dialog(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl U
         })
 }
 
-pub(super) fn sheet(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn sheet(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
     let sheet_open = models.sheet_open.clone();
     let sheet_open_for_trigger = sheet_open.clone();
 
@@ -540,7 +555,10 @@ pub(super) fn sheet(_cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild 
         })
 }
 
-pub(super) fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
+pub(super) fn portal_geometry(
+    cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
 
     let popover = shadcn::Popover::from_open(portal_geometry_popover_open.clone())

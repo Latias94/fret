@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("schema_display_composable.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let method = ui_ai::HttpMethod::Put;
     let path = Arc::<str>::from("/api/posts/{postId}");
     let description =

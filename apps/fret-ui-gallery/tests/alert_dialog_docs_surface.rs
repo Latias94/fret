@@ -66,7 +66,7 @@ fn alert_dialog_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let rtl = include_str!("../src/ui/snippets/alert_dialog/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::AlertDialog::new_controllable(cx, None, false)",
         "shadcn::AlertDialogPart::trigger(",

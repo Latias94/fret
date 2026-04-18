@@ -1,8 +1,8 @@
 use super::super::super::super::*;
-use fret::UiCx;
+use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_menus(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,

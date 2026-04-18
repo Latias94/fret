@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("test_results_basic.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let summary = ui_ai::TestResultsSummaryData::new(10, 2, 1, 13).duration_ms(3500);
 
     ui_ai::TestResults::new()

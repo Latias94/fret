@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("submenu.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::CommandId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
 
     let file = shadcn::MenubarTrigger::new("File")

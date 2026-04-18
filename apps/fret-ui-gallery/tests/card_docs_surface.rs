@@ -62,7 +62,7 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let meeting_notes = include_str!("../src/ui/snippets/card/meeting_notes.rs");
 
     for needle in [
-        "use fret::{UiChild, UiCx};",
+        "use fret::{UiChild, AppComponentCx};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::card(|cx| {",
         "shadcn::card_header(|cx| {",
@@ -126,7 +126,7 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
         "use fret_ui_assets::ImageSource;",
         "use fret_ui_assets::ui::ImageSourceElementContextExt as _;",
         "ImageSource::rgba8(",
-        "fn demo_cover_image(cx: &mut UiCx<'_>) -> Option<ImageId>",
+        "fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId>",
         "A practical talk on component APIs, accessibility, and shipping faster.",
     ] {
         assert!(
@@ -145,7 +145,7 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
 
     for needle in [
         "ImageSource::rgba8(",
-        "fn demo_avatar_image(cx: &mut UiCx<'_>) -> Option<ImageId>",
+        "fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId>",
         "AvatarImage::maybe(avatar_image)",
     ] {
         assert!(

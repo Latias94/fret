@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("package_info_demo.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let react = ui_ai::PackageInfo::new("react")
         .current_version("18.2.0")
         .new_version("19.0.0")
@@ -52,7 +52,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 // endregion: example
 
 // region: custom_children
-pub fn render_custom_children(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render_custom_children(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui_ai::PackageInfo::new("react")
         .current_version("18.2.0")
         .new_version("19.0.0")

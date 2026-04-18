@@ -80,6 +80,7 @@ impl SonnerDemoDriver {
                 let SonnerDemoLocals { last_action } =
                     locals.as_ref().expect("sonner locals should exist").clone();
                 let last_action_value = last_action.layout_value(cx);
+                let cx = cx.elements();
 
                 vec![
                     cx.flex(

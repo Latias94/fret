@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("fieldset.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let street = cx.local_model_keyed("street", String::new);
     let city = cx.local_model_keyed("city", String::new);
     let zip = cx.local_model_keyed("zip", String::new);

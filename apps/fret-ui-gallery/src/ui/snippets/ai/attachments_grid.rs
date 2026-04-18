@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("attachments_grid.rs");
 
 // region: example
 use super::{attachment_landscape_image_id, attachment_portrait_image_id};
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::Theme;
@@ -13,7 +13,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-fn demo_items(cx: &mut UiCx<'_>) -> Vec<ui_ai::AttachmentData> {
+fn demo_items(cx: &mut AppComponentCx<'_>) -> Vec<ui_ai::AttachmentData> {
     let mut image_one = ui_ai::AttachmentFileData::new("att-image")
         .filename("mountain-landscape.jpg")
         .media_type("image/jpeg");
@@ -44,7 +44,7 @@ fn demo_items(cx: &mut UiCx<'_>) -> Vec<ui_ai::AttachmentData> {
 }
 
 fn render_grid_attachment(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     data: ui_ai::AttachmentData,
     on_remove: ui_ai::OnAttachmentRemove,
     test_id: Option<&'static str>,
@@ -89,7 +89,7 @@ fn render_grid_attachment(
     })
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let removed_ids = cx.local_model_keyed("removed_ids", Vec::<Arc<str>>::new);
 
     let hidden = cx

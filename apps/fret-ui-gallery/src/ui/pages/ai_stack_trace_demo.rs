@@ -2,9 +2,12 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::ai as snippets;
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 
-pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_stack_trace_demo(
+    cx: &mut AppComponentCx<'_>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
     let usage = snippets::stack_trace_usage::render(cx);
     let demo = snippets::stack_trace_demo::render(cx);
     let collapsed = snippets::stack_trace_collapsed::render(cx);
@@ -69,7 +72,7 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
     vec![body.into_element(cx)]
 }
 
-fn stack_trace_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+fn stack_trace_props_table(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     doc_layout::text_table(
         cx,
         ["Surface", "Method", "Type", "Default", "Description"],

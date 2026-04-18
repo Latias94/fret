@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("top_app_bar.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui_material3::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let bar = |cx: &mut UiCx<'_>,
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
+    let bar = |cx: &mut AppComponentCx<'_>,
                variant: TopAppBarVariant,
                scrolled: bool,
                title: &'static str,
@@ -33,7 +33,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)
     };
 
-    let scroll_demo = |cx: &mut UiCx<'_>,
+    let scroll_demo = |cx: &mut AppComponentCx<'_>,
                        key: &'static str,
                        title: &'static str,
                        variant: TopAppBarVariant,

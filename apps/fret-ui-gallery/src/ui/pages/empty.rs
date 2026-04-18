@@ -1,9 +1,9 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::empty as snippets;
-use fret::UiCx;
+use fret::AppComponentCx;
 
-pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_empty(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let outline = snippets::outline::render(cx);

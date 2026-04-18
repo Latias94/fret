@@ -66,21 +66,46 @@ pub fn assert_default_app_surface(
     let normalized = source.split_whitespace().collect::<String>();
 
     assert!(
-        source.contains("use fret::UiCx;")
-            || normalized.contains("usefret::{UiChild,UiCx};")
-            || normalized.contains("usefret::{UiCx,UiChild};"),
+        source.contains("use fret::AppComponentCx;")
+            || normalized.contains("usefret::{UiChild,AppComponentCx};")
+            || normalized.contains("usefret::{AppComponentCx,UiChild};"),
         "{} should use the default app helper context alias",
         path.display()
     );
     assert!(
         expected_patterns
             .iter()
-            .any(|pattern| source.contains(pattern)),
-        "{} should expose UiCx on the {}",
+            .any(|pattern| source_contains_equivalent_marker(source, &normalized, pattern)),
+        "{} should expose AppComponentCx on the {}",
         path.display(),
         surface_label
     );
     assert_no_raw_app_surface(path, source);
+}
+
+pub fn source_contains_equivalent_marker(source: &str, normalized: &str, pattern: &str) -> bool {
+    if source.contains(pattern) {
+        return true;
+    }
+
+    let normalized_pattern = pattern.split_whitespace().collect::<String>();
+    if normalized.contains(&normalized_pattern) {
+        return true;
+    }
+
+    let is_default_app_component_import = matches!(
+        normalized_pattern.as_str(),
+        "usefret::{UiChild,AppComponentCx};" | "usefret::{AppComponentCx,UiChild};"
+    );
+
+    if !is_default_app_component_import {
+        return false;
+    }
+
+    normalized.contains("usefret::{UiChild,AppComponentCx};")
+        || normalized.contains("usefret::{AppComponentCx,UiChild};")
+        || (normalized.contains("usefret::AppComponentCx;")
+            && normalized.contains("usefret::UiChild;"))
 }
 
 pub fn assert_internal_preview_surface(
@@ -108,7 +133,7 @@ pub fn assert_internal_preview_surface(
         .any(|pattern| source.contains(pattern))
     {
         assert!(
-            source.contains("use fret::UiCx;"),
+            source.contains("use fret::AppComponentCx;"),
             "{} should use the shared helper context alias",
             path.display()
         );
@@ -116,7 +141,7 @@ pub fn assert_internal_preview_surface(
             expected_patterns
                 .iter()
                 .any(|pattern| source.contains(pattern)),
-            "{} should expose UiCx on the {}",
+            "{} should expose AppComponentCx on the {}",
             path.display(),
             surface_label
         );

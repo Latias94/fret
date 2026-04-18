@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("test_results_errors.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let summary = ui_ai::TestResultsSummaryData::new(1, 1, 0, 2).duration_ms(130);
-    let test_parts = |cx: &mut UiCx<'_>| {
+    let test_parts = |cx: &mut AppComponentCx<'_>| {
         ui::children![
             cx;
             ui_ai::TestStatus::from_context().into_element(cx),

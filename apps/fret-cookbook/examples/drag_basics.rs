@@ -151,7 +151,7 @@ impl View for DragBasicsView {
         region.layout.size.width = Length::Fill;
         region.layout.size.height = Length::Px(Px(240.0));
 
-        let draggable = cx.pointer_region(region, |cx| {
+        let draggable = cx.elements().pointer_region(region, |cx| {
             cx.pointer_region_on_pointer_down(on_pointer_down);
             cx.pointer_region_on_pointer_move(on_pointer_move);
             cx.pointer_region_on_pointer_up(on_pointer_up);

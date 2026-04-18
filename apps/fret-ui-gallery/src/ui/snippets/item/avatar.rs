@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
-use fret::{UiChild, UiCx};
+use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn icon_button(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     icon_id: &'static str,
     variant: shadcn::ButtonVariant,
     test_id: &'static str,
@@ -23,7 +23,7 @@ fn icon_button(
 }
 
 fn item_team(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     test_id: &'static str,
     action_test_id: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
@@ -66,7 +66,7 @@ fn item_team(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()
