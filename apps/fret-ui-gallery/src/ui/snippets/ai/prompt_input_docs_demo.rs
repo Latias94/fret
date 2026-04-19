@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
 // region: example
 use super::shared_preview_image_id;
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;

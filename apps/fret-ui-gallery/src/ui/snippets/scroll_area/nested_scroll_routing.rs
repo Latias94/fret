@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("nested_scroll_routing.rs");
 
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;

@@ -107,13 +107,13 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
   The first-party `badge/link.rs` example now overrides link launching through
   `Badge::on_activate(...)` instead of reopening the activation bridge just to keep diagnostics
   runs side-effect free.
-  Extracted `UiCx` helper functions now get the same grouped action/data surface through
-  `UiCxActionsExt` / `UiCxDataExt`, and AI widgets such as `WorkflowControlsButton`,
+  Extracted app-render helper functions now get the same grouped action/data surface through
+  `AppRenderActionsExt` / `AppRenderDataExt`, and AI widgets such as `WorkflowControlsButton`,
   `MessageAction`, `ArtifactAction`, `ArtifactClose`, `CheckpointTrigger`,
   `ConversationDownload`, `PromptInputButton`, `WebPreviewNavigationButton`, and
   `ConfirmationAction` now stay on their native `.action(...)` slots or widget-owned
   `.on_activate(...)` hooks instead of extending the bridge table. First-party UI Gallery button
-  and sidebar snippets now also use `UiCxActionsExt` plus widget-owned `.on_activate(...)` for
+  and sidebar snippets now also use `AppRenderActionsExt` plus widget-owned `.on_activate(...)` for
   local listeners instead of importing `AppActivateExt`. When extracted app helpers only need a
   hover shell or attributed text leaf, prefer `fret_ui_kit::ui::hover_region(...)` and
   `fret_ui_kit::ui::rich_text(...)` over raw `HoverRegionProps`, `StyledTextProps`, or

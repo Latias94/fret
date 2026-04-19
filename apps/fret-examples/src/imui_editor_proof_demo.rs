@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
-use fret::advanced::view::{UiCxDataExt as _, ViewWindowState};
+use fret::advanced::view::{AppRenderDataExt as _, ViewWindowState};
 use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("outside_press.rs");
 
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::ui;

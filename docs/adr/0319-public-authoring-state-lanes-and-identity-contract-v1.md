@@ -133,7 +133,7 @@ During the current migration window:
 - app-hosted component/snippet helpers that deliberately target the default `fret::app::App`
   host should prefer `AppComponentCx<'a>`,
 - `RenderContextAccess<'a, App>` remains the underlying generic capability,
-- grouped app-facing helper namespaces such as `UiCxActionsExt` / `UiCxDataExt` may continue to
+- grouped app-facing helper namespaces such as `AppRenderActionsExt` / `AppRenderDataExt` may continue to
   power that lane,
 - and `UiCx` should be treated only as the compatibility old-name alias when an older helper still
   has not migrated to `AppRenderContext<'a>`, `AppRenderCx<'a>`, or `AppComponentCx<'a>`.

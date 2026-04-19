@@ -451,8 +451,11 @@ pub mod app {
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
     pub use crate::view::{
-        AppRenderContext, LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt,
+        AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState, RenderContextAccess,
     };
+    /// Compatibility old-name grouped helper aliases kept for explicit imports during migration.
+    #[allow(deprecated)]
+    pub use crate::view::{UiCxActionsExt, UiCxDataExt};
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
     /// This is the same underlying runtime type as the raw kernel alias exposed on
@@ -472,13 +475,13 @@ pub mod app {
         pub use crate::app::AppRenderCx;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+        pub use crate::view::AppRenderActionsExt as _;
+        pub use crate::view::AppRenderDataExt as _;
         #[cfg(feature = "state-mutation")]
         pub use crate::view::MutationHandleReadLayoutExt as _;
         #[cfg(feature = "state-query")]
         pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::TrackedStateExt as _;
-        pub use crate::view::UiCxActionsExt as _;
-        pub use crate::view::UiCxDataExt as _;
         pub use crate::view::View;
         pub use crate::{AppUi, Ui, UiChild, WindowId};
         pub use fret_core::Px;
@@ -656,9 +659,10 @@ pub mod router {
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
+        #[allow(deprecated)]
         pub use crate::view::{
-            AppUiRenderRootState, UiCxDataExt, ViewWindowState, render_root_with_app_ui,
-            view_init_window, view_view,
+            AppRenderDataExt, AppUiRenderRootState, UiCxDataExt, ViewWindowState,
+            render_root_with_app_ui, view_init_window, view_view,
         };
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -906,12 +910,12 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
+        pub use crate::view::AppRenderActionsExt as _;
+        pub use crate::view::AppRenderDataExt as _;
         #[cfg(feature = "state-mutation")]
         pub use crate::view::MutationHandleReadLayoutExt as _;
         #[cfg(feature = "state-query")]
         pub use crate::view::QueryHandleReadLayoutExt as _;
-        pub use crate::view::UiCxActionsExt as _;
-        pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, Ui};
         pub use fret_app::Effect;
@@ -3081,7 +3085,7 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch::<A>()`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch_payload::<A>(payload)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AppRenderActionsExt`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_kit::ui::hover_region(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_kit::ui::rich_text(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector_layout(...)`"));
@@ -3538,7 +3542,7 @@ mod authoring_surface_policy_tests {
                 .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
         );
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`use fret::app::AppActivateExt as _;`"));
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`AppRenderActionsExt` / `AppRenderDataExt`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_kit::ui::hover_region(...)`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_kit::ui::rich_text(...)`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("first-party"));
@@ -3626,8 +3630,8 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
-        assert!(app_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
-        assert!(app_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::AppRenderDataExt as _;"));
         assert!(
             app_prelude.contains("pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;")
         );
@@ -3719,9 +3723,10 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
-        assert!(LIB_RS.contains(
-            "AppRenderContext, LocalState, RenderContextAccess, UiCxActionsExt, UiCxDataExt"
-        ));
+        assert!(
+            LIB_RS.contains("AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,")
+        );
+        assert!(LIB_RS.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }
 
@@ -3758,8 +3763,8 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));
         assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
-        assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
-        assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
+        assert!(advanced_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
+        assert!(advanced_prelude.contains("pub use crate::view::AppRenderDataExt as _;"));
         assert!(
             advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
         );
@@ -4078,7 +4083,7 @@ mod authoring_surface_policy_tests {
         assert!(!root_header.contains("pub mod view;"));
         assert!(advanced_surface.contains("pub mod view {"));
         assert!(advanced_surface.contains("AppUiRenderRootState"));
-        assert!(advanced_surface.contains("UiCxDataExt"));
+        assert!(advanced_surface.contains("AppRenderDataExt"));
         assert!(advanced_surface.contains("render_root_with_app_ui"));
         assert!(advanced_surface.contains("ViewWindowState,"));
         assert!(advanced_surface.contains("view_init_window,"));

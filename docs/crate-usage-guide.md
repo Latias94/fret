@@ -801,8 +801,8 @@ them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than ex
 `fret::app::prelude::*`. Extracted helpers on the default lane should usually be generic over
 `fret::app::AppRenderContext<'a>`; the underlying capability remains
 `RenderContextAccess<'a, App>`, and those helpers keep the same grouped surface through
-`UiCxActionsExt` / `UiCxDataExt` (or explicit imports from `fret::app::{UiCxActionsExt,
-UiCxDataExt}` when you are intentionally not using the prelude). When a closure-local or inline
+`AppRenderActionsExt` / `AppRenderDataExt` (or explicit imports from `fret::app::{AppRenderActionsExt,
+AppRenderDataExt}` when you are intentionally not using the prelude). When a closure-local or inline
 helper materially benefits from a concrete context carrier, prefer `&mut fret::app::AppRenderCx<'_>`.
 Keep `UiCx` itself only as the compatibility old-name alias behind explicit import when an older
 helper intentionally still wants `ElementContext<App>`. Prefer `AppComponentCx` for app-hosted

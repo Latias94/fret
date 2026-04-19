@@ -6,7 +6,7 @@ pub const SOURCE: &str = include_str!("types.rs");
 use super::{
     last_action_model, message_request, preview_controls_row, preview_note, preview_stack, request,
 };
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::UiHost;

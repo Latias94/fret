@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("description.rs");
 
 // region: example
 use super::{last_action_model, message_request, preview_controls_row, preview_frame};
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};

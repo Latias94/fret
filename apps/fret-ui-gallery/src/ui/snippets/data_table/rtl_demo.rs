@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl_demo.rs");
 
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_runtime::Model;

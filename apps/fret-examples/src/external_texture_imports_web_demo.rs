@@ -10,7 +10,7 @@
 //! - The `ImportedViewportRenderTarget` helper records updates as runner deltas.
 
 use anyhow::Context as _;
-use fret::advanced::view::UiCxDataExt as _;
+use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::Paint;

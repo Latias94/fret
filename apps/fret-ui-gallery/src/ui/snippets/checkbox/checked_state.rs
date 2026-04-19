@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("checked_state.rs");
 
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};

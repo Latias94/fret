@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use fret::advanced::view::UiCxDataExt as _;
+use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::App;
 use fret_core::{AppWindowId, Event, KeyCode};
 use fret_launch::{

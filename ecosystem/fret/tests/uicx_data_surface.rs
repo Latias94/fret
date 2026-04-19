@@ -29,10 +29,12 @@ fn advanced_prelude_slice() -> &'static str {
 }
 
 #[test]
-fn uicx_data_ext_is_part_of_the_default_and_advanced_preludes() {
-    assert!(VIEW_RS.contains("pub trait UiCxDataExt"));
-    assert!(app_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
-    assert!(advanced_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
+fn app_render_data_ext_is_part_of_the_default_and_advanced_preludes() {
+    assert!(VIEW_RS.contains("pub trait AppRenderDataExt"));
+    assert!(app_prelude_slice().contains("pub use crate::view::AppRenderDataExt as _;"));
+    assert!(advanced_prelude_slice().contains("pub use crate::view::AppRenderDataExt as _;"));
+    assert!(!app_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
+    assert!(!advanced_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
 }
 
 #[test]

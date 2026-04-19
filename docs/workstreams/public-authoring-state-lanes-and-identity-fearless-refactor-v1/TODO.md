@@ -36,6 +36,7 @@ Companion docs:
 - `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`
 - `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
 - `UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`
+- `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`
 - `APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - `APP_UI_ASYNC_PLAYGROUND_HELPER_CAPABILITY_AUDIT_2026-04-17.md`
 - `APP_UI_MARKDOWN_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
@@ -295,7 +296,7 @@ Companion docs:
     or `UiAssets::image_stats(&mut *cx.app)` directly just to enter the asset helper surface.
   - [x] close the remaining grouped app-facing query maintenance seam that still forced real
     `AppUi` / `AppComponentCx` examples back onto raw client shell code:
-    `fret::view::{AppUiData, UiCxData}` now own `query_snapshot()`,
+    `fret::view::{AppUiData, AppRenderData}` now own `query_snapshot()`,
     `query_snapshot_entry(...)`, and `cancel_query(...)`; `async_playground_demo` uses grouped
     invalidation/cancel/snapshot helpers end-to-end, `markdown_demo` uses grouped namespace
     invalidation, and `QUERY_GROUPED_MAINTENANCE_SURFACE_AUDIT_2026-04-15.md` records why this
@@ -608,6 +609,12 @@ Companion docs:
   Result: `fret::advanced::prelude::*` now exports `AppComponentCx<'a>` instead of `UiCx<'a>`, the
   remaining first-party example/cookbook runtime tail now uses `AppComponentCx<'a>`, and the proof
   is recorded in `UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`.
+- [x] Retire `UiCx` from the grouped app-render helper extension names before auditing the root
+  alias itself.
+  Result: `AppRenderActionsExt` / `AppRenderDataExt` are the canonical grouped helper extension
+  names, the first-party examples and UI Gallery snippets now import those names, and
+  `UiCxActionsExt` / `UiCxDataExt` remain only as explicit deprecated compatibility aliases.
+  Proof: `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`.
 - [ ] Audit the remaining explicit-import `UiCx` tail and either classify it as
   advanced/compatibility-only or migrate it to `AppRenderContext<'a>` / `AppRenderCx<'a>` /
   `AppComponentCx<'a>`.

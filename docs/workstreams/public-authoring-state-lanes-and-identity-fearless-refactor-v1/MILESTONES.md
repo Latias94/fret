@@ -32,6 +32,7 @@ Related:
 - AppUi Deref removal proof audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`
 - AppComponentCx UI Gallery migration audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
 - UiCx advanced prelude and first-party tail audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`
+- App render grouped helper extension naming audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`
 - AppUi Todo root capability landing audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
 - Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
@@ -318,7 +319,7 @@ Related:
     `api_workbench_lite_demo` extracted helpers accept
     `fret::app::RenderContextAccess<'a, App>`, `LocalState::{layout_value, paint_value,
     layout_read_ref, paint_read_ref}`, `QueryHandleReadLayoutExt`, `MutationHandleReadLayoutExt`,
-    and `UiCxDataExt`/`UiCxActionsExt` now work through the same capability, and the remaining raw
+    and `AppRenderDataExt`/`AppRenderActionsExt` now work through the same capability, and the remaining raw
     `ElementContext` requirements are explicit `cx.elements()` escape hatches at
     `into_element(...)` / `with(...)` late-landing boundaries instead of implicit `AppUi` `Deref`
     inheritance.
@@ -454,7 +455,7 @@ Related:
     capability surface is available without widening the `fret` facade.
   - the grouped app-facing query maintenance lane is now closed over the remaining first-party
     proof seams too:
-    `fret::view::{AppUiData, UiCxData}` now own `query_snapshot()`,
+    `fret::view::{AppUiData, AppRenderData}` now own `query_snapshot()`,
     `query_snapshot_entry(...)`, and `cancel_query(...)`, `async_playground_demo` uses grouped
     invalidation/cancel/snapshot helpers instead of raw `with_query_client(...)`, and
     `markdown_demo` now uses grouped namespace invalidation too. The owner split is now recorded
@@ -574,9 +575,14 @@ Related:
     `apps/fret-ui-gallery/src/ui/**` plus the matching source-policy gates use
     `AppComponentCx<'a>` for snippets/pages/internal previews instead of teaching `UiCx<'a>` on
     the gallery surface,
+  - the grouped app-render helper extension names now follow the same split too:
+    `AppRenderActionsExt` / `AppRenderDataExt` are canonical, first-party examples and gallery
+    snippets import those names, and `UiCxActionsExt` / `UiCxDataExt` remain only as explicit
+    deprecated compatibility aliases,
   - and the follow-on proof is recorded in
     `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md` and
-    `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`.
+    `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md` plus
+    `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`.
   - final closeout and the remaining explicit-import `UiCx` compatibility-tail audit outside the
     gallery surface are still open.
 

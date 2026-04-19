@@ -1429,7 +1429,7 @@ mod authoring_surface_policy_tests {
             EXTERNAL_TEXTURE_IMPORTS_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui",
-                "use fret::advanced::view::UiCxDataExt as _;",
+                "use fret::advanced::view::AppRenderDataExt as _;",
                 "let show = cx.data().selector_model_layout(&st.show, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
@@ -1446,7 +1446,7 @@ mod authoring_surface_policy_tests {
         assert_low_level_interop_examples_keep_direct_leaf_roots(
             EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO,
             &[
-                "use fret::advanced::view::UiCxDataExt as _;",
+                "use fret::advanced::view::AppRenderDataExt as _;",
                 "let show = cx.data().selector_model_layout(&show_model, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
@@ -1465,7 +1465,7 @@ mod authoring_surface_policy_tests {
             EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAvfView) -> fret::Ui",
-                "use fret::advanced::view::UiCxDataExt as _;",
+                "use fret::advanced::view::AppRenderDataExt as _;",
                 "let show = cx.data().selector_model_layout(&st.show, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
@@ -1483,7 +1483,7 @@ mod authoring_surface_policy_tests {
             EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
             &[
                 "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsMfView) -> fret::Ui",
-                "use fret::advanced::view::UiCxDataExt as _;",
+                "use fret::advanced::view::AppRenderDataExt as _;",
                 "let show = cx.data().selector_model_layout(&st.show, |show| show);",
                 "let theme = cx.theme().snapshot();",
                 "cx.viewport_surface_props(ViewportSurfaceProps {",
@@ -5497,7 +5497,7 @@ mod authoring_surface_policy_tests {
         ] {
             let normalized = src.split_whitespace().collect::<String>();
             for marker in [
-                "use fret::advanced::view::UiCxDataExt as _;",
+                "use fret::advanced::view::AppRenderDataExt as _;",
                 "selector_model_layout(",
             ] {
                 let marker = marker.split_whitespace().collect::<String>();
@@ -5525,7 +5525,7 @@ mod authoring_surface_policy_tests {
         for src in [VIRTUAL_LIST_STRESS_DEMO, CANVAS_DATAGRID_STRESS_DEMO] {
             let normalized = src.split_whitespace().collect::<String>();
             for marker in [
-                "use fret::advanced::view::UiCxDataExt as _;",
+                "use fret::advanced::view::AppRenderDataExt as _;",
                 "cx.data().selector_model_layout(",
             ] {
                 let marker = marker.split_whitespace().collect::<String>();

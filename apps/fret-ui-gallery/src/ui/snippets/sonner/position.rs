@@ -6,7 +6,7 @@ pub const SOURCE: &str = include_str!("position.rs");
 use super::{
     last_action_model, position_model, preview_controls_row, preview_note, preview_stack, request,
 };
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, SemanticsDecoration};

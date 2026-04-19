@@ -1538,15 +1538,15 @@ pub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T> {
     local: LocalState<T>,
 }
 
-/// Grouped action/effect registration helpers for extracted `AppComponentCx` child builders on the default
-/// app surface.
+/// Grouped action/effect registration helpers for extracted app-render helpers on the default app
+/// surface.
 #[doc(hidden)]
-pub struct UiCxActions<'cx, 'a> {
+pub struct AppRenderActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
 }
 
 #[doc(hidden)]
-pub struct UiCxActionLocal<'cx, 'a, T> {
+pub struct AppRenderActionLocal<'cx, 'a, T> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
     local: LocalState<T>,
 }
@@ -1558,7 +1558,7 @@ pub struct AppUiLocalsWith<'view, 'cx, 'a, H: UiHost, C> {
 }
 
 #[doc(hidden)]
-pub struct UiCxLocalsWith<'cx, 'a, C> {
+pub struct AppRenderLocalsWith<'cx, 'a, C> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
     captures: C,
 }
@@ -1633,7 +1633,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActionLocal<'view, 'cx, 'a, H, bool> {
     }
 }
 
-impl<'cx, 'a, C> UiCxLocalsWith<'cx, 'a, C>
+impl<'cx, 'a, C> AppRenderLocalsWith<'cx, 'a, C>
 where
     C: Clone + 'static,
 {
@@ -1642,7 +1642,7 @@ where
         A: crate::TypedAction,
     {
         let captures = self.captures;
-        uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| {
+        app_render_on_action_notify::<A>(self.cx, move |host, _action_cx| {
             let mut tx = LocalStateTxn {
                 models: host.models_mut(),
             };
@@ -1651,7 +1651,7 @@ where
     }
 }
 
-impl<'cx, 'a, T> UiCxActionLocal<'cx, 'a, T>
+impl<'cx, 'a, T> AppRenderActionLocal<'cx, 'a, T>
 where
     T: Any,
 {
@@ -1660,7 +1660,7 @@ where
         A: crate::TypedAction,
     {
         let local = self.local;
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+        app_render_on_action::<A>(self.cx, move |host, action_cx| {
             local.update_action(host, action_cx, |value| update(value))
         });
     }
@@ -1671,7 +1671,7 @@ where
         T: Clone,
     {
         let local = self.local;
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+        app_render_on_action::<A>(self.cx, move |host, action_cx| {
             local.set_action(host, action_cx, value.clone())
         });
     }
@@ -1681,19 +1681,19 @@ where
         A: crate::actions::TypedPayloadAction,
     {
         let local = self.local;
-        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+        app_render_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
             local.update_action_if(host, action_cx, |value| update(value, payload))
         });
     }
 }
 
-impl<'cx, 'a> UiCxActionLocal<'cx, 'a, bool> {
+impl<'cx, 'a> AppRenderActionLocal<'cx, 'a, bool> {
     pub fn toggle_bool<A>(self)
     where
         A: crate::TypedAction,
     {
         let local = self.local;
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+        app_render_on_action::<A>(self.cx, move |host, action_cx| {
             local.update_action(host, action_cx, |value| *value = !*value)
         });
     }
@@ -1770,18 +1770,18 @@ fn action_listener(f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnA
 }
 
 #[derive(Default)]
-struct UiCxActionHooksFrameSlot {
+struct AppRenderActionHooksFrameSlot {
     frame_id: Option<fret_runtime::FrameId>,
 }
 
-struct UiCxActionHooksOwner;
+struct AppRenderActionHooksOwner;
 struct ViewRuntimeActionHooksOwner;
 struct AppUiRenderRootActionHooksOwner;
 
-fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
+fn prepare_app_render_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
     let frame_id = cx.frame_id;
     let action_root = cx.root_id();
-    let needs_reset = cx.root_state(UiCxActionHooksFrameSlot::default, |slot| {
+    let needs_reset = cx.root_state(AppRenderActionHooksFrameSlot::default, |slot| {
         if slot.frame_id == Some(frame_id) {
             return false;
         }
@@ -1789,21 +1789,21 @@ fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
         true
     });
     if needs_reset {
-        cx.action_clear_on_command_for_owner::<UiCxActionHooksOwner>(action_root);
-        cx.action_clear_on_command_availability_for_owner::<UiCxActionHooksOwner>(action_root);
+        cx.action_clear_on_command_for_owner::<AppRenderActionHooksOwner>(action_root);
+        cx.action_clear_on_command_availability_for_owner::<AppRenderActionHooksOwner>(action_root);
     }
 }
 
-fn uicx_on_action<A>(
+fn app_render_on_action<A>(
     cx: &mut ElementContext<'_, crate::app::App>,
     f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx) -> bool + 'static,
 ) where
     A: crate::TypedAction,
 {
-    prepare_uicx_action_hooks(cx);
+    prepare_app_render_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.action_add_on_command_for_owner::<UiCxActionHooksOwner>(
+    cx.action_add_on_command_for_owner::<AppRenderActionHooksOwner>(
         action_root,
         Arc::new(move |host, action_cx, command| {
             if command != action {
@@ -1814,13 +1814,13 @@ fn uicx_on_action<A>(
     );
 }
 
-fn uicx_on_action_notify<A>(
+fn app_render_on_action_notify<A>(
     cx: &mut ElementContext<'_, crate::app::App>,
     f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx) -> bool + 'static,
 ) where
     A: crate::TypedAction,
 {
-    uicx_on_action::<A>(cx, move |host, action_cx| {
+    app_render_on_action::<A>(cx, move |host, action_cx| {
         let handled = f(host, action_cx);
         if handled {
             host.request_redraw(action_cx.window);
@@ -1830,16 +1830,16 @@ fn uicx_on_action_notify<A>(
     });
 }
 
-fn uicx_on_payload_action<A>(
+fn app_render_on_payload_action<A>(
     cx: &mut ElementContext<'_, crate::app::App>,
     f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx, A::Payload) -> bool + 'static,
 ) where
     A: crate::actions::TypedPayloadAction,
 {
-    prepare_uicx_action_hooks(cx);
+    prepare_app_render_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.action_add_on_command_for_owner::<UiCxActionHooksOwner>(
+    cx.action_add_on_command_for_owner::<AppRenderActionHooksOwner>(
         action_root,
         Arc::new(move |host, action_cx, command| {
             if command != action {
@@ -1857,7 +1857,7 @@ fn uicx_on_payload_action<A>(
     );
 }
 
-fn uicx_on_action_availability<A>(
+fn app_render_on_action_availability<A>(
     cx: &mut ElementContext<'_, crate::app::App>,
     f: impl Fn(
         &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
@@ -1867,10 +1867,10 @@ fn uicx_on_action_availability<A>(
 ) where
     A: crate::TypedAction,
 {
-    prepare_uicx_action_hooks(cx);
+    prepare_app_render_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.action_add_on_command_availability_for_owner::<UiCxActionHooksOwner>(
+    cx.action_add_on_command_availability_for_owner::<AppRenderActionHooksOwner>(
         action_root,
         Arc::new(move |host, action_cx, command| {
             if command != action {
@@ -1969,7 +1969,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     }
 }
 
-impl<'cx, 'a> UiCxActions<'cx, 'a> {
+impl<'cx, 'a> AppRenderActions<'cx, 'a> {
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
@@ -1977,11 +1977,11 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
 
     /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
     /// on every helper family.
-    pub fn local<T>(self, local: &LocalState<T>) -> UiCxActionLocal<'cx, 'a, T>
+    pub fn local<T>(self, local: &LocalState<T>) -> AppRenderActionLocal<'cx, 'a, T>
     where
         T: Any,
     {
-        UiCxActionLocal {
+        AppRenderActionLocal {
             cx: self.cx,
             local: LocalState::clone(local),
         }
@@ -1991,7 +1991,7 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     where
         A: crate::TypedAction,
     {
-        uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| f(host.models_mut()));
+        app_render_on_action_notify::<A>(self.cx, move |host, _action_cx| f(host.models_mut()));
     }
 
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
@@ -2006,7 +2006,7 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     ) where
         A: crate::actions::TypedPayloadAction,
     {
-        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+        app_render_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
             let handled = f(host.models_mut(), payload);
             if handled {
                 host.request_redraw(action_cx.window);
@@ -2016,14 +2016,14 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         });
     }
 
-    /// Clone the provided `LocalState<T>` handles into a hidden builder so helper-heavy `AppComponentCx`
+    /// Clone the provided `LocalState<T>` handles into a hidden builder so helper-heavy app-render
     /// code can pass `(&draft_state, &next_id_state, ...)` directly, then register the typed
     /// action via `.on::<A>(...)` without reopening a `LocalState::clone(...)` prelude.
-    pub fn locals_with<C>(self, captures: C) -> UiCxLocalsWith<'cx, 'a, C::Owned>
+    pub fn locals_with<C>(self, captures: C) -> AppRenderLocalsWith<'cx, 'a, C::Owned>
     where
         C: LocalActionCapture,
     {
-        UiCxLocalsWith {
+        AppRenderLocalsWith {
             cx: self.cx,
             captures: captures.capture_owned(),
         }
@@ -2033,7 +2033,7 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     where
         A: crate::TypedAction,
     {
-        uicx_on_action_notify::<A>(self.cx, move |host, action_cx| {
+        app_render_on_action_notify::<A>(self.cx, move |host, action_cx| {
             host.record_transient_event(action_cx, transient_key);
             true
         });
@@ -2049,7 +2049,7 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     ) where
         A: crate::TypedAction,
     {
-        uicx_on_action_availability::<A>(self.cx, f);
+        app_render_on_action_availability::<A>(self.cx, f);
     }
 }
 
@@ -2452,15 +2452,16 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
     }
 }
 
-/// Grouped selector/query helpers for extracted `AppComponentCx` child builders on the default app surface.
+/// Grouped selector/query helpers for extracted app-render helpers on the default app surface.
 #[doc(hidden)]
-pub struct UiCxData<'cx, 'a> {
+pub struct AppRenderData<'cx, 'a> {
     #[allow(dead_code)]
     cx: &'cx mut ElementContext<'a, crate::app::App>,
 }
 
-impl<'cx, 'a> UiCxData<'cx, 'a> {
-    /// Default LocalState-first selector path for extracted `AppComponentCx` helpers on the app-facing lane.
+impl<'cx, 'a> AppRenderData<'cx, 'a> {
+    /// Default LocalState-first selector path for extracted app-render helpers on the app-facing
+    /// lane.
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector_layout<Inputs, TValue>(
@@ -2479,8 +2480,8 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
-    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `AppComponentCx` helpers when
-    /// the derived value affects layout.
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted app-render helpers
+    /// when the derived value affects layout.
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector_model_layout<Inputs, TValue>(
@@ -2499,8 +2500,8 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
-    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `AppComponentCx` helpers when
-    /// the derived value affects paint.
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted app-render helpers
+    /// when the derived value affects paint.
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector_model_paint<Inputs, TValue>(
@@ -2573,7 +2574,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
     }
 
-    /// Grouped query-client snapshot read for extracted `AppComponentCx` app-facing diagnostics helpers.
+    /// Grouped query-client snapshot read for extracted app-render diagnostics helpers.
     ///
     /// Keep raw `fret::query::with_query_client(...)` for pure app/driver code that does not have
     /// a grouped `cx.data()` surface.
@@ -2582,7 +2583,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         fret_query::with_query_client(self.cx.app, |client, _app| client.snapshot())
     }
 
-    /// Find one typed query snapshot entry from an extracted `AppComponentCx` helper on the grouped app
+    /// Find one typed query snapshot entry from an extracted app-render helper on the grouped app
     /// data lane.
     #[cfg(feature = "state-query")]
     pub fn query_snapshot_entry<T: Any + Send + Sync + 'static>(
@@ -2593,7 +2594,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
             .and_then(|snapshot| query_snapshot_entry_for_key(snapshot, key))
     }
 
-    /// Cancel one inflight query task from an extracted `AppComponentCx` helper while keeping redraw
+    /// Cancel one inflight query task from an extracted app-render helper while keeping redraw
     /// ownership on the grouped app data lane.
     #[cfg(feature = "state-query")]
     pub fn cancel_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
@@ -2634,7 +2635,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Consume a mutation completion exactly once for one `(effect_key, handle)` pair inside an
-    /// extracted `AppComponentCx` helper.
+    /// extracted app-render helper.
     ///
     /// Prefer `update_after_mutation_completion(...)` when this once-only gate immediately drives
     /// app-owned model updates.
@@ -2648,7 +2649,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Update ordinary app-owned `LocalState<T>` or shared models exactly once after a mutation
-    /// reaches a fresh terminal completion inside an extracted `AppComponentCx` helper.
+    /// reaches a fresh terminal completion inside an extracted app-render helper.
     #[cfg(feature = "state-mutation")]
     pub fn update_after_mutation_completion<TIn: 'static, TOut: 'static>(
         self,
@@ -2670,7 +2671,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Consume a mutation success exactly once for one `(effect_key, handle)` pair inside an
-    /// extracted `AppComponentCx` helper.
+    /// extracted app-render helper.
     #[cfg(feature = "state-mutation")]
     pub fn take_mutation_success<TIn: 'static, TOut: 'static>(
         self,
@@ -2680,7 +2681,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         take_mutation_success_in(self.cx, effect_key, handle)
     }
 
-    /// Grouped invalidation helper for extracted `AppComponentCx` app-facing helpers.
+    /// Grouped invalidation helper for extracted app-render helpers.
     #[cfg(feature = "state-query")]
     pub fn invalidate_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
         let _ = fret_query::with_query_client(self.cx.app, |client, app| {
@@ -2689,7 +2690,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         self.cx.app.request_redraw(self.cx.window);
     }
 
-    /// Grouped namespace invalidation helper for extracted `AppComponentCx` app-facing helpers.
+    /// Grouped namespace invalidation helper for extracted app-render helpers.
     #[cfg(feature = "state-query")]
     pub fn invalidate_query_namespace(self, namespace: &'static str) {
         let _ = fret_query::with_query_client(self.cx.app, |client, _app| {
@@ -2699,7 +2700,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Invalidate one query key exactly once after a mutation reports success inside an extracted
-    /// `AppComponentCx` helper.
+    /// app-render helper.
     #[cfg(all(feature = "state-query", feature = "state-mutation"))]
     pub fn invalidate_query_after_mutation_success<
         TIn: 'static,
@@ -2723,7 +2724,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Invalidate one query namespace exactly once after a mutation reports success inside an
-    /// extracted `AppComponentCx` helper.
+    /// extracted app-render helper.
     #[cfg(all(feature = "state-query", feature = "state-mutation"))]
     pub fn invalidate_query_namespace_after_mutation_success<TIn: 'static, TOut: 'static>(
         self,
@@ -2743,41 +2744,69 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 }
 
-/// Brings the grouped `data()` namespace to extracted `AppComponentCx` helper functions.
-pub trait UiCxDataExt<'a> {
+/// Brings the grouped `data()` namespace to extracted app-render helper functions.
+pub trait AppRenderDataExt<'a> {
     /// Discover selector/query helpers through `cx.data()` rather than naming the carrier type
     /// directly.
-    fn data(&mut self) -> UiCxData<'_, 'a>;
+    fn data(&mut self) -> AppRenderData<'_, 'a>;
 }
 
-impl<'a, Cx> UiCxDataExt<'a> for Cx
+impl<'a, Cx> AppRenderDataExt<'a> for Cx
 where
     Cx: RenderContextAccess<'a, crate::app::App>,
 {
-    fn data(&mut self) -> UiCxData<'_, 'a> {
-        UiCxData {
+    fn data(&mut self) -> AppRenderData<'_, 'a> {
+        AppRenderData {
             cx: self.elements(),
         }
     }
 }
 
-/// Brings the grouped `actions()` namespace to extracted `AppComponentCx` helper functions.
-pub trait UiCxActionsExt<'a> {
+#[doc(hidden)]
+#[deprecated(note = "use AppRenderDataExt")]
+pub use AppRenderDataExt as UiCxDataExt;
+
+#[doc(hidden)]
+#[deprecated(note = "use AppRenderData")]
+#[allow(unused_imports)]
+pub use AppRenderData as UiCxData;
+
+/// Brings the grouped `actions()` namespace to extracted app-render helper functions.
+pub trait AppRenderActionsExt<'a> {
     /// Discover grouped action helpers through `cx.actions()` rather than naming the carrier type
     /// directly.
-    fn actions(&mut self) -> UiCxActions<'_, 'a>;
+    fn actions(&mut self) -> AppRenderActions<'_, 'a>;
 }
 
-impl<'a, Cx> UiCxActionsExt<'a> for Cx
+impl<'a, Cx> AppRenderActionsExt<'a> for Cx
 where
     Cx: RenderContextAccess<'a, crate::app::App>,
 {
-    fn actions(&mut self) -> UiCxActions<'_, 'a> {
-        UiCxActions {
+    fn actions(&mut self) -> AppRenderActions<'_, 'a> {
+        AppRenderActions {
             cx: self.elements(),
         }
     }
 }
+
+#[doc(hidden)]
+#[deprecated(note = "use AppRenderActionsExt")]
+pub use AppRenderActionsExt as UiCxActionsExt;
+
+#[doc(hidden)]
+#[deprecated(note = "use AppRenderActions")]
+#[allow(unused_imports)]
+pub use AppRenderActions as UiCxActions;
+
+#[doc(hidden)]
+#[deprecated(note = "use AppRenderActionLocal")]
+#[allow(unused_imports)]
+pub use AppRenderActionLocal as UiCxActionLocal;
+
+#[doc(hidden)]
+#[deprecated(note = "use AppRenderLocalsWith")]
+#[allow(unused_imports)]
+pub use AppRenderLocalsWith as UiCxLocalsWith;
 
 /// Grouped render-time effect helpers for the default app authoring surface.
 #[doc(hidden)]
@@ -3424,10 +3453,10 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, AppUiRenderRootState, LocalActionCapture, LocalState,
-        LocalStateTxn, OnActivate, UiCxActionsExt as _, View, ViewWindowState, action_listener,
-        dispatch_action_listener, dispatch_payload_action_listener, render_root_with_app_ui,
-        view_init_window, view_view,
+        AppActivateExt, AppActivateSurface, AppRenderActionsExt as _, AppUiRenderRootState,
+        LocalActionCapture, LocalState, LocalStateTxn, OnActivate, View, ViewWindowState,
+        action_listener, dispatch_action_listener, dispatch_payload_action_listener,
+        render_root_with_app_ui, view_init_window, view_view,
     };
     use std::any::Any;
     #[cfg(feature = "state-mutation")]
@@ -5110,7 +5139,7 @@ mod tests {
                     saw_command = true;
                     assert!(
                         ui.dispatch_command(&mut app, &mut services, &command),
-                        "checkbox payload command should be handled by UiCx payload_models"
+                        "checkbox payload command should be handled by app render payload_models"
                     );
                 }
                 other => app.push_effect(other),
@@ -5344,8 +5373,8 @@ mod tests {
             api_source.contains("pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch")
         );
         assert!(api_source.contains("pub trait RenderContextAccess<'a, H: UiHost + 'a>"));
-        assert!(api_source.contains("pub trait UiCxDataExt"));
-        assert!(api_source.contains("pub trait UiCxActionsExt"));
+        assert!(api_source.contains("pub trait AppRenderDataExt"));
+        assert!(api_source.contains("pub trait AppRenderActionsExt"));
         assert!(!api_source.contains("pub fn watch_local<'m, T: Any>("));
         assert!(api_source.contains("pub(crate) fn watch_local<'m, T: Any>("));
         assert!(!api_source.contains("pub fn action_root(&self) -> fret_ui::GlobalElementId"));
@@ -5454,7 +5483,7 @@ mod tests {
                 "#[doc(hidden)]\npub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T>"
             )
         );
-        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxActionLocal<'cx, 'a, T>"));
+        assert!(api_source.contains("#[doc(hidden)]\npub struct AppRenderActionLocal<'cx, 'a, T>"));
         assert!(api_source.contains("pub fn update<A>(self, update: impl Fn(&mut T) + 'static)"));
         assert!(api_source.contains("pub fn set<A>(self, value: T)"));
         assert!(api_source.contains("pub fn toggle_bool<A>(self)"));
@@ -5536,7 +5565,7 @@ mod tests {
                 "#[doc(hidden)]\npub struct AppUiLocalsWith<'view, 'cx, 'a, H: UiHost, C>"
             )
         );
-        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxLocalsWith<'cx, 'a, C>"));
+        assert!(api_source.contains("#[doc(hidden)]\npub struct AppRenderLocalsWith<'cx, 'a, C>"));
         assert!(
             api_source.contains("#[doc(hidden)]\npub struct AppUiState<'view, 'cx, 'a, H: UiHost>")
         );
@@ -5544,11 +5573,11 @@ mod tests {
             api_source
                 .contains("#[doc(hidden)]\npub struct AppUiActions<'view, 'cx, 'a, H: UiHost>")
         );
-        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxActions<'cx, 'a>"));
+        assert!(api_source.contains("#[doc(hidden)]\npub struct AppRenderActions<'cx, 'a>"));
         assert!(
             api_source.contains("#[doc(hidden)]\npub struct AppUiData<'view, 'cx, 'a, H: UiHost>")
         );
-        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxData<'cx, 'a>"));
+        assert!(api_source.contains("#[doc(hidden)]\npub struct AppRenderData<'cx, 'a>"));
         assert!(
             api_source
                 .contains("#[doc(hidden)]\npub struct AppUiEffects<'view, 'cx, 'a, H: UiHost>")

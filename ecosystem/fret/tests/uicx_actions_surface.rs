@@ -31,16 +31,20 @@ fn advanced_prelude_slice() -> &'static str {
 }
 
 #[test]
-fn uicx_actions_ext_is_part_of_the_default_and_advanced_preludes() {
-    assert!(VIEW_RS.contains("pub trait UiCxActionsExt"));
-    assert!(app_prelude_slice().contains("pub use crate::view::UiCxActionsExt as _;"));
-    assert!(advanced_prelude_slice().contains("pub use crate::view::UiCxActionsExt as _;"));
+fn app_render_actions_ext_is_part_of_the_default_and_advanced_preludes() {
+    assert!(VIEW_RS.contains("pub trait AppRenderActionsExt"));
+    assert!(app_prelude_slice().contains("pub use crate::view::AppRenderActionsExt as _;"));
+    assert!(advanced_prelude_slice().contains("pub use crate::view::AppRenderActionsExt as _;"));
+    assert!(!app_prelude_slice().contains("pub use crate::view::UiCxActionsExt as _;"));
+    assert!(!advanced_prelude_slice().contains("pub use crate::view::UiCxActionsExt as _;"));
 }
 
 #[test]
-fn app_lane_keeps_explicit_uicx_helper_traits_for_manual_imports() {
+fn app_lane_exports_canonical_grouped_helpers_and_old_name_compatibility() {
     let app_slice = app_module_slice();
-    assert!(app_slice.contains("pub use crate::view::{LocalState, UiCxActionsExt, UiCxDataExt};"));
+    assert!(app_slice.contains("AppRenderActionsExt"));
+    assert!(app_slice.contains("AppRenderDataExt"));
+    assert!(app_slice.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
     assert!(!app_slice.contains("pub use crate::view::QueryHandleReadLayoutExt;"));
     assert!(app_prelude_slice().contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
 }

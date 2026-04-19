@@ -130,7 +130,7 @@ The current closure target for new default-path helper signatures is therefore:
 - prefer `fret::app::AppRenderCx<'a>` when closure-local or inline helper families need a
   concrete context carrier,
 - keep `RenderContextAccess<'a, App>` as the underlying generic capability,
-- keep grouped app helper extensions (`UiCxActionsExt`, `UiCxDataExt`) valid on that lane,
+- keep grouped app helper extensions (`AppRenderActionsExt`, `AppRenderDataExt`) valid on that lane,
 - and treat `UiCx` only as the compatibility old-name alias while migration is still in flight.
 
 That closes the previously open concrete-type ergonomics question without pretending the repo can

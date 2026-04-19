@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use super::{last_action_model, message_request, preview_frame};
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;

@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 
-use fret::advanced::view::UiCxDataExt as _;
+use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,

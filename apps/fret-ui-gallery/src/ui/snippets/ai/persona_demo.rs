@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("persona_demo.rs");
 
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use std::sync::Arc;
 
 use fret::{AppComponentCx, UiChild};

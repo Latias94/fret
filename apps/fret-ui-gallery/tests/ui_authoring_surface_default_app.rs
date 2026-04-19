@@ -342,7 +342,7 @@ fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
         assert_selected_snippets_prefer_grouped_uicx_listeners(
             relative_path,
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 ".on_activate(cx.actions().listen(",
             ],
             &["use fret::app::AppActivateExt as _;"],
@@ -356,7 +356,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/workflow_controls_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::WorkflowControlsButton::new(\"Zoom in\", fret_icons::ids::ui::PLUS)",
                 ".on_activate(cx.actions().listen(",
             ][..],
@@ -364,7 +364,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/workflow_node_graph_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::WorkflowControlsButton::new(\"Zoom in\", IconId::new_static(\"lucide.plus\"))",
                 ".on_activate(cx.actions().listen(zoom_in))",
             ][..],
@@ -372,7 +372,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/message_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::MessageAction::new(\"Copy\")",
                 ".on_activate(cx.actions().listen(set_action(\"assistant.copy\")))",
             ][..],
@@ -380,7 +380,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/message_usage.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::MessageAction::new(\"Retry\")",
                 ".on_activate(cx.actions().listen(set_action(\"assistant.retry\")))",
             ][..],
@@ -388,7 +388,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/artifact_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::ArtifactClose::new()",
                 ".on_activate(cx.actions().listen(",
             ][..],
@@ -396,7 +396,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/artifact_code_display.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::ArtifactAction::new()",
                 ".on_activate(cx.actions().listen(status_action(",
             ][..],
@@ -404,7 +404,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
         (
             "src/ui/snippets/ai/checkpoint_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])",
                 ".on_activate(cx.actions().listen(restore_to_checkpoint.clone()))",
             ][..],
@@ -438,7 +438,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
         (
             "src/ui/snippets/ai/confirmation_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "cx.actions().models::<act::RequestApproval>(",
                 "shadcn::Button::new(\"Request approval\")",
                 ".action(act::RequestApproval)",
@@ -451,7 +451,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
         (
             "src/ui/snippets/ai/conversation_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "cx.actions().models::<act::DownloadConversation>(",
                 "ui_ai::ConversationDownload::new(\"Download conversation\")",
                 ".action(act::DownloadConversation)",
@@ -460,7 +460,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
         (
             "src/ui/snippets/ai/prompt_input_docs_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "cx.actions().models::<act::ToggleSearch>(",
                 "ui_ai::PromptInputSelect::new(",
                 "ui_ai::PromptInputSelectTrigger::new()",
@@ -472,7 +472,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_act
         (
             "src/ui/snippets/ai/web_preview_demo.rs",
             &[
-                "use fret::app::UiCxActionsExt as _;",
+                "use fret::app::AppRenderActionsExt as _;",
                 "cx.actions().models::<act::NavigateBack>(",
                 "cx.actions().models::<act::NavigateForward>(",
                 "ui_ai::WebPreviewNavigationButton::go_back([cx.text(\"←\")])",

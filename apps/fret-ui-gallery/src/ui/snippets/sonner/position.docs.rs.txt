@@ -1,5 +1,5 @@
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{UiChild, AppComponentCx};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};

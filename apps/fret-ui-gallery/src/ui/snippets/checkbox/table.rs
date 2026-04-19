@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
-use fret::app::UiCxActionsExt as _;
+use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::primitives::checkbox::CheckedState;

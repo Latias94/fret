@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use fret::advanced::view::UiCxDataExt as _;
+use fret::advanced::view::AppRenderDataExt as _;
 use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
