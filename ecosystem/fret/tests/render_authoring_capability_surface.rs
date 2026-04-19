@@ -1,6 +1,9 @@
 const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
 const COOKBOOK_SCAFFOLD: &str = include_str!("../../../apps/fret-cookbook/src/scaffold.rs");
+const DEFAULT_SNIPPET_GATE: &str =
+    include_str!("../../../tools/gate_no_raw_app_context_in_default_teaching_snippets.py");
+const PRE_RELEASE_PY: &str = include_str!("../../../tools/pre_release.py");
 
 fn app_module_slice() -> &'static str {
     let app_start = FRET_LIB_RS
@@ -64,10 +67,24 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     assert!(
         FRET_LIB_RS.contains("pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;")
     );
-    assert!(FRET_LIB_RS.contains("Compatibility raw app element context alias"));
+    assert!(FRET_LIB_RS.contains("Deprecated compatibility raw app element context alias"));
+    assert!(FRET_LIB_RS.contains("#[deprecated("));
     assert!(FRET_LIB_RS.contains("Prefer `fret::app::AppRenderContext<'a>`"));
     assert!(FRET_LIB_RS.contains("`AppRenderCx<'a>` when closure-local or inline helper families"));
     assert!(FRET_LIB_RS.contains("Prefer `AppComponentCx<'a>` for"));
+}
+
+#[test]
+fn default_teaching_snippet_gate_tracks_app_component_context_surface() {
+    assert!(DEFAULT_SNIPPET_GATE.contains("default teaching snippets use AppComponentCx"));
+    assert!(DEFAULT_SNIPPET_GATE.contains("AppComponentCx<'_>"));
+    assert!(
+        !DEFAULT_SNIPPET_GATE
+            .contains("must keep the default app-facing helper signature on UiCx<'_>")
+    );
+    assert!(
+        PRE_RELEASE_PY.contains("Teaching surfaces policy (default snippets use AppComponentCx)")
+    );
 }
 
 #[test]

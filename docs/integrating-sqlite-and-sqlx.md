@@ -20,7 +20,7 @@ On the default `fret` app surface, prefer the grouped helpers:
 - `cx.data().query_async(...)` / `cx.data().query_async_local(...)` for observed reads,
 - `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)` for explicit writes,
 - `cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
-  mutation-to-query handoff inside `AppUi` / extracted `UiCx`.
+  mutation-to-query handoff inside `AppUi` / extracted default-lane helpers.
 
 Do not teach a Save/Delete/Sync flow as `query_async(...)`: queries stay on the read/cache lane,
 while writes stay on the explicit submit lane.
@@ -369,7 +369,7 @@ let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &epoch);
 
 **B) Keep the key stable and invalidate on epoch change (preferred for hot paths):**
 
-Inside `AppUi` / extracted `UiCx` helpers, prefer `cx.data().invalidate_query_namespace(...)`
+Inside `AppUi` / extracted default-lane helpers, prefer `cx.data().invalidate_query_namespace(...)`
 instead of spelling the raw query-client shell inline:
 
 ```rust

@@ -1,6 +1,6 @@
 # Public Authoring State Lanes and Identity Fearless Refactor v1 — Milestones
 
-Last updated: 2026-04-18
+Last updated: 2026-04-19
 
 Related:
 
@@ -33,6 +33,7 @@ Related:
 - AppComponentCx UI Gallery migration audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
 - UiCx advanced prelude and first-party tail audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`
 - App render grouped helper extension naming audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`
+- UiCx compatibility alias deprecation audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`
 - AppUi Todo root capability landing audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
 - Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
@@ -569,7 +570,7 @@ Related:
   - `UiCx` is now compatibility-only and no longer part of `fret::app::prelude::*`, while
     `AppRenderCx<'a>` is the default concrete helper carrier on the app-facing lane,
   - `ecosystem/fret/src/lib.rs` now also exposes `AppComponentCx<'a>` as the explicit app-hosted
-    component/snippet helper alias, with `UiCx<'a>` retained only as the compatibility old-name
+    component/snippet helper alias, with `UiCx<'a>` retained only as the deprecated compatibility old-name
     alias to that lane,
   - the shipped first-party exemplar surface now follows that naming split too:
     `apps/fret-ui-gallery/src/ui/**` plus the matching source-policy gates use
@@ -579,12 +580,17 @@ Related:
     `AppRenderActionsExt` / `AppRenderDataExt` are canonical, first-party examples and gallery
     snippets import those names, and `UiCxActionsExt` / `UiCxDataExt` remain only as explicit
     deprecated compatibility aliases,
+  - the remaining root alias now follows the same posture too:
+    `UiCx<'a>` is explicitly deprecated, public docs/tooling describe it as deprecated
+    compatibility-only, and the default teaching-snippet gate now enforces
+    `AppComponentCx<'a>` instead of `UiCx<'a>`,
   - and the follow-on proof is recorded in
     `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md` and
     `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md` plus
-    `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`.
-  - final closeout and the remaining explicit-import `UiCx` compatibility-tail audit outside the
-    gallery surface are still open.
+    `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md` and
+    `UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`.
+  - final closeout and the eventual release-window removal decision for the deprecated `UiCx`
+    alias are still open.
 
 Execution rule:
 

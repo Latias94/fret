@@ -163,7 +163,7 @@ invalidate the affected query keys/namespaces so the next UI frame refetches fre
 After a write (POST/PUT/DELETE), invalidate the affected keys so the next UI frame refetches.
 Prefer invalidating by namespace so you can evolve key shapes without missing dependent queries.
 
-Inside `AppUi` / extracted `UiCx` helpers, prefer the grouped app-facing helpers
+Inside `AppUi` / extracted default-lane helpers, prefer the grouped app-facing helpers
 `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)`.
 When the trigger is one completed mutation on the default app lane, prefer
 `cx.data().invalidate_query_namespace_after_mutation_success(...)`:

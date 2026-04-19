@@ -718,7 +718,7 @@ impl<'a, H: UiHost + 'a, T> RenderContextAccess<'a, H> for T where
 /// Named default extracted-helper render lane for ordinary `fret` app code.
 ///
 /// This is the app-facing façade over `RenderContextAccess<'a, crate::app::App>` so new helper
-/// signatures can name the default lane directly without reopening the raw `UiCx` alias or
+/// signatures can name the default lane directly without reopening the deprecated `UiCx` alias or
 /// spelling the generic host parameter at every callsite.
 pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App> {}
 

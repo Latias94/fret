@@ -72,7 +72,7 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_no_on_action_in_teaching_surfaces.py")],
     )
     _run_checked(
-        "Teaching surfaces policy (default snippets use UiCx)",
+        "Teaching surfaces policy (default snippets use AppComponentCx)",
         [py, str(repo_root / "tools/gate_no_raw_app_context_in_default_teaching_snippets.py")],
     )
     _run_checked(

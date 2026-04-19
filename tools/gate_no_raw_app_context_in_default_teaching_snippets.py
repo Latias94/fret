@@ -5,7 +5,7 @@ from pathlib import Path
 from _gate_lib import WORKSPACE_ROOT, fail, ok
 
 
-GATE_NAME = "default teaching snippets use UiCx"
+GATE_NAME = "default teaching snippets use AppComponentCx"
 
 
 def curated_default_snippet_paths() -> list[Path]:
@@ -75,19 +75,22 @@ def main() -> None:
         text = read_text(path)
         rel = path.relative_to(WORKSPACE_ROOT)
 
-        if "UiCx<'_>" not in text:
+        if "AppComponentCx<'_>" not in text:
             problems.append(
-                f"{rel} must keep the default app-facing helper signature on UiCx<'_>"
+                f"{rel} must keep the default app-hosted helper signature on AppComponentCx<'_>"
             )
 
         for forbidden in [
+            "UiCx<'_>",
             "ElementContext<'_, App>",
             "ElementContext<'_, KernelApp>",
             "use fret_app::App;",
             "use fret::advanced::KernelApp;",
         ]:
             if forbidden in text:
-                problems.append(f"{rel} reintroduced forbidden default-surface snippet: {forbidden}")
+                problems.append(
+                    f"{rel} reintroduced forbidden default-surface snippet: {forbidden}"
+                )
 
     if problems:
         fail(GATE_NAME, "\n".join(problems))

@@ -131,7 +131,8 @@ The current closure target for new default-path helper signatures is therefore:
   concrete context carrier,
 - keep `RenderContextAccess<'a, App>` as the underlying generic capability,
 - keep grouped app helper extensions (`AppRenderActionsExt`, `AppRenderDataExt`) valid on that lane,
-- and treat `UiCx` only as the compatibility old-name alias while migration is still in flight.
+- and treat `UiCx` only as the deprecated compatibility old-name alias while migration is still in
+  flight.
 
 That closes the previously open concrete-type ergonomics question without pretending the repo can
 now delete every `AppComponentCx` usage immediately:

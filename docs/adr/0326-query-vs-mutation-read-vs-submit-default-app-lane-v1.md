@@ -206,7 +206,9 @@ clearer.
 - `ecosystem/fret-query`
   - owns observed read cache/invalidation/refetch semantics only.
 - `ecosystem/fret`
-  - owns grouped `AppUi` / `UiCx` sugar and the first-contact app-facing teaching story.
+  - owns grouped `AppUi` / `AppRenderContext` / `AppRenderCx` / `AppComponentCx` sugar and the
+    first-contact app-facing teaching story, with `UiCx` retained only as a deprecated
+    compatibility alias.
 
 This ADR does not move submit policy into `crates/fret-ui`.
 

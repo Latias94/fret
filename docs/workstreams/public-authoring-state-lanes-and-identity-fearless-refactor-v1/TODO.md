@@ -615,9 +615,13 @@ Companion docs:
   names, the first-party examples and UI Gallery snippets now import those names, and
   `UiCxActionsExt` / `UiCxDataExt` remain only as explicit deprecated compatibility aliases.
   Proof: `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`.
-- [ ] Audit the remaining explicit-import `UiCx` tail and either classify it as
+- [x] Audit the remaining explicit-import `UiCx` tail and either classify it as
   advanced/compatibility-only or migrate it to `AppRenderContext<'a>` / `AppRenderCx<'a>` /
   `AppComponentCx<'a>`.
+  Result: `UiCx<'a>` now remains only as an explicitly deprecated compatibility alias at the root
+  surface, public docs/tooling describe it that way, and the default teaching-snippet gate now
+  enforces `AppComponentCx<'a>` instead of `UiCx<'a>`.
+  Proof: `UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`.
 - [ ] Record a closeout audit with:
   - [ ] final target interface,
   - [ ] migration results,

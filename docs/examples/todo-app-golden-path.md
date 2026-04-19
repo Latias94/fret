@@ -304,7 +304,7 @@ Default helper rule on this path:
   `fret::app::AppRenderContext<'a>` on the default lane,
 - if a closure-local or inline helper materially benefits from a concrete context carrier, prefer
   `&mut fret::app::AppRenderCx<'_>`,
-- keep `UiCx` only as the compatibility old-name alias when an older helper intentionally still
+- keep `UiCx` only as the deprecated compatibility old-name alias when an older helper intentionally still
   wants `ElementContext<App>`, and prefer `AppComponentCx` for app-hosted component/snippet
   helpers,
 - if a helper is only wrapping already-typed children into page chrome, prefer

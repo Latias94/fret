@@ -334,12 +334,15 @@ pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;
 /// stay host-generic, and `AppRenderCx<'a>` / `AppRenderContext<'a>` for app render helpers.
 pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;
 
-/// Compatibility raw app element context alias for extracted helper functions.
+/// Deprecated compatibility raw app element context alias for extracted helper functions.
 ///
 /// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures and `AppRenderCx<'a>`
 /// for concrete closure-local helper carriers on the default lane. Prefer `AppComponentCx<'a>` for
-/// app-hosted snippets/components. Keep `UiCx` only as the compatibility old-name alias behind
-/// explicit import during the migration window.
+/// app-hosted snippets/components. Keep `UiCx` only as the deprecated compatibility old-name alias
+/// behind explicit import during the migration window.
+#[deprecated(
+    note = "use AppComponentCx for app-hosted snippets/components, AppRenderCx for concrete render helpers, or AppRenderContext for named app render helpers"
+)]
 pub type UiCx<'a> = AppComponentCx<'a>;
 
 /// App-facing child return alias for extracted helper functions on the default surface.

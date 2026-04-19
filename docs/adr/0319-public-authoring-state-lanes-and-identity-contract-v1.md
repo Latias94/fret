@@ -135,12 +135,13 @@ During the current migration window:
 - `RenderContextAccess<'a, App>` remains the underlying generic capability,
 - grouped app-facing helper namespaces such as `AppRenderActionsExt` / `AppRenderDataExt` may continue to
   power that lane,
-- and `UiCx` should be treated only as the compatibility old-name alias when an older helper still
-  has not migrated to `AppRenderContext<'a>`, `AppRenderCx<'a>`, or `AppComponentCx<'a>`.
+- and `UiCx` should be treated only as the deprecated compatibility old-name alias when an older
+  helper still has not migrated to `AppRenderContext<'a>`, `AppRenderCx<'a>`, or
+  `AppComponentCx<'a>`.
 
 Named helper families that only need grouped state/query access plus ordinary late-landing should
-migrate from `UiCx` or `AppComponentCx` to `fret::app::AppRenderContext<'a>` rather than widening
-`AppUi` again or silently reclassifying the whole surface as raw-owner authoring.
+migrate from deprecated `UiCx` or from `AppComponentCx` to `fret::app::AppRenderContext<'a>` rather
+than widening `AppUi` again or silently reclassifying the whole surface as raw-owner authoring.
 
 The long-term target is not “`AppUi` is narrow but `AppComponentCx` remains a raw `ElementContext` alias”.
 The long-term target is one explicit app-facing render-authoring lane plus one explicit
