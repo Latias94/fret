@@ -81,7 +81,8 @@ Key evidence anchors:
 
 ## Deferred follow-on
 
-If the repo later wants to remove `UiCx<'a>` outright:
+If the repo later wants to remove `UiCx<'a>` outright, use
+`docs/workstreams/uicx-compat-alias-release-retirement-v1/`:
 
 - open a new narrow release-facing follow-on lane,
 - decide the removal window explicitly,
