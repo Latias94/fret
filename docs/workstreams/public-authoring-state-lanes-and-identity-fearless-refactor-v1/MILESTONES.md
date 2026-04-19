@@ -34,6 +34,7 @@ Related:
 - UiCx advanced prelude and first-party tail audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`
 - App render grouped helper extension naming audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md`
 - UiCx compatibility alias deprecation audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`
+- Closeout audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-04-19.md`
 - AppUi Todo root capability landing audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
 - Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
@@ -563,7 +564,7 @@ Related:
     `postprocess_theme_demo`, `liquid_glass_demo`, `genui_demo`, and
     `imui_floating_windows_demo` each carry top-level classification docs and are locked by the
     `advanced_reference_demos_are_explicitly_classified` gate.
-- **M5**: In progress
+- **M5**: Done
   - `ecosystem/fret/src/view.rs` no longer ships `AppUi` `Deref` / `DerefMut` impls,
   - `fret`, `fret-examples`, `fret-cookbook`, and `fret-ui-gallery` now compile in that shipped
     no-`Deref` state,
@@ -589,8 +590,10 @@ Related:
     `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md` plus
     `APP_RENDER_GROUPED_HELPER_EXT_NAMING_AUDIT_2026-04-19.md` and
     `UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`.
-  - final closeout and the eventual release-window removal decision for the deprecated `UiCx`
-    alias are still open.
+  - the broad authoring-surface lane is now closed through
+    `CLOSEOUT_AUDIT_2026-04-19.md`,
+  - and any future removal of the deprecated `UiCx` alias should happen in a narrower
+    release-facing follow-on instead of reopening this lane.
 
 Execution rule:
 

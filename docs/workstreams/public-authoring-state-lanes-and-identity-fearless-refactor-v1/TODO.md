@@ -622,12 +622,13 @@ Companion docs:
   surface, public docs/tooling describe it that way, and the default teaching-snippet gate now
   enforces `AppComponentCx<'a>` instead of `UiCx<'a>`.
   Proof: `UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`.
-- [ ] Record a closeout audit with:
-  - [ ] final target interface,
-  - [ ] migration results,
-  - [ ] retained advanced seams,
-  - [ ] render-authoring lane closure results,
-  - [ ] and any intentionally deferred follow-on lanes.
+- [x] Record a closeout audit with:
+  - [x] final target interface,
+  - [x] migration results,
+  - [x] retained advanced seams,
+  - [x] render-authoring lane closure results,
+  - [x] and any intentionally deferred follow-on lanes.
+  Proof: `CLOSEOUT_AUDIT_2026-04-19.md`.
 
 ## Standing rules
 
