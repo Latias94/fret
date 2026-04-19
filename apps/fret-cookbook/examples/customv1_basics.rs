@@ -64,7 +64,7 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
 }
 
 fn panel_shell<B>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     body: B,
 ) -> impl IntoUiElement<KernelApp> + use<B>
@@ -97,13 +97,13 @@ where
 }
 
 fn preview_content(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: &'static str,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let theme = cx.theme_snapshot();
     let muted_foreground = ColorRef::Color(theme.color_token("muted-foreground"));
 
-    let swatch = |_cx: &mut UiCx<'_>, rgb: u32| {
+    let swatch = |_cx: &mut AppComponentCx<'_>, rgb: u32| {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .bg(ColorRef::Color(Color::from_srgb_hex_rgb(rgb)))
             .rounded(Radius::Sm)

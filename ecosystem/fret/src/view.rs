@@ -1538,7 +1538,7 @@ pub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T> {
     local: LocalState<T>,
 }
 
-/// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
+/// Grouped action/effect registration helpers for extracted `AppComponentCx` child builders on the default
 /// app surface.
 #[doc(hidden)]
 pub struct UiCxActions<'cx, 'a> {
@@ -2016,7 +2016,7 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         });
     }
 
-    /// Clone the provided `LocalState<T>` handles into a hidden builder so helper-heavy `UiCx`
+    /// Clone the provided `LocalState<T>` handles into a hidden builder so helper-heavy `AppComponentCx`
     /// code can pass `(&draft_state, &next_id_state, ...)` directly, then register the typed
     /// action via `.on::<A>(...)` without reopening a `LocalState::clone(...)` prelude.
     pub fn locals_with<C>(self, captures: C) -> UiCxLocalsWith<'cx, 'a, C::Owned>
@@ -2452,7 +2452,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
     }
 }
 
-/// Grouped selector/query helpers for extracted `UiCx` child builders on the default app surface.
+/// Grouped selector/query helpers for extracted `AppComponentCx` child builders on the default app surface.
 #[doc(hidden)]
 pub struct UiCxData<'cx, 'a> {
     #[allow(dead_code)]
@@ -2460,7 +2460,7 @@ pub struct UiCxData<'cx, 'a> {
 }
 
 impl<'cx, 'a> UiCxData<'cx, 'a> {
-    /// Default LocalState-first selector path for extracted `UiCx` helpers on the app-facing lane.
+    /// Default LocalState-first selector path for extracted `AppComponentCx` helpers on the app-facing lane.
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector_layout<Inputs, TValue>(
@@ -2479,7 +2479,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
-    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `UiCx` helpers when
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `AppComponentCx` helpers when
     /// the derived value affects layout.
     #[track_caller]
     #[cfg(feature = "state-selector")]
@@ -2499,7 +2499,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
-    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `UiCx` helpers when
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `AppComponentCx` helpers when
     /// the derived value affects paint.
     #[track_caller]
     #[cfg(feature = "state-selector")]
@@ -2573,7 +2573,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
     }
 
-    /// Grouped query-client snapshot read for extracted `UiCx` app-facing diagnostics helpers.
+    /// Grouped query-client snapshot read for extracted `AppComponentCx` app-facing diagnostics helpers.
     ///
     /// Keep raw `fret::query::with_query_client(...)` for pure app/driver code that does not have
     /// a grouped `cx.data()` surface.
@@ -2582,7 +2582,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         fret_query::with_query_client(self.cx.app, |client, _app| client.snapshot())
     }
 
-    /// Find one typed query snapshot entry from an extracted `UiCx` helper on the grouped app
+    /// Find one typed query snapshot entry from an extracted `AppComponentCx` helper on the grouped app
     /// data lane.
     #[cfg(feature = "state-query")]
     pub fn query_snapshot_entry<T: Any + Send + Sync + 'static>(
@@ -2593,7 +2593,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
             .and_then(|snapshot| query_snapshot_entry_for_key(snapshot, key))
     }
 
-    /// Cancel one inflight query task from an extracted `UiCx` helper while keeping redraw
+    /// Cancel one inflight query task from an extracted `AppComponentCx` helper while keeping redraw
     /// ownership on the grouped app data lane.
     #[cfg(feature = "state-query")]
     pub fn cancel_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
@@ -2634,7 +2634,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Consume a mutation completion exactly once for one `(effect_key, handle)` pair inside an
-    /// extracted `UiCx` helper.
+    /// extracted `AppComponentCx` helper.
     ///
     /// Prefer `update_after_mutation_completion(...)` when this once-only gate immediately drives
     /// app-owned model updates.
@@ -2648,7 +2648,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Update ordinary app-owned `LocalState<T>` or shared models exactly once after a mutation
-    /// reaches a fresh terminal completion inside an extracted `UiCx` helper.
+    /// reaches a fresh terminal completion inside an extracted `AppComponentCx` helper.
     #[cfg(feature = "state-mutation")]
     pub fn update_after_mutation_completion<TIn: 'static, TOut: 'static>(
         self,
@@ -2670,7 +2670,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Consume a mutation success exactly once for one `(effect_key, handle)` pair inside an
-    /// extracted `UiCx` helper.
+    /// extracted `AppComponentCx` helper.
     #[cfg(feature = "state-mutation")]
     pub fn take_mutation_success<TIn: 'static, TOut: 'static>(
         self,
@@ -2680,7 +2680,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         take_mutation_success_in(self.cx, effect_key, handle)
     }
 
-    /// Grouped invalidation helper for extracted `UiCx` app-facing helpers.
+    /// Grouped invalidation helper for extracted `AppComponentCx` app-facing helpers.
     #[cfg(feature = "state-query")]
     pub fn invalidate_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
         let _ = fret_query::with_query_client(self.cx.app, |client, app| {
@@ -2689,7 +2689,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         self.cx.app.request_redraw(self.cx.window);
     }
 
-    /// Grouped namespace invalidation helper for extracted `UiCx` app-facing helpers.
+    /// Grouped namespace invalidation helper for extracted `AppComponentCx` app-facing helpers.
     #[cfg(feature = "state-query")]
     pub fn invalidate_query_namespace(self, namespace: &'static str) {
         let _ = fret_query::with_query_client(self.cx.app, |client, _app| {
@@ -2699,7 +2699,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Invalidate one query key exactly once after a mutation reports success inside an extracted
-    /// `UiCx` helper.
+    /// `AppComponentCx` helper.
     #[cfg(all(feature = "state-query", feature = "state-mutation"))]
     pub fn invalidate_query_after_mutation_success<
         TIn: 'static,
@@ -2723,7 +2723,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 
     /// Invalidate one query namespace exactly once after a mutation reports success inside an
-    /// extracted `UiCx` helper.
+    /// extracted `AppComponentCx` helper.
     #[cfg(all(feature = "state-query", feature = "state-mutation"))]
     pub fn invalidate_query_namespace_after_mutation_success<TIn: 'static, TOut: 'static>(
         self,
@@ -2743,7 +2743,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
     }
 }
 
-/// Brings the grouped `data()` namespace to extracted `UiCx` helper functions.
+/// Brings the grouped `data()` namespace to extracted `AppComponentCx` helper functions.
 pub trait UiCxDataExt<'a> {
     /// Discover selector/query helpers through `cx.data()` rather than naming the carrier type
     /// directly.
@@ -2761,7 +2761,7 @@ where
     }
 }
 
-/// Brings the grouped `actions()` namespace to extracted `UiCx` helper functions.
+/// Brings the grouped `actions()` namespace to extracted `AppComponentCx` helper functions.
 pub trait UiCxActionsExt<'a> {
     /// Discover grouped action helpers through `cx.actions()` rather than naming the carrier type
     /// directly.

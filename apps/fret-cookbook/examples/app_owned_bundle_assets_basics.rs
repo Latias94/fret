@@ -107,7 +107,7 @@ impl View for AppOwnedBundleAssetsBasicsView {
 }
 
 fn render_image_panel(
-    _cx: &mut UiCx<'_>,
+    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     state: fret_ui_assets::ImageSourceState,
 ) -> impl IntoUiElement<KernelApp> + use<> {
@@ -205,7 +205,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    _cx: &mut UiCx<'_>,
+    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     state: fret_ui_assets::ui::SvgAssetSourceState,
 ) -> impl IntoUiElement<KernelApp> + use<> {

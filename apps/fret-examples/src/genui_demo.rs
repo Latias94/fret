@@ -1470,7 +1470,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     genui_page(cx, theme, left, right)
 }
 
-fn genui_page<L, R>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, left: L, right: R) -> Ui
+fn genui_page<L, R>(cx: &mut AppComponentCx<'_>, theme: ThemeSnapshot, left: L, right: R) -> Ui
 where
     L: IntoUiElement<KernelApp>,
     R: IntoUiElement<KernelApp>,

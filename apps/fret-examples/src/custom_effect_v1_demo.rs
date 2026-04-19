@@ -292,7 +292,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
     model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
@@ -353,7 +353,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) ->
 }
 
 fn stage(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     enabled: bool,
     effect: EffectId,
     blur_radius_px: f32,
@@ -497,7 +497,7 @@ fn stage(
 }
 
 fn lens_row(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     enabled: bool,
     effect: EffectId,
     blur_radius_px: f32,
@@ -540,7 +540,7 @@ fn lens_row(
 }
 
 fn lens_shell<B>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: Arc<str>,
     radius: Px,
     body: B,
@@ -602,7 +602,11 @@ where
     )
 }
 
-fn plain_lens<L>(cx: &mut UiCx<'_>, label: L, radius: Px) -> impl IntoUiElement<KernelApp> + use<L>
+fn plain_lens<L>(
+    cx: &mut AppComponentCx<'_>,
+    label: L,
+    radius: Px,
+) -> impl IntoUiElement<KernelApp> + use<L>
 where
     L: Into<Arc<str>>,
 {
@@ -623,7 +627,7 @@ where
 }
 
 fn custom_effect_lens<L>(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     label: L,
     effect: EffectId,
     blur_radius_px: f32,
@@ -697,7 +701,7 @@ where
 }
 
 fn inspector(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     st: &mut CustomEffectV1State,
     blur_radius_px: f32,
     blur_downsample: f32,
@@ -742,7 +746,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut UiCx<'_>, label: &str, value: String| {
+            let label_row = |cx: &mut AppComponentCx<'_>, label: &str, value: String| {
                 ui::h_flex(move |cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),

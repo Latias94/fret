@@ -311,12 +311,12 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
     model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn inspector(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     st: &mut ThemePostprocessState,
     theme: &str,
     chromatic_offset_px: f32,
@@ -364,7 +364,7 @@ fn inspector(
             ..Default::default()
         },
         move |cx| {
-            let label_row = |cx: &mut UiCx<'_>, label: &str, value: String| {
+            let label_row = |cx: &mut AppComponentCx<'_>, label: &str, value: String| {
                 ui::h_row(|cx| {
                     [
                         shadcn::Label::new(label).into_element(cx),
@@ -524,7 +524,7 @@ fn inspector(
 }
 
 fn stage(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     enabled: bool,
     compare: bool,
     theme: &str,
@@ -657,7 +657,7 @@ fn stage(
 }
 
 fn stage_body(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     postprocess_applied: bool,
     label: &str,
 ) -> impl IntoUiElement<KernelApp> + use<> {
@@ -747,10 +747,10 @@ fn stage_body(
     )
 }
 
-fn stage_cards(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
+fn stage_cards(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
-    let card = |cx: &mut UiCx<'_>, title: &str, subtitle: &str| {
+    let card = |cx: &mut AppComponentCx<'_>, title: &str, subtitle: &str| {
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Px(Px(320.0));
         layout.size.height = Length::Px(Px(220.0));

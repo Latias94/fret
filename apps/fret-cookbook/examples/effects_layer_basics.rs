@@ -100,7 +100,7 @@ impl View for EffectsLayerBasicsView {
                 cx;
                 shadcn::Label::new("EffectLayer preview"),
                 ui::h_flex(|cx| {
-                    let tile = |_cx: &mut UiCx<'_>, color: ColorRef| {
+                    let tile = |_cx: &mut AppComponentCx<'_>, color: ColorRef| {
                         ui::container(|_cx| Vec::<AnyElement>::new())
                             .w_px(Px(28.0))
                             .h_px(Px(28.0))

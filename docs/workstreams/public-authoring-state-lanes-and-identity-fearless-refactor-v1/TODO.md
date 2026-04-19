@@ -35,6 +35,7 @@ Companion docs:
 - `APP_UI_FINAL_NO_DEREF_TAIL_OWNER_AUDIT_2026-04-17.md`
 - `APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`
 - `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
+- `UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`
 - `APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - `APP_UI_ASYNC_PLAYGROUND_HELPER_CAPABILITY_AUDIT_2026-04-17.md`
 - `APP_UI_MARKDOWN_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
@@ -252,7 +253,7 @@ Companion docs:
     or flattening its advanced helper lane:
     `imui_editor_proof_demo` now accepts
     `fret::app::ElementContextAccess<'a, KernelApp>` at the outer `render_view(...)` boundary,
-    keeps the internal `UiCx` helper family unchanged, and source-policy gates now forbid the root
+    keeps the internal `AppComponentCx` helper family unchanged, and source-policy gates now forbid the root
     from spelling `render_view(cx.elements())`.
   - [x] classify and then migrate the remaining `AppUi`-root advanced entry seams in
     `apps/fret-examples/src` so they stop using raw `cx.elements()` only as an entry adapter:
@@ -293,7 +294,7 @@ Companion docs:
     `assets_reload_epoch_basics` now use those adapters instead of spelling `cx.app + cx.window`
     or `UiAssets::image_stats(&mut *cx.app)` directly just to enter the asset helper surface.
   - [x] close the remaining grouped app-facing query maintenance seam that still forced real
-    `AppUi` / `UiCx` examples back onto raw client shell code:
+    `AppUi` / `AppComponentCx` examples back onto raw client shell code:
     `fret::view::{AppUiData, UiCxData}` now own `query_snapshot()`,
     `query_snapshot_entry(...)`, and `cancel_query(...)`; `async_playground_demo` uses grouped
     invalidation/cancel/snapshot helpers end-to-end, `markdown_demo` uses grouped namespace
@@ -301,7 +302,7 @@ Companion docs:
     owner stays on the `fret` app-facing lane rather than moving into `fret-query`.
   - [x] close the remaining cookbook host-global theme snapshot tail by owner class instead of one
     flat grep bucket:
-    ordinary `AppUi` / `UiCx` cookbook examples now use `cx.theme_snapshot()`, direct-leaf
+    ordinary `AppUi` / `AppComponentCx` cookbook examples now use `cx.theme_snapshot()`, direct-leaf
     `ElementContext` interop roots now use `cx.theme().snapshot()`, cookbook source-policy tests
     lock the split, and `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md` records the owner
     classification so future cleanup does not mix app-facing and interop lanes.
@@ -602,8 +603,14 @@ Companion docs:
   Result: `apps/fret-ui-gallery/src/ui/**` plus the matching source-policy tests now use
   `AppComponentCx<'a>`, and the migration proof is recorded in
   `APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`.
+- [x] Demote `UiCx` from `fret::advanced::prelude::*` once the first-party app-hosted example tail
+  is migrated to `AppComponentCx<'a>`.
+  Result: `fret::advanced::prelude::*` now exports `AppComponentCx<'a>` instead of `UiCx<'a>`, the
+  remaining first-party example/cookbook runtime tail now uses `AppComponentCx<'a>`, and the proof
+  is recorded in `UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`.
 - [ ] Audit the remaining explicit-import `UiCx` tail and either classify it as
-  advanced/compatibility-only or migrate it to `AppRenderContext<'a>` / `AppRenderCx<'a>`.
+  advanced/compatibility-only or migrate it to `AppRenderContext<'a>` / `AppRenderCx<'a>` /
+  `AppComponentCx<'a>`.
 - [ ] Record a closeout audit with:
   - [ ] final target interface,
   - [ ] migration results,

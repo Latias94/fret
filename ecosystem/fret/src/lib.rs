@@ -339,7 +339,7 @@ pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;
 /// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures and `AppRenderCx<'a>`
 /// for concrete closure-local helper carriers on the default lane. Prefer `AppComponentCx<'a>` for
 /// app-hosted snippets/components. Keep `UiCx` only as the compatibility old-name alias behind
-/// explicit import or on the advanced lane during the migration window.
+/// explicit import during the migration window.
 pub type UiCx<'a> = AppComponentCx<'a>;
 
 /// App-facing child return alias for extracted helper functions on the default surface.
@@ -899,6 +899,7 @@ pub mod advanced {
 
     /// Common imports for advanced/manual-assembly application code.
     pub mod prelude {
+        pub use crate::AppComponentCx;
         pub use crate::AppRenderCx;
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::advanced::interop::embedded_viewport::{
@@ -912,7 +913,7 @@ pub mod advanced {
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
-        pub use crate::{AppUi, Ui, UiCx};
+        pub use crate::{AppUi, Ui};
         pub use fret_app::Effect;
         pub use fret_core::{AppWindowId, Event, UiServices};
         #[cfg(feature = "icons")]
@@ -3741,16 +3742,18 @@ mod authoring_surface_policy_tests {
     #[test]
     fn advanced_prelude_reexports_app_facing_view_aliases() {
         let advanced_prelude = advanced_prelude_source();
-        assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
+        assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
+        assert!(LIB_RS.contains("pub use crate::{AppUi, Ui};"));
         assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
         assert!(advanced_prelude_exports_symbol("KernelApp"));
         assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!advanced_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(advanced_prelude_exports_symbol("AppUiRawModelExt"));
+        assert!(advanced_prelude_exports_symbol("AppComponentCx"));
         assert!(advanced_prelude_exports_symbol("AppRenderCx"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
-        assert!(advanced_prelude_exports_symbol("UiCx"));
+        assert!(!advanced_prelude_exports_symbol("UiCx"));
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));

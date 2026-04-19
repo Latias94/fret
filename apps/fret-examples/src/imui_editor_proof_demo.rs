@@ -235,7 +235,7 @@ fn color_hex_readout(color: Option<Color>) -> String {
         .unwrap_or_else(|| "<none>".to_string())
 }
 
-fn authoring_parity_theme_diag_lines(cx: &mut UiCx<'_>) -> [String; 2] {
+fn authoring_parity_theme_diag_lines(cx: &mut AppComponentCx<'_>) -> [String; 2] {
     let theme = fret_ui::Theme::global(&*cx.app);
     let scheme = match theme.color_scheme {
         Some(fret_core::ColorScheme::Dark) => "Dark",
@@ -385,7 +385,7 @@ fn proof_drag_preview_card<H: UiHost>(
 }
 
 fn editor_text_assist_readout(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     items: Arc<[TextAssistItem]>,
     query_model: &Model<String>,
     dismissed_query_model: &Model<String>,
@@ -424,7 +424,7 @@ fn editor_text_assist_readout(
 }
 
 fn editor_text_field_readout(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     committed_model: &Model<String>,
     outcome_model: &Model<String>,
 ) -> EditorTextFieldReadout {
@@ -434,7 +434,7 @@ fn editor_text_field_readout(
         })
 }
 
-fn editor_string_model_readout(cx: &mut UiCx<'_>, model: &Model<String>) -> String {
+fn editor_string_model_readout(cx: &mut AppComponentCx<'_>, model: &Model<String>) -> String {
     cx.data().selector_model_paint(model, |value| value)
 }
 
@@ -2388,7 +2388,7 @@ where
 }
 
 fn render_authoring_parity_surface(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     numeric_input_model: Model<f64>,
@@ -2487,7 +2487,7 @@ fn render_authoring_parity_surface(
 }
 
 fn render_authoring_parity_shared_state(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     numeric_input_model: Model<f64>,
@@ -2592,7 +2592,7 @@ fn render_authoring_parity_shared_state(
 }
 
 fn render_authoring_parity_declarative_group(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     numeric_input_model: Model<f64>,
@@ -2785,7 +2785,7 @@ fn render_authoring_parity_declarative_group(
 }
 
 fn render_authoring_parity_imui_group(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     name_model: Model<String>,
     drag_value_model: Model<f64>,
     numeric_input_model: Model<f64>,
@@ -3343,7 +3343,7 @@ fn render_authoring_parity_imui_group(
 }
 
 fn build_authoring_parity_gradient_editor(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     angle_model: Model<f64>,
     stops_model: Model<Vec<GradientDemoStop>>,
     next_id_model: Model<u64>,

@@ -17,7 +17,7 @@ Related:
 
 Close one specific default-lane ambiguity:
 
-- should `UiCx` keep arriving through `fret::app::prelude::*`,
+- should `AppComponentCx` keep arriving through `fret::app::prelude::*`,
 - even after `AppRenderCx<'a>` is already the blessed concrete closure-local carrier?
 
 This note does not remove the compatibility alias itself, does not delete `AppUi` `Deref`, and
@@ -25,7 +25,7 @@ does not widen the advanced lane back into the default prelude.
 
 ## Assumptions-first checkpoint
 
-1. `UiCx` is now compatibility vocabulary, not the taught default helper name.
+1. `AppComponentCx` is now compatibility vocabulary, not the taught default helper name.
    Confidence: Confident.
    Evidence: `docs/authoring-golden-path-v2.md`, `docs/first-hour.md`,
    `docs/crate-usage-guide.md`, `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
@@ -60,7 +60,7 @@ That meant the default import surface still taught two concrete helper names at 
 
 Current evidence does not justify deleting `UiCx` outright:
 
-- advanced/reference examples still use it intentionally,
+- advanced/reference examples still used it intentionally,
 - migration-era helper families still exist,
 - and the alias is harmless when it is treated as explicit compatibility vocabulary.
 

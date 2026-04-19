@@ -247,7 +247,7 @@ where
     assets_page(cx, &theme, card)
 }
 
-fn assets_page<C>(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui
+fn assets_page<C>(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui
 where
     C: IntoUiElement<KernelApp>,
 {
@@ -270,7 +270,7 @@ where
 }
 
 fn render_image_panel(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     frame: u64,
     image: Option<fret_core::ImageId>,
@@ -339,7 +339,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     svg: Option<fret_core::SvgId>,
 ) -> impl IntoUiElement<KernelApp> + use<> {

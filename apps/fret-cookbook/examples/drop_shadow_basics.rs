@@ -41,7 +41,7 @@ fn shadow_chain() -> EffectChain {
 struct DropShadowBasicsView;
 
 fn shadow_card(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: String,
     enabled: bool,
     chain: EffectChain,

@@ -15,7 +15,7 @@
   `AppComponentCx<'a>`.
 - First-party UI Gallery snippet/page/internal-preview surfaces now use `AppComponentCx<'a>`
   instead of teaching `UiCx<'a>` on the shipped exemplar surface.
-- The remaining `UiCx` tail is no longer first-party gallery authoring; it is now concentrated in
+- The remaining `AppComponentCx` tail is no longer first-party gallery authoring; it is now concentrated in
   explicit compatibility / advanced/reference surfaces outside the gallery.
 
 ## Evidence anchors
@@ -39,7 +39,7 @@
 
 ## Remaining follow-on
 
-- Audit and classify the remaining explicit-import `UiCx` tail in:
+- Audit and classify the remaining explicit-import `AppComponentCx` tail in:
   - `apps/fret-examples` advanced/reference demos
   - `apps/fret-cookbook` advanced examples
 - Decide case by case whether each remaining helper should stay explicit compatibility/advanced or

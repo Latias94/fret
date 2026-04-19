@@ -121,7 +121,7 @@ next remaining gap is higher-level:
 
 - `AppUi` now blocks helper-local slot/model APIs unless code opts into `cx.elements()`,
 - but `AppUi` still reaches the broader `ElementContext` surface through `Deref`,
-- and extracted helper functions still use `UiCx`, which is currently a plain
+- and extracted helper functions still use `AppComponentCx`, which is currently a plain
   `ElementContext<App>` alias.
 
 The current closure target for new default-path helper signatures is therefore:
@@ -134,21 +134,21 @@ The current closure target for new default-path helper signatures is therefore:
 - and treat `UiCx` only as the compatibility old-name alias while migration is still in flight.
 
 That closes the previously open concrete-type ergonomics question without pretending the repo can
-now delete every `UiCx` usage immediately:
+now delete every `AppComponentCx` usage immediately:
 
 - `AppRenderContext<'a>` carries the named-helper teaching surface,
 - `AppRenderCx<'a>` carries the concrete closure-local helper story on the same app-facing lane,
-- and `UiCx` remains only as the migration-era old name.
+- and `AppComponentCx` remains only as the migration-era old name.
 
 A compile audit on 2026-04-02 showed that blindly removing `AppUi`'s `Deref` is not yet the right
 end state:
 
-- `cargo check -p fret-examples --all-targets` surfaced 100 `UiCx`/`into_element(...)` style
+- `cargo check -p fret-examples --all-targets` surfaced 100 `AppComponentCx`/`into_element(...)` style
   mismatched-type failures, 31 direct `app` field reads, plus ordinary render-authoring helper
   lookups such as `theme_snapshot`, `container`, `text_props`, `flex`, and
   `environment_viewport_bounds`.
 - `cargo check -p fret-cookbook --all-targets` surfaced the same pattern at smaller scale:
-  17 `UiCx`/`into_element(...)` mismatches, 11 direct `app` field reads, and ordinary helper calls
+  17 `AppComponentCx`/`into_element(...)` mismatches, 11 direct `app` field reads, and ordinary helper calls
   such as `text`, `text_props`, `action_is_enabled`, and `pointer_region`.
 
 This means the next structural task is not a blind `Deref` deletion.
@@ -319,7 +319,7 @@ render-authoring surface for those ordinary operations.
 The target is not:
 
 - `AppUi` is narrow,
-- while extracted helper functions still take raw `ElementContext<App>` through `UiCx`.
+- while extracted helper functions still take raw `ElementContext<App>` through `AppComponentCx`.
 
 The target is:
 
@@ -442,7 +442,7 @@ This batch now also owns the next audit/freeze step for the render-authoring lan
   - keep-raw escape hatch,
   - explicit non-default render lane,
   - missing app-facing sugar,
-- and decide the correct target for extracted helper functions (`UiCx` wrapper / trait surface /
+- and decide the correct target for extracted helper functions (`AppComponentCx` wrapper / trait surface /
   equivalent) before deleting implicit coercions.
 
 ### B3 — Migrate the default ladder and first-contact docs

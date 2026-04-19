@@ -18,7 +18,7 @@ Related:
 ## Question
 
 After landing `AppRenderContext<'a>` as the named helper façade, should closure-heavy default
-authoring keep leaning on compatibility `UiCx`, or does the app-facing lane need its own concrete
+authoring keep leaning on compatibility `AppComponentCx`, or does the app-facing lane need its own concrete
 helper carrier?
 
 ## Verdict
@@ -42,7 +42,7 @@ Landing `AppRenderCx<'a>` does three things:
 
 1. it gives the default lane an app-facing concrete type name that does not teach raw
    `ElementContext<App>` spelling,
-2. it stops overloading `UiCx` as both the compatibility old name and the only concrete helper
+2. it stops overloading `AppComponentCx` as both the compatibility old name and the only concrete helper
    carrier,
 3. it keeps the underlying capability model unchanged because `RenderContextAccess<'a, App>`
    remains the real contract.
@@ -58,15 +58,15 @@ The narrow proof in this slice is `apps/fret-examples/src/hello_world_compare_de
   capability-first late-landing story.
 
 The corresponding source-policy gate lives in `apps/fret-examples/src/lib.rs` and forbids the old
-`UiCx` spelling from drifting back into that concrete proof.
+`AppComponentCx` spelling from drifting back into that concrete proof.
 
 ## Implication for the lane
 
-This change does **not** prove that the repo should now delete `UiCx` everywhere or remove
+This change does **not** prove that the repo should now delete `AppComponentCx` everywhere or remove
 `AppUi`'s `Deref`.
 
 It proves something narrower and more useful:
 
 - the named-helper story is `AppRenderContext<'a>`,
 - the concrete closure-helper story is `AppRenderCx<'a>`,
-- and `UiCx` is now clearly only a migration-era old name.
+- and `AppComponentCx` is now clearly only a migration-era old name.

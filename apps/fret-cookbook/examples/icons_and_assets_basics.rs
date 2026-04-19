@@ -69,7 +69,7 @@ fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
 }
 
 fn render_image_preview(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     image: Option<ImageId>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
@@ -201,7 +201,7 @@ impl View for IconsAndAssetsBasicsView {
                 shadcn::card_content(|cx| {
                     ui::children![
                         cx;
-                        ui::v_flex(|cx: &mut UiCx<'_>| {
+                        ui::v_flex(|cx: &mut AppComponentCx<'_>| {
                             let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                             let preload = cx
                                 .app

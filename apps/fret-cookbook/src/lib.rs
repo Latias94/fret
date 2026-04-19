@@ -218,13 +218,13 @@ mod authoring_surface_policy_tests {
         }
     }
 
-    fn assert_advanced_helpers_prefer_uicx(
+    fn assert_advanced_helpers_prefer_app_component_cx(
         src: &str,
         required_markers: &[&str],
         forbidden_markers: &[&str],
     ) {
         let normalized = src.split_whitespace().collect::<String>();
-        assert!(normalized.contains("UiCx<'_>"));
+        assert!(normalized.contains("AppComponentCx<'_>"));
         for marker in required_markers {
             let marker = marker.split_whitespace().collect::<String>();
             assert!(normalized.contains(&marker), "missing marker: {marker}");
@@ -293,7 +293,7 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_EXAMPLE.contains(
             "fn hello_page(render_marker: &'static str, count_value: u32) -> impl UiChild"
         ));
-        assert!(!HELLO_EXAMPLE.contains("fn hello_page(cx: &mut UiCx<'_>,"));
+        assert!(!HELLO_EXAMPLE.contains("fn hello_page(cx: &mut AppComponentCx<'_>,"));
         assert!(HELLO_EXAMPLE.contains("ui::single(cx, hello_page(render_marker, count_value))"));
         assert!(HELLO_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
         assert!(HELLO_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
@@ -732,7 +732,7 @@ mod authoring_surface_policy_tests {
         assert!(SCAFFOLD.contains("ui::single(cx, surface)"));
         assert!(SCAFFOLD.contains(".into_element_in(cx)"));
         assert!(!SCAFFOLD.contains("ui::children![cx; surface]"));
-        assert!(!SCAFFOLD.contains("&mut UiCx<'_>"));
+        assert!(!SCAFFOLD.contains("&mut AppComponentCx<'_>"));
         assert!(!SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
         assert!(!SCAFFOLD.contains("B: IntoUiElement<H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
@@ -878,13 +878,13 @@ mod authoring_surface_policy_tests {
         assert!(DRAG_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
 
-        assert!(EFFECTS_LAYER_EXAMPLE.contains("UiCx<'_>"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("AppComponentCx<'_>"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(
             EFFECTS_LAYER_EXAMPLE.contains("ui::effect_layer(EffectMode::FilterContent, chain")
         );
 
-        assert!(DROP_SHADOW_EXAMPLE.contains("UiCx<'_>"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("AppComponentCx<'_>"));
         assert!(DROP_SHADOW_EXAMPLE.contains("DropShadowV1"));
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().local_init(|| true)"));
         assert!(DROP_SHADOW_EXAMPLE.contains("enabled_state.layout(cx)"));
@@ -1082,14 +1082,14 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn advanced_helper_contexts_prefer_uicx_aliases() {
-        assert_advanced_helpers_prefer_uicx(
+    fn advanced_helper_contexts_prefer_app_component_cx() {
+        assert_advanced_helpers_prefer_app_component_cx(
             EFFECTS_LAYER_EXAMPLE,
-            &["let tile = |_cx: &mut UiCx<'_>, color: ColorRef|"],
+            &["let tile = |_cx: &mut AppComponentCx<'_>, color: ColorRef|"],
             &["let tile = |_cx: &mut ElementContext<'_, KernelApp>, color: ColorRef|"],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             DROP_SHADOW_EXAMPLE,
             &[
                 "fn shadow_card(",
@@ -1098,14 +1098,14 @@ mod authoring_surface_policy_tests {
             ],
             &[
                 "let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement",
-                "let card = |cx: &mut UiCx<'_>, title: String| -> AnyElement",
+                "let card = |cx: &mut AppComponentCx<'_>, title: String| -> AnyElement",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             ICONS_AND_ASSETS_EXAMPLE,
             &[
-                "ui::v_flex(|cx: &mut UiCx<'_>| {",
+                "ui::v_flex(|cx: &mut AppComponentCx<'_>| {",
                 "fn render_image_preview(",
                 "image: Option<ImageId>,",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
@@ -1113,33 +1113,33 @@ mod authoring_surface_policy_tests {
             &[
                 "ui::v_flex(|cx: &mut ElementContext<'_, KernelApp>| {",
                 "let render_image = |cx: &mut ElementContext<'_, KernelApp>,",
-                "let render_image = |cx: &mut UiCx<'_>,",
+                "let render_image = |cx: &mut AppComponentCx<'_>,",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             ASSETS_RELOAD_EPOCH_EXAMPLE,
             &[
-                "fn render_image_panel(_cx: &mut UiCx<'_>,",
+                "fn render_image_panel(_cx: &mut AppComponentCx<'_>,",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
-                "fn render_svg_panel(_cx: &mut UiCx<'_>,",
+                "fn render_svg_panel(_cx: &mut AppComponentCx<'_>,",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
             ],
             &[
                 "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn render_image_panel(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::ImageSourceState,) -> AnyElement",
-                "fn render_svg_panel(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::SvgFileState,) -> AnyElement",
+                "fn render_image_panel(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::ImageSourceState,) -> AnyElement",
+                "fn render_svg_panel(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::SvgFileState,) -> AnyElement",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             CHART_INTERACTIONS_EXAMPLE,
-            &["fn chart_canvas(cx: &mut UiCx<'_>,"],
+            &["fn chart_canvas(cx: &mut AppComponentCx<'_>,"],
             &["fn chart_canvas(cx: &mut ElementContext<'_, KernelApp>,"],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             CUSTOM_V1_EXAMPLE,
             &[
                 "fn panel_shell<B>(",
@@ -1149,7 +1149,7 @@ mod authoring_surface_policy_tests {
                 "fn preview_content(",
                 "label: &'static str,",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
-                "let swatch = |_cx: &mut UiCx<'_>, rgb: u32|",
+                "let swatch = |_cx: &mut AppComponentCx<'_>, rgb: u32|",
             ],
             &[
                 "UiChildIntoElement<KernelApp>",
@@ -1205,13 +1205,13 @@ mod authoring_surface_policy_tests {
         assert_intentional_raw_retained_seam(
             CHART_INTERACTIONS_EXAMPLE,
             &[
-                "fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
+                "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
                 "RetainedSubtreeProps::new::<KernelApp>",
                 "cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true),",
                 "vec![cx.retained_subtree(props)]",
             ],
             &[
-                "fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> impl IntoUiElement<KernelApp>",
+                "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> impl IntoUiElement<KernelApp>",
             ],
         );
     }
@@ -1547,7 +1547,7 @@ mod authoring_surface_policy_tests {
         migrated_basics_examples_use_the_new_app_surface();
         advanced_examples_use_the_explicit_advanced_surface();
         advanced_view_examples_prefer_app_ui_and_ui_aliases();
-        advanced_helper_contexts_prefer_uicx_aliases();
+        advanced_helper_contexts_prefer_app_component_cx();
         common_shadcn_control_examples_prefer_local_state_bridges_over_clone_model();
         date_picker_example_prefers_local_state_bridges_over_clone_model();
         overlay_example_prefers_local_state_bool_root_bridges_over_clone_model();

@@ -436,7 +436,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
 }
 
 fn stage(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     st: &mut State,
     enabled: bool,
     show_user0_probe: bool,
@@ -546,7 +546,7 @@ fn stage(
 }
 
 fn stage_controls(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     st: &mut State,
     enabled: bool,
     show_user0_probe: bool,
@@ -646,7 +646,7 @@ fn stage_controls(
     .into_element(cx)
 }
 
-fn animated_backdrop(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
+fn animated_backdrop(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
     let viewport = cx.environment_viewport_bounds(Invalidation::Paint);
     let w = viewport.size.width.0.max(1.0);
     let h = viewport.size.height.0.max(1.0);
@@ -777,7 +777,7 @@ fn animated_backdrop(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<>
 }
 
 fn lens_row(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     enabled: bool,
     show_user0_probe: bool,
     lens_effect: EffectId,
@@ -894,7 +894,7 @@ fn lens_row(
 }
 
 fn lens_shell(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     radius: Px,
     lens_w: Px,
@@ -991,7 +991,7 @@ fn lens_shell(
 }
 
 fn plain_lens(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     radius: Px,
     lens_w: Px,
@@ -1001,7 +1001,7 @@ fn plain_lens(
 }
 
 fn custom_effect_lens(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     effect: EffectId,
     radius: Px,
@@ -1051,7 +1051,7 @@ fn custom_effect_lens(
 }
 
 fn custom_effect_user0_probe_lens(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     effect: EffectId,
     user0_image: ImageId,
@@ -1080,7 +1080,7 @@ fn custom_effect_user0_probe_lens(
 }
 
 fn custom_effect_user1_probe_lens(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     effect: EffectId,
     user1_image: ImageId,
@@ -1109,7 +1109,7 @@ fn custom_effect_user1_probe_lens(
 }
 
 fn custom_effect_user01_probe_lens(
-    cx: &mut UiCx<'_>,
+    cx: &mut AppComponentCx<'_>,
     title: &'static str,
     effect: EffectId,
     user0_image: ImageId,

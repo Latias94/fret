@@ -274,7 +274,7 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsW
 
 // This stays on `AnyElement` intentionally: it owns the retained-subtree bridge boundary and the
 // cached-subtree landing seam for `ChartCanvas`.
-fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement {
+fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement {
     let engine = st.engine.clone();
 
     let mut layout = LayoutStyle::default();
@@ -296,7 +296,7 @@ fn chart_canvas(cx: &mut UiCx<'_>, st: &ChartInteractionsWindowState) -> AnyElem
 
     cx.cached_subtree_with(
         CachedSubtreeProps::default().contained_layout(true),
-        |cx: &mut UiCx<'_>| vec![cx.retained_subtree(props)],
+        |cx: &mut AppComponentCx<'_>| vec![cx.retained_subtree(props)],
     )
 }
 

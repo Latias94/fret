@@ -1,7 +1,7 @@
 use fret::{
     advanced::{KernelApp, prelude::Effect},
-    app::RenderContextAccess as _,
     app::prelude::*,
+    app::{AppComponentCx, RenderContextAccess as _},
     assets::{AssetBundleId, AssetLocator, AssetRequest, AssetStartupMode, AssetStartupPlan},
     children::UiElementSinkExt as _,
     component::prelude::IntoUiElement,
@@ -157,7 +157,7 @@ impl View for AssetsReloadEpochBasicsView {
 }
 
 fn render_image_panel(
-    _cx: &mut UiCx<'_>,
+    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ImageSourceState,
 ) -> impl IntoUiElement<KernelApp> + use<> {
@@ -238,7 +238,7 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    _cx: &mut UiCx<'_>,
+    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ui::SvgAssetSourceState,
 ) -> impl IntoUiElement<KernelApp> + use<> {

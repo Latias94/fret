@@ -72,7 +72,8 @@ fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     assert!(advanced_prelude.contains("pub use crate::advanced::*;"));
     assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
     assert!(advanced_prelude_exports_symbol("AppRenderCx"));
-    assert!(advanced_prelude.contains("pub use crate::{AppUi, Ui, UiCx};"));
+    assert!(advanced_prelude.contains("pub use crate::AppComponentCx;"));
+    assert!(advanced_prelude.contains("pub use crate::{AppUi, Ui};"));
     assert!(advanced_prelude.contains("pub use fret_app::Effect;"));
     assert!(advanced_prelude.contains("pub use fret_core::{AppWindowId, Event, UiServices};"));
     assert!(advanced_prelude.contains("pub use fret_runtime::{ActionId, TypedAction};"));

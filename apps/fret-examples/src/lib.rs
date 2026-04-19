@@ -518,7 +518,7 @@ mod authoring_surface_policy_tests {
         );
         let page_sig =
             format!("fn {page_fn}(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild");
-        let legacy_page_sig = format!("fn {page_fn}(cx: &mut UiCx<'_>,");
+        let legacy_page_sig = format!("fn {page_fn}(cx: &mut AppComponentCx<'_>,");
         assert!(src.contains(call_site));
         assert!(src.contains(&page_sig));
         assert!(!src.contains(&legacy_page_sig));
@@ -658,7 +658,7 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains(&legacy));
     }
 
-    fn assert_advanced_helpers_prefer_uicx(
+    fn assert_advanced_helpers_prefer_app_component_cx(
         src: &str,
         required_markers: &[&str],
         forbidden_markers: &[&str],
@@ -1120,11 +1120,11 @@ mod authoring_surface_policy_tests {
                 "config.fail_mode.layout_value(cx)",
             ],
             &[
-                "fn tracked_query_inputs(cx: &mut UiCx<'_>,",
-                "fn header_bar(cx: &mut UiCx<'_>,",
-                "fn body(cx: &mut UiCx<'_>,",
-                "fn query_panel_for_mode(cx: &mut UiCx<'_>,",
-                "fn status_badge(cx: &mut UiCx<'_>,",
+                "fn tracked_query_inputs(cx: &mut AppComponentCx<'_>,",
+                "fn header_bar(cx: &mut AppComponentCx<'_>,",
+                "fn body(cx: &mut AppComponentCx<'_>,",
+                "fn query_panel_for_mode(cx: &mut AppComponentCx<'_>,",
+                "fn status_badge(cx: &mut AppComponentCx<'_>,",
                 "handle.layout_query(cx).value_or_default()",
                 "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
                 "config.fail_mode.layout_value_in(cx)",
@@ -1335,7 +1335,7 @@ mod authoring_surface_policy_tests {
             "fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild"
         ));
         assert!(HELLO_COUNTER_DEMO.contains("let theme = cx.theme_snapshot();"));
-        assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
+        assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut AppComponentCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
         assert!(!HELLO_COUNTER_DEMO.contains("Theme::global(&*cx.app).snapshot()"));
     }
@@ -2186,9 +2186,9 @@ mod authoring_surface_policy_tests {
             "fn render_selection_panel(cx: &mut AppUi<'_, '_>,",
             "fn render_center_panel(cx: &mut AppUi<'_, '_>,",
             "fn render_inspector_panel(cx: &mut AppUi<'_, '_>,",
-            "fn render_selection_panel(cx: &mut UiCx<'_>,",
-            "fn render_center_panel(cx: &mut UiCx<'_>,",
-            "fn render_inspector_panel(cx: &mut UiCx<'_>,",
+            "fn render_selection_panel(cx: &mut AppComponentCx<'_>,",
+            "fn render_center_panel(cx: &mut AppComponentCx<'_>,",
+            "fn render_inspector_panel(cx: &mut AppComponentCx<'_>,",
         ] {
             let legacy = legacy.split_whitespace().collect::<String>();
             assert!(
@@ -3558,8 +3558,8 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn advanced_helper_contexts_prefer_uicx_aliases() {
-        assert_advanced_helpers_prefer_uicx(
+    fn advanced_helper_contexts_prefer_app_component_cx() {
+        assert_advanced_helpers_prefer_app_component_cx(
             ASSETS_DEMO,
             &[
                 "fn render_view<'a, Cx>(cx: &mut Cx) -> Ui",
@@ -3567,7 +3567,7 @@ mod authoring_surface_policy_tests {
                 "let theme = cx.theme_snapshot();",
                 "let cx = cx.elements();",
                 "render_view(cx)",
-                "fn assets_page<C>(cx: &mut UiCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui",
+                "fn assets_page<C>(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui",
                 "C: IntoUiElement<KernelApp>",
                 "fn render_image_panel(",
                 "theme: &ThemeSnapshot,",
@@ -3578,20 +3578,20 @@ mod authoring_surface_policy_tests {
                 ") -> impl IntoUiElement<KernelApp> + use<>",
             ],
             &[
-                "fn render_view(cx: &mut UiCx<'_>) -> Ui",
+                "fn render_view(cx: &mut AppComponentCx<'_>) -> Ui",
                 "render_view(cx.elements())",
-                "fn assets_page<C>(cx: &mut UiCx<'_>, theme: &Theme, card: C) -> Ui",
-                "fn render_image_panel(cx: &mut UiCx<'_>, theme: &Theme,",
-                "fn render_svg_panel(cx: &mut UiCx<'_>, theme: &Theme,",
+                "fn assets_page<C>(cx: &mut AppComponentCx<'_>, theme: &Theme, card: C) -> Ui",
+                "fn render_image_panel(cx: &mut AppComponentCx<'_>, theme: &Theme,",
+                "fn render_svg_panel(cx: &mut AppComponentCx<'_>, theme: &Theme,",
                 "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             GENUI_DEMO,
             &[
-                "fn genui_page<L, R>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, left: L, right: R) -> Ui",
+                "fn genui_page<L, R>(cx: &mut AppComponentCx<'_>, theme: ThemeSnapshot, left: L, right: R) -> Ui",
                 "L: IntoUiElement<KernelApp>,",
                 "R: IntoUiElement<KernelApp>,",
                 "genui_page(cx, theme, left, right)",
@@ -3599,13 +3599,13 @@ mod authoring_surface_policy_tests {
             &["let page = ui::container(move |cx| {"],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             IMUI_EDITOR_PROOF_DEMO,
             &[
-                "fn render_authoring_parity_surface(cx: &mut UiCx<'_>,",
-                "fn render_authoring_parity_shared_state(cx: &mut UiCx<'_>,",
-                "fn render_authoring_parity_declarative_group(cx: &mut UiCx<'_>,",
-                "fn render_authoring_parity_imui_group(cx: &mut UiCx<'_>,",
+                "fn render_authoring_parity_surface(cx: &mut AppComponentCx<'_>,",
+                "fn render_authoring_parity_shared_state(cx: &mut AppComponentCx<'_>,",
+                "fn render_authoring_parity_declarative_group(cx: &mut AppComponentCx<'_>,",
+                "fn render_authoring_parity_imui_group(cx: &mut AppComponentCx<'_>,",
             ],
             &[
                 "fn render_authoring_parity_surface(cx: &mut ElementContext<'_, KernelApp>,",
@@ -3615,75 +3615,75 @@ mod authoring_surface_policy_tests {
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             MARKDOWN_DEMO,
-            &["let spinner_box = |cx: &mut UiCx<'_>|"],
+            &["let spinner_box = |cx: &mut AppComponentCx<'_>|"],
             &["let spinner_box = |cx: &mut fret_ui::ElementContext<'_, KernelApp>|"],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             CUSTOM_EFFECT_V1_DEMO,
             &[
-                "fn watch_first_f32(cx: &mut UiCx<'_>,",
-                "fn stage(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn lens_row(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn inspector(cx: &mut UiCx<'_>, st: &mut CustomEffectV1State, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> impl IntoUiElement<KernelApp> + use<>",
-                "let label_row = |cx: &mut UiCx<'_>, label: &str, value: String|",
+                "fn watch_first_f32(cx: &mut AppComponentCx<'_>,",
+                "fn stage(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn lens_row(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn inspector(cx: &mut AppComponentCx<'_>, st: &mut CustomEffectV1State, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> impl IntoUiElement<KernelApp> + use<>",
+                "let label_row = |cx: &mut AppComponentCx<'_>, label: &str, value: String|",
             ],
             &[
                 "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn stage(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> AnyElement",
+                "fn stage(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> AnyElement",
                 "fn lens_row(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn lens_row(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> AnyElement",
+                "fn lens_row(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> AnyElement",
                 "fn inspector(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn inspector(cx: &mut UiCx<'_>, st: &mut CustomEffectV1State, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> AnyElement",
+                "fn inspector(cx: &mut AppComponentCx<'_>, st: &mut CustomEffectV1State, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32,) -> AnyElement",
                 "let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             CUSTOM_EFFECT_V2_DEMO,
             &[
-                "fn watch_first_f32(cx: &mut UiCx<'_>,",
-                "fn stage(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn lens_row(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn inspector(cx: &mut UiCx<'_>, st: &mut CustomEffectV2State, sampling_value: &str, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32,) -> impl IntoUiElement<KernelApp> + use<>",
-                "let label_row = |cx: &mut UiCx<'_>, label: &str, value: String|",
+                "fn watch_first_f32(cx: &mut AppComponentCx<'_>,",
+                "fn stage(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn lens_row(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn inspector(cx: &mut AppComponentCx<'_>, st: &mut CustomEffectV2State, sampling_value: &str, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32,) -> impl IntoUiElement<KernelApp> + use<>",
+                "let label_row = |cx: &mut AppComponentCx<'_>, label: &str, value: String|",
             ],
             &[
                 "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn stage(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> AnyElement",
+                "fn stage(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> AnyElement",
                 "fn lens_row(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn lens_row(cx: &mut UiCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> AnyElement",
+                "fn lens_row(cx: &mut AppComponentCx<'_>, enabled: bool, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool,) -> AnyElement",
                 "fn inspector(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn inspector(cx: &mut UiCx<'_>, st: &mut CustomEffectV2State, sampling_value: &str, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32,) -> AnyElement",
+                "fn inspector(cx: &mut AppComponentCx<'_>, st: &mut CustomEffectV2State, sampling_value: &str, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32,) -> AnyElement",
                 "let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             CUSTOM_EFFECT_V3_DEMO,
             &[
-                "fn stage(cx: &mut UiCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, use_non_filterable_user0: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, use_non_filterable_user1: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn stage_controls(cx: &mut UiCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, show_user1_probe: bool, use_non_filterable_user0: bool, use_non_filterable_user1: bool,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn animated_backdrop(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn lens_row(cx: &mut UiCx<'_>, enabled: bool, show_user0_probe: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn lens_shell(cx: &mut UiCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px, with_effect: Option<EffectChain>,) -> impl IntoUiElement<KernelApp> + use<>",
-                "fn custom_effect_user01_probe_lens(cx: &mut UiCx<'_>,",
+                "fn stage(cx: &mut AppComponentCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, use_non_filterable_user0: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, use_non_filterable_user1: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn stage_controls(cx: &mut AppComponentCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, show_user1_probe: bool, use_non_filterable_user0: bool, use_non_filterable_user1: bool,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn animated_backdrop(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn lens_row(cx: &mut AppComponentCx<'_>, enabled: bool, show_user0_probe: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn lens_shell(cx: &mut AppComponentCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px, with_effect: Option<EffectChain>,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn custom_effect_user01_probe_lens(cx: &mut AppComponentCx<'_>,",
             ],
             &[
                 "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn stage(cx: &mut UiCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, use_non_filterable_user0: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, use_non_filterable_user1: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> AnyElement",
+                "fn stage(cx: &mut AppComponentCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, use_non_filterable_user0: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, use_non_filterable_user1: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> AnyElement",
                 "fn stage_controls(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn stage_controls(cx: &mut UiCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, show_user1_probe: bool, use_non_filterable_user0: bool, use_non_filterable_user1: bool,) -> AnyElement",
+                "fn stage_controls(cx: &mut AppComponentCx<'_>, st: &mut State, enabled: bool, show_user0_probe: bool, show_user1_probe: bool, use_non_filterable_user0: bool, use_non_filterable_user1: bool,) -> AnyElement",
                 "fn animated_backdrop(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement",
-                "fn animated_backdrop(cx: &mut UiCx<'_>) -> AnyElement",
+                "fn animated_backdrop(cx: &mut AppComponentCx<'_>) -> AnyElement",
                 "fn lens_row(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn lens_row(cx: &mut UiCx<'_>, enabled: bool, show_user0_probe: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> AnyElement",
+                "fn lens_row(cx: &mut AppComponentCx<'_>, enabled: bool, show_user0_probe: bool, lens_effect: EffectId, user0_probe_effect: Option<EffectId>, show_user1_probe: bool, user1_probe_effect: Option<EffectId>, user01_probe_effect: Option<EffectId>, user0_image: Option<ImageId>, user1_image: Option<ImageId>,) -> AnyElement",
                 "fn lens_shell(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn lens_shell(cx: &mut UiCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px, with_effect: Option<EffectChain>,) -> AnyElement",
+                "fn lens_shell(cx: &mut AppComponentCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px, with_effect: Option<EffectChain>,) -> AnyElement",
                 "fn custom_effect_user01_probe_lens(cx: &mut ElementContext<'_, KernelApp>,",
             ],
         );
@@ -3705,20 +3705,20 @@ mod authoring_surface_policy_tests {
                 "user1_image: ImageId,",
             ],
             &[
-                "fn plain_lens(cx: &mut UiCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
-                "fn custom_effect_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
-                "fn custom_effect_user0_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
-                "fn custom_effect_user1_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
-                "fn custom_effect_user01_probe_lens(cx: &mut UiCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn plain_lens(cx: &mut AppComponentCx<'_>, title: &'static str, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_lens(cx: &mut AppComponentCx<'_>, title: &'static str, effect: EffectId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_user0_probe_lens(cx: &mut AppComponentCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_user1_probe_lens(cx: &mut AppComponentCx<'_>, title: &'static str, effect: EffectId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
+                "fn custom_effect_user01_probe_lens(cx: &mut AppComponentCx<'_>, title: &'static str, effect: EffectId, user0_image: ImageId, user1_image: ImageId, radius: Px, lens_w: Px, lens_h: Px) -> AnyElement",
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             LIQUID_GLASS_DEMO,
             &[
-                "fn watch_first_f32(cx: &mut UiCx<'_>,",
-                "let mk_card = |cx: &mut UiCx<'_>,",
-                "|cx: &mut UiCx<'_>, label: &str, value: String|",
+                "fn watch_first_f32(cx: &mut AppComponentCx<'_>,",
+                "let mk_card = |cx: &mut AppComponentCx<'_>,",
+                "|cx: &mut AppComponentCx<'_>, label: &str, value: String|",
             ],
             &[
                 "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
@@ -3727,28 +3727,28 @@ mod authoring_surface_policy_tests {
             ],
         );
 
-        assert_advanced_helpers_prefer_uicx(
+        assert_advanced_helpers_prefer_app_component_cx(
             POSTPROCESS_THEME_DEMO,
             &[
-                "fn watch_first_f32(cx: &mut UiCx<'_>,",
-                "fn inspector(cx: &mut UiCx<'_>, st: &mut ThemePostprocessState, theme: &str, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> impl IntoUiElement<KernelApp> + use<>",
-                "let label_row = |cx: &mut UiCx<'_>, label: &str, value: String|",
-                "fn stage(cx: &mut UiCx<'_>, enabled: bool, compare: bool, theme: &str, effect: EffectId, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> impl IntoUiElement<KernelApp> + use<>",
+                "fn watch_first_f32(cx: &mut AppComponentCx<'_>,",
+                "fn inspector(cx: &mut AppComponentCx<'_>, st: &mut ThemePostprocessState, theme: &str, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> impl IntoUiElement<KernelApp> + use<>",
+                "let label_row = |cx: &mut AppComponentCx<'_>, label: &str, value: String|",
+                "fn stage(cx: &mut AppComponentCx<'_>, enabled: bool, compare: bool, theme: &str, effect: EffectId, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> impl IntoUiElement<KernelApp> + use<>",
                 "fn stage_body(",
                 "postprocess_applied: bool,",
                 "label: &str,",
-                "fn stage_cards(cx: &mut UiCx<'_>) -> impl IntoUiElement<KernelApp> + use<>",
-                "let card = |cx: &mut UiCx<'_>, title: &str, subtitle: &str|",
+                "fn stage_cards(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<KernelApp> + use<>",
+                "let card = |cx: &mut AppComponentCx<'_>, title: &str, subtitle: &str|",
             ],
             &[
                 "fn watch_first_f32(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn inspector(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn inspector(cx: &mut UiCx<'_>, st: &mut ThemePostprocessState, theme: &str, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> AnyElement",
+                "fn inspector(cx: &mut AppComponentCx<'_>, st: &mut ThemePostprocessState, theme: &str, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> AnyElement",
                 "let label_row = |cx: &mut ElementContext<'_, KernelApp>, label: &str, value: String|",
                 "fn stage(cx: &mut ElementContext<'_, KernelApp>,",
-                "fn stage(cx: &mut UiCx<'_>, enabled: bool, compare: bool, theme: &str, effect: EffectId, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> AnyElement",
-                "fn stage_body(cx: &mut UiCx<'_>, postprocess_applied: bool, label: &str) -> AnyElement",
-                "fn stage_cards(cx: &mut UiCx<'_>) -> AnyElement",
+                "fn stage(cx: &mut AppComponentCx<'_>, enabled: bool, compare: bool, theme: &str, effect: EffectId, chromatic_offset_px: f32, scanline_strength: f32, scanline_spacing_px: f32, vignette_strength: f32, grain_strength: f32, grain_scale: f32, retro_pixel_scale: f32, retro_dither: bool,) -> AnyElement",
+                "fn stage_body(cx: &mut AppComponentCx<'_>, postprocess_applied: bool, label: &str) -> AnyElement",
+                "fn stage_cards(cx: &mut AppComponentCx<'_>) -> AnyElement",
                 "fn stage_body(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn stage_cards(cx: &mut ElementContext<'_, KernelApp>) -> AnyElement",
                 "let card = |cx: &mut ElementContext<'_, KernelApp>, title: &str, subtitle: &str|",
@@ -3782,23 +3782,23 @@ mod authoring_surface_policy_tests {
                 "let state = handle.read_layout(cx);",
             ],
             &[
-                "fn header_bar(cx: &mut UiCx<'_>,",
-                "fn body(cx: &mut UiCx<'_>,",
-                "fn catalog_panel(cx: &mut UiCx<'_>,",
-                "fn catalog_item(cx: &mut UiCx<'_>,",
-                "fn main_panel(cx: &mut UiCx<'_>,",
-                "fn inspector_panel(cx: &mut UiCx<'_>,",
-                "fn policy_editor(cx: &mut UiCx<'_>,",
-                "fn query_panel_for_mode(cx: &mut UiCx<'_>,",
-                "fn query_inputs_row(cx: &mut UiCx<'_>,",
-                "fn query_result_view(cx: &mut UiCx<'_>,",
-                "fn active_mode(cx: &mut UiCx<'_>,",
-                "fn query_policy(cx: &mut UiCx<'_>,",
-                "fn query_fail_mode(cx: &mut UiCx<'_>,",
-                "fn tracked_query_inputs(cx: &mut UiCx<'_>,",
-                "fn query_key_for_id(cx: &mut UiCx<'_>,",
-                "fn status_badge(cx: &mut UiCx<'_>,",
-                "fn snapshot_entry_for_key(cx: &mut UiCx<'_>,",
+                "fn header_bar(cx: &mut AppComponentCx<'_>,",
+                "fn body(cx: &mut AppComponentCx<'_>,",
+                "fn catalog_panel(cx: &mut AppComponentCx<'_>,",
+                "fn catalog_item(cx: &mut AppComponentCx<'_>,",
+                "fn main_panel(cx: &mut AppComponentCx<'_>,",
+                "fn inspector_panel(cx: &mut AppComponentCx<'_>,",
+                "fn policy_editor(cx: &mut AppComponentCx<'_>,",
+                "fn query_panel_for_mode(cx: &mut AppComponentCx<'_>,",
+                "fn query_inputs_row(cx: &mut AppComponentCx<'_>,",
+                "fn query_result_view(cx: &mut AppComponentCx<'_>,",
+                "fn active_mode(cx: &mut AppComponentCx<'_>,",
+                "fn query_policy(cx: &mut AppComponentCx<'_>,",
+                "fn query_fail_mode(cx: &mut AppComponentCx<'_>,",
+                "fn tracked_query_inputs(cx: &mut AppComponentCx<'_>,",
+                "fn query_key_for_id(cx: &mut AppComponentCx<'_>,",
+                "fn status_badge(cx: &mut AppComponentCx<'_>,",
+                "fn snapshot_entry_for_key(cx: &mut AppComponentCx<'_>,",
                 "handle.layout_query(cx).value_or_default()",
             ],
         );
@@ -3820,9 +3820,9 @@ mod authoring_surface_policy_tests {
                 ") -> impl IntoUiElement<KernelApp> + use<L>",
             ],
             &[
-                "fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement",
-                "fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement",
-                "fn custom_effect_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32) -> AnyElement",
+                "fn lens_shell(cx: &mut AppComponentCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement",
+                "fn plain_lens(cx: &mut AppComponentCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement",
+                "fn custom_effect_lens(cx: &mut AppComponentCx<'_>, label: impl Into<Arc<str>>, effect: EffectId, blur_radius_px: f32, blur_downsample: f32, refraction_height_px: f32, refraction_amount_px: f32, depth_effect: f32, chromatic_aberration: f32, corner_radius_px: f32, grain_strength: f32, grain_scale: f32) -> AnyElement",
             ],
         );
 
@@ -3843,9 +3843,9 @@ mod authoring_surface_policy_tests {
                 ") -> impl IntoUiElement<KernelApp> + use<L>",
             ],
             &[
-                "fn lens_shell(cx: &mut UiCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement",
-                "fn plain_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement",
-                "fn custom_effect_lens(cx: &mut UiCx<'_>, label: impl Into<Arc<str>>, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool) -> AnyElement",
+                "fn lens_shell(cx: &mut AppComponentCx<'_>, label: Arc<str>, radius: Px, body: AnyElement) -> AnyElement",
+                "fn plain_lens(cx: &mut AppComponentCx<'_>, label: impl Into<Arc<str>>, radius: Px) -> AnyElement",
+                "fn custom_effect_lens(cx: &mut AppComponentCx<'_>, label: impl Into<Arc<str>>, effect: EffectId, input_image: Option<ImageId>, sampling: ImageSamplingHint, uv_span: f32, input_strength: f32, rim_strength: f32, blur_radius_px: f32, debug_input: bool) -> AnyElement",
             ],
         );
 
@@ -3998,10 +3998,10 @@ mod authoring_surface_policy_tests {
             ],
             &[
                 "set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());",
-                "let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|",
+                "let swatch = |_cx: &mut AppComponentCx<'_>, fill_rgb: u32, border_rgb: u32|",
                 "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
-                "let swatch = |cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
-                "fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
+                "let swatch = |cx: &mut AppComponentCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
+                "fn hello_world_compare_root(cx: &mut AppComponentCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
                 "let cx = cx.elements();",
                 "cx.text_props(TextProps {",
                 ".into_element(cx)",
@@ -4360,7 +4360,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
-                "use fret::app::RenderContextAccess as _;",
+                "use fret::app::{AppRenderContext, RenderContextAccess as _};",
                 "value: LocalState::new_in(app.models_mut(), initial.map(Arc::from)),",
                 "open: LocalState::new_in(app.models_mut(), false),",
                 "stale_time_s: LocalState::new_in(app.models_mut(), \"2\".to_string()),",
@@ -4458,7 +4458,7 @@ mod authoring_surface_policy_tests {
                 "render_view(cx)",
             ],
             &[
-                "fn render_view(cx: &mut UiCx<'_>) -> Ui",
+                "fn render_view(cx: &mut AppComponentCx<'_>) -> Ui",
                 "render_view(cx.elements())",
             ],
         );

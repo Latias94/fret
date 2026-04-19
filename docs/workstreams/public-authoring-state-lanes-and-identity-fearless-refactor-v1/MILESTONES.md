@@ -31,6 +31,7 @@ Related:
 - AppUi final no-Deref tail owner audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_FINAL_NO_DEREF_TAIL_OWNER_AUDIT_2026-04-17.md`
 - AppUi Deref removal proof audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_REMOVAL_PROOF_AUDIT_2026-04-18.md`
 - AppComponentCx UI Gallery migration audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_COMPONENT_CX_UI_GALLERY_MIGRATION_AUDIT_2026-04-18.md`
+- UiCx advanced prelude and first-party tail audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_ADVANCED_PRELUDE_AND_FIRST_PARTY_TAIL_AUDIT_2026-04-18.md`
 - AppUi Todo root capability landing audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_TODO_ROOT_CAPABILITY_LANDING_AUDIT_2026-04-17.md`
 - Default lane LocalState + keyed identity freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/DEFAULT_LANE_LOCALSTATE_KEYED_IDENTITY_FREEZE_AUDIT_2026-04-16.md`
 - Todo env/responsive lane freeze audit: `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO_ENV_RESPONSIVE_LANE_FREEZE_AUDIT_2026-04-16.md`
@@ -415,7 +416,7 @@ Related:
     flattening its advanced helper story:
     `imui_editor_proof_demo` takes
     `fret::app::ElementContextAccess<'a, KernelApp>` at the outer `render_view(...)` boundary,
-    leaves its internal `UiCx` helper family on the advanced lane, and source-policy gates now
+    leaves its internal `AppComponentCx` helper family on the advanced lane, and source-policy gates now
     forbid `render_view(cx.elements())` from drifting back into that root.
   - the 2026-04-15 advanced-entry audit has now landed as the next framework slice rather than
     staying a planning note:
@@ -461,7 +462,7 @@ Related:
     grouped UI maintenance stays on `fret`, while raw `with_query_client(...)` remains the pure
     app/driver or lower-level authoring seam.
   - the cookbook theme-read owner split is now explicit too:
-    cookbook `AppUi` / `UiCx` ordinary token reads use `cx.theme_snapshot()`, while direct-leaf
+    cookbook `AppUi` / `AppComponentCx` ordinary token reads use `cx.theme_snapshot()`, while direct-leaf
     `ElementContext` interop roots use `cx.theme().snapshot()`. The repo no longer teaches
     `Theme::global(&*cx.app).snapshot()` on cookbook examples, cookbook source-policy tests lock
     both owner classes, and `COOKBOOK_THEME_CONTEXT_OWNER_AUDIT_2026-04-15.md` records the split.
@@ -690,3 +691,7 @@ Definition of done:
 - the workbench/tool-app consumer probe no longer needs raw `cx.app` / raw helper-context leakage
   to stay on the default app authoring story,
 - and the migration backlog has no uncategorized user-facing leftovers.
+  Current follow-on: `UiCx` itself still exists as an explicit-import compatibility alias at the
+  root surface, but `fret::advanced::prelude::*` now exports `AppComponentCx<'a>` instead, and the
+  first-party examples/cookbook runtime tail has been migrated onto that canonical app-hosted
+  helper alias.

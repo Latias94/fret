@@ -139,13 +139,13 @@ During the current migration window:
   has not migrated to `AppRenderContext<'a>`, `AppRenderCx<'a>`, or `AppComponentCx<'a>`.
 
 Named helper families that only need grouped state/query access plus ordinary late-landing should
-migrate from `UiCx` to `fret::app::AppRenderContext<'a>` rather than widening `AppUi` again or
-silently reclassifying the whole surface as raw-owner authoring.
+migrate from `UiCx` or `AppComponentCx` to `fret::app::AppRenderContext<'a>` rather than widening
+`AppUi` again or silently reclassifying the whole surface as raw-owner authoring.
 
-The long-term target is not “`AppUi` is narrow but `UiCx` remains a raw `ElementContext` alias”.
+The long-term target is not “`AppUi` is narrow but `AppComponentCx` remains a raw `ElementContext` alias”.
 The long-term target is one explicit app-facing render-authoring lane plus one explicit
 component/internal identity lane.
-In the shipped default prelude, `UiCx` is no longer reexported; reaching for it requires explicit
+In the shipped default prelude, `AppComponentCx` is no longer reexported; reaching for it requires explicit
 import / advanced-surface intent.
 
 ### D2 — `LocalState<T>` remains the only blessed first-contact local-state story
