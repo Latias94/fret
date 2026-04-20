@@ -66,7 +66,7 @@ Commands run for the final slice:
 ```bash
 cargo fmt --package fret
 python3 tools/gate_no_raw_app_context_in_default_teaching_snippets.py
-cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test uicx_actions_surface --test uicx_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
+cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test app_render_actions_surface --test app_render_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 ```
 

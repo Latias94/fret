@@ -174,7 +174,7 @@ fn assert_material3_snippet_prefers_copyable_root(
     }
 }
 
-fn assert_selected_snippets_prefer_grouped_uicx_listeners(
+fn assert_selected_snippets_prefer_grouped_app_action_listeners(
     relative_path: &str,
     required_markers: &[&str],
     forbidden_markers: &[&str],
@@ -315,7 +315,7 @@ fn ui_gallery_diagnostics_raw_render_roots_are_explicitly_documented() {
 }
 
 #[test]
-fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
+fn selected_button_and_sidebar_snippets_prefer_grouped_app_action_listeners() {
     for relative_path in [
         "src/ui/snippets/ai/chat_demo.rs",
         "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
@@ -339,7 +339,7 @@ fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
         "src/ui/snippets/sonner/types.rs",
         "src/ui/snippets/sonner/usage.rs",
     ] {
-        assert_selected_snippets_prefer_grouped_uicx_listeners(
+        assert_selected_snippets_prefer_grouped_app_action_listeners(
             relative_path,
             &[
                 "use fret::app::AppRenderActionsExt as _;",
@@ -351,7 +351,7 @@ fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
 }
 
 #[test]
-fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_hook_slots() {
+fn selected_ai_snippets_prefer_grouped_app_action_listeners_when_widgets_have_native_hook_slots() {
     for (relative_path, required_markers) in [
         (
             "src/ui/snippets/ai/workflow_controls_demo.rs",
@@ -433,7 +433,7 @@ fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_h
 }
 
 #[test]
-fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_action_slots() {
+fn selected_ai_snippets_prefer_grouped_app_actions_when_widgets_have_native_action_slots() {
     for (relative_path, required_markers) in [
         (
             "src/ui/snippets/ai/confirmation_demo.rs",

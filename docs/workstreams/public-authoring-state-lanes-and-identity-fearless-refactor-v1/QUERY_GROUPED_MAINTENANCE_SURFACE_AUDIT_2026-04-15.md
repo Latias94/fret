@@ -11,7 +11,7 @@ Related:
 - `docs/authoring-golden-path-v2.md`
 - `ecosystem/fret/src/view.rs`
 - `ecosystem/fret/src/lib.rs`
-- `ecosystem/fret/tests/uicx_data_surface.rs`
+- `ecosystem/fret/tests/app_render_data_surface.rs`
 - `apps/fret-examples/src/async_playground_demo.rs`
 - `apps/fret-examples/src/markdown_demo.rs`
 - `docs/workstreams/app-composition-density-follow-on-v1/QUERY_INVALIDATION_SHELL_AUDIT_2026-03-17.md`

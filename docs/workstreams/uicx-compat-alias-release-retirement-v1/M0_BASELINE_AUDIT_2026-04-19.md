@@ -80,8 +80,8 @@ still unresolved.
 
 - Evidence:
   - `ecosystem/fret/src/view.rs`
-  - `ecosystem/fret/tests/uicx_actions_surface.rs`
-  - `ecosystem/fret/tests/uicx_data_surface.rs`
+  - `ecosystem/fret/tests/app_render_actions_surface.rs`
+  - `ecosystem/fret/tests/app_render_data_surface.rs`
 - Confidence:
   - Likely
 - Consequence if wrong:

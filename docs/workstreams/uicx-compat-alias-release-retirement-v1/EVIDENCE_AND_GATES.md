@@ -24,7 +24,7 @@ What this proves:
 
 ```bash
 python3 tools/gate_no_raw_app_context_in_default_teaching_snippets.py
-cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test uicx_actions_surface --test uicx_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
+cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test app_render_actions_surface --test app_render_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
 cargo nextest run -p fret --lib
 ```
 
@@ -67,8 +67,8 @@ git diff --check
 - `ecosystem/fret/src/view.rs`
 - `ecosystem/fret/tests/render_authoring_capability_surface.rs`
 - `ecosystem/fret/tests/raw_state_advanced_surface_docs.rs`
-- `ecosystem/fret/tests/uicx_actions_surface.rs`
-- `ecosystem/fret/tests/uicx_data_surface.rs`
+- `ecosystem/fret/tests/app_render_actions_surface.rs`
+- `ecosystem/fret/tests/app_render_data_surface.rs`
 - `ecosystem/fret/tests/crate_usage_grouped_query_surface.rs`
 - `tools/gate_no_raw_app_context_in_default_teaching_snippets.py`
 - `tools/pre_release.py`

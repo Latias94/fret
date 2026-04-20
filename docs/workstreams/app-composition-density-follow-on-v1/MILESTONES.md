@@ -39,7 +39,7 @@ Closeout note on 2026-03-18:
     `cx.data().invalidate_query_namespace(...)` inside `AppUi` / extracted `UiCx`,
   - raw `with_query_client(...)` only at the pure app/driver boundary,
 - existing source-policy checks already lock that posture:
-  - `ecosystem/fret/tests/uicx_data_surface.rs`
+  - `ecosystem/fret/tests/app_render_data_surface.rs`
   - `ecosystem/fret/tests/crate_usage_grouped_query_surface.rs`
 - this means M3 is now met and the workstream should be read as maintenance-only unless a new
   default app-lane drift appears.

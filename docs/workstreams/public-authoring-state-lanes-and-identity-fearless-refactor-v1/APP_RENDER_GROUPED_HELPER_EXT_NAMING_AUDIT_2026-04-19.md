@@ -49,7 +49,7 @@ reexported by `fret::app::prelude::*` or `fret::advanced::prelude::*`.
 
 ## Gates
 
-- `cargo nextest run -p fret --test uicx_actions_surface --test uicx_data_surface --test crate_usage_grouped_query_surface`
+- `cargo nextest run -p fret --test app_render_actions_surface --test app_render_data_surface --test crate_usage_grouped_query_surface`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
 - `cargo nextest run -p fret-examples --lib --no-fail-fast`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`

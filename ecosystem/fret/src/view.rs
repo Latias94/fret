@@ -4957,7 +4957,7 @@ mod tests {
     }
 
     #[test]
-    fn uicx_payload_models_runtime_dispatch_updates_shared_models_and_requests_redraw() {
+    fn payload_models_runtime_dispatch_updates_shared_models_and_requests_redraw() {
         let mut app = crate::app::App::new();
         let window = AppWindowId::default();
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
@@ -4973,7 +4973,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            "uicx-payload-models-runtime",
+            "app-render-payload-models-runtime",
             |cx| {
                 cx.actions().payload_models::<RuntimePayloadAppendAction>({
                     let selected_rows = selected_rows.clone();
@@ -5021,7 +5021,7 @@ mod tests {
 
     #[cfg(feature = "shadcn")]
     #[test]
-    fn checkbox_action_payload_round_trips_through_uicx_payload_models() {
+    fn checkbox_action_payload_round_trips_through_payload_models() {
         let mut app = crate::app::App::new();
         let window = AppWindowId::default();
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
@@ -5038,7 +5038,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            "uicx-payload-models-checkbox",
+            "app-render-payload-models-checkbox",
             |cx| {
                 cx.actions().payload_models::<RuntimePayloadAppendAction>({
                     let selected_rows = selected_rows.clone();

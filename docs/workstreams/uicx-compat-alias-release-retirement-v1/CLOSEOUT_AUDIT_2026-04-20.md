@@ -54,7 +54,7 @@ Commands for the final slice:
 ```bash
 python3 tools/gate_no_raw_app_context_in_default_teaching_snippets.py
 cargo nextest run -p fret --lib
-cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test uicx_actions_surface --test uicx_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
+cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test app_render_actions_surface --test app_render_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
 python3 tools/check_workstream_catalog.py
 python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 python3 -m json.tool docs/workstreams/uicx-compat-alias-release-retirement-v1/WORKSTREAM.json > /dev/null
@@ -66,8 +66,8 @@ Key evidence anchors:
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/src/view.rs`
 - `ecosystem/fret/tests/render_authoring_capability_surface.rs`
-- `ecosystem/fret/tests/uicx_actions_surface.rs`
-- `ecosystem/fret/tests/uicx_data_surface.rs`
+- `ecosystem/fret/tests/app_render_actions_surface.rs`
+- `ecosystem/fret/tests/app_render_data_surface.rs`
 - `docs/crate-usage-guide.md`
 - `docs/authoring-golden-path-v2.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`

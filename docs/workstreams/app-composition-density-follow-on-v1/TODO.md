@@ -125,6 +125,6 @@ Handoff note on 2026-03-18:
   as a co-equal default path.
   - Closed on 2026-03-18:
     - grouped app-lane docs now teach `cx.data().invalidate_query*`,
-    - `crate-usage-guide`, canonical examples, and the `uicx_data_surface` /
+    - `crate-usage-guide`, canonical examples, and the `app_render_data_surface` /
       `crate_usage_grouped_query_surface` tests lock the same posture,
     - `with_query_client(...)` remains documented only for pure app/driver code.
