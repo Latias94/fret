@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("adaptive_panel.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::{Axis, Px};
-use fret_ui::element::{AnyElement, LayoutQueryRegionProps};
 use fret_ui::Invalidation;
+use fret_ui::element::{AnyElement, LayoutQueryRegionProps};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
