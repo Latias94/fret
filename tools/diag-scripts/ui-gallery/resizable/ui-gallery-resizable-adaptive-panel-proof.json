@@ -1,0 +1,156 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-resizable-adaptive-panel-proof",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "resizable",
+      "container_queries",
+      "panel_resize",
+      "layout",
+      "regression"
+    ],
+    "target_hints": [
+      "Launches the Resizable page in fret-ui-gallery.",
+      "Keeps the viewport wide while shrinking only the fixed-window request panel via the splitter.",
+      "Captures before/after bundle, screenshot, and layout-sidecar evidence for the promoted fixed-window container-query proof."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 980.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "resizable" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-resizable" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-resizable" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-adaptive-panel-proof"
+        }
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-adaptive-panel-proof"
+      },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-adaptive-panel-state-wide"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-resizable-adaptive-panel-before.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-resizable-adaptive-panel-before"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-resizable-adaptive-panel-before"
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-adaptive-panel.splitter.0"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-adaptive-panel.splitter.0"
+        }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "arrow_right", "modifiers": { "shift": true } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "arrow_right", "modifiers": { "shift": true } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "arrow_right", "modifiers": { "shift": true } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "arrow_right", "modifiers": { "shift": true } },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-adaptive-panel-state-compact"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-resizable-adaptive-panel-after.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-resizable-adaptive-panel-after"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-resizable-adaptive-panel-after"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-resizable-adaptive-panel-proof"
+    }
+  ]
+}

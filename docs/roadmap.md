@@ -71,6 +71,12 @@ Tracker highlights:
   split): `docs/workstreams/adaptive-layout-contract-closure-v1/TARGET_INTERFACE_STATE.md`,
   `docs/workstreams/adaptive-layout-contract-closure-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/adaptive-layout-contract-closure-v1/CLOSEOUT_AUDIT_2026-04-10.md`.
+- Resizable adaptive panel proof closeout record (closed narrow follow-on that promotes ADR 0325's
+  fixed-window panel-resize/container-query proof into the first-party `Resizable` gallery/docs
+  surface, so the default teaching path no longer relies on the docking demo alone):
+  `docs/workstreams/resizable-adaptive-panel-proof-v1/DESIGN.md`,
+  `docs/workstreams/resizable-adaptive-panel-proof-v1/CLOSEOUT_AUDIT_2026-04-20.md`, and
+  `docs/workstreams/resizable-adaptive-panel-proof-v1/EVIDENCE_AND_GATES.md`.
 - Device-shell strategy surface closeout record (closed narrow lane for explicit desktop/mobile
   shell branching above raw viewport queries, now shipping a crate-local `fret-ui-kit`
   `device_shell_*` helper with two real gallery consumers and explicit dialog/sidebar boundaries):

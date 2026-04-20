@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-14
+Catalog updated: 2026-04-20
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 236
+- Dedicated directories: 237
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -478,6 +478,7 @@ Rule:
 - `docs/workstreams/renderer-scene-encoding-semantics-audit-v1/` — first 2026-02-23, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/renderer-upstream-semantics-parity-v1/` — first 2026-02-22, latest 2026-02-22, 3 markdown docs
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1/` — first 2026-02-14, latest 2026-02-23, 4 markdown docs
+- `docs/workstreams/resizable-adaptive-panel-proof-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow closeout lane that promotes ADR 0325's fixed-window panel-resize/container-query proof into the first-party `Resizable` gallery/docs surface)
 - `docs/workstreams/resource-loading-fearless-refactor-v1/` — first 2026-03-15, latest 2026-03-16, 7 markdown docs
 - `docs/workstreams/resource-loading-release-readiness-fearless-refactor-v1/` — first n/a, latest n/a, 3 markdown docs
 - `docs/workstreams/retained-bridge-exit-v1/` — first 2026-02-07, latest 2026-02-08, 2 markdown docs

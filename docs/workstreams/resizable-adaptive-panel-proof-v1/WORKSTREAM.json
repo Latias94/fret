@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "slug": "resizable-adaptive-panel-proof-v1",
+  "title": "Resizable Adaptive Panel Proof v1",
+  "status": "closed",
+  "updated": "2026-04-20",
+  "scope_kind": "closeout",
+  "problem": "ADR 0325 still called for a stronger fixed-window panel-resize/container-query teaching surface on first-party gallery/docs. The docking demo already proved the mechanism, but the default `Resizable` docs path did not promote that proof directly.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/resizable-adaptive-panel-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/resizable-adaptive-panel-proof-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/resizable-adaptive-panel-proof-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/resizable-adaptive-panel-proof-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/resizable-adaptive-panel-proof-v1/CLOSEOUT_AUDIT_2026-04-20.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout by showing that the `Resizable` gallery page now contains a fixed-window adaptive proof and that the promoted diag script flips the right pane from wide to compact without changing the viewport width.",
+    "commands": [
+      "rg -n \"Adaptive Panel Proof|ui-gallery-resizable-adaptive-panel\" apps/fret-ui-gallery/src/ui/pages/resizable.rs apps/fret-ui-gallery/src/ui/snippets/resizable/adaptive_panel.rs",
+      "cargo nextest run -p fret-ui-gallery --test resizable_docs_surface --no-fail-fast",
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json --dir target/fret-diag/ui-gallery-resizable-adaptive-panel-proof --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery"
+    ]
+  },
+  "gates": [
+    {
+      "name": "gallery-source-policy",
+      "command": "cargo nextest run -p fret-ui-gallery --test resizable_docs_surface --no-fail-fast"
+    },
+    {
+      "name": "diag-proof",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json --dir target/fret-diag/ui-gallery-resizable-adaptive-panel-proof --session-auto --pack --include-screenshots --launch target/release/fret-ui-gallery"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "skill-anchors",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/resizable-adaptive-panel-proof-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-hygiene",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/resizable-adaptive-panel-proof-v1/DESIGN.md",
+    "docs/workstreams/resizable-adaptive-panel-proof-v1/TODO.md",
+    "docs/workstreams/resizable-adaptive-panel-proof-v1/MILESTONES.md",
+    "docs/workstreams/resizable-adaptive-panel-proof-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/resizable-adaptive-panel-proof-v1/CLOSEOUT_AUDIT_2026-04-20.md",
+    "docs/workstreams/resizable-adaptive-panel-proof-v1/WORKSTREAM.json",
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/roadmap.md",
+    "apps/fret-ui-gallery/src/ui/pages/resizable.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/resizable/adaptive_panel.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/resizable/notes.rs",
+    "apps/fret-ui-gallery/tests/resizable_docs_surface.rs",
+    "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "This lane is closed. The first-party `Resizable` docs surface now teaches the fixed-window container-query proof directly. Reopen only if future evidence exceeds docs promotion and requires a broader adaptive authoring or runtime change."
+  },
+  "follow_on_of": "adaptive-layout-contract-closure-v1"
+}

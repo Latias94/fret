@@ -12,9 +12,11 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
         "Unlike `slider` or `progress`, there is no direct `Resizable` primitive in Radix Primitives or Base UI; those libraries still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
         "`resizable_panel_group(cx, model, |cx| ..)` is already the composable children-equivalent lane for Fret",
         "A generic composable children / `compose()` API is not warranted here",
-        "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`.",
+        "The Fret-only follow-up below intentionally keeps one fixed-window splitter proof on the first-party docs surface so `panel width` remains visibly distinct from `viewport width` in review and diagnostics.",
+        "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof` is the explicit Fret follow-up",
         "DocSection::build(cx, \"About\", about)",
         "DocSection::build(cx, \"API Reference\", api_reference)",
+        "DocSection::build(cx, \"Adaptive Panel Proof\", adaptive_panel)",
     ] {
         assert!(
             source.contains(needle),
@@ -25,12 +27,12 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
     let normalized = normalize_ws(source);
     let ordered_sections = normalize_ws(
         r#"
-        vec![demo, about, usage, vertical, handle, rtl, api_reference, notes,]
+        vec![demo, about, usage, vertical, handle, rtl, api_reference, adaptive_panel, notes,]
         "#,
     );
     assert!(
         normalized.contains(&ordered_sections),
-        "resizable page should keep the docs-path sections before the Fret-only `Notes` follow-up",
+        "resizable page should keep the docs-path sections before the fixed-window proof and the final `Notes` follow-up",
     );
 }
 
@@ -40,10 +42,11 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     let demo = include_str!("../src/ui/snippets/resizable/demo.rs");
     let handle = include_str!("../src/ui/snippets/resizable/handle.rs");
     let rtl = include_str!("../src/ui/snippets/resizable/rtl.rs");
+    let adaptive_panel = include_str!("../src/ui/snippets/resizable/adaptive_panel.rs");
     let notes = include_str!("../src/ui/snippets/resizable/notes.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "let fractions = cx.local_model_keyed(\"ui-gallery-resizable-usage-fractions\", || vec![0.5, 0.5]);",
         "shadcn::resizable_panel_group(cx, fractions, |cx| {",
@@ -97,8 +100,23 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "Gallery now mirrors the shadcn/Base UI Resizable docs path",
+        "ui-gallery-resizable-adaptive-panel-state-wide",
+        "ui-gallery-resizable-adaptive-panel-state-compact",
+        "FieldOrientation::ContainerAdaptive",
+        ".test_id_prefix(\"ui-gallery-resizable-adaptive-panel\")",
+        "\"Resize the splitter, not the viewport\"",
+        "\"ui-gallery.resizable.adaptive_panel.target\"",
+    ] {
+        assert!(
+            adaptive_panel.contains(needle),
+            "resizable adaptive-panel proof snippet should keep the fixed-window container-query teaching surface; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "Adaptive Panel Proof",
         "tools/diag-scripts/ui-gallery/resizable/",
+        "ui-gallery-resizable-adaptive-panel-proof.json",
         "No extra generic children API is planned unless a real authoring cliff appears",
     ] {
         assert!(

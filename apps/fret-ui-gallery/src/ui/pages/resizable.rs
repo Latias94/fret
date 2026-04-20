@@ -9,12 +9,14 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let vertical = snippets::vertical::render(cx);
     let handle = snippets::handle::render(cx);
     let rtl = snippets::rtl::render(cx);
+    let adaptive_panel = snippets::adaptive_panel::render(cx);
     let notes = snippets::notes::render(cx);
     let about = doc_layout::notes_block([
         "Reference stack: shadcn Resizable docs on the Base UI and Radix lanes.",
         "The current visual/chrome baseline comes from the default shadcn registry recipe, with parallel headless baselines in the base and radix registry variants.",
         "Unlike `slider` or `progress`, there is no direct `Resizable` primitive in Radix Primitives or Base UI; those libraries still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
         "This page is docs/public-surface parity work, not a mechanism-layer gap: drag routing, hit-testing, focusable splitter semantics, and min-size clamping already live in `fret-ui`.",
+        "The Fret-only follow-up below intentionally keeps one fixed-window splitter proof on the first-party docs surface so `panel width` remains visibly distinct from `viewport width` in review and diagnostics.",
     ]);
     let api_reference = doc_layout::notes_block([
         "`ResizablePanelGroup::new(model).entries([...])` and `shadcn::resizable_panel_group(cx, model, |cx| ..)` cover the documented authoring surface.",
@@ -33,6 +35,13 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
         .no_shell()
         .description("Public surface summary, ownership notes, and the children-API decision.")
         .test_id_prefix("ui-gallery-resizable-api-reference");
+    let adaptive_panel = DocSection::build(cx, "Adaptive Panel Proof", adaptive_panel)
+        .description(
+            "Fixed-window splitter resize proving that the compact branch follows container width, not viewport width.",
+        )
+        .max_w(Px(1120.0))
+        .test_id_prefix("ui-gallery-resizable-adaptive-panel-proof")
+        .code_rust_from_file_region(snippets::adaptive_panel::SOURCE, "example");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .description("Remaining parity notes and diagnostics anchors.")
@@ -63,7 +72,7 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Notes` stays as the explicit Fret follow-up for parity conclusions and diagnostics anchors.",
+            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof` is the explicit Fret follow-up that promotes one fixed-window container-query teaching surface before `Notes` closes on parity conclusions and diagnostics anchors.",
         ),
         vec![
             demo,
@@ -73,6 +82,7 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
             handle,
             rtl,
             api_reference,
+            adaptive_panel,
             notes,
         ],
     );
