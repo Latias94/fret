@@ -62,6 +62,8 @@ impl UiDiagnosticsWsBridge {
             "devtools.pick".to_string(),
             "devtools.scripts".to_string(),
             "devtools.bundles".to_string(),
+            "environment_sources".to_string(),
+            "devtools.environment_sources".to_string(),
             "diag.script_v2".to_string(),
             "diag.pointer_kind_touch".to_string(),
             "diag.pointer_kind_pen".to_string(),

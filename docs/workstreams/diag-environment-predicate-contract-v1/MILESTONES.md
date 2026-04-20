@@ -22,6 +22,31 @@ Status:
 
 - Completed on 2026-04-20.
 
+## M4: Transport-session query foundation
+
+Exit criteria:
+
+- Existing DevTools sessions can publish admitted environment sources via an explicit request/ack
+  surface rather than static hello/session descriptors.
+- The first transport-session query publishes `host.monitor_topology` truthfully as
+  `preflight_transport_session` for attach-to-existing-session flows.
+- `crates/fret-diag` can acquire that session-published catalog without touching manifest grammar.
+- The repo keeps launch-time filesystem publication and transport-session query as parallel
+  acquisition lanes rather than collapsing them into capabilities.
+
+Primary evidence:
+
+- `docs/workstreams/diag-environment-predicate-contract-v1/M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md`
+- `crates/fret-diag-protocol/src/lib.rs`
+- `crates/fret-diag/src/devtools.rs`
+- `crates/fret-diag/src/lib.rs`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
+
+Status:
+
+- Completed on 2026-04-20.
+
 ## M1: Diagnostics predicate owner split
 
 Exit criteria:

@@ -117,6 +117,9 @@ Environment fingerprint note:
   `out_dir` root.
 - `host.monitor_topology` currently maps to `environment.source.host.monitor_topology.json` when
   that launch-time source is available.
+- DevTools WS sessions that advertise `devtools.environment_sources` may also answer
+  `environment.sources.get` / `environment.sources.get_ack` with a session-published source
+  catalog.
 - Campaign result aggregates may report `environment_sources_path`,
   `environment_source_catalog_provenance`, and `environment_sources`.
 - Campaign manifests still only gate on `requires_capabilities`.

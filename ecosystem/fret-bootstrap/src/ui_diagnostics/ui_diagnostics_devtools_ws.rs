@@ -1,8 +1,13 @@
+#[cfg(feature = "diagnostics-ws")]
+use super::bundle::ui_diagnostics_monitor_topology_from_runner;
 use super::*;
 
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{
-    DiagScreenshotRequestV1, DiagScreenshotWindowRequestV1, UiInspectConfigV1,
+    DevtoolsEnvironmentSourcesGetAckV1, DevtoolsEnvironmentSourcesGetV1, DiagScreenshotRequestV1,
+    DiagScreenshotWindowRequestV1, EnvironmentSourceAvailabilityV1, FilesystemEnvironmentSourceV1,
+    HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
+    UiInspectConfigV1,
 };
 
 #[cfg(feature = "diagnostics-ws")]
@@ -33,6 +38,32 @@ pub(super) struct PendingDevtoolsHitTestExplainRequest {
     pub(super) request_id: Option<u64>,
     pub(super) window_ffi: u64,
     pub(super) target: UiSelectorV1,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn build_environment_sources_get_ack_v1(
+    host_monitor_topology: Option<&fret_runtime::RunnerMonitorTopologySnapshotV1>,
+) -> DevtoolsEnvironmentSourcesGetAckV1 {
+    let host_monitor_topology =
+        host_monitor_topology.map(|snapshot| HostMonitorTopologyEnvironmentPayloadV1 {
+            schema_version: 1,
+            source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+            monitor_topology: ui_diagnostics_monitor_topology_from_runner(snapshot),
+        });
+    let mut sources = Vec::new();
+    if host_monitor_topology.is_some() {
+        sources.push(FilesystemEnvironmentSourceV1 {
+            source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+            availability: EnvironmentSourceAvailabilityV1::PreflightTransportSession,
+        });
+    }
+    DevtoolsEnvironmentSourcesGetAckV1 {
+        schema_version: 1,
+        sources,
+        runner_kind: Some("fret-bootstrap".to_string()),
+        runner_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        host_monitor_topology,
+    }
 }
 
 impl UiDiagnosticsService {
@@ -480,6 +511,22 @@ impl UiDiagnosticsService {
     #[cfg(feature = "diagnostics-ws")]
     fn apply_ws_message(&mut self, msg: DiagTransportMessageV1) {
         match msg.r#type.as_str() {
+            "environment.sources.get" => {
+                let Ok(_req) =
+                    serde_json::from_value::<DevtoolsEnvironmentSourcesGetV1>(msg.payload)
+                else {
+                    return;
+                };
+                let payload = serde_json::to_value(build_environment_sources_get_ack_v1(
+                    self.host_monitor_topology.as_ref(),
+                ))
+                .unwrap_or(serde_json::Value::Null);
+                self.ws_send_with_request_id(
+                    "environment.sources.get_ack",
+                    msg.request_id,
+                    payload,
+                );
+            }
             "inspect.set" => {
                 let Ok(cfg) = serde_json::from_value::<UiInspectConfigV1>(msg.payload) else {
                     return;
@@ -708,5 +755,55 @@ impl UiDiagnosticsService {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(all(test, feature = "diagnostics-ws"))]
+mod tests {
+    use super::*;
+
+    fn rect(x: i32, y: i32, width: u32, height: u32) -> fret_runtime::RunnerMonitorRectPhysicalV1 {
+        fret_runtime::RunnerMonitorRectPhysicalV1 {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn environment_sources_get_ack_publishes_transport_session_monitor_topology() {
+        let ack = build_environment_sources_get_ack_v1(Some(
+            &fret_runtime::RunnerMonitorTopologySnapshotV1 {
+                virtual_desktop_bounds_physical: Some(rect(0, 0, 3200, 1080)),
+                monitors: vec![
+                    fret_runtime::RunnerMonitorInfoV1 {
+                        bounds_physical: rect(0, 0, 1920, 1080),
+                        scale_factor: 1.0,
+                    },
+                    fret_runtime::RunnerMonitorInfoV1 {
+                        bounds_physical: rect(1920, 0, 1280, 1024),
+                        scale_factor: 1.25,
+                    },
+                ],
+            },
+        ));
+
+        assert_eq!(ack.sources.len(), 1);
+        assert_eq!(
+            ack.sources[0].availability,
+            EnvironmentSourceAvailabilityV1::PreflightTransportSession
+        );
+        assert_eq!(
+            ack.sources[0].source_id,
+            HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            ack.host_monitor_topology
+                .as_ref()
+                .map(|payload| payload.monitor_topology.monitors.len()),
+            Some(2)
+        );
+        assert_eq!(ack.runner_kind.as_deref(), Some("fret-bootstrap"));
     }
 }

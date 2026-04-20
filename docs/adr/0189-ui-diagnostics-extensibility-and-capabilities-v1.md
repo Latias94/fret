@@ -103,6 +103,10 @@ Transport notes:
 - For devtools WS transports, capabilities SHOULD be negotiated via a hello/ack handshake.
 - For file-trigger transports, capabilities MAY be declared by the runner in a sidecar file under `FRET_DIAG_DIR`
   (e.g. `capabilities.json`) so tooling can read them deterministically.
+- Environment-source publication MUST stay separate from capability negotiation:
+  filesystem publication belongs in `environment.sources.json`, and DevTools publication belongs in
+  an explicit session request/ack surface such as `environment.sources.get`.
+- Tooling MUST NOT infer environment facts from `capabilities.json` or hello capabilities.
 
 ### 3) Add optional script metadata as a stable extension point
 

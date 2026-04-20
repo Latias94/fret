@@ -415,6 +415,9 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M3_PUBLICATION: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M4_TRANSPORT_QUERY: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md"
+    );
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
     );
@@ -429,9 +432,15 @@ mod authoring_surface_policy_tests {
         include_str!("../../../crates/fret-diag/src/registry/campaigns.rs");
     const DIAG_CAMPAIGN_RS: &str = include_str!("../../../crates/fret-diag/src/diag_campaign.rs");
     const DIAG_LIB_RS: &str = include_str!("../../../crates/fret-diag/src/lib.rs");
+    const DIAG_DEVTOOLS_RS: &str = include_str!("../../../crates/fret-diag/src/devtools.rs");
     const DIAG_FS_TRANSPORT_RS: &str =
         include_str!("../../../crates/fret-diag/src/transport/fs.rs");
     const DIAG_PROTOCOL_RS: &str = include_str!("../../../crates/fret-diag-protocol/src/lib.rs");
+    const UI_DIAGNOSTICS_DEVTOOLS_WS_RS: &str = include_str!(
+        "../../../ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs"
+    );
+    const UI_DIAGNOSTICS_WS_BRIDGE_RS: &str =
+        include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs");
     const ENVIRONMENT_QUERIES_ADR: &str =
         include_str!("../../../docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md");
     const RESOURCE_LOADING_WORKSTREAM_README: &str =
@@ -3566,6 +3575,7 @@ mod authoring_surface_policy_tests {
             "M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
             "M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md",
             "M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md",
+            "M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
@@ -3582,6 +3592,7 @@ mod authoring_surface_policy_tests {
             "`ecosystem/fret-bootstrap` now publishes `environment.sources.json`",
             "`environment.source.host.monitor_topology.json`",
             "`environment_source_catalog_provenance`",
+            "`environment.sources.get` / `environment.sources.get_ack`",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_DESIGN.contains(marker),
@@ -3654,6 +3665,19 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
+            "`environment.sources.get`",
+            "`environment.sources.get_ack`",
+            "`devtools.environment_sources`",
+            "`preflight_transport_session`",
+            "Static session descriptors are the wrong owner for dynamic environment sources",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M4_TRANSPORT_QUERY.contains(marker),
+                "the transport-session note should keep the explicit query boundary visible: {marker}"
+            );
+        }
+
+        for marker in [
             "pub struct ElementEnvironmentSnapshotV1",
             "pub viewport_bounds: RectV1",
             "pub safe_area_insets: Option<UiEdgesV1>",
@@ -3721,6 +3745,9 @@ mod authoring_surface_policy_tests {
             "environment.sources.json",
             "PublishedEnvironmentSourceArtifact",
             "read_filesystem_published_environment_sources_with_provenance",
+            "read_transport_published_environment_sources",
+            "read_transport_host_monitor_topology_environment_payload",
+            "query_transport_environment_sources",
             "FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1",
         ] {
             assert!(
@@ -3730,9 +3757,22 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
+            "pub fn environment_sources_get",
+            "environment.sources.get",
+            "wait_for_environment_sources_get_ack",
+        ] {
+            assert!(
+                DIAG_DEVTOOLS_RS.contains(marker),
+                "the devtools helper should keep the explicit environment-source request surface visible: {marker}"
+            );
+        }
+
+        for marker in [
             "pub enum EnvironmentSourceAvailabilityV1",
             "pub struct FilesystemEnvironmentSourceV1",
             "pub struct FilesystemEnvironmentSourcesV1",
+            "pub struct DevtoolsEnvironmentSourcesGetV1",
+            "pub struct DevtoolsEnvironmentSourcesGetAckV1",
             "HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1",
             "FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1",
             "pub struct HostMonitorTopologyEnvironmentPayloadV1",
@@ -3751,6 +3791,28 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_FS_TRANSPORT_RS.contains(marker),
                 "the filesystem transport should keep capabilities sidecar ownership explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "build_environment_sources_get_ack_v1",
+            "\"environment.sources.get\"",
+            "\"environment.sources.get_ack\"",
+            "EnvironmentSourceAvailabilityV1::PreflightTransportSession",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_DEVTOOLS_WS_RS.contains(marker),
+                "the runtime WS handler should keep the explicit transport-session source query visible: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"environment_sources\".to_string()",
+            "\"devtools.environment_sources\".to_string()",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_WS_BRIDGE_RS.contains(marker),
+                "the runtime WS capability advertisement should keep the query support capability visible: {marker}"
             );
         }
 
@@ -3790,6 +3852,7 @@ mod authoring_surface_policy_tests {
             "`environment.sources.json` or session-published source catalog",
             "Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute",
             "`environment.source.host.monitor_topology.json`",
+            "`environment.sources.get` / `environment.sources.get_ack`",
             "`environment_source_catalog_provenance`",
         ] {
             assert!(
@@ -3800,6 +3863,7 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "`environment.sources.json` catalog plus",
+            "`environment.sources.get` / `environment.sources.get_ack`",
             "`post_run_only` environment sources are evidence-only and must not drive preflight.",
             "`host.monitor_topology` now has a launch-time filesystem publication lane",
             "`environment_sources_path`",

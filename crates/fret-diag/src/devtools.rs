@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
     DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
+    DevtoolsEnvironmentSourcesGetAckV1, DevtoolsEnvironmentSourcesGetV1,
     DevtoolsScreenshotRequestV1, DiagTransportMessageV1, UiHitTestExplainV1, UiInspectConfigV1,
     UiSelectorV1, UiSemanticsNodeGetV1,
 };
@@ -138,6 +139,19 @@ impl DevtoolsOps {
                 window,
             })
             .unwrap_or(serde_json::Value::Null),
+        });
+        request_id
+    }
+
+    pub fn environment_sources_get(&self, session_id: Option<&str>) -> u64 {
+        let request_id = self.next_request_id();
+        self.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "environment.sources.get".to_string(),
+            session_id: session_id.map(|s| s.to_string()),
+            request_id: Some(request_id),
+            payload: serde_json::to_value(DevtoolsEnvironmentSourcesGetV1 { schema_version: 1 })
+                .unwrap_or(serde_json::Value::Null),
         });
         request_id
     }
@@ -336,8 +350,27 @@ pub(crate) fn wait_for_bundle_dumped(
     }
 }
 
+pub(crate) fn wait_for_environment_sources_get_ack(
+    devtools: &DevtoolsOps,
+    selected_session_id: &str,
+    expected_request_id: u64,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<DevtoolsEnvironmentSourcesGetAckV1, String> {
+    wait_for_message(devtools, timeout_ms, poll_ms, |msg| {
+        if msg.r#type != "environment.sources.get_ack"
+            || msg.session_id.as_deref() != Some(selected_session_id)
+            || msg.request_id != Some(expected_request_id)
+        {
+            return None;
+        }
+        serde_json::from_value::<DevtoolsEnvironmentSourcesGetAckV1>(msg.payload).ok()
+    })
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
     use std::sync::Mutex;
 
     use super::*;
@@ -346,12 +379,17 @@ mod tests {
     #[derive(Default)]
     struct TestTransport {
         sent: Mutex<Vec<DiagTransportMessageV1>>,
+        recv: Mutex<VecDeque<DiagTransportMessageV1>>,
         default_session_id: Mutex<Option<String>>,
     }
 
     impl TestTransport {
         fn take_sent(&self) -> Vec<DiagTransportMessageV1> {
             std::mem::take(&mut self.sent.lock().unwrap())
+        }
+
+        fn push_recv(&self, msg: DiagTransportMessageV1) {
+            self.recv.lock().unwrap().push_back(msg);
         }
     }
 
@@ -365,7 +403,7 @@ mod tests {
         }
 
         fn try_recv(&self) -> Option<DiagTransportMessageV1> {
-            None
+            self.recv.lock().unwrap().pop_front()
         }
 
         fn set_default_session_id(&self, session_id: Option<String>) {
@@ -415,5 +453,58 @@ mod tests {
         let payload: DevtoolsBundleDumpV1 = serde_json::from_value(msg.payload.clone()).unwrap();
         assert_eq!(payload.label, None);
         assert_eq!(payload.max_snapshots, Some(123));
+    }
+
+    #[test]
+    fn environment_source_get_sets_request_id_and_payload() {
+        let transport = Arc::new(TestTransport::default());
+        let client = ToolingDiagClient::new_for_test(transport.clone());
+        let ops = DevtoolsOps::with_request_id_seed(client, 99);
+
+        let request_id = ops.environment_sources_get(Some("s1"));
+        assert_eq!(request_id, 99);
+
+        let sent = transport.take_sent();
+        assert_eq!(sent.len(), 1);
+        let msg = &sent[0];
+        assert_eq!(msg.r#type, "environment.sources.get");
+        assert_eq!(msg.session_id.as_deref(), Some("s1"));
+        assert_eq!(msg.request_id, Some(request_id));
+
+        let payload: DevtoolsEnvironmentSourcesGetV1 =
+            serde_json::from_value(msg.payload.clone()).unwrap();
+        assert_eq!(payload.schema_version, 1);
+    }
+
+    #[test]
+    fn wait_for_environment_source_get_ack_filters_session_and_request_id() {
+        let transport = Arc::new(TestTransport::default());
+        transport.push_recv(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "environment.sources.get_ack".to_string(),
+            session_id: Some("other-session".to_string()),
+            request_id: Some(7),
+            payload: serde_json::json!({ "schema_version": 1 }),
+        });
+        transport.push_recv(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "environment.sources.get_ack".to_string(),
+            session_id: Some("session-1".to_string()),
+            request_id: Some(7),
+            payload: serde_json::json!({
+                "schema_version": 1,
+                "sources": [{
+                    "source_id": "host.monitor_topology",
+                    "availability": "preflight_transport_session"
+                }]
+            }),
+        });
+
+        let client = ToolingDiagClient::new_for_test(transport);
+        let ops = DevtoolsOps::with_request_id_seed(client, 7);
+        let ack = wait_for_environment_sources_get_ack(&ops, "session-1", 7, 100, 1).expect("ack");
+        assert_eq!(ack.schema_version, 1);
+        assert_eq!(ack.sources.len(), 1);
+        assert_eq!(ack.sources[0].source_id, "host.monitor_topology");
     }
 }

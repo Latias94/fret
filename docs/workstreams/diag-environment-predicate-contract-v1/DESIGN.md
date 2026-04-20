@@ -92,6 +92,10 @@ fields and debug snapshots now carry richer environment evidence.
   root.
 - When the runner exposes host monitor topology, the runtime also publishes
   `environment.source.host.monitor_topology.json`.
+- DevTools WS sessions that advertise `devtools.environment_sources` now answer an explicit
+  `environment.sources.get` / `environment.sources.get_ack` query.
+- That transport-session query currently returns source ids plus an inline
+  `host_monitor_topology` payload when available.
 - `crates/fret-diag` now carries `environment_sources_path`,
   `environment_source_catalog_provenance`, and `environment_sources` through campaign
   summary/result/aggregate artifacts.
@@ -200,8 +204,9 @@ First concrete candidate:
 - Because of that publication path, its truthful availability is now `launch_time`.
 - `launch_time` still does not make it a truthful campaign-preflight input because current campaign
   preflight still happens before launch.
-- If the repo later needs truthful preflight use, it still needs either a persisted preflight
-  sidecar or a transport/session handshake.
+- The repo now also has a transport/session handshake for existing DevTools sessions.
+- That transport-session path is truthful `preflight_transport_session` only for
+  attach-to-existing-session flows; tool-launched filesystem runs still remain `launch_time`.
 
 Explicit exclusions for this source family:
 
@@ -212,16 +217,17 @@ Explicit exclusions for this source family:
 
 ## Intended next slice
 
-This lane should next decide the smallest additive orchestration surface for environment predicates
-inside `crates/fret-diag`.
+The lane has now landed both acquisition foundations that were needed before syntax work:
 
-That decision should stay narrow:
+- launch-time filesystem publication,
+- and transport-session query for existing DevTools sessions.
+
+The next slice can now choose the smallest additive orchestration surface for environment
+predicates inside `crates/fret-diag`.
+
+That decision should still stay narrow:
 
 - keep `requires_capabilities` unchanged,
-- add environment-source catalog/provenance plumbing before any manifest field,
 - keep `capability_source` and environment-source provenance separate,
-- and start with source IDs plus deterministic provenance/availability before widening into a full
-  expression language.
-
-The exact manifest JSON shape is intentionally not frozen yet in this note.
-That syntax should be chosen only after the source taxonomy and admission rules are accepted.
+- bind grammar only to admitted source ids and explicit availability classes,
+- and avoid a generic predicate language before one concrete source proves the need.

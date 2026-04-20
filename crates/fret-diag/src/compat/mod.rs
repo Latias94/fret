@@ -21,6 +21,7 @@ pub(crate) fn normalize_capability(raw: &str) -> Option<String> {
         "gesture_long_press" => "diag.gesture_long_press",
         "gesture_swipe" => "diag.gesture_swipe",
         "gesture_pinch" => "diag.gesture_pinch",
+        "environment_sources" => "devtools.environment_sources",
         _ => raw,
     };
     Some(mapped.to_string())

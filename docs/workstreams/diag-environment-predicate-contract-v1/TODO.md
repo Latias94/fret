@@ -23,6 +23,9 @@ Status: Active
 - [x] DEPC-017 Surface `environment_sources_path`,
   `environment_source_catalog_provenance`, and `environment_sources` in campaign
   summary/result/aggregate artifacts without introducing manifest consumers.
+- [x] DEPC-018 Land a transport/session environment-source query foundation before manifest syntax
+  so existing DevTools sessions can publish admitted sources without overloading hello/session
+  capabilities.
 - [ ] DEPC-014 Choose the smallest additive diagnostics manifest shape once the first concrete
   source and timing contract are both ready.
 

@@ -15,8 +15,9 @@ use std::process::Child;
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
-    EnvironmentSourceAvailabilityV1, FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1,
+    DevtoolsBundleDumpedV1, DevtoolsEnvironmentSourcesGetAckV1, DevtoolsSessionListV1,
+    DevtoolsSessionRemovedV1, EnvironmentSourceAvailabilityV1,
+    FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1,
     FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
     FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
     HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
@@ -947,6 +948,55 @@ pub(crate) fn read_filesystem_published_environment_sources_with_provenance(
     (provenance, published)
 }
 
+pub(crate) fn normalize_transport_environment_sources(
+    ack: &DevtoolsEnvironmentSourcesGetAckV1,
+) -> Vec<FilesystemEnvironmentSourceV1> {
+    normalize_filesystem_environment_sources(&FilesystemEnvironmentSourcesV1 {
+        schema_version: ack.schema_version,
+        sources: ack.sources.clone(),
+        runner_kind: ack.runner_kind.clone(),
+        runner_version: ack.runner_version.clone(),
+    })
+}
+
+pub(crate) fn read_transport_published_environment_sources(
+    ack: &DevtoolsEnvironmentSourcesGetAckV1,
+) -> Vec<PublishedEnvironmentSourceArtifact> {
+    normalize_transport_environment_sources(ack)
+        .into_iter()
+        .map(|source| PublishedEnvironmentSourceArtifact {
+            payload_path: None,
+            source_id: source.source_id,
+            availability: source.availability,
+        })
+        .collect()
+}
+
+pub(crate) fn read_transport_host_monitor_topology_environment_payload(
+    ack: &DevtoolsEnvironmentSourcesGetAckV1,
+) -> Option<HostMonitorTopologyEnvironmentPayloadV1> {
+    let mut payload = ack.host_monitor_topology.clone()?;
+    let source_id = normalize_environment_source_id(&payload.source_id)?;
+    if source_id != HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1 {
+        return None;
+    }
+    payload.source_id = source_id;
+    Some(payload)
+}
+
+pub(crate) fn read_published_host_monitor_topology_environment_payload(
+    sources: &[PublishedEnvironmentSourceArtifact],
+) -> Option<HostMonitorTopologyEnvironmentPayloadV1> {
+    sources
+        .iter()
+        .find(|source| {
+            normalize_environment_source_id(&source.source_id).as_deref()
+                == Some(HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1)
+        })
+        .and_then(|source| source.payload_path.as_deref())
+        .and_then(read_host_monitor_topology_environment_payload)
+}
+
 fn capabilities_check_v1(
     source: &str,
     required: &[String],
@@ -1389,6 +1439,63 @@ mod capability_tests {
                 .and_then(|value| value.as_str()),
             Some("devtools_ws")
         );
+    }
+
+    #[test]
+    fn transport_environment_source_catalog_normalizes_sources_and_keeps_inline_payload() {
+        let ack = DevtoolsEnvironmentSourcesGetAckV1 {
+            schema_version: 1,
+            sources: vec![
+                FilesystemEnvironmentSourceV1 {
+                    source_id: " host.monitor_topology ".to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::PreflightTransportSession,
+                },
+                FilesystemEnvironmentSourceV1 {
+                    source_id: "".to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+                },
+            ],
+            runner_kind: Some("fret-bootstrap".to_string()),
+            runner_version: Some("1".to_string()),
+            host_monitor_topology: Some(HostMonitorTopologyEnvironmentPayloadV1 {
+                schema_version: 1,
+                source_id: " host.monitor_topology ".to_string(),
+                monitor_topology: fret_diag_protocol::UiDiagnosticsMonitorTopologyV1 {
+                    schema_version: 1,
+                    virtual_desktop_bounds_physical: Some(
+                        fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                            x: 0,
+                            y: 0,
+                            width: 3200,
+                            height: 1080,
+                        },
+                    ),
+                    monitors: vec![fret_diag_protocol::UiDiagnosticsMonitorFingerprintV1 {
+                        bounds_physical: fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                            x: 0,
+                            y: 0,
+                            width: 1920,
+                            height: 1080,
+                        },
+                        scale_factor: 1.0,
+                    }],
+                },
+            }),
+        };
+
+        let published = read_transport_published_environment_sources(&ack);
+        assert_eq!(published.len(), 1);
+        assert_eq!(published[0].source_id, "host.monitor_topology");
+        assert_eq!(
+            published[0].availability,
+            EnvironmentSourceAvailabilityV1::PreflightTransportSession
+        );
+        assert_eq!(published[0].payload_path, None);
+
+        let payload =
+            read_transport_host_monitor_topology_environment_payload(&ack).expect("payload");
+        assert_eq!(payload.source_id, "host.monitor_topology");
+        assert_eq!(payload.monitor_topology.monitors.len(), 1);
     }
 
     #[test]
@@ -1940,6 +2047,46 @@ struct ConnectedToolingTransport {
     selected_session_id: String,
     available_caps: Vec<String>,
     capability_source: CapabilitySource,
+    #[allow(dead_code)]
+    // Foundation fields intentionally land before manifest consumers so provenance and payload
+    // shapes can be frozen independently of grammar work.
+    environment_source_catalog_provenance: EnvironmentSourceCatalogProvenance,
+    #[allow(dead_code)]
+    environment_sources: Vec<PublishedEnvironmentSourceArtifact>,
+    #[allow(dead_code)]
+    host_monitor_topology_environment: Option<HostMonitorTopologyEnvironmentPayloadV1>,
+}
+
+fn session_supports_environment_sources_query(available_caps: &[String]) -> bool {
+    available_caps
+        .iter()
+        .any(|cap| cap == "devtools.environment_sources")
+}
+
+fn query_transport_environment_sources(
+    devtools: &DevtoolsOps,
+    selected_session_id: &str,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<
+    (
+        Vec<PublishedEnvironmentSourceArtifact>,
+        Option<HostMonitorTopologyEnvironmentPayloadV1>,
+    ),
+    String,
+> {
+    let request_id = devtools.environment_sources_get(Some(selected_session_id));
+    let ack = crate::devtools::wait_for_environment_sources_get_ack(
+        devtools,
+        selected_session_id,
+        request_id,
+        timeout_ms,
+        poll_ms,
+    )?;
+    Ok((
+        read_transport_published_environment_sources(&ack),
+        read_transport_host_monitor_topology_environment_payload(&ack),
+    ))
 }
 
 fn connect_devtools_ws_tooling(
@@ -1968,6 +2115,8 @@ fn connect_devtools_ws_tooling(
         "devtools.scripts".to_string(),
         "devtools.bundles".to_string(),
         "devtools.sessions".to_string(),
+        "environment_sources".to_string(),
+        "devtools.environment_sources".to_string(),
         // Script runner surface (v2+).
         "diag.script_v2".to_string(),
     ];
@@ -1997,9 +2146,35 @@ fn connect_devtools_ws_tooling(
     available_caps.sort();
     available_caps.dedup();
 
+    let environment_source_catalog_provenance =
+        EnvironmentSourceCatalogProvenance::transport_session("devtools_ws", &selected_session_id);
+    let (environment_sources, host_monitor_topology_environment) =
+        if session_supports_environment_sources_query(&available_caps) {
+            match query_transport_environment_sources(
+                &devtools,
+                &selected_session_id,
+                timeout_ms,
+                poll_ms,
+            ) {
+                Ok(value) => value,
+                Err(err) => {
+                    eprintln!(
+                        "warning: devtools environment.sources.get failed for session {}: {}",
+                        selected_session_id, err
+                    );
+                    (Vec::new(), None)
+                }
+            }
+        } else {
+            (Vec::new(), None)
+        };
+
     Ok(ConnectedToolingTransport {
         devtools,
         capability_source: CapabilitySource::transport_session("devtools_ws", &selected_session_id),
+        environment_source_catalog_provenance,
+        environment_sources,
+        host_monitor_topology_environment,
         selected_session_id,
         available_caps,
     })
@@ -2049,9 +2224,17 @@ fn connect_filesystem_tooling(
     available_caps.sort();
     available_caps.dedup();
 
+    let (environment_source_catalog_provenance, environment_sources) =
+        read_filesystem_published_environment_sources_with_provenance(&cfg.out_dir);
+    let host_monitor_topology_environment =
+        read_published_host_monitor_topology_environment_payload(&environment_sources);
+
     Ok(ConnectedToolingTransport {
         devtools,
         capability_source: CapabilitySource::transport_session("filesystem", &selected_session_id),
+        environment_source_catalog_provenance,
+        environment_sources,
+        host_monitor_topology_environment,
         selected_session_id,
         available_caps,
     })

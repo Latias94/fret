@@ -72,6 +72,26 @@ pub struct DevtoolsSessionRemovedV1 {
     pub session_id: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsEnvironmentSourcesGetV1 {
+    #[serde(default = "default_devtools_environment_sources_schema_version")]
+    pub schema_version: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsEnvironmentSourcesGetAckV1 {
+    #[serde(default = "default_devtools_environment_sources_schema_version")]
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<FilesystemEnvironmentSourceV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_monitor_topology: Option<HostMonitorTopologyEnvironmentPayloadV1>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiScriptMetaV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3527,6 +3547,10 @@ fn default_diag_screenshot_schema_version() -> u32 {
     1
 }
 
+fn default_devtools_environment_sources_schema_version() -> u32 {
+    1
+}
+
 fn is_zero_u64(v: &u64) -> bool {
     *v == 0
 }
@@ -3847,6 +3871,89 @@ mod tests {
         let parsed: DiagScreenshotResultFileV1 = serde_json::from_value(value).unwrap();
         assert_eq!(parsed.schema_version, 1);
         assert_eq!(DiagScreenshotResultFileV1::default().schema_version, 1);
+    }
+
+    #[test]
+    fn environment_sources_get_request_defaults_schema_version_and_round_trips() {
+        let parsed: DevtoolsEnvironmentSourcesGetV1 =
+            serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(parsed.schema_version, 1);
+        assert_eq!(
+            serde_json::to_value(parsed).unwrap(),
+            serde_json::json!({
+                "schema_version": 1
+            })
+        );
+    }
+
+    #[test]
+    fn environment_sources_get_ack_round_trips_and_omits_missing_payloads() {
+        let ack = DevtoolsEnvironmentSourcesGetAckV1 {
+            schema_version: 1,
+            sources: vec![FilesystemEnvironmentSourceV1 {
+                source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                availability: EnvironmentSourceAvailabilityV1::PreflightTransportSession,
+            }],
+            runner_kind: Some("fret-bootstrap".to_string()),
+            runner_version: Some("1.2.3".to_string()),
+            host_monitor_topology: None,
+        };
+        assert_eq!(
+            serde_json::to_value(ack).unwrap(),
+            serde_json::json!({
+                "schema_version": 1,
+                "sources": [{
+                    "source_id": "host.monitor_topology",
+                    "availability": "preflight_transport_session"
+                }],
+                "runner_kind": "fret-bootstrap",
+                "runner_version": "1.2.3"
+            })
+        );
+
+        let parsed: DevtoolsEnvironmentSourcesGetAckV1 =
+            serde_json::from_value(serde_json::json!({
+                "sources": [{
+                    "source_id": "host.monitor_topology",
+                    "availability": "preflight_transport_session"
+                }],
+                "host_monitor_topology": {
+                    "schema_version": 1,
+                    "source_id": "host.monitor_topology",
+                    "monitor_topology": {
+                        "schema_version": 1,
+                        "virtual_desktop_bounds_physical": {
+                            "x": 0,
+                            "y": 0,
+                            "width": 3200,
+                            "height": 1080
+                        },
+                        "monitors": [{
+                            "bounds_physical": {
+                                "x": 0,
+                                "y": 0,
+                                "width": 1920,
+                                "height": 1080
+                            },
+                            "scale_factor": 1.0
+                        }]
+                    }
+                }
+            }))
+            .unwrap();
+        assert_eq!(parsed.schema_version, 1);
+        assert_eq!(parsed.sources.len(), 1);
+        assert_eq!(
+            parsed.sources[0].availability,
+            EnvironmentSourceAvailabilityV1::PreflightTransportSession
+        );
+        assert_eq!(
+            parsed
+                .host_monitor_topology
+                .as_ref()
+                .map(|payload| payload.source_id.as_str()),
+            Some("host.monitor_topology")
+        );
     }
 
     #[test]
