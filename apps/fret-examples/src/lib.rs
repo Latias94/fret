@@ -418,6 +418,9 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M4_TRANSPORT_QUERY: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M5_ADMISSION: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md"
+    );
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
     );
@@ -3576,6 +3579,7 @@ mod authoring_surface_policy_tests {
             "M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md",
             "M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md",
             "M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md",
+            "M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
@@ -3593,6 +3597,8 @@ mod authoring_surface_policy_tests {
             "`environment.source.host.monitor_topology.json`",
             "`environment_source_catalog_provenance`",
             "`environment.sources.get` / `environment.sources.get_ack`",
+            "Campaign manifests may now declare `requires_environment`.",
+            "launch-time probe for tool-launched filesystem runs.",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_DESIGN.contains(marker),
@@ -3678,6 +3684,19 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
+            "Campaign manifests now support `requires_environment`",
+            "`source_id: \"host.monitor_topology\"`",
+            "`predicate.kind: \"host_monitor_topology\"`",
+            "`check.environment.json`",
+            "launch-time probe for tool-launched filesystem runs",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M5_ADMISSION.contains(marker),
+                "the admission note should keep the shipped grammar and execution slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
             "pub struct ElementEnvironmentSnapshotV1",
             "pub viewport_bounds: RectV1",
             "pub safe_area_insets: Option<UiEdgesV1>",
@@ -3712,8 +3731,10 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "pub requires_capabilities: Vec<String>",
-            "requires_capabilities: Vec<String>",
+            "pub requires_environment: Vec<CampaignEnvironmentRequirementDefinition>",
+            "requires_environment: Vec<CampaignEnvironmentRequirementDefinition>",
             "normalize_lowercase_string_list(manifest.requires_capabilities)",
+            "CampaignManifestEnvironmentPredicateV1",
         ] {
             assert!(
                 DIAG_CAMPAIGNS_RS.contains(marker),
@@ -3723,6 +3744,9 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "maybe_execute_campaign_capability_preflight",
+            "maybe_execute_campaign_environment_admission",
+            "check.environment.json",
+            "CampaignEnvironmentAcquisition::LaunchTimeProbe",
             "execute_campaign_start_plan(start_plan)?;",
             "read_filesystem_capabilities_with_provenance(&ctx.resolved_out_dir)",
             "populate_environment_source_summary_artifacts",
@@ -3848,8 +3872,10 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
-            "Campaign manifests still only gate on `requires_capabilities`.",
-            "`environment.sources.json` or session-published source catalog",
+            "Campaign manifests may also declare `requires_environment`.",
+            "`source_id: \"host.monitor_topology\"`",
+            "`predicate.kind: \"host_monitor_topology\"`",
+            "`requires_capabilities` remains capabilities-only.",
             "Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute",
             "`environment.source.host.monitor_topology.json`",
             "`environment.sources.get` / `environment.sources.get_ack`",
@@ -3862,11 +3888,11 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
-            "`environment.sources.json` catalog plus",
-            "`environment.sources.get` / `environment.sources.get_ack`",
+            "source-scoped `requires_environment` grammar",
+            "cargo nextest run -p fret-diag --lib environment_admission --no-fail-fast",
             "`post_run_only` environment sources are evidence-only and must not drive preflight.",
             "`host.monitor_topology` now has a launch-time filesystem publication lane",
-            "`environment_sources_path`",
+            "`check.environment.json`",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES.contains(marker),

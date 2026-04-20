@@ -10,6 +10,8 @@ Related:
 - `M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
 - `M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
 - `M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md`
+- `M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md`
+- `M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -79,12 +81,19 @@ This is the first place where a true host/run-level environment source can live 
 campaign tooling. `monitor_topology` belongs here because it is a host inventory fingerprint,
 while `scale_factors_seen` remains run evidence only.
 
-### 4. Diagnostics orchestration preflight
+### 4. Diagnostics orchestration admission
 
-Today `crates/fret-diag` only supports `requires_capabilities`.
+`crates/fret-diag` now supports two separate orchestration policy lanes:
 
-That means the repo still has no typed host-environment predicate contract, even though some bundle
-fields and debug snapshots now carry richer environment evidence.
+- `requires_capabilities`
+- `requires_environment`
+
+The first shipped `requires_environment` slice is intentionally narrow:
+
+- it is source-scoped,
+- it is source-specific,
+- it does not widen `requires_capabilities`,
+- and it admits only `host.monitor_topology` through a `host_monitor_topology` predicate.
 
 ## Current shipped source-publication state
 
@@ -99,7 +108,18 @@ fields and debug snapshots now carry richer environment evidence.
 - `crates/fret-diag` now carries `environment_sources_path`,
   `environment_source_catalog_provenance`, and `environment_sources` through campaign
   summary/result/aggregate artifacts.
-- Campaign preflight still runs before launch and still only evaluates `requires_capabilities`.
+- Campaign manifests may now declare `requires_environment`.
+- The first shipped manifest grammar is:
+  - `source_id: "host.monitor_topology"`
+  - `predicate.kind: "host_monitor_topology"`
+  - predicate thresholds:
+    - `monitor_count_ge`
+    - `distinct_scale_factor_count_ge`
+- `requires_environment` is evaluated by campaign admission, not by capability preflight.
+- The current admission order is:
+  - existing filesystem publication under the selected diagnostics `out_dir`,
+  - preflight transport/session query for attached DevTools WS sessions,
+  - launch-time probe for tool-launched filesystem runs.
 
 ## Must-be-true outcomes
 
@@ -215,19 +235,20 @@ Explicit exclusions for this source family:
 - Promoting either one into the catalog requires a new diagnostics admission decision rather than
   silent reuse.
 
-## Intended next slice
+## Current shipped slice
 
-The lane has now landed both acquisition foundations that were needed before syntax work:
+The lane has now landed the first end-to-end environment admission contract inside `crates/fret-diag`:
 
-- launch-time filesystem publication,
-- and transport-session query for existing DevTools sessions.
+- `requires_environment` is now part of campaign manifests,
+- `host.monitor_topology` is the first admitted source,
+- `host_monitor_topology` is the first shipped source-specific predicate kind,
+- admission keeps capability evidence and environment evidence separate,
+- and launch-time filesystem publication plus transport-session query now feed one honest
+  campaign-level skip/run decision.
 
-The next slice can now choose the smallest additive orchestration surface for environment
-predicates inside `crates/fret-diag`.
-
-That decision should still stay narrow:
+The contract still stays deliberately narrow:
 
 - keep `requires_capabilities` unchanged,
 - keep `capability_source` and environment-source provenance separate,
-- bind grammar only to admitted source ids and explicit availability classes,
-- and avoid a generic predicate language before one concrete source proves the need.
+- bind grammar only to admitted source ids and source-specific predicates,
+- and avoid a generic predicate language before a second real source proves the need.

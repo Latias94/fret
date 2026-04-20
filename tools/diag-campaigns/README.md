@@ -10,8 +10,38 @@ Current rules:
 - canonical authoring uses ordered `items`,
 - each item has `kind` (`suite` or `script`) plus `value`,
 - legacy top-level `suites` / `scripts` is still accepted for compatibility,
-- supported metadata fields include `owner`, `platforms`, `tier`, and `expected_duration_ms`,
+- supported metadata fields include `owner`, `platforms`, `tier`, `expected_duration_ms`,
+  `requires_capabilities`, and `requires_environment`,
 - manifest entries override same-id built-in fallback definitions.
+
+Environment requirements:
+
+- `requires_capabilities` stays capabilities-only.
+- `requires_environment` is a separate source-scoped admission surface.
+- v1 currently supports one admitted source/predicate pair:
+  - `source_id: "host.monitor_topology"`
+  - `predicate.kind: "host_monitor_topology"`
+- v1 threshold keys:
+  - `monitor_count_ge`
+  - `distinct_scale_factor_count_ge`
+- At least one threshold must be present.
+
+Example:
+
+```json
+{
+  "requires_environment": [
+    {
+      "source_id": "host.monitor_topology",
+      "predicate": {
+        "kind": "host_monitor_topology",
+        "monitor_count_ge": 2,
+        "distinct_scale_factor_count_ge": 2
+      }
+    }
+  ]
+}
+```
 
 Run artifact layout:
 

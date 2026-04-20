@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1;
 use serde::Deserialize;
 
 use crate::regression_summary::RegressionLaneV1;
@@ -23,6 +24,44 @@ pub(crate) struct CampaignItemDefinition {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CampaignEnvironmentRequirementDefinition {
+    pub source_id: String,
+    pub predicate: CampaignEnvironmentPredicateDefinition,
+}
+
+impl CampaignEnvironmentRequirementDefinition {
+    pub(crate) fn to_json_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "source_id": self.source_id,
+            "predicate": self.predicate.to_json_value(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CampaignEnvironmentPredicateDefinition {
+    HostMonitorTopology(HostMonitorTopologyPredicateDefinition),
+}
+
+impl CampaignEnvironmentPredicateDefinition {
+    fn to_json_value(&self) -> serde_json::Value {
+        match self {
+            Self::HostMonitorTopology(predicate) => serde_json::json!({
+                "kind": "host_monitor_topology",
+                "monitor_count_ge": predicate.monitor_count_ge,
+                "distinct_scale_factor_count_ge": predicate.distinct_scale_factor_count_ge,
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct HostMonitorTopologyPredicateDefinition {
+    pub monitor_count_ge: Option<u64>,
+    pub distinct_scale_factor_count_ge: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CampaignDefinition {
     pub id: String,
     pub description: String,
@@ -35,6 +74,7 @@ pub(crate) struct CampaignDefinition {
     pub expected_duration_ms: Option<u64>,
     pub tags: Vec<String>,
     pub requires_capabilities: Vec<String>,
+    pub requires_environment: Vec<CampaignEnvironmentRequirementDefinition>,
     pub flake_policy: Option<String>,
     pub source: CampaignDefinitionSource,
 }
@@ -86,6 +126,8 @@ struct CampaignManifestV1 {
     #[serde(default)]
     requires_capabilities: Vec<String>,
     #[serde(default)]
+    requires_environment: Vec<CampaignManifestEnvironmentRequirementV1>,
+    #[serde(default)]
     flake_policy: Option<String>,
 }
 
@@ -98,6 +140,23 @@ struct CampaignManifestItemV1 {
     suite: Option<String>,
     #[serde(default)]
     script: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CampaignManifestEnvironmentRequirementV1 {
+    source_id: String,
+    predicate: CampaignManifestEnvironmentPredicateV1,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum CampaignManifestEnvironmentPredicateV1 {
+    HostMonitorTopology {
+        #[serde(default)]
+        monitor_count_ge: Option<u64>,
+        #[serde(default)]
+        distinct_scale_factor_count_ge: Option<u64>,
+    },
 }
 
 const UI_GALLERY_SMOKE_SUITES: &[&str] = &["ui-gallery-lite-smoke", "ui-gallery-layout"];
@@ -122,6 +181,7 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 "developer-loop".to_string(),
             ],
             requires_capabilities: Vec::new(),
+            requires_environment: Vec::new(),
             flake_policy: Some("fail_fast".to_string()),
             source: CampaignDefinitionSource::Builtin,
         },
@@ -138,6 +198,7 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
             expected_duration_ms: Some(300_000),
             tags: vec!["ui-gallery".to_string(), "correctness".to_string()],
             requires_capabilities: Vec::new(),
+            requires_environment: Vec::new(),
             flake_policy: Some("retry_once".to_string()),
             source: CampaignDefinitionSource::Builtin,
         },
@@ -154,6 +215,7 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
             expected_duration_ms: Some(120_000),
             tags: vec!["docking".to_string(), "smoke".to_string()],
             requires_capabilities: Vec::new(),
+            requires_environment: Vec::new(),
             flake_policy: Some("fail_fast".to_string()),
             source: CampaignDefinitionSource::Builtin,
         },
@@ -313,6 +375,11 @@ pub(crate) fn campaign_to_json(campaign: &CampaignDefinition) -> serde_json::Val
         "expected_duration_ms": campaign.expected_duration_ms,
         "tags": campaign.tags,
         "requires_capabilities": campaign.requires_capabilities,
+        "requires_environment": campaign
+            .requires_environment
+            .iter()
+            .map(CampaignEnvironmentRequirementDefinition::to_json_value)
+            .collect::<Vec<_>>(),
         "flake_policy": campaign.flake_policy,
         "source_kind": source_kind_str(&campaign.source),
         "source_path": match &campaign.source {
@@ -390,6 +457,29 @@ fn normalize_lowercase_string_list(values: Vec<String>) -> Vec<String> {
     values.sort();
     values.dedup();
     values
+}
+
+fn normalize_environment_source_id(raw: &str) -> Option<String> {
+    let normalized = raw.trim().to_ascii_lowercase();
+    if normalized.is_empty() {
+        return None;
+    }
+    Some(normalized)
+}
+
+fn normalize_positive_threshold(
+    path: &Path,
+    label: &str,
+    value: Option<u64>,
+) -> Result<Option<u64>, String> {
+    match value {
+        Some(0) => Err(format!(
+            "campaign manifest `{label}` must be >= 1: {}",
+            path.display()
+        )),
+        Some(value) => Ok(Some(value)),
+        None => Ok(None),
+    }
 }
 
 pub(crate) fn load_manifest_campaigns_from_dir(
@@ -498,6 +588,8 @@ pub(crate) fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, 
     tags.sort();
     tags.dedup();
     let requires_capabilities = normalize_lowercase_string_list(manifest.requires_capabilities);
+    let requires_environment =
+        parse_manifest_environment_requirements(path, manifest.requires_environment)?;
     let flake_policy =
         normalize_optional_string(manifest.flake_policy).map(|value| value.to_ascii_lowercase());
 
@@ -513,6 +605,7 @@ pub(crate) fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, 
         expected_duration_ms: manifest.expected_duration_ms,
         tags,
         requires_capabilities,
+        requires_environment,
         flake_policy,
         source: CampaignDefinitionSource::Manifest(path.to_path_buf()),
     })
@@ -568,6 +661,64 @@ fn parse_manifest_items(
         }
     }
     Ok(items)
+}
+
+fn parse_manifest_environment_requirements(
+    path: &Path,
+    requirements: Vec<CampaignManifestEnvironmentRequirementV1>,
+) -> Result<Vec<CampaignEnvironmentRequirementDefinition>, String> {
+    let mut normalized = Vec::with_capacity(requirements.len());
+    for requirement in requirements {
+        let source_id =
+            normalize_environment_source_id(&requirement.source_id).ok_or_else(|| {
+                format!(
+                    "campaign manifest environment requirement source_id must not be empty: {}",
+                    path.display()
+                )
+            })?;
+
+        let predicate = match requirement.predicate {
+            CampaignManifestEnvironmentPredicateV1::HostMonitorTopology {
+                monitor_count_ge,
+                distinct_scale_factor_count_ge,
+            } => {
+                if source_id != HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1 {
+                    return Err(format!(
+                        "campaign manifest host_monitor_topology predicate requires source_id `{}`: {}",
+                        HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1,
+                        path.display()
+                    ));
+                }
+
+                let monitor_count_ge =
+                    normalize_positive_threshold(path, "monitor_count_ge", monitor_count_ge)?;
+                let distinct_scale_factor_count_ge = normalize_positive_threshold(
+                    path,
+                    "distinct_scale_factor_count_ge",
+                    distinct_scale_factor_count_ge,
+                )?;
+                if monitor_count_ge.is_none() && distinct_scale_factor_count_ge.is_none() {
+                    return Err(format!(
+                        "campaign manifest host_monitor_topology predicate must declare at least one threshold: {}",
+                        path.display()
+                    ));
+                }
+
+                CampaignEnvironmentPredicateDefinition::HostMonitorTopology(
+                    HostMonitorTopologyPredicateDefinition {
+                        monitor_count_ge,
+                        distinct_scale_factor_count_ge,
+                    },
+                )
+            }
+        };
+
+        normalized.push(CampaignEnvironmentRequirementDefinition {
+            source_id,
+            predicate,
+        });
+    }
+    Ok(normalized)
 }
 
 #[cfg(test)]
@@ -663,6 +814,7 @@ mod tests {
         assert_eq!(campaign.items[1].kind, CampaignItemKind::Suite);
         assert_eq!(campaign.expected_duration_ms, Some(12345));
         assert!(campaign.requires_capabilities.is_empty());
+        assert!(campaign.requires_environment.is_empty());
         assert!(campaign.flake_policy.is_none());
         assert!(matches!(
             campaign.source,
@@ -701,7 +853,96 @@ mod tests {
             campaign.requires_capabilities,
             vec!["diag.script_v2".to_string(), "gpu_pick".to_string()]
         );
+        assert!(campaign.requires_environment.is_empty());
         assert_eq!(campaign.flake_policy.as_deref(), Some("retry_once"));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn manifest_campaign_parses_host_monitor_topology_environment_requirement() {
+        let root = unique_temp_dir();
+        let manifests_dir = campaigns_dir_from_workspace_root(&root);
+        fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        let manifest_path = manifests_dir.join("mixed-dpi.json");
+        fs::write(
+            &manifest_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "mixed-dpi",
+  "description": "Mixed-DPI-only campaign.",
+  "lane": "smoke",
+  "items": [
+    { "kind": "script", "value": "tools/diag-scripts/docking/arbitration/example.json" }
+  ],
+  "requires_environment": [
+    {
+      "source_id": " HOST.MONITOR_TOPOLOGY ",
+      "predicate": {
+        "kind": "host_monitor_topology",
+        "monitor_count_ge": 2,
+        "distinct_scale_factor_count_ge": 2
+      }
+    }
+  ]
+}"#,
+        )
+        .expect("write manifest");
+
+        let registry = CampaignRegistry::load_from_workspace_root(&root).unwrap();
+        let campaign = registry.resolve("mixed-dpi").unwrap();
+        assert_eq!(campaign.requires_environment.len(), 1);
+        assert_eq!(
+            campaign.requires_environment[0].source_id,
+            HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            campaign.requires_environment[0].predicate,
+            CampaignEnvironmentPredicateDefinition::HostMonitorTopology(
+                HostMonitorTopologyPredicateDefinition {
+                    monitor_count_ge: Some(2),
+                    distinct_scale_factor_count_ge: Some(2),
+                }
+            )
+        );
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn manifest_campaign_rejects_empty_host_monitor_topology_environment_predicate() {
+        let root = unique_temp_dir();
+        let manifests_dir = campaigns_dir_from_workspace_root(&root);
+        fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        let manifest_path = manifests_dir.join("invalid-env.json");
+        fs::write(
+            &manifest_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "invalid-env",
+  "description": "Invalid environment requirement.",
+  "lane": "smoke",
+  "items": [
+    { "kind": "suite", "value": "ui-gallery-lite-smoke" }
+  ],
+  "requires_environment": [
+    {
+      "source_id": "host.monitor_topology",
+      "predicate": {
+        "kind": "host_monitor_topology"
+      }
+    }
+  ]
+}"#,
+        )
+        .expect("write manifest");
+
+        let error = CampaignRegistry::load_from_workspace_root(&root).unwrap_err();
+        assert!(error.contains(
+            "campaign manifest host_monitor_topology predicate must declare at least one threshold"
+        ));
 
         let _ = fs::remove_dir_all(&root);
     }
@@ -761,6 +1002,15 @@ mod tests {
             expected_duration_ms: Some(10),
             tags: vec!["ui-gallery".to_string()],
             requires_capabilities: vec!["diag.script_v2".to_string()],
+            requires_environment: vec![CampaignEnvironmentRequirementDefinition {
+                source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                predicate: CampaignEnvironmentPredicateDefinition::HostMonitorTopology(
+                    HostMonitorTopologyPredicateDefinition {
+                        monitor_count_ge: Some(2),
+                        distinct_scale_factor_count_ge: Some(2),
+                    },
+                ),
+            }],
             flake_policy: Some("fail_fast".to_string()),
             source: CampaignDefinitionSource::Builtin,
         };
@@ -773,6 +1023,12 @@ mod tests {
             Some(vec![serde_json::Value::String(
                 "diag.script_v2".to_string()
             )])
+        );
+        assert_eq!(
+            json.get("requires_environment")
+                .and_then(|value| value.as_array())
+                .map(Vec::len),
+            Some(1)
         );
         assert_eq!(
             json.get("flake_policy").and_then(|value| value.as_str()),

@@ -47,6 +47,35 @@ Status:
 
 - Completed on 2026-04-20.
 
+## M5: Requires-environment host-monitor-topology admission
+
+Exit criteria:
+
+- Campaign manifests support a separate `requires_environment` field.
+- The first shipped grammar stays source-scoped and source-specific.
+- The first admitted source/predicate pair is:
+  - `source_id: "host.monitor_topology"`
+  - `predicate.kind: "host_monitor_topology"`
+- The first shipped thresholds are:
+  - `monitor_count_ge`
+  - `distinct_scale_factor_count_ge`
+- Campaign admission can resolve that requirement through:
+  - existing filesystem publication,
+  - preflight transport/session query,
+  - or a launch-time probe.
+- Unsatisfied requirements emit deterministic skip artifacts separate from capability artifacts.
+
+Primary evidence:
+
+- `docs/workstreams/diag-environment-predicate-contract-v1/M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md`
+- `crates/fret-diag/src/registry/campaigns.rs`
+- `crates/fret-diag/src/diag_campaign.rs`
+- `tools/diag-campaigns/README.md`
+
+Status:
+
+- Completed on 2026-04-20.
+
 ## M1: Diagnostics predicate owner split
 
 Exit criteria:

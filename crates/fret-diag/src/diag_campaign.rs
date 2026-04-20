@@ -1,9 +1,11 @@
 use super::*;
 
 use crate::registry::campaigns::{
-    CampaignDefinition, CampaignFilterOptions, CampaignItemDefinition, CampaignItemKind,
-    CampaignRegistry, campaign_to_json, campaigns_dir_from_workspace_root, item_kind_str,
-    lane_to_str, load_manifest_campaigns_from_dir, load_manifest_campaigns_from_paths, parse_lane,
+    CampaignDefinition, CampaignEnvironmentPredicateDefinition,
+    CampaignEnvironmentRequirementDefinition, CampaignFilterOptions, CampaignItemDefinition,
+    CampaignItemKind, CampaignRegistry, HostMonitorTopologyPredicateDefinition, campaign_to_json,
+    campaigns_dir_from_workspace_root, item_kind_str, lane_to_str,
+    load_manifest_campaigns_from_dir, load_manifest_campaigns_from_paths, parse_lane,
     source_kind_str,
 };
 use crate::regression_summary::{
@@ -79,6 +81,7 @@ struct CampaignExecutionOutcome {
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_check_path: Option<PathBuf>,
     environment_sources_path: Option<PathBuf>,
     environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
     environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
@@ -105,6 +108,7 @@ struct CampaignSummaryArtifacts {
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_check_path: Option<PathBuf>,
     environment_sources_path: Option<PathBuf>,
     environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
     environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
@@ -196,6 +200,7 @@ struct CampaignAggregateArtifacts {
     share_manifest_path: Option<PathBuf>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_check_path: Option<PathBuf>,
     environment_sources_path: Option<PathBuf>,
     environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
     environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
@@ -209,6 +214,7 @@ struct CampaignAggregatePathProjection {
     index_path: Option<String>,
     share_manifest_path: Option<String>,
     capabilities_check_path: Option<String>,
+    environment_check_path: Option<String>,
     environment_sources_path: Option<String>,
 }
 
@@ -233,6 +239,67 @@ struct CampaignItemRunCounters {
     suites_failed: usize,
     scripts_total: usize,
     scripts_failed: usize,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignEnvironmentAdmissionAttempt {
+    acquisition: CampaignEnvironmentAcquisition,
+    source_catalog_provenance: crate::EnvironmentSourceCatalogProvenance,
+    environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
+    host_monitor_topology_environment:
+        Option<fret_diag_protocol::HostMonitorTopologyEnvironmentPayloadV1>,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignEnvironmentAdmissionEvaluation {
+    attempt: CampaignEnvironmentAdmissionAttempt,
+    requirement_results: Vec<CampaignEnvironmentRequirementEvaluation>,
+}
+
+impl CampaignEnvironmentAdmissionEvaluation {
+    fn all_satisfied(&self) -> bool {
+        self.requirement_results
+            .iter()
+            .all(|result| result.satisfied)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CampaignEnvironmentRequirementEvaluation {
+    requirement: CampaignEnvironmentRequirementDefinition,
+    satisfied: bool,
+    reason_code: Option<String>,
+    reason: Option<String>,
+    observed: serde_json::Value,
+}
+
+impl CampaignEnvironmentRequirementEvaluation {
+    fn to_json_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "requirement": self.requirement.to_json_value(),
+            "satisfied": self.satisfied,
+            "reason_code": self.reason_code,
+            "reason": self.reason,
+            "observed": self.observed,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CampaignEnvironmentAcquisition {
+    ExistingFilesystem,
+    PreflightTransportSession,
+    LaunchTimeProbe,
+}
+
+impl CampaignEnvironmentAcquisition {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::ExistingFilesystem => "existing_filesystem",
+            Self::PreflightTransportSession => "preflight_transport_session",
+            Self::LaunchTimeProbe => "launch_time_probe",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -838,6 +905,9 @@ fn cmd_campaign_list(
         if !campaign.requires_capabilities.is_empty() {
             details.push(format!("caps={}", campaign.requires_capabilities.join("|")));
         }
+        if !campaign.requires_environment.is_empty() {
+            details.push(format!("env={}", campaign.requires_environment.len()));
+        }
         println!(
             "{} ({}) - {}",
             campaign.id,
@@ -1027,6 +1097,16 @@ fn cmd_campaign_show(
             "requires_capabilities: {}",
             campaign.requires_capabilities.join(", ")
         );
+    }
+    if !campaign.requires_environment.is_empty() {
+        println!("requires_environment:");
+        for requirement in &campaign.requires_environment {
+            println!(
+                "  - {}",
+                serde_json::to_string(&requirement.to_json_value())
+                    .unwrap_or_else(|_| "<invalid requirement>".to_string())
+            );
+        }
     }
     if let Some(flake_policy) = campaign.flake_policy.as_deref() {
         println!("flake_policy: {flake_policy}");
@@ -1492,6 +1572,7 @@ fn normalize_campaign_execution_outcome(
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -1511,6 +1592,7 @@ fn build_campaign_execution_report(
         share_error,
         capabilities_check_path,
         capability_source,
+        environment_check_path,
         environment_sources_path,
         environment_source_catalog_provenance,
         environment_sources,
@@ -1524,6 +1606,7 @@ fn build_campaign_execution_report(
             share_error,
             capabilities_check_path,
             capability_source,
+            environment_check_path,
             environment_sources_path,
             environment_source_catalog_provenance,
             environment_sources,
@@ -1543,6 +1626,7 @@ fn build_campaign_report_aggregate_artifacts(
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_check_path: Option<PathBuf>,
     environment_sources_path: Option<PathBuf>,
     environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
     environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
@@ -1553,6 +1637,7 @@ fn build_campaign_report_aggregate_artifacts(
         share_manifest_path,
         capabilities_check_path,
         capability_source,
+        environment_check_path,
         environment_sources_path,
         environment_source_catalog_provenance,
         environment_sources,
@@ -1572,6 +1657,11 @@ fn execute_campaign_inner(
         maybe_execute_campaign_capability_preflight(campaign, ctx, start_plan)?
     {
         return Ok(preflight_outcome);
+    }
+    if let Some(admission_outcome) =
+        maybe_execute_campaign_environment_admission(campaign, ctx, start_plan)?
+    {
+        return Ok(admission_outcome);
     }
 
     let item_results = execute_campaign_items(campaign, &start_plan.execution, ctx)?;
@@ -1685,6 +1775,7 @@ fn maybe_execute_campaign_capability_preflight(
         share_error: summary_artifacts.share_error,
         capabilities_check_path: Some(check_path),
         capability_source: Some(capability_source),
+        environment_check_path: None,
         environment_sources_path: summary_artifacts.environment_sources_path,
         environment_source_catalog_provenance: summary_artifacts
             .environment_source_catalog_provenance,
@@ -1848,6 +1939,586 @@ fn campaign_capability_preflight_error(
     )
 }
 
+fn maybe_execute_campaign_environment_admission(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+    start_plan: &CampaignExecutionStartPlan,
+) -> Result<Option<CampaignExecutionOutcome>, String> {
+    if campaign.requires_environment.is_empty() {
+        return Ok(None);
+    }
+
+    let evaluation = evaluate_campaign_environment_admission(campaign, ctx, start_plan)?;
+    if evaluation.all_satisfied() {
+        return Ok(None);
+    }
+
+    let check_path = start_plan
+        .execution
+        .campaign_root
+        .join("check.environment.json");
+    write_campaign_environment_check(&check_path, campaign, &evaluation)?;
+
+    let admission_summary_dir = start_plan.execution.campaign_root.join("admission");
+    write_campaign_environment_admission_summary(
+        &admission_summary_dir,
+        campaign,
+        &start_plan.execution,
+        &ctx.workspace_root,
+        &check_path,
+        &evaluation,
+    )?;
+
+    let summary_finalize = CampaignSummaryFinalizePlan {
+        summarize_inputs: vec![admission_summary_dir.display().to_string()],
+        out_dir: start_plan.execution.campaign_root.clone(),
+        summary_path: start_plan.execution.summary_path.clone(),
+        created_unix_ms: start_plan.execution.created_unix_ms,
+        should_generate_share_manifest: false,
+    };
+    let mut summary_artifacts = finalize_campaign_summary_artifacts(&summary_finalize, ctx);
+    summary_artifacts.environment_check_path = Some(check_path.clone());
+    apply_environment_source_summary_artifacts_from_attempt(
+        &mut summary_artifacts,
+        &evaluation.attempt,
+    );
+    write_campaign_result(
+        &start_plan.execution,
+        campaign,
+        &[],
+        &summary_artifacts,
+        ctx,
+    )?;
+
+    Ok(Some(CampaignExecutionOutcome {
+        items_failed: 0,
+        error: Some(campaign_environment_admission_error(
+            campaign,
+            &start_plan.execution,
+            &evaluation,
+            &check_path,
+        )),
+        share_manifest_path: summary_artifacts.share_manifest_path,
+        share_error: summary_artifacts.share_error,
+        capabilities_check_path: summary_artifacts.capabilities_check_path,
+        capability_source: summary_artifacts.capability_source,
+        environment_check_path: Some(check_path),
+        environment_sources_path: summary_artifacts.environment_sources_path,
+        environment_source_catalog_provenance: summary_artifacts
+            .environment_source_catalog_provenance,
+        environment_sources: summary_artifacts.environment_sources,
+    }))
+}
+
+fn evaluate_campaign_environment_admission(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+    start_plan: &CampaignExecutionStartPlan,
+) -> Result<CampaignEnvironmentAdmissionEvaluation, String> {
+    let mut last_evaluation = evaluate_campaign_environment_requirements_against_attempt(
+        campaign,
+        build_existing_filesystem_environment_admission_attempt(ctx),
+    );
+    if last_evaluation.all_satisfied() {
+        return Ok(last_evaluation);
+    }
+
+    if let Some(transport_attempt) =
+        maybe_build_transport_session_environment_admission_attempt(ctx)?
+    {
+        last_evaluation =
+            evaluate_campaign_environment_requirements_against_attempt(campaign, transport_attempt);
+        if last_evaluation.all_satisfied() {
+            return Ok(last_evaluation);
+        }
+    }
+
+    if let Some(probe_attempt) =
+        maybe_build_launch_time_probe_environment_admission_attempt(ctx, start_plan)?
+    {
+        last_evaluation =
+            evaluate_campaign_environment_requirements_against_attempt(campaign, probe_attempt);
+    }
+
+    Ok(last_evaluation)
+}
+
+fn build_existing_filesystem_environment_admission_attempt(
+    ctx: &CampaignRunContext,
+) -> CampaignEnvironmentAdmissionAttempt {
+    let (source_catalog_provenance, environment_sources) =
+        crate::read_filesystem_published_environment_sources_with_provenance(&ctx.resolved_out_dir);
+    let host_monitor_topology_environment =
+        crate::read_published_host_monitor_topology_environment_payload(&environment_sources);
+    CampaignEnvironmentAdmissionAttempt {
+        acquisition: CampaignEnvironmentAcquisition::ExistingFilesystem,
+        source_catalog_provenance,
+        environment_sources,
+        host_monitor_topology_environment,
+    }
+}
+
+fn maybe_build_transport_session_environment_admission_attempt(
+    ctx: &CampaignRunContext,
+) -> Result<Option<CampaignEnvironmentAdmissionAttempt>, String> {
+    let use_devtools_ws = ctx.devtools_ws_url.is_some()
+        || ctx.devtools_token.is_some()
+        || ctx.devtools_session_id.is_some();
+    if !use_devtools_ws {
+        return Ok(None);
+    }
+
+    let ws_url = ctx.devtools_ws_url.as_deref().ok_or_else(|| {
+        "missing --devtools-ws-url (required when using DevTools WS transport)".to_string()
+    })?;
+    let token = ctx.devtools_token.as_deref().ok_or_else(|| {
+        "missing --devtools-token (required when using DevTools WS transport)".to_string()
+    })?;
+    let connected = connect_devtools_ws_tooling(
+        ws_url,
+        token,
+        ctx.devtools_session_id.as_deref(),
+        ctx.timeout_ms,
+        ctx.poll_ms,
+    )?;
+
+    Ok(Some(CampaignEnvironmentAdmissionAttempt {
+        acquisition: CampaignEnvironmentAcquisition::PreflightTransportSession,
+        source_catalog_provenance: connected.environment_source_catalog_provenance,
+        environment_sources: connected.environment_sources,
+        host_monitor_topology_environment: connected.host_monitor_topology_environment,
+    }))
+}
+
+fn maybe_build_launch_time_probe_environment_admission_attempt(
+    ctx: &CampaignRunContext,
+    start_plan: &CampaignExecutionStartPlan,
+) -> Result<Option<CampaignEnvironmentAdmissionAttempt>, String> {
+    if ctx.launch.is_none() {
+        return Ok(None);
+    }
+
+    let probe_out_dir = start_plan
+        .execution
+        .campaign_root
+        .join("environment-admission-probe");
+    let resolved_paths = ResolvedScriptPaths::for_out_dir(&ctx.workspace_root, &probe_out_dir);
+    let fs_transport_cfg = resolved_paths.launch_fs_transport_cfg();
+    let mut launch_env = ctx.launch_env.clone();
+    apply_environment_admission_probe_launch_defaults(&mut launch_env);
+    let mut child = maybe_launch_demo(
+        &ctx.launch,
+        &launch_env,
+        &ctx.workspace_root,
+        &resolved_paths.ready_path,
+        &resolved_paths.exit_path,
+        &fs_transport_cfg,
+        false,
+        false,
+        ctx.timeout_ms,
+        ctx.poll_ms,
+        ctx.launch_high_priority,
+    )
+    .map_err(|error| format!("campaign environment admission probe launch failed: {error}"))?;
+
+    let attempt = {
+        let (source_catalog_provenance, environment_sources) =
+            crate::read_filesystem_published_environment_sources_with_provenance(
+                &resolved_paths.out_dir,
+            );
+        let host_monitor_topology_environment =
+            crate::read_published_host_monitor_topology_environment_payload(&environment_sources);
+        CampaignEnvironmentAdmissionAttempt {
+            acquisition: CampaignEnvironmentAcquisition::LaunchTimeProbe,
+            source_catalog_provenance,
+            environment_sources,
+            host_monitor_topology_environment,
+        }
+    };
+
+    let _ = stop_launched_demo(&mut child, &resolved_paths.exit_path, ctx.poll_ms);
+
+    Ok(Some(attempt))
+}
+
+fn apply_environment_admission_probe_launch_defaults(launch_env: &mut Vec<(String, String)>) {
+    if !launch_env
+        .iter()
+        .any(|(key, _)| key == "FRET_DIAG_REDACT_TEXT")
+    {
+        launch_env.push(("FRET_DIAG_REDACT_TEXT".to_string(), "0".to_string()));
+    }
+    if !launch_env
+        .iter()
+        .any(|(key, _)| key == "FRET_DIAG_RENDERER_PERF")
+    {
+        launch_env.push(("FRET_DIAG_RENDERER_PERF".to_string(), "1".to_string()));
+    }
+}
+
+fn evaluate_campaign_environment_requirements_against_attempt(
+    campaign: &CampaignDefinition,
+    attempt: CampaignEnvironmentAdmissionAttempt,
+) -> CampaignEnvironmentAdmissionEvaluation {
+    let requirement_results = campaign
+        .requires_environment
+        .iter()
+        .cloned()
+        .map(|requirement| evaluate_campaign_environment_requirement(&requirement, &attempt))
+        .collect();
+    CampaignEnvironmentAdmissionEvaluation {
+        attempt,
+        requirement_results,
+    }
+}
+
+fn evaluate_campaign_environment_requirement(
+    requirement: &CampaignEnvironmentRequirementDefinition,
+    attempt: &CampaignEnvironmentAdmissionAttempt,
+) -> CampaignEnvironmentRequirementEvaluation {
+    match &requirement.predicate {
+        CampaignEnvironmentPredicateDefinition::HostMonitorTopology(predicate) => {
+            evaluate_host_monitor_topology_environment_requirement(requirement, predicate, attempt)
+        }
+    }
+}
+
+fn evaluate_host_monitor_topology_environment_requirement(
+    requirement: &CampaignEnvironmentRequirementDefinition,
+    predicate: &HostMonitorTopologyPredicateDefinition,
+    attempt: &CampaignEnvironmentAdmissionAttempt,
+) -> CampaignEnvironmentRequirementEvaluation {
+    let source = attempt
+        .environment_sources
+        .iter()
+        .find(|source| source.source_id == requirement.source_id);
+    let base_observed = serde_json::json!({
+        "acquisition": attempt.acquisition.as_str(),
+        "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+        "environment_sources": attempt
+            .environment_sources
+            .iter()
+            .map(|source| source.to_json_value())
+            .collect::<Vec<_>>(),
+    });
+    let Some(source) = source else {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.source_missing".to_string()),
+            reason: Some(format!(
+                "required environment source `{}` was not published",
+                requirement.source_id
+            )),
+            observed: base_observed,
+        };
+    };
+
+    if source.availability == fret_diag_protocol::EnvironmentSourceAvailabilityV1::PostRunOnly {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.source_post_run_only".to_string()),
+            reason: Some(format!(
+                "required environment source `{}` is only available post-run",
+                requirement.source_id
+            )),
+            observed: serde_json::json!({
+                "acquisition": attempt.acquisition.as_str(),
+                "source": source.to_json_value(),
+                "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+            }),
+        };
+    }
+
+    let Some(payload) = attempt.host_monitor_topology_environment.as_ref() else {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.payload_missing".to_string()),
+            reason: Some(format!(
+                "required environment source `{}` did not publish a host monitor topology payload",
+                requirement.source_id
+            )),
+            observed: serde_json::json!({
+                "acquisition": attempt.acquisition.as_str(),
+                "source": source.to_json_value(),
+                "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+            }),
+        };
+    };
+
+    let monitor_count = payload.monitor_topology.monitors.len() as u64;
+    let distinct_scale_factor_count = payload
+        .monitor_topology
+        .monitors
+        .iter()
+        .map(|monitor| monitor.scale_factor.to_bits())
+        .collect::<std::collections::BTreeSet<_>>()
+        .len() as u64;
+    let observed = serde_json::json!({
+        "acquisition": attempt.acquisition.as_str(),
+        "source": source.to_json_value(),
+        "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+        "monitor_count": monitor_count,
+        "distinct_scale_factor_count": distinct_scale_factor_count,
+    });
+
+    if let Some(expected) = predicate.monitor_count_ge
+        && monitor_count < expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.host_monitor_topology.monitor_count_lt".to_string()),
+            reason: Some(format!(
+                "required monitor_count >= {expected}, observed {monitor_count}"
+            )),
+            observed,
+        };
+    }
+    if let Some(expected) = predicate.distinct_scale_factor_count_ge
+        && distinct_scale_factor_count < expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some(
+                "environment.host_monitor_topology.distinct_scale_factor_count_lt".to_string(),
+            ),
+            reason: Some(format!(
+                "required distinct_scale_factor_count >= {expected}, observed {distinct_scale_factor_count}"
+            )),
+            observed,
+        };
+    }
+
+    CampaignEnvironmentRequirementEvaluation {
+        requirement: requirement.clone(),
+        satisfied: true,
+        reason_code: None,
+        reason: None,
+        observed,
+    }
+}
+
+fn write_campaign_environment_check(
+    path: &Path,
+    campaign: &CampaignDefinition,
+    evaluation: &CampaignEnvironmentAdmissionEvaluation,
+) -> Result<(), String> {
+    write_json_value(
+        path,
+        &serde_json::json!({
+            "schema_version": 1,
+            "status": "failed",
+            "acquisition": evaluation.attempt.acquisition.as_str(),
+            "required_environment": campaign
+                .requires_environment
+                .iter()
+                .map(CampaignEnvironmentRequirementDefinition::to_json_value)
+                .collect::<Vec<_>>(),
+            "results": evaluation
+                .requirement_results
+                .iter()
+                .map(CampaignEnvironmentRequirementEvaluation::to_json_value)
+                .collect::<Vec<_>>(),
+            "environment_sources_path": evaluation
+                .attempt
+                .source_catalog_provenance
+                .catalog_path()
+                .map(|path| path.display().to_string()),
+            "environment_source_catalog_provenance": evaluation
+                .attempt
+                .source_catalog_provenance
+                .to_json_value(),
+            "environment_sources": evaluation
+                .attempt
+                .environment_sources
+                .iter()
+                .map(|source| source.to_json_value())
+                .collect::<Vec<_>>(),
+        }),
+    )
+}
+
+fn write_campaign_environment_admission_summary(
+    admission_summary_dir: &Path,
+    campaign: &CampaignDefinition,
+    plan: &CampaignExecutionPlan,
+    workspace_root: &Path,
+    check_path: &Path,
+    evaluation: &CampaignEnvironmentAdmissionEvaluation,
+) -> Result<(), String> {
+    std::fs::create_dir_all(admission_summary_dir).map_err(|e| {
+        format!(
+            "failed to create campaign admission summary dir {}: {}",
+            admission_summary_dir.display(),
+            e
+        )
+    })?;
+
+    let mut totals = RegressionTotalsV1::default();
+    totals.record_status(RegressionStatusV1::SkippedPolicy);
+    let item = RegressionItemSummaryV1 {
+        item_id: "environment_admission".to_string(),
+        kind: RegressionItemKindV1::CampaignStep,
+        name: "environment_admission".to_string(),
+        status: RegressionStatusV1::SkippedPolicy,
+        reason_code: Some("environment.requirement_unsatisfied".to_string()),
+        source_reason_code: None,
+        lane: campaign.lane,
+        owner: campaign.owner.clone(),
+        feature_tags: Vec::new(),
+        timing: None,
+        attempts: None,
+        evidence: Some(RegressionEvidenceV1 {
+            bundle_artifact: None,
+            bundle_dir: None,
+            triage_json: None,
+            script_result_json: None,
+            ai_packet_dir: None,
+            pack_path: None,
+            screenshots_manifest: None,
+            perf_summary_json: None,
+            compare_json: None,
+            extra: Some(serde_json::json!({
+                "environment_check_path": check_path.display().to_string(),
+                "required_environment": campaign
+                    .requires_environment
+                    .iter()
+                    .map(CampaignEnvironmentRequirementDefinition::to_json_value)
+                    .collect::<Vec<_>>(),
+                "acquisition": evaluation.attempt.acquisition.as_str(),
+                "environment_sources_path": evaluation
+                    .attempt
+                    .source_catalog_provenance
+                    .catalog_path()
+                    .map(|path| path.display().to_string()),
+                "environment_source_catalog_provenance": evaluation
+                    .attempt
+                    .source_catalog_provenance
+                    .to_json_value(),
+                "environment_sources": evaluation
+                    .attempt
+                    .environment_sources
+                    .iter()
+                    .map(|source| source.to_json_value())
+                    .collect::<Vec<_>>(),
+                "results": evaluation
+                    .requirement_results
+                    .iter()
+                    .map(CampaignEnvironmentRequirementEvaluation::to_json_value)
+                    .collect::<Vec<_>>(),
+            })),
+        }),
+        source: Some(RegressionSourceV1 {
+            script: None,
+            suite: None,
+            campaign_case: Some("environment_admission".to_string()),
+            metadata: Some(serde_json::json!({
+                "acquisition": evaluation.attempt.acquisition.as_str(),
+                "environment_source_catalog_provenance": evaluation
+                    .attempt
+                    .source_catalog_provenance
+                    .to_json_value(),
+                "required_environment": campaign
+                    .requires_environment
+                    .iter()
+                    .map(CampaignEnvironmentRequirementDefinition::to_json_value)
+                    .collect::<Vec<_>>(),
+                "results": evaluation
+                    .requirement_results
+                    .iter()
+                    .map(CampaignEnvironmentRequirementEvaluation::to_json_value)
+                    .collect::<Vec<_>>(),
+            })),
+        }),
+        notes: Some(RegressionNotesV1 {
+            summary: Some(campaign_environment_requirement_summary(evaluation)),
+            details: Vec::new(),
+        }),
+    };
+
+    let mut summary = RegressionSummaryV1::new(
+        RegressionCampaignSummaryV1 {
+            name: campaign.id.clone(),
+            lane: campaign.lane,
+            profile: campaign.profile.clone(),
+            schema_version: Some(1),
+            requested_by: Some("diag campaign environment admission".to_string()),
+            filters: None,
+        },
+        RegressionRunSummaryV1 {
+            run_id: plan.run_id.clone(),
+            created_unix_ms: plan.created_unix_ms,
+            started_unix_ms: None,
+            finished_unix_ms: None,
+            duration_ms: None,
+            workspace_root: Some(workspace_root.display().to_string()),
+            out_dir: Some(admission_summary_dir.display().to_string()),
+            tool: "fretboard-dev diag campaign".to_string(),
+            tool_version: None,
+            git_commit: None,
+            git_branch: None,
+            host: None,
+        },
+        totals,
+    );
+    summary.items = vec![item];
+    summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+
+    write_json_value(
+        &admission_summary_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1),
+        &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
+    )
+}
+
+fn campaign_environment_requirement_summary(
+    evaluation: &CampaignEnvironmentAdmissionEvaluation,
+) -> String {
+    evaluation
+        .requirement_results
+        .iter()
+        .filter(|result| !result.satisfied)
+        .map(|result| {
+            result
+                .reason
+                .clone()
+                .unwrap_or_else(|| "environment requirement unsatisfied".to_string())
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+fn campaign_environment_admission_error(
+    campaign: &CampaignDefinition,
+    plan: &CampaignExecutionPlan,
+    evaluation: &CampaignEnvironmentAdmissionEvaluation,
+    check_path: &Path,
+) -> String {
+    format!(
+        "campaign `{}` skipped by environment admission under {}: {} (see {})",
+        campaign.id,
+        plan.campaign_root.display(),
+        campaign_environment_requirement_summary(evaluation),
+        check_path.display()
+    )
+}
+
+fn apply_environment_source_summary_artifacts_from_attempt(
+    artifacts: &mut CampaignSummaryArtifacts,
+    attempt: &CampaignEnvironmentAdmissionAttempt,
+) {
+    artifacts.environment_sources_path = attempt
+        .source_catalog_provenance
+        .catalog_path()
+        .map(Path::to_path_buf);
+    artifacts.environment_source_catalog_provenance =
+        Some(attempt.source_catalog_provenance.clone());
+    artifacts.environment_sources = attempt.environment_sources.clone();
+}
+
 fn build_campaign_execution_outcome(
     campaign: &CampaignDefinition,
     plan: &CampaignExecutionPlan,
@@ -1864,6 +2535,7 @@ fn build_campaign_execution_outcome(
         share_manifest_path,
         capabilities_check_path,
         capability_source,
+        environment_check_path,
         environment_sources_path,
         environment_source_catalog_provenance,
         environment_sources,
@@ -1879,6 +2551,7 @@ fn build_campaign_execution_outcome(
         share_error,
         capabilities_check_path,
         capability_source,
+        environment_check_path,
         environment_sources_path,
         environment_source_catalog_provenance,
         environment_sources,
@@ -2055,6 +2728,7 @@ fn build_campaign_summary_artifacts(
         share_error: outcome.share_error,
         capabilities_check_path: None,
         capability_source: None,
+        environment_check_path: None,
         environment_sources_path: None,
         environment_source_catalog_provenance: None,
         environment_sources: Vec::new(),
@@ -3079,6 +3753,10 @@ fn campaign_batch_paths_json(
         serde_json::json!(paths.capabilities_check_path),
     );
     payload.insert(
+        "environment_check_path".to_string(),
+        serde_json::json!(paths.environment_check_path),
+    );
+    payload.insert(
         "capability_source".to_string(),
         serde_json::json!(
             batch
@@ -3287,6 +3965,7 @@ fn build_campaign_aggregate_artifacts(
         share_manifest_path: summary_artifacts.share_manifest_path.clone(),
         capabilities_check_path: summary_artifacts.capabilities_check_path.clone(),
         capability_source: summary_artifacts.capability_source.clone(),
+        environment_check_path: summary_artifacts.environment_check_path.clone(),
         environment_sources_path: summary_artifacts.environment_sources_path.clone(),
         environment_source_catalog_provenance: summary_artifacts
             .environment_source_catalog_provenance
@@ -3303,6 +3982,7 @@ fn campaign_aggregate_json(aggregate: &CampaignAggregateArtifacts) -> serde_json
         "index_path": aggregate.index_path.is_file().then(|| aggregate.index_path.display().to_string()),
         "share_manifest_path": aggregate.share_manifest_path.as_ref().map(|path| path.display().to_string()),
         "capabilities_check_path": aggregate.capabilities_check_path.as_ref().map(|path| path.display().to_string()),
+        "environment_check_path": aggregate.environment_check_path.as_ref().map(|path| path.display().to_string()),
         "capability_source": aggregate.capability_source.as_ref().map(|source| source.to_json_value()),
         "environment_sources_path": aggregate.environment_sources_path.as_ref().map(|path| path.display().to_string()),
         "environment_source_catalog_provenance": aggregate
@@ -3348,6 +4028,10 @@ fn campaign_aggregate_path_projection(
             .capabilities_check_path
             .as_ref()
             .map(|path| path.display().to_string()),
+        environment_check_path: aggregate
+            .environment_check_path
+            .as_ref()
+            .map(|path| path.display().to_string()),
         environment_sources_path: aggregate
             .environment_sources_path
             .as_ref()
@@ -3380,6 +4064,12 @@ fn campaign_manifest_resolved_json(
         "script_count": campaign.script_count(),
         "suites": campaign.suites(),
         "scripts": campaign.scripts(),
+        "requires_capabilities": campaign.requires_capabilities,
+        "requires_environment": campaign
+            .requires_environment
+            .iter()
+            .map(CampaignEnvironmentRequirementDefinition::to_json_value)
+            .collect::<Vec<_>>(),
         "launch": &ctx.launch,
         "launch_env": &ctx.launch_env,
     })
@@ -3509,11 +4199,20 @@ fn campaign_report_status_label(report: &CampaignExecutionReport) -> &'static st
 }
 
 fn campaign_report_is_policy_skipped(report: &CampaignExecutionReport) -> bool {
-    !report.ok && report.items_failed == 0 && report.aggregate.capabilities_check_path.is_some()
+    !report.ok
+        && report.items_failed == 0
+        && (report.aggregate.capabilities_check_path.is_some()
+            || report.aggregate.environment_check_path.is_some())
 }
 
 fn campaign_report_reason_code(report: &CampaignExecutionReport) -> Option<&'static str> {
-    campaign_report_is_policy_skipped(report).then_some("capability.missing")
+    if report.aggregate.capabilities_check_path.is_some() {
+        Some("capability.missing")
+    } else if report.aggregate.environment_check_path.is_some() {
+        Some("environment.requirement_unsatisfied")
+    } else {
+        None
+    }
 }
 
 fn campaign_report_paths_json(
@@ -3553,6 +4252,10 @@ fn campaign_report_paths_json(
     payload.insert(
         "capabilities_check_path".to_string(),
         serde_json::json!(paths.capabilities_check_path),
+    );
+    payload.insert(
+        "environment_check_path".to_string(),
+        serde_json::json!(paths.environment_check_path),
     );
     payload.insert(
         "capability_source".to_string(),
@@ -4177,6 +4880,7 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -5036,6 +5740,7 @@ mod tests {
             expected_duration_ms: None,
             tags: vec!["ui-gallery".to_string()],
             requires_capabilities: Vec::new(),
+            requires_environment: Vec::new(),
             flake_policy: Some("fail_fast".to_string()),
             source: crate::registry::campaigns::CampaignDefinitionSource::Builtin,
         };
@@ -5195,9 +5900,80 @@ mod tests {
             expected_duration_ms: None,
             tags: vec!["ui-gallery".to_string()],
             requires_capabilities: Vec::new(),
+            requires_environment: Vec::new(),
             flake_policy: Some("fail_fast".to_string()),
             source: crate::registry::campaigns::CampaignDefinitionSource::Builtin,
         }
+    }
+
+    fn write_host_monitor_topology_environment_files(
+        out_dir: &Path,
+        availability: fret_diag_protocol::EnvironmentSourceAvailabilityV1,
+        scale_factors: &[f32],
+    ) -> (PathBuf, PathBuf) {
+        std::fs::create_dir_all(out_dir).unwrap();
+        let environment_sources_path =
+            out_dir.join(fret_diag_protocol::FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        std::fs::write(
+            &environment_sources_path,
+            serde_json::to_vec_pretty(&fret_diag_protocol::FilesystemEnvironmentSourcesV1 {
+                schema_version: 1,
+                sources: vec![fret_diag_protocol::FilesystemEnvironmentSourceV1 {
+                    source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                        .to_string(),
+                    availability,
+                }],
+                runner_kind: Some("fret-bootstrap".to_string()),
+                runner_version: Some("1".to_string()),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+
+        let environment_payload_path = out_dir.join(
+            fret_diag_protocol::FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+        );
+        let monitors = scale_factors
+            .iter()
+            .enumerate()
+            .map(
+                |(index, scale_factor)| fret_diag_protocol::UiDiagnosticsMonitorFingerprintV1 {
+                    bounds_physical: fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                        x: (index as i32) * 1600,
+                        y: 0,
+                        width: 1600,
+                        height: 900,
+                    },
+                    scale_factor: *scale_factor,
+                },
+            )
+            .collect::<Vec<_>>();
+        std::fs::write(
+            &environment_payload_path,
+            serde_json::to_vec_pretty(
+                &fret_diag_protocol::HostMonitorTopologyEnvironmentPayloadV1 {
+                    schema_version: 1,
+                    source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                        .to_string(),
+                    monitor_topology: fret_diag_protocol::UiDiagnosticsMonitorTopologyV1 {
+                        schema_version: 1,
+                        virtual_desktop_bounds_physical: Some(
+                            fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                                x: 0,
+                                y: 0,
+                                width: (scale_factors.len() as u32).saturating_mul(1600),
+                                height: 900,
+                            },
+                        ),
+                        monitors,
+                    },
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        (environment_sources_path, environment_payload_path)
     }
 
     fn sample_campaign_execution_report(
@@ -5215,6 +5991,7 @@ mod tests {
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -5306,6 +6083,7 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -5589,6 +6367,7 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("runs/ui-gallery-smoke/share.manifest.json")),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: Some(PathBuf::from("diag-out/environment.sources.json")),
             environment_source_catalog_provenance: Some(
                 crate::EnvironmentSourceCatalogProvenance::filesystem(Some(Path::new(
@@ -5650,6 +6429,7 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -5702,6 +6482,7 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -5739,6 +6520,7 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -5781,6 +6563,7 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -5862,6 +6645,7 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -5930,6 +6714,7 @@ mod tests {
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -5982,6 +6767,7 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6032,6 +6818,7 @@ mod tests {
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6103,6 +6890,7 @@ mod tests {
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6165,6 +6953,7 @@ mod tests {
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6232,6 +7021,7 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6325,6 +7115,7 @@ mod tests {
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6466,6 +7257,7 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: Some(PathBuf::from("batch/check.capabilities.json")),
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: Some(PathBuf::from("batch/environment.sources.json")),
             environment_source_catalog_provenance: Some(
                 crate::EnvironmentSourceCatalogProvenance::filesystem(Some(Path::new(
@@ -6537,6 +7329,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             Vec::new(),
         );
 
@@ -6562,6 +7355,7 @@ mod tests {
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -6783,6 +7577,7 @@ mod tests {
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: None,
             environment_source_catalog_provenance: None,
             environment_sources: Vec::new(),
@@ -6819,6 +7614,7 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_check_path: None,
             environment_sources_path: Some(PathBuf::from("batch/environment.sources.json")),
             environment_source_catalog_provenance: Some(
                 crate::EnvironmentSourceCatalogProvenance::filesystem(Some(Path::new(
@@ -7009,6 +7805,7 @@ mod tests {
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -7076,6 +7873,7 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("share/manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_check_path: None,
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
@@ -7488,6 +8286,127 @@ mod tests {
                 .and_then(|value| value.get("payload_path"))
                 .and_then(|value| value.as_str()),
             Some(expected_environment_payload_path.as_str())
+        );
+    }
+
+    #[test]
+    fn environment_admission_skips_when_host_monitor_topology_requirement_is_unsatisfied() {
+        let root = temp_test_root("campaign-environment-admission-skip");
+        let ctx = sample_campaign_run_context(&root);
+        let (environment_sources_path, environment_payload_path) =
+            write_host_monitor_topology_environment_files(
+                &ctx.resolved_out_dir,
+                fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+                &[1.0, 1.0],
+            );
+
+        let mut campaign = sample_campaign_definition();
+        campaign.requires_environment = vec![CampaignEnvironmentRequirementDefinition {
+            source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                .to_string(),
+            predicate: CampaignEnvironmentPredicateDefinition::HostMonitorTopology(
+                HostMonitorTopologyPredicateDefinition {
+                    monitor_count_ge: Some(2),
+                    distinct_scale_factor_count_ge: Some(2),
+                },
+            ),
+        }];
+        let start_plan = build_campaign_execution_start_plan_at(&campaign, &ctx, 42);
+        execute_campaign_start_plan(&start_plan).unwrap();
+
+        let outcome = maybe_execute_campaign_environment_admission(&campaign, &ctx, &start_plan)
+            .unwrap()
+            .expect("expected environment admission outcome");
+
+        let check_path = start_plan
+            .execution
+            .campaign_root
+            .join("check.environment.json");
+        let result_path = start_plan
+            .execution
+            .campaign_root
+            .join("campaign.result.json");
+        let check_json = read_json_value(&check_path).expect("check json");
+        let result_json = read_json_value(&result_path).expect("result json");
+        let expected_check_path = check_path.display().to_string();
+
+        assert_eq!(outcome.items_failed, 0);
+        assert_eq!(
+            outcome.environment_check_path.as_deref(),
+            Some(check_path.as_path())
+        );
+        assert_eq!(
+            outcome.environment_sources_path.as_deref(),
+            Some(environment_sources_path.as_path())
+        );
+        assert_eq!(
+            outcome.environment_sources[0].payload_path.as_deref(),
+            Some(environment_payload_path.as_path())
+        );
+        assert!(
+            outcome
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("skipped by environment admission"))
+        );
+        assert_eq!(
+            check_json
+                .get("acquisition")
+                .and_then(|value| value.as_str()),
+            Some("existing_filesystem")
+        );
+        assert_eq!(
+            check_json
+                .get("results")
+                .and_then(|value| value.as_array())
+                .and_then(|results| results.first())
+                .and_then(|value| value.get("reason_code"))
+                .and_then(|value| value.as_str()),
+            Some("environment.host_monitor_topology.distinct_scale_factor_count_lt")
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_check_path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_check_path.as_str())
+        );
+    }
+
+    #[test]
+    fn environment_admission_allows_satisfied_host_monitor_topology_requirement() {
+        let root = temp_test_root("campaign-environment-admission-pass");
+        let ctx = sample_campaign_run_context(&root);
+        let _ = write_host_monitor_topology_environment_files(
+            &ctx.resolved_out_dir,
+            fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+            &[1.0, 1.25],
+        );
+
+        let mut campaign = sample_campaign_definition();
+        campaign.requires_environment = vec![CampaignEnvironmentRequirementDefinition {
+            source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                .to_string(),
+            predicate: CampaignEnvironmentPredicateDefinition::HostMonitorTopology(
+                HostMonitorTopologyPredicateDefinition {
+                    monitor_count_ge: Some(2),
+                    distinct_scale_factor_count_ge: Some(2),
+                },
+            ),
+        }];
+        let start_plan = build_campaign_execution_start_plan_at(&campaign, &ctx, 42);
+        execute_campaign_start_plan(&start_plan).unwrap();
+
+        let outcome =
+            maybe_execute_campaign_environment_admission(&campaign, &ctx, &start_plan).unwrap();
+
+        assert!(outcome.is_none());
+        assert!(
+            !start_plan
+                .execution
+                .campaign_root
+                .join("check.environment.json")
+                .exists()
         );
     }
 

@@ -107,6 +107,12 @@ Transport notes:
   filesystem publication belongs in `environment.sources.json`, and DevTools publication belongs in
   an explicit session request/ack surface such as `environment.sources.get`.
 - Tooling MUST NOT infer environment facts from `capabilities.json` or hello capabilities.
+- Campaign manifests MAY also declare `requires_environment`, but that contract MUST stay separate
+  from capability negotiation and MUST bind only to admitted diagnostics-owned environment
+  sources.
+- The first admitted `requires_environment` source/predicate pair is
+  `host.monitor_topology` + `host_monitor_topology`, with source-local thresholds such as
+  `monitor_count_ge` and `distinct_scale_factor_count_ge`.
 
 ### 3) Add optional script metadata as a stable extension point
 

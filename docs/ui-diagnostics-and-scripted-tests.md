@@ -122,9 +122,16 @@ Environment fingerprint note:
   catalog.
 - Campaign result aggregates may report `environment_sources_path`,
   `environment_source_catalog_provenance`, and `environment_sources`.
-- Campaign manifests still only gate on `requires_capabilities`.
-- If diagnostics later promotes host-environment sources into orchestration, use a separate
-  `environment.sources.json` or session-published source catalog rather than `capabilities.json`.
+- Campaign manifests may also declare `requires_environment`.
+- The first shipped environment requirement is source-scoped and source-specific:
+  - `source_id: "host.monitor_topology"`
+  - `predicate.kind: "host_monitor_topology"`
+  - thresholds:
+    - `monitor_count_ge`
+    - `distinct_scale_factor_count_ge`
+- `requires_capabilities` remains capabilities-only.
+- `requires_environment` uses the separate source catalog/query family and campaign admission
+  rather than `capabilities.json`.
 - Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute for a real
   host-environment preflight contract.
 

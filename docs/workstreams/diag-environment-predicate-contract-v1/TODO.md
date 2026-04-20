@@ -26,7 +26,7 @@ Status: Active
 - [x] DEPC-018 Land a transport/session environment-source query foundation before manifest syntax
   so existing DevTools sessions can publish admitted sources without overloading hello/session
   capabilities.
-- [ ] DEPC-014 Choose the smallest additive diagnostics manifest shape once the first concrete
+- [x] DEPC-014 Choose the smallest additive diagnostics manifest shape once the first concrete
   source and timing contract are both ready.
 
 ## Living-doc alignment
@@ -37,5 +37,7 @@ Status: Active
 
 ## Deferred by design
 
-- [ ] DEPC-030 Do not implement actual environment predicate execution in this lane until a first
-  concrete source/timing/grammar slice is chosen.
+- [x] DEPC-030 Implement the first concrete environment predicate execution slice only after the
+  first source/timing/grammar decision is frozen.
+- [ ] DEPC-031 Do not widen `requires_environment` into a generic boolean expression language until
+  a second admitted source proves the need.
