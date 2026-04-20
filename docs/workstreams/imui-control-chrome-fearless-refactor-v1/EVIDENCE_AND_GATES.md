@@ -30,6 +30,7 @@ shared owner split instead of letting demos paper over broken defaults.
 - `ecosystem/fret-ui-kit/tests/imui_bullet_text_smoke.rs`
 - `ecosystem/fret-ui-kit/tests/imui_button_smoke.rs`
 - `ecosystem/fret-imui/src/tests/composition.rs`
+- `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json`
 - `tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json`
 - `tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json`
 - `tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json`
@@ -66,6 +67,7 @@ These three surfaces together answer:
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_adapter_seam_smoke --test imui_combo_smoke`
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_bullet_text_smoke --test imui_separator_text_smoke --test imui_button_smoke`
 - `cargo nextest run -p fret-imui button_family_variants_and_radio_mount_with_expected_bounds`
+- `cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface`
 - `cargo nextest run -p fret-imui bullet_text_helper_renders_indicator_before_wrapped_label separator_text_helper_renders_label_with_trailing_rule button_family_variants_and_radio_mount_with_expected_bounds`
 - `cargo nextest run -p fret-imui button_activate_shortcut_is_scoped_to_focused_button button_lifecycle_edges_follow_press_session long_press_sets_long_pressed_true_once_and_reports_holding checkbox_lifecycle_reports_edit_and_deactivated_after_edit right_click_sets_context_menu_requested_true_once`
 
@@ -79,6 +81,7 @@ This package protects:
 ### Showcase layout / screenshot gates
 
 - `cargo nextest run -p fret-examples --lib showcase_responsive_layout`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
@@ -86,6 +89,7 @@ This package protects:
 This package protects:
 
 - the current showcase responsive-layout expectations,
+- compact control discoverability and non-overlap on the adapter proof surface,
 - compact-shell reachability,
 - and the screenshot proof that the showcase remains reviewable at the default compact window.
 
@@ -104,7 +108,29 @@ These commands were run after the shared control-chrome landing:
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
 - `git diff --check -- ecosystem/fret-ui-kit/src/imui/options.rs ecosystem/fret-ui-kit/src/imui/control_chrome.rs ecosystem/fret-ui-kit/src/imui.rs ecosystem/fret-ui-kit/src/imui/button_controls.rs ecosystem/fret-ui-kit/src/imui/boolean_controls.rs ecosystem/fret-ui-kit/tests/imui_button_smoke.rs ecosystem/fret-imui/src/tests/composition.rs apps/fret-examples/src/imui_interaction_showcase_demo.rs`
 
-Artifacts left behind by the latest compact screenshot gate:
+## Executed on 2026-04-20
+
+- `cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release`
+
+Artifacts left behind by the 2026-04-20 adapter discoverability gate:
+
+- run result:
+  `target/fret-diag/1776672988456/script.result.json`
+- before layout sidecar:
+  `target/fret-diag/1776672988679-imui-shadcn-adapter.discoverability.before/layout.taffy.v1.json`
+- before bundle:
+  `target/fret-diag/1776672988687-imui-shadcn-adapter.discoverability.before/bundle.schema2.json`
+- before screenshot:
+  `target/fret-diag/screenshots/1776672988691-imui-shadcn-adapter.discoverability.before/window-4294967297-tick-21-frame-22.png`
+- after layout sidecar:
+  `target/fret-diag/1776672988815-imui-shadcn-adapter.discoverability.after/layout.taffy.v1.json`
+- after bundle:
+  `target/fret-diag/1776672988824-imui-shadcn-adapter.discoverability.after/bundle.schema2.json`
+- after screenshot:
+  `target/fret-diag/screenshots/1776672988827-imui-shadcn-adapter.discoverability.after/window-4294967297-tick-36-frame-37.png`
+
+Artifacts left behind by the 2026-04-14 compact showcase screenshot gate:
 
 - session:
   `target/fret-diag/sessions/1776138817580-24424`
@@ -114,17 +140,6 @@ Artifacts left behind by the latest compact screenshot gate:
   `target/fret-diag/sessions/1776138817580-24424/screenshots/1776138987735-imui-interaction-showcase.compact/window-4294967297-tick-40-frame-39.png`
 
 ## Missing gates that should become real
-
-### Control discoverability screenshot / bounds gate
-
-The current screenshot gate protects compact-shell visibility, but it does not yet directly prove
-that shared IMUI form controls read as interactive.
-
-Before closing this lane, add a bounded gate that explicitly protects at least:
-
-- visible field/button chrome for the migrated controls,
-- no overlap between adjacent control rows in the compact lab surface,
-- and stable selectors for the main migrated controls.
 
 ### Narrow-width field regression gate
 

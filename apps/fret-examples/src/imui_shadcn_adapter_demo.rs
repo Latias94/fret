@@ -1,14 +1,48 @@
+//! Product-validation IMUI surface for the shared control-chrome lane.
+//!
+//! This stays intentionally small: downstream authors should be able to look at one compact window
+//! and tell that IMUI helpers now read like real controls even before shell-specific recipes layer
+//! on more product chrome.
+
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*};
 use fret_core::Px;
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, Invalidation};
+use fret_ui_kit::{ColorRef, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
+
+const TEST_ID_ROOT: &str = "imui-shadcn-demo.root";
+const TEST_ID_HEADER: &str = "imui-shadcn-demo.header";
+const TEST_ID_CONTROL_CARD: &str = "imui-shadcn-demo.controls.card";
+const TEST_ID_SUMMARY_CARD: &str = "imui-shadcn-demo.summary.card";
+const TEST_ID_INSPECTOR_CARD: &str = "imui-shadcn-demo.inspector.card";
+const TEST_ID_INCREMENT: &str = "imui-shadcn-demo.controls.increment";
+const TEST_ID_ENABLED: &str = "imui-shadcn-demo.controls.enabled";
+const TEST_ID_VALUE: &str = "imui-shadcn-demo.controls.value";
+const TEST_ID_MODE: &str = "imui-shadcn-demo.controls.mode";
+const TEST_ID_DRAFT: &str = "imui-shadcn-demo.controls.draft";
+const TEST_ID_SUMMARY_COUNT: &str = "imui-shadcn-demo.summary.count";
+const TEST_ID_SUMMARY_ENABLED: &str = "imui-shadcn-demo.summary.enabled";
+const TEST_ID_SUMMARY_VALUE: &str = "imui-shadcn-demo.summary.value";
+const TEST_ID_SUMMARY_MODE: &str = "imui-shadcn-demo.summary.mode";
+const TEST_ID_SUMMARY_DRAFT: &str = "imui-shadcn-demo.summary.draft";
+const TEST_ID_TABLE: &str = "imui-shadcn-demo.inspector.table";
+const TEST_ID_RECENT_LIST: &str = "imui-shadcn-demo.inspector.recent";
+
+const STACK_BREAKPOINT_PX: f32 = 840.0;
+const COMPACT_SURFACE_WIDTH_PX: f32 = 1024.0;
+const COMPACT_SURFACE_HEIGHT_PX: f32 = 700.0;
+const SIDE_COLUMN_WIDTH: Px = Px(352.0);
+const RECENT_VIEWPORT_HEIGHT_COMPACT: Px = Px(56.0);
+const RECENT_VIEWPORT_HEIGHT_REGULAR: Px = Px(156.0);
 
 struct ImUiShadcnAdapterView;
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-shadcn-adapter-demo")
-        .window("imui_shadcn_adapter_demo", (840.0, 560.0))
+        .window("imui_shadcn_adapter_demo", (960.0, 620.0))
         .view::<ImUiShadcnAdapterView>()?
         .run()?;
     Ok(())
@@ -26,6 +60,21 @@ impl View for ImUiShadcnAdapterView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+        let stack_cards = viewport.size.width.0 < STACK_BREAKPOINT_PX;
+        let compact_surface = viewport.size.width.0 < COMPACT_SURFACE_WIDTH_PX
+            || viewport.size.height.0 < COMPACT_SURFACE_HEIGHT_PX;
+        let content_gap = if compact_surface {
+            Space::N2
+        } else {
+            Space::N4
+        };
+        let surface_padding = if compact_surface {
+            Space::N2
+        } else {
+            Space::N4
+        };
+
         let count_state = cx.state().local_init(|| 0u32);
         let enabled_state = cx.state().local_init(|| false);
         let value_state = cx.state().local_init(|| 32.0f32);
@@ -39,151 +88,491 @@ impl View for ImUiShadcnAdapterView {
         let draft = draft_state.paint_value(cx);
 
         let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
+        let draft_label: Arc<str> = if draft.is_empty() {
+            Arc::from("(empty)")
+        } else {
+            Arc::from(draft.clone())
+        };
 
         fret_imui::imui_in(cx, |ui| {
-            use fret_ui_kit::imui::{
-                InputTextOptions, SliderOptions, TableColumn, TableOptions,
-                UiWriterImUiFacadeExt as _, VirtualListMeasureMode, VirtualListOptions,
-            };
+            use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-            let select_items = [
-                Arc::<str>::from("Alpha"),
-                Arc::<str>::from("Beta"),
-                Arc::<str>::from("Gamma"),
-            ];
-            let table_columns = [
-                TableColumn::fill("Field"),
-                TableColumn::px("Value", Px(160.0)),
-                TableColumn::px("Source", Px(100.0)),
-            ];
+            let muted_bg = ColorRef::Color(ui.cx_mut().theme().color_token("muted"));
 
-            let summary_card = {
-                let cx = ui.cx_mut();
-                let header = shadcn::CardHeader::new([
-                    shadcn::CardTitle::new("imui + shadcn adapter (minimal)").into_element(cx),
-                    shadcn::CardDescription::new(
-                        "Control flow stays immediate-mode; visuals can come from shadcn recipes.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx);
+            let root = ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
+                let header = {
+                    let badges = ui::h_flex(move |cx| {
+                        vec![
+                            shadcn::Badge::new("Immediate flow")
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                            shadcn::Badge::new("Shared chrome")
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                            shadcn::Badge::new("Compact-safe")
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .wrap()
+                    .into_element(cx);
 
-                let content = shadcn::CardContent::new([
-                    shadcn::Badge::new(format!("count: {count}"))
-                        .variant(shadcn::BadgeVariant::Secondary)
+                    let header_copy = if compact_surface {
+                        "Compact proof that shared IMUI controls already read like controls inside a shadcn shell."
+                    } else {
+                        "The immediate-mode helpers remain model-driven; the surrounding shadcn shell only proves the shared control family now reads as real controls instead of passive text."
+                    };
+                    let content = shadcn::CardContent::new([
+                        ui::text(header_copy)
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
                         .into_element(cx),
-                    shadcn::Badge::new(format!("enabled: {enabled}"))
-                        .variant(shadcn::BadgeVariant::Secondary)
+                        badges,
+                    ])
+                    .into_element(cx);
+
+                    shadcn::Card::new([
+                        shadcn::CardHeader::new([
+                            shadcn::CardTitle::new("IMUI + shadcn adapter proof")
+                                .into_element(cx),
+                            shadcn::CardDescription::new(if compact_surface {
+                                "Compact proof surface for control discoverability and live state feedback."
+                            } else {
+                                "One compact downstream-facing surface for control discoverability, compact tool panels, and live state feedback."
+                            })
+                            .into_element(cx),
+                        ])
                         .into_element(cx),
-                    shadcn::Badge::new(format!("value: {:.1}", value))
-                        .variant(shadcn::BadgeVariant::Secondary)
+                        content,
+                    ])
+                    .into_element(cx)
+                    .test_id(TEST_ID_HEADER)
+                };
+
+                let controls_card = {
+                    let count_state = count_state.clone();
+                    let enabled_state = enabled_state.clone();
+                    let value_state = value_state.clone();
+                    let mode_state = mode_state.clone();
+                    let draft_state = draft_state.clone();
+
+                    let control_surface =
+                        ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
+                            fret_imui::imui(cx, move |ui| {
+                                use fret_ui_kit::imui::{
+                                    ButtonOptions, ComboModelOptions, InputTextOptions,
+                                    SliderOptions, SwitchOptions, UiWriterImUiFacadeExt as _,
+                                    UiWriterUiKitExt as _,
+                                };
+
+                                let select_items = [
+                                    Arc::<str>::from("Alpha"),
+                                    Arc::<str>::from("Beta"),
+                                    Arc::<str>::from("Gamma"),
+                                ];
+
+                                if compact_surface {
+                                    let note = {
+                                        let cx = ui.cx_mut();
+                                        ui::text(
+                                            "Shared helpers should already feel interactive in a compact tool panel.",
+                                        )
+                                        .text_xs()
+                                        .wrap(fret_core::TextWrap::Word)
+                                        .into_element(cx)
+                                    };
+                                    ui.add_ui(note);
+                                } else {
+                                    let heading = {
+                                        let cx = ui.cx_mut();
+                                        ui::text("Interactive controls")
+                                            .text_sm()
+                                            .font_semibold()
+                                            .into_element(cx)
+                                    };
+                                    ui.add_ui(heading);
+
+                                    let note = {
+                                        let cx = ui.cx_mut();
+                                        ui::text(
+                                            "These are the shared IMUI helpers downstream authors actually call. The shell around them should not need to compensate for weak default affordance.",
+                                        )
+                                        .text_xs()
+                                        .wrap(fret_core::TextWrap::Word)
+                                        .into_element(cx)
+                                    };
+                                    ui.add_ui(note);
+                                }
+
+                                let increment = ui.button_with_options(
+                                    "Increment count",
+                                    ButtonOptions {
+                                        test_id: Some(Arc::from(TEST_ID_INCREMENT)),
+                                        ..Default::default()
+                                    },
+                                );
+                                if increment.clicked() {
+                                    let _ = count_state
+                                        .update_in(ui.cx_mut().app.models_mut(), |v| *v += 1);
+                                }
+
+                                let _ = ui.switch_model_with_options(
+                                    "Enabled (switch)",
+                                    enabled_state.model(),
+                                    SwitchOptions {
+                                        test_id: Some(Arc::from(TEST_ID_ENABLED)),
+                                        ..Default::default()
+                                    },
+                                );
+
+                                let _ = ui.slider_f32_model_with_options(
+                                    "Value",
+                                    value_state.model(),
+                                    SliderOptions {
+                                        min: 0.0,
+                                        max: 100.0,
+                                        step: 1.0,
+                                        test_id: Some(Arc::from(TEST_ID_VALUE)),
+                                        ..Default::default()
+                                    },
+                                );
+
+                                let _ = ui.combo_model_with_options(
+                                    "imui-shadcn-demo.mode.popup",
+                                    "Mode",
+                                    mode_state.model(),
+                                    &select_items,
+                                    ComboModelOptions {
+                                        test_id: Some(Arc::from(TEST_ID_MODE)),
+                                        ..Default::default()
+                                    },
+                                );
+
+                                let _ = ui.input_text_model_with_options(
+                                    draft_state.model(),
+                                    InputTextOptions {
+                                        placeholder: Some(Arc::from("Type some text...")),
+                                        test_id: Some(Arc::from(TEST_ID_DRAFT)),
+                                        ..Default::default()
+                                    },
+                                );
+
+                                ui.separator_text(if compact_surface {
+                                    "Proof goals"
+                                } else {
+                                    "Why this proof exists"
+                                });
+                                ui.bullet_text(
+                                    if compact_surface {
+                                        "Controls should look interactive by default."
+                                    } else {
+                                        "A control should already look interactive before a recipe crate adds more product chrome."
+                                    },
+                                );
+                                ui.bullet_text(
+                                    if compact_surface {
+                                        "Compact tool panels should stay readable without demo-local width patches."
+                                    } else {
+                                        "Compact tool panels should not need demo-local width patches to keep buttons, fields, and triggers readable."
+                                    },
+                                );
+                            })
+                        })
+                        .into_element(cx);
+
+                    shadcn::Card::new([
+                        shadcn::CardHeader::new([
+                            shadcn::CardTitle::new("Control lab").into_element(cx),
+                            shadcn::CardDescription::new(
+                                "Direct IMUI helpers with stable selectors for screenshot/layout diagnostics.",
+                            )
+                            .into_element(cx),
+                        ])
                         .into_element(cx),
-                    shadcn::Badge::new(format!("mode: {mode_label}"))
-                        .variant(shadcn::BadgeVariant::Secondary)
+                        shadcn::CardContent::new([control_surface]).into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .test_id(TEST_ID_CONTROL_CARD)
+                };
+
+                let summary_card = {
+                    let summary_mode_label = mode_label.clone();
+                    let summary_draft_label = draft_label.clone();
+                    let rows = ui::h_flex(move |cx| {
+                        vec![
+                            summary_badge(
+                                cx,
+                                Arc::<str>::from(format!("count: {count}")),
+                                TEST_ID_SUMMARY_COUNT,
+                            ),
+                            summary_badge(
+                                cx,
+                                Arc::<str>::from(format!("enabled: {enabled}")),
+                                TEST_ID_SUMMARY_ENABLED,
+                            ),
+                            summary_badge(
+                                cx,
+                                Arc::<str>::from(format!("value: {value:.1}")),
+                                TEST_ID_SUMMARY_VALUE,
+                            ),
+                            summary_badge(
+                                cx,
+                                Arc::<str>::from(format!("mode: {summary_mode_label}")),
+                                TEST_ID_SUMMARY_MODE,
+                            ),
+                            summary_badge(
+                                cx,
+                                Arc::<str>::from(format!("draft: {summary_draft_label}")),
+                                TEST_ID_SUMMARY_DRAFT,
+                            ),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .wrap()
+                    .w_full()
+                    .min_w_0()
+                    .into_element(cx);
+
+                    let summary_header = if compact_surface {
+                        shadcn::CardHeader::new([shadcn::CardTitle::new("Live summary")
+                            .into_element(cx)])
+                        .into_element(cx)
+                    } else {
+                        shadcn::CardHeader::new([
+                            shadcn::CardTitle::new("Live summary").into_element(cx),
+                            shadcn::CardDescription::new(
+                                "The proof surface should update live as soon as the shared IMUI helpers fire.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx)
+                    };
+
+                    shadcn::Card::new([
+                        summary_header,
+                        shadcn::CardContent::new([rows]).into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .test_id(TEST_ID_SUMMARY_CARD)
+                };
+
+                let inspector_card = {
+                    let count = count;
+                    let enabled = enabled;
+                    let value = value;
+                    let mode_label = mode_label.clone();
+                    let draft = draft.clone();
+
+                    let inspector_surface =
+                        ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
+                            fret_imui::imui(cx, move |ui| {
+                                use fret_ui_kit::imui::{
+                                    TableColumn, TableOptions, UiWriterImUiFacadeExt as _,
+                                    VirtualListMeasureMode, VirtualListOptions,
+                                };
+
+                                let table_columns = if compact_surface {
+                                    vec![
+                                        TableColumn::fill("Signal"),
+                                        TableColumn::px("State", Px(144.0)),
+                                    ]
+                                } else {
+                                    vec![
+                                        TableColumn::fill("Field"),
+                                        TableColumn::px("Value", Px(160.0)),
+                                        TableColumn::px("Source", Px(100.0)),
+                                    ]
+                                };
+
+                                if !compact_surface {
+                                    ui.separator_text("Inspector snapshot");
+                                }
+                                ui.table_with_options(
+                                    "imui-shadcn-demo.inspector.table",
+                                    &table_columns,
+                                    TableOptions {
+                                        striped: true,
+                                        test_id: Some(Arc::from(TEST_ID_TABLE)),
+                                        ..Default::default()
+                                    },
+                                    |table| {
+                                        if compact_surface {
+                                            table.row("mode", |row| {
+                                                row.cell_text("Mode");
+                                                row.cell_text(Arc::<str>::from(format!(
+                                                    "{mode_label} via combo"
+                                                )));
+                                            });
+                                            table.row("enabled", |row| {
+                                                row.cell_text("Enabled");
+                                                row.cell_text(Arc::<str>::from(format!(
+                                                    "{enabled} via switch"
+                                                )));
+                                            });
+                                            table.row("count", |row| {
+                                                row.cell_text("Count");
+                                                row.cell_text(Arc::<str>::from(format!(
+                                                    "{count} via button"
+                                                )));
+                                            });
+                                        } else {
+                                            table.row("count", |row| {
+                                                row.cell_text("Count");
+                                                row.cell_text(Arc::<str>::from(format!("{count}")));
+                                                row.cell_text("Button");
+                                            });
+                                            table.row("enabled", |row| {
+                                                row.cell_text("Enabled");
+                                                row.cell_text(Arc::<str>::from(format!("{enabled}")));
+                                                row.cell_text("Switch");
+                                            });
+                                            table.row("value", |row| {
+                                                row.cell_text("Value");
+                                                row.cell_text(Arc::<str>::from(format!(
+                                                    "{value:.1}"
+                                                )));
+                                                row.cell_text("Slider");
+                                            });
+                                            table.row("mode", |row| {
+                                                row.cell_text("Mode");
+                                                row.cell_text(mode_label.clone());
+                                                row.cell_text("Combo");
+                                            });
+                                            table.row("draft", |row| {
+                                                row.cell_text("Draft");
+                                                row.cell_text(Arc::<str>::from(draft.clone()));
+                                                row.cell_text("Input");
+                                            });
+                                        }
+                                    },
+                                );
+
+                                if !compact_surface {
+                                    ui.separator_text("Recent entries");
+                                }
+                                let _ = ui.virtual_list_with_options(
+                                    "imui-shadcn-demo.inspector.recent",
+                                    if compact_surface { 12 } else { 96 },
+                                    VirtualListOptions {
+                                        viewport_height: if compact_surface {
+                                            RECENT_VIEWPORT_HEIGHT_COMPACT
+                                        } else {
+                                            RECENT_VIEWPORT_HEIGHT_REGULAR
+                                        },
+                                        estimate_row_height: Px(28.0),
+                                        overscan: 2,
+                                        gap: Px(2.0),
+                                        measure_mode: VirtualListMeasureMode::Fixed,
+                                        test_id: Some(Arc::from(TEST_ID_RECENT_LIST)),
+                                        ..Default::default()
+                                    },
+                                    |index| index as fret_ui::ItemKey,
+                                    |ui, index| {
+                                        let selected = if compact_surface {
+                                            (count as usize % 8) == (index % 8)
+                                        } else {
+                                            (count as usize % 12) == (index % 12)
+                                        };
+                                        let _ = ui.selectable(
+                                            format!("Recent entry #{index:03}"),
+                                            selected,
+                                        );
+                                    },
+                                );
+                            })
+                        })
+                        .into_element(cx);
+
+                    let inspector_header = if compact_surface {
+                        shadcn::CardHeader::new([shadcn::CardTitle::new("Inspector")
+                            .into_element(cx)])
+                        .into_element(cx)
+                    } else {
+                        shadcn::CardHeader::new([
+                            shadcn::CardTitle::new("Inspector").into_element(cx),
+                            shadcn::CardDescription::new(
+                                "A compact downstream tool panel should stay readable without forking control chrome per demo.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx)
+                    };
+
+                    shadcn::Card::new([
+                        inspector_header,
+                        shadcn::CardContent::new([inspector_surface]).into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .test_id(TEST_ID_INSPECTOR_CARD)
+                };
+
+                let side_column = ui::v_flex(move |cx| vec![summary_card, inspector_card])
+                    .gap(content_gap)
+                    .w_full()
+                    .min_w_0()
+                    .into_element(cx);
+
+                let body = if stack_cards {
+                    ui::v_flex(move |cx| vec![controls_card, side_column])
+                        .gap(content_gap)
+                        .w_full()
+                        .min_w_0()
+                        .into_element(cx)
+                } else {
+                    ui::h_flex(move |cx| {
+                        vec![
+                            ui::container(move |_cx| [controls_card])
+                                .flex_1()
+                                .min_w_0()
+                                .into_element(cx),
+                            ui::container(move |_cx| [side_column])
+                                .w_px(SIDE_COLUMN_WIDTH)
+                                .flex_shrink_0()
+                                .min_w_0()
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(content_gap)
+                    .items_stretch()
+                    .w_full()
+                    .min_w_0()
+                    .into_element(cx)
+                };
+
+                vec![
+                    ui::v_flex(move |cx| vec![header, body])
+                        .gap(content_gap)
+                        .w_full()
+                        .min_w_0()
                         .into_element(cx),
-                    shadcn::Badge::new(format!("draft: {draft}"))
-                        .variant(shadcn::BadgeVariant::Secondary)
-                        .into_element(cx),
-                ])
-                .into_element(cx);
+                ]
+            })
+            .p(surface_padding)
+            .size_full()
+            .bg(muted_bg)
+            .into_element(ui.cx_mut())
+            .test_id(TEST_ID_ROOT);
 
-                shadcn::Card::new([header, content]).into_element(cx)
-            };
-            ui.add(summary_card);
-
-            if ui.button("Increment count (imui button)").clicked() {
-                let _ = count_state.update_in(ui.cx_mut().app.models_mut(), |v| *v += 1);
-            }
-
-            let _ = ui.switch_model("Enabled (switch)", enabled_state.model());
-
-            let _ = ui.slider_f32_model_with_options(
-                "Value",
-                value_state.model(),
-                SliderOptions {
-                    min: 0.0,
-                    max: 100.0,
-                    step: 1.0,
-                    ..Default::default()
-                },
-            );
-
-            let _ = ui.combo_model_with_options(
-                "imui-shadcn-demo.mode.popup",
-                "Mode",
-                mode_state.model(),
-                &select_items,
-                fret_ui_kit::imui::ComboModelOptions {
-                    test_id: Some(Arc::from("imui-shadcn-demo.mode")),
-                    ..Default::default()
-                },
-            );
-
-            let _ = ui.input_text_model_with_options(
-                draft_state.model(),
-                InputTextOptions {
-                    placeholder: Some(Arc::from("Type some text...")),
-                    ..Default::default()
-                },
-            );
-
-            ui.separator_text("Inspector snapshot");
-            ui.table_with_options(
-                "imui-shadcn-demo.table",
-                &table_columns,
-                TableOptions {
-                    striped: true,
-                    test_id: Some(Arc::from("imui-shadcn-demo.table")),
-                    ..Default::default()
-                },
-                |table| {
-                    table.row("count", |row| {
-                        row.cell_text("Count");
-                        row.cell_text(Arc::<str>::from(format!("{count}")));
-                        row.cell_text("State");
-                    });
-                    table.row("enabled", |row| {
-                        row.cell_text("Enabled");
-                        row.cell_text(Arc::<str>::from(format!("{enabled}")));
-                        row.cell_text("Toggle");
-                    });
-                    table.row("value", |row| {
-                        row.cell_text("Value");
-                        row.cell_text(Arc::<str>::from(format!("{value:.1}")));
-                        row.cell_text("Slider");
-                    });
-                    table.row("mode", |row| {
-                        row.cell_text("Mode");
-                        row.cell_text(mode_label.clone());
-                        row.cell_text("Combo");
-                    });
-                    table.row("draft", |row| {
-                        row.cell_text("Draft");
-                        row.cell_text(Arc::<str>::from(draft.clone()));
-                        row.cell_text("Input");
-                    });
-                },
-            );
-
-            ui.separator_text("Virtualized recent entries");
-            let _ = ui.virtual_list_with_options(
-                "imui-shadcn-demo.virtual-list",
-                256,
-                VirtualListOptions {
-                    viewport_height: Px(156.0),
-                    estimate_row_height: Px(28.0),
-                    overscan: 2,
-                    gap: Px(2.0),
-                    measure_mode: VirtualListMeasureMode::Fixed,
-                    test_id: Some(Arc::from("imui-shadcn-demo.virtual-list")),
-                    ..Default::default()
-                },
-                |index| index as fret_ui::ItemKey,
-                |ui, index| {
-                    let selected = (count as usize % 16) == (index % 16);
-                    let _ = ui.selectable(format!("Recent entry #{index:03}"), selected);
-                },
-            );
+            ui.add_ui(root);
         })
     }
+}
+
+fn summary_badge(
+    cx: &mut ElementContext<'_, KernelApp>,
+    label: Arc<str>,
+    test_id: &'static str,
+) -> AnyElement {
+    let label = ui::text(label)
+        .text_xs()
+        .font_medium()
+        .nowrap()
+        .into_element(cx)
+        .test_id(test_id);
+
+    shadcn::Badge::new("")
+        .variant(shadcn::BadgeVariant::Secondary)
+        .children([label])
+        .into_element(cx)
 }

@@ -405,6 +405,9 @@ mod authoring_surface_policy_tests {
         include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
+    const IMUI_SHADCN_ADAPTER_DISCOVERABILITY_SCRIPT: &str = include_str!(
+        "../../../tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json"
+    );
     const IMUI_EDITOR_PROOF_APP_OWNER_AUDIT: &str = include_str!(
         "../../../docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md"
     );
@@ -2364,10 +2367,19 @@ mod authoring_surface_policy_tests {
             "imui_shadcn_adapter_demo",
             IMUI_SHADCN_ADAPTER_DEMO,
             &[
+                "Product-validation IMUI surface for the shared control-chrome lane.",
                 "fret_imui::imui_in(cx, |ui| {",
+                "ui.add_ui(root);",
+                "fret_imui::imui(cx, move |ui| {",
                 "UiWriterImUiFacadeExt as _",
+                "const TEST_ID_ROOT: &str = \"imui-shadcn-demo.root\";",
+                "const TEST_ID_INCREMENT: &str = \"imui-shadcn-demo.controls.increment\";",
+                "const TEST_ID_ENABLED: &str = \"imui-shadcn-demo.controls.enabled\";",
+                "const TEST_ID_VALUE: &str = \"imui-shadcn-demo.controls.value\";",
+                "const TEST_ID_MODE: &str = \"imui-shadcn-demo.controls.mode\";",
+                "const TEST_ID_DRAFT: &str = \"imui-shadcn-demo.controls.draft\";",
+                "summary_badge(",
                 "ui.combo_model_with_options(",
-                "ui.separator_text(\"Inspector snapshot\")",
                 "ui.table_with_options(",
                 "ui.virtual_list_with_options(",
             ],
@@ -2516,6 +2528,60 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_ROOT_HOSTING_RULE_NOTE.contains(marker),
                 "the immediate-mode workstream should keep the root-host teaching rule explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface() {
+        let demo = IMUI_SHADCN_ADAPTER_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "constTEST_ID_ROOT:&str=\"imui-shadcn-demo.root\";",
+            "constTEST_ID_CONTROL_CARD:&str=\"imui-shadcn-demo.controls.card\";",
+            "constTEST_ID_SUMMARY_CARD:&str=\"imui-shadcn-demo.summary.card\";",
+            "constTEST_ID_INSPECTOR_CARD:&str=\"imui-shadcn-demo.inspector.card\";",
+            "constTEST_ID_SUMMARY_COUNT:&str=\"imui-shadcn-demo.summary.count\";",
+            "constTEST_ID_SUMMARY_ENABLED:&str=\"imui-shadcn-demo.summary.enabled\";",
+            "constTEST_ID_SUMMARY_MODE:&str=\"imui-shadcn-demo.summary.mode\";",
+            "constTEST_ID_SUMMARY_DRAFT:&str=\"imui-shadcn-demo.summary.draft\";",
+            "test_id:Some(Arc::from(TEST_ID_INCREMENT))",
+            "test_id:Some(Arc::from(TEST_ID_ENABLED))",
+            "test_id:Some(Arc::from(TEST_ID_VALUE))",
+            "test_id:Some(Arc::from(TEST_ID_MODE))",
+            "test_id:Some(Arc::from(TEST_ID_DRAFT))",
+            "summary_badge(",
+        ] {
+            assert!(
+                demo.contains(marker),
+                "imui shadcn adapter demo should keep the compact control-discoverability proof markers: {marker}"
+            );
+        }
+
+        let script = IMUI_SHADCN_ADAPTER_DISCOVERABILITY_SCRIPT
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "\"name\":\"imui-shadcn-adapter-control-discoverability\"",
+            "\"id\":\"imui-shadcn-demo.root\"",
+            "\"id\":\"imui-shadcn-demo.controls.increment.chrome\"",
+            "\"id\":\"imui-shadcn-demo.inspector.card\"",
+            "\"id\":\"imui-shadcn-demo.controls.enabled.chrome\"",
+            "\"id\":\"imui-shadcn-demo.controls.value.chrome\"",
+            "\"id\":\"imui-shadcn-demo.controls.mode.chrome\"",
+            "\"id\":\"imui-shadcn-demo.controls.draft\"",
+            "\"kind\":\"bounds_min_size\"",
+            "\"kind\":\"bounds_non_overlapping\"",
+            "\"id\":\"imui-shadcn-demo.controls.mode.option.1\"",
+            "\"text\":\"mode:Beta\"",
+            "\"text\":\"draft:stagingreview\"",
+            "\"type\":\"capture_layout_sidecar\"",
+            "\"type\":\"capture_screenshot\"",
+        ] {
+            assert!(
+                script.contains(marker),
+                "adapter discoverability script should keep the bounded screenshot/layout proof markers: {marker}"
             );
         }
     }

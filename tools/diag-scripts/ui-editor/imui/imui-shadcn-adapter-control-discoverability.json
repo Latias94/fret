@@ -1,0 +1,217 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-shadcn-adapter-control-discoverability",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "imui",
+      "adapter",
+      "control_chrome",
+      "discoverability",
+      "compact",
+      "screenshot",
+      "ui_editor"
+    ],
+    "target_hints": [
+      "Keeps one compact downstream-facing screenshot/layout proof that shared IMUI controls read like real controls.",
+      "Use this when the shared IMUI control chrome changes and the shadcn adapter demo must still look reviewable without demo-local patches."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 620.0 },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.increment" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.header" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.card" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.summary.card" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.inspector.card" },
+        "padding_px": 4.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.increment.chrome" },
+        "min_w_px": 96.0,
+        "min_h_px": 28.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.enabled.chrome" },
+        "min_w_px": 160.0,
+        "min_h_px": 28.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.value.chrome" },
+        "min_w_px": 180.0,
+        "min_h_px": 36.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.mode.chrome" },
+        "min_w_px": 180.0,
+        "min_h_px": 36.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "imui-shadcn-demo.controls.increment.chrome" },
+        "b": { "kind": "test_id", "id": "imui-shadcn-demo.controls.enabled.chrome" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "imui-shadcn-demo.controls.mode.chrome" },
+        "b": { "kind": "test_id", "id": "imui-shadcn-demo.controls.draft" },
+        "eps_px": 0.5
+      }
+    },
+    { "type": "capture_layout_sidecar", "label": "imui-shadcn-adapter.discoverability.before" },
+    { "type": "capture_bundle", "label": "imui-shadcn-adapter.discoverability.before" },
+    { "type": "capture_screenshot", "label": "imui-shadcn-adapter.discoverability.before" },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.increment" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.summary.count" },
+        "text": "count: 1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.enabled" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.summary.enabled" },
+        "text": "enabled: true"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.mode" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.mode.option.1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.mode.option.1" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.summary.mode" },
+        "text": "mode: Beta"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-shadcn-demo.controls.draft" },
+      "text": "staging review"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.summary.draft" },
+        "text": "draft: staging review"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "imui-shadcn-adapter.discoverability.after" },
+    { "type": "capture_bundle", "label": "imui-shadcn-adapter.discoverability.after" },
+    { "type": "capture_screenshot", "label": "imui-shadcn-adapter.discoverability.after" }
+  ]
+}

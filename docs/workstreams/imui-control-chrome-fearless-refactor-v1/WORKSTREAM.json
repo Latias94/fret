@@ -3,7 +3,7 @@
   "slug": "imui-control-chrome-fearless-refactor-v1",
   "title": "ImUi Control Chrome Fearless Refactor v1",
   "status": "active",
-  "updated": "2026-04-14",
+  "updated": "2026-04-20",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The default immediate controls in `ecosystem/fret-ui-kit::imui` still teach text-like interactive surfaces and unstable narrow-width form behavior. This lane owns a shared control-chrome refactor so button/switch/slider/combo/input surfaces become clearly interactive, survive compact editor rails, and stop forcing demos to compensate for broken defaults.",
@@ -80,6 +80,14 @@
       "command": "cargo nextest run -p fret-examples --lib showcase_responsive_layout"
     },
     {
+      "name": "imui-shadcn-adapter-discoverability-source-gate",
+      "command": "cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface"
+    },
+    {
+      "name": "imui-shadcn-adapter-discoverability-diag",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release"
+    },
+    {
       "name": "imui-showcase-interaction-smoke",
       "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release"
     },
@@ -115,6 +123,7 @@
     "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",

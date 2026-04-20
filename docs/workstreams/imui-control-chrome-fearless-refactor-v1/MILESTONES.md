@@ -1,7 +1,7 @@
 # ImUi Control Chrome Fearless Refactor v1 - Milestones
 
 Status: active execution lane
-Last updated: 2026-04-14
+Last updated: 2026-04-20
 
 ## M0 - Baseline and lane split
 
@@ -45,7 +45,8 @@ Current state:
 - `imui_interaction_showcase_demo` now proves the shared button-family/radio surface directly.
 - `bullet_text` now exists as a default IMUI informational helper, and the imgui audit no longer
   under-counts `separator_text`.
-- `imui_shadcn_adapter_demo` cleanup is still pending.
+- `imui_shadcn_adapter_demo` now acts as the compact downstream-facing proof that shared IMUI
+  helpers still read like controls when hosted in a shadcn shell.
 - The fresh imgui component-family audit now makes the remaining follow-on order explicit.
 
 ## M3 - Proof and gates
@@ -58,11 +59,14 @@ Exit criteria:
 
 Current state:
 
-- Partially achieved on 2026-04-14.
+- Achieved on 2026-04-20.
 - Focused Rust gates are green and the compact showcase screenshot script produced a reviewable
   artifact.
 - Focused compile/runtime gates now also cover the new button-family/radio surface.
-- A more direct control-discoverability screenshot/bounds gate is still pending.
+- The adapter demo now has a direct compact control-discoverability screenshot/layout gate with a
+  passing before/after artifact pair at `900x620`.
+- A narrower field-width regression lane may still be warranted if future shared-field work moves
+  beyond the current proof.
 
 ## M4 - Follow-on decision
 

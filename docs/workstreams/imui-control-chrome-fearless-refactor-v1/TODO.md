@@ -1,7 +1,7 @@
 # ImUi Control Chrome Fearless Refactor v1 - TODO
 
 Status: active execution lane
-Last updated: 2026-04-14
+Last updated: 2026-04-20
 
 ## Lane setup
 
@@ -41,7 +41,7 @@ Last updated: 2026-04-14
 
 - [x] Update `imui_interaction_showcase_demo` so it proves the new shared surface rather than
       compensating for old defaults.
-- [ ] Update `imui_shadcn_adapter_demo` so it remains a small proof that the IMUI helpers now read
+- [x] Update `imui_shadcn_adapter_demo` so it remains a small proof that the IMUI helpers now read
       as real controls.
 - [x] Keep `imui_response_signals_demo` focused on behavior proof, but make sure the migrated
       controls do not regress its readability.
@@ -59,6 +59,6 @@ Last updated: 2026-04-14
 - [x] Keep `fret-imui` interaction tests green after the migration.
 - [x] Add or extend focused tests for the migrated control families where the old visuals encoded
       implicit behavior assumptions.
-- [ ] Promote a showcase diag check that directly protects control discoverability / compact layout
+- [x] Promote a showcase diag check that directly protects control discoverability / compact layout
       after the new chrome lands.
 - [x] Leave one reviewable screenshot anchor for the migrated showcase surface.
