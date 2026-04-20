@@ -15,9 +15,10 @@ use std::process::Child;
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1, UiArtifactStatsV1,
-    UiCapabilitiesCheckV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1,
-    UiScriptStageV1,
+    DevtoolsBundleDumpedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
+    EnvironmentSourceAvailabilityV1, FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
+    UiArtifactStatsV1, UiCapabilitiesCheckV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
+    UiScriptResultV1, UiScriptStageV1,
 };
 
 pub mod api;
@@ -544,6 +545,24 @@ pub(crate) fn resolve_filesystem_capabilities_path(base_dir: &Path) -> Option<Pa
     None
 }
 
+pub(crate) fn resolve_filesystem_environment_sources_path(base_dir: &Path) -> Option<PathBuf> {
+    let direct = base_dir.join("environment.sources.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = base_dir.join("_root").join("environment.sources.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    if let Some(parent) = base_dir.parent() {
+        let from_parent = parent.join("environment.sources.json");
+        if from_parent.is_file() {
+            return Some(from_parent);
+        }
+    }
+    None
+}
+
 pub(crate) fn read_filesystem_capabilities_payload(
     path: &Path,
 ) -> Option<fret_diag_protocol::FilesystemCapabilitiesV1> {
@@ -551,6 +570,15 @@ pub(crate) fn read_filesystem_capabilities_payload(
         return None;
     };
     serde_json::from_slice::<fret_diag_protocol::FilesystemCapabilitiesV1>(&bytes).ok()
+}
+
+pub(crate) fn read_filesystem_environment_sources_payload(
+    path: &Path,
+) -> Option<FilesystemEnvironmentSourcesV1> {
+    let Ok(bytes) = std::fs::read(path) else {
+        return None;
+    };
+    serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(&bytes).ok()
 }
 
 pub(crate) fn normalize_filesystem_capabilities(
@@ -564,6 +592,51 @@ pub(crate) fn normalize_filesystem_capabilities(
     caps.sort();
     caps.dedup();
     caps
+}
+
+fn normalize_environment_source_id(value: &str) -> Option<String> {
+    let normalized = value.trim().to_ascii_lowercase();
+    if normalized.is_empty() {
+        return None;
+    }
+    Some(normalized)
+}
+
+fn environment_source_availability_sort_key(
+    value: EnvironmentSourceAvailabilityV1,
+) -> &'static str {
+    match value {
+        EnvironmentSourceAvailabilityV1::PreflightFilesystemSidecar => {
+            "preflight_filesystem_sidecar"
+        }
+        EnvironmentSourceAvailabilityV1::PreflightTransportSession => "preflight_transport_session",
+        EnvironmentSourceAvailabilityV1::LaunchTime => "launch_time",
+        EnvironmentSourceAvailabilityV1::PostRunOnly => "post_run_only",
+    }
+}
+
+pub(crate) fn normalize_filesystem_environment_sources(
+    parsed: &FilesystemEnvironmentSourcesV1,
+) -> Vec<FilesystemEnvironmentSourceV1> {
+    let mut sources: Vec<FilesystemEnvironmentSourceV1> = parsed
+        .sources
+        .iter()
+        .filter_map(|source| {
+            let source_id = normalize_environment_source_id(&source.source_id)?;
+            Some(FilesystemEnvironmentSourceV1 {
+                source_id,
+                availability: source.availability,
+            })
+        })
+        .collect();
+    sources.sort_by(|a, b| {
+        a.source_id.cmp(&b.source_id).then_with(|| {
+            environment_source_availability_sort_key(a.availability)
+                .cmp(environment_source_availability_sort_key(b.availability))
+        })
+    });
+    sources.dedup();
+    sources
 }
 
 fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
@@ -673,9 +746,109 @@ impl CapabilitySource {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum EnvironmentSourceCatalogProvenanceKind {
+    Filesystem,
+    TransportSession,
+    Inline,
+    Unknown,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct EnvironmentSourceCatalogProvenance {
+    kind: EnvironmentSourceCatalogProvenanceKind,
+    catalog_path: Option<PathBuf>,
+    label: Option<String>,
+    transport: Option<String>,
+    session_id: Option<String>,
+}
+
+impl EnvironmentSourceCatalogProvenance {
+    fn kind_str(&self) -> &'static str {
+        match self.kind {
+            EnvironmentSourceCatalogProvenanceKind::Filesystem => "filesystem",
+            EnvironmentSourceCatalogProvenanceKind::TransportSession => "transport_session",
+            EnvironmentSourceCatalogProvenanceKind::Inline => "inline",
+            EnvironmentSourceCatalogProvenanceKind::Unknown => "unknown",
+        }
+    }
+
+    pub(crate) fn filesystem(path: Option<&Path>) -> Self {
+        Self {
+            kind: EnvironmentSourceCatalogProvenanceKind::Filesystem,
+            catalog_path: path.map(Path::to_path_buf),
+            label: None,
+            transport: Some("filesystem".to_string()),
+            session_id: None,
+        }
+    }
+
+    pub(crate) fn transport_session(transport: &str, session_id: &str) -> Self {
+        Self {
+            kind: EnvironmentSourceCatalogProvenanceKind::TransportSession,
+            catalog_path: None,
+            label: Some(format!("{transport}:{session_id}")),
+            transport: Some(transport.to_string()),
+            session_id: Some(session_id.to_string()),
+        }
+    }
+
+    pub(crate) fn transport_name(&self) -> &str {
+        self.transport.as_deref().unwrap_or(match self.kind {
+            EnvironmentSourceCatalogProvenanceKind::Filesystem => "filesystem",
+            EnvironmentSourceCatalogProvenanceKind::TransportSession => "transport_session",
+            EnvironmentSourceCatalogProvenanceKind::Inline => "inline",
+            EnvironmentSourceCatalogProvenanceKind::Unknown => "unknown",
+        })
+    }
+
+    pub(crate) fn catalog_path(&self) -> Option<&Path> {
+        self.catalog_path.as_deref()
+    }
+
+    pub(crate) fn legacy_label(&self) -> String {
+        if let Some(path) = self.catalog_path.as_deref() {
+            return format!("{}:{}", self.transport_name(), path.display());
+        }
+        if let Some(label) = self.label.as_deref() {
+            return label.to_string();
+        }
+        match self.kind {
+            EnvironmentSourceCatalogProvenanceKind::Filesystem => {
+                "filesystem:<missing environment.sources.json>".to_string()
+            }
+            EnvironmentSourceCatalogProvenanceKind::TransportSession => self
+                .session_id
+                .as_deref()
+                .map(|session_id| format!("{}:{session_id}", self.transport_name()))
+                .unwrap_or_else(|| format!("{}:<missing session>", self.transport_name())),
+            EnvironmentSourceCatalogProvenanceKind::Inline => "inline".to_string(),
+            EnvironmentSourceCatalogProvenanceKind::Unknown => "unknown".to_string(),
+        }
+    }
+
+    pub(crate) fn to_json_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "kind": self.kind_str(),
+            "catalog_path": self.catalog_path.as_ref().map(|path| path.display().to_string()),
+            "label": self.label.clone().or_else(|| Some(self.legacy_label())),
+            "transport": self.transport.clone(),
+            "session_id": self.session_id.clone(),
+        })
+    }
+}
+
 pub(crate) fn resolve_filesystem_capabilities_source(base_dir: &Path) -> CapabilitySource {
     let source_path = resolve_filesystem_capabilities_path(base_dir);
     CapabilitySource::filesystem(source_path.as_deref())
+}
+
+pub(crate) fn resolve_filesystem_environment_sources_provenance(
+    base_dir: &Path,
+) -> EnvironmentSourceCatalogProvenance {
+    let source_path = resolve_filesystem_environment_sources_path(base_dir);
+    EnvironmentSourceCatalogProvenance::filesystem(source_path.as_deref())
 }
 
 pub(crate) fn read_filesystem_capabilities_with_provenance(
@@ -686,6 +859,21 @@ pub(crate) fn read_filesystem_capabilities_with_provenance(
         .source_path()
         .and_then(read_filesystem_capabilities_payload)
         .map(|parsed| normalize_filesystem_capabilities(&parsed))
+        .unwrap_or_default();
+    (source, available)
+}
+
+pub(crate) fn read_filesystem_environment_sources_with_provenance(
+    base_dir: &Path,
+) -> (
+    EnvironmentSourceCatalogProvenance,
+    Vec<FilesystemEnvironmentSourceV1>,
+) {
+    let source = resolve_filesystem_environment_sources_provenance(base_dir);
+    let available = source
+        .catalog_path()
+        .and_then(read_filesystem_environment_sources_payload)
+        .map(|parsed| normalize_filesystem_environment_sources(&parsed))
         .unwrap_or_default();
     (source, available)
 }
@@ -951,6 +1139,109 @@ mod capability_tests {
         assert_eq!(source.source_path(), None);
         assert_eq!(source.legacy_check_source(), "devtools_ws");
         assert_eq!(source.legacy_label(), "devtools_ws:session-123");
+    }
+
+    #[test]
+    fn read_filesystem_environment_sources_with_provenance_falls_back_to_parent_path() {
+        let parent_dir = make_temp_dir("fret-diag-environment-sources-parent");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let sources = FilesystemEnvironmentSourcesV1 {
+            schema_version: 1,
+            sources: vec![
+                FilesystemEnvironmentSourceV1 {
+                    source_id: " host.monitor_topology ".to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::PostRunOnly,
+                },
+                FilesystemEnvironmentSourceV1 {
+                    source_id: "HOST.MONITOR_TOPOLOGY".to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::PostRunOnly,
+                },
+                FilesystemEnvironmentSourceV1 {
+                    source_id: "".to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+                },
+            ],
+            runner_kind: Some("filesystem".to_string()),
+            runner_version: Some("1".to_string()),
+        };
+        std::fs::write(
+            parent_dir.join("session").join("environment.sources.json"),
+            serde_json::to_string_pretty(&sources).unwrap() + "\n",
+        )
+        .unwrap();
+        let expected_catalog_path = parent_dir.join("session").join("environment.sources.json");
+
+        let (source, available) = read_filesystem_environment_sources_with_provenance(&run_dir);
+
+        assert_eq!(source.catalog_path(), Some(expected_catalog_path.as_path()));
+        assert_eq!(
+            available,
+            vec![FilesystemEnvironmentSourceV1 {
+                source_id: "host.monitor_topology".to_string(),
+                availability: EnvironmentSourceAvailabilityV1::PostRunOnly,
+            }]
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn resolve_filesystem_environment_sources_provenance_formats_legacy_label() {
+        let parent_dir = make_temp_dir("fret-diag-environment-sources-source-label");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let sources = FilesystemEnvironmentSourcesV1 {
+            schema_version: 1,
+            sources: vec![FilesystemEnvironmentSourceV1 {
+                source_id: "host.monitor_topology".to_string(),
+                availability: EnvironmentSourceAvailabilityV1::PostRunOnly,
+            }],
+            runner_kind: None,
+            runner_version: None,
+        };
+        let catalog_path = parent_dir.join("session").join("environment.sources.json");
+        std::fs::write(
+            &catalog_path,
+            serde_json::to_string_pretty(&sources).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let source = resolve_filesystem_environment_sources_provenance(&run_dir);
+
+        assert_eq!(source.catalog_path(), Some(catalog_path.as_path()));
+        assert_eq!(
+            source.legacy_label(),
+            format!("filesystem:{}", catalog_path.display())
+        );
+        assert_eq!(
+            source
+                .to_json_value()
+                .get("catalog_path")
+                .and_then(|value| value.as_str()),
+            Some(catalog_path.display().to_string().as_str())
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn transport_session_environment_source_catalog_provenance_keeps_transport_identity() {
+        let source =
+            EnvironmentSourceCatalogProvenance::transport_session("devtools_ws", "session-123");
+
+        assert_eq!(source.transport_name(), "devtools_ws");
+        assert_eq!(source.catalog_path(), None);
+        assert_eq!(source.legacy_label(), "devtools_ws:session-123");
+        assert_eq!(
+            source
+                .to_json_value()
+                .get("transport")
+                .and_then(|value| value.as_str()),
+            Some("devtools_ws")
+        );
     }
 
     #[test]

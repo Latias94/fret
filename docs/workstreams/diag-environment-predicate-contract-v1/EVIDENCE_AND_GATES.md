@@ -28,6 +28,12 @@ What this proves:
 cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast
 ```
 
+### Environment-foundation gate
+
+```bash
+cargo nextest run -p fret-diag --lib environment_source --no-fail-fast
+```
+
 ### Lane hygiene
 
 ```bash
@@ -51,6 +57,9 @@ git diff --check
   `preflight_filesystem_sidecar`, `preflight_transport_session`, `launch_time`,
   and `post_run_only`.
 - `post_run_only` environment sources are evidence-only and must not drive preflight.
+- `fret-diag-protocol` now exposes the additive environment-source catalog types.
+- `crates/fret-diag` now has a parallel filesystem loader/provenance seam for
+  `environment.sources.json`.
 - The repo now has an explicit lane that forbids collapsing those surfaces into one generic runtime
   abstraction without stronger evidence.
 
@@ -61,6 +70,7 @@ git diff --check
 - `docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/TODO.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md`
@@ -73,5 +83,7 @@ git diff --check
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs`
 - `crates/fret-runtime/src/font_catalog.rs`
+- `crates/fret-diag-protocol/src/lib.rs`
+- `crates/fret-diag/src/lib.rs`
 - `crates/fret-diag/src/registry/campaigns.rs`
 - `apps/fret-examples/src/lib.rs`

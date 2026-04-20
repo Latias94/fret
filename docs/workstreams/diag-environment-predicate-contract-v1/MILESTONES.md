@@ -56,6 +56,9 @@ Exit criteria:
 Primary future evidence:
 
 - `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md`
+- `crates/fret-diag-protocol/src/lib.rs`
+- `crates/fret-diag/src/lib.rs`
 - `crates/fret-diag/src/registry/campaigns.rs`
 - `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/transport/fs.rs`
@@ -63,4 +66,5 @@ Primary future evidence:
 
 Status:
 
-- Design preconditions frozen on 2026-04-20; implementation not started.
+- Environment-source catalog foundation landed on 2026-04-20; manifest and consumer wiring remain
+  unstarted.

@@ -409,6 +409,9 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_DECISION: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_FOUNDATION: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md"
+    );
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
     );
@@ -425,6 +428,7 @@ mod authoring_surface_policy_tests {
     const DIAG_LIB_RS: &str = include_str!("../../../crates/fret-diag/src/lib.rs");
     const DIAG_FS_TRANSPORT_RS: &str =
         include_str!("../../../crates/fret-diag/src/transport/fs.rs");
+    const DIAG_PROTOCOL_RS: &str = include_str!("../../../crates/fret-diag-protocol/src/lib.rs");
     const ENVIRONMENT_QUERIES_ADR: &str =
         include_str!("../../../docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md");
     const RESOURCE_LOADING_WORKSTREAM_README: &str =
@@ -3540,6 +3544,7 @@ mod authoring_surface_policy_tests {
             "`requires_capabilities`",
             "M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
             "M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
+            "M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
@@ -3594,6 +3599,19 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_DECISION.contains(marker),
                 "the provenance-and-availability decision should keep the catalog contract explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`EnvironmentSourceAvailabilityV1`",
+            "`FilesystemEnvironmentSourcesV1`",
+            "`EnvironmentSourceCatalogProvenance`",
+            "`environment.sources.json`",
+            "This slice intentionally did not:",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_FOUNDATION.contains(marker),
+                "the implementation note should keep the landed foundation scope explicit: {marker}"
             );
         }
 
@@ -3656,10 +3674,24 @@ mod authoring_surface_policy_tests {
             "pub(crate) fn read_filesystem_capabilities_with_provenance",
             "CapabilitySource::filesystem",
             "capabilities.json",
+            "EnvironmentSourceCatalogProvenance",
+            "read_filesystem_environment_sources_with_provenance",
+            "environment.sources.json",
         ] {
             assert!(
                 DIAG_LIB_RS.contains(marker),
                 "the diagnostics library should keep capability-source provenance explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub enum EnvironmentSourceAvailabilityV1",
+            "pub struct FilesystemEnvironmentSourceV1",
+            "pub struct FilesystemEnvironmentSourcesV1",
+        ] {
+            assert!(
+                DIAG_PROTOCOL_RS.contains(marker),
+                "the diagnostics protocol should keep the environment-source catalog types explicit: {marker}"
             );
         }
 

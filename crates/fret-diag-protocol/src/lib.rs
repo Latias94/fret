@@ -217,6 +217,33 @@ pub struct FilesystemCapabilitiesV1 {
     pub hints: Option<FilesystemCapabilitiesHintsV1>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EnvironmentSourceAvailabilityV1 {
+    PreflightFilesystemSidecar,
+    PreflightTransportSession,
+    LaunchTime,
+    PostRunOnly,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FilesystemEnvironmentSourceV1 {
+    pub source_id: String,
+    pub availability: EnvironmentSourceAvailabilityV1,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FilesystemEnvironmentSourcesV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<FilesystemEnvironmentSourceV1>,
+    /// Optional runner identity for auditability (additive; tooling must treat as hints).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_version: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiDiagnosticsConfigPathsV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]

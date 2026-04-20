@@ -16,6 +16,8 @@ Status: Active
 - [x] DEPC-012 Choose the first concrete source candidate and record why syntax remains deferred.
 - [x] DEPC-013 Define the environment-source provenance/timing lane needed before manifest syntax
   lands.
+- [x] DEPC-015 Land additive protocol + filesystem loader foundations for an environment-source
+  catalog without introducing manifest consumers.
 - [ ] DEPC-014 Choose the smallest additive diagnostics manifest shape once the first concrete
   source and timing contract are both ready.
 

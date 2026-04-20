@@ -24,6 +24,10 @@
       "path": "docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/diag-environment-predicate-contract-v1/TODO.md"
     },
@@ -61,6 +65,10 @@
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast"
     },
     {
+      "name": "environment-foundation",
+      "command": "cargo nextest run -p fret-diag --lib environment_source --no-fail-fast"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python3 tools/check_workstream_catalog.py"
     },
@@ -83,6 +91,7 @@
     "docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
+    "docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/TODO.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md",
@@ -92,6 +101,8 @@
     "docs/workstreams/resource-loading-fearless-refactor-v1/README.md",
     "docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md",
     "docs/ui-diagnostics-and-scripted-tests.md",
+    "crates/fret-diag-protocol/src/lib.rs",
+    "crates/fret-diag/src/lib.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
     "crates/fret-runtime/src/font_catalog.rs",
