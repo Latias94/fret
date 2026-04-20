@@ -44,8 +44,9 @@ git diff --check
 - `fret::advanced::view` no longer reexports `UiCxDataExt`.
 - `ecosystem/fret/src/view.rs` no longer defines the hidden `UiCx*` carrier aliases.
 - Default teaching gates and first-party docs remain on canonical names only.
-- `release-plz.toml` still treats the workspace as `semver_check = true`, so the next published
-  `fret` release must carry the breaking-change note for this deletion.
+- `release-plz.toml` still treats the workspace as `semver_check = true`, and the repo-managed
+  release note now lives in `CHANGELOG.md` plus `docs/release/v0.1.0-release-checklist.md` so the
+  next published `fret` release keeps the deletion explicit instead of relying on chat/history.
 
 ## Evidence anchors
 
@@ -62,6 +63,8 @@ git diff --check
 - `docs/examples/todo-app-golden-path.md`
 - `docs/first-hour.md`
 - `docs/shadcn-declarative-progress.md`
+- `CHANGELOG.md`
+- `docs/release/v0.1.0-release-checklist.md`
 - `ecosystem/fret/Cargo.toml`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/src/view.rs`
@@ -70,6 +73,7 @@ git diff --check
 - `ecosystem/fret/tests/app_render_actions_surface.rs`
 - `ecosystem/fret/tests/app_render_data_surface.rs`
 - `ecosystem/fret/tests/crate_usage_grouped_query_surface.rs`
+- `ecosystem/fret/tests/uicx_release_notes_surface.rs`
 - `tools/gate_no_raw_app_context_in_default_teaching_snippets.py`
 - `tools/pre_release.py`
 - `release-plz.toml`

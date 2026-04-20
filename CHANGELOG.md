@@ -17,6 +17,13 @@ Release runbooks:
 
 ## Unreleased
 
+### Breaking Changes
+
+- Remove the published `UiCx*` compatibility alias family from `fret`.
+  Use `AppComponentCx<'a>`, `AppRenderCx<'a>`, `AppRenderContext<'a>`,
+  `AppRenderActionsExt`, and `AppRenderDataExt` instead of `UiCx<'a>`,
+  `UiCxActionsExt`, and `UiCxDataExt`.
+
 ### Added
 
 - Adopt `release-plz` workflow with explicit publish allowlist.
@@ -33,4 +40,3 @@ Release runbooks:
 
 - Add release adoption analysis and v0.1 release checklist docs.
 - Reorganize `README.md` for quick-start + architecture + release discoverability.
-

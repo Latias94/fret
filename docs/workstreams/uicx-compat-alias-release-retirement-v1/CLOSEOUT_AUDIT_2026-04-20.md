@@ -47,6 +47,11 @@ That is acceptable for this repo state, but the next published `fret` release mu
 - the SemVer-appropriate version-group bump required by `release-plz` / semver checks
 - an explicit breaking-change note that `UiCx*` compatibility aliases were removed
 
+That release-facing note now lives in the repo-managed release surfaces:
+
+- `CHANGELOG.md`
+- `docs/release/v0.1.0-release-checklist.md`
+
 ## Closure evidence
 
 Commands for the final slice:
@@ -70,5 +75,7 @@ Key evidence anchors:
 - `ecosystem/fret/tests/app_render_data_surface.rs`
 - `docs/crate-usage-guide.md`
 - `docs/authoring-golden-path-v2.md`
+- `CHANGELOG.md`
+- `docs/release/v0.1.0-release-checklist.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md`
