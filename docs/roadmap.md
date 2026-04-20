@@ -152,6 +152,13 @@ Tracker highlights:
   `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`,
   `docs/workstreams/diag-monitor-topology-environment-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`.
+- Diagnostics environment-predicate contract lane (active narrow follow-on that classifies
+  per-window UI environment snapshots, renderer font environment snapshots, and bundle-level
+  diagnostics env fingerprints before any host-environment preflight contract lands):
+  `docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md`,
+  `docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md`,
+  `docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`.
 - Docking N-ary split graph (canonical form + ops semantics): `docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1.md` (TODOs: `docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1-todo.md`).
 - Immediate-mode compatibility retained surface reduction (closed closeout lane for public/proof retained-compatibility surface deletion): `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`, `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`, `docs/workstreams/imui-compat-retained-surface-v1/MILESTONES.md`, `docs/workstreams/imui-compat-retained-surface-v1/BASELINE_AUDIT_2026-03-31.md`, and `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`.
 - Immediate-mode stack v2 closeout record (stack reset + editor adapter closure + teaching-surface cleanup): `docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`.

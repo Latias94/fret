@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "slug": "diag-environment-predicate-contract-v1",
+  "title": "Diag Environment Predicate Contract v1",
+  "status": "active",
+  "updated": "2026-04-20",
+  "scope_kind": "execution",
+  "problem": "The repo now has multiple environment snapshots with different owners and purposes (`debug.environment`, renderer font provenance, and bundle env fingerprints), but diagnostics orchestration still only supports `requires_capabilities`. Before any host-environment gating lands, the framework needs a narrow contract that classifies these sources correctly and rejects a generic one-size-fits-all snapshot abstraction.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/resource-loading-fearless-refactor-v1/README.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this lane by proving the repo still has multiple environment snapshot families with different owners while diagnostics orchestration still only honors `requires_capabilities`.",
+    "commands": [
+      "rg -n \"ElementEnvironmentSnapshotV1|RendererFontEnvironmentSnapshot|UiDiagnosticsEnvFingerprintV1|requires_capabilities|diag-environment-predicate-contract-v1\" ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs crates/fret-runtime/src/font_catalog.rs crates/fret-diag/src/registry/campaigns.rs docs/workstreams/diag-environment-predicate-contract-v1 docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md docs/workstreams/resource-loading-fearless-refactor-v1/README.md",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "source-policy-gate",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-hygiene",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json",
+    "docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md",
+    "docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md",
+    "docs/workstreams/diag-environment-predicate-contract-v1/TODO.md",
+    "docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md",
+    "docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md",
+    "docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md",
+    "docs/workstreams/resource-loading-fearless-refactor-v1/README.md",
+    "docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md",
+    "docs/ui-diagnostics-and-scripted-tests.md",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+    "crates/fret-runtime/src/font_catalog.rs",
+    "crates/fret-diag/src/registry/campaigns.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md",
+    "docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md",
+    "docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md",
+    "docs/adr/0246-environment-queries-preference-extensions-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane only for the diagnostics environment predicate taxonomy and admission-rule contract. Do not merge existing environment snapshot families into one generic runtime abstraction unless fresh evidence proves they need one shared owner, lifetime, and consumer model."
+  },
+  "follow_on_of": "diag-monitor-topology-environment-v1"
+}

@@ -395,8 +395,27 @@ mod authoring_surface_policy_tests {
     const DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_CLOSEOUT: &str = include_str!(
         "../../../docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json"
+    );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_DESIGN: &str =
+        include_str!("../../../docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md");
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_BASELINE: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md"
+    );
     const RUNNER_MONITOR_TOPOLOGY_DIAGNOSTICS: &str =
         include_str!("../../../crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs");
+    const ELEMENT_RUNTIME_DIAGNOSTICS_RS: &str = include_str!(
+        "../../../ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs"
+    );
+    const RUNTIME_FONT_CATALOG_RS: &str =
+        include_str!("../../../crates/fret-runtime/src/font_catalog.rs");
+    const DIAG_CAMPAIGNS_RS: &str =
+        include_str!("../../../crates/fret-diag/src/registry/campaigns.rs");
+    const ENVIRONMENT_QUERIES_ADR: &str =
+        include_str!("../../../docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md");
+    const RESOURCE_LOADING_WORKSTREAM_README: &str =
+        include_str!("../../../docs/workstreams/resource-loading-fearless-refactor-v1/README.md");
     const UI_DIAGNOSTICS_SERVICE_RS: &str =
         include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs");
     const UI_DIAGNOSTICS_BUNDLE_RS: &str =
@@ -3494,6 +3513,131 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_CLOSEOUT.contains(marker),
                 "the closeout note should keep the shipped verdict explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy() {
+        for marker in [
+            "\"slug\": \"diag-environment-predicate-contract-v1\"",
+            "\"status\": \"active\"",
+            "\"follow_on_of\": \"diag-monitor-topology-environment-v1\"",
+            "\"default_action\": \"continue\"",
+            "`requires_capabilities`",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
+                "the environment-predicate lane should keep the active workstream markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "It does not force a generic runtime `EnvironmentSnapshot` abstraction.",
+            "`ElementEnvironmentSnapshotV1` is the per-window reactive UI environment surface.",
+            "`RendererFontEnvironmentSnapshot` is a renderer/resource-loading provenance surface.",
+            "`UiDiagnosticsEnvFingerprintV1` is the diagnostics-run environment fingerprint.",
+            "`crates/fret-diag`",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_DESIGN.contains(marker),
+                "the design note should keep the taxonomy and owner split explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The repo already has three environment lanes with different purposes",
+            "Do not generalize them into one erased runtime family yet",
+            "The current automation preflight contract is still `requires_capabilities` only",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_BASELINE.contains(marker),
+                "the baseline audit should keep the no-premature-abstraction verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub struct ElementEnvironmentSnapshotV1",
+            "pub viewport_bounds: RectV1",
+            "pub safe_area_insets: Option<UiEdgesV1>",
+        ] {
+            assert!(
+                ELEMENT_RUNTIME_DIAGNOSTICS_RS.contains(marker),
+                "the per-window environment snapshot surface should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub struct RendererFontEnvironmentSnapshot",
+            "pub revision: u64",
+            "pub text_font_stack_key: Option<u64>",
+        ] {
+            assert!(
+                RUNTIME_FONT_CATALOG_RS.contains(marker),
+                "the renderer font environment surface should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub struct UiDiagnosticsEnvFingerprintV1",
+            "pub monitor_topology: Option<UiDiagnosticsMonitorTopologyV1>",
+            "pub scale_factors_seen: Vec<f32>",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_BUNDLE_RS.contains(marker),
+                "the diagnostics-run environment fingerprint should stay explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub requires_capabilities: Vec<String>",
+            "requires_capabilities: Vec<String>",
+            "normalize_lowercase_string_list(manifest.requires_capabilities)",
+        ] {
+            assert!(
+                DIAG_CAMPAIGNS_RS.contains(marker),
+                "campaign orchestration should keep capabilities as the current preflight contract: {marker}"
+            );
+        }
+
+        for marker in [
+            "environment query",
+            "Per-window (keyed by `AppWindowId`).",
+            "a **committed** per-window environment snapshot",
+        ] {
+            assert!(
+                ENVIRONMENT_QUERIES_ADR.contains(marker),
+                "the environment-queries ADR should keep the per-window contract explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`fret_runtime::RendererFontEnvironmentSnapshot` tracks a monotonic `revision`",
+            "resource-loading predicates can now gate that inventory by revision, source lane, and",
+        ] {
+            assert!(
+                RESOURCE_LOADING_WORKSTREAM_README.contains(marker),
+                "the resource-loading lane should keep the renderer-font environment contract explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`debug.environment` remains a per-window runtime/debug surface, not a campaign preflight",
+            "host-environment predicates belong to the dedicated follow-on lane",
+        ] {
+            assert!(
+                DIAG_EXTENSIBILITY_DETERMINISM_DOC.contains(marker),
+                "the diagnostics determinism note should keep the preflight boundary explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Campaign manifests still only gate on `requires_capabilities`.",
+            "Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_BUNDLES_DOC.contains(marker),
+                "the living diagnostics doc should keep the environment-predicate boundary explicit: {marker}"
             );
         }
     }

@@ -41,6 +41,10 @@ Important boundary:
 - `monitor_topology` is the host environment fingerprint.
 - `scale_factors_seen` remains run-observed per-window evidence collected during the diagnostics
   run; it is not a substitute for host monitor inventory.
+- `debug.environment` remains a per-window runtime/debug surface, not a campaign preflight
+  contract.
+- host-environment predicates belong to the dedicated follow-on lane
+  `docs/workstreams/diag-environment-predicate-contract-v1/`.
 
 ## Repeat-run triage
 

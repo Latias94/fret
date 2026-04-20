@@ -113,6 +113,9 @@ Environment fingerprint note:
 - `bundle.json.env.scale_factors_seen` remains the last-known per-window scale factors observed
   during the run.
 - Do not treat `scale_factors_seen` as host monitor topology or as a mixed-DPI preflight signal.
+- Campaign manifests still only gate on `requires_capabilities`.
+- Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute for a real
+  host-environment preflight contract.
 
 ## Sidecars (index/meta/test-id index)
 
