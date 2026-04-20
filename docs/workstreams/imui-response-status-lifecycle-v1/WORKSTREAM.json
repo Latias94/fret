@@ -2,8 +2,8 @@
   "schema_version": 1,
   "slug": "imui-response-status-lifecycle-v1",
   "title": "ImUi Response Status Lifecycle v1",
-  "status": "active",
-  "updated": "2026-04-13",
+  "status": "closed",
+  "updated": "2026-04-20",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The active immediate-mode product-closure umbrella already narrowed the remaining P0 backlog, but the missing `ResponseExt` item-status lifecycle vocabulary now needs its own bounded lane so the repo can freeze activation/deactivation/edit semantics without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate key-owner problem.",
@@ -15,6 +15,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md"
     },
     {
       "role": "execution",
@@ -91,6 +95,7 @@
     "docs/workstreams/imui-response-status-lifecycle-v1/TODO.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
@@ -118,7 +123,7 @@
     "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane until the first lifecycle quartet, its owner split, and the bounded public response slices are explicit. If pressure shifts to key ownership, deeper menu-bar/submenu policy, or tab-trigger outward response work, start another narrow follow-on instead of widening this folder."
+    "default_action": "close",
+    "notes": "This lane is closed. Reuse it as the closeout record for the first `ResponseExt` lifecycle vocabulary. If future pressure shifts to key ownership, broader proof depth, or helper-owned trigger policy, start another narrow follow-on instead of reopening this folder."
   }
 }

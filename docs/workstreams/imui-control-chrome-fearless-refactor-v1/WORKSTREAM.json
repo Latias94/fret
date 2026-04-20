@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "imui-control-chrome-fearless-refactor-v1",
   "title": "ImUi Control Chrome Fearless Refactor v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-20",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
@@ -19,6 +19,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M1_IMUI_VS_IMGUI_COMPONENT_AUDIT_2026-04-14.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md"
     },
     {
       "role": "execution",
@@ -120,6 +124,7 @@
     "docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md",
     "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md",
     "docs/workstreams/imui-control-chrome-fearless-refactor-v1/M1_IMUI_VS_IMGUI_COMPONENT_AUDIT_2026-04-14.md",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md",
     "docs/workstreams/control-chrome-normalization-audit-v1/control-chrome-normalization-audit-v1.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
@@ -155,7 +160,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane while the shared IMUI control chrome refactor is active. If the remaining work narrows to one control family only (for example checkbox/selectable-only parity), start a smaller follow-on instead of widening this lane again."
+    "default_action": "close",
+    "notes": "This lane is closed. Reuse it as the latest closeout record for the shared IMUI control-chrome rewrite. If future pressure shifts to field-width policy, checkbox/selectable/disclosure parity, or broader IMUI owner questions, start a narrower follow-on instead of reopening this lane."
   }
 }

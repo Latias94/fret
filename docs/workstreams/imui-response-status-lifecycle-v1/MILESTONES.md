@@ -1,7 +1,7 @@
 # ImUi Response Status Lifecycle v1 - Milestones
 
-Status: active execution lane
-Last updated: 2026-04-13
+Status: closed closeout lane
+Last updated: 2026-04-20
 
 ## M0 - Baseline and owner freeze
 
@@ -112,9 +112,13 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- Closed on 2026-04-20.
 - The first bounded expansion already landed on public menu/combo response surfaces.
+- The focused interaction floor now covers slider pointer-commit lifecycle plus both single-line
+  and multiline text-entry focus/edit/blur lifecycle, so value-editing controls are no longer
+  protected only by source gates when evaluating closeout readiness.
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the helper-owned
   menu/submenu/tab trigger response-surface decision and now serves as the landed closeout record
   for that additive helper-facing surface.
+- `FINAL_STATUS.md` now serves as the explicit closeout record for this lifecycle-vocabulary lane.
 - Richer menu-bar/submenu policy depth and broader tab policy still remain outside this lane.

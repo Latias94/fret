@@ -1,6 +1,6 @@
 # ImUi Control Chrome Fearless Refactor v1 - Milestones
 
-Status: active execution lane
+Status: closed closeout lane
 Last updated: 2026-04-20
 
 ## M0 - Baseline and lane split
@@ -82,3 +82,11 @@ Exit criteria:
 - either the remaining work is small enough to close here,
 - or the leftover scope is explicitly narrowed into a new follow-on instead of silently growing the
   lane.
+
+Current state:
+
+- Closed on 2026-04-20.
+- `FINAL_STATUS.md` now serves as the explicit closeout record for the shared IMUI control-chrome
+  rewrite.
+- Future pressure on compact field-width policy or other control families is now routed to new
+  narrow follow-ons instead of widening this lane again.

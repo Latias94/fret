@@ -1,7 +1,7 @@
 # ImUi Response Status Lifecycle v1 - TODO
 
-Status: active execution lane
-Last updated: 2026-04-13
+Status: closed closeout lane
+Last updated: 2026-04-20
 
 ## Lane setup
 
@@ -87,13 +87,19 @@ Last updated: 2026-04-13
 - [x] Expand to the next public menu/combo family surfaces only after the first slice lands
       cleanly.
       Result: click-only menu item lifecycle and combo open/edit lifecycle now have focused proof.
+- [x] Broaden the focused interaction floor so value-editing slider and text-entry helpers are not
+      protected only by source-policy gates.
+      Result: focused `fret-imui` tests now prove slider pointer-commit lifecycle and input-text
+      focus/edit/blur lifecycle directly.
 - [x] Decide whether menu-bar/submenu triggers and tab triggers should stay deferred or move into a
       later narrow follow-on with their own outward response proof.
       Result: `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the
       helper-owned menu/submenu/tab trigger response-surface decision, and it has since landed the
       additive helper-facing response surface so this lane can stay focused on public response
       surfaces that already exist.
-- [ ] Start a new narrow follow-on instead of widening this lane if the pressure shifts to key
+- [x] Start a new narrow follow-on instead of widening this lane if the pressure shifts to key
       ownership or broader proof-depth work.
-- [ ] Close this lane once the first lifecycle vocabulary and focused gates are explicit enough to
+- [x] Close this lane once the first lifecycle vocabulary and focused gates are explicit enough to
       stop using the folder as an active execution queue.
+      Result: `FINAL_STATUS.md` now closes the lane after the focused runtime floor was expanded to
+      cover slider, input text, and textarea lifecycle proof.

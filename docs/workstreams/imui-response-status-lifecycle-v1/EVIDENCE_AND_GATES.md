@@ -83,6 +83,9 @@ This gate currently proves:
 - `cargo nextest run -p fret-imui button_lifecycle_edges_follow_press_session`
 - `cargo nextest run -p fret-imui menu_item_lifecycle_edges_follow_press_session`
 - `cargo nextest run -p fret-imui checkbox_lifecycle_reports_edit_and_deactivated_after_edit`
+- `cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit`
+- `cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges`
+- `cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edges`
 - `cargo nextest run -p fret-imui combo_lifecycle_tracks_open_session_edges`
 - `cargo nextest run -p fret-imui combo_model_lifecycle_reports_edit_on_option_pick`
 
@@ -91,6 +94,11 @@ This focused package currently proves the first landed lifecycle slice around:
 - press-session activation / deactivation on direct buttons,
 - press-session activation / deactivation on click-only menu items,
 - `edited` and `deactivated_after_edit` on a value-editing checkbox,
+- pointer-commit `edited` / `deactivated_after_edit` on `slider_f32_model_with_options`,
+- focus-gain `activated`, edit-time `edited`, and blur-time `deactivated_after_edit` on
+  `input_text_model_with_options`,
+- focus-gain `activated`, edit-time `edited`, and blur-time `deactivated_after_edit` on
+  `textarea_model_with_options`,
 - popup-open activation / deactivation on generic combo triggers,
 - selection-commit `edited` / `deactivated_after_edit` on `combo_model_with_options`,
 - and the immediate interaction wiring that those lifecycle edges depend on.
@@ -102,13 +110,13 @@ This focused package currently proves the first landed lifecycle slice around:
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
 - `python3 -m json.tool docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json > /dev/null`
 
-## Missing gates before closure
+## Closeout read
 
-Before claiming this lane is closed, add:
+The old focused-floor gap is now closed:
 
-- broader focused tests beyond the current button/menu/checkbox/combo coverage,
-- and any extra focused tests needed before deciding whether menu-bar/submenu triggers or tab
-  triggers need their own outward response proof.
+- button/menu/checkbox/combo proof stayed green,
+- slider pointer-commit lifecycle now has a focused runtime gate,
+- and both single-line and multiline text-entry lifecycle now have focused runtime gates.
 
-Do not respond to that gap by widening the shared response contract or by bundling key-owner
-semantics into this lane.
+Do not respond to future pressure by widening the shared response contract or by bundling
+key-owner semantics back into this lane.

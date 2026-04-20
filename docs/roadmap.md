@@ -32,18 +32,18 @@ Tracker highlights:
   multi-window hand-feel closure): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
-- ImUi response-status lifecycle follow-on (active narrow P0 lane that freezes `ResponseExt`
-  lifecycle vocabulary around activation/deactivation/edit sequencing without widening
-  `fret-authoring::Response`, `crates/fret-ui`, or the still-separate key-owner problem):
+- ImUi response-status lifecycle closeout record (closed narrow P0 lane that landed the first
+  `ResponseExt` lifecycle vocabulary around activation/deactivation/edit sequencing without
+  widening `fret-authoring::Response`, `crates/fret-ui`, or the still-separate key-owner
+  problem):
   `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
-  `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`, and
+  `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`, and
   `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
-- ImUi control-chrome fearless refactor follow-on (active narrow lane that rewrites the shared
-  `fret-ui-kit::imui` default control surface so button/switch/slider/combo/input helpers stop
-  teaching text-like interactive widgets and compact editor rails stop overlapping or hiding hit
-  targets):
+- ImUi control-chrome fearless refactor closeout record (closed narrow lane that landed the shared
+  `fret-ui-kit::imui` default control-surface rewrite so button/switch/slider/combo/input helpers
+  now read as controls and compact editor rails no longer need demo-level width workarounds):
   `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`,
-  `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`,
+  `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`,
   and `docs/workstreams/imui-control-chrome-fearless-refactor-v1/EVIDENCE_AND_GATES.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper

@@ -125,27 +125,29 @@ Current source of truth for the in-tree immediate-mode stack:
     needs the frozen two-surface proof budget before review; split implementation-heavy work into
     narrower follow-ons.
 
-- Active narrow P0 response-status lifecycle follow-on:
+- Closed narrow P0 response-status lifecycle closeout record:
   - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`
+  - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/TODO.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json`
-  - Scope: freeze the narrow `ResponseExt` lifecycle vocabulary and first bounded implementation
-    slice without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate
-    key-owner problem.
+  - Scope: records the landed first `ResponseExt` lifecycle vocabulary after direct pressables,
+    menu items, boolean controls, slider, input text, textarea, combo, and combo-model helpers all
+    gained focused proof without widening `fret-authoring::Response` or `crates/fret-ui`.
 
-- Active narrow IMUI control-chrome follow-on:
+- Closed narrow IMUI control-chrome closeout record:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`
+  - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/TODO.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/MILESTONES.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/WORKSTREAM.json`
-  - Scope: rewrite the shared `fret-ui-kit::imui` default control surface so field/button helpers
-    read as interactive by default, compact editor rails stop overlapping/clipping shared controls,
-    and showcase/demo surfaces stop compensating for broken defaults.
+  - Scope: records the landed shared `fret-ui-kit::imui` control-chrome rewrite after the compact
+    showcase stopped depending on the old fixed-width workaround and the shared button/field
+    surface became the default proof path.
 
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
@@ -424,11 +426,11 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
-- `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 6 markdown docs
+- `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
-- `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 5 markdown docs
+- `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)

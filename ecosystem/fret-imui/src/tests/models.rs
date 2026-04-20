@@ -1,5 +1,7 @@
 use super::*;
 use fret_runtime::KeyChord;
+use fret_ui_kit::imui::ButtonOptions;
+use fret_ui_kit::imui::TextAreaOptions;
 
 #[test]
 fn checkbox_changed_is_delivered_once_and_updates_model() {
@@ -413,6 +415,207 @@ fn input_text_model_reports_changed_once_after_text_input() {
 }
 
 #[test]
+fn input_text_lifecycle_tracks_focus_edit_and_blur_edges() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(String::new());
+    let activated = Rc::new(Cell::new(false));
+    let deactivated = Rc::new(Cell::new(false));
+    let edited = Rc::new(Cell::new(false));
+    let after_edit = Rc::new(Cell::new(false));
+    let text = Rc::new(RefCell::new(String::new()));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  activated_out: &Rc<Cell<bool>>,
+                  deactivated_out: &Rc<Cell<bool>>,
+                  edited_out: &Rc<Cell<bool>>,
+                  after_edit_out: &Rc<Cell<bool>>,
+                  text_out: &Rc<RefCell<String>>| {
+        crate::imui_raw(cx, |ui| {
+            ui.vertical(|ui| {
+                let resp = ui.input_text_model_with_options(
+                    &model,
+                    InputTextOptions {
+                        test_id: Some(Arc::from("imui-input-text-lifecycle")),
+                        ..Default::default()
+                    },
+                );
+                activated_out.set(resp.activated());
+                deactivated_out.set(resp.deactivated());
+                edited_out.set(resp.edited());
+                after_edit_out.set(resp.deactivated_after_edit());
+
+                let _ = ui.button_with_options(
+                    "Blur target",
+                    ButtonOptions {
+                        test_id: Some(Arc::from("imui-input-text-lifecycle.blur-target")),
+                        ..Default::default()
+                    },
+                );
+            });
+
+            let current = ui
+                .cx_mut()
+                .app
+                .models()
+                .get_cloned(&model)
+                .unwrap_or_default();
+            text_out.replace(current);
+        })
+    };
+
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(text.borrow().is_empty());
+
+    let input = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-input-text-lifecycle",
+    );
+    click_at(&mut ui, &mut app, &mut services, input);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(text.borrow().is_empty());
+
+    text_input_event(&mut ui, &mut app, &mut services, "hello");
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(edited.get());
+    assert!(!after_edit.get());
+    assert_eq!(text.borrow().as_str(), "hello");
+
+    let blur_target = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-input-text-lifecycle.blur-target",
+    );
+    click_at(&mut ui, &mut app, &mut services, blur_target);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(deactivated.get());
+    assert!(!edited.get());
+    assert!(after_edit.get());
+    assert_eq!(text.borrow().as_str(), "hello");
+}
+
+#[test]
 fn textarea_model_reports_changed_once_after_text_input() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -512,6 +715,201 @@ fn textarea_model_reports_changed_once_after_text_input() {
     );
     assert!(!changed.get());
     assert_eq!(text.borrow().as_str(), "line-1\nline-2");
+}
+
+#[test]
+fn textarea_lifecycle_tracks_focus_edit_and_blur_edges() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(240.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(String::new());
+    let activated = Rc::new(Cell::new(false));
+    let deactivated = Rc::new(Cell::new(false));
+    let edited = Rc::new(Cell::new(false));
+    let after_edit = Rc::new(Cell::new(false));
+    let text = Rc::new(RefCell::new(String::new()));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  activated_out: &Rc<Cell<bool>>,
+                  deactivated_out: &Rc<Cell<bool>>,
+                  edited_out: &Rc<Cell<bool>>,
+                  after_edit_out: &Rc<Cell<bool>>,
+                  text_out: &Rc<RefCell<String>>| {
+        crate::imui_raw(cx, |ui| {
+            ui.vertical(|ui| {
+                let resp = ui.textarea_model_with_options(
+                    &model,
+                    TextAreaOptions {
+                        test_id: Some(Arc::from("imui-textarea-lifecycle")),
+                        ..Default::default()
+                    },
+                );
+                activated_out.set(resp.activated());
+                deactivated_out.set(resp.deactivated());
+                edited_out.set(resp.edited());
+                after_edit_out.set(resp.deactivated_after_edit());
+
+                let _ = ui.button_with_options(
+                    "Blur target",
+                    ButtonOptions {
+                        test_id: Some(Arc::from("imui-textarea-lifecycle.blur-target")),
+                        ..Default::default()
+                    },
+                );
+            });
+
+            let current = ui
+                .cx_mut()
+                .app
+                .models()
+                .get_cloned(&model)
+                .unwrap_or_default();
+            text_out.replace(current);
+        })
+    };
+
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-textarea-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(text.borrow().is_empty());
+
+    let input = first_child_point(&ui, root);
+    click_at(&mut ui, &mut app, &mut services, input);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-textarea-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert!(text.borrow().is_empty());
+
+    text_input_event(&mut ui, &mut app, &mut services, "hello\nworld");
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-textarea-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(edited.get());
+    assert!(!after_edit.get());
+    assert_eq!(text.borrow().as_str(), "hello\nworld");
+
+    let blur_target = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-textarea-lifecycle.blur-target",
+    );
+    click_at(&mut ui, &mut app, &mut services, blur_target);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let text_out = text.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-textarea-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &text_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(deactivated.get());
+    assert!(!edited.get());
+    assert!(after_edit.get());
+    assert_eq!(text.borrow().as_str(), "hello\nworld");
 }
 
 #[test]
@@ -1172,6 +1570,205 @@ fn slider_f32_model_reports_changed_once_after_pointer_input() {
     );
     assert!(!changed.get());
     assert!(value.get() >= 70.0);
+}
+
+#[test]
+fn slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(160.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(0.0_f32);
+    let activated = Rc::new(Cell::new(false));
+    let deactivated = Rc::new(Cell::new(false));
+    let edited = Rc::new(Cell::new(false));
+    let after_edit = Rc::new(Cell::new(false));
+    let value = Rc::new(Cell::new(0.0_f32));
+
+    let render = |cx: &mut ElementContext<'_, TestHost>,
+                  activated_out: &Rc<Cell<bool>>,
+                  deactivated_out: &Rc<Cell<bool>>,
+                  edited_out: &Rc<Cell<bool>>,
+                  after_edit_out: &Rc<Cell<bool>>,
+                  value_out: &Rc<Cell<f32>>| {
+        crate::imui_raw(cx, |ui| {
+            let resp = ui.slider_f32_model_with_options(
+                "Volume",
+                &model,
+                SliderOptions {
+                    min: 0.0,
+                    max: 100.0,
+                    step: 1.0,
+                    test_id: Some(Arc::from("imui-slider-lifecycle")),
+                    ..Default::default()
+                },
+            );
+            activated_out.set(resp.activated());
+            deactivated_out.set(resp.deactivated());
+            edited_out.set(resp.edited());
+            after_edit_out.set(resp.deactivated_after_edit());
+            let now = ui
+                .cx_mut()
+                .app
+                .models()
+                .get_copied(&model)
+                .unwrap_or_default();
+            value_out.set(now);
+        })
+    };
+
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let value_out = value.clone();
+    let root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-slider-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &value_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(!edited.get());
+    assert!(!after_edit.get());
+    assert_eq!(value.get(), 0.0);
+
+    let slider_node = ui.children(root)[0];
+    let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+    let start = Point::new(
+        Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 * 0.1),
+        Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+    );
+    let drag = Point::new(
+        Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 * 0.9),
+        Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+    );
+    pointer_down_at(&mut ui, &mut app, &mut services, start);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let value_out = value.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-slider-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &value_out,
+            )
+        },
+    );
+    assert!(activated.get());
+    assert!(!deactivated.get());
+    assert!(edited.get());
+    assert!(!after_edit.get());
+    assert!(value.get() > 0.0);
+
+    pointer_move_at(
+        &mut ui,
+        &mut app,
+        &mut services,
+        drag,
+        MouseButtons {
+            left: true,
+            ..Default::default()
+        },
+    );
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let value_out = value.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-slider-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &value_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+    assert!(edited.get());
+    assert!(!after_edit.get());
+    assert!(value.get() >= 70.0);
+
+    pointer_up_at(&mut ui, &mut app, &mut services, drag);
+
+    app.advance_frame();
+    let activated_out = activated.clone();
+    let deactivated_out = deactivated.clone();
+    let edited_out = edited.clone();
+    let after_edit_out = after_edit.clone();
+    let value_out = value.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-slider-lifecycle",
+        |cx| {
+            render(
+                cx,
+                &activated_out,
+                &deactivated_out,
+                &edited_out,
+                &after_edit_out,
+                &value_out,
+            )
+        },
+    );
+    assert!(!activated.get());
+    assert!(deactivated.get());
+    assert!(!edited.get());
+    assert!(after_edit.get());
+    assert!(value.get() > 0.0);
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # ImUi Control Chrome Fearless Refactor v1 - TODO
 
-Status: active execution lane
+Status: closed closeout lane
 Last updated: 2026-04-20
 
 ## Lane setup
@@ -62,3 +62,15 @@ Last updated: 2026-04-20
 - [x] Promote a showcase diag check that directly protects control discoverability / compact layout
       after the new chrome lands.
 - [x] Leave one reviewable screenshot anchor for the migrated showcase surface.
+
+## M4 - Closeout and routing
+
+- [x] Close this lane explicitly once the shared control chrome owner, compact rail proof, and
+      focused gate package are explicit enough to stop using this folder as an active execution
+      queue.
+      Result: `FINAL_STATUS.md` now closes the lane as the shared IMUI control-chrome rewrite
+      record.
+- [x] Route any future pressure to a narrower follow-on instead of reopening this lane as a generic
+      IMUI parity bucket.
+      Result: future field-width policy and checkbox/selectable/disclosure parity work now route to
+      separate follow-ons.
