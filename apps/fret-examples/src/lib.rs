@@ -384,6 +384,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_CAPTURE_PLAN_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md"
+    );
     const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
         include_str!("../../../docs/diagnostics-first-open.md");
     const DIAGNOSTICS_START_HERE_DOC: &str =
@@ -3337,6 +3340,46 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the mixed-DPI TODO runbook should remain explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_automation_decision() {
+        for marker in [
+            "\"role\": \"status\"",
+            "M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the mixed-DPI automation decision reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "`bundle.json.env.scale_factors_seen` is not a host monitor-topology contract",
+            "`mixed_dpi_signal_observed` remains drag evidence, not a preflight capability",
+            "Campaign manifests still only gate on stable `requires_capabilities`",
+            "Do not add an automated mixed-DPI gate in this lane yet.",
+            "Keep the bounded P3 campaign generic and portable across single-monitor and mixed-DPI hosts.",
+            "the real Windows mixed-DPI acceptance pair as the only remaining open proof item",
+            "start a narrow diagnostics follow-on",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE.contains(marker),
+                "the docking parity lane should keep the mixed-DPI automation decision explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
+            "do not add a mixed-DPI-only automated gate",
+            "Manual acceptance run on a real mixed-DPI setup",
+            "Result: no, not honestly in this lane yet.",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the mixed-DPI TODO state should keep the automation decision explicit: {marker}"
             );
         }
     }

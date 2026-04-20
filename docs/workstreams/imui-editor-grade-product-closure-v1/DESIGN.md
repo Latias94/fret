@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1
 
-Status: active execution lane
-Last updated: 2026-04-12
+Status: maintenance umbrella lane
+Last updated: 2026-04-20
 
 Related:
 
@@ -33,7 +33,13 @@ Related:
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 
-This follow-on owns one narrow question:
+Status note (2026-04-20): this lane now acts as the cross-phase IMUI product-closure recorder
+rather than the default implementation surface. Keep phase ordering, proof-family classification,
+and follow-on decisions here; continue the remaining active P3 execution in
+`docs/workstreams/docking-multiwindow-imgui-parity/`, and keep future implementation-heavy P0/P1/P2
+pressure on new narrow follow-ons instead of reopening this folder broadly.
+
+This umbrella follow-on owns one cross-phase question:
 
 > after the in-tree `imui` stack reset and helper-closure lanes are closed, how do we close the
 > remaining editor-grade maturity gap against Dear ImGui without undoing Fret's

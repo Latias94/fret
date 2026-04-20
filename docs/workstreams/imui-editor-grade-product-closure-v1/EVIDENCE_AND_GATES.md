@@ -13,6 +13,10 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
+- `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
+- `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
+- `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
+- `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
 - `docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md`
@@ -29,6 +33,8 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/diagnostics-first-open.md`
 - `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `apps/fret-cookbook/examples/imui_action_basics.rs`

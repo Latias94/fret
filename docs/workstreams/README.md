@@ -98,7 +98,7 @@ those files, keep historical names when they are the evidence.
 
 Current source of truth for the in-tree immediate-mode stack:
 
-- Active editor-grade product-closure follow-on:
+- Maintenance umbrella for editor-grade product closure:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_TEACHING_SURFACE_INVENTORY_2026-04-12.md`
@@ -120,10 +120,11 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
-  - Scope: close the remaining maturity gap after the stack-reset closeouts without reopening
-    runtime widening or generic helper-growth by default; future `fret-ui-kit::imui` widening now
-    needs the frozen two-surface proof budget before review; split implementation-heavy work into
-    narrower follow-ons.
+  - Scope: keep the phase ordering and cross-phase status for the remaining maturity gap after the
+    stack-reset closeouts without reopening runtime widening or generic helper-growth by default;
+    future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
+    review, and implementation-heavy work should stay in narrower follow-ons or the active docking
+    parity lane.
 
 - Closed narrow P0 response-status lifecycle closeout record:
   - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
@@ -181,6 +182,14 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: records the no-new-helper-yet verdict for promoted first-party workbench shell helpers
     after the umbrella lane froze the P1 proof roster and promoted shell diagnostics floor; keep
     active P3 execution in the existing docking parity lane.
+
+- Active P3 docking parity execution lane:
+  - `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
+  - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
+    bounded P3 package and the mixed-DPI execution slice rather than reopening the umbrella lane.
 
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`

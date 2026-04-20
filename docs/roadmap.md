@@ -26,10 +26,9 @@ Workstream docs live under `docs/workstreams/` (living implementation trackers; 
 
 Tracker highlights:
 
-- ImUi editor-grade product-closure follow-on (active lane that treats the remaining gap against
-  Dear ImGui as a product-closure problem rather than another stack rewrite, with ordered phases for
-  authoring-lane convergence, workbench shell closure, diagnostics/devtools unification, and
-  multi-window hand-feel closure): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
+- ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
+  ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in
+  narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
 - ImUi response-status lifecycle closeout record (closed narrow P0 lane that landed the first

@@ -96,7 +96,7 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Authoring surfaces (imui convergence)
 
-- Active editor-grade product-closure follow-on for the remaining Dear ImGui-class maturity gap:
+- Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md`
@@ -141,9 +141,9 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-workbench-shell-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json`
-- Use the new product-closure lane for the active phase ordering across authoring, shell, tooling,
-  and multi-window hand-feel. Keep the older `imui` stack and helper lanes as closeout evidence
-  unless fresh proof exceeds their audits.
+- Use the product-closure lane as the maintenance umbrella for phase ordering across authoring,
+  shell, tooling, and multi-window hand-feel. Keep the older `imui` stack and helper lanes as
+  closeout evidence unless fresh proof exceeds their audits.
 - Use `docs/workstreams/imui-response-status-lifecycle-v1/` as the closed closeout record for the
   first P0 `ResponseExt` lifecycle vocabulary slice; if future pressure shifts to key ownership or
   broader proof depth, start a narrower follow-on instead of widening this folder again.
@@ -160,7 +160,7 @@ It complements (but does not replace) ADRs:
   first-party shell helpers.
 - Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and
   `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md` as the
-  next active execution lane for the remaining P3 multi-window hand-feel problem.
+  current active execution lane for the remaining P3 multi-window hand-feel problem.
 - Source of truth for the closed `imui` compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`

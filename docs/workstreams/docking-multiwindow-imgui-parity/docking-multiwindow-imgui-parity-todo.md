@@ -194,6 +194,11 @@ Each TODO is labeled:
       - Use it to generate a dated Markdown draft after bundle selection, then only fill host
         summary fields left as `TODO` and manual checklist items that bounded routing cannot prove
         by itself.
+    - [x] Automation decision is now explicit:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md`
+      - Keep `bundle.json.env.scale_factors_seen` and `dock-routing mixed_dpi_signal_observed` as
+        evidence-only signals; do not add a mixed-DPI-only automated gate until diagnostics grows a
+        real monitor-topology environment source plus environment predicates.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.
@@ -201,7 +206,9 @@ Each TODO is labeled:
       - PASS: run id `1772616085355` (`target/fret-diag-screen-conv-evidence-check`)
       - Evidence: `dock-routing` report surfaces `scr/origin/sf_run` alongside `pos/grab`.
     - [ ] Manual acceptance run on a real mixed-DPI setup (100% + 150%) with “pre-crossing” and “post-crossing” bundles captured.
-    - [ ] Decide if we can auto-detect mixed-DPI reliably enough to add an automated gate.
+    - [x] Decide if we can auto-detect mixed-DPI reliably enough to add an automated gate.
+      - Result: no, not honestly in this lane yet. Keep the gate manual until diagnostics exports a
+        monitor-topology environment source and a stable environment-predicate contract.
 
 ## P1 — Cross-platform robustness and capability modeling
 

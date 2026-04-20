@@ -1,7 +1,11 @@
 # ImUi Editor-Grade Product Closure v1 - TODO
 
-Status: active execution lane
-Last updated: 2026-04-13
+Status: maintenance umbrella lane
+Last updated: 2026-04-20
+
+Status note (2026-04-20): keep phase ordering and follow-on decisions here. Do not resume
+implementation-heavy work in this folder while the remaining P3 execution continues in
+`docs/workstreams/docking-multiwindow-imgui-parity/`.
 
 ## Lane setup
 
@@ -11,6 +15,11 @@ Last updated: 2026-04-13
 - [x] Keep the lane narrow: start a dedicated follow-on once a phase becomes implementation-heavy.
       Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now proves this rule for the
       implementation-heavy `ResponseExt` lifecycle vocabulary slice.
+- [x] Demote this folder from active execution to umbrella maintenance once the implementation-heavy
+      phases moved into narrower lanes.
+      Result: this folder now records phase ordering and cross-phase status, while the narrow P0/P1
+      closeout records stay closed and the remaining active P3 execution continues in
+      `docs/workstreams/docking-multiwindow-imgui-parity/`.
 
 ## P0 - Default authoring lane closure
 
@@ -121,7 +130,10 @@ Last updated: 2026-04-13
 
 ## Closeout / follow-on management
 
-- [ ] If P0 becomes mostly teaching-surface cleanup, split it into a narrow authoring-lane follow-on.
+- [x] Keep pure teaching-surface cleanup out of this umbrella unless it becomes the dominant
+      remaining P0 pressure.
+      Result: the remaining P0 backlog no longer reads as teaching-surface cleanup first, so no
+      dedicated authoring-lane follow-on is warranted yet.
 - [x] If further P0 work becomes mostly immediate convenience breadth
       (key ownership, item-status lifecycle, richer collection/pane proof), split a narrow follow-on
       instead of widening this umbrella folder.
@@ -148,8 +160,12 @@ Last updated: 2026-04-13
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella
       focused on phase ordering and cross-phase status.
-- [ ] If P2 becomes mostly tooling UX/productization, split it into a narrow devtools follow-on.
+- [x] Keep future diagnostics/devtools productization out of this umbrella unless fresh P2 pressure
+      becomes implementation-heavy again.
+      Result: P2 is closed in this lane; any future tooling UX/productization should start as a
+      narrow devtools follow-on instead of widening this folder.
 - [x] If P3 becomes mostly platform diagnostics and runner work, continue using the existing docking
       parity lane or start a narrower follow-on there instead of bloating this folder.
-      Result: after the P1 shell lane closeout, the next active execution priority should continue
-      in `docs/workstreams/docking-multiwindow-imgui-parity/`.
+      Result: after the P1 shell closeout and the umbrella maintenance refresh, the active
+      execution priority continues in `docs/workstreams/docking-multiwindow-imgui-parity/`, with
+      `WORKSTREAM.json` and `M0_BASELINE_AUDIT_2026-04-13.md` as the first-open resume surface.

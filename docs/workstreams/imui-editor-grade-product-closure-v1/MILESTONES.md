@@ -1,7 +1,10 @@
 # ImUi Editor-Grade Product Closure v1 - Milestones
 
-Status: active execution lane
-Last updated: 2026-04-13
+Status: maintenance umbrella lane
+Last updated: 2026-04-20
+
+Status note (2026-04-20): this file now records umbrella phase state only. Implementation-heavy
+execution has moved into closed narrow follow-ons or the active docking parity lane.
 
 ## M0 - Baseline and owner freeze
 
@@ -47,7 +50,7 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- In progress as umbrella status only.
 - The generic/editor golden pair is now frozen as:
   `apps/fret-cookbook/examples/imui_action_basics.rs` +
   `apps/fret-examples/src/imui_editor_proof_demo.rs`.
@@ -77,7 +80,7 @@ Current status:
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the closed trigger-response canonicalization closeout at
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
-  and the new helper-owned trigger response-surface follow-on at
+  and the closed helper-owned trigger response-surface follow-on at
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`.
 - Execution consequence:
   keep this lane as the umbrella recorder. The `ResponseExt` lifecycle vocabulary slice now lives in
@@ -87,6 +90,9 @@ Current status:
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
   and any further implementation-heavy P0 work should keep following the same narrow follow-on rule
   instead of turning M1 back into a generic helper-growth backlog.
+- The shared control-chrome rewrite is now also a closed narrow closeout record at
+  `docs/workstreams/imui-control-chrome-fearless-refactor-v1/`, so future control-surface pressure
+  should reopen only through another narrow lane instead of widening this umbrella.
 
 ## M2 - P1 editor workbench shell closure
 
@@ -107,7 +113,7 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- Closed in this umbrella.
 - The primary P1 workbench-shell proof is now frozen as
   `apps/fret-examples/src/workspace_shell_demo.rs`.
 - The minimal shell-mounted editor-rail proof is now frozen as
@@ -154,7 +160,7 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- Closed in this umbrella.
 - The first-open P2 developer path is now explicit:
   inspect/pick -> script -> bundle -> compare starts from the CLI-compatible diagnostics contract,
   while DevTools GUI and MCP stay thin consumers of the same artifacts root.
@@ -203,7 +209,7 @@ Primary evidence:
 
 Current status:
 
-- In progress.
+- In progress, but the active execution lives in the docking parity lane rather than this folder.
 - The first P3 checklist is now explicit:
   `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` freezes hovered-window, peek-behind,
   transparent payload, and mixed-DPI follow-drag as the runner-owned parity budget for this lane.
@@ -240,3 +246,5 @@ Primary evidence:
 Current status:
 
 - Not started.
+- The lane should close only after the remaining M1/M4 status is resolved or explicitly handed off
+  to new narrow follow-ons with the umbrella state refreshed again.

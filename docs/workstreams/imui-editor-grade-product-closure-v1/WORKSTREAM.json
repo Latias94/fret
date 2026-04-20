@@ -2,8 +2,8 @@
   "schema_version": 1,
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
-  "status": "active",
-  "updated": "2026-04-13",
+  "status": "maintenance",
+  "updated": "2026-04-20",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, and one runner-grade multi-window hand-feel story.",
@@ -46,15 +46,11 @@
     },
     {
       "role": "reference",
-      "path": "docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md"
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md"
     },
     {
       "role": "reference",
-      "path": "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json"
-    },
-    {
-      "role": "reference",
-      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md"
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md"
     },
     {
       "role": "reference",
@@ -62,15 +58,7 @@
     },
     {
       "role": "reference",
-      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json"
-    },
-    {
-      "role": "reference",
-      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md"
-    },
-    {
-      "role": "reference",
-      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json"
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md"
     },
     {
       "role": "status",
@@ -82,15 +70,7 @@
     },
     {
       "role": "reference",
-      "path": "docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md"
-    },
-    {
-      "role": "reference",
       "path": "docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md"
-    },
-    {
-      "role": "reference",
-      "path": "docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json"
     },
     {
       "role": "status",
@@ -115,6 +95,14 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md"
     },
     {
       "role": "execution",
@@ -146,12 +134,13 @@
     }
   ],
   "repro": {
-    "summary": "Use the frozen golden pair / minimum proof budget (cookbook generic immediate proof + editor immediate proof) plus the workspace shell and DevTools proofs before splitting narrower follow-ons.",
+    "summary": "Use the frozen golden pair, the workspace shell and DevTools proofs, and the docking parity first-open state to decide whether this umbrella only needs a status refresh or whether execution should stay in an existing narrow lane.",
     "commands": [
       "cargo build -p fret-cookbook --example imui_action_basics --features cookbook-imui",
       "cargo build -p fret-demo --bin imui_editor_proof_demo",
       "cargo build -p fret-demo --bin workspace_shell_demo",
       "cargo build -p fret-devtools",
+      "cargo run -p fret-demo --bin docking_arbitration_demo",
       "cargo nextest run -p fret-imui",
       "cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface",
       "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
@@ -263,19 +252,13 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
-    "docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md",
-    "docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md",
-    "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json",
-    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md",
-    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json",
-    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/DESIGN.md",
-    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/M0_BASELINE_AUDIT_2026-04-13.md",
-    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md",
-    "docs/workstreams/imui-workbench-shell-closure-v1/DESIGN.md",
     "docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md",
-    "docs/workstreams/imui-workbench-shell-closure-v1/WORKSTREAM.json",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md",
@@ -289,6 +272,8 @@
     "docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md",
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
@@ -334,6 +319,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane active only while it is freezing the maturity-gap taxonomy, proof surfaces, the P0 teaching pack, the P1 shell proof matrix, and the gate package. The implementation-heavy P0 `ResponseExt` lifecycle slice now lives in `imui-response-status-lifecycle-v1`, the helper-owned menu/submenu/tab trigger response verdict now lives in `imui-menu-tab-trigger-response-surface-v1`, and the canonical naming cleanup now lives in `imui-menu-tab-trigger-response-canonicalization-v1`; start similarly narrow follow-ons once any other phase turns into implementation-heavy work."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }

@@ -3,7 +3,7 @@
   "slug": "docking-multiwindow-imgui-parity",
   "title": "Docking Multi-Window ImGui Parity",
   "status": "active",
-  "updated": "2026-04-13",
+  "updated": "2026-04-20",
   "scope_kind": "execution",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
   "authoritative_docs": [
@@ -18,6 +18,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md"
     },
     {
       "role": "next",
@@ -89,14 +93,22 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",
+    "docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "tools/diag-campaigns/imui-p3-multiwindow-parity.json",
     "tools/diag_pick_docking_mixed_dpi_acceptance_pair.py",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_index.rs",
+    "crates/fret-diag/src/bundle_index.rs",
+    "crates/fret-diag/src/commands/dock_routing.rs",
+    "crates/fret-diag/src/registry/campaigns.rs",
+    "crates/fret-launch/src/runner/desktop/runner/window.rs",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",
@@ -114,6 +126,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for remaining runner/backend-owned multi-window parity closure. Split a narrower runner follow-on only if mixed-DPI or platform-specific placement work clearly outgrows the shared docking parity owner split."
+    "notes": "Continue this lane for the remaining runner/backend-owned multi-window parity closure. The mixed-DPI automation decision is now frozen: keep the bounded P3 campaign generic, keep mixed-DPI signals evidence-only, and treat the real Windows acceptance pair as the last open `DW-P0-dpi-006` proof item. Split a narrower runner or diagnostics follow-on only if platform-specific placement work or environment-predicate work clearly outgrows this owner split."
   }
 }
