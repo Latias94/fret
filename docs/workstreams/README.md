@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 237
+- Dedicated directories: 238
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -190,6 +190,15 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
     bounded P3 package and the mixed-DPI execution slice rather than reopening the umbrella lane.
+
+- Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
+  - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
+  - `docs/workstreams/diag-monitor-topology-environment-v1/DESIGN.md`
+  - `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`
+  - Scope: records the shipped runner-owned host monitor-topology environment fingerprint after
+    the docking lane froze `scale_factors_seen` as evidence-only; future host-environment
+    predicates still need a different follow-on instead of reopening the docking lane or this
+    folder.
 
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
@@ -370,6 +379,7 @@ Rule:
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/` — first 2026-02-10, latest 2026-02-28, 9 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
+- `docs/workstreams/diag-monitor-topology-environment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that adds a runner-owned host monitor-topology environment fingerprint without adding mixed-DPI-only campaign gating or environment predicates)
 - `docs/workstreams/diag-perf-attribution-v1/` — first 2026-02-14, latest 2026-02-14, 4 markdown docs
 - `docs/workstreams/diag-perf-profiling-infra-v1/` — first 2026-02-15, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs

@@ -51,6 +51,7 @@ pub mod platform_text_input;
 pub mod redraw_request_diagnostics;
 pub mod runner_accessibility_diagnostics;
 pub mod runner_frame_drive_diagnostics;
+pub mod runner_monitor_topology_diagnostics;
 pub mod runner_platform_window_receiver_diagnostics;
 pub mod runner_present_diagnostics;
 pub mod runner_surface_config_diagnostics;
@@ -188,6 +189,10 @@ pub use runner_accessibility_diagnostics::{
 pub use runner_frame_drive_diagnostics::{
     RunnerFrameDriveAggregateSnapshot, RunnerFrameDriveDiagnosticsStore, RunnerFrameDriveReason,
     RunnerFrameDriveReasonCount, RunnerFrameDriveWindowSnapshot,
+};
+pub use runner_monitor_topology_diagnostics::{
+    RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1, RunnerMonitorTopologyDiagnosticsStore,
+    RunnerMonitorTopologySnapshotV1,
 };
 pub use runner_platform_window_receiver_diagnostics::{
     RunnerPlatformWindowReceiverAtCursorSnapshotV1, RunnerPlatformWindowReceiverAtCursorSourceV1,

@@ -49,6 +49,7 @@ mod bundle;
 pub use bundle::{
     UiDiagnosticsBundleConfigV1, UiDiagnosticsBundleTablesV1, UiDiagnosticsBundleV1,
     UiDiagnosticsBundleV2, UiDiagnosticsEnvDiagnosticsV1, UiDiagnosticsEnvFingerprintV1,
+    UiDiagnosticsMonitorFingerprintV1, UiDiagnosticsMonitorTopologyV1, UiDiagnosticsPhysicalRectV1,
     UiDiagnosticsWindowBundleV1,
 };
 

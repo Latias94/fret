@@ -587,7 +587,7 @@ fn wheel_position_prefer_intended_hit(
 }
 
 #[cfg(test)]
-mod tests {
+mod window_target_and_geometry_helper_tests {
     use super::*;
 
     #[test]

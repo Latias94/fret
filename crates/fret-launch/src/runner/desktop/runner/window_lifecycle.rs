@@ -266,6 +266,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.dev_state.register_window_key(new_window, key);
         }
 
+        self.refresh_runner_monitor_topology_diagnostics(event_loop);
+
         Ok(new_window)
     }
 

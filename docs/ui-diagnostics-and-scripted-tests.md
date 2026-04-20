@@ -106,6 +106,14 @@ Overrides (both manual and script dumps):
 
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
 
+Environment fingerprint note:
+
+- `bundle.json.env.monitor_topology` is the host monitor inventory exported by the runner when
+  that environment source is available.
+- `bundle.json.env.scale_factors_seen` remains the last-known per-window scale factors observed
+  during the run.
+- Do not treat `scale_factors_seen` as host monitor topology or as a mixed-DPI preflight signal.
+
 ## Sidecars (index/meta/test-id index)
 
 On native filesystem dumps, the runtime also writes bounded sidecars next to the bundle artifact:

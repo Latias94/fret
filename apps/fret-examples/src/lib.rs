@@ -387,6 +387,25 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md"
     );
+    const DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json"
+    );
+    const DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_DESIGN: &str =
+        include_str!("../../../docs/workstreams/diag-monitor-topology-environment-v1/DESIGN.md");
+    const DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md"
+    );
+    const RUNNER_MONITOR_TOPOLOGY_DIAGNOSTICS: &str =
+        include_str!("../../../crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs");
+    const UI_DIAGNOSTICS_SERVICE_RS: &str =
+        include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs");
+    const UI_DIAGNOSTICS_BUNDLE_RS: &str =
+        include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs");
+    const DIAG_EXTENSIBILITY_DETERMINISM_DOC: &str = include_str!(
+        "../../../docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md"
+    );
+    const UI_DIAGNOSTICS_BUNDLES_DOC: &str =
+        include_str!("../../../docs/ui-diagnostics-and-scripted-tests.md");
     const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
         include_str!("../../../docs/diagnostics-first-open.md");
     const DIAGNOSTICS_START_HERE_DOC: &str =
@@ -3366,7 +3385,8 @@ mod authoring_surface_policy_tests {
             "start a narrow diagnostics follow-on",
         ] {
             assert!(
-                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE.contains(marker),
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE
+                    .contains(marker),
                 "the docking parity lane should keep the mixed-DPI automation decision explicit: {marker}"
             );
         }
@@ -3380,6 +3400,100 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the mixed-DPI TODO state should keep the automation decision explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_topology_follow_on() {
+        for marker in [
+            "\"slug\": \"diag-monitor-topology-environment-v1\"",
+            "\"status\": \"closed\"",
+            "\"follow_on_of\": \"docking-multiwindow-imgui-parity\"",
+            "RunnerMonitorTopologyDiagnosticsStore",
+            "monitor_topology",
+            "\"default_action\": \"stay_closed\"",
+        ] {
+            assert!(
+                DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_WORKSTREAM.contains(marker),
+                "the monitor-topology follow-on should keep the first-open state marker reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "It does not reopen the broad docking parity lane.",
+            "It does not add mixed-DPI-only campaign gates.",
+            "`scale_factors_seen` remains the last-known per-window scale-factor evidence",
+            "environment predicates remain a future follow-on.",
+        ] {
+            assert!(
+                DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_DESIGN.contains(marker),
+                "the monitor-topology design note should keep the owner split explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "RunnerMonitorTopologyDiagnosticsStore",
+            "RunnerMonitorTopologySnapshotV1",
+            "update_snapshot",
+            "clear_snapshot",
+        ] {
+            assert!(
+                RUNNER_MONITOR_TOPOLOGY_DIAGNOSTICS.contains(marker),
+                "the runtime diagnostics store should keep the host monitor-topology contract explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "sync_runner_monitor_topology_from_app",
+            "RunnerMonitorTopologyDiagnosticsStore",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_SERVICE_RS.contains(marker),
+                "diagnostics should keep syncing the runtime monitor-topology source explicitly: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub monitor_topology: Option<UiDiagnosticsMonitorTopologyV1>",
+            "scale_factors_seen",
+            "env_fingerprint_exports_host_monitor_topology_without_reclassifying_scale_factors_seen",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_BUNDLE_RS.contains(marker),
+                "the bundle env fingerprint should keep the monitor-topology split explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`monitor_topology` is the host environment fingerprint.",
+            "`scale_factors_seen` remains run-observed per-window evidence",
+        ] {
+            assert!(
+                DIAG_EXTENSIBILITY_DETERMINISM_DOC.contains(marker),
+                "the diagnostics determinism note should keep the environment boundary explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`bundle.json.env.monitor_topology` is the host monitor inventory",
+            "`bundle.json.env.scale_factors_seen` remains the last-known per-window scale factors observed",
+            "Do not treat `scale_factors_seen` as host monitor topology",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_BUNDLES_DOC.contains(marker),
+                "the living diagnostics doc should keep the monitor-topology guidance explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "RunnerMonitorTopologyDiagnosticsStore",
+            "bundle.json.env.monitor_topology",
+            "`crates/fret-diag` still does not grow environment predicates or mixed-DPI-only campaign",
+        ] {
+            assert!(
+                DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_CLOSEOUT.contains(marker),
+                "the closeout note should keep the shipped verdict explicit: {marker}"
             );
         }
     }

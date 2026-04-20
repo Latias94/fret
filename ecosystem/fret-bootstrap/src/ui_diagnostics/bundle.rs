@@ -1,3 +1,6 @@
+use fret_runtime::{
+    RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1, RunnerMonitorTopologySnapshotV1,
+};
 use serde::{Deserialize, Serialize};
 
 use super::*;
@@ -82,8 +85,33 @@ pub struct UiDiagnosticsEnvFingerprintV1 {
     pub diagnostics: UiDiagnosticsEnvDiagnosticsV1,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub capabilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monitor_topology: Option<UiDiagnosticsMonitorTopologyV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scale_factors_seen: Vec<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UiDiagnosticsMonitorTopologyV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtual_desktop_bounds_physical: Option<UiDiagnosticsPhysicalRectV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub monitors: Vec<UiDiagnosticsMonitorFingerprintV1>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiDiagnosticsPhysicalRectV1 {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct UiDiagnosticsMonitorFingerprintV1 {
+    pub bounds_physical: UiDiagnosticsPhysicalRectV1,
+    pub scale_factor: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -283,6 +311,10 @@ impl UiDiagnosticsEnvFingerprintV1 {
         } else {
             "native".to_string()
         };
+        let monitor_topology = svc
+            .host_monitor_topology
+            .as_ref()
+            .map(UiDiagnosticsMonitorTopologyV1::from_runner);
 
         let mut capabilities: Vec<String> = vec!["diag.script_v2".to_string()];
         if svc.cfg.screenshots_enabled {
@@ -347,7 +379,44 @@ impl UiDiagnosticsEnvFingerprintV1 {
                 devtools_ws_configured: svc.ws_is_configured(),
             },
             capabilities,
+            monitor_topology,
             scale_factors_seen,
+        }
+    }
+}
+
+impl UiDiagnosticsMonitorTopologyV1 {
+    fn from_runner(snapshot: &RunnerMonitorTopologySnapshotV1) -> Self {
+        Self {
+            schema_version: 1,
+            virtual_desktop_bounds_physical: snapshot
+                .virtual_desktop_bounds_physical
+                .map(UiDiagnosticsPhysicalRectV1::from_runner),
+            monitors: snapshot
+                .monitors
+                .iter()
+                .map(UiDiagnosticsMonitorFingerprintV1::from_runner)
+                .collect(),
+        }
+    }
+}
+
+impl UiDiagnosticsPhysicalRectV1 {
+    fn from_runner(rect: RunnerMonitorRectPhysicalV1) -> Self {
+        Self {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+        }
+    }
+}
+
+impl UiDiagnosticsMonitorFingerprintV1 {
+    fn from_runner(monitor: &RunnerMonitorInfoV1) -> Self {
+        Self {
+            bounds_physical: UiDiagnosticsPhysicalRectV1::from_runner(monitor.bounds_physical),
+            scale_factor: monitor.scale_factor,
         }
     }
 }
@@ -424,5 +493,70 @@ impl UiDiagnosticsBundleV2 {
         if table.entries.is_empty() {
             self.tables.semantics = None;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn env_fingerprint_exports_host_monitor_topology_without_reclassifying_scale_factors_seen() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.host_monitor_topology = Some(RunnerMonitorTopologySnapshotV1 {
+            virtual_desktop_bounds_physical: Some(RunnerMonitorRectPhysicalV1 {
+                x: 0,
+                y: 0,
+                width: 4480,
+                height: 1440,
+            }),
+            monitors: vec![
+                RunnerMonitorInfoV1 {
+                    bounds_physical: RunnerMonitorRectPhysicalV1 {
+                        x: 0,
+                        y: 0,
+                        width: 2560,
+                        height: 1440,
+                    },
+                    scale_factor: 1.0,
+                },
+                RunnerMonitorInfoV1 {
+                    bounds_physical: RunnerMonitorRectPhysicalV1 {
+                        x: 2560,
+                        y: 0,
+                        width: 1920,
+                        height: 1080,
+                    },
+                    scale_factor: 1.5,
+                },
+            ],
+        });
+
+        let env = UiDiagnosticsEnvFingerprintV1::from_service(&svc);
+        assert_eq!(env.scale_factors_seen, Vec::<f32>::new());
+
+        let topology = env.monitor_topology.expect("expected monitor topology");
+        assert_eq!(topology.schema_version, 1);
+        assert_eq!(topology.monitors.len(), 2);
+        assert_eq!(
+            topology.virtual_desktop_bounds_physical,
+            Some(UiDiagnosticsPhysicalRectV1 {
+                x: 0,
+                y: 0,
+                width: 4480,
+                height: 1440,
+            })
+        );
+        assert_eq!(
+            topology.monitors[1].bounds_physical,
+            UiDiagnosticsPhysicalRectV1 {
+                x: 2560,
+                y: 0,
+                width: 1920,
+                height: 1080,
+            }
+        );
+        assert_eq!(topology.monitors[1].scale_factor, 1.5);
     }
 }

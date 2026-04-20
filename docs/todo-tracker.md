@@ -161,6 +161,10 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and
   `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md` as the
   current active execution lane for the remaining P3 multi-window hand-feel problem.
+- Use `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json` as the closed
+  diagnostics follow-on for the M3 mixed-DPI automation decision:
+  the repo now has a runner-owned host monitor-topology environment fingerprint, but host
+  predicates and mixed-DPI-only campaign selection still require a different narrower lane.
 - Source of truth for the closed `imui` compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`

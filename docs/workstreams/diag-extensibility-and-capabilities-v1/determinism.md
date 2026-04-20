@@ -32,7 +32,15 @@ Current bundle surface (implemented):
   - target triple summary (`target_os`/`target_family`/`target_arch`),
   - diagnostics flags (semantics, redaction, screenshots, WS transport),
   - declared `diag.*` capabilities,
+  - `monitor_topology` (host monitor inventory + virtual desktop bounds when the runner publishes
+    that environment source),
   - `scale_factors_seen` (last-known per-window scale factors).
+
+Important boundary:
+
+- `monitor_topology` is the host environment fingerprint.
+- `scale_factors_seen` remains run-observed per-window evidence collected during the diagnostics
+  run; it is not a substitute for host monitor inventory.
 
 ## Repeat-run triage
 
