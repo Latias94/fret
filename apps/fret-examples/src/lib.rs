@@ -2587,6 +2587,40 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround() {
+        let demo = IMUI_INTERACTION_SHOWCASE_DEMO
+            .split_whitespace()
+            .collect::<String>();
+
+        for marker in [
+            "constSHOWCASE_COMPACT_RAIL_MIN_WIDTH:Px=Px(272.0);",
+            "constSHOWCASE_COMPACT_RAIL_MAX_WIDTH:Px=Px(352.0);",
+            "constSHOWCASE_REGULAR_SIDE_COLUMN_WIDTH:Px=Px(336.0);",
+            ".basis(LengthRefinement::Fraction(0.32))",
+            ".min_w(SHOWCASE_COMPACT_RAIL_MIN_WIDTH)",
+            ".max_w(SHOWCASE_COMPACT_RAIL_MAX_WIDTH)",
+            ".w_px(SHOWCASE_REGULAR_SIDE_COLUMN_WIDTH)",
+        ] {
+            assert!(
+                demo.contains(marker),
+                "interaction showcase should keep the compact rail layout without a fixed-width workaround: {marker}"
+            );
+        }
+
+        for marker in [
+            "constSHOWCASE_SIDE_COLUMN_WIDTH:Px=Px(320.0);",
+            "side_column_width:Px,",
+            ".w_px(responsive.side_column_width)",
+            "assert_eq!(layout.side_column_width,SHOWCASE_SIDE_COLUMN_WIDTH);",
+        ] {
+            assert!(
+                !demo.contains(marker),
+                "interaction showcase should not keep the old fixed compact rail workaround: {marker}"
+            );
+        }
+    }
+
+    #[test]
     fn imui_editor_proof_demo_defaults_to_imgui_like_dense_preset_for_editor_grade_launches() {
         for marker in [
             "const ENV_EDITOR_PRESET: &str = \"FRET_IMUI_EDITOR_PRESET\";",

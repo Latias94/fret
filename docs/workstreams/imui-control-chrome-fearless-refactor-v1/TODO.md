@@ -45,7 +45,7 @@ Last updated: 2026-04-20
       as real controls.
 - [x] Keep `imui_response_signals_demo` focused on behavior proof, but make sure the migrated
       controls do not regress its readability.
-- [ ] Re-audit whether the showcase compact lab still needs a special-width workaround after the
+- [x] Re-audit whether the showcase compact lab still needs a special-width workaround after the
       shared control chrome lands.
 - [x] Record a component-family audit against `repo-ref/imgui` so the next slice is selected by
       real gap priority instead of memory.

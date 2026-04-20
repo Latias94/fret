@@ -13,6 +13,7 @@ shared owner split instead of letting demos paper over broken defaults.
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 - `docs/workstreams/standalone/ui-editor-egui-imgui-gap-v1.md`
 - `apps/fret-examples/src/imui_interaction_showcase_demo.rs`
+- `apps/fret-examples/src/lib.rs`
 - `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
 - `ecosystem/fret-ui-kit/src/imui/button_controls.rs`
@@ -81,6 +82,7 @@ This package protects:
 ### Showcase layout / screenshot gates
 
 - `cargo nextest run -p fret-examples --lib showcase_responsive_layout`
+- `cargo nextest run -p fret-examples showcase_responsive_layout imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
@@ -89,6 +91,8 @@ This package protects:
 This package protects:
 
 - the current showcase responsive-layout expectations,
+- the absence of the old fixed-width compact-lab workaround now that shared control chrome owns the
+  compact rail,
 - compact control discoverability and non-overlap on the adapter proof surface,
 - compact-shell reachability,
 - and the screenshot proof that the showcase remains reviewable at the default compact window.
@@ -111,7 +115,11 @@ These commands were run after the shared control-chrome landing:
 ## Executed on 2026-04-20
 
 - `cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface`
+- `cargo nextest run -p fret-examples showcase_responsive_layout imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
+- `git diff --check -- apps/fret-examples/src/imui_interaction_showcase_demo.rs apps/fret-examples/src/lib.rs`
 
 Artifacts left behind by the 2026-04-20 adapter discoverability gate:
 
@@ -129,6 +137,37 @@ Artifacts left behind by the 2026-04-20 adapter discoverability gate:
   `target/fret-diag/1776672988824-imui-shadcn-adapter.discoverability.after/bundle.schema2.json`
 - after screenshot:
   `target/fret-diag/screenshots/1776672988827-imui-shadcn-adapter.discoverability.after/window-4294967297-tick-36-frame-37.png`
+
+Artifacts left behind by the 2026-04-20 compact showcase fixed-rail re-audit:
+
+- run result:
+  `target/fret-diag/1776674580589/script.result.json`
+- comparison bundle before the re-audit:
+  `target/fret-diag/1776673936986-imui-interaction-showcase.compact/bundle.schema2.json`
+- compact layout sidecar after the re-audit:
+  `target/fret-diag/1776674580966-imui-interaction-showcase.compact-layout/layout.taffy.v1.json`
+- compact bundle after the re-audit:
+  `target/fret-diag/1776674580976-imui-interaction-showcase.compact/bundle.schema2.json`
+- compact screenshot after the re-audit:
+  `target/fret-diag/screenshots/1776674580981-imui-interaction-showcase.compact/window-4294967297-tick-39-frame-38.png`
+
+This artifact set captures the main conclusion of the re-audit:
+
+- the old comparison bundle still shows the workaround-era compact shell/lab semantic width near
+  the old `320px` rail (`318px` bounds at the card level, `270px` on representative controls),
+- while the new compact layout sidecar shows the shared rail hitting its `352px` cap (`704px` at
+  the x2 layout capture scale),
+- and the new compact bundle shows the semantic shell/lab width widening to `350px` with inner
+  controls widening to `302px`.
+
+Artifacts left behind by the 2026-04-20 compact-shell reachability gate:
+
+- run result:
+  `target/fret-diag/1776674616593/script.result.json`
+- compact-shell bundle:
+  `target/fret-diag/1776674617108-imui-interaction-showcase.compact-shell/bundle.schema2.json`
+- compact-shell screenshot:
+  `target/fret-diag/screenshots/1776674617117-imui-interaction-showcase.compact-shell/window-4294967297-tick-52-frame-52.png`
 
 Artifacts left behind by the 2026-04-14 compact showcase screenshot gate:
 

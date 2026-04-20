@@ -19,7 +19,7 @@ use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
 use fret_ui_kit::imui::ChildRegionOptions;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, UiExt as _, ui};
+use fret_ui_kit::{ColorRef, LayoutRefinement, LengthRefinement, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const TEST_ID_ROOT: &str = "imui-interaction-showcase.root";
@@ -39,7 +39,9 @@ const SHOWCASE_HEADER_RAIL_WIDTH: Px = Px(332.0);
 const SHOWCASE_COMPACT_WIDTH: Px = Px(1240.0);
 const SHOWCASE_STACK_WIDTH: Px = Px(1040.0);
 const SHOWCASE_SHORT_HEIGHT: Px = Px(820.0);
-const SHOWCASE_SIDE_COLUMN_WIDTH: Px = Px(320.0);
+const SHOWCASE_COMPACT_RAIL_MIN_WIDTH: Px = Px(272.0);
+const SHOWCASE_COMPACT_RAIL_MAX_WIDTH: Px = Px(352.0);
+const SHOWCASE_REGULAR_SIDE_COLUMN_WIDTH: Px = Px(336.0);
 
 #[derive(Clone)]
 struct ShowcaseEvent {
@@ -55,7 +57,6 @@ struct ShowcaseResponsiveLayout {
     compact_rows: bool,
     stack_body: bool,
     stack_header: bool,
-    side_column_width: Px,
 }
 
 impl ShowcaseResponsiveLayout {
@@ -83,11 +84,6 @@ impl ShowcaseResponsiveLayout {
             compact_rows: compact_width && !stack_body,
             stack_body,
             stack_header: stack_body,
-            side_column_width: if compact_width {
-                SHOWCASE_SIDE_COLUMN_WIDTH
-            } else {
-                Px(336.0)
-            },
         }
     }
 }
@@ -258,8 +254,13 @@ impl View for ImUiInteractionShowcaseView {
                                 .min_w_0()
                                 .into_element(cx),
                             ui::container(move |_cx| [shell])
-                                .w_px(responsive.side_column_width)
-                                .flex_shrink_0()
+                                .layout(
+                                    LayoutRefinement::default()
+                                        .basis(LengthRefinement::Fraction(0.32))
+                                        .min_w(SHOWCASE_COMPACT_RAIL_MIN_WIDTH)
+                                        .max_w(SHOWCASE_COMPACT_RAIL_MAX_WIDTH)
+                                        .flex_grow(1.0),
+                                )
                                 .min_w_0()
                                 .into_element(cx),
                         ]
@@ -276,8 +277,13 @@ impl View for ImUiInteractionShowcaseView {
                                 .min_w_0()
                                 .into_element(cx),
                             ui::container(move |_cx| [lab])
-                                .w_px(responsive.side_column_width)
-                                .flex_shrink_0()
+                                .layout(
+                                    LayoutRefinement::default()
+                                        .basis(LengthRefinement::Fraction(0.32))
+                                        .min_w(SHOWCASE_COMPACT_RAIL_MIN_WIDTH)
+                                        .max_w(SHOWCASE_COMPACT_RAIL_MAX_WIDTH)
+                                        .flex_grow(1.0),
+                                )
                                 .min_w_0()
                                 .into_element(cx),
                         ]
@@ -304,7 +310,7 @@ impl View for ImUiInteractionShowcaseView {
                         .into_element(cx),
                     ui::v_flex(move |cx| vec![lab, timeline_card])
                         .gap(responsive.section_gap)
-                        .w_px(responsive.side_column_width)
+                        .w_px(SHOWCASE_REGULAR_SIDE_COLUMN_WIDTH)
                         .flex_shrink_0()
                         .min_w_0()
                         .into_element(cx),
@@ -508,7 +514,6 @@ mod tests {
         assert!(layout.compact_rows);
         assert_eq!(layout.outer_padding, Space::N3);
         assert_eq!(layout.surface_padding, Space::N4);
-        assert_eq!(layout.side_column_width, SHOWCASE_SIDE_COLUMN_WIDTH);
     }
 
     #[test]

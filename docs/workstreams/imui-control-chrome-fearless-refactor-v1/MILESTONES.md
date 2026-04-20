@@ -40,9 +40,14 @@ Exit criteria:
 
 Current state:
 
-- In progress.
+- Achieved on 2026-04-20.
 - The shared controls now ship button/field chrome by default.
-- `imui_interaction_showcase_demo` now proves the shared button-family/radio surface directly.
+- `imui_interaction_showcase_demo` now proves the shared button-family/radio surface directly
+  without keeping the old fixed-width compact-lab workaround.
+- The compact showcase rail now uses shared layout constraints (`basis(32%)`, `min 272px`,
+  `max 352px`) while the regular two-column view keeps its explicit `336px` secondary column.
+- The 2026-04-20 compact layout/bundle evidence shows the compact shell and lab hit the shared rail
+  cap at the default `1180x760` window instead of staying on the previous workaround-era width.
 - `bullet_text` now exists as a default IMUI informational helper, and the imgui audit no longer
   under-counts `separator_text`.
 - `imui_shadcn_adapter_demo` now acts as the compact downstream-facing proof that shared IMUI
@@ -65,6 +70,8 @@ Current state:
 - Focused compile/runtime gates now also cover the new button-family/radio surface.
 - The adapter demo now has a direct compact control-discoverability screenshot/layout gate with a
   passing before/after artifact pair at `900x620`.
+- The compact-shell smoke gate stayed green after the compact showcase switched from a fixed rail
+  workaround to the shared elastic rail constraints.
 - A narrower field-width regression lane may still be warranted if future shared-field work moves
   beyond the current proof.
 
