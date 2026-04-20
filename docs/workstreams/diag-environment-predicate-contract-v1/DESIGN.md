@@ -1,7 +1,13 @@
 # Diag Environment Predicate Contract v1
 
-Status: Active design note
+Status: Closed design note
 Last updated: 2026-04-20
+
+Status note (2026-04-20): this lane is closed after shipping the first source-scoped
+`requires_environment` contract for `host.monitor_topology`. The current closeout verdict lives in
+`docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md` and
+`docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`. References below to a
+future second source or wider grammar should be read as follow-on-only, not active execution.
 
 Related:
 

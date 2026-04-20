@@ -1,6 +1,6 @@
 # Diag Environment Predicate Contract v1 - TODO
 
-Status: Active
+Status: Closed
 
 ## Baseline and taxonomy
 
@@ -39,5 +39,6 @@ Status: Active
 
 - [x] DEPC-030 Implement the first concrete environment predicate execution slice only after the
   first source/timing/grammar decision is frozen.
-- [ ] DEPC-031 Do not widen `requires_environment` into a generic boolean expression language until
-  a second admitted source proves the need.
+- [x] DEPC-031 Close this lane with an explicit no-widening rule:
+  do not widen `requires_environment` into a generic boolean expression language until a different
+  narrow follow-on proves a second admitted source and real combination pressure.

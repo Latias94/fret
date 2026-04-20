@@ -1,6 +1,6 @@
 # Diag Environment Predicate Contract v1 - Evidence and Gates
 
-Status: Active
+Status: Closed
 
 ## Smallest current repro
 
@@ -101,6 +101,10 @@ git diff --check
 - `host_monitor_topology` is the first shipped predicate kind.
 - `host.monitor_topology` is now the first candidate predicate source and the first launch-time
   published source in the filesystem catalog family.
+- the current repo still does not have a second admitted source candidate:
+  - ADR 0246 preference extensions remain per-window committed environment/debug data,
+  - `RendererFontEnvironmentSnapshot` remains renderer/resource provenance,
+  - and `scale_factors_seen` remains run evidence only.
 - the next additive contract is a separate `environment.sources.json` catalog rather than
   `capabilities.json`.
 - the repo now also has an additive session-published source catalog surface via
@@ -135,12 +139,14 @@ git diff --check
 - `docs/workstreams/diag-environment-predicate-contract-v1/M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/TODO.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`
 - `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
+- `docs/adr/0246-environment-queries-preference-extensions-v1.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`

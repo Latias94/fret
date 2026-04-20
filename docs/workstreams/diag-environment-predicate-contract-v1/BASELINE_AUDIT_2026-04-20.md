@@ -1,6 +1,11 @@
 # Baseline Audit - 2026-04-20
 
-Status: Active baseline
+Status: Historical baseline reference
+
+Status note (2026-04-20): this baseline remains the entry evidence for why the lane opened, but
+the current shipped verdict lives in
+`docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md` and
+`docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`.
 
 ## Assumptions-first resume set
 

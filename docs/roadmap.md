@@ -152,11 +152,13 @@ Tracker highlights:
   `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`,
   `docs/workstreams/diag-monitor-topology-environment-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`.
-- Diagnostics environment-predicate contract lane (active narrow follow-on that classifies
-  per-window UI environment snapshots, renderer font environment snapshots, and bundle-level
-  diagnostics env fingerprints before any host-environment preflight contract lands):
+- Diagnostics environment-predicate contract closeout record (closed narrow follow-on that
+  classifies per-window UI environment snapshots, renderer font environment snapshots, and
+  bundle-level diagnostics env fingerprints, then lands the first `host.monitor_topology`
+  environment-admission contract without widening grammar past one admitted source):
   `docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md`,
   `docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md`,
+  `docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md`,
   `docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`.
 - Docking N-ary split graph (canonical form + ops semantics): `docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1.md` (TODOs: `docs/workstreams/docking-nary-split-graph-v1/docking-nary-split-graph-v1-todo.md`).

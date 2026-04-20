@@ -165,10 +165,11 @@ It complements (but does not replace) ADRs:
   diagnostics follow-on for the M3 mixed-DPI automation decision:
   the repo now has a runner-owned host monitor-topology environment fingerprint, but host
   predicates and mixed-DPI-only campaign selection still require a different narrower lane.
-- Use `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json` as the current
-  active planning lane for future diagnostics host-environment predicates:
+- Use `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json` as the closed
+  verdict for the first diagnostics host-environment predicate contract:
   it classifies the current per-window UI environment, renderer font environment, and bundle env
-  fingerprint surfaces so the repo does not collapse them into one generic snapshot abstraction.
+  fingerprint surfaces, ships `host.monitor_topology` as the first admitted source, and freezes
+  the rule that wider grammar needs a different narrow follow-on plus a second real source.
 - Source of truth for the closed `imui` compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`

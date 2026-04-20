@@ -200,13 +200,15 @@ Current source of truth for the in-tree immediate-mode stack:
     predicates still need a different follow-on instead of reopening the docking lane or this
     folder.
 
-- Active narrow diagnostics lane for future environment predicates:
+- Closed narrow diagnostics closeout record for the first environment-predicate contract:
   - `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`
   - `docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md`
   - `docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md`
-  - Scope: classifies the current environment snapshot families and locks the rule that any future
-    host-environment predicate contract belongs in diagnostics orchestration, not in a generic
-    erased runtime snapshot abstraction.
+  - `docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md`
+  - Scope: classifies the current environment snapshot families, lands the first
+    `host.monitor_topology` environment-admission contract, and closes with the rule that any
+    wider grammar needs a different narrow follow-on instead of a generic erased runtime snapshot
+    abstraction.
 
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
@@ -385,7 +387,7 @@ Rule:
 - `docs/workstreams/diag-cli-main-lanes-hardening-v1/` — first 2026-03-26, latest 2026-03-26, 1 markdown docs
 - `docs/workstreams/diag-devtools-gui-v1/` — first 2026-02-07, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/` — first 2026-02-10, latest 2026-02-28, 9 markdown docs
-- `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow diagnostics lane that classifies existing environment snapshot families before any host-environment predicate contract lands)
+- `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 12 markdown docs (closed narrow diagnostics closeout record that classifies existing environment snapshot families, lands the first `host.monitor_topology` environment-admission contract, and defers wider grammar until a second admitted source exists)
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
 - `docs/workstreams/diag-monitor-topology-environment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that adds a runner-owned host monitor-topology environment fingerprint without adding mixed-DPI-only campaign gating or environment predicates)

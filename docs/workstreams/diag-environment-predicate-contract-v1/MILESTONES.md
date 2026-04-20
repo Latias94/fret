@@ -1,6 +1,6 @@
 # Diag Environment Predicate Contract v1 - Milestones
 
-Status: Active
+Status: Closed
 
 ## M0: Baseline taxonomy freeze
 
@@ -71,6 +71,27 @@ Primary evidence:
 - `crates/fret-diag/src/registry/campaigns.rs`
 - `crates/fret-diag/src/diag_campaign.rs`
 - `tools/diag-campaigns/README.md`
+
+Status:
+
+- Completed on 2026-04-20.
+
+## M6: Closeout after first admitted source
+
+Exit criteria:
+
+- The lane records that the first real environment-predicate contract is shipped.
+- The lane records why current non-monitor-topology surfaces do not yet qualify as a second
+  admitted source.
+- The lane closes with an explicit rule that wider expression grammar requires a different narrow
+  follow-on and fresh source evidence.
+
+Primary evidence:
+
+- `docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md`
+- `docs/adr/0246-environment-queries-preference-extensions-v1.md`
+- `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
+- `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`
 
 Status:
 
