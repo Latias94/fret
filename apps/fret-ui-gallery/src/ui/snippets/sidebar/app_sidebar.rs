@@ -310,12 +310,12 @@ fn team_switcher(
         .min(TEAMS.len().saturating_sub(1));
     let team = TEAMS.get(active_team_index).copied().unwrap_or(TEAMS[0]);
     let sidebar_ctx = shadcn::use_sidebar(cx).expect("sidebar context");
-    let side = if sidebar_ctx.is_mobile {
+    let side = if sidebar_ctx.device_shell_mode.is_mobile() {
         shadcn::DropdownMenuSide::Bottom
     } else {
         shadcn::DropdownMenuSide::Right
     };
-    let align = if sidebar_ctx.is_mobile {
+    let align = if sidebar_ctx.device_shell_mode.is_mobile() {
         shadcn::DropdownMenuAlign::End
     } else {
         shadcn::DropdownMenuAlign::Start
@@ -466,7 +466,7 @@ fn project_groups(
     last_action: Model<Arc<str>>,
 ) -> AnyElement {
     let sidebar_ctx = shadcn::use_sidebar(cx).expect("sidebar context");
-    let collapsed = !sidebar_ctx.is_mobile && sidebar_ctx.collapsed();
+    let collapsed = sidebar_ctx.device_shell_mode.is_desktop() && sidebar_ctx.collapsed();
     if collapsed {
         return cx.text("");
     }
@@ -550,7 +550,7 @@ fn project_groups(
 
 fn nav_user(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> AnyElement {
     let sidebar_ctx = shadcn::use_sidebar(cx).expect("sidebar context");
-    let side = if sidebar_ctx.is_mobile {
+    let side = if sidebar_ctx.device_shell_mode.is_mobile() {
         shadcn::DropdownMenuSide::Bottom
     } else {
         shadcn::DropdownMenuSide::Right

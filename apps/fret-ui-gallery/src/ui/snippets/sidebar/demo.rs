@@ -27,7 +27,8 @@ fn menu_button(
     icon: &'static str,
     test_id: Arc<str>,
 ) -> shadcn::SidebarMenuButton {
-    let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
+    let collapsed = shadcn::use_sidebar(cx)
+        .is_some_and(|ctx| ctx.device_shell_mode.is_desktop() && ctx.collapsed());
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
     let value_for_activate: Arc<str> = Arc::from(value);
@@ -50,8 +51,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let content = shadcn::SidebarProvider::new().with(cx, |cx| {
         let selected_value = resolve_selected(cx, &selected_model, "playground");
-        let collapsed =
-            shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
+        let collapsed = shadcn::use_sidebar(cx)
+            .is_some_and(|ctx| ctx.device_shell_mode.is_desktop() && ctx.collapsed());
 
         let header = ui::h_row(|cx| {
             vec![

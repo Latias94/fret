@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "slug": "sidebar-device-shell-vocabulary-alignment-v1",
+  "title": "Sidebar Device-Shell Vocabulary Alignment v1",
+  "status": "closed",
+  "updated": "2026-04-20",
+  "scope_kind": "closeout",
+  "problem": "The adaptive taxonomy and shared `device_shell_*` owner were already closed, but the sidebar app-shell provider/context still exposed private `is_mobile*` naming. This lane closed that narrow drift by aligning the sidebar family on `DeviceShellMode` / `DeviceShellSwitchPolicy` without reopening panel/container work.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/CLOSEOUT_AUDIT_2026-04-20.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout by proving the sidebar provider/context surface now uses shared device-shell nouns and the gallery/source-policy gates teach the same boundary.",
+    "commands": [
+      "rg -n \"pub fn device_shell_mode|pub fn device_shell_switch_policy|pub device_shell_mode: DeviceShellMode\" ecosystem/fret-ui-shadcn/src/sidebar.rs",
+      "rg -n \"SidebarProvider::device_shell_mode|device_shell_switch_policy|DeviceShellMode::Mobile\" apps/fret-ui-gallery/src/ui/pages/sidebar.rs apps/fret-ui-gallery/src/ui/snippets/sidebar",
+      "cargo nextest run -p fret-ui-gallery --test device_shell_recipe_wrapper_surface --test device_shell_strategy_surface --test sidebar_docs_surface --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "gallery-source-policy",
+      "command": "cargo nextest run -p fret-ui-gallery --test device_shell_recipe_wrapper_surface --test device_shell_strategy_surface --test sidebar_docs_surface --no-fail-fast"
+    },
+    {
+      "name": "sidebar-lib-proof",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_provider_custom_device_shell_policy_can_force_mobile_sheet_branch --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "skill-anchors",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-hygiene",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/DESIGN.md",
+    "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/TODO.md",
+    "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/MILESTONES.md",
+    "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/CLOSEOUT_AUDIT_2026-04-20.md",
+    "docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/WORKSTREAM.json",
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "ecosystem/fret-ui-kit/src/adaptive.rs",
+    "ecosystem/fret-ui-shadcn/src/adaptive_shell.rs",
+    "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/pages/sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/mobile.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/use_sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/controlled.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/structure.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/rtl.rs",
+    "apps/fret-ui-gallery/tests/device_shell_recipe_wrapper_surface.rs",
+    "apps/fret-ui-gallery/tests/device_shell_strategy_surface.rs",
+    "apps/fret-ui-gallery/tests/sidebar_docs_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0325-adaptive-authoring-surface-and-query-axis-taxonomy-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "This lane is closed. Sidebar now uses shared device-shell nouns while remaining app-shell-only. Start a different follow-on only if future evidence exceeds naming alignment and requires a new container-aware or higher-level adaptive surface."
+  },
+  "follow_on_of": "adaptive-presentation-surface-v1"
+}

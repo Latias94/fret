@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 235
+- Dedicated directories: 236
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -487,6 +487,7 @@ Rule:
 - `docs/workstreams/runtime-safety-hardening-v1/` — first 2026-02-13, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/scroll-extents-dom-parity/` — first 2026-02-01, latest 2026-03-09, 2 markdown docs
 - `docs/workstreams/scroll-optimization-v1/` — first 2026-03-02, latest 2026-03-09, 3 markdown docs
+- `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow closeout lane that aligns the sidebar app-shell provider/context surface on shared `device_shell_*` vocabulary without reopening panel/container adaptive work)
 - `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/select-combobox-deep-redesign-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/shadcn-component-surface-audit-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs

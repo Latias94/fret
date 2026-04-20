@@ -74,7 +74,7 @@ fn sidebar_page_keeps_app_shell_device_shell_boundary_explicit() {
     let source = include_str!("../src/ui/pages/sidebar.rs");
 
     for needle in [
-        "`SidebarProvider::is_mobile(...)` and `is_mobile_breakpoint(...)` are app-shell/device-shell controls",
+        "`SidebarProvider::device_shell_mode(...)` and `device_shell_switch_policy(...)` are app-shell/device-shell controls",
         "`Sidebar` should stay an app-shell surface; editor rails and inspector sidebars should use a separate container-aware surface",
         "That forced-mobile example documents the app-shell sheet path only",
     ] {

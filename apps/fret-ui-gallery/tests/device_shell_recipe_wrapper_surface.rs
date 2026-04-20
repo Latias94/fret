@@ -80,7 +80,7 @@ fn dialog_and_sidebar_boundaries_stay_outside_wrapper_growth() {
     );
 
     for needle in [
-        "`SidebarProvider::is_mobile(...)` and `is_mobile_breakpoint(...)` are app-shell/device-shell controls",
+        "`SidebarProvider::device_shell_mode(...)` and `device_shell_switch_policy(...)` are app-shell/device-shell controls",
         "`Sidebar` should stay an app-shell surface; editor rails and inspector sidebars should use a separate container-aware surface",
     ] {
         assert!(
@@ -130,10 +130,15 @@ fn shadcn_private_adaptive_shell_seam_stays_internal_and_narrow() {
     }
 
     assert!(
+        helper.contains("pub(crate) fn resolve_device_shell_mode<H: UiHost>("),
+        "adaptive shell helper should keep a crate-private mode resolver seam",
+    );
+    assert!(
         helper.contains("pub(crate) fn is_desktop_shell<H: UiHost>("),
         "adaptive shell helper should stay on a crate-private callable seam",
     );
     for forbidden in [
+        "pub fn resolve_device_shell_mode<",
         "pub fn is_desktop_shell<",
         "device_shell_switch(",
         "pub struct DeviceShellSwitchPolicy",
@@ -144,12 +149,14 @@ fn shadcn_private_adaptive_shell_seam_stays_internal_and_narrow() {
         );
     }
 
-    for (name, source) in [("drawer", drawer), ("sidebar", sidebar)] {
-        assert!(
-            source.contains("crate::adaptive_shell::is_desktop_shell("),
-            "{name} should reuse the private adaptive shell seam instead of growing public wrapper vocabulary",
-        );
-    }
+    assert!(
+        drawer.contains("crate::adaptive_shell::is_desktop_shell("),
+        "drawer should keep using the private adaptive shell boolean seam for its internal parity breakpoint",
+    );
+    assert!(
+        sidebar.contains("crate::adaptive_shell::resolve_device_shell_mode("),
+        "sidebar should reuse the private adaptive shell mode seam instead of duplicating device-shell classification locally",
+    );
 
     assert!(
         !combobox.contains("crate::adaptive_shell::is_desktop_shell("),

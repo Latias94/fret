@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("mobile.rs");
 
 // region: example
+use fret::adaptive::DeviceShellMode;
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
@@ -26,7 +27,8 @@ fn menu_button(
     icon: &'static str,
     test_id: Arc<str>,
 ) -> shadcn::SidebarMenuButton {
-    let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
+    let collapsed = shadcn::use_sidebar(cx)
+        .is_some_and(|ctx| ctx.device_shell_mode.is_desktop() && ctx.collapsed());
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
     let value_for_activate: Arc<str> = Arc::from(value);
@@ -51,7 +53,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::SidebarProvider::new()
         .default_open(false)
         .open_mobile(Some(open_mobile.clone()))
-        .is_mobile(true)
+        .device_shell_mode(DeviceShellMode::Mobile)
         .with(cx, |cx| {
             let open_mobile_now = cx
                 .get_model_cloned(&open_mobile, Invalidation::Paint)
@@ -80,7 +82,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .test_id("ui-gallery-sidebar-mobile-external-toggle")
                             .into_element(cx),
                         shadcn::raw::typography::muted(
-                            "Forced mobile mode via SidebarProvider.is_mobile(true).",
+                            "Forced mobile mode via SidebarProvider.device_shell_mode(DeviceShellMode::Mobile).",
                         ).into_element(cx),
                         shadcn::raw::typography::muted( format!("open_mobile={open_mobile_now}")).into_element(cx),
                         shadcn::raw::typography::muted( format!("selected={}", selected_value.as_ref())).into_element(cx),

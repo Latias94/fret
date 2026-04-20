@@ -36,7 +36,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .width_mobile(Px(320.0))
         .with(cx, |cx| {
             let sidebar_ctx = shadcn::use_sidebar(cx).expect("sidebar context");
-            let collapsed = !sidebar_ctx.is_mobile && sidebar_ctx.collapsed();
+            let collapsed = sidebar_ctx.device_shell_mode.is_desktop() && sidebar_ctx.collapsed();
             let search_value = cx
                 .get_model_cloned(&search, Invalidation::Layout)
                 .unwrap_or_default();

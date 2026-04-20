@@ -18,6 +18,7 @@ use fret_ui::element::{
     SizeStyle, SpacerProps, VisualTransformProps,
 };
 use fret_ui::{CommandAvailability, ElementContext, ElementContextAccess, Theme, UiHost};
+use fret_ui_kit::adaptive::{DeviceShellMode, DeviceShellSwitchPolicy};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -27,7 +28,6 @@ use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::viewport_tailwind;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::typography;
@@ -393,7 +393,7 @@ pub struct SidebarContext {
     pub state: SidebarState,
     pub open: Model<bool>,
     pub open_mobile: Model<bool>,
-    pub is_mobile: bool,
+    pub device_shell_mode: DeviceShellMode,
     pub width: Px,
     pub width_icon: Px,
     pub width_mobile: Px,
@@ -425,7 +425,7 @@ impl SidebarContext {
     }
 
     pub fn toggle_sidebar<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
-        if self.is_mobile {
+        if self.device_shell_mode.is_mobile() {
             let _ = cx.app.models_mut().update(&self.open_mobile, |v| *v = !*v);
             return;
         }
@@ -470,7 +470,7 @@ fn sidebar_collapsed_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
     }
 
     use_sidebar(cx)
-        .map(|ctx| !ctx.is_mobile && ctx.collapsed())
+        .map(|ctx| ctx.device_shell_mode.is_desktop() && ctx.collapsed())
         .unwrap_or(false)
 }
 
@@ -633,8 +633,8 @@ pub struct SidebarProvider {
     default_open: bool,
     open_mobile: Option<Model<bool>>,
     default_open_mobile: bool,
-    is_mobile_override: Option<bool>,
-    is_mobile_breakpoint: Px,
+    device_shell_mode_override: Option<DeviceShellMode>,
+    device_shell_switch_policy: DeviceShellSwitchPolicy,
     width: Option<Px>,
     width_icon: Option<Px>,
     width_mobile: Option<Px>,
@@ -649,8 +649,14 @@ impl std::fmt::Debug for SidebarProvider {
             .field("default_open", &self.default_open)
             .field("open_mobile", &self.open_mobile)
             .field("default_open_mobile", &self.default_open_mobile)
-            .field("is_mobile_override", &self.is_mobile_override)
-            .field("is_mobile_breakpoint", &self.is_mobile_breakpoint)
+            .field(
+                "device_shell_mode_override",
+                &self.device_shell_mode_override,
+            )
+            .field(
+                "device_shell_switch_policy",
+                &self.device_shell_switch_policy,
+            )
             .field("width", &self.width)
             .field("width_icon", &self.width_icon)
             .field("width_mobile", &self.width_mobile)
@@ -676,8 +682,8 @@ impl SidebarProvider {
             default_open: true,
             open_mobile: None,
             default_open_mobile: false,
-            is_mobile_override: None,
-            is_mobile_breakpoint: viewport_tailwind::MD,
+            device_shell_mode_override: None,
+            device_shell_switch_policy: DeviceShellSwitchPolicy::default(),
             width: None,
             width_icon: None,
             width_mobile: None,
@@ -706,20 +712,20 @@ impl SidebarProvider {
         self
     }
 
-    /// Overrides whether the sidebar should use mobile/offcanvas behavior.
+    /// Overrides the resolved device-shell branch for the sidebar app shell.
     ///
-    /// When unset, `SidebarProvider` infers mobile mode from the committed per-window environment
-    /// snapshot (ADR 0232) using a Tailwind-aligned viewport breakpoint.
-    pub fn is_mobile(mut self, is_mobile: bool) -> Self {
-        self.is_mobile_override = Some(is_mobile);
+    /// When unset, `SidebarProvider` resolves the branch from the committed per-window environment
+    /// snapshot (ADR 0232) using [`SidebarProvider::device_shell_switch_policy`].
+    pub fn device_shell_mode(mut self, mode: DeviceShellMode) -> Self {
+        self.device_shell_mode_override = Some(mode);
         self
     }
 
-    /// Overrides the viewport breakpoint used to infer mobile mode when `is_mobile` is not set.
+    /// Overrides the viewport/device policy used to resolve the sidebar desktop-vs-sheet branch.
     ///
     /// This is intentionally viewport-driven (device shell), not container-query-driven.
-    pub fn is_mobile_breakpoint(mut self, breakpoint: Px) -> Self {
-        self.is_mobile_breakpoint = breakpoint;
+    pub fn device_shell_switch_policy(mut self, policy: DeviceShellSwitchPolicy) -> Self {
+        self.device_shell_switch_policy = policy;
         self
     }
 
@@ -817,8 +823,8 @@ impl SidebarProvider {
             SidebarState::Collapsed
         };
 
-        let is_mobile = self.is_mobile_override.unwrap_or_else(|| {
-            !crate::adaptive_shell::is_desktop_shell(cx, self.is_mobile_breakpoint)
+        let device_shell_mode = self.device_shell_mode_override.unwrap_or_else(|| {
+            crate::adaptive_shell::resolve_device_shell_mode(cx, self.device_shell_switch_policy)
         });
         let resolved_widths = {
             let theme = Theme::global(&*cx.app);
@@ -834,7 +840,7 @@ impl SidebarProvider {
             state,
             open: open.clone(),
             open_mobile: open_mobile.clone(),
-            is_mobile,
+            device_shell_mode,
             width: resolved_widths.full,
             width_icon: resolved_widths.icon,
             width_mobile: resolved_widths.mobile,
@@ -842,7 +848,7 @@ impl SidebarProvider {
 
         let open_for_command = open.clone();
         let open_mobile_for_command = open_mobile.clone();
-        let is_mobile_for_command = is_mobile;
+        let is_mobile_for_command = device_shell_mode.is_mobile();
 
         with_sidebar_provider_state(cx, context, |cx| {
             let children = TooltipProvider::new()
@@ -956,7 +962,9 @@ impl Sidebar {
         I: IntoIterator<Item = AnyElement>,
     {
         let sidebar_ctx = use_sidebar(cx);
-        let is_mobile = sidebar_ctx.as_ref().is_some_and(|ctx| ctx.is_mobile);
+        let is_mobile = sidebar_ctx
+            .as_ref()
+            .is_some_and(|ctx| ctx.device_shell_mode.is_mobile());
 
         let Self {
             children: _,
@@ -980,7 +988,7 @@ impl Sidebar {
         {
             let open_model = sidebar_ctx.open.clone();
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
-            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+            let is_mobile_for_toggle = sidebar_ctx.device_shell_mode.is_mobile();
 
             let on_key_down = sidebar_toggle_key_down_handler(
                 open_model.clone(),
@@ -1193,7 +1201,9 @@ impl Sidebar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let sidebar_ctx = use_sidebar(cx);
-        let is_mobile = sidebar_ctx.as_ref().is_some_and(|ctx| ctx.is_mobile);
+        let is_mobile = sidebar_ctx
+            .as_ref()
+            .is_some_and(|ctx| ctx.device_shell_mode.is_mobile());
 
         let Self {
             children,
@@ -1468,7 +1478,7 @@ impl SidebarTrigger {
                             host.models_mut(),
                             &ctx.open,
                             &ctx.open_mobile,
-                            ctx.is_mobile,
+                            ctx.device_shell_mode.is_mobile(),
                         );
                         host.request_redraw(action_cx.window);
                     }
@@ -1640,7 +1650,7 @@ impl SidebarRail {
                             host.models_mut(),
                             &ctx.open,
                             &ctx.open_mobile,
-                            ctx.is_mobile,
+                            ctx.device_shell_mode.is_mobile(),
                         );
                         host.request_redraw(action_cx.window);
                     }
@@ -1802,7 +1812,7 @@ impl SidebarInset {
             .is_some_and(|variant| variant == SidebarVariant::Inset);
         let collapsed = sidebar_ctx
             .as_ref()
-            .is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
+            .is_some_and(|ctx| ctx.device_shell_mode.is_desktop() && ctx.collapsed());
 
         let background = Theme::global(&*cx.app).color_token("background");
         let mut chrome = ChromeRefinement::default().bg(ColorRef::Color(background));
@@ -2432,7 +2442,7 @@ impl SidebarGroupAction {
             });
         }
 
-        let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.is_mobile);
+        let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.device_shell_mode.is_mobile());
         let (top, right, size, hit_expand) = {
             let theme = Theme::global(&*cx.app);
             let top = theme
@@ -2952,7 +2962,7 @@ impl SidebarMenuAction {
         }
 
         if self.show_on_hover {
-            let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.is_mobile);
+            let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.device_shell_mode.is_mobile());
             let item_hovered = sidebar_menu_item_hovered_in_scope(cx).unwrap_or(true);
             let item_open = sidebar_menu_item_open_in_scope(cx).unwrap_or(false);
             let item_focus_within = sidebar_menu_item_focus_within_in_scope(cx).unwrap_or(false);
@@ -2965,7 +2975,7 @@ impl SidebarMenuAction {
         }
 
         let top = sidebar_menu_affordance_top(self.size);
-        let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.is_mobile);
+        let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.device_shell_mode.is_mobile());
         let dir = crate::direction::use_direction(cx, None);
         let (right, size, hit_expand) = {
             let theme = Theme::global(&*cx.app);
@@ -3785,7 +3795,7 @@ impl SidebarMenuSubButton {
         if let Some(sidebar_ctx) = use_sidebar(cx) {
             let open_model = sidebar_ctx.open.clone();
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
-            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+            let is_mobile_for_toggle = sidebar_ctx.device_shell_mode.is_mobile();
 
             let on_key_down = sidebar_toggle_key_down_handler(
                 open_model.clone(),
@@ -4224,7 +4234,7 @@ impl SidebarMenuButton {
         if let Some(sidebar_ctx) = use_sidebar(cx) {
             let open_model = sidebar_ctx.open.clone();
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
-            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+            let is_mobile_for_toggle = sidebar_ctx.device_shell_mode.is_mobile();
 
             let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
                 open_model,
@@ -4987,7 +4997,7 @@ mod tests {
                 SidebarProvider::new()
                     .open(Some(open_model.clone()))
                     .open_mobile(Some(open_mobile_model.clone()))
-                    .is_mobile(true)
+                    .device_shell_mode(DeviceShellMode::Mobile)
                     .width_mobile(Px(360.0))
                     .with(cx, |cx| {
                         let content = SidebarMenuButton::new("Inbox")
@@ -5051,7 +5061,7 @@ mod tests {
                 SidebarProvider::new()
                     .open(Some(open_model.clone()))
                     .open_mobile(Some(open_mobile_model.clone()))
-                    .is_mobile(true)
+                    .device_shell_mode(DeviceShellMode::Mobile)
                     .with(cx, |cx| {
                         let content = SidebarMenuButton::new("Inbox")
                             .test_id("sidebar-mobile-menu-button")
@@ -5113,7 +5123,7 @@ mod tests {
                 SidebarProvider::new()
                     .open(Some(open_model.clone()))
                     .open_mobile(Some(open_mobile_model.clone()))
-                    .is_mobile(true)
+                    .device_shell_mode(DeviceShellMode::Mobile)
                     .with(cx, |cx| {
                         let button = SidebarMenuButton::new("Inbox")
                             .test_id("sidebar-mobile-viewport-menu-button")
@@ -5338,7 +5348,7 @@ mod tests {
     }
 
     #[test]
-    fn sidebar_provider_custom_mobile_breakpoint_can_force_mobile_sheet_branch() {
+    fn sidebar_provider_custom_device_shell_policy_can_force_mobile_sheet_branch() {
         let window = AppWindowId::default();
         let mut app = App::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
@@ -5368,7 +5378,9 @@ mod tests {
                 SidebarProvider::new()
                     .open(Some(open_model.clone()))
                     .open_mobile(Some(open_mobile_model.clone()))
-                    .is_mobile_breakpoint(Px(900.0))
+                    .device_shell_switch_policy(
+                        DeviceShellSwitchPolicy::default().desktop_min_width(Px(900.0)),
+                    )
                     .with(cx, |cx| {
                         let content = SidebarMenuButton::new("Inbox")
                             .test_id("sidebar-mobile-custom-breakpoint-menu-button")
@@ -5426,7 +5438,7 @@ mod tests {
             |cx| {
                 SidebarProvider::new()
                     .open(Some(open_model.clone()))
-                    .is_mobile(true)
+                    .device_shell_mode(DeviceShellMode::Mobile)
                     .with(cx, |cx| {
                         let skeleton = SidebarMenuSkeleton::new()
                             .show_icon(true)
@@ -6054,13 +6066,19 @@ mod tests {
                 bounds,
                 "shadcn-sidebar-group-action-mobile-hit-area",
                 |cx| {
-                    SidebarProvider::new().is_mobile(is_mobile).with(cx, |cx| {
-                        let action = SidebarGroupAction::new(Vec::<AnyElement>::new())
-                            .test_id(test_id)
-                            .into_element(cx);
-                        let group = SidebarGroup::new([action]).into_element(cx);
-                        vec![group]
-                    })
+                    SidebarProvider::new()
+                        .device_shell_mode(if is_mobile {
+                            DeviceShellMode::Mobile
+                        } else {
+                            DeviceShellMode::Desktop
+                        })
+                        .with(cx, |cx| {
+                            let action = SidebarGroupAction::new(Vec::<AnyElement>::new())
+                                .test_id(test_id)
+                                .into_element(cx);
+                            let group = SidebarGroup::new([action]).into_element(cx);
+                            vec![group]
+                        })
                 },
             );
             ui.set_root(root);
@@ -6277,18 +6295,24 @@ mod tests {
                 bounds,
                 "shadcn-sidebar-menu-action-mobile-hit-area",
                 |cx| {
-                    SidebarProvider::new().is_mobile(is_mobile).with(cx, |cx| {
-                        let button = SidebarMenuButton::new("Projects")
-                            .test_id("sidebar-menu-button")
-                            .into_element(cx);
-                        let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
-                            .test_id(test_id)
-                            .into_element(cx);
-                        let item = SidebarMenuItem::new(button)
-                            .extend_children([action])
-                            .into_element(cx);
-                        vec![SidebarMenu::new([item]).into_element(cx)]
-                    })
+                    SidebarProvider::new()
+                        .device_shell_mode(if is_mobile {
+                            DeviceShellMode::Mobile
+                        } else {
+                            DeviceShellMode::Desktop
+                        })
+                        .with(cx, |cx| {
+                            let button = SidebarMenuButton::new("Projects")
+                                .test_id("sidebar-menu-button")
+                                .into_element(cx);
+                            let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
+                                .test_id(test_id)
+                                .into_element(cx);
+                            let item = SidebarMenuItem::new(button)
+                                .extend_children([action])
+                                .into_element(cx);
+                            vec![SidebarMenu::new([item]).into_element(cx)]
+                        })
                 },
             );
             ui.set_root(root);

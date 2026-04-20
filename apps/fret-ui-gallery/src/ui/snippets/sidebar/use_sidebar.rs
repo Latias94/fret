@@ -52,7 +52,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             cx.text(format!("state={state_label}")),
                             cx.text(format!("open={open_now}")),
                             cx.text(format!("open_mobile={open_mobile_now}")),
-                            cx.text(format!("is_mobile={}", sidebar_ctx.is_mobile)),
+                            cx.text(format!(
+                                "device_shell_mode={:?}",
+                                sidebar_ctx.device_shell_mode
+                            )),
                             cx.text(format!("width={:.0}px", sidebar_ctx.width.0)),
                             cx.text(format!("width_icon={:.0}px", sidebar_ctx.width_icon.0)),
                             cx.text(format!("width_mobile={:.0}px", sidebar_ctx.width_mobile.0)),

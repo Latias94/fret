@@ -12,7 +12,7 @@ fn sidebar_page_documents_group_label_children_lane_and_page_order() {
         "the gallery keeps one consolidated `Structure` section",
         "`SidebarGroupLabel asChild + CollapsibleTrigger` lane",
         "The structure snippet now carries the official `SidebarGroupLabel asChild` collapsible-group lane",
-        "`SidebarProvider::is_mobile(...)` and `is_mobile_breakpoint(...)` are app-shell/device-shell controls",
+        "`SidebarProvider::device_shell_mode(...)` and `device_shell_switch_policy(...)` are app-shell/device-shell controls",
         "`Sidebar` should stay an app-shell surface; editor rails and inspector sidebars should use a separate container-aware surface",
         "That forced-mobile example documents the app-shell sheet path only",
     ] {

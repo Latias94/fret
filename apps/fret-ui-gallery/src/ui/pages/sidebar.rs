@@ -15,8 +15,8 @@ pub(super) fn preview_sidebar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`SidebarProvider` owns default open state, controlled models, viewport/mobile inference, and width defaults (`width`, `width_icon`, `width_mobile`).",
-        "`SidebarProvider::is_mobile(...)` and `is_mobile_breakpoint(...)` are app-shell/device-shell controls for the sidebar's desktop-vs-sheet branch, not generic panel/container adaptive helpers.",
+        "`SidebarProvider` owns default open state, controlled models, device-shell inference, and width defaults (`width`, `width_icon`, `width_mobile`).",
+        "`SidebarProvider::device_shell_mode(...)` and `device_shell_switch_policy(...)` are app-shell/device-shell controls for the sidebar's desktop-vs-sheet branch, not generic panel/container adaptive helpers.",
         "`Sidebar` owns `side`, `variant`, and `collapsible`; `SidebarInset` remains required for the inset variant.",
         "`Sidebar` should stay an app-shell surface; editor rails and inspector sidebars should use a separate container-aware surface instead of reusing sidebar mobile inference.",
         "`SidebarHeader`, `SidebarFooter`, `SidebarContent`, `SidebarGroup`, `SidebarGroupLabel`, `SidebarGroupAction`, and `SidebarGroupContent` cover the upstream section structure directly.",
@@ -28,7 +28,7 @@ pub(super) fn preview_sidebar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "Width ownership follows upstream: use `SidebarProvider::width`, `width_icon`, and `width_mobile` first; `Sidebar` keeps theme-token fallback defaults.",
         "Keep `test_id_prefix` stable: `tools/diag-scripts/ui-gallery/sidebar/*` depend on DocSection tab trigger IDs.",
-        "Mobile example forces `is_mobile(true)` for deterministic overlay + focus-restore diagnostics.",
+        "Mobile example forces `device_shell_mode(DeviceShellMode::Mobile)` for deterministic overlay + focus-restore diagnostics.",
         "That forced-mobile example documents the app-shell sheet path only; it is not evidence that `Sidebar` should become the generic answer for editor panel adaptation.",
         "The official docs split many sidebar parts into separate headings; the gallery keeps one consolidated `Structure` section so the copyable Fret authoring surface stays compact, but it now explicitly includes the `SidebarGroupLabel asChild + CollapsibleTrigger` lane from the upstream `SidebarGroup` docs.",
         "The new `AppSidebar` section is intentionally closer to shadcn block `sidebar-07`: it favors a single inline file over upstream's multi-file split so app authors can copy and trim it directly.",

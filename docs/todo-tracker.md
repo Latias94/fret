@@ -76,6 +76,10 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/adaptive-presentation-surface-v1/TARGET_INTERFACE_STATE.md`
   - `docs/workstreams/adaptive-presentation-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`
   - `docs/workstreams/adaptive-presentation-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`
+- Closed narrow follow-on for sidebar device-shell vocabulary alignment:
+  - `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/DESIGN.md`
+  - `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/CLOSEOUT_AUDIT_2026-04-20.md`
+  - `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/EVIDENCE_AND_GATES.md`
 - Closed narrow follow-on for container-aware editor rail / inspector sidebar extraction
   threshold:
   - `docs/workstreams/container-aware-editor-rail-surface-v1/DESIGN.md`

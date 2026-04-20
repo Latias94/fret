@@ -97,6 +97,13 @@ Tracker highlights:
   `docs/workstreams/adaptive-presentation-surface-v1/TARGET_INTERFACE_STATE.md`,
   `docs/workstreams/adaptive-presentation-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md`, and
   `docs/workstreams/adaptive-presentation-surface-v1/CLOSEOUT_AUDIT_2026-04-11.md`.
+- Sidebar device-shell vocabulary alignment closeout record (closed narrow follow-on that replaces
+  the sidebar app-shell `is_mobile*` provider/context surface with shared
+  `device_shell_mode(...)` / `device_shell_switch_policy(...)` vocabulary while keeping sidebar out
+  of the panel/container lane):
+  `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/DESIGN.md`,
+  `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/CLOSEOUT_AUDIT_2026-04-20.md`, and
+  `docs/workstreams/sidebar-device-shell-vocabulary-alignment-v1/EVIDENCE_AND_GATES.md`.
 - Container-aware editor-rail surface closeout record (closed narrow follow-on that freezes the
   owner split, proves a second shell-mounted rail consumer, and still defers public extraction
   until a narrower container-aware helper lane is explicitly warranted):

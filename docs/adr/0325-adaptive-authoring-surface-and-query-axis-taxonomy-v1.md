@@ -219,12 +219,11 @@ Examples of surfaces now aligned more closely to this ADR:
 - `ecosystem/fret-ui-shadcn/src/field.rs`
   - `FieldOrientation::ContainerAdaptive` now keeps the label/content layout explicit about its
     container-query axis while still matching the upstream `orientation="responsive"` outcome.
-
-Examples of surfaces that still need review against this ADR:
-
 - `ecosystem/fret-ui-shadcn/src/sidebar.rs`
-  - the current `is_mobile` / `is_mobile_breakpoint` story is acceptable for an app shell, but it
-    should not silently become the editor/panel adaptive story.
+  - `SidebarProvider::device_shell_mode(DeviceShellMode)` and
+    `device_shell_switch_policy(DeviceShellSwitchPolicy)` now keep the app-shell/device-shell axis
+    explicit while `SidebarContext::device_shell_mode` keeps `use_sidebar(cx)` consumers on the
+    same shared vocabulary instead of reviving ad-hoc mobile booleans.
 
 Examples of surfaces already closer to the target direction:
 
