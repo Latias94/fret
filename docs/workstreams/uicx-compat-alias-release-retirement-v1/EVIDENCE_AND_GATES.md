@@ -1,10 +1,10 @@
 # UiCx Compat Alias Release Retirement v1 — Evidence and Gates
 
-Status: Active
+Status: Closed
 
 ## Smallest current repro
 
-Use this sequence before changing alias code:
+Use this sequence to reopen the shipped deletion evidence:
 
 ```bash
 rg -n "pub type UiCx<'a>|UiCxActionsExt|UiCxDataExt|UiCxActions|UiCxData|UiCxActionLocal|UiCxLocalsWith" ecosystem/fret/src/lib.rs ecosystem/fret/src/view.rs
@@ -14,9 +14,9 @@ python3 tools/gate_no_raw_app_context_in_default_teaching_snippets.py
 
 What this proves:
 
-- the compatibility alias family still exists and where,
+- the old compatibility alias family no longer exists on the live `fret` surface,
 - the `fret` facade remains part of a semver-checked published release graph,
-- and the canonical first-party default teaching surface already rejects `UiCx<'_>`.
+- and the canonical first-party default teaching surface still rejects `UiCx<'_>`.
 
 ## Gate set
 
@@ -25,6 +25,7 @@ What this proves:
 ```bash
 python3 tools/gate_no_raw_app_context_in_default_teaching_snippets.py
 cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test uicx_actions_surface --test uicx_data_surface --test crate_usage_grouped_query_surface --no-fail-fast
+cargo nextest run -p fret --lib
 ```
 
 ### Lane hygiene
@@ -36,19 +37,15 @@ python3 -m json.tool docs/workstreams/uicx-compat-alias-release-retirement-v1/WO
 git diff --check
 ```
 
-## Current evidence at lane open
+## Current evidence after deletion
 
-- `UiCx<'a>` remains a deprecated root compatibility alias to `AppComponentCx<'a>`.
-- `fret::app` still explicitly reexports `UiCxActionsExt` and `UiCxDataExt` under
-  `#[allow(deprecated)]`.
-- `fret::advanced::view` still explicitly reexports `UiCxDataExt`.
-- `ecosystem/fret/src/view.rs` still defines the hidden deprecated carrier aliases:
-  `UiCxDataExt`, `UiCxData`, `UiCxActionsExt`, `UiCxActions`, `UiCxActionLocal`,
-  `UiCxLocalsWith`.
-- Default teaching gates and first-party docs already require or teach canonical names instead of
-  `UiCx`.
-- `release-plz.toml` treats the workspace as `semver_check = true` and includes published `fret`
-  package release entries, so alias deletion needs an explicit release-facing justification.
+- `ecosystem/fret/src/lib.rs` no longer exports `UiCx<'a>`.
+- `fret::app` no longer reexports `UiCxActionsExt` or `UiCxDataExt`.
+- `fret::advanced::view` no longer reexports `UiCxDataExt`.
+- `ecosystem/fret/src/view.rs` no longer defines the hidden `UiCx*` carrier aliases.
+- Default teaching gates and first-party docs remain on canonical names only.
+- `release-plz.toml` still treats the workspace as `semver_check = true`, so the next published
+  `fret` release must carry the breaking-change note for this deletion.
 
 ## Evidence anchors
 

@@ -40,11 +40,11 @@ fn app_render_actions_ext_is_part_of_the_default_and_advanced_preludes() {
 }
 
 #[test]
-fn app_lane_exports_canonical_grouped_helpers_and_old_name_compatibility() {
+fn app_lane_exports_only_canonical_grouped_helpers() {
     let app_slice = app_module_slice();
     assert!(app_slice.contains("AppRenderActionsExt"));
     assert!(app_slice.contains("AppRenderDataExt"));
-    assert!(app_slice.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
+    assert!(!app_slice.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
     assert!(!app_slice.contains("pub use crate::view::QueryHandleReadLayoutExt;"));
     assert!(app_prelude_slice().contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
 }

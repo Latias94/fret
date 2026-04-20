@@ -18,7 +18,9 @@ fn crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces() {
     assert!(CRATE_USAGE_GUIDE.contains("`&mut fret::app::AppRenderCx<'_>`"));
     assert!(CRATE_USAGE_GUIDE.contains("`AppRenderActionsExt`"));
     assert!(CRATE_USAGE_GUIDE.contains("`AppRenderDataExt`"));
-    assert!(CRATE_USAGE_GUIDE.contains("compatibility old-name alias"));
+    assert!(CRATE_USAGE_GUIDE.contains("Prefer `AppComponentCx`"));
+    assert!(!CRATE_USAGE_GUIDE.contains("compatibility old-name alias"));
+    assert!(!CRATE_USAGE_GUIDE.contains("`UiCx`"));
     assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
     assert!(CRATE_USAGE_GUIDE.contains("`ContainerQueryHysteresis`"));
     assert!(CRATE_USAGE_GUIDE.contains("`ViewportQueryHysteresis`"));

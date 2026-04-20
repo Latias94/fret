@@ -40,9 +40,8 @@ surface, lock these decisions before adding public API:
   carrying runtime context unless they really need it, default-path helper signatures should
   prefer `fret::app::AppRenderContext<'a>` for named helpers and
   `&mut fret::app::AppRenderCx<'_>` for concrete closure-local helpers over `AppComponentCx`, with
-  `RenderContextAccess<'a, App>` kept as the underlying generic capability, and `UiCx` itself
-  staying only as a deprecated compatibility old-name alias when an older helper intentionally still wants
-  `ElementContext<App>`; reusable generic helpers should move toward the unified component
+  `RenderContextAccess<'a, App>` kept as the underlying generic capability; reusable generic
+  helpers should move toward the unified component
   conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
   `AnyElement` stays explicit
@@ -804,9 +803,8 @@ them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than ex
 `AppRenderActionsExt` / `AppRenderDataExt` (or explicit imports from `fret::app::{AppRenderActionsExt,
 AppRenderDataExt}` when you are intentionally not using the prelude). When a closure-local or inline
 helper materially benefits from a concrete context carrier, prefer `&mut fret::app::AppRenderCx<'_>`.
-Keep `UiCx` itself only as the deprecated compatibility old-name alias behind explicit import when
-an older helper intentionally still wants `ElementContext<App>`. Prefer `AppComponentCx` for app-hosted
-component/snippet helpers that deliberately target the default app host.
+Prefer `AppComponentCx` for app-hosted component/snippet helpers that deliberately target the
+default app host.
 Enable `fret-query/ui` only when you are working directly with low-level `ElementContext` or
 generic writer extensions outside the app-facing `fret` facades.
 

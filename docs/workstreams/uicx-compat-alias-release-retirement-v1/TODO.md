@@ -1,6 +1,6 @@
 # UiCx Compat Alias Release Retirement v1 — TODO
 
-Status: Active
+Status: Closed
 
 ## Baseline evidence
 
@@ -14,28 +14,24 @@ Status: Active
 
 ## Release policy
 
-- [ ] UICX-RR-010 Decide the release-window posture for the explicit compatibility aliases:
-  - `UiCx<'a>`
-  - `UiCxActionsExt`
-  - `UiCxDataExt`
-- [ ] UICX-RR-011 Decide whether the hidden deprecated carriers retire:
-  - in the same release-facing slice as the explicit aliases, or
-  - in a separate earlier slice with proof that they are not part of the supported semver surface.
-- [ ] UICX-RR-012 Write the explicit removal criteria:
-  - required downstream evidence,
-  - required release note / migration wording,
-  - and required gate set before alias deletion is acceptable.
+- [x] UICX-RR-010 Decide the release-window posture for the explicit compatibility aliases:
+  - accepted verdict on 2026-04-20: remove now instead of carrying a deprecated release window
+- [x] UICX-RR-011 Decide whether the hidden deprecated carriers retire:
+  - accepted verdict on 2026-04-20: retire in the same reviewed slice as the explicit aliases
+- [x] UICX-RR-012 Write the explicit removal criteria:
+  - accepted verdict on 2026-04-20: no further downstream migration window is required for this
+    repo; the publish-facing release note must instead carry the explicit breaking-change callout
 
 ## Implementation / migration
 
-- [ ] UICX-RR-020 If the verdict is retain, keep deprecation wording and release docs consistent.
-- [ ] UICX-RR-021 If the verdict is remove, delete the chosen alias set in one explicit reviewed
+- [x] UICX-RR-020 If the verdict is retain, keep deprecation wording and release docs consistent.
+  - N/A after the delete-now verdict.
+- [x] UICX-RR-021 If the verdict is remove, delete the chosen alias set in one explicit reviewed
   slice or an explicitly justified split slice.
-- [ ] UICX-RR-022 Refresh tests, source-policy gates, and release preflight after the verdict
+- [x] UICX-RR-022 Refresh tests, source-policy gates, and release preflight after the verdict
   lands.
 
 ## Closeout
 
-- [ ] UICX-RR-030 Close the lane with one explicit verdict:
-  - retained for a defined release window, or
+- [x] UICX-RR-030 Close the lane with one explicit verdict:
   - removed with release-facing evidence and migration notes.

@@ -2,10 +2,10 @@
   "schema_version": 1,
   "slug": "uicx-compat-alias-release-retirement-v1",
   "title": "UiCx Compat Alias Release Retirement v1",
-  "status": "active",
-  "updated": "2026-04-19",
-  "scope_kind": "execution",
-  "problem": "The broad public-authoring refactor is closed, canonical first-party teaching now uses AppComponentCx/AppRender*, and the remaining `UiCx*` family is deprecated compatibility only. Because `fret` is a published crate in a semver-checked release graph, deciding whether to retain or remove those aliases is now an explicit release-facing problem rather than an internal architecture cleanup.",
+  "status": "closed",
+  "updated": "2026-04-20",
+  "scope_kind": "closeout",
+  "problem": "The broad public-authoring refactor was already closed, but the published `fret` facade still carried a wrong-name `UiCx*` compatibility family. This lane closed that release-facing question by deleting the full alias family and keeping canonical teaching on AppComponentCx/AppRender* only.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -28,12 +28,16 @@
       "path": "docs/workstreams/uicx-compat-alias-release-retirement-v1/EVIDENCE_AND_GATES.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/workstreams/uicx-compat-alias-release-retirement-v1/CLOSEOUT_AUDIT_2026-04-20.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-04-19.md"
     }
   ],
   "repro": {
-    "summary": "Open this lane by freezing the live alias inventory, the semver-checked publish facts, and the canonical default teaching gate before deciding any removal.",
+    "summary": "Reopen this closeout by proving the alias family is gone, the canonical teaching gates still hold, and the published `fret` surface remains the only release-facing concern.",
     "commands": [
       "rg -n \"pub type UiCx<'a>|UiCxActionsExt|UiCxDataExt|UiCxActions|UiCxData|UiCxActionLocal|UiCxLocalsWith\" ecosystem/fret/src/lib.rs ecosystem/fret/src/view.rs",
       "rg -n \"semver_check = true|name = \\\"fret\\\"|publish = true\" release-plz.toml",
@@ -48,6 +52,10 @@
     {
       "name": "fret-uicx-source-policy",
       "command": "cargo nextest run -p fret --test render_authoring_capability_surface --test raw_state_advanced_surface_docs --test uicx_actions_surface --test uicx_data_surface --test crate_usage_grouped_query_surface --no-fail-fast"
+    },
+    {
+      "name": "fret-lib-source-policy",
+      "command": "cargo nextest run -p fret --lib"
     },
     {
       "name": "workstream-catalog",
@@ -72,6 +80,7 @@
     "docs/workstreams/uicx-compat-alias-release-retirement-v1/TODO.md",
     "docs/workstreams/uicx-compat-alias-release-retirement-v1/MILESTONES.md",
     "docs/workstreams/uicx-compat-alias-release-retirement-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/uicx-compat-alias-release-retirement-v1/CLOSEOUT_AUDIT_2026-04-20.md",
     "docs/workstreams/uicx-compat-alias-release-retirement-v1/WORKSTREAM.json",
     "docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-04-19.md",
     "docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md",
@@ -98,8 +107,8 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane until the deprecated `UiCx*` compatibility family has an explicit release-window verdict and delete criteria. Do not reopen the broad public-authoring lane for this question."
+    "default_action": "stay_closed",
+    "notes": "This lane is closed. The `UiCx*` compatibility family is deleted from the live `fret` surface. Start a different release-facing follow-on only if a future published compatibility problem appears."
   },
   "follow_on_of": "public-authoring-state-lanes-and-identity-fearless-refactor-v1"
 }

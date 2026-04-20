@@ -718,8 +718,8 @@ impl<'a, H: UiHost + 'a, T> RenderContextAccess<'a, H> for T where
 /// Named default extracted-helper render lane for ordinary `fret` app code.
 ///
 /// This is the app-facing façade over `RenderContextAccess<'a, crate::app::App>` so new helper
-/// signatures can name the default lane directly without reopening the deprecated `UiCx` alias or
-/// spelling the generic host parameter at every callsite.
+/// signatures can name the default lane directly without spelling the generic host parameter at
+/// every callsite.
 pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App> {}
 
 impl<'a, T> AppRenderContext<'a> for T where T: RenderContextAccess<'a, crate::app::App> {}
@@ -2762,15 +2762,6 @@ where
     }
 }
 
-#[doc(hidden)]
-#[deprecated(note = "use AppRenderDataExt")]
-pub use AppRenderDataExt as UiCxDataExt;
-
-#[doc(hidden)]
-#[deprecated(note = "use AppRenderData")]
-#[allow(unused_imports)]
-pub use AppRenderData as UiCxData;
-
 /// Brings the grouped `actions()` namespace to extracted app-render helper functions.
 pub trait AppRenderActionsExt<'a> {
     /// Discover grouped action helpers through `cx.actions()` rather than naming the carrier type
@@ -2788,25 +2779,6 @@ where
         }
     }
 }
-
-#[doc(hidden)]
-#[deprecated(note = "use AppRenderActionsExt")]
-pub use AppRenderActionsExt as UiCxActionsExt;
-
-#[doc(hidden)]
-#[deprecated(note = "use AppRenderActions")]
-#[allow(unused_imports)]
-pub use AppRenderActions as UiCxActions;
-
-#[doc(hidden)]
-#[deprecated(note = "use AppRenderActionLocal")]
-#[allow(unused_imports)]
-pub use AppRenderActionLocal as UiCxActionLocal;
-
-#[doc(hidden)]
-#[deprecated(note = "use AppRenderLocalsWith")]
-#[allow(unused_imports)]
-pub use AppRenderLocalsWith as UiCxLocalsWith;
 
 /// Grouped render-time effect helpers for the default app authoring surface.
 #[doc(hidden)]

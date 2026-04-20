@@ -221,22 +221,19 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Default render authoring release boundary
 
-- Active narrow release-facing follow-on for deprecated `UiCx` compatibility alias retirement:
+- Closed narrow release-facing closeout for `UiCx*` compatibility alias retirement:
   - `docs/workstreams/uicx-compat-alias-release-retirement-v1/DESIGN.md`
-  - `docs/workstreams/uicx-compat-alias-release-retirement-v1/M0_BASELINE_AUDIT_2026-04-19.md`
-  - `docs/workstreams/uicx-compat-alias-release-retirement-v1/TODO.md`
-  - `docs/workstreams/uicx-compat-alias-release-retirement-v1/MILESTONES.md`
+  - `docs/workstreams/uicx-compat-alias-release-retirement-v1/CLOSEOUT_AUDIT_2026-04-20.md`
   - `docs/workstreams/uicx-compat-alias-release-retirement-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/uicx-compat-alias-release-retirement-v1/WORKSTREAM.json`
-- Use `uicx-compat-alias-release-retirement-v1` for release-window, migration-note, and
-  delete-criteria decisions around:
+- The repo deleted:
   - `UiCx<'a>`
   - `UiCxActionsExt`
   - `UiCxDataExt`
-  - the hidden deprecated carrier aliases in `ecosystem/fret/src/view.rs`
+  - the hidden `UiCx*` carrier aliases in `ecosystem/fret/src/view.rs`
 - Keep `public-authoring-state-lanes-and-identity-fearless-refactor-v1` closed as the shipped
-  default render-authoring closeout; do not reopen that broad lane for compatibility-alias
-  retirement.
+  default render-authoring closeout and keep
+  `uicx-compat-alias-release-retirement-v1` closed as the release-facing delete verdict.
 
 ## P0 - IME / Text Input
 

@@ -271,8 +271,8 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
 
 - app-facing starter docs, cookbook snippets, and UI Gallery teaching samples should prefer `Ui`,
   `UiChild`, and the canonical app-lane helper aliases (`AppRenderContext<'a>`,
-  `AppRenderCx<'a>`, `AppComponentCx<'a>`) rather than raw `AnyElement`, deprecated `UiCx`, or
-  legacy split conversion trait names,
+  `AppRenderCx<'a>`, `AppComponentCx<'a>`) rather than raw `AnyElement`, raw `ElementContext`
+  spellings, or legacy split conversion trait names,
 - reusable generic helpers in `fret-ui-shadcn` / `fret-ui-kit` should converge on the unified
   component conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`,

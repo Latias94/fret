@@ -155,8 +155,7 @@ Key points:
   access, prefer a helper generic over `fret::app::AppRenderContext<'a>` on the default lane.
   If a closure-local or inline helper materially benefits from a concrete context carrier, prefer
   `&mut fret::app::AppRenderCx<'_>`. Prefer `AppComponentCx` for app-hosted component/snippet
-  helpers. Keep `UiCx` only as the deprecated compatibility old-name alias behind explicit import
-  when an older helper intentionally still wants `ElementContext<App>`.
+  helpers when you intentionally want an app-hosted `ElementContext<App>` lane.
 - If a local helper is only a pure page shell around already-typed children, prefer
   `fn page(...) -> impl UiChild` and let `render(...)` late-land it through
   `ui::single(cx, page(...))`.

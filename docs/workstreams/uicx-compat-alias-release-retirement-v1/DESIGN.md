@@ -1,7 +1,12 @@
 # UiCx Compat Alias Release Retirement v1
 
-Status: Active
-Last updated: 2026-04-19
+Status: Closed historical design note
+Last updated: 2026-04-20
+
+Status note (2026-04-20): this document remains useful for the lane-opening rationale and the
+release-facing owner split, but the shipped verdict now lives in
+`CLOSEOUT_AUDIT_2026-04-20.md` and `WORKSTREAM.json`. Read the execution framing below as the
+historical lane setup that led to full alias deletion.
 
 Related:
 
@@ -10,6 +15,7 @@ Related:
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
 - `WORKSTREAM.json`
+- `CLOSEOUT_AUDIT_2026-04-20.md`
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-04-19.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `ecosystem/fret/src/lib.rs`
@@ -105,4 +111,5 @@ The final answer may be either:
   out of first-party teaching, or
 - remove them in a release-facing slice once the repo has explicit downstream and semver evidence.
 
-Either way, the answer must be recorded here rather than inferred from stale TODO items.
+That answer is now recorded in `CLOSEOUT_AUDIT_2026-04-20.md`: the repo deleted the entire
+`UiCx*` compatibility family instead of carrying it forward into another public release window.

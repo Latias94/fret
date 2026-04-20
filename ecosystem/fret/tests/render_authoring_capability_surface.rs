@@ -23,8 +23,16 @@ fn app_prelude_slice() -> &'static str {
     &app_slice[prelude_start..]
 }
 
+fn public_surface_slice() -> &'static str {
+    let tests_start = FRET_LIB_RS
+        .find("#[cfg(test)]")
+        .unwrap_or(FRET_LIB_RS.len());
+    &FRET_LIB_RS[..tests_start]
+}
+
 #[test]
 fn app_lane_exports_explicit_render_authoring_capability_surface() {
+    let public_surface = public_surface_slice();
     let app_slice = app_module_slice();
     let app_prelude = app_prelude_slice();
 
@@ -61,17 +69,16 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
         "let mut carried_action_handlers = Some(std::mem::take(&mut self.action_handlers));"
     ));
     assert!(
-        FRET_LIB_RS
+        public_surface
             .contains("pub type AppRenderCx<'a> = fret_ui::ElementContext<'a, crate::app::App>;")
     );
     assert!(
-        FRET_LIB_RS.contains("pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;")
+        public_surface.contains("pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;")
     );
-    assert!(FRET_LIB_RS.contains("Deprecated compatibility raw app element context alias"));
-    assert!(FRET_LIB_RS.contains("#[deprecated("));
-    assert!(FRET_LIB_RS.contains("Prefer `fret::app::AppRenderContext<'a>`"));
-    assert!(FRET_LIB_RS.contains("`AppRenderCx<'a>` when closure-local or inline helper families"));
-    assert!(FRET_LIB_RS.contains("Prefer `AppComponentCx<'a>` for"));
+    assert!(public_surface.contains("Canonical app-hosted component/snippet context alias."));
+    assert!(public_surface.contains("Use this for first-party examples, gallery snippets"));
+    assert!(!public_surface.contains("pub type UiCx<'a>"));
+    assert!(!public_surface.contains("Deprecated compatibility raw app element context alias"));
 }
 
 #[test]

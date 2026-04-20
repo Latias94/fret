@@ -35,6 +35,8 @@ fn app_render_data_ext_is_part_of_the_default_and_advanced_preludes() {
     assert!(advanced_prelude_slice().contains("pub use crate::view::AppRenderDataExt as _;"));
     assert!(!app_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
     assert!(!advanced_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
+    assert!(!VIEW_RS.contains("pub use AppRenderDataExt as UiCxDataExt;"));
+    assert!(!VIEW_RS.contains("pub use AppRenderData as UiCxData;"));
 }
 
 #[test]

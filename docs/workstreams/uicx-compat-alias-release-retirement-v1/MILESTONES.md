@@ -1,6 +1,6 @@
 # UiCx Compat Alias Release Retirement v1 — Milestones
 
-Status: Active
+Status: Closed
 
 ## M0: Baseline freeze and ownership lock
 
@@ -42,7 +42,7 @@ Primary evidence:
 
 Status:
 
-- In progress on 2026-04-19.
+- Completed on 2026-04-20.
 
 ## M2: Release-facing verdict and closeout
 
@@ -63,4 +63,4 @@ Primary gates:
 
 Status:
 
-- Not started on 2026-04-19.
+- Completed on 2026-04-20.

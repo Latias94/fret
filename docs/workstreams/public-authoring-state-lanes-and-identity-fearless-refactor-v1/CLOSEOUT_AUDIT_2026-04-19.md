@@ -81,9 +81,6 @@ Key evidence anchors:
 
 ## Deferred follow-on
 
-If the repo later wants to remove `UiCx<'a>` outright, use
-`docs/workstreams/uicx-compat-alias-release-retirement-v1/`:
-
-- open a new narrow release-facing follow-on lane,
-- decide the removal window explicitly,
-- and use downstream evidence rather than reopening this broad authoring-surface lane.
+The later release-facing delete verdict now lives in
+`docs/workstreams/uicx-compat-alias-release-retirement-v1/CLOSEOUT_AUDIT_2026-04-20.md`.
+Keep this broad lane closed; do not reopen it for alias vocabulary cleanup.

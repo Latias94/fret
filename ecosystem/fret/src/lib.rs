@@ -334,17 +334,6 @@ pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;
 /// stay host-generic, and `AppRenderCx<'a>` / `AppRenderContext<'a>` for app render helpers.
 pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;
 
-/// Deprecated compatibility raw app element context alias for extracted helper functions.
-///
-/// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures and `AppRenderCx<'a>`
-/// for concrete closure-local helper carriers on the default lane. Prefer `AppComponentCx<'a>` for
-/// app-hosted snippets/components. Keep `UiCx` only as the deprecated compatibility old-name alias
-/// behind explicit import during the migration window.
-#[deprecated(
-    note = "use AppComponentCx for app-hosted snippets/components, AppRenderCx for concrete render helpers, or AppRenderContext for named app render helpers"
-)]
-pub type UiCx<'a> = AppComponentCx<'a>;
-
 /// App-facing child return alias for extracted helper functions on the default surface.
 pub trait UiChild: fret_ui_kit::IntoUiElement<crate::app::App> {}
 
@@ -456,9 +445,6 @@ pub mod app {
     pub use crate::view::{
         AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState, RenderContextAccess,
     };
-    /// Compatibility old-name grouped helper aliases kept for explicit imports during migration.
-    #[allow(deprecated)]
-    pub use crate::view::{UiCxActionsExt, UiCxDataExt};
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
     /// This is the same underlying runtime type as the raw kernel alias exposed on
@@ -662,10 +648,9 @@ pub mod router {
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
-        #[allow(deprecated)]
         pub use crate::view::{
-            AppRenderDataExt, AppUiRenderRootState, UiCxDataExt, ViewWindowState,
-            render_root_with_app_ui, view_init_window, view_view,
+            AppRenderDataExt, AppUiRenderRootState, ViewWindowState, render_root_with_app_ui,
+            view_init_window, view_view,
         };
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -3723,13 +3708,14 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
+        let public_surface = crate_public_surface_source();
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
         assert!(
             LIB_RS.contains("AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,")
         );
-        assert!(LIB_RS.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
+        assert!(!public_surface.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }
 
@@ -3796,6 +3782,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn retained_advanced_aliases_live_only_on_explicit_advanced_surface() {
+        let public_surface = crate_public_surface_source();
         let root_header = root_surface_header_source();
         let advanced_prelude = advanced_prelude_source();
         assert!(!root_header.contains("pub use fret_app::App as KernelApp;"));
@@ -3812,7 +3799,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(LIB_RS.contains("pub type ComponentCx<'a, H> = fret_ui::ElementContext<'a, H>;"));
         assert!(LIB_RS.contains("pub type AppComponentCx<'a> = ComponentCx<'a, crate::app::App>;"));
-        assert!(LIB_RS.contains("pub type UiCx<'a> = AppComponentCx<'a>;"));
+        assert!(!public_surface.contains("pub type UiCx<'a>"));
     }
 
     #[test]
@@ -4353,7 +4340,10 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn legacy_root_prelude_is_deleted() {
-        assert!(!LIB_RS.contains("pub mod prelude {\n    pub use fret_ui_kit::prelude::*;"));
+        let public_surface = crate_public_surface_source();
+        assert!(
+            !public_surface.contains("pub mod prelude {\n    pub use fret_ui_kit::prelude::*;")
+        );
     }
 
     #[test]
