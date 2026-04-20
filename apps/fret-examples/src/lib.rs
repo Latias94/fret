@@ -421,6 +421,9 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M5_ADMISSION: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/CLOSEOUT_AUDIT_2026-04-20.md"
+    );
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
     );
@@ -3570,20 +3573,22 @@ mod authoring_surface_policy_tests {
     fn immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy() {
         for marker in [
             "\"slug\": \"diag-environment-predicate-contract-v1\"",
-            "\"status\": \"active\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
             "\"follow_on_of\": \"diag-monitor-topology-environment-v1\"",
-            "\"default_action\": \"continue\"",
-            "`requires_capabilities`",
+            "\"default_action\": \"stay_closed\"",
+            "the first honest `requires_environment` contract for `host.monitor_topology`",
             "M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
             "M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
             "M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md",
             "M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md",
             "M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md",
             "M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md",
+            "CLOSEOUT_AUDIT_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
-                "the environment-predicate lane should keep the active workstream markers explicit: {marker}"
+                "the environment-predicate lane should keep the closed workstream markers explicit: {marker}"
             );
         }
 
@@ -3693,6 +3698,20 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M5_ADMISSION.contains(marker),
                 "the admission note should keep the shipped grammar and execution slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: Closed",
+            "The shipped outcome is:",
+            "ADR 0246 does not currently justify a second admitted source id.",
+            "renderer font provenance should remain outside `requires_environment`.",
+            "`scale_factors_seen` is not a second admitted source candidate.",
+            "Until that evidence exists, do not widen `requires_environment`",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_CLOSEOUT.contains(marker),
+                "the closeout note should keep the no-second-source verdict explicit: {marker}"
             );
         }
 
