@@ -20,6 +20,10 @@
       "path": "docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/diag-environment-predicate-contract-v1/TODO.md"
     },
@@ -78,6 +82,7 @@
     "docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
+    "docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/TODO.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md",
     "docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md",

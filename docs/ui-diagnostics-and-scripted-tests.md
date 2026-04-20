@@ -114,6 +114,8 @@ Environment fingerprint note:
   during the run.
 - Do not treat `scale_factors_seen` as host monitor topology or as a mixed-DPI preflight signal.
 - Campaign manifests still only gate on `requires_capabilities`.
+- If diagnostics later promotes host-environment sources into orchestration, use a separate
+  `environment.sources.json` or session-published source catalog rather than `capabilities.json`.
 - Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute for a real
   host-environment preflight contract.
 

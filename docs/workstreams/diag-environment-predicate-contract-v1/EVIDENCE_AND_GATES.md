@@ -16,7 +16,9 @@ What this proves:
 - the repo still has separate environment lanes,
 - diagnostics orchestration still exposes `requires_capabilities` as the only shipped preflight
   contract,
-- and the new lane keeps the no-erased-runtime-family verdict explicit.
+- the new lane keeps the no-erased-runtime-family verdict explicit,
+- and the next contract is now frozen as a separate `environment.sources.json` catalog plus
+  explicit availability classes rather than a premature manifest key.
 
 ## Gate set
 
@@ -43,6 +45,12 @@ git diff --check
 - `crates/fret-diag` still only honors `requires_capabilities` for orchestration preflight.
 - `host.monitor_topology` is now the first candidate predicate source, but manifest syntax remains
   deferred because current campaign preflight runs before fresh launch-time publication.
+- the next additive contract is a separate `environment.sources.json` catalog rather than
+  `capabilities.json`.
+- the availability classes are now explicit:
+  `preflight_filesystem_sidecar`, `preflight_transport_session`, `launch_time`,
+  and `post_run_only`.
+- `post_run_only` environment sources are evidence-only and must not drive preflight.
 - The repo now has an explicit lane that forbids collapsing those surfaces into one generic runtime
   abstraction without stronger evidence.
 
@@ -52,6 +60,7 @@ git diff --check
 - `docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/TODO.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md`

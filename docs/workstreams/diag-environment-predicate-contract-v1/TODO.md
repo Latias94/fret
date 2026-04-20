@@ -14,7 +14,7 @@ Status: Active
 - [x] DEPC-011 Define the admission rule for promoting an environment source into a
   predicate-capable source.
 - [x] DEPC-012 Choose the first concrete source candidate and record why syntax remains deferred.
-- [ ] DEPC-013 Define the environment-source provenance/timing lane needed before manifest syntax
+- [x] DEPC-013 Define the environment-source provenance/timing lane needed before manifest syntax
   lands.
 - [ ] DEPC-014 Choose the smallest additive diagnostics manifest shape once the first concrete
   source and timing contract are both ready.

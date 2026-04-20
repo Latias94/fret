@@ -406,6 +406,12 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M1_DECISION: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_DECISION: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md"
+    );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
+    );
     const RUNNER_MONITOR_TOPOLOGY_DIAGNOSTICS: &str =
         include_str!("../../../crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs");
     const ELEMENT_RUNTIME_DIAGNOSTICS_RS: &str = include_str!(
@@ -3533,6 +3539,7 @@ mod authoring_surface_policy_tests {
             "\"default_action\": \"continue\"",
             "`requires_capabilities`",
             "M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
+            "M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
@@ -3573,6 +3580,20 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M1_DECISION.contains(marker),
                 "the first-source decision should keep the timing and syntax deferral explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`environment.sources.json`",
+            "`FilesystemEnvironmentSourcesV1`",
+            "`EnvironmentSourceCatalogProvenance`",
+            "`preflight_filesystem_sidecar`",
+            "`post_run_only`",
+            "`host.monitor_topology` is the first admitted source id",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_DECISION.contains(marker),
+                "the provenance-and-availability decision should keep the catalog contract explicit: {marker}"
             );
         }
 
@@ -3686,11 +3707,22 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "Campaign manifests still only gate on `requires_capabilities`.",
+            "`environment.sources.json` or session-published source catalog",
             "Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute",
         ] {
             assert!(
                 UI_DIAGNOSTICS_BUNDLES_DOC.contains(marker),
                 "the living diagnostics doc should keep the environment-predicate boundary explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`environment.sources.json` catalog plus",
+            "`post_run_only` environment sources are evidence-only and must not drive preflight.",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES.contains(marker),
+                "the evidence-and-gates note should keep the catalog and availability outcome explicit: {marker}"
             );
         }
     }

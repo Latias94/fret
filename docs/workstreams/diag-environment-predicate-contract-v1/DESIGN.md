@@ -8,6 +8,7 @@ Related:
 - `WORKSTREAM.json`
 - `BASELINE_AUDIT_2026-04-20.md`
 - `M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
+- `M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -152,6 +153,18 @@ The correct next contract is a source-scoped diagnostics predicate layer that ca
 - whether the source is available preflight, launch-time, or only post-run,
 - and how missing/unsupported cases fail deterministically.
 
+The first frozen precondition for that layer is now explicit:
+
+- diagnostics should keep a separate environment-source catalog parallel to `capabilities.json`,
+- the first persisted filesystem publication name should be `environment.sources.json`,
+- the first protocol direction is `FilesystemEnvironmentSourcesV1`,
+- the first diagnostics-owned provenance helper is `EnvironmentSourceCatalogProvenance`,
+- and availability must stay explicit as:
+  - `preflight_filesystem_sidecar`
+  - `preflight_transport_session`
+  - `launch_time`
+  - `post_run_only`
+
 Admission rule for a new predicate-capable source:
 
 1. the source is data-only and versionable,
@@ -164,9 +177,20 @@ Admission rule for a new predicate-capable source:
 First concrete candidate:
 
 - `host.monitor_topology` is the first qualified source candidate.
+- `host.monitor_topology` is also the first admitted source id for the future
+  `environment.sources.json` family.
 - It is qualified because it answers a real scheduling problem that capabilities cannot express.
 - It is not yet implementation-ready for campaign predicates because current campaign preflight
   happens before fresh tool-launched runs publish such a source.
+- If it is only available through bundle export in a fresh run, its truthful availability class is
+  `post_run_only`.
+
+Explicit exclusions for this source family:
+
+- `debug.environment` is not an admitted source id by default.
+- `RendererFontEnvironmentSnapshot` is not an admitted source id by default.
+- Promoting either one into the catalog requires a new diagnostics admission decision rather than
+  silent reuse.
 
 ## Intended next slice
 
@@ -176,10 +200,10 @@ inside `crates/fret-diag`.
 That decision should stay narrow:
 
 - keep `requires_capabilities` unchanged,
-- add a separate environment-specific field if and only if the source/admission rules and timing
-  model are ready,
-- and start with source IDs plus deterministic provenance before widening into a full expression
-  language.
+- add environment-source catalog/provenance plumbing before any manifest field,
+- keep `capability_source` and environment-source provenance separate,
+- and start with source IDs plus deterministic provenance/availability before widening into a full
+  expression language.
 
 The exact manifest JSON shape is intentionally not frozen yet in this note.
 That syntax should be chosen only after the source taxonomy and admission rules are accepted.
