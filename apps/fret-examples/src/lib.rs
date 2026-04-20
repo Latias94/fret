@@ -403,6 +403,9 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_BASELINE: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M1_DECISION: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md"
+    );
     const RUNNER_MONITOR_TOPOLOGY_DIAGNOSTICS: &str =
         include_str!("../../../crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs");
     const ELEMENT_RUNTIME_DIAGNOSTICS_RS: &str = include_str!(
@@ -412,6 +415,10 @@ mod authoring_surface_policy_tests {
         include_str!("../../../crates/fret-runtime/src/font_catalog.rs");
     const DIAG_CAMPAIGNS_RS: &str =
         include_str!("../../../crates/fret-diag/src/registry/campaigns.rs");
+    const DIAG_CAMPAIGN_RS: &str = include_str!("../../../crates/fret-diag/src/diag_campaign.rs");
+    const DIAG_LIB_RS: &str = include_str!("../../../crates/fret-diag/src/lib.rs");
+    const DIAG_FS_TRANSPORT_RS: &str =
+        include_str!("../../../crates/fret-diag/src/transport/fs.rs");
     const ENVIRONMENT_QUERIES_ADR: &str =
         include_str!("../../../docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md");
     const RESOURCE_LOADING_WORKSTREAM_README: &str =
@@ -3525,6 +3532,7 @@ mod authoring_surface_policy_tests {
             "\"follow_on_of\": \"diag-monitor-topology-environment-v1\"",
             "\"default_action\": \"continue\"",
             "`requires_capabilities`",
+            "M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
@@ -3553,6 +3561,18 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_BASELINE.contains(marker),
                 "the baseline audit should keep the no-premature-abstraction verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The first candidate source for environment predicates is `host.monitor_topology`.",
+            "Do not freeze `requires_environment` syntax yet.",
+            "Do not overload `capabilities.json` with environment fingerprints.",
+            "Current campaign preflight happens before launch",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M1_DECISION.contains(marker),
+                "the first-source decision should keep the timing and syntax deferral explicit: {marker}"
             );
         }
 
@@ -3597,6 +3617,39 @@ mod authoring_surface_policy_tests {
             assert!(
                 DIAG_CAMPAIGNS_RS.contains(marker),
                 "campaign orchestration should keep capabilities as the current preflight contract: {marker}"
+            );
+        }
+
+        for marker in [
+            "maybe_execute_campaign_capability_preflight",
+            "execute_campaign_start_plan(start_plan)?;",
+            "read_filesystem_capabilities_with_provenance(&ctx.resolved_out_dir)",
+        ] {
+            assert!(
+                DIAG_CAMPAIGN_RS.contains(marker),
+                "the campaign execution path should keep preflight timing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub(crate) fn read_filesystem_capabilities_with_provenance",
+            "CapabilitySource::filesystem",
+            "capabilities.json",
+        ] {
+            assert!(
+                DIAG_LIB_RS.contains(marker),
+                "the diagnostics library should keep capability-source provenance explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "let path = self.cfg.out_dir.join(\"capabilities.json\")",
+            "FilesystemCapabilitiesV1",
+            "self.last_emitted_capabilities",
+        ] {
+            assert!(
+                DIAG_FS_TRANSPORT_RS.contains(marker),
+                "the filesystem transport should keep capabilities sidecar ownership explicit: {marker}"
             );
         }
 

@@ -385,7 +385,7 @@ Rule:
 - `docs/workstreams/diag-cli-main-lanes-hardening-v1/` — first 2026-03-26, latest 2026-03-26, 1 markdown docs
 - `docs/workstreams/diag-devtools-gui-v1/` — first 2026-02-07, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/` — first 2026-02-10, latest 2026-02-28, 9 markdown docs
-- `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow diagnostics lane that classifies existing environment snapshot families before any host-environment predicate contract lands)
+- `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow diagnostics lane that classifies existing environment snapshot families before any host-environment predicate contract lands)
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
 - `docs/workstreams/diag-monitor-topology-environment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that adds a runner-owned host monitor-topology environment fingerprint without adding mixed-DPI-only campaign gating or environment predicates)

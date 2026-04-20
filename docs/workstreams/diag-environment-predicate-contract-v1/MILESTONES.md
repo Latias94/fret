@@ -37,6 +37,7 @@ Primary evidence:
 - `docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
 
 Status:
 
@@ -47,6 +48,8 @@ Status:
 Exit criteria:
 
 - One concrete source qualifies for predicate-capable use under the admission rules.
+- The repo has a separate environment-source provenance/timing path that does not overload
+  `capabilities.json`.
 - The repo chooses the smallest additive manifest/summary contract for that source.
 - Diagnostics preflight can emit deterministic provenance for the new decision.
 
@@ -54,6 +57,7 @@ Primary future evidence:
 
 - `crates/fret-diag/src/registry/campaigns.rs`
 - `crates/fret-diag/src/diag_campaign.rs`
+- `crates/fret-diag/src/transport/fs.rs`
 - a future dated status note in this folder
 
 Status:

@@ -41,6 +41,8 @@ git diff --check
 - `RendererFontEnvironmentSnapshot` remains the renderer/resource provenance surface.
 - `UiDiagnosticsEnvFingerprintV1` remains the bundle/run-level diagnostics environment fingerprint.
 - `crates/fret-diag` still only honors `requires_capabilities` for orchestration preflight.
+- `host.monitor_topology` is now the first candidate predicate source, but manifest syntax remains
+  deferred because current campaign preflight runs before fresh launch-time publication.
 - The repo now has an explicit lane that forbids collapsing those surfaces into one generic runtime
   abstraction without stronger evidence.
 
@@ -49,8 +51,10 @@ git diff --check
 - `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`
 - `docs/workstreams/diag-environment-predicate-contract-v1/DESIGN.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/BASELINE_AUDIT_2026-04-20.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/TODO.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/MILESTONES.md`
+- `docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`
 - `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`

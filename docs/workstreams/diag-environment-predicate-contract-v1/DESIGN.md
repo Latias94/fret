@@ -7,6 +7,7 @@ Related:
 
 - `WORKSTREAM.json`
 - `BASELINE_AUDIT_2026-04-20.md`
+- `M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -160,6 +161,13 @@ Admission rule for a new predicate-capable source:
 5. and the source adds a real scheduling or skip/run decision that `requires_capabilities` cannot
    express honestly.
 
+First concrete candidate:
+
+- `host.monitor_topology` is the first qualified source candidate.
+- It is qualified because it answers a real scheduling problem that capabilities cannot express.
+- It is not yet implementation-ready for campaign predicates because current campaign preflight
+  happens before fresh tool-launched runs publish such a source.
+
 ## Intended next slice
 
 This lane should next decide the smallest additive orchestration surface for environment predicates
@@ -168,7 +176,8 @@ inside `crates/fret-diag`.
 That decision should stay narrow:
 
 - keep `requires_capabilities` unchanged,
-- add a separate environment-specific field if and only if the source/admission rules are ready,
+- add a separate environment-specific field if and only if the source/admission rules and timing
+  model are ready,
 - and start with source IDs plus deterministic provenance before widening into a full expression
   language.
 
