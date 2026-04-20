@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 
 use super::*;
 
+pub use fret_diag_protocol::{
+    UiDiagnosticsMonitorFingerprintV1, UiDiagnosticsMonitorTopologyV1, UiDiagnosticsPhysicalRectV1,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum BundleSemanticsModeV1 {
     All,
@@ -89,29 +93,6 @@ pub struct UiDiagnosticsEnvFingerprintV1 {
     pub monitor_topology: Option<UiDiagnosticsMonitorTopologyV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scale_factors_seen: Vec<f32>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UiDiagnosticsMonitorTopologyV1 {
-    pub schema_version: u32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub virtual_desktop_bounds_physical: Option<UiDiagnosticsPhysicalRectV1>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub monitors: Vec<UiDiagnosticsMonitorFingerprintV1>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct UiDiagnosticsPhysicalRectV1 {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct UiDiagnosticsMonitorFingerprintV1 {
-    pub bounds_physical: UiDiagnosticsPhysicalRectV1,
-    pub scale_factor: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -314,7 +295,7 @@ impl UiDiagnosticsEnvFingerprintV1 {
         let monitor_topology = svc
             .host_monitor_topology
             .as_ref()
-            .map(UiDiagnosticsMonitorTopologyV1::from_runner);
+            .map(ui_diagnostics_monitor_topology_from_runner);
 
         let mut capabilities: Vec<String> = vec!["diag.script_v2".to_string()];
         if svc.cfg.screenshots_enabled {
@@ -385,39 +366,39 @@ impl UiDiagnosticsEnvFingerprintV1 {
     }
 }
 
-impl UiDiagnosticsMonitorTopologyV1 {
-    fn from_runner(snapshot: &RunnerMonitorTopologySnapshotV1) -> Self {
-        Self {
-            schema_version: 1,
-            virtual_desktop_bounds_physical: snapshot
-                .virtual_desktop_bounds_physical
-                .map(UiDiagnosticsPhysicalRectV1::from_runner),
-            monitors: snapshot
-                .monitors
-                .iter()
-                .map(UiDiagnosticsMonitorFingerprintV1::from_runner)
-                .collect(),
-        }
+pub(super) fn ui_diagnostics_monitor_topology_from_runner(
+    snapshot: &RunnerMonitorTopologySnapshotV1,
+) -> UiDiagnosticsMonitorTopologyV1 {
+    UiDiagnosticsMonitorTopologyV1 {
+        schema_version: 1,
+        virtual_desktop_bounds_physical: snapshot
+            .virtual_desktop_bounds_physical
+            .map(ui_diagnostics_physical_rect_from_runner),
+        monitors: snapshot
+            .monitors
+            .iter()
+            .map(ui_diagnostics_monitor_fingerprint_from_runner)
+            .collect(),
     }
 }
 
-impl UiDiagnosticsPhysicalRectV1 {
-    fn from_runner(rect: RunnerMonitorRectPhysicalV1) -> Self {
-        Self {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-        }
+fn ui_diagnostics_physical_rect_from_runner(
+    rect: RunnerMonitorRectPhysicalV1,
+) -> UiDiagnosticsPhysicalRectV1 {
+    UiDiagnosticsPhysicalRectV1 {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
     }
 }
 
-impl UiDiagnosticsMonitorFingerprintV1 {
-    fn from_runner(monitor: &RunnerMonitorInfoV1) -> Self {
-        Self {
-            bounds_physical: UiDiagnosticsPhysicalRectV1::from_runner(monitor.bounds_physical),
-            scale_factor: monitor.scale_factor,
-        }
+fn ui_diagnostics_monitor_fingerprint_from_runner(
+    monitor: &RunnerMonitorInfoV1,
+) -> UiDiagnosticsMonitorFingerprintV1 {
+    UiDiagnosticsMonitorFingerprintV1 {
+        bounds_physical: ui_diagnostics_physical_rect_from_runner(monitor.bounds_physical),
+        scale_factor: monitor.scale_factor,
     }
 }
 

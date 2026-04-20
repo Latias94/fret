@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize};
 
 pub mod builder;
 
+pub const FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1: &str = "environment.sources.json";
+pub const HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1: &str = "host.monitor_topology";
+pub const FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1: &str =
+    "environment.source.host.monitor_topology.json";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Envelope message for diagnostics/devtools transports.
 ///
@@ -242,6 +247,36 @@ pub struct FilesystemEnvironmentSourcesV1 {
     pub runner_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_version: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiDiagnosticsPhysicalRectV1 {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct UiDiagnosticsMonitorFingerprintV1 {
+    pub bounds_physical: UiDiagnosticsPhysicalRectV1,
+    pub scale_factor: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UiDiagnosticsMonitorTopologyV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtual_desktop_bounds_physical: Option<UiDiagnosticsPhysicalRectV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub monitors: Vec<UiDiagnosticsMonitorFingerprintV1>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HostMonitorTopologyEnvironmentPayloadV1 {
+    pub schema_version: u32,
+    pub source_id: String,
+    pub monitor_topology: UiDiagnosticsMonitorTopologyV1,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

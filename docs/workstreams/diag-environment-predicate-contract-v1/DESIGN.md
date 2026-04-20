@@ -9,6 +9,7 @@ Related:
 - `BASELINE_AUDIT_2026-04-20.md`
 - `M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md`
 - `M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
+- `M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -18,7 +19,10 @@ Related:
 - `docs/workstreams/resource-loading-fearless-refactor-v1/README.md`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
 - `crates/fret-runtime/src/font_catalog.rs`
+- `crates/fret-diag/src/diag_campaign.rs`
 - `crates/fret-diag/src/registry/campaigns.rs`
 
 This workstream is the narrow diagnostics follow-on after
@@ -81,6 +85,17 @@ Today `crates/fret-diag` only supports `requires_capabilities`.
 
 That means the repo still has no typed host-environment predicate contract, even though some bundle
 fields and debug snapshots now carry richer environment evidence.
+
+## Current shipped source-publication state
+
+- `ecosystem/fret-bootstrap` now publishes `environment.sources.json` at the diagnostics `out_dir`
+  root.
+- When the runner exposes host monitor topology, the runtime also publishes
+  `environment.source.host.monitor_topology.json`.
+- `crates/fret-diag` now carries `environment_sources_path`,
+  `environment_source_catalog_provenance`, and `environment_sources` through campaign
+  summary/result/aggregate artifacts.
+- Campaign preflight still runs before launch and still only evaluates `requires_capabilities`.
 
 ## Must-be-true outcomes
 
@@ -177,13 +192,16 @@ Admission rule for a new predicate-capable source:
 First concrete candidate:
 
 - `host.monitor_topology` is the first qualified source candidate.
-- `host.monitor_topology` is also the first admitted source id for the future
+- `host.monitor_topology` is also the first admitted and currently published source id for the
   `environment.sources.json` family.
 - It is qualified because it answers a real scheduling problem that capabilities cannot express.
-- It is not yet implementation-ready for campaign predicates because current campaign preflight
-  happens before fresh tool-launched runs publish such a source.
-- If it is only available through bundle export in a fresh run, its truthful availability class is
-  `post_run_only`.
+- The current filesystem publication shape is `environment.sources.json` plus
+  `environment.source.host.monitor_topology.json` at the diagnostics `out_dir` root.
+- Because of that publication path, its truthful availability is now `launch_time`.
+- `launch_time` still does not make it a truthful campaign-preflight input because current campaign
+  preflight still happens before launch.
+- If the repo later needs truthful preflight use, it still needs either a persisted preflight
+  sidecar or a transport/session handshake.
 
 Explicit exclusions for this source family:
 

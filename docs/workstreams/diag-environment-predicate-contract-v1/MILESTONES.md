@@ -53,18 +53,42 @@ Exit criteria:
 - The repo chooses the smallest additive manifest/summary contract for that source.
 - Diagnostics preflight can emit deterministic provenance for the new decision.
 
-Primary future evidence:
+Primary evidence:
 
 - `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md`
 - `docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md`
 - `crates/fret-diag-protocol/src/lib.rs`
 - `crates/fret-diag/src/lib.rs`
 - `crates/fret-diag/src/registry/campaigns.rs`
-- `crates/fret-diag/src/diag_campaign.rs`
-- `crates/fret-diag/src/transport/fs.rs`
-- a future dated status note in this folder
 
 Status:
 
-- Environment-source catalog foundation landed on 2026-04-20; manifest and consumer wiring remain
-  unstarted.
+- Completed on 2026-04-20 as the catalog/provenance foundation.
+
+## M3: Launch-time publication and campaign provenance
+
+Exit criteria:
+
+- Diagnostics runtime publishes `environment.sources.json` at the diagnostics `out_dir` root.
+- `host.monitor_topology` gains a source-local payload file,
+  `environment.source.host.monitor_topology.json`, when the runner exposes that inventory.
+- `host.monitor_topology` is reclassified from the earlier bundle-only fallback to truthful
+  `launch_time` availability.
+- Campaign summary/result/aggregate artifacts expose:
+  - `environment_sources_path`
+  - `environment_source_catalog_provenance`
+  - `environment_sources`
+- Campaign preflight still stays capabilities-only and does not freeze manifest syntax.
+
+Primary evidence:
+
+- `docs/workstreams/diag-environment-predicate-contract-v1/M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
+- `crates/fret-diag/src/lib.rs`
+- `crates/fret-diag/src/diag_campaign.rs`
+- `docs/ui-diagnostics-and-scripted-tests.md`
+
+Status:
+
+- Completed on 2026-04-20.

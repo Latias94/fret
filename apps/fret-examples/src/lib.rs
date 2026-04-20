@@ -412,6 +412,9 @@ mod authoring_surface_policy_tests {
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M2_FOUNDATION: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md"
     );
+    const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M3_PUBLICATION: &str = include_str!(
+        "../../../docs/workstreams/diag-environment-predicate-contract-v1/M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md"
+    );
     const DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES: &str = include_str!(
         "../../../docs/workstreams/diag-environment-predicate-contract-v1/EVIDENCE_AND_GATES.md"
     );
@@ -435,6 +438,8 @@ mod authoring_surface_policy_tests {
         include_str!("../../../docs/workstreams/resource-loading-fearless-refactor-v1/README.md");
     const UI_DIAGNOSTICS_SERVICE_RS: &str =
         include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs");
+    const UI_DIAGNOSTICS_FS_TRIGGERS_RS: &str =
+        include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs");
     const UI_DIAGNOSTICS_BUNDLE_RS: &str =
         include_str!("../../../ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs");
     const DIAG_EXTENSIBILITY_DETERMINISM_DOC: &str = include_str!(
@@ -3483,10 +3488,25 @@ mod authoring_surface_policy_tests {
         for marker in [
             "sync_runner_monitor_topology_from_app",
             "RunnerMonitorTopologyDiagnosticsStore",
+            "refresh_environment_source_files",
+            "published_host_monitor_topology",
+            "environment_sources_catalog_written",
         ] {
             assert!(
                 UI_DIAGNOSTICS_SERVICE_RS.contains(marker),
                 "diagnostics should keep syncing the runtime monitor-topology source explicitly: {marker}"
+            );
+        }
+
+        for marker in [
+            "refresh_environment_source_files",
+            "HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1",
+            "FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1",
+            "EnvironmentSourceAvailabilityV1::LaunchTime",
+        ] {
+            assert!(
+                UI_DIAGNOSTICS_FS_TRIGGERS_RS.contains(marker),
+                "filesystem diagnostics publication should keep the launch-time source sidecars explicit: {marker}"
             );
         }
 
@@ -3545,6 +3565,7 @@ mod authoring_surface_policy_tests {
             "M1_FIRST_SOURCE_AND_TIMING_DECISION_2026-04-20.md",
             "M2_ENVIRONMENT_SOURCE_PROVENANCE_AND_AVAILABILITY_CONTRACT_2026-04-20.md",
             "M2_ENVIRONMENT_SOURCE_CATALOG_FOUNDATION_2026-04-20.md",
+            "M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_WORKSTREAM.contains(marker),
@@ -3558,6 +3579,9 @@ mod authoring_surface_policy_tests {
             "`RendererFontEnvironmentSnapshot` is a renderer/resource-loading provenance surface.",
             "`UiDiagnosticsEnvFingerprintV1` is the diagnostics-run environment fingerprint.",
             "`crates/fret-diag`",
+            "`ecosystem/fret-bootstrap` now publishes `environment.sources.json`",
+            "`environment.source.host.monitor_topology.json`",
+            "`environment_source_catalog_provenance`",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_DESIGN.contains(marker),
@@ -3616,6 +3640,20 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
+            "`environment.sources.json` at the diagnostics `out_dir`",
+            "`environment.source.host.monitor_topology.json`",
+            "`environment_sources_path`",
+            "`environment_source_catalog_provenance`",
+            "`environment_sources`",
+            "Campaign preflight still only evaluates `requires_capabilities` before launch.",
+        ] {
+            assert!(
+                DIAG_ENVIRONMENT_PREDICATE_CONTRACT_M3_PUBLICATION.contains(marker),
+                "the launch-time publication note should keep the runtime/publication boundary explicit: {marker}"
+            );
+        }
+
+        for marker in [
             "pub struct ElementEnvironmentSnapshotV1",
             "pub viewport_bounds: RectV1",
             "pub safe_area_insets: Option<UiEdgesV1>",
@@ -3663,6 +3701,10 @@ mod authoring_surface_policy_tests {
             "maybe_execute_campaign_capability_preflight",
             "execute_campaign_start_plan(start_plan)?;",
             "read_filesystem_capabilities_with_provenance(&ctx.resolved_out_dir)",
+            "populate_environment_source_summary_artifacts",
+            "environment_sources_path",
+            "environment_source_catalog_provenance",
+            "environment_sources",
         ] {
             assert!(
                 DIAG_CAMPAIGN_RS.contains(marker),
@@ -3677,6 +3719,9 @@ mod authoring_surface_policy_tests {
             "EnvironmentSourceCatalogProvenance",
             "read_filesystem_environment_sources_with_provenance",
             "environment.sources.json",
+            "PublishedEnvironmentSourceArtifact",
+            "read_filesystem_published_environment_sources_with_provenance",
+            "FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1",
         ] {
             assert!(
                 DIAG_LIB_RS.contains(marker),
@@ -3688,6 +3733,9 @@ mod authoring_surface_policy_tests {
             "pub enum EnvironmentSourceAvailabilityV1",
             "pub struct FilesystemEnvironmentSourceV1",
             "pub struct FilesystemEnvironmentSourcesV1",
+            "HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1",
+            "FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1",
+            "pub struct HostMonitorTopologyEnvironmentPayloadV1",
         ] {
             assert!(
                 DIAG_PROTOCOL_RS.contains(marker),
@@ -3741,6 +3789,8 @@ mod authoring_surface_policy_tests {
             "Campaign manifests still only gate on `requires_capabilities`.",
             "`environment.sources.json` or session-published source catalog",
             "Do not scrape `debug.environment` or other debug-only snapshot lanes as a substitute",
+            "`environment.source.host.monitor_topology.json`",
+            "`environment_source_catalog_provenance`",
         ] {
             assert!(
                 UI_DIAGNOSTICS_BUNDLES_DOC.contains(marker),
@@ -3751,6 +3801,8 @@ mod authoring_surface_policy_tests {
         for marker in [
             "`environment.sources.json` catalog plus",
             "`post_run_only` environment sources are evidence-only and must not drive preflight.",
+            "`host.monitor_topology` now has a launch-time filesystem publication lane",
+            "`environment_sources_path`",
         ] {
             assert!(
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES.contains(marker),

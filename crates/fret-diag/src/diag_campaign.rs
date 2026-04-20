@@ -79,6 +79,9 @@ struct CampaignExecutionOutcome {
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_sources_path: Option<PathBuf>,
+    environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
+    environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +105,9 @@ struct CampaignSummaryArtifacts {
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_sources_path: Option<PathBuf>,
+    environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
+    environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
 }
 
 #[derive(Debug, Clone)]
@@ -190,6 +196,9 @@ struct CampaignAggregateArtifacts {
     share_manifest_path: Option<PathBuf>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_sources_path: Option<PathBuf>,
+    environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
+    environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
     summarize_error: Option<String>,
     share_error: Option<String>,
 }
@@ -200,6 +209,7 @@ struct CampaignAggregatePathProjection {
     index_path: Option<String>,
     share_manifest_path: Option<String>,
     capabilities_check_path: Option<String>,
+    environment_sources_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1482,6 +1492,9 @@ fn normalize_campaign_execution_outcome(
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         },
     }
 }
@@ -1498,6 +1511,9 @@ fn build_campaign_execution_report(
         share_error,
         capabilities_check_path,
         capability_source,
+        environment_sources_path,
+        environment_source_catalog_provenance,
+        environment_sources,
     } = outcome;
     CampaignExecutionReport {
         campaign_id: campaign.id.clone(),
@@ -1508,6 +1524,9 @@ fn build_campaign_execution_report(
             share_error,
             capabilities_check_path,
             capability_source,
+            environment_sources_path,
+            environment_source_catalog_provenance,
+            environment_sources,
         ),
         items_total: campaign.items.len(),
         items_failed,
@@ -1524,6 +1543,9 @@ fn build_campaign_report_aggregate_artifacts(
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
+    environment_sources_path: Option<PathBuf>,
+    environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
+    environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
 ) -> CampaignAggregateArtifacts {
     CampaignAggregateArtifacts {
         summary_path: plan.summary_path.clone(),
@@ -1531,6 +1553,9 @@ fn build_campaign_report_aggregate_artifacts(
         share_manifest_path,
         capabilities_check_path,
         capability_source,
+        environment_sources_path,
+        environment_source_catalog_provenance,
+        environment_sources,
         summarize_error: None,
         share_error,
     }
@@ -1660,6 +1685,10 @@ fn maybe_execute_campaign_capability_preflight(
         share_error: summary_artifacts.share_error,
         capabilities_check_path: Some(check_path),
         capability_source: Some(capability_source),
+        environment_sources_path: summary_artifacts.environment_sources_path,
+        environment_source_catalog_provenance: summary_artifacts
+            .environment_source_catalog_provenance,
+        environment_sources: summary_artifacts.environment_sources,
     }))
 }
 
@@ -1835,6 +1864,9 @@ fn build_campaign_execution_outcome(
         share_manifest_path,
         capabilities_check_path,
         capability_source,
+        environment_sources_path,
+        environment_source_catalog_provenance,
+        environment_sources,
         summarize_error,
         share_error,
     } = aggregate;
@@ -1847,6 +1879,9 @@ fn build_campaign_execution_outcome(
         share_error,
         capabilities_check_path,
         capability_source,
+        environment_sources_path,
+        environment_source_catalog_provenance,
+        environment_sources,
     }
 }
 
@@ -1971,7 +2006,10 @@ fn finalize_campaign_summary_artifacts(
     ctx: &CampaignRunContext,
 ) -> CampaignSummaryArtifacts {
     let outcome = execute_campaign_summary_finalize_outcome(plan, ctx);
-    build_campaign_summary_artifacts(plan.created_unix_ms, now_unix_ms(), outcome)
+    let mut artifacts =
+        build_campaign_summary_artifacts(plan.created_unix_ms, now_unix_ms(), outcome);
+    populate_environment_source_summary_artifacts(&mut artifacts, &ctx.resolved_out_dir);
+    artifacts
 }
 
 fn execute_campaign_summary_finalize_outcome(
@@ -2017,7 +2055,24 @@ fn build_campaign_summary_artifacts(
         share_error: outcome.share_error,
         capabilities_check_path: None,
         capability_source: None,
+        environment_sources_path: None,
+        environment_source_catalog_provenance: None,
+        environment_sources: Vec::new(),
     }
+}
+
+fn populate_environment_source_summary_artifacts(
+    artifacts: &mut CampaignSummaryArtifacts,
+    resolved_out_dir: &Path,
+) {
+    let (catalog_provenance, environment_sources) =
+        crate::read_filesystem_published_environment_sources_with_provenance(resolved_out_dir);
+    artifacts.environment_sources_path = catalog_provenance.catalog_path().map(Path::to_path_buf);
+    artifacts.environment_source_catalog_provenance = artifacts
+        .environment_sources_path
+        .as_ref()
+        .map(|_| catalog_provenance);
+    artifacts.environment_sources = environment_sources;
 }
 
 fn campaign_item_failures_error(
@@ -3033,6 +3088,31 @@ fn campaign_batch_paths_json(
                 .map(|source| source.to_json_value())
         ),
     );
+    payload.insert(
+        "environment_sources_path".to_string(),
+        serde_json::json!(paths.environment_sources_path),
+    );
+    payload.insert(
+        "environment_source_catalog_provenance".to_string(),
+        serde_json::json!(
+            batch
+                .aggregate
+                .environment_source_catalog_provenance
+                .as_ref()
+                .map(|provenance| provenance.to_json_value())
+        ),
+    );
+    payload.insert(
+        "environment_sources".to_string(),
+        serde_json::json!(
+            batch
+                .aggregate
+                .environment_sources
+                .iter()
+                .map(|source| source.to_json_value())
+                .collect::<Vec<_>>()
+        ),
+    );
     payload
 }
 
@@ -3207,6 +3287,11 @@ fn build_campaign_aggregate_artifacts(
         share_manifest_path: summary_artifacts.share_manifest_path.clone(),
         capabilities_check_path: summary_artifacts.capabilities_check_path.clone(),
         capability_source: summary_artifacts.capability_source.clone(),
+        environment_sources_path: summary_artifacts.environment_sources_path.clone(),
+        environment_source_catalog_provenance: summary_artifacts
+            .environment_source_catalog_provenance
+            .clone(),
+        environment_sources: summary_artifacts.environment_sources.clone(),
         summarize_error: summary_artifacts.summarize_error.clone(),
         share_error: summary_artifacts.share_error.clone(),
     }
@@ -3219,6 +3304,16 @@ fn campaign_aggregate_json(aggregate: &CampaignAggregateArtifacts) -> serde_json
         "share_manifest_path": aggregate.share_manifest_path.as_ref().map(|path| path.display().to_string()),
         "capabilities_check_path": aggregate.capabilities_check_path.as_ref().map(|path| path.display().to_string()),
         "capability_source": aggregate.capability_source.as_ref().map(|source| source.to_json_value()),
+        "environment_sources_path": aggregate.environment_sources_path.as_ref().map(|path| path.display().to_string()),
+        "environment_source_catalog_provenance": aggregate
+            .environment_source_catalog_provenance
+            .as_ref()
+            .map(|provenance| provenance.to_json_value()),
+        "environment_sources": aggregate
+            .environment_sources
+            .iter()
+            .map(|source| source.to_json_value())
+            .collect::<Vec<_>>(),
         "summarize_error": aggregate.summarize_error.clone(),
         "share_error": aggregate.share_error.clone(),
     })
@@ -3251,6 +3346,10 @@ fn campaign_aggregate_path_projection(
             .map(|path| path.display().to_string()),
         capabilities_check_path: aggregate
             .capabilities_check_path
+            .as_ref()
+            .map(|path| path.display().to_string()),
+        environment_sources_path: aggregate
+            .environment_sources_path
             .as_ref()
             .map(|path| path.display().to_string()),
     }
@@ -3463,6 +3562,31 @@ fn campaign_report_paths_json(
                 .capability_source
                 .as_ref()
                 .map(|source| source.to_json_value())
+        ),
+    );
+    payload.insert(
+        "environment_sources_path".to_string(),
+        serde_json::json!(paths.environment_sources_path),
+    );
+    payload.insert(
+        "environment_source_catalog_provenance".to_string(),
+        serde_json::json!(
+            report
+                .aggregate
+                .environment_source_catalog_provenance
+                .as_ref()
+                .map(|provenance| provenance.to_json_value())
+        ),
+    );
+    payload.insert(
+        "environment_sources".to_string(),
+        serde_json::json!(
+            report
+                .aggregate
+                .environment_sources
+                .iter()
+                .map(|source| source.to_json_value())
+                .collect::<Vec<_>>()
         ),
     );
     payload
@@ -4053,6 +4177,9 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let report = build_campaign_execution_report(&campaign, &plan, outcome);
@@ -5088,6 +5215,9 @@ mod tests {
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: None,
                 share_error: None,
             },
@@ -5176,6 +5306,9 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: None,
                 share_error: None,
             },
@@ -5456,6 +5589,20 @@ mod tests {
             share_manifest_path: Some(PathBuf::from("runs/ui-gallery-smoke/share.manifest.json")),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: Some(PathBuf::from("diag-out/environment.sources.json")),
+            environment_source_catalog_provenance: Some(
+                crate::EnvironmentSourceCatalogProvenance::filesystem(Some(Path::new(
+                    "diag-out/environment.sources.json",
+                ))),
+            ),
+            environment_sources: vec![crate::PublishedEnvironmentSourceArtifact {
+                source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                    .to_string(),
+                availability: fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+                payload_path: Some(PathBuf::from(
+                    "diag-out/environment.source.host.monitor_topology.json",
+                )),
+            }],
             summarize_error: None,
             share_error: Some("share failed".to_string()),
         };
@@ -5477,11 +5624,19 @@ mod tests {
             run_paths.share_manifest_path.as_deref(),
             Some("runs/ui-gallery-smoke/share.manifest.json")
         );
+        assert_eq!(
+            run_paths.environment_sources_path.as_deref(),
+            Some("diag-out/environment.sources.json")
+        );
         assert!(result_paths.summary_path.is_none());
         assert!(result_paths.index_path.is_none());
         assert_eq!(
             result_paths.share_manifest_path.as_deref(),
             Some("runs/ui-gallery-smoke/share.manifest.json")
+        );
+        assert_eq!(
+            result_paths.environment_sources_path.as_deref(),
+            Some("diag-out/environment.sources.json")
         );
     }
 
@@ -5495,6 +5650,9 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -5544,6 +5702,9 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -5578,6 +5739,9 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: None,
                 share_error: None,
             },
@@ -5617,6 +5781,9 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: None,
                 share_error: Some("batch share failed".to_string()),
             },
@@ -5695,6 +5862,9 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let payload =
@@ -5760,6 +5930,9 @@ mod tests {
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let write_plan = build_campaign_result_write_plan(
@@ -5809,6 +5982,9 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let sections =
@@ -5856,6 +6032,9 @@ mod tests {
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let payload =
@@ -5924,6 +6103,9 @@ mod tests {
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let sections = build_campaign_batch_result_payload_sections(
@@ -5983,6 +6165,9 @@ mod tests {
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let write_plan = build_campaign_batch_result_write_plan(
@@ -6047,6 +6232,9 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let root = PathBuf::from("diag-root");
@@ -6137,6 +6325,9 @@ mod tests {
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let batch = build_campaign_batch_artifacts(&plan, summary_artifacts);
@@ -6275,6 +6466,20 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: Some(PathBuf::from("batch/check.capabilities.json")),
             capability_source: None,
+            environment_sources_path: Some(PathBuf::from("batch/environment.sources.json")),
+            environment_source_catalog_provenance: Some(
+                crate::EnvironmentSourceCatalogProvenance::filesystem(Some(Path::new(
+                    "batch/environment.sources.json",
+                ))),
+            ),
+            environment_sources: vec![crate::PublishedEnvironmentSourceArtifact {
+                source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                    .to_string(),
+                availability: fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+                payload_path: Some(PathBuf::from(
+                    "batch/environment.source.host.monitor_topology.json",
+                )),
+            }],
         };
 
         let aggregate = build_campaign_aggregate_artifacts(
@@ -6297,6 +6502,24 @@ mod tests {
         );
         assert_eq!(aggregate.summarize_error.as_deref(), Some("summary failed"));
         assert_eq!(aggregate.share_error.as_deref(), Some("share failed"));
+        assert_eq!(
+            aggregate.environment_sources_path,
+            Some(PathBuf::from("batch/environment.sources.json"))
+        );
+        assert_eq!(
+            aggregate
+                .environment_source_catalog_provenance
+                .as_ref()
+                .and_then(|provenance| provenance.catalog_path()),
+            Some(Path::new("batch/environment.sources.json"))
+        );
+        assert_eq!(aggregate.environment_sources.len(), 1);
+        assert_eq!(
+            aggregate.environment_sources[0].payload_path.as_deref(),
+            Some(Path::new(
+                "batch/environment.source.host.monitor_topology.json"
+            ))
+        );
     }
 
     #[test]
@@ -6312,6 +6535,9 @@ mod tests {
             Some("share failed".to_string()),
             None,
             None,
+            None,
+            None,
+            Vec::new(),
         );
 
         assert_eq!(aggregate.summary_path, plan.summary_path);
@@ -6336,6 +6562,9 @@ mod tests {
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -6554,6 +6783,9 @@ mod tests {
             share_error: None,
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: None,
+            environment_source_catalog_provenance: None,
+            environment_sources: Vec::new(),
         };
 
         let run = campaign_result_run_json(
@@ -6587,6 +6819,20 @@ mod tests {
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
             capability_source: None,
+            environment_sources_path: Some(PathBuf::from("batch/environment.sources.json")),
+            environment_source_catalog_provenance: Some(
+                crate::EnvironmentSourceCatalogProvenance::filesystem(Some(Path::new(
+                    "batch/environment.sources.json",
+                ))),
+            ),
+            environment_sources: vec![crate::PublishedEnvironmentSourceArtifact {
+                source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                    .to_string(),
+                availability: fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+                payload_path: Some(PathBuf::from(
+                    "batch/environment.source.host.monitor_topology.json",
+                )),
+            }],
         };
 
         let aggregate = campaign_result_aggregate_json(
@@ -6622,6 +6868,46 @@ mod tests {
                 .get("share_error")
                 .and_then(|value| value.as_str()),
             Some("share failed")
+        );
+        assert_eq!(
+            aggregate
+                .get("environment_sources_path")
+                .and_then(|value| value.as_str()),
+            Some("batch/environment.sources.json")
+        );
+        assert_eq!(
+            aggregate
+                .get("environment_source_catalog_provenance")
+                .and_then(|value| value.get("kind"))
+                .and_then(|value| value.as_str()),
+            Some("filesystem")
+        );
+        assert_eq!(
+            aggregate
+                .get("environment_sources")
+                .and_then(|value| value.as_array())
+                .and_then(|items| items.first())
+                .and_then(|value| value.get("source_id"))
+                .and_then(|value| value.as_str()),
+            Some(fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1)
+        );
+        assert_eq!(
+            aggregate
+                .get("environment_sources")
+                .and_then(|value| value.as_array())
+                .and_then(|items| items.first())
+                .and_then(|value| value.get("availability"))
+                .and_then(|value| value.as_str()),
+            Some("launch_time")
+        );
+        assert_eq!(
+            aggregate
+                .get("environment_sources")
+                .and_then(|value| value.as_array())
+                .and_then(|items| items.first())
+                .and_then(|value| value.get("payload_path"))
+                .and_then(|value| value.as_str()),
+            Some("batch/environment.source.host.monitor_topology.json")
         );
     }
 
@@ -6723,6 +7009,9 @@ mod tests {
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
@@ -6787,6 +7076,9 @@ mod tests {
                 share_manifest_path: Some(PathBuf::from("share/manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
+                environment_sources_path: None,
+                environment_source_catalog_provenance: None,
+                environment_sources: Vec::new(),
                 share_error: Some("share boom".to_string()),
             },
         };
@@ -6934,6 +7226,59 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
+        let environment_sources_path = ctx
+            .resolved_out_dir
+            .join(fret_diag_protocol::FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        std::fs::write(
+            &environment_sources_path,
+            serde_json::to_vec_pretty(&fret_diag_protocol::FilesystemEnvironmentSourcesV1 {
+                schema_version: 1,
+                sources: vec![fret_diag_protocol::FilesystemEnvironmentSourceV1 {
+                    source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                        .to_string(),
+                    availability: fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+                }],
+                runner_kind: Some("fret-bootstrap".to_string()),
+                runner_version: Some("1".to_string()),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let environment_payload_path = ctx.resolved_out_dir.join(
+            fret_diag_protocol::FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+        );
+        std::fs::write(
+            &environment_payload_path,
+            serde_json::to_vec_pretty(
+                &fret_diag_protocol::HostMonitorTopologyEnvironmentPayloadV1 {
+                    schema_version: 1,
+                    source_id: fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+                        .to_string(),
+                    monitor_topology: fret_diag_protocol::UiDiagnosticsMonitorTopologyV1 {
+                        schema_version: 1,
+                        virtual_desktop_bounds_physical: Some(
+                            fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                                x: 0,
+                                y: 0,
+                                width: 3200,
+                                height: 1080,
+                            },
+                        ),
+                        monitors: vec![fret_diag_protocol::UiDiagnosticsMonitorFingerprintV1 {
+                            bounds_physical: fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                                x: 0,
+                                y: 0,
+                                width: 3200,
+                                height: 1080,
+                            },
+                            scale_factor: 1.25,
+                        }],
+                    },
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         let mut campaign = sample_campaign_definition();
         campaign.requires_capabilities = vec![
@@ -6960,6 +7305,30 @@ mod tests {
         assert_eq!(
             outcome.capabilities_check_path.as_deref(),
             Some(check_path.as_path())
+        );
+        assert_eq!(
+            outcome.environment_sources_path.as_deref(),
+            Some(environment_sources_path.as_path())
+        );
+        assert_eq!(
+            outcome
+                .environment_source_catalog_provenance
+                .as_ref()
+                .and_then(|provenance| provenance.catalog_path()),
+            Some(environment_sources_path.as_path())
+        );
+        assert_eq!(outcome.environment_sources.len(), 1);
+        assert_eq!(
+            outcome.environment_sources[0].source_id,
+            fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            outcome.environment_sources[0].availability,
+            fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime
+        );
+        assert_eq!(
+            outcome.environment_sources[0].payload_path.as_deref(),
+            Some(environment_payload_path.as_path())
         );
         assert!(outcome.share_manifest_path.is_none());
         assert!(outcome.share_error.is_none());
@@ -7064,6 +7433,61 @@ mod tests {
                 .and_then(|value| value.get("path"))
                 .and_then(|value| value.as_str()),
             Some(expected_capabilities_source_path.as_str())
+        );
+        let expected_environment_sources_path = environment_sources_path.display().to_string();
+        let expected_environment_payload_path = environment_payload_path.display().to_string();
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_sources_path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_environment_sources_path.as_str())
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_source_catalog_provenance"))
+                .and_then(|value| value.get("kind"))
+                .and_then(|value| value.as_str()),
+            Some("filesystem")
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_source_catalog_provenance"))
+                .and_then(|value| value.get("catalog_path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_environment_sources_path.as_str())
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_sources"))
+                .and_then(|value| value.as_array())
+                .and_then(|items| items.first())
+                .and_then(|value| value.get("source_id"))
+                .and_then(|value| value.as_str()),
+            Some(fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1)
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_sources"))
+                .and_then(|value| value.as_array())
+                .and_then(|items| items.first())
+                .and_then(|value| value.get("availability"))
+                .and_then(|value| value.as_str()),
+            Some("launch_time")
+        );
+        assert_eq!(
+            result_json
+                .get("aggregate")
+                .and_then(|value| value.get("environment_sources"))
+                .and_then(|value| value.as_array())
+                .and_then(|items| items.first())
+                .and_then(|value| value.get("payload_path"))
+                .and_then(|value| value.as_str()),
+            Some(expected_environment_payload_path.as_str())
         );
     }
 

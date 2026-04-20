@@ -1,13 +1,18 @@
 use std::path::{Path, PathBuf};
 
 use fret_diag_protocol::{
-    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiInspectConfigV1,
-    UiScriptEventLogEntryV1, UiScriptResultV1, UiScriptStageV1,
+    EnvironmentSourceAvailabilityV1, FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1,
+    FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1, FilesystemCapabilitiesV1,
+    FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
+    HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
+    UiActionScriptV1, UiActionScriptV2, UiInspectConfigV1, UiScriptEventLogEntryV1,
+    UiScriptResultV1, UiScriptStageV1,
 };
 
 use super::{
-    PendingScript, UiDiagnosticsService, display_path, format_bundle_dump_note,
-    push_script_event_log, read_touch_stamp, sanitize_label, touch_file, unix_ms_now,
+    PendingScript, UiDiagnosticsService, bundle::ui_diagnostics_monitor_topology_from_runner,
+    display_path, format_bundle_dump_note, push_script_event_log, read_touch_stamp, sanitize_label,
+    touch_file, unix_ms_now,
 };
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -267,6 +272,7 @@ impl UiDiagnosticsService {
         }
 
         self.ensure_capabilities_file();
+        self.refresh_environment_source_files();
 
         let ts = unix_ms_now();
         let mut f = match std::fs::OpenOptions::new()
@@ -311,6 +317,110 @@ impl UiDiagnosticsService {
         }
 
         self.ready_written = true;
+    }
+
+    pub(super) fn refresh_environment_source_files(&mut self) {
+        if !self.cfg.enabled || self.is_wasm_ws_only() {
+            return;
+        }
+
+        let current_topology = self.host_monitor_topology.clone();
+        if self.environment_sources_catalog_written
+            && self.published_host_monitor_topology == current_topology
+        {
+            return;
+        }
+
+        let catalog_path = self
+            .cfg
+            .out_dir
+            .join(FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        if let Some(parent) = catalog_path.parent()
+            && let Err(err) = std::fs::create_dir_all(parent)
+        {
+            warn_fs_once(
+                &mut self.environment_sources_write_warned,
+                &self.cfg.out_dir,
+                "ui diagnostics: failed to create environment.sources.json parent dir",
+                parent,
+                &err,
+            );
+            return;
+        }
+
+        let sources = current_topology
+            .as_ref()
+            .map(|_| {
+                vec![FilesystemEnvironmentSourceV1 {
+                    source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+                }]
+            })
+            .unwrap_or_default();
+        let catalog_payload = FilesystemEnvironmentSourcesV1 {
+            schema_version: 1,
+            sources,
+            runner_kind: Some("fret-bootstrap".to_string()),
+            runner_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        };
+
+        if let Ok(mut text) = serde_json::to_string_pretty(&catalog_payload) {
+            text.push('\n');
+            if let Err(err) = std::fs::write(&catalog_path, text) {
+                warn_fs_once(
+                    &mut self.environment_sources_write_warned,
+                    &self.cfg.out_dir,
+                    "ui diagnostics: failed to write environment.sources.json",
+                    &catalog_path,
+                    &err,
+                );
+                return;
+            }
+        }
+
+        let payload_path = self
+            .cfg
+            .out_dir
+            .join(FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1);
+        match current_topology.as_ref() {
+            Some(snapshot) => {
+                let payload = HostMonitorTopologyEnvironmentPayloadV1 {
+                    schema_version: 1,
+                    source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                    monitor_topology: ui_diagnostics_monitor_topology_from_runner(snapshot),
+                };
+                if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
+                    text.push('\n');
+                    if let Err(err) = std::fs::write(&payload_path, text) {
+                        warn_fs_once(
+                            &mut self.environment_sources_write_warned,
+                            &self.cfg.out_dir,
+                            "ui diagnostics: failed to write host monitor topology environment payload",
+                            &payload_path,
+                            &err,
+                        );
+                        return;
+                    }
+                }
+            }
+            None => {
+                if payload_path.is_file()
+                    && let Err(err) = std::fs::remove_file(&payload_path)
+                {
+                    warn_fs_once(
+                        &mut self.environment_sources_write_warned,
+                        &self.cfg.out_dir,
+                        "ui diagnostics: failed to remove stale host monitor topology environment payload",
+                        &payload_path,
+                        &err,
+                    );
+                    return;
+                }
+            }
+        }
+
+        self.environment_sources_catalog_written = true;
+        self.published_host_monitor_topology = current_topology;
     }
 
     pub(super) fn ensure_capabilities_file(&mut self) {
@@ -719,5 +829,101 @@ impl UiDiagnosticsService {
         }
 
         self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_diag_protocol::{
+        FilesystemEnvironmentSourcesV1, HostMonitorTopologyEnvironmentPayloadV1,
+    };
+    use fret_runtime::{
+        RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1, RunnerMonitorTopologySnapshotV1,
+    };
+
+    fn rect(x: i32, y: i32, width: u32, height: u32) -> RunnerMonitorRectPhysicalV1 {
+        RunnerMonitorRectPhysicalV1 {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    fn sample_topology(scale_factor: f32) -> RunnerMonitorTopologySnapshotV1 {
+        RunnerMonitorTopologySnapshotV1 {
+            virtual_desktop_bounds_physical: Some(rect(0, 0, 3200, 1080)),
+            monitors: vec![
+                RunnerMonitorInfoV1 {
+                    bounds_physical: rect(0, 0, 1920, 1080),
+                    scale_factor: 1.0,
+                },
+                RunnerMonitorInfoV1 {
+                    bounds_physical: rect(1920, 0, 1280, 1024),
+                    scale_factor,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn refresh_environment_source_files_publishes_launch_time_monitor_topology_sidecars() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-environment-source-sidecars-{}-{}",
+            unix_ms_now(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+
+        let mut service = UiDiagnosticsService::default();
+        service.cfg.enabled = true;
+        service.cfg.out_dir = root.clone();
+        service.host_monitor_topology = Some(sample_topology(1.25));
+
+        service.refresh_environment_source_files();
+
+        let catalog_path = root.join(FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        let payload_path =
+            root.join(FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1);
+        assert!(catalog_path.is_file());
+        assert!(payload_path.is_file());
+
+        let catalog = serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(
+            &std::fs::read(&catalog_path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(catalog.sources.len(), 1);
+        assert_eq!(
+            catalog.sources[0].source_id,
+            HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            catalog.sources[0].availability,
+            EnvironmentSourceAvailabilityV1::LaunchTime
+        );
+
+        let payload = serde_json::from_slice::<HostMonitorTopologyEnvironmentPayloadV1>(
+            &std::fs::read(&payload_path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            payload.source_id,
+            HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(payload.monitor_topology.monitors.len(), 2);
+        assert_eq!(payload.monitor_topology.monitors[1].scale_factor, 1.25);
+
+        service.host_monitor_topology = None;
+        service.refresh_environment_source_files();
+
+        let catalog = serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(
+            &std::fs::read(&catalog_path).unwrap(),
+        )
+        .unwrap();
+        assert!(catalog.sources.is_empty());
+        assert!(!payload_path.exists());
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

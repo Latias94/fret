@@ -16,7 +16,10 @@ use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
     DevtoolsBundleDumpedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
-    EnvironmentSourceAvailabilityV1, FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
+    EnvironmentSourceAvailabilityV1, FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1,
+    FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+    FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
+    HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
     UiArtifactStatsV1, UiCapabilitiesCheckV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
     UiScriptResultV1, UiScriptStageV1,
 };
@@ -546,16 +549,20 @@ pub(crate) fn resolve_filesystem_capabilities_path(base_dir: &Path) -> Option<Pa
 }
 
 pub(crate) fn resolve_filesystem_environment_sources_path(base_dir: &Path) -> Option<PathBuf> {
-    let direct = base_dir.join("environment.sources.json");
+    resolve_named_filesystem_sidecar_path(base_dir, FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1)
+}
+
+fn resolve_named_filesystem_sidecar_path(base_dir: &Path, file_name: &str) -> Option<PathBuf> {
+    let direct = base_dir.join(file_name);
     if direct.is_file() {
         return Some(direct);
     }
-    let root = base_dir.join("_root").join("environment.sources.json");
+    let root = base_dir.join("_root").join(file_name);
     if root.is_file() {
         return Some(root);
     }
     if let Some(parent) = base_dir.parent() {
-        let from_parent = parent.join("environment.sources.json");
+        let from_parent = parent.join(file_name);
         if from_parent.is_file() {
             return Some(from_parent);
         }
@@ -579,6 +586,15 @@ pub(crate) fn read_filesystem_environment_sources_payload(
         return None;
     };
     serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(&bytes).ok()
+}
+
+pub(crate) fn read_host_monitor_topology_environment_payload(
+    path: &Path,
+) -> Option<HostMonitorTopologyEnvironmentPayloadV1> {
+    let Ok(bytes) = std::fs::read(path) else {
+        return None;
+    };
+    serde_json::from_slice::<HostMonitorTopologyEnvironmentPayloadV1>(&bytes).ok()
 }
 
 pub(crate) fn normalize_filesystem_capabilities(
@@ -637,6 +653,23 @@ pub(crate) fn normalize_filesystem_environment_sources(
     });
     sources.dedup();
     sources
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PublishedEnvironmentSourceArtifact {
+    pub source_id: String,
+    pub availability: EnvironmentSourceAvailabilityV1,
+    pub payload_path: Option<PathBuf>,
+}
+
+impl PublishedEnvironmentSourceArtifact {
+    pub(crate) fn to_json_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "source_id": self.source_id,
+            "availability": environment_source_availability_sort_key(self.availability),
+            "payload_path": self.payload_path.as_ref().map(|path| path.display().to_string()),
+        })
+    }
 }
 
 fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
@@ -876,6 +909,42 @@ pub(crate) fn read_filesystem_environment_sources_with_provenance(
         .map(|parsed| normalize_filesystem_environment_sources(&parsed))
         .unwrap_or_default();
     (source, available)
+}
+
+pub(crate) fn resolve_filesystem_environment_source_payload_path(
+    base_dir: &Path,
+    source_id: &str,
+) -> Option<PathBuf> {
+    match normalize_environment_source_id(source_id).as_deref() {
+        Some(HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1) => {
+            resolve_named_filesystem_sidecar_path(
+                base_dir,
+                FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+            )
+        }
+        _ => None,
+    }
+}
+
+pub(crate) fn read_filesystem_published_environment_sources_with_provenance(
+    base_dir: &Path,
+) -> (
+    EnvironmentSourceCatalogProvenance,
+    Vec<PublishedEnvironmentSourceArtifact>,
+) {
+    let (provenance, sources) = read_filesystem_environment_sources_with_provenance(base_dir);
+    let published = sources
+        .into_iter()
+        .map(|source| PublishedEnvironmentSourceArtifact {
+            payload_path: resolve_filesystem_environment_source_payload_path(
+                base_dir,
+                &source.source_id,
+            ),
+            source_id: source.source_id,
+            availability: source.availability,
+        })
+        .collect();
+    (provenance, published)
 }
 
 fn capabilities_check_v1(
@@ -1182,6 +1251,84 @@ mod capability_tests {
                 source_id: "host.monitor_topology".to_string(),
                 availability: EnvironmentSourceAvailabilityV1::PostRunOnly,
             }]
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
+    fn published_environment_sources_include_payload_path_for_host_monitor_topology() {
+        let parent_dir = make_temp_dir("fret-diag-environment-source-payload-path");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let sources = FilesystemEnvironmentSourcesV1 {
+            schema_version: 1,
+            sources: vec![FilesystemEnvironmentSourceV1 {
+                source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+            }],
+            runner_kind: Some("filesystem".to_string()),
+            runner_version: Some("1".to_string()),
+        };
+        let catalog_path = parent_dir
+            .join("session")
+            .join(FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        std::fs::write(
+            &catalog_path,
+            serde_json::to_string_pretty(&sources).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let payload = HostMonitorTopologyEnvironmentPayloadV1 {
+            schema_version: 1,
+            source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+            monitor_topology: fret_diag_protocol::UiDiagnosticsMonitorTopologyV1 {
+                schema_version: 1,
+                virtual_desktop_bounds_physical: Some(
+                    fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                        x: 0,
+                        y: 0,
+                        width: 3200,
+                        height: 1080,
+                    },
+                ),
+                monitors: vec![fret_diag_protocol::UiDiagnosticsMonitorFingerprintV1 {
+                    bounds_physical: fret_diag_protocol::UiDiagnosticsPhysicalRectV1 {
+                        x: 0,
+                        y: 0,
+                        width: 3200,
+                        height: 1080,
+                    },
+                    scale_factor: 1.25,
+                }],
+            },
+        };
+        let payload_path = parent_dir
+            .join("session")
+            .join(FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1);
+        std::fs::write(
+            &payload_path,
+            serde_json::to_string_pretty(&payload).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let (provenance, published) =
+            read_filesystem_published_environment_sources_with_provenance(&run_dir);
+
+        assert_eq!(provenance.catalog_path(), Some(catalog_path.as_path()));
+        assert_eq!(published.len(), 1);
+        assert_eq!(
+            published[0].payload_path.as_deref(),
+            Some(payload_path.as_path())
+        );
+        assert_eq!(
+            read_host_monitor_topology_environment_payload(
+                published[0].payload_path.as_deref().unwrap()
+            )
+            .unwrap()
+            .source_id,
+            HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1
         );
 
         let _ = std::fs::remove_dir_all(&parent_dir);

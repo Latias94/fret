@@ -15,6 +15,8 @@ pub struct UiDiagnosticsService {
     ready_write_warned: bool,
     capabilities_written: bool,
     capabilities_write_warned: bool,
+    environment_sources_catalog_written: bool,
+    environment_sources_write_warned: bool,
     inspector: inspect_controller::InspectController,
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
@@ -31,6 +33,7 @@ pub struct UiDiagnosticsService {
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     host_monitor_topology: Option<fret_runtime::RunnerMonitorTopologySnapshotV1>,
+    published_host_monitor_topology: Option<fret_runtime::RunnerMonitorTopologySnapshotV1>,
     debug_extensions: Option<extensions::DebugExtensionsRegistryV1>,
     #[cfg(feature = "diagnostics-ws")]
     pending_devtools_screenshot:
@@ -1063,6 +1066,7 @@ impl UiDiagnosticsService {
         }
 
         self.sync_runner_monitor_topology_from_app(app);
+        self.refresh_environment_source_files();
         self.note_window_seen(window);
 
         self.poll_pick_trigger();
@@ -1133,6 +1137,7 @@ impl UiDiagnosticsService {
             return;
         }
         self.sync_runner_monitor_topology_from_app(app);
+        self.refresh_environment_source_files();
         if self.cfg.simulate_no_frames {
             // Diagnostics-only test hook: keep windows "seen" but do not record per-frame
             // snapshots. Script liveness should be provided by the keepalive/no-frame path.

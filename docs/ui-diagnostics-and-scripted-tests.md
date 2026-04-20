@@ -113,6 +113,12 @@ Environment fingerprint note:
 - `bundle.json.env.scale_factors_seen` remains the last-known per-window scale factors observed
   during the run.
 - Do not treat `scale_factors_seen` as host monitor topology or as a mixed-DPI preflight signal.
+- On native diagnostics runs, the runtime may also publish `environment.sources.json` at the run
+  `out_dir` root.
+- `host.monitor_topology` currently maps to `environment.source.host.monitor_topology.json` when
+  that launch-time source is available.
+- Campaign result aggregates may report `environment_sources_path`,
+  `environment_source_catalog_provenance`, and `environment_sources`.
 - Campaign manifests still only gate on `requires_capabilities`.
 - If diagnostics later promotes host-environment sources into orchestration, use a separate
   `environment.sources.json` or session-published source catalog rather than `capabilities.json`.

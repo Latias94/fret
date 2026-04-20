@@ -18,6 +18,11 @@ Status: Active
   lands.
 - [x] DEPC-015 Land additive protocol + filesystem loader foundations for an environment-source
   catalog without introducing manifest consumers.
+- [x] DEPC-016 Publish `host.monitor_topology` as a launch-time filesystem source at the
+  diagnostics `out_dir` root.
+- [x] DEPC-017 Surface `environment_sources_path`,
+  `environment_source_catalog_provenance`, and `environment_sources` in campaign
+  summary/result/aggregate artifacts without introducing manifest consumers.
 - [ ] DEPC-014 Choose the smallest additive diagnostics manifest shape once the first concrete
   source and timing contract are both ready.
 
