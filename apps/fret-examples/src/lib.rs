@@ -2447,12 +2447,17 @@ mod authoring_surface_policy_tests {
             "imui_hello_demo",
             IMUI_HELLO_DEMO,
             &[
+                "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
+                "imui_in(cx, |ui| {",
+                "ui.text(format!(\"Count: {count}\"));",
+                "ui.checkbox_model(\"Enabled\", enabled_state.model())",
+            ],
+            &[
                 "fret_imui::imui_in(cx, |ui| {",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
-                "ui.checkbox_model(\"Enabled\", enabled_state.model())",
+                "fret_ui_kit::ui::text(format!(\"Count: {count}\"))",
             ],
-            &[],
         );
 
         assert_current_imui_teaching_surface(
@@ -4490,6 +4495,20 @@ mod authoring_surface_policy_tests {
                 "imui_hello_demo should stay explicitly demoted to smoke/reference: {marker}"
             );
         }
+    }
+
+    #[test]
+    fn imui_hello_demo_prefers_root_fret_imui_facade_lane() {
+        assert!(
+            IMUI_HELLO_DEMO
+                .contains("use fret::{FretApp, advanced::prelude::*, imui::prelude::*};")
+        );
+        assert!(IMUI_HELLO_DEMO.contains("imui_in(cx, |ui| {"));
+        assert!(IMUI_HELLO_DEMO.contains("ui.text(format!(\"Count: {count}\"));"));
+        assert!(IMUI_HELLO_DEMO.contains("ui.button(\"Increment\").clicked()"));
+        assert!(!IMUI_HELLO_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));
+        assert!(!IMUI_HELLO_DEMO.contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;"));
+        assert!(!IMUI_HELLO_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;"));
     }
 
     #[test]
