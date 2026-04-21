@@ -2708,6 +2708,11 @@ mod authoring_surface_policy_tests {
     fn immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster() {
         for marker in [
             "Immediate-mode sidecar (when you intentionally want the IMUI lane):",
+            "First-party authoring policy: use the root `fret::imui` lane",
+            "`use fret::imui::prelude::*;`",
+            "`use fret::imui::{kit::..., prelude::*};`",
+            "deliberate exception is `imui_node_graph_demo`",
+            "compatibility-only retained-bridge",
             "imui_action_basics",
             "imui_editor_proof_demo",
             "imui_hello_demo",

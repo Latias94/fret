@@ -126,6 +126,11 @@ auto-enable required cookbook features for known Lab examples and print what it 
 
 Immediate-mode sidecar (when you intentionally want the IMUI lane):
 
+- First-party authoring policy: use the root `fret::imui` lane (`use fret::imui::prelude::*;` or
+  `use fret::imui::{kit::..., prelude::*};`) for immediate-mode teaching surfaces. The only
+  deliberate exception is `imui_node_graph_demo`, which remains a compatibility-only retained-bridge
+  proof.
+
 - Golden pair:
   - `imui_action_basics` — generic/default immediate authoring on the app lane
   - `imui_editor_proof_demo` — editor-grade immediate proof on the intended generic/editor owner
