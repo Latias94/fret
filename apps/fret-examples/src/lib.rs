@@ -2556,10 +2556,10 @@ mod authoring_surface_policy_tests {
             IMUI_SHADCN_ADAPTER_DEMO,
             &[
                 "Product-validation IMUI surface for the shared control-chrome lane.",
-                "fret_imui::imui_in(cx, |ui| {",
+                "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
+                "imui_in(cx, |ui| {",
                 "ui.add_ui(root);",
-                "fret_imui::imui(cx, move |ui| {",
-                "UiWriterImUiFacadeExt as _",
+                "imui(cx, move |ui| {",
                 "const TEST_ID_ROOT: &str = \"imui-shadcn-demo.root\";",
                 "const TEST_ID_INCREMENT: &str = \"imui-shadcn-demo.controls.increment\";",
                 "const TEST_ID_ENABLED: &str = \"imui-shadcn-demo.controls.enabled\";",
@@ -2567,11 +2567,33 @@ mod authoring_surface_policy_tests {
                 "const TEST_ID_MODE: &str = \"imui-shadcn-demo.controls.mode\";",
                 "const TEST_ID_DRAFT: &str = \"imui-shadcn-demo.controls.draft\";",
                 "summary_badge(",
+                "kit::ButtonOptions {",
+                "kit::SwitchOptions {",
+                "kit::SliderOptions {",
+                "kit::ComboModelOptions {",
+                "kit::InputTextOptions {",
                 "ui.combo_model_with_options(",
+                "kit::TableColumn::fill(\"Signal\")",
+                "kit::TableOptions {",
                 "ui.table_with_options(",
+                "kit::VirtualListOptions {",
+                "kit::VirtualListMeasureMode::Fixed",
                 "ui.virtual_list_with_options(",
             ],
-            &[],
+            &[
+                "fret_imui::imui_in(cx, |ui| {",
+                "fret_imui::imui(cx, move |ui| {",
+                "UiWriterImUiFacadeExt as _",
+                "UiWriterUiKitExt as _",
+                "fret_ui_kit::imui::ButtonOptions",
+                "fret_ui_kit::imui::SwitchOptions",
+                "fret_ui_kit::imui::SliderOptions",
+                "fret_ui_kit::imui::ComboModelOptions",
+                "fret_ui_kit::imui::InputTextOptions",
+                "fret_ui_kit::imui::TableColumn",
+                "fret_ui_kit::imui::TableOptions",
+                "fret_ui_kit::imui::VirtualListOptions",
+            ],
         );
 
         assert_current_imui_teaching_surface(
@@ -4636,6 +4658,34 @@ mod authoring_surface_policy_tests {
         assert!(
             !IMUI_INTERACTION_SHOWCASE_DEMO
                 .contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
+        );
+    }
+
+    #[test]
+    fn imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane() {
+        assert!(
+            IMUI_SHADCN_ADAPTER_DEMO
+                .contains("use fret::{FretApp, advanced::prelude::*, imui::prelude::*};")
+        );
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("imui_in(cx, |ui| {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("imui(cx, move |ui| {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::ButtonOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::SwitchOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::SliderOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::ComboModelOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::InputTextOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::TableColumn::fill(\"Signal\")"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::TableOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::VirtualListOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::VirtualListMeasureMode::Fixed"));
+        assert!(!IMUI_SHADCN_ADAPTER_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));
+        assert!(!IMUI_SHADCN_ADAPTER_DEMO.contains("fret_imui::imui(cx, move |ui| {"));
+        assert!(
+            !IMUI_SHADCN_ADAPTER_DEMO
+                .contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;")
+        );
+        assert!(
+            !IMUI_SHADCN_ADAPTER_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
         );
     }
 

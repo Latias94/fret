@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
@@ -94,9 +94,7 @@ impl View for ImUiShadcnAdapterView {
             Arc::from(draft.clone())
         };
 
-        fret_imui::imui_in(cx, |ui| {
-            use fret_ui_kit::imui::UiWriterUiKitExt as _;
-
+        imui_in(cx, |ui| {
             let muted_bg = ColorRef::Color(ui.cx_mut().theme().color_token("muted"));
 
             let root = ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
@@ -159,13 +157,7 @@ impl View for ImUiShadcnAdapterView {
 
                     let control_surface =
                         ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
-                            fret_imui::imui(cx, move |ui| {
-                                use fret_ui_kit::imui::{
-                                    ButtonOptions, ComboModelOptions, InputTextOptions,
-                                    SliderOptions, SwitchOptions, UiWriterImUiFacadeExt as _,
-                                    UiWriterUiKitExt as _,
-                                };
-
+                            imui(cx, move |ui| {
                                 let select_items = [
                                     Arc::<str>::from("Alpha"),
                                     Arc::<str>::from("Beta"),
@@ -207,7 +199,7 @@ impl View for ImUiShadcnAdapterView {
 
                                 let increment = ui.button_with_options(
                                     "Increment count",
-                                    ButtonOptions {
+                                    kit::ButtonOptions {
                                         test_id: Some(Arc::from(TEST_ID_INCREMENT)),
                                         ..Default::default()
                                     },
@@ -220,7 +212,7 @@ impl View for ImUiShadcnAdapterView {
                                 let _ = ui.switch_model_with_options(
                                     "Enabled (switch)",
                                     enabled_state.model(),
-                                    SwitchOptions {
+                                    kit::SwitchOptions {
                                         test_id: Some(Arc::from(TEST_ID_ENABLED)),
                                         ..Default::default()
                                     },
@@ -229,7 +221,7 @@ impl View for ImUiShadcnAdapterView {
                                 let _ = ui.slider_f32_model_with_options(
                                     "Value",
                                     value_state.model(),
-                                    SliderOptions {
+                                    kit::SliderOptions {
                                         min: 0.0,
                                         max: 100.0,
                                         step: 1.0,
@@ -243,7 +235,7 @@ impl View for ImUiShadcnAdapterView {
                                     "Mode",
                                     mode_state.model(),
                                     &select_items,
-                                    ComboModelOptions {
+                                    kit::ComboModelOptions {
                                         test_id: Some(Arc::from(TEST_ID_MODE)),
                                         ..Default::default()
                                     },
@@ -251,7 +243,7 @@ impl View for ImUiShadcnAdapterView {
 
                                 let _ = ui.input_text_model_with_options(
                                     draft_state.model(),
-                                    InputTextOptions {
+                                    kit::InputTextOptions {
                                         placeholder: Some(Arc::from("Type some text...")),
                                         test_id: Some(Arc::from(TEST_ID_DRAFT)),
                                         ..Default::default()
@@ -366,22 +358,17 @@ impl View for ImUiShadcnAdapterView {
 
                     let inspector_surface =
                         ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
-                            fret_imui::imui(cx, move |ui| {
-                                use fret_ui_kit::imui::{
-                                    TableColumn, TableOptions, UiWriterImUiFacadeExt as _,
-                                    VirtualListMeasureMode, VirtualListOptions,
-                                };
-
+                            imui(cx, move |ui| {
                                 let table_columns = if compact_surface {
                                     vec![
-                                        TableColumn::fill("Signal"),
-                                        TableColumn::px("State", Px(144.0)),
+                                        kit::TableColumn::fill("Signal"),
+                                        kit::TableColumn::px("State", Px(144.0)),
                                     ]
                                 } else {
                                     vec![
-                                        TableColumn::fill("Field"),
-                                        TableColumn::px("Value", Px(160.0)),
-                                        TableColumn::px("Source", Px(100.0)),
+                                        kit::TableColumn::fill("Field"),
+                                        kit::TableColumn::px("Value", Px(160.0)),
+                                        kit::TableColumn::px("Source", Px(100.0)),
                                     ]
                                 };
 
@@ -391,7 +378,7 @@ impl View for ImUiShadcnAdapterView {
                                 ui.table_with_options(
                                     "imui-shadcn-demo.inspector.table",
                                     &table_columns,
-                                    TableOptions {
+                                    kit::TableOptions {
                                         striped: true,
                                         test_id: Some(Arc::from(TEST_ID_TABLE)),
                                         ..Default::default()
@@ -454,7 +441,7 @@ impl View for ImUiShadcnAdapterView {
                                 let _ = ui.virtual_list_with_options(
                                     "imui-shadcn-demo.inspector.recent",
                                     if compact_surface { 12 } else { 96 },
-                                    VirtualListOptions {
+                                    kit::VirtualListOptions {
                                         viewport_height: if compact_surface {
                                             RECENT_VIEWPORT_HEIGHT_COMPACT
                                         } else {
@@ -463,7 +450,7 @@ impl View for ImUiShadcnAdapterView {
                                         estimate_row_height: Px(28.0),
                                         overscan: 2,
                                         gap: Px(2.0),
-                                        measure_mode: VirtualListMeasureMode::Fixed,
+                                        measure_mode: kit::VirtualListMeasureMode::Fixed,
                                         test_id: Some(Arc::from(TEST_ID_RECENT_LIST)),
                                         ..Default::default()
                                     },
