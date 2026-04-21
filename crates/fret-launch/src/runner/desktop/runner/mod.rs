@@ -89,6 +89,27 @@ fn read_startup_incoming_open_paths_from_args() -> Vec<std::path::PathBuf> {
     paths
 }
 
+#[cfg(any(test, target_os = "linux"))]
+fn apply_linux_windowing_capability_posture(
+    caps: &mut PlatformCapabilities,
+    is_wayland_session: bool,
+) {
+    // Linux windowing behavior varies significantly across X11/Wayland and compositors. Default
+    // to best-effort until we add backend-specific detection.
+    caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::BestEffort;
+    caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::BestEffort;
+    caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::BestEffort;
+
+    // Wayland compositors do not provide a reliable "window under cursor" contract and may ignore
+    // programmatic window positioning/z-level hints. Prefer a predictable in-window floating
+    // fallback over OS tear-off UX (ADR 0054 / ADR 0083).
+    if is_wayland_session {
+        caps.ui.window_tear_off = false;
+        caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+        caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
+    }
+}
+
 #[derive(Debug, Default)]
 struct DiagIncomingOpenPayload {
     files: Vec<fret_core::ExternalDropFileData>,
@@ -393,23 +414,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             #[cfg(target_os = "linux")]
             {
-                // Linux windowing behavior varies significantly across X11/Wayland and
-                // compositors. Default to best-effort until we add backend-specific detection.
-                caps.ui.window_hover_detection =
-                    fret_runtime::WindowHoverDetectionQuality::BestEffort;
-                caps.ui.window_set_outer_position =
-                    fret_runtime::WindowSetOuterPositionQuality::BestEffort;
-                caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::BestEffort;
-
-                // Wayland compositors do not provide a reliable "window under cursor" contract and
-                // may ignore programmatic window positioning/z-level hints. Prefer a predictable
-                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0083).
-                if platform_prefs::linux_is_wayland_session() {
-                    caps.ui.window_tear_off = false;
-                    caps.ui.window_hover_detection =
-                        fret_runtime::WindowHoverDetectionQuality::None;
-                    caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
-                }
+                apply_linux_windowing_capability_posture(
+                    &mut caps,
+                    platform_prefs::linux_is_wayland_session(),
+                );
             }
 
             caps.clipboard.text.read = true;
@@ -1032,6 +1040,59 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         }
         self.diag_cursor_screen_pos_override.is_some() || self.diag_mouse_buttons_override.is_some()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn linux_windowing_capability_posture_keeps_x11_as_best_effort() {
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = true;
+        caps.ui.window_tear_off = true;
+
+        apply_linux_windowing_capability_posture(&mut caps, false);
+
+        assert!(caps.ui.multi_window);
+        assert!(caps.ui.window_tear_off);
+        assert_eq!(
+            caps.ui.window_hover_detection,
+            fret_runtime::WindowHoverDetectionQuality::BestEffort
+        );
+        assert_eq!(
+            caps.ui.window_set_outer_position,
+            fret_runtime::WindowSetOuterPositionQuality::BestEffort
+        );
+        assert_eq!(
+            caps.ui.window_z_level,
+            fret_runtime::WindowZLevelQuality::BestEffort
+        );
+    }
+
+    #[test]
+    fn linux_windowing_capability_posture_disables_tear_off_on_wayland() {
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = true;
+        caps.ui.window_tear_off = true;
+
+        apply_linux_windowing_capability_posture(&mut caps, true);
+
+        assert!(caps.ui.multi_window);
+        assert!(!caps.ui.window_tear_off);
+        assert_eq!(
+            caps.ui.window_hover_detection,
+            fret_runtime::WindowHoverDetectionQuality::None
+        );
+        assert_eq!(
+            caps.ui.window_set_outer_position,
+            fret_runtime::WindowSetOuterPositionQuality::BestEffort
+        );
+        assert_eq!(
+            caps.ui.window_z_level,
+            fret_runtime::WindowZLevelQuality::None
+        );
     }
 }
 

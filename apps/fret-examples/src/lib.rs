@@ -387,6 +387,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
+    );
     const DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json"
     );
@@ -3456,6 +3459,48 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the mixed-DPI TODO state should keep the automation decision explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice() {
+        for marker in [
+            "\"role\": \"status\"",
+            "M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md",
+            "linux_windowing_capability_posture",
+            "request_float_degrades_to_in_window_when_window_hover_detection_is_none",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the Wayland degradation slice reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "Wayland degradation is an owner-split question first",
+            "keep `ui.multi_window=true`",
+            "`ui.window_tear_off=false`",
+            "`ui.window_hover_detection=none`",
+            "in-window floating fallback instead of `CreateWindowKind::DockFloating`",
+            "Manual compositor acceptance is a different proof step from source-policy freeze",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE.contains(marker),
+                "the docking parity lane should keep the Wayland degradation policy explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.",
+            "M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md",
+            "Wayland keeps `ui.multi_window=true`",
+            "Docking runtime fallback is now explicitly locked for `window_hover_detection == None`.",
+            "Manual Wayland compositor acceptance remains open.",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the docking parity TODO should keep the Wayland degradation progress explicit: {marker}"
             );
         }
     }

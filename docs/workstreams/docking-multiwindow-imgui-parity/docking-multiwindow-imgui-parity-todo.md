@@ -253,7 +253,19 @@ Each TODO is labeled:
     - Capability downgrade: `crates/fret-launch/src/runner/desktop/runner/mod.rs` (`backend_platform_capabilities`)
     - Tear-off request degradation (no `CreateWindowKind::DockFloating` when tear-off is disabled): `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`)
     - Docking UI gating: `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
-    - Unit tests: `crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs` (`is_wayland_session_*`)
+    - Source-policy status note: `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`
+    - Unit tests:
+      - `crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs` (`is_wayland_session_*`)
+      - `crates/fret-launch/src/runner/desktop/runner/mod.rs` (`linux_windowing_capability_posture_*`)
+      - `ecosystem/fret-docking/src/runtime.rs` (`request_float_degrades_to_in_window_when_window_hover_detection_is_none`)
+  - Progress:
+    - [x] Runner capability posture is now explicit and helper-tested:
+      - Wayland keeps `ui.multi_window=true`
+      - Wayland sets `ui.window_tear_off=false`
+      - Wayland sets `ui.window_hover_detection=none`
+      - Wayland sets `ui.window_z_level=none`
+    - [x] Docking runtime fallback is now explicitly locked for `window_hover_detection == None`.
+    - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - Run `cargo run -p fret-demo --bin docking_arbitration_demo`.
     - Attempt to tear off a tab: no new OS window should be created; the panel should float inside the same OS window.

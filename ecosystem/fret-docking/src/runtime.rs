@@ -939,6 +939,58 @@ mod tests {
     }
 
     #[test]
+    fn request_float_degrades_to_in_window_when_window_hover_detection_is_none() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = true;
+        caps.ui.window_tear_off = true;
+        caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+        app.set_global(caps);
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        let op = DockOp::RequestFloatPanelToNewWindow {
+            source_window: window_a,
+            panel: panel.clone(),
+            anchor: None,
+        };
+        assert!(handle_dock_op(&mut app, op));
+
+        let effects = app.take_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::Window(WindowRequest::Create(_)))),
+            "expected no OS window creation effect when window hover detection is unavailable"
+        );
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "expected panel to remain in window, inside a floating container"
+        );
+    }
+
+    #[test]
     fn request_float_is_idempotent_until_window_created() {
         let window_a = AppWindowId::from(KeyData::from_ffi(1));
         let panel = PanelKey::new("test.panel");

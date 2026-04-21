@@ -186,6 +186,7 @@ Current source of truth for the in-tree immediate-mode stack:
 - Active P3 docking parity execution lane:
   - `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -399,7 +400,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-04-13, 5 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-04-21, 7 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs

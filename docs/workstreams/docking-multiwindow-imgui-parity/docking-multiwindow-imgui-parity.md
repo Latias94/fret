@@ -246,6 +246,8 @@ Current policy (Wayland):
 
 - Disable docking OS tear-off and prefer in-window floating fallback to keep docking predictable (see
   `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md` `DW-P1-linux-003`).
+- Source-policy freeze for that posture now lives in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

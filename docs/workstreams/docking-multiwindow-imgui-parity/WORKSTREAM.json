@@ -3,7 +3,7 @@
   "slug": "docking-multiwindow-imgui-parity",
   "title": "Docking Multi-Window ImGui Parity",
   "status": "active",
-  "updated": "2026-04-20",
+  "updated": "2026-04-21",
   "scope_kind": "execution",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
   "authoritative_docs": [
@@ -22,6 +22,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
     },
     {
       "role": "next",
@@ -55,13 +59,23 @@
       "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
       "cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json --dir target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
       "python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture"
+      "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+      "cargo nextest run -p fret-docking --lib request_float_degrades_to_in_window_when_window_hover_detection_is_none --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "p3-multiwindow-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture"
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice --no-fail-fast"
+    },
+    {
+      "name": "p3-wayland-capability-posture",
+      "command": "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast"
+    },
+    {
+      "name": "p3-wayland-tear-off-fallback",
+      "command": "cargo nextest run -p fret-docking --lib request_float_degrades_to_in_window_when_window_hover_detection_is_none --no-fail-fast"
     },
     {
       "name": "p3-bounded-campaign-validate",
@@ -94,6 +108,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",
     "docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md",
@@ -108,7 +123,10 @@
     "crates/fret-diag/src/bundle_index.rs",
     "crates/fret-diag/src/commands/dock_routing.rs",
     "crates/fret-diag/src/registry/campaigns.rs",
+    "crates/fret-launch/src/runner/desktop/runner/mod.rs",
+    "crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs",
     "crates/fret-launch/src/runner/desktop/runner/window.rs",
+    "ecosystem/fret-docking/src/runtime.rs",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",
