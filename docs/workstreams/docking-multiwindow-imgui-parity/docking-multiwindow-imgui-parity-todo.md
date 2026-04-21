@@ -236,10 +236,16 @@ Each TODO is labeled:
     - DPI semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
     - Cursor-grab aligned initial placement (best-effort until OS window exists):
       - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`compute_window_position_from_cursor_grab_estimate`)
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`estimated_outer_pos_for_cursor_grab`, `scale_decoration_offset_for_target_scale`)
       - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`outer_pos_for_cursor_grab` tests)
   - Acceptance (manual; Windows):
     - Mixed-DPI (100% + 150%): tear off a tab near the cursor; the new window should appear with the cursor over the grabbed tab (no large “jump”).
     - With window decorations enabled: initial placement should not be offset by titlebar height.
+  - Progress:
+    - [x] Creation-time cursor-grab estimate now prefers the cursor monitor scale on Windows and
+      scales source decoration offsets toward that target ratio before the OS window exists.
+      This keeps the first placement estimate closer to the eventual post-create follow position on
+      mixed-DPI hosts instead of blindly reusing the source window scale.
 
 - [~] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
   - Goal: on platforms where programmatic window movement is best-effort, disable follow-mode and keep

@@ -828,6 +828,61 @@ pub(super) fn outer_pos_for_cursor_grab(
     Some((x, y))
 }
 
+pub(super) fn scale_decoration_offset_for_target_scale(
+    decoration_offset: winit::dpi::PhysicalPosition<i32>,
+    source_scale_factor: f64,
+    target_scale_factor: f64,
+) -> winit::dpi::PhysicalPosition<i32> {
+    if !source_scale_factor.is_finite()
+        || source_scale_factor <= 0.0
+        || !target_scale_factor.is_finite()
+        || target_scale_factor <= 0.0
+    {
+        return decoration_offset;
+    }
+
+    let ratio = target_scale_factor / source_scale_factor;
+    if !ratio.is_finite() || ratio <= 0.0 || (ratio - 1.0).abs() <= f64::EPSILON {
+        return decoration_offset;
+    }
+
+    let scaled_x = (decoration_offset.x as f64 * ratio)
+        .round()
+        .clamp(i32::MIN as f64, i32::MAX as f64) as i32;
+    let scaled_y = (decoration_offset.y as f64 * ratio)
+        .round()
+        .clamp(i32::MIN as f64, i32::MAX as f64) as i32;
+
+    winit::dpi::PhysicalPosition::new(scaled_x, scaled_y)
+}
+
+pub(super) fn estimated_outer_pos_for_cursor_grab(
+    screen_pos: PhysicalPosition<f64>,
+    grab_offset_logical: Point,
+    source_scale_factor: f64,
+    target_scale_factor: f64,
+    decoration_offset: winit::dpi::PhysicalPosition<i32>,
+    max_client_logical: Option<winit::dpi::LogicalSize<f32>>,
+) -> Option<(f64, f64)> {
+    let scale_factor = if target_scale_factor.is_finite() && target_scale_factor > 0.0 {
+        target_scale_factor
+    } else {
+        source_scale_factor
+    };
+    let decoration_offset = scale_decoration_offset_for_target_scale(
+        decoration_offset,
+        source_scale_factor,
+        scale_factor,
+    );
+    outer_pos_for_cursor_grab(
+        screen_pos,
+        grab_offset_logical,
+        scale_factor,
+        decoration_offset,
+        max_client_logical,
+    )
+}
+
 impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
@@ -1101,7 +1156,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ) -> Option<WindowPosition> {
         let screen_pos = self.cursor_screen_pos?;
         let state = self.windows.get(reference_window)?;
-        let scale = state.window.scale_factor();
+        let source_scale = state.window.scale_factor();
+
+        #[cfg(target_os = "windows")]
+        let target_scale = Self::monitor_scale_factor_for_point(state.window.as_ref(), screen_pos)
+            .unwrap_or(source_scale);
+        #[cfg(not(target_os = "windows"))]
+        let target_scale = source_scale;
 
         let max_client = winit::dpi::LogicalSize::new(
             new_window_inner_size.width as f32,
@@ -1118,10 +1179,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(not(target_os = "windows"))]
         let decoration_offset = state.window.surface_position();
 
-        if let Some((ox, oy)) = outer_pos_for_cursor_grab(
+        if let Some((ox, oy)) = estimated_outer_pos_for_cursor_grab(
             screen_pos,
             grab_offset_logical,
-            scale,
+            source_scale,
+            target_scale,
             decoration_offset,
             Some(max_client),
         ) {
@@ -1133,7 +1195,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // platform-specific coordinate spaces and DPI conversions.
         let outer_size =
             winit::dpi::LogicalSize::new(new_window_inner_size.width, new_window_inner_size.height)
-                .to_physical::<u32>(scale);
+                .to_physical::<u32>(target_scale);
 
         #[cfg(target_os = "windows")]
         if let Some(work) = super::win32::monitor_work_area_for_point(screen_pos) {
@@ -1593,6 +1655,56 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .collect()
     }
 
+    #[cfg(target_os = "windows")]
+    pub(super) fn monitor_scale_factor_for_point(
+        window: &dyn Window,
+        point: PhysicalPosition<f64>,
+    ) -> Option<f64> {
+        let mut best_scale = None;
+        let mut best_dist2 = f64::INFINITY;
+
+        for monitor in window.available_monitors() {
+            let Some(pos) = monitor.position() else {
+                continue;
+            };
+            let Some(mode) = monitor.current_video_mode() else {
+                continue;
+            };
+            let size = mode.size();
+            let rect = MonitorRectF64 {
+                min_x: pos.x as f64,
+                min_y: pos.y as f64,
+                max_x: pos.x as f64 + size.width as f64,
+                max_y: pos.y as f64 + size.height as f64,
+            };
+
+            let dx = if point.x < rect.min_x {
+                rect.min_x - point.x
+            } else if point.x > rect.max_x {
+                point.x - rect.max_x
+            } else {
+                0.0
+            };
+            let dy = if point.y < rect.min_y {
+                rect.min_y - point.y
+            } else if point.y > rect.max_y {
+                point.y - rect.max_y
+            } else {
+                0.0
+            };
+            let dist2 = dx * dx + dy * dy;
+            if dist2 < best_dist2 {
+                best_dist2 = dist2;
+                best_scale = Some(monitor.scale_factor());
+            }
+            if dist2 == 0.0 {
+                return Some(monitor.scale_factor());
+            }
+        }
+
+        best_scale
+    }
+
     pub(super) fn find_monitor_for_point(
         monitors: &[MonitorRectF64],
         point: PhysicalPosition<f64>,
@@ -1778,6 +1890,35 @@ mod tests {
             .expect("expected outer pos");
         assert_eq!(x, 800.0);
         assert_eq!(y, 300.0);
+    }
+
+    #[test]
+    fn scale_decoration_offset_for_target_scale_applies_monitor_ratio() {
+        let deco = winit::dpi::PhysicalPosition::new(12, 36);
+        let scaled = scale_decoration_offset_for_target_scale(deco, 1.0, 1.5);
+        assert_eq!(scaled, winit::dpi::PhysicalPosition::new(18, 54));
+    }
+
+    #[test]
+    fn estimated_outer_pos_for_cursor_grab_prefers_target_monitor_scale() {
+        let cursor = PhysicalPosition::new(1500.0, 900.0);
+        let grab = Point::new(Px(20.0), Px(40.0));
+        let source_scale = 1.0;
+        let target_scale = 1.5;
+        let deco = winit::dpi::PhysicalPosition::new(10, 30);
+        let max_client = winit::dpi::LogicalSize::new(200.0f32, 200.0f32);
+
+        let (x, y) = estimated_outer_pos_for_cursor_grab(
+            cursor,
+            grab,
+            source_scale,
+            target_scale,
+            deco,
+            Some(max_client),
+        )
+        .expect("expected outer pos");
+        assert_eq!(x, 1455.0);
+        assert_eq!(y, 795.0);
     }
 
     #[test]
