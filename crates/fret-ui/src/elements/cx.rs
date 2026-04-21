@@ -47,6 +47,15 @@ use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
+fn chain_timer_handlers(existing: Option<OnTimer>, handler: OnTimer) -> Option<OnTimer> {
+    match existing {
+        None => Some(handler),
+        Some(prev) => Some(Arc::new(move |host, cx, token| {
+            prev(host, cx, token) || handler(host, cx, token)
+        })),
+    }
+}
+
 /// Per-frame view construction context passed to declarative element constructors.
 ///
 /// `ElementContext` exposes:
@@ -3199,23 +3208,28 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Replace the timer handler installed for `element`.
+    ///
+    /// This is an overwrite operation. Use it only when the current layer owns the entire timer
+    /// dispatch for the element.
+    ///
+    /// Helper/bridge code that may coexist with other timer hooks on the same element should
+    /// prefer [`Self::timer_add_on_timer_for`] so it does not silently clobber previously
+    /// installed handlers.
     pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
         self.state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = Some(handler);
         });
     }
 
+    /// Append a timer handler to `element` without clobbering earlier handlers.
+    ///
+    /// Handlers run in registration order and short-circuit on the first one that returns `true`.
+    /// This is the safer choice for layered policy/helper surfaces that do not exclusively own the
+    /// element's timer routing.
     pub fn timer_add_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
         self.state_for(element, TimerActionHooks::default, |hooks| {
-            hooks.on_timer = match hooks.on_timer.clone() {
-                None => Some(handler),
-                Some(prev) => {
-                    let next = handler.clone();
-                    Some(Arc::new(move |host, cx, token| {
-                        prev(host, cx, token) || next(host, cx, token)
-                    }))
-                }
-            };
+            hooks.on_timer = chain_timer_handlers(hooks.on_timer.clone(), handler);
         });
     }
 
@@ -4545,5 +4559,131 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .collect::<Vec<_>>()
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GlobalElementId;
+    use super::chain_timer_handlers;
+    use crate::action::{ActionCx, UiActionHost, UiFocusActionHost};
+    use crate::test_host::TestHost;
+    use fret_core::AppWindowId;
+    use fret_runtime::{TimeHost, TimerToken};
+    use std::sync::{Arc, Mutex};
+
+    struct TestTimerHost<'a> {
+        app: &'a mut TestHost,
+        requested_focus: Option<GlobalElementId>,
+    }
+
+    impl UiActionHost for TestTimerHost<'_> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: fret_runtime::Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.app.next_timer_token()
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+    }
+
+    impl UiFocusActionHost for TestTimerHost<'_> {
+        fn request_focus(&mut self, target: GlobalElementId) {
+            self.requested_focus = Some(target);
+        }
+    }
+
+    #[test]
+    fn chained_timer_handlers_fall_through_until_one_handles() {
+        let calls = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+        let calls_for_first = calls.clone();
+        let calls_for_second = calls.clone();
+        let handler = chain_timer_handlers(
+            Some(Arc::new(move |_host, _cx, _token| {
+                calls_for_first
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push("first");
+                false
+            })),
+            Arc::new(move |_host, _cx, _token| {
+                calls_for_second
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push("second");
+                true
+            }),
+        )
+        .expect("combined timer handler");
+
+        let window = AppWindowId::default();
+        let target = GlobalElementId(7);
+        let token = TimerToken(9);
+        let mut app = TestHost::new();
+        let mut host = TestTimerHost {
+            app: &mut app,
+            requested_focus: None,
+        };
+
+        assert!(handler(&mut host, ActionCx { window, target }, token));
+        assert_eq!(
+            calls.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            &["first", "second"]
+        );
+    }
+
+    #[test]
+    fn chained_timer_handlers_short_circuit_after_first_handled() {
+        let calls = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+        let calls_for_first = calls.clone();
+        let calls_for_second = calls.clone();
+        let handler = chain_timer_handlers(
+            Some(Arc::new(move |_host, _cx, _token| {
+                calls_for_first
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push("first");
+                true
+            })),
+            Arc::new(move |_host, _cx, _token| {
+                calls_for_second
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push("second");
+                true
+            }),
+        )
+        .expect("combined timer handler");
+
+        let window = AppWindowId::default();
+        let target = GlobalElementId(8);
+        let token = TimerToken(10);
+        let mut app = TestHost::new();
+        let mut host = TestTimerHost {
+            app: &mut app,
+            requested_focus: None,
+        };
+
+        assert!(handler(&mut host, ActionCx { window, target }, token));
+        assert_eq!(
+            calls.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            &["first"]
+        );
     }
 }

@@ -450,7 +450,9 @@ pub fn install_in_window_menubar_focus_bridge<H: UiHost>(
             pending_focus.clone(),
         ),
     );
-    cx.timer_on_timer_for(
+    // This bridge layer augments an existing element; use additive timer semantics so it does not
+    // clobber any timer handler already owned by the element itself.
+    cx.timer_add_on_timer_for(
         element,
         pending_menubar_focus_timer_handler(
             group_active.clone(),
