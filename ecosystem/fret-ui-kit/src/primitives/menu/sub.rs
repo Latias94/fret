@@ -1826,6 +1826,84 @@ mod tests {
     }
 
     #[test]
+    fn submenu_trigger_hover_switches_to_sibling_when_outside_grace_polygon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let models = new_models(host.app);
+        let cfg = MenuSubmenuConfig::default();
+        let old_trigger = GlobalElementId(10);
+        let new_trigger = GlobalElementId(11);
+
+        let _ = host
+            .models_mut()
+            .update(&models.open_value, |v| *v = Some(Arc::from("a")));
+        let _ = host
+            .models_mut()
+            .update(&models.trigger, |v| *v = Some(old_trigger));
+        let _ = host.models_mut().update(&models.last_pointer, |v| {
+            *v = Some(Point::new(Px(200.0), Px(40.0)))
+        });
+        let _ = host.models_mut().update(&models.pointer_dir, |v| {
+            *v = Some(pointer_grace_intent::GraceSide::Left)
+        });
+
+        handle_sub_trigger_hover_change(
+            &mut host,
+            ActionCx {
+                window,
+                target: old_trigger,
+            },
+            &models,
+            cfg,
+            new_trigger,
+            true,
+            Arc::from("b"),
+        );
+
+        let armed = host
+            .models_mut()
+            .read(&models.open_timer, |v| *v)
+            .ok()
+            .flatten()
+            .expect("expected sibling hover to arm an open timer");
+
+        let on_timer = on_timer_handler(models.clone(), cfg);
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: new_trigger,
+            },
+            armed
+        ));
+
+        let open_value = host
+            .models_mut()
+            .read(&models.open_value, |v| v.clone())
+            .ok()
+            .flatten();
+        let trigger = host
+            .models_mut()
+            .read(&models.trigger, |v| *v)
+            .ok()
+            .flatten();
+        let pending_open = host
+            .models_mut()
+            .read(&models.pending_open_value, |v| v.clone())
+            .ok()
+            .flatten();
+
+        assert_eq!(open_value.as_deref(), Some("b"));
+        assert_eq!(trigger, Some(new_trigger));
+        assert!(pending_open.is_none());
+    }
+
+    #[test]
     fn focus_timer_retries_until_submenu_focus_target_is_ready() {
         let window = AppWindowId::default();
         let mut app = App::new();

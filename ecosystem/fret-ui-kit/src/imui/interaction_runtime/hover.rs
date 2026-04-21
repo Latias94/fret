@@ -251,7 +251,7 @@ pub(in super::super) fn install_hover_query_hooks_for_pressable<H: UiHost>(
 
     let long_press_signal_model_for_timer = long_press_signal_model.clone();
     let shared_delay_model_for_timer = shared_delay_model.clone();
-    cx.timer_on_timer_for(
+    cx.timer_add_on_timer_for(
         id,
         Arc::new(move |host, action_cx, token| {
             let stationary = hover_timer_token_for(HOVER_TIMER_KIND_STATIONARY, action_cx.target);
