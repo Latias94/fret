@@ -1,4 +1,9 @@
 use super::*;
+use crate::element::{
+    ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
+    PressableProps, SizeStyle,
+};
+use std::{cell::Cell, rc::Rc};
 
 #[derive(Clone)]
 struct Counts {
@@ -161,6 +166,136 @@ impl<H: UiHost> Widget<H> for CornerCaptureOverlay {
     }
 }
 
+fn render_lower_overlay_occlusion_hover_scene(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    sibling_hovered: Rc<Cell<bool>>,
+    sibling_hovered_raw: Rc<Cell<bool>>,
+    sibling_hovered_raw_below_barrier: Rc<Cell<bool>>,
+) -> GlobalElementId {
+    let base_root = crate::declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "occlusion-base",
+        |_cx| Vec::new(),
+    );
+
+    let mut sibling_id: Option<GlobalElementId> = None;
+    let parent_root = crate::declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "occlusion-parent-overlay",
+        |cx| {
+            vec![cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![
+                        cx.pressable_with_id(
+                            PressableProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(Px(0.0)).into(),
+                                        top: Some(Px(0.0)).into(),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(80.0)),
+                                        height: Length::Px(Px(32.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |_cx, _st, _id| Vec::new(),
+                        ),
+                        cx.pressable_with_id(
+                            PressableProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(Px(120.0)).into(),
+                                        top: Some(Px(0.0)).into(),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(80.0)),
+                                        height: Length::Px(Px(32.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |_cx, st, id| {
+                                sibling_id = Some(id);
+                                sibling_hovered.set(st.hovered);
+                                sibling_hovered_raw.set(st.hovered_raw);
+                                sibling_hovered_raw_below_barrier.set(st.hovered_raw_below_barrier);
+                                Vec::new()
+                            },
+                        ),
+                    ]
+                },
+            )]
+        },
+    );
+
+    let child_root = crate::declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "occlusion-child-overlay",
+        |cx| {
+            vec![cx.pointer_region(
+                PointerRegionProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )]
+        },
+    );
+
+    ui.set_root(base_root);
+    let _parent_layer = ui.push_overlay_root(parent_root, false);
+    let child_layer = ui.push_overlay_root(child_root, false);
+    ui.set_layer_pointer_occlusion(child_layer, PointerOcclusion::BlockMouseExceptScroll);
+    ui.layout_all(app, services, bounds, 1.0);
+
+    sibling_id.expect("sibling pressable id")
+}
+
 #[test]
 fn pointer_occlusion_block_mouse_except_scroll_suppresses_underlay_hit_dispatch_but_allows_wheel() {
     let window = AppWindowId::default();
@@ -237,6 +372,96 @@ fn pointer_occlusion_block_mouse_except_scroll_suppresses_underlay_hit_dispatch_
     assert_eq!(app.models().get_copied(&counts.moves).unwrap_or(0), 0);
     assert_eq!(app.models().get_copied(&counts.downs).unwrap_or(0), 0);
     assert_eq!(app.models().get_copied(&counts.wheels).unwrap_or(0), 1);
+}
+
+#[test]
+fn pointer_occlusion_exposes_raw_hover_for_lower_overlay_pressable_via_secondary_hit_test() {
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let sibling_hovered = Rc::new(Cell::new(false));
+    let sibling_hovered_raw = Rc::new(Cell::new(false));
+    let sibling_hovered_raw_below_barrier = Rc::new(Cell::new(false));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    let sibling = render_lower_overlay_occlusion_hover_scene(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        sibling_hovered.clone(),
+        sibling_hovered_raw.clone(),
+        sibling_hovered_raw_below_barrier.clone(),
+    );
+
+    let sibling_node =
+        crate::elements::node_for_element(&mut app, window, sibling).expect("sibling node");
+    let sibling_bounds = ui.debug_node_bounds(sibling_node).expect("sibling bounds");
+    let pointer = Point::new(
+        Px(sibling_bounds.origin.x.0 + sibling_bounds.size.width.0 * 0.5),
+        Px(sibling_bounds.origin.y.0 + sibling_bounds.size.height.0 * 0.5),
+    );
+
+    let hit = ui.debug_hit_test(pointer);
+    assert_ne!(
+        hit.hit,
+        Some(sibling_node),
+        "expected the child occlusion overlay to win top-level hit testing at the sibling trigger position",
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: pointer,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    app.advance_frame();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    let sibling_after = render_lower_overlay_occlusion_hover_scene(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        sibling_hovered.clone(),
+        sibling_hovered_raw.clone(),
+        sibling_hovered_raw_below_barrier.clone(),
+    );
+    assert_eq!(
+        sibling_after, sibling,
+        "expected stable pressable identity across frames for the lower overlay sibling trigger",
+    );
+
+    assert!(
+        !sibling_hovered.get(),
+        "expected the occlusion overlay to suppress normal hovered state for the lower overlay pressable",
+    );
+    assert!(
+        !sibling_hovered_raw.get(),
+        "expected the occlusion overlay to suppress raw hovered state for the lower overlay pressable",
+    );
+    assert!(
+        sibling_hovered_raw_below_barrier.get(),
+        "expected a secondary under-occlusion hit test to expose hovered_raw_below_barrier for the lower overlay pressable",
+    );
 }
 
 #[test]

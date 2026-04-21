@@ -2,6 +2,66 @@ use super::*;
 use std::collections::HashMap;
 
 impl<H: UiHost> UiTree<H> {
+    fn secondary_hit_test_for_roots(
+        &mut self,
+        roots: &[NodeId],
+        position: Point,
+    ) -> Option<NodeId> {
+        if roots.is_empty() {
+            return None;
+        }
+
+        let saved = self.hit_test_path_cache.take();
+        self.hit_test_path_cache = None;
+        let hit = self.hit_test_layers_cached(roots, position);
+        self.hit_test_path_cache = saved;
+        hit
+    }
+
+    fn hit_test_below_pointer_occlusion_layer(
+        &mut self,
+        barrier_root: Option<NodeId>,
+        occlusion_layer: UiLayerId,
+        position: Point,
+    ) -> Option<NodeId> {
+        let mut roots: Vec<NodeId> = Vec::new();
+        let mut reached_occlusion = false;
+        let mut hit_barrier = false;
+
+        for &layer_id in self.layer_order.iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            if barrier_root.is_some() && hit_barrier {
+                break;
+            }
+
+            if !reached_occlusion {
+                if layer_id == occlusion_layer {
+                    reached_occlusion = true;
+                }
+                if barrier_root == Some(layer.root) {
+                    hit_barrier = true;
+                }
+                continue;
+            }
+
+            if barrier_root == Some(layer.root) {
+                hit_barrier = true;
+                continue;
+            }
+
+            if layer.hit_testable {
+                roots.push(layer.root);
+            }
+        }
+
+        self.secondary_hit_test_for_roots(roots.as_slice(), position)
+    }
+
     fn snapshot_parent_or_retained(
         &self,
         snapshot: Option<&UiDispatchSnapshot>,
@@ -138,6 +198,7 @@ impl<H: UiHost> UiTree<H> {
         hit_for_hover: Option<NodeId>,
         hit_for_hover_region: Option<NodeId>,
         hit_for_raw_below_barrier: Option<NodeId>,
+        raw_below_pointer_occlusion_layer: Option<UiLayerId>,
         snapshot: Option<&UiDispatchSnapshot>,
         invalidation_visited: &mut HashMap<NodeId, u8>,
         needs_redraw: &mut bool,
@@ -253,6 +314,15 @@ impl<H: UiHost> UiTree<H> {
 
         let hovered_pressable_raw_below_barrier = if hit_for_raw_below_barrier.is_some() {
             self.pressable_target_for_hit(app, window, hit_for_raw_below_barrier, snapshot)
+        } else if let (Some(occlusion_layer), Some(position)) =
+            (raw_below_pointer_occlusion_layer, position)
+        {
+            let hit = self.hit_test_below_pointer_occlusion_layer(
+                barrier_root,
+                occlusion_layer,
+                position,
+            );
+            self.pressable_target_for_hit(app, window, hit, snapshot)
         } else if let (Some(barrier_root), Some(position)) = (barrier_root, position) {
             let mut roots: Vec<NodeId> = Vec::new();
             let mut hit_barrier = false;
@@ -279,10 +349,7 @@ impl<H: UiHost> UiTree<H> {
             if roots.is_empty() {
                 None
             } else {
-                let saved = self.hit_test_path_cache.take();
-                self.hit_test_path_cache = None;
-                let hit = self.hit_test_layers_cached(&roots, position);
-                self.hit_test_path_cache = saved;
+                let hit = self.secondary_hit_test_for_roots(roots.as_slice(), position);
                 if hit.is_none() {
                     None
                 } else {

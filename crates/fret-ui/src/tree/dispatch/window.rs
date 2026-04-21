@@ -988,18 +988,19 @@ impl<H: UiHost> UiTree<H> {
             let mut hit_for_hover = hit;
             let mut hit_for_hover_region = hit;
             let mut hit_for_raw_below_barrier: Option<NodeId> = None;
+            let mut raw_below_pointer_occlusion_layer: Option<UiLayerId> = None;
             if captured.is_none()
                 && let Some((occlusion_layer, occlusion)) =
                     self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
             {
+                let hit_layer = hit.and_then(|hit| self.node_layer(hit));
                 let occlusion_z = self
                     .layer_order
                     .iter()
                     .position(|id| *id == occlusion_layer);
-                let hit_layer_z = hit
-                    .and_then(|hit| self.node_layer(hit))
-                    .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
+                let hit_layer_z =
+                    hit_layer.and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
 
                 let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
                     (Some(oz), Some(hz), Some(_)) => hz < oz,
@@ -1009,7 +1010,11 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 if hit_is_below_occlusion {
-                    hit_for_raw_below_barrier = hit;
+                    if hit.is_some() {
+                        hit_for_raw_below_barrier = hit;
+                    } else {
+                        raw_below_pointer_occlusion_layer = Some(occlusion_layer);
+                    }
                     // Match GPUI-style "occluded hover": underlay hover/pressable detection is
                     // disabled while occlusion is active, even when scroll is still allowed.
                     hit_for_hover = None;
@@ -1023,6 +1028,8 @@ impl<H: UiHost> UiTree<H> {
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
                     }
+                } else if hit_layer == Some(occlusion_layer) {
+                    raw_below_pointer_occlusion_layer = Some(occlusion_layer);
                 }
             }
 
@@ -1108,6 +1115,7 @@ impl<H: UiHost> UiTree<H> {
                     hit_for_hover,
                     hit_for_hover_region,
                     hit_for_raw_below_barrier,
+                    raw_below_pointer_occlusion_layer,
                     Some(pointer_chain_snapshot),
                     &mut invalidation_visited,
                     &mut needs_redraw,
@@ -2993,17 +3001,18 @@ impl<H: UiHost> UiTree<H> {
             let mut hit_for_hover = hit;
             let mut hit_for_hover_region = hit;
             let mut hit_for_raw_below_barrier: Option<NodeId> = None;
+            let mut raw_below_pointer_occlusion_layer: Option<UiLayerId> = None;
             if let Some((occlusion_layer, occlusion)) =
                 self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
             {
+                let hit_layer = hit.and_then(|hit| self.node_layer(hit));
                 let occlusion_z = self
                     .layer_order
                     .iter()
                     .position(|id| *id == occlusion_layer);
-                let hit_layer_z = hit
-                    .and_then(|hit| self.node_layer(hit))
-                    .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
+                let hit_layer_z =
+                    hit_layer.and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
                 let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
                     (Some(oz), Some(hz), Some(_)) => hz < oz,
                     (Some(_), None, Some(_)) => true,
@@ -3011,9 +3020,15 @@ impl<H: UiHost> UiTree<H> {
                     _ => false,
                 };
                 if hit_is_below_occlusion {
-                    hit_for_raw_below_barrier = hit;
+                    if hit.is_some() {
+                        hit_for_raw_below_barrier = hit;
+                    } else {
+                        raw_below_pointer_occlusion_layer = Some(occlusion_layer);
+                    }
                     hit_for_hover = None;
                     hit_for_hover_region = None;
+                } else if hit_layer == Some(occlusion_layer) {
+                    raw_below_pointer_occlusion_layer = Some(occlusion_layer);
                 }
             }
 
@@ -3030,6 +3045,7 @@ impl<H: UiHost> UiTree<H> {
                         hit_for_hover,
                         hit_for_hover_region,
                         hit_for_raw_below_barrier,
+                        raw_below_pointer_occlusion_layer,
                         Some(pointer_chain_snapshot),
                         &mut invalidation_visited,
                         &mut needs_redraw,
