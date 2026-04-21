@@ -38,6 +38,14 @@ Tracker highlights:
   `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
   `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`, and
   `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
+- ImUi collection + pane proof closeout record (closed narrow P0/P1 lane that proved the current
+  first-party asset-browser collection breadth and shell-mounted pane composition breadth, then
+  closed on a no-helper-widening verdict without reopening runtime widening, key-owner work,
+  shell-helper promotion, or the active multi-window runner lane):
+  `docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md`,
+  `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`, and
+  `docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md`.
 - ImUi control-chrome fearless refactor closeout record (closed narrow lane that landed the shared
   `fret-ui-kit::imui` default control-surface rewrite so button/switch/slider/combo/input helpers
   now read as controls and compact editor rails no longer need demo-level width workarounds):

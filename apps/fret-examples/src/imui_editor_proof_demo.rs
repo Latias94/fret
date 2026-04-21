@@ -39,7 +39,7 @@ use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
 };
-use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
+use fret_ui_kit::imui::{ImUiMultiSelectState, UiWriterImUiFacadeExt as _};
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
     publish_cross_window_drag_preview_ghost_with_options, render_cross_window_drag_preview_ghosts,
@@ -323,6 +323,23 @@ struct ProofDragAsset {
 }
 
 #[derive(Clone, PartialEq, Eq)]
+struct ProofCollectionAsset {
+    id: Arc<str>,
+    label: Arc<str>,
+    path: Arc<str>,
+    kind: Arc<str>,
+    size_kib: u32,
+}
+
+#[derive(Clone)]
+struct ProofCollectionDragPayload {
+    lead_label: Arc<str>,
+    lead_path: Arc<str>,
+    asset_ids: Arc<[Arc<str>]>,
+    asset_paths: Arc<[Arc<str>]>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
 struct ProofOutlinerItem {
     id: Arc<str>,
     label: Arc<str>,
@@ -341,6 +358,120 @@ fn proof_outliner_order_line(items: &[ProofOutlinerItem]) -> String {
         .collect::<Vec<_>>()
         .join(" -> ");
     format!("Order: {labels}")
+}
+
+fn proof_collection_assets_in_visible_order(
+    assets: Arc<[ProofCollectionAsset]>,
+    reverse_order: bool,
+) -> Vec<ProofCollectionAsset> {
+    let mut visible = assets.iter().cloned().collect::<Vec<_>>();
+    if reverse_order {
+        visible.reverse();
+    }
+    visible
+}
+
+fn proof_collection_selected_assets<'a>(
+    assets: &'a [ProofCollectionAsset],
+    selection: &ImUiMultiSelectState<Arc<str>>,
+) -> Vec<&'a ProofCollectionAsset> {
+    let by_id = assets
+        .iter()
+        .map(|asset| (asset.id.as_ref(), asset))
+        .collect::<HashMap<_, _>>();
+
+    selection
+        .selected
+        .iter()
+        .filter_map(|id| by_id.get(id.as_ref()).copied())
+        .collect()
+}
+
+fn proof_collection_selection_line(
+    assets: &[ProofCollectionAsset],
+    selection: &ImUiMultiSelectState<Arc<str>>,
+) -> String {
+    let selected = proof_collection_selected_assets(assets, selection);
+    if selected.is_empty() {
+        return "Selection: none. Click to select, primary-modifier click to toggle, shift-click to extend.".to_string();
+    }
+
+    let labels = selected
+        .iter()
+        .map(|asset| asset.label.as_ref())
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("Selection: {} asset(s) | {labels}", selected.len())
+}
+
+fn proof_collection_visible_order_line(assets: &[ProofCollectionAsset]) -> String {
+    let labels = assets
+        .iter()
+        .map(|asset| asset.label.as_ref())
+        .collect::<Vec<_>>()
+        .join(" -> ");
+    format!("Visible order: {labels}")
+}
+
+fn proof_collection_drag_payload_for_asset(
+    assets: &[ProofCollectionAsset],
+    selection: &ImUiMultiSelectState<Arc<str>>,
+    dragged: &ProofCollectionAsset,
+) -> ProofCollectionDragPayload {
+    let selected_assets = proof_collection_selected_assets(assets, selection);
+    let payload_assets = if selection.is_selected(&dragged.id) && !selected_assets.is_empty() {
+        selected_assets
+    } else {
+        vec![dragged]
+    };
+    let lead = payload_assets.first().copied().unwrap_or(dragged);
+    let asset_ids = payload_assets
+        .iter()
+        .map(|asset| asset.id.clone())
+        .collect::<Vec<_>>();
+    let asset_paths = payload_assets
+        .iter()
+        .map(|asset| asset.path.clone())
+        .collect::<Vec<_>>();
+
+    ProofCollectionDragPayload {
+        lead_label: lead.label.clone(),
+        lead_path: lead.path.clone(),
+        asset_ids: asset_ids.into(),
+        asset_paths: asset_paths.into(),
+    }
+}
+
+fn proof_collection_drag_preview_title(payload: &ProofCollectionDragPayload) -> Arc<str> {
+    if payload.asset_ids.len() == 1 {
+        payload.lead_label.clone()
+    } else {
+        Arc::from(format!("{} selected assets", payload.asset_ids.len()))
+    }
+}
+
+fn proof_collection_drag_preview_subtitle(
+    payload: &ProofCollectionDragPayload,
+) -> Option<Arc<str>> {
+    if payload.asset_paths.len() == 1 {
+        Some(payload.lead_path.clone())
+    } else {
+        Some(Arc::from(format!(
+            "{} + {} more",
+            payload.lead_path,
+            payload.asset_paths.len() - 1
+        )))
+    }
+}
+
+fn proof_collection_drop_status(prefix: &str, payload: &ProofCollectionDragPayload) -> String {
+    let paths = payload
+        .asset_paths
+        .iter()
+        .map(|path| path.as_ref())
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{prefix} {} asset(s): {paths}", payload.asset_paths.len())
 }
 
 fn proof_outliner_items_snapshot(
@@ -3209,6 +3340,205 @@ fn render_authoring_parity_imui_group(
         ui.text(drag_drop_status);
 
         ui.separator();
+        ui.text("Collection-first asset browser proof");
+        ui.text(
+            "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
+        );
+        ui.text(
+            "Marquee / box-select stays deferred for M2 while click, range, and toggle proof remains sufficient.",
+        );
+
+        let collection_selection_model = authoring_parity_collection_selection_model(ui.cx_mut());
+        let collection_reverse_order_model =
+            authoring_parity_collection_reverse_order_model(ui.cx_mut());
+        let collection_drop_status_model =
+            authoring_parity_collection_drop_status_model(ui.cx_mut());
+        let collection_assets = authoring_parity_collection_assets();
+        let collection_selection = ui
+            .cx_mut()
+            .data()
+            .selector_model_paint(&collection_selection_model, |state| state);
+        let mut collection_reverse_order = ui
+            .cx_mut()
+            .data()
+            .selector_model_paint(&collection_reverse_order_model, |value| value);
+
+        let order_toggle = ui.button_with_options(
+            if collection_reverse_order {
+                "Show folder order"
+            } else {
+                "Reverse visible order"
+            },
+            fret_ui_kit::imui::ButtonOptions {
+                test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.collection.order-toggle",
+                )),
+                ..Default::default()
+            },
+        );
+        if order_toggle.clicked() {
+            let _ = ui
+                .cx_mut()
+                .app
+                .models_mut()
+                .update(&collection_reverse_order_model, |value| *value = !*value);
+            collection_reverse_order = !collection_reverse_order;
+        }
+
+        let collection_assets =
+            proof_collection_assets_in_visible_order(collection_assets, collection_reverse_order);
+        let collection_keys = collection_assets
+            .iter()
+            .map(|asset| asset.id.clone())
+            .collect::<Vec<_>>();
+
+        ui.text(proof_collection_visible_order_line(&collection_assets));
+        ui.text(proof_collection_selection_line(
+            &collection_assets,
+            &collection_selection,
+        ));
+
+        ui.child_region_with_options(
+            "imui-editor-proof.authoring.imui.collection.browser",
+            fret_ui_kit::imui::ChildRegionOptions {
+                layout: fret_ui_kit::LayoutRefinement::default()
+                    .w_full()
+                    .h_px(Px(220.0)),
+                scroll: fret_ui_kit::imui::ScrollOptions {
+                    viewport_test_id: Some(Arc::from(
+                        "imui-editor-proof.authoring.imui.collection.browser.viewport",
+                    )),
+                    ..Default::default()
+                },
+                test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.collection.browser",
+                )),
+                content_test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.collection.browser.content",
+                )),
+            },
+            |ui| {
+                ui.grid_with_options(
+                    fret_ui_kit::imui::GridOptions {
+                        columns: 3,
+                        column_gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N2),
+                        row_gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N2),
+                        row_items: fret_ui_kit::Items::Stretch,
+                        test_id: Some(Arc::from(
+                            "imui-editor-proof.authoring.imui.collection.grid",
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        for asset in &collection_assets {
+                            let payload = proof_collection_drag_payload_for_asset(
+                                &collection_assets,
+                                &collection_selection,
+                                asset,
+                            );
+                            let preview_title = proof_collection_drag_preview_title(&payload);
+                            let preview_subtitle = proof_collection_drag_preview_subtitle(&payload);
+                            let ghost_id = format!(
+                                "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
+                                asset.id
+                            );
+
+                            ui.id(asset.id.clone(), |ui| {
+                                ui.vertical_with_options(
+                                    fret_ui_kit::imui::VerticalOptions {
+                                        layout: fret_ui_kit::LayoutRefinement::default()
+                                            .flex_1()
+                                            .min_h(Px(80.0)),
+                                        gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N1),
+                                        test_id: Some(Arc::from(format!(
+                                            "imui-editor-proof.authoring.imui.collection.asset.{}",
+                                            asset.id
+                                        ))),
+                                        ..Default::default()
+                                    },
+                                    |ui| {
+                                        let trigger = ui.multi_selectable_with_options(
+                                            asset.label.clone(),
+                                            &collection_selection_model,
+                                            &collection_keys,
+                                            asset.id.clone(),
+                                            fret_ui_kit::imui::SelectableOptions {
+                                                test_id: Some(Arc::from(format!(
+                                                    "imui-editor-proof.authoring.imui.collection.asset.{}.select",
+                                                    asset.id
+                                                ))),
+                                                ..Default::default()
+                                            },
+                                        );
+                                        let source = ui.drag_source_with_options(
+                                            trigger,
+                                            payload.clone(),
+                                            fret_ui_kit::imui::DragSourceOptions::default(),
+                                        );
+                                        let _ = drag_preview_ghost_with_options(
+                                            ui,
+                                            ghost_id.as_str(),
+                                            source,
+                                            DragPreviewGhostOptions {
+                                                test_id: Some(Arc::from(format!(
+                                                    "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
+                                                    asset.id
+                                                ))),
+                                                ..Default::default()
+                                            },
+                                            proof_drag_preview_card(
+                                                preview_title.clone(),
+                                                preview_subtitle.clone(),
+                                            ),
+                                        );
+
+                                        ui.text(format!("{} | {} KiB", asset.kind, asset.size_kib));
+                                        ui.text(asset.path.clone());
+                                    },
+                                );
+                            });
+                        }
+                    },
+                );
+            },
+        );
+
+        let import_trigger = ui.button_with_options(
+            "Import selected set to bundle",
+            fret_ui_kit::imui::ButtonOptions {
+                test_id: Some(Arc::from(
+                    "imui-editor-proof.authoring.imui.collection.import-target",
+                )),
+                ..Default::default()
+            },
+        );
+        let import_drop = ui.drop_target::<ProofCollectionDragPayload>(import_trigger);
+        if let Some(payload) = import_drop.delivered_payload() {
+            let next_status = proof_collection_drop_status("Delivered", &payload);
+            let _ = ui
+                .cx_mut()
+                .app
+                .models_mut()
+                .update(&collection_drop_status_model, |status| {
+                    status.clear();
+                    status.push_str(&next_status);
+                });
+        }
+
+        let persisted_collection_status =
+            editor_string_model_readout(ui.cx_mut(), &collection_drop_status_model);
+        let visible_collection_status = if let Some(payload) = import_drop.delivered_payload() {
+            proof_collection_drop_status("Delivered", &payload)
+        } else if let Some(payload) = import_drop.preview_payload() {
+            proof_collection_drop_status("Preview", &payload)
+        } else if import_drop.active() {
+            "Compatible collection drag active".to_string()
+        } else {
+            persisted_collection_status
+        };
+        ui.text(visible_collection_status);
+
+        ui.separator();
         ui.text("Reorderable outliner proof");
         ui.text(
             "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
@@ -3444,22 +3774,64 @@ fn authoring_parity_shading_items() -> Arc<[EnumSelectItem]> {
     .into()
 }
 
-fn authoring_parity_drag_assets() -> Arc<[ProofDragAsset]> {
+fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {
     vec![
-        ProofDragAsset {
+        ProofCollectionAsset {
+            id: Arc::from("stone-albedo"),
             label: Arc::from("Stone Albedo"),
             path: Arc::from("textures/stone/albedo.ktx2"),
+            kind: Arc::from("Texture"),
+            size_kib: 512,
         },
-        ProofDragAsset {
+        ProofCollectionAsset {
+            id: Arc::from("stone-normal"),
             label: Arc::from("Stone Normal"),
             path: Arc::from("textures/stone/normal.ktx2"),
+            kind: Arc::from("Texture"),
+            size_kib: 384,
         },
-        ProofDragAsset {
+        ProofCollectionAsset {
+            id: Arc::from("stone-orm"),
             label: Arc::from("Stone ORM"),
             path: Arc::from("textures/stone/orm.ktx2"),
+            kind: Arc::from("Texture"),
+            size_kib: 256,
+        },
+        ProofCollectionAsset {
+            id: Arc::from("moss-overlay"),
+            label: Arc::from("Moss Overlay"),
+            path: Arc::from("textures/moss/overlay.ktx2"),
+            kind: Arc::from("Texture"),
+            size_kib: 196,
+        },
+        ProofCollectionAsset {
+            id: Arc::from("pebble-height"),
+            label: Arc::from("Pebble Height"),
+            path: Arc::from("textures/pebble/height.ktx2"),
+            kind: Arc::from("Height"),
+            size_kib: 164,
+        },
+        ProofCollectionAsset {
+            id: Arc::from("dust-mask"),
+            label: Arc::from("Dust Mask"),
+            path: Arc::from("textures/shared/dust-mask.ktx2"),
+            kind: Arc::from("Mask"),
+            size_kib: 72,
         },
     ]
     .into()
+}
+
+fn authoring_parity_drag_assets() -> Arc<[ProofDragAsset]> {
+    authoring_parity_collection_assets()
+        .iter()
+        .take(3)
+        .map(|asset| ProofDragAsset {
+            label: asset.label.clone(),
+            path: asset.path.clone(),
+        })
+        .collect::<Vec<_>>()
+        .into()
 }
 
 fn authoring_parity_outliner_items() -> Arc<[ProofOutlinerItem]> {
@@ -3928,6 +4300,47 @@ fn authoring_parity_asset_slot_model<H: UiHost>(cx: &mut ElementContext<'_, H>) 
                 .models_mut()
                 .insert("textures/default/basecolor.ktx2".to_string())
         },
+    )
+}
+
+fn authoring_parity_collection_selection_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<ImUiMultiSelectState<Arc<str>>> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.collection_selection",
+        |cx| {
+            let assets = authoring_parity_collection_assets();
+            let default_id = assets.first().map(|asset| asset.id.clone());
+            let state = default_id
+                .clone()
+                .map(|id| ImUiMultiSelectState {
+                    selected: vec![id.clone()],
+                    anchor: Some(id),
+                })
+                .unwrap_or_default();
+            cx.app.models_mut().insert(state)
+        },
+    )
+}
+
+fn authoring_parity_collection_reverse_order_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<bool> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.collection_reverse_order",
+        |cx| cx.app.models_mut().insert(false),
+    )
+}
+
+fn authoring_parity_collection_drop_status_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.collection_drop_status",
+        |cx| cx.app.models_mut().insert("Idle".to_string()),
     )
 }
 

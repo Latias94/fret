@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "slug": "imui-collection-pane-proof-v1",
+  "title": "ImUi Collection + Pane Proof v1",
+  "status": "closed",
+  "updated": "2026-04-21",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "The immediate-mode product-closure umbrella already narrowed the remaining P0/P1 backlog, but collection-first and pane-first proof breadth still lacks a dedicated owner: Fret needs a narrow follow-on that can validate asset-grid/file-browser style collection proof, child-region/pane composition proof, and any directly justified helper widening without reopening runtime growth, shell-helper promotion, key ownership, or multi-window runner parity.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/M2_COLLECTION_PROOF_CLOSURE_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/M3_PANE_PROOF_CLOSURE_2026-04-21.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout only if new evidence shows that the shipped M2/M3 proof pair is insufficient: `imui_editor_proof_demo` now carries the collection-first asset-browser proof, `workspace_shell_demo` now carries the shell-mounted pane proof with nested `child_region` composition, and `editor_notes_demo` remains supporting pane-rail evidence while helper widening stays unjustified.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_editor_proof_demo",
+      "cargo run -p fret-demo --bin workspace_shell_demo",
+      "cargo run -p fret-demo --bin editor_notes_demo",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit --no-fail-fast",
+      "cargo nextest run -p fret-imui collection_drag_payload_preserves_selected_keys_across_order_flip --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures imui_editor_proof_authoring_immediate_column_uses_official_editor_adapters imui_editor_proof_keeps_app_owned_sortable_and_dock_helpers_explicit --no-fail-fast",
+      "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test workspace_shell_pane_proof_surface --test editor_notes_editor_rail_surface --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke",
+      "cargo nextest run -p fret-imui"
+    ]
+  },
+  "gates": [
+    {
+      "name": "collection-pane-proof-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit --no-fail-fast"
+    },
+    {
+      "name": "collection-focused-interaction",
+      "command": "cargo nextest run -p fret-imui collection_drag_payload_preserves_selected_keys_across_order_flip --no-fail-fast"
+    },
+    {
+      "name": "pane-proof-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit --no-fail-fast"
+    },
+    {
+      "name": "collection-baseline-floor",
+      "command": "cargo nextest run -p fret-examples --lib imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures imui_editor_proof_authoring_immediate_column_uses_official_editor_adapters imui_editor_proof_keeps_app_owned_sortable_and_dock_helpers_explicit --no-fail-fast"
+    },
+    {
+      "name": "pane-proof-surface-floor",
+      "command": "cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test workspace_shell_pane_proof_surface --test editor_notes_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "imui-adapter-floor",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke"
+    },
+    {
+      "name": "imui-interaction-floor",
+      "command": "cargo nextest run -p fret-imui"
+    },
+    {
+      "name": "workspace-shell-diag-floor",
+      "command": "cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/M2_COLLECTION_PROOF_CLOSURE_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/M3_PANE_PROOF_CLOSURE_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/TODO.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/MILESTONES.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "docs/workstreams/imui-workbench-shell-closure-v1/CLOSEOUT_AUDIT_2026-04-13.md",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
+    "ecosystem/fret-ui-kit/src/imui/child_region.rs",
+    "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-imui/src/tests/interaction.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/lib.rs",
+    "apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs",
+    "apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0042-scroll-contract-and-scrollbar-ownership.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0084-virtualized-accessibility-and-collection-semantics.md"
+  ],
+  "continue_policy": {
+    "default_action": "close",
+    "notes": "This lane is closed. Reuse it as the closeout record for the shipped M2/M3 collection-first and pane-first proof pair. Do not widen `child_region`, do not add a narrower collection/pane demo split, and do not add a narrower pane-only diagnostics path here by default. If future pressure shifts to key ownership, shell-helper promotion, broader menu/tab policy, or runner/backend multi-window parity, start or resume a different narrow lane instead of reopening this folder."
+  }
+}

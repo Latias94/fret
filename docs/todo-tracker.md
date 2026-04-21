@@ -103,6 +103,14 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+- Closed narrow closeout record for collection-first and pane-first proof breadth:
+  - `docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/TODO.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json`
 - Closed narrow P0 response-status lifecycle closeout record:
   - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`
@@ -147,6 +155,11 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-response-status-lifecycle-v1/` as the closed closeout record for the
   first P0 `ResponseExt` lifecycle vocabulary slice; if future pressure shifts to key ownership or
   broader proof depth, start a narrower follow-on instead of widening this folder again.
+- Use `docs/workstreams/imui-collection-pane-proof-v1/` as the closed closeout record for the
+  shipped collection/pane proof pair:
+  the lane now records the asset-grid/file-browser style collection proof and the shell-mounted
+  `child_region` pane composition proof together, while keeping key ownership, shell-helper
+  promotion, and runner/backend multi-window parity out of this folder.
 - Use `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` as the closed closeout record
   for the shared IMUI control affordance / compact-field behavior rewrite; if future pressure
   shifts to field-width policy or family-specific parity, start a narrower follow-on instead of

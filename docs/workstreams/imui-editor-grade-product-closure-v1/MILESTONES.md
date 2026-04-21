@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - Milestones
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 Status note (2026-04-20): this file now records umbrella phase state only. Implementation-heavy
 execution has moved into closed narrow follow-ons or the active docking parity lane.
@@ -75,18 +75,22 @@ Current status:
 - The tested shortcut repeat rule is now explicit at the immediate layer:
   default key repeat does not retrigger activation, and `shortcut_repeat=true` is the opt-in seam.
 - The remaining credible P0 backlog is now narrower:
-  broader multi-select proof, deeper child-region/menu/tab policy, the separate key-owner surface,
+  the separate key-owner surface,
   the split item-status lifecycle follow-on at
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
+  the closed collection/pane proof-breadth closeout record at
+  `docs/workstreams/imui-collection-pane-proof-v1/`,
   the closed trigger-response canonicalization closeout at
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
   and the closed helper-owned trigger response-surface follow-on at
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`.
 - Execution consequence:
   keep this lane as the umbrella recorder. The `ResponseExt` lifecycle vocabulary slice now lives in
-  `docs/workstreams/imui-response-status-lifecycle-v1/`, the helper-owned menu/submenu/tab trigger
-  response verdict now lives in `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`, the
-  naming cleanup closeout now lives in
+  `docs/workstreams/imui-response-status-lifecycle-v1/`,
+  the collection/pane proof-breadth closeout record now lives in
+  `docs/workstreams/imui-collection-pane-proof-v1/`,
+  the helper-owned menu/submenu/tab trigger response verdict now lives in
+  `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`, the naming cleanup closeout now lives in
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
   and any further implementation-heavy P0 work should keep following the same narrow follow-on rule
   instead of turning M1 back into a generic helper-growth backlog.

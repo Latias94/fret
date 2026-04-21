@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-20
+Catalog updated: 2026-04-21
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 239
+- Dedicated directories: 240
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -125,6 +125,19 @@ Current source of truth for the in-tree immediate-mode stack:
     future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
     review, and implementation-heavy work should stay in narrower follow-ons or the active docking
     parity lane.
+
+- Closed narrow P0/P1 collection + pane proof closeout record:
+  - `docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/TODO.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json`
+  - Scope: records the shipped collection-first asset-browser proof and the shipped shell-mounted
+    pane proof, then closes on a no-helper-widening verdict; keep key ownership, shell-helper
+    promotion, broader menu/tab policy, and runner/backend multi-window parity in their separate
+    lanes.
 
 - Closed narrow P0 response-status lifecycle closeout record:
   - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
@@ -458,6 +471,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
+- `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)

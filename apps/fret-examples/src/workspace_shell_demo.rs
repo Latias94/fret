@@ -24,8 +24,13 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
-use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
-use fret_ui_kit::{TreeItem, TreeState};
+use fret_ui_kit::imui::{
+    ChildRegionOptions, HorizontalOptions, ScrollOptions, UiWriterImUiFacadeExt as _,
+};
+use fret_ui_kit::{
+    LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space,
+    TreeItem, TreeState,
+};
 use fret_workspace::close_policy::{
     WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy, WorkspaceDirtyCloseRequest,
 };
@@ -84,6 +89,17 @@ struct WorkspaceShellEditorRailState {
     active_tab_label: Arc<str>,
     active_tab_count: usize,
     active_dirty_count: usize,
+    two_row_pinned: bool,
+    prompt_open: bool,
+}
+
+#[derive(Clone)]
+struct WorkspaceShellPaneProofState {
+    pane_id: Arc<str>,
+    active_tab_label: Arc<str>,
+    tab_count: usize,
+    dirty_count: usize,
+    is_active: bool,
     two_row_pinned: bool,
     prompt_open: bool,
 }
@@ -276,6 +292,170 @@ where
         },
         move |_cx| vec![inspector],
     )
+}
+
+fn workspace_shell_pane_proof<'a, Cx>(
+    cx: &mut Cx,
+    state: WorkspaceShellPaneProofState,
+) -> fret_ui::element::AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let cx = cx.elements();
+    fret_ui_kit::ui::v_flex_build(move |cx, out| {
+        fret_imui::imui_build(cx, out, move |ui| {
+            let WorkspaceShellPaneProofState {
+                pane_id,
+                active_tab_label,
+                tab_count,
+                dirty_count,
+                is_active,
+                two_row_pinned,
+                prompt_open,
+            } = state;
+
+            let shell_id = format!("workspace-shell-pane-{}-proof.shell", pane_id);
+            let shell_viewport_id = format!("{}.viewport", shell_id);
+            let shell_content_id = format!("{}.content", shell_id);
+            let toolbar_id = format!("workspace-shell-pane-{}-proof.toolbar", pane_id);
+            let toolbar_viewport_id = format!("{}.viewport", toolbar_id);
+            let tabs_id = format!("workspace-shell-pane-{}-proof.tabs", pane_id);
+            let tabs_viewport_id = format!("{}.viewport", tabs_id);
+            let inspector_id = format!("workspace-shell-pane-{}-proof.inspector", pane_id);
+            let inspector_viewport_id = format!("{}.viewport", inspector_id);
+            let status_id = format!("workspace-shell-pane-{}-proof.status", pane_id);
+            let status_viewport_id = format!("{}.viewport", status_id);
+
+            ui.child_region_with_options(
+                shell_id.as_str(),
+                ChildRegionOptions {
+                    layout: LayoutRefinement::default().w_full().h_full(),
+                    scroll: ScrollOptions {
+                        viewport_test_id: Some(Arc::from(shell_viewport_id)),
+                        ..Default::default()
+                    },
+                    test_id: Some(Arc::from(shell_id.clone())),
+                    content_test_id: Some(Arc::from(shell_content_id)),
+                },
+                |ui| {
+                    ui.text(format!("Shell-mounted pane proof for {pane_id}"));
+                    ui.text(
+                        "Nested child regions stay app-composed in the workspace shell; no helper widening is required for this slice.",
+                    );
+
+                    ui.child_region_with_options(
+                        toolbar_id.as_str(),
+                        ChildRegionOptions {
+                            layout: LayoutRefinement::default().w_full().h_px(Px(60.0)),
+                            scroll: ScrollOptions {
+                                viewport_test_id: Some(Arc::from(toolbar_viewport_id)),
+                                ..Default::default()
+                            },
+                            test_id: Some(Arc::from(toolbar_id.clone())),
+                            content_test_id: Some(Arc::from(format!("{toolbar_id}.content"))),
+                        },
+                        |ui| {
+                            ui.separator_text("Toolbar");
+                            ui.horizontal_with_options(
+                                HorizontalOptions {
+                                    gap: MetricRef::space(Space::N2),
+                                    ..Default::default()
+                                },
+                                |ui| {
+                                    ui.text("Open Preview");
+                                    ui.text("Split Right");
+                                    ui.text("Float");
+                                    ui.text("Focus Inspector");
+                                },
+                            );
+                        },
+                    );
+
+                    ui.horizontal_with_options(
+                        HorizontalOptions {
+                            gap: MetricRef::space(Space::N2),
+                            items: fret_ui_kit::Items::Stretch,
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.child_region_with_options(
+                                tabs_id.as_str(),
+                                ChildRegionOptions {
+                                    layout: LayoutRefinement::default().w_px(Px(200.0)).h_px(Px(148.0)),
+                                    scroll: ScrollOptions {
+                                        viewport_test_id: Some(Arc::from(tabs_viewport_id)),
+                                        ..Default::default()
+                                    },
+                                    test_id: Some(Arc::from(tabs_id.clone())),
+                                    content_test_id: Some(Arc::from(format!("{tabs_id}.content"))),
+                                },
+                                |ui| {
+                                    ui.separator_text("Tabs");
+                                    ui.text(format!("Active tab: {active_tab_label}"));
+                                    ui.text(format!("Tabs in pane: {tab_count}"));
+                                    ui.text(if two_row_pinned {
+                                        "Tab strip layout: pinned two-row"
+                                    } else {
+                                        "Tab strip layout: auto"
+                                    });
+                                },
+                            );
+
+                            ui.child_region_with_options(
+                                inspector_id.as_str(),
+                                ChildRegionOptions {
+                                    layout: LayoutRefinement::default().w_full().h_px(Px(148.0)),
+                                    scroll: ScrollOptions {
+                                        viewport_test_id: Some(Arc::from(inspector_viewport_id)),
+                                        ..Default::default()
+                                    },
+                                    test_id: Some(Arc::from(inspector_id.clone())),
+                                    content_test_id: Some(Arc::from(format!(
+                                        "{inspector_id}.content"
+                                    ))),
+                                },
+                                |ui| {
+                                    ui.separator_text("Inspector");
+                                    ui.text(format!("Pane id: {pane_id}"));
+                                    ui.text(if is_active {
+                                        "Focus state: active pane"
+                                    } else {
+                                        "Focus state: passive pane"
+                                    });
+                                    ui.text(format!("Dirty tabs: {dirty_count}"));
+                                },
+                            );
+                        },
+                    );
+
+                    ui.child_region_with_options(
+                        status_id.as_str(),
+                        ChildRegionOptions {
+                            layout: LayoutRefinement::default().w_full().h_px(Px(76.0)),
+                            scroll: ScrollOptions {
+                                viewport_test_id: Some(Arc::from(status_viewport_id)),
+                                ..Default::default()
+                            },
+                            test_id: Some(Arc::from(status_id.clone())),
+                            content_test_id: Some(Arc::from(format!("{status_id}.content"))),
+                        },
+                        |ui| {
+                            ui.separator_text("Status");
+                            ui.text(if prompt_open {
+                                "Dirty close prompt: open"
+                            } else {
+                                "Dirty close prompt: closed"
+                            });
+                            ui.text("Decision: keep the current `child_region` seam for M3.");
+                        },
+                    );
+                },
+            );
+        });
+    })
+    .w_full()
+    .h_full()
+    .into_element(cx)
 }
 
 fn build_file_tree_items() -> (Vec<TreeItem>, TreeState) {
@@ -748,6 +928,22 @@ impl WorkspaceShellDemoDriver {
                                 body_layout.overflow = Overflow::Clip;
 
                                 let pane_content_bg = Some(theme_for_center.color_token("muted"));
+                                let pane_active_label: Arc<str> = pane
+                                    .tabs
+                                    .active()
+                                    .cloned()
+                                    .unwrap_or_else(|| Arc::from("<none>"));
+                                let pane_tab_count = pane.tabs.tabs().len();
+                                let pane_dirty_count = pane.tabs.dirty_in_tab_order().len();
+                                let pane_proof_state = WorkspaceShellPaneProofState {
+                                    pane_id: pane.id.clone(),
+                                    active_tab_label: pane_active_label.clone(),
+                                    tab_count: pane_tab_count,
+                                    dirty_count: pane_dirty_count,
+                                    is_active,
+                                    two_row_pinned,
+                                    prompt_open,
+                                };
 
                                 let pane_root_test_id: Arc<str> = Arc::from(format!(
                                     "workspace-shell-pane-{}-root",
@@ -796,25 +992,10 @@ impl WorkspaceShellDemoDriver {
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
-                                                                let active_label: Arc<str> = pane
-                                                                    .tabs
-                                                                    .active()
-                                                                    .cloned()
-                                                                    .unwrap_or_else(|| {
-                                                                        Arc::from("<none>")
-                                                                    });
-                                                                let msg: Arc<str> =
-                                                                    Arc::from(format!(
-                                                                        "pane={} active={} {}",
-                                                                        pane.id.as_ref(),
-                                                                        active_label.as_ref(),
-                                                                        if is_active {
-                                                                            "(active)"
-                                                                        } else {
-                                                                            ""
-                                                                        }
-                                                                    ));
-                                                                vec![cx.text(msg)]
+                                                                vec![workspace_shell_pane_proof(
+                                                                    cx,
+                                                                    pane_proof_state.clone(),
+                                                                )]
                                                             },
                                                         )]
                                                     },

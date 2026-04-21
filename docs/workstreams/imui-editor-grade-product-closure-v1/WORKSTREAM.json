@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-04-20",
+  "updated": "2026-04-21",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, and one runner-grade multi-window hand-feel story.",
@@ -47,6 +47,18 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md"
     },
     {
       "role": "reference",
@@ -253,6 +265,10 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json",
     "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md",

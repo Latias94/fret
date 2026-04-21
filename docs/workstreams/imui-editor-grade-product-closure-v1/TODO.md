@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - TODO
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 Status note (2026-04-20): keep phase ordering and follow-on decisions here. Do not resume
 implementation-heavy work in this folder while the remaining P3 execution continues in
@@ -138,8 +138,10 @@ implementation-heavy work in this folder while the remaining P3 execution contin
       (key ownership, item-status lifecycle, richer collection/pane proof), split a narrow follow-on
       instead of widening this umbrella folder.
       Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now owns the narrow
-      `ResponseExt` lifecycle vocabulary slice, while this umbrella keeps phase ordering and the
-      remaining cross-phase backlog read.
+      `ResponseExt` lifecycle vocabulary slice, and
+      `docs/workstreams/imui-collection-pane-proof-v1/` now records the closed collection-first /
+      pane-first proof pair with a no-helper-widening verdict, while this umbrella keeps phase
+      ordering and the remaining cross-phase backlog read.
 - [x] If further P0/P1 pressure becomes mostly shared IMUI control affordance and compact field
       behavior, split a narrow control-surface follow-on instead of turning showcase cleanup into
       the umbrella lane's implementation log.
