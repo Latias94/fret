@@ -1,6 +1,7 @@
 use super::*;
 use fret_runtime::KeyChord;
 use fret_ui_kit::imui::ButtonOptions;
+use fret_ui_kit::imui::InputTextMode;
 use fret_ui_kit::imui::TextAreaOptions;
 
 #[test]
@@ -412,6 +413,59 @@ fn input_text_model_reports_changed_once_after_text_input() {
     );
     assert!(!changed.get());
     assert_eq!(text.borrow().as_str(), "hello");
+}
+
+#[test]
+fn input_text_password_mode_obscures_paint_text_without_mutating_model() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(140.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(String::from("secret"));
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-password",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let _ = ui.input_text_model_with_options(
+                    &model,
+                    InputTextOptions {
+                        mode: InputTextMode::Password,
+                        test_id: Some(Arc::from("imui-input-text-password")),
+                        ..Default::default()
+                    },
+                );
+            })
+        },
+    );
+
+    services.prepared.clear();
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        services.prepared.iter().any(|text| text == "••••••"),
+        "expected password mode to paint an obscured string"
+    );
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("secret"),
+        "expected password mode to preserve the underlying model value"
+    );
 }
 
 #[test]

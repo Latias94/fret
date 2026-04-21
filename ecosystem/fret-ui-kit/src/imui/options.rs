@@ -14,8 +14,9 @@ pub use containers::{
 };
 pub use controls::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, CheckboxOptions, CollapsingHeaderOptions,
-    ComboModelOptions, ComboOptions, InputTextOptions, RadioOptions, SelectableOptions,
-    SliderOptions, SwitchOptions, TabItemOptions, TextAreaOptions, TreeNodeOptions,
+    ComboModelOptions, ComboOptions, InputTextMode, InputTextOptions, RadioOptions,
+    SelectableOptions, SliderOptions, SwitchOptions, TabItemOptions, TextAreaOptions,
+    TreeNodeOptions,
 };
 pub use menus::{
     BeginMenuOptions, BeginSubmenuOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,

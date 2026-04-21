@@ -33,14 +33,17 @@ use fret_ui_kit::imui::{
 use fret_ui_kit::{OverlayPresence, OverlayRequest};
 
 #[derive(Default)]
-struct FakeTextService;
+struct FakeTextService {
+    prepared: Vec<String>,
+}
 
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _input: &fret_core::TextInput,
+        input: &fret_core::TextInput,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.prepared.push(input.text().to_string());
         (
             fret_core::TextBlobId::default(),
             TextMetrics {

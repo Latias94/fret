@@ -279,10 +279,25 @@ impl Default for ButtonOptions {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputTextMode {
+    /// Render the model value directly.
+    PlainText,
+    /// Obscure the painted text while preserving the underlying model value.
+    Password,
+}
+
+impl Default for InputTextMode {
+    fn default() -> Self {
+        Self::PlainText
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct InputTextOptions {
     pub enabled: bool,
     pub focusable: bool,
+    pub mode: InputTextMode,
     pub a11y_label: Option<Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
     pub placeholder: Option<Arc<str>>,
@@ -296,6 +311,7 @@ impl Default for InputTextOptions {
         Self {
             enabled: true,
             focusable: true,
+            mode: InputTextMode::PlainText,
             a11y_label: None,
             a11y_role: Some(SemanticsRole::TextField),
             placeholder: None,
