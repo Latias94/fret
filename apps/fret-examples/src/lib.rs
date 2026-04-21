@@ -2614,13 +2614,27 @@ mod authoring_surface_policy_tests {
             "imui_editor_proof_demo",
             IMUI_EDITOR_PROOF_DEMO,
             &[
+                "use fret::imui::prelude::*;",
                 "use fret_ui_editor::imui as editor_imui;",
-                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::ImUiMultiSelectState;",
+                "imui(cx, |ui| {",
+                "imui(cx, move |ui| {",
+                "imui_build(cx, out, |ui| {",
+                "imui_build(cx, &mut out, move |ui| {",
+                "imui_build(cx, out, f);",
                 "editor_imui::property_grid(",
                 "editor_imui::numeric_input(",
                 "editor_imui::gradient_editor(",
             ],
-            &[],
+            &[
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "fret_imui::imui(cx, |ui| {",
+                "fret_imui::imui(cx, move |ui| {",
+                "fret_imui::imui_build(cx, out, |ui| {",
+                "fret_imui::imui_build(cx, &mut out, move |ui| {",
+                "fret_imui::imui_build(cx, out, f);",
+            ],
         );
     }
 
@@ -4687,6 +4701,29 @@ mod authoring_surface_policy_tests {
         assert!(
             !IMUI_SHADCN_ADAPTER_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
         );
+    }
+
+    #[test]
+    fn imui_editor_proof_demo_prefers_root_fret_imui_entry_surface() {
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("use fret::imui::prelude::*;"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("use fret_ui_editor::imui as editor_imui;"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("use fret_ui_kit::imui::ImUiMultiSelectState;"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("imui(cx, |ui| {"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("imui(cx, move |ui| {"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("imui_build(cx, out, |ui| {"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("imui_build(cx, &mut out, move |ui| {"));
+        assert!(IMUI_EDITOR_PROOF_DEMO.contains("imui_build(cx, out, f);"));
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains("fret_imui::imui(cx, |ui| {"));
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains("fret_imui::imui(cx, move |ui| {"));
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains("fret_imui::imui_build(cx, out, |ui| {"));
+        assert!(
+            !IMUI_EDITOR_PROOF_DEMO.contains("fret_imui::imui_build(cx, &mut out, move |ui| {")
+        );
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains("fret_imui::imui_build(cx, out, f);"));
+        assert!(
+            !IMUI_EDITOR_PROOF_DEMO.contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;")
+        );
+        assert!(!IMUI_EDITOR_PROOF_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;"));
     }
 
     #[test]
