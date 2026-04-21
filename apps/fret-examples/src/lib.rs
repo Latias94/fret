@@ -2464,13 +2464,22 @@ mod authoring_surface_policy_tests {
             "imui_floating_windows_demo",
             IMUI_FLOATING_WINDOWS_DEMO,
             &[
-                "fret_imui::imui_in(cx, |ui| {",
-                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
-                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
+                "imui_in(cx, |ui| {",
+                "kit::WindowOptions::default()",
+                "kit::FloatingWindowResizeOptions::default()",
                 "ui.window_with_options(",
                 "ui.combo_model_with_options(",
             ],
-            &[],
+            &[
+                "fret_imui::imui_in(cx, |ui| {",
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "fret_ui_kit::imui::WindowOptions::default()",
+                "fret_ui_kit::imui::FloatingWindowResizeOptions::default()",
+                "fret_ui_kit::imui::MenuItemOptions",
+                "fret_ui_kit::imui::ComboModelOptions",
+            ],
         );
 
         assert_current_imui_teaching_surface(
@@ -4509,6 +4518,28 @@ mod authoring_surface_policy_tests {
         assert!(!IMUI_HELLO_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));
         assert!(!IMUI_HELLO_DEMO.contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;"));
         assert!(!IMUI_HELLO_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;"));
+    }
+
+    #[test]
+    fn imui_floating_windows_demo_prefers_root_fret_imui_facade_lane() {
+        assert!(
+            IMUI_FLOATING_WINDOWS_DEMO
+                .contains("use fret::{FretApp, advanced::prelude::*, imui::prelude::*};")
+        );
+        assert!(IMUI_FLOATING_WINDOWS_DEMO.contains("imui_in(cx, |ui| {"));
+        assert!(IMUI_FLOATING_WINDOWS_DEMO.contains("kit::WindowOptions::default()"));
+        assert!(IMUI_FLOATING_WINDOWS_DEMO.contains("kit::FloatingWindowResizeOptions::default()"));
+        assert!(IMUI_FLOATING_WINDOWS_DEMO.contains("kit::MenuItemOptions {"));
+        assert!(IMUI_FLOATING_WINDOWS_DEMO.contains("kit::ComboModelOptions {"));
+        assert!(!IMUI_FLOATING_WINDOWS_DEMO.contains("use fret_imui::prelude::UiWriter;"));
+        assert!(!IMUI_FLOATING_WINDOWS_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));
+        assert!(
+            !IMUI_FLOATING_WINDOWS_DEMO
+                .contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;")
+        );
+        assert!(
+            !IMUI_FLOATING_WINDOWS_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
+        );
     }
 
     #[test]

@@ -10,9 +10,8 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
-use fret_imui::prelude::UiWriter;
 use fret_ui_kit::on_activate_notify;
 
 struct ImUiFloatingWindowsView;
@@ -35,10 +34,7 @@ impl View for ImUiFloatingWindowsView {
         let select_mode_state = cx.state().local_init(|| None::<Arc<str>>);
         let a_overlap_clicked_state = cx.state().local_init(|| false);
 
-        fret_imui::imui_in(cx, |ui| {
-            use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
-            use fret_ui_kit::imui::UiWriterUiKitExt as _;
-
+        imui_in(cx, |ui| {
             let title = fret_ui_kit::ui::text("imui floating windows demo (diagnostics)")
                 .text_sm()
                 .font_semibold();
@@ -87,10 +83,10 @@ impl View for ImUiFloatingWindowsView {
                     id,
                     "Window A",
                     initial_position,
-                    fret_ui_kit::imui::WindowOptions::default()
+                    kit::WindowOptions::default()
                         .with_open(open_a_state.model())
                         .with_size(initial_size)
-                        .with_resize(fret_ui_kit::imui::FloatingWindowResizeOptions::default()),
+                        .with_resize(kit::FloatingWindowResizeOptions::default()),
                     |ui| {
                         ui.vertical(|ui| {
                             ui.mount(|cx| {
@@ -182,7 +178,7 @@ impl View for ImUiFloatingWindowsView {
                                 let open = ui.popup_open_model("ctx");
                                 let _ = ui.menu_item_with_options(
                                     "Close menu",
-                                    fret_ui_kit::imui::MenuItemOptions {
+                                    kit::MenuItemOptions {
                                         close_popup: Some(open),
                                         test_id: Some(Arc::from("imui-float-demo.ctx.close")),
                                         ..Default::default()
@@ -201,7 +197,7 @@ impl View for ImUiFloatingWindowsView {
                                 "Mode",
                                 select_mode_state.model(),
                                 &select_items,
-                                fret_ui_kit::imui::ComboModelOptions {
+                                kit::ComboModelOptions {
                                     test_id: Some(Arc::from("imui-float-demo.select")),
                                     ..Default::default()
                                 },
@@ -214,9 +210,9 @@ impl View for ImUiFloatingWindowsView {
                     "b",
                     "Window B",
                     Point::new(Px(176.0), Px(116.0)),
-                    fret_ui_kit::imui::WindowOptions::default()
+                    kit::WindowOptions::default()
                         .with_size(Size::new(Px(180.0), Px(120.0)))
-                        .with_resize(fret_ui_kit::imui::FloatingWindowResizeOptions::default()),
+                        .with_resize(kit::FloatingWindowResizeOptions::default()),
                     |ui| {
                         ui.vertical(|ui| {
                             ui.text("This window starts on top of A's overlap target.");
