@@ -2486,9 +2486,11 @@ mod authoring_surface_policy_tests {
             "imui_response_signals_demo",
             IMUI_RESPONSE_SIGNALS_DEMO,
             &[
-                "fret_imui::imui_in(cx, |ui| {",
-                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
-                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
+                "imui_in(cx, |ui| {",
+                "kit::SliderOptions {",
+                "kit::MenuBarOptions {",
+                "kit::TabBarOptions {",
                 "click.secondary_clicked()",
                 "drag.drag_started()",
                 "trigger.context_menu_requested()",
@@ -2496,7 +2498,22 @@ mod authoring_surface_policy_tests {
                 "combo_resp.trigger.activated()",
                 "combo_model_resp.deactivated_after_edit()",
             ],
-            &[],
+            &[
+                "fret_imui::imui_in(cx, |ui| {",
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "fret_ui_kit::imui::SliderOptions {",
+                "fret_ui_kit::imui::InputTextOptions {",
+                "fret_ui_kit::imui::MenuItemOptions {",
+                "fret_ui_kit::imui::ComboOptions {",
+                "fret_ui_kit::imui::SelectableOptions {",
+                "fret_ui_kit::imui::ComboModelOptions {",
+                "fret_ui_kit::imui::MenuBarOptions {",
+                "fret_ui_kit::imui::BeginMenuOptions {",
+                "fret_ui_kit::imui::BeginSubmenuOptions {",
+                "fret_ui_kit::imui::TabBarOptions {",
+                "fret_ui_kit::imui::TabItemOptions {",
+            ],
         );
 
         assert_current_imui_teaching_surface(
@@ -4539,6 +4556,34 @@ mod authoring_surface_policy_tests {
         );
         assert!(
             !IMUI_FLOATING_WINDOWS_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
+        );
+    }
+
+    #[test]
+    fn imui_response_signals_demo_prefers_root_fret_imui_facade_lane() {
+        assert!(
+            IMUI_RESPONSE_SIGNALS_DEMO
+                .contains("use fret::{FretApp, advanced::prelude::*, imui::prelude::*};")
+        );
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("imui_in(cx, |ui| {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::SliderOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::InputTextOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::MenuItemOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::ComboOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::SelectableOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::ComboModelOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::MenuBarOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::BeginMenuOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::BeginSubmenuOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::TabBarOptions {"));
+        assert!(IMUI_RESPONSE_SIGNALS_DEMO.contains("kit::TabItemOptions {"));
+        assert!(!IMUI_RESPONSE_SIGNALS_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));
+        assert!(
+            !IMUI_RESPONSE_SIGNALS_DEMO
+                .contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;")
+        );
+        assert!(
+            !IMUI_RESPONSE_SIGNALS_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
         );
     }
 

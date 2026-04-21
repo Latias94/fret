@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::{Point, Px, Rect};
 
 struct ImUiResponseSignalsView;
@@ -114,10 +114,7 @@ impl View for ImUiResponseSignalsView {
         let lifecycle_text_value_value = lifecycle_text_value.layout_value(cx);
         let lifecycle_combo_model_value_value = lifecycle_combo_model_value.layout_value(cx);
 
-        fret_imui::imui_in(cx, |ui| {
-            use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
-            use fret_ui_kit::imui::UiWriterUiKitExt as _;
-
+        imui_in(cx, |ui| {
             let title = fret_ui_kit::ui::text("imui response signals proof (facade)")
                 .text_sm()
                 .font_semibold();
@@ -233,7 +230,7 @@ impl View for ImUiResponseSignalsView {
             let lifecycle_slider_resp = ui.slider_f32_model_with_options(
                 "Edited slider",
                 lifecycle_slider_value.model(),
-                fret_ui_kit::imui::SliderOptions {
+                kit::SliderOptions {
                     min: 0.0,
                     max: 100.0,
                     step: 1.0,
@@ -251,7 +248,7 @@ impl View for ImUiResponseSignalsView {
 
             let lifecycle_text_resp = ui.input_text_model_with_options(
                 lifecycle_text_value.model(),
-                fret_ui_kit::imui::InputTextOptions {
+                kit::InputTextOptions {
                     placeholder: Some(Arc::from("Focus, type, and blur")),
                     ..Default::default()
                 },
@@ -271,7 +268,7 @@ impl View for ImUiResponseSignalsView {
 
             let menu_lifecycle = ui.menu_item_with_options(
                 "Lifecycle menu item (press and release)",
-                fret_ui_kit::imui::MenuItemOptions {
+                kit::MenuItemOptions {
                     test_id: Some(Arc::from("imui-resp-demo.lifecycle-menu")),
                     ..Default::default()
                 },
@@ -289,14 +286,14 @@ impl View for ImUiResponseSignalsView {
                 "imui-resp-demo.lifecycle-combo",
                 "Lifecycle combo",
                 "Preview only",
-                fret_ui_kit::imui::ComboOptions {
+                kit::ComboOptions {
                     test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo")),
                     ..Default::default()
                 },
                 |ui| {
                     let _ = ui.selectable_with_options(
                         "Preview only",
-                        fret_ui_kit::imui::SelectableOptions {
+                        kit::SelectableOptions {
                             test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo.option.0")),
                             ..Default::default()
                         },
@@ -322,7 +319,7 @@ impl View for ImUiResponseSignalsView {
                 "Lifecycle combo model",
                 lifecycle_combo_model_value.model(),
                 &lifecycle_combo_items,
-                fret_ui_kit::imui::ComboModelOptions {
+                kit::ComboModelOptions {
                     test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo-model")),
                     placeholder: Some(Arc::from("Pick a mode")),
                     ..Default::default()
@@ -364,7 +361,7 @@ impl View for ImUiResponseSignalsView {
             ui.add_ui(trigger_surface_report);
 
             ui.menu_bar_with_options(
-                fret_ui_kit::imui::MenuBarOptions {
+                kit::MenuBarOptions {
                     test_id: Some(Arc::from("imui-resp-demo.trigger-menu.root")),
                     ..Default::default()
                 },
@@ -372,7 +369,7 @@ impl View for ImUiResponseSignalsView {
                     let file_menu = ui.begin_menu_with_options(
                         "imui-resp-demo.trigger-menu.file",
                         "Trigger surface menu",
-                        fret_ui_kit::imui::BeginMenuOptions {
+                        kit::BeginMenuOptions {
                             test_id: Some(Arc::from("imui-resp-demo.trigger-menu.file")),
                             ..Default::default()
                         },
@@ -380,7 +377,7 @@ impl View for ImUiResponseSignalsView {
                             let recent_menu = ui.begin_submenu_with_options(
                                 "imui-resp-demo.trigger-menu.recent",
                                 "Recent",
-                                fret_ui_kit::imui::BeginSubmenuOptions {
+                                kit::BeginSubmenuOptions {
                                     test_id: Some(Arc::from(
                                         "imui-resp-demo.trigger-menu.file.recent",
                                     )),
@@ -389,7 +386,7 @@ impl View for ImUiResponseSignalsView {
                                 |ui| {
                                     let _ = ui.menu_item_with_options(
                                         "Project Alpha",
-                                        fret_ui_kit::imui::MenuItemOptions {
+                                        kit::MenuItemOptions {
                                             test_id: Some(Arc::from(
                                                 "imui-resp-demo.trigger-menu.file.recent.alpha",
                                             )),
@@ -417,7 +414,7 @@ impl View for ImUiResponseSignalsView {
 
             let tab_response = ui.tab_bar_with_options(
                 "imui-resp-demo.trigger-tabs",
-                fret_ui_kit::imui::TabBarOptions {
+                kit::TabBarOptions {
                     selected: Some(trigger_tab_selected.model().clone()),
                     test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.root")),
                     ..Default::default()
@@ -426,7 +423,7 @@ impl View for ImUiResponseSignalsView {
                     tabs.begin_tab_item_with_options(
                         "scene",
                         "Scene",
-                        fret_ui_kit::imui::TabItemOptions {
+                        kit::TabItemOptions {
                             test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.scene")),
                             panel_test_id: Some(Arc::from(
                                 "imui-resp-demo.trigger-tabs.scene.panel",
@@ -440,7 +437,7 @@ impl View for ImUiResponseSignalsView {
                     tabs.begin_tab_item_with_options(
                         "inspector",
                         "Inspector",
-                        fret_ui_kit::imui::TabItemOptions {
+                        kit::TabItemOptions {
                             test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.inspector")),
                             panel_test_id: Some(Arc::from(
                                 "imui-resp-demo.trigger-tabs.inspector.panel",
@@ -491,7 +488,7 @@ impl View for ImUiResponseSignalsView {
             ui.begin_popup_context_menu("ctx", trigger, |ui| {
                 let toggle = ui.menu_item_with_options(
                     "Toggle flag",
-                    fret_ui_kit::imui::MenuItemOptions {
+                    kit::MenuItemOptions {
                         test_id: Some(Arc::from("imui-resp-demo.ctx.toggle")),
                         ..Default::default()
                     },
@@ -504,7 +501,7 @@ impl View for ImUiResponseSignalsView {
                 let open = ui.popup_open_model("ctx");
                 let _ = ui.menu_item_with_options(
                     "Close menu",
-                    fret_ui_kit::imui::MenuItemOptions {
+                    kit::MenuItemOptions {
                         close_popup: Some(open),
                         test_id: Some(Arc::from("imui-resp-demo.ctx.close")),
                         ..Default::default()
