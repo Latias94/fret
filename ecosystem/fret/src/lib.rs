@@ -83,6 +83,9 @@
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - depend on `fret-docking` directly for editor-grade docking workflows instead of expecting a
 //!   `fret` root feature proxy
+//! - enable `imui` for `fret::imui::{prelude::*, kit, editor, docking}` when the app wants an
+//!   explicit imgui-style authoring lane; keep those helpers off `fret::app::prelude::*` so the
+//!   default app story stays declarative-first
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
 //!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
@@ -200,6 +203,46 @@ pub mod overlay {
         OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
         OverlayRequest, OverlayStackEntryKind, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
     };
+}
+
+/// Optional immediate-mode authoring lane for apps that want imgui-style control flow without
+/// widening the default `fret::app::prelude::*` surface.
+#[cfg(feature = "imui")]
+pub mod imui {
+    pub use fret_imui::{
+        ImUi, Response, imui, imui_build, imui_build_in, imui_in, imui_raw, imui_raw_in,
+    };
+    pub use fret_ui_kit::imui::{ImUiFacade, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt};
+
+    /// Policy-heavy immediate-mode widgets, responses, and option types from `fret-ui-kit`.
+    pub mod kit {
+        pub use fret_ui_kit::imui::*;
+    }
+
+    /// Editor-grade controls and composites available on the immediate-mode lane.
+    pub mod editor {
+        pub use fret_ui_editor::imui::*;
+        pub use fret_ui_editor::{composites, controls, primitives, theme};
+    }
+
+    /// Docking helpers for immediate-mode authoring.
+    pub mod docking {
+        pub use fret_docking::dock;
+        pub use fret_docking::imui::*;
+        pub use fret_docking::{
+            DockingRuntime, handle_dock_before_close_window, handle_dock_op,
+            handle_dock_window_created,
+        };
+    }
+
+    /// Common imports for immediate-mode authoring on the explicit `fret::imui` lane.
+    pub mod prelude {
+        pub use crate::imui::{
+            ImUi, ImUiFacade, Response, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt,
+            docking, editor, imui, imui_build, imui_build_in, imui_in, imui_raw, imui_raw_in, kit,
+        };
+        pub use fret_imui::prelude::*;
+    }
 }
 
 /// Explicit logical asset-contract vocabulary and host registration helpers for app code.
@@ -3697,6 +3740,13 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("RouterUiStore"));
         assert!(!app_prelude_exports_symbol("DockManager"));
         assert!(!app_prelude_exports_symbol("DockPanelRegistry"));
+        assert!(!app_prelude_exports_symbol("ImUi"));
+        assert!(!app_prelude_exports_symbol("ImUiFacade"));
+        assert!(!app_prelude_exports_symbol("UiWriterImUiFacadeExt"));
+        assert!(!app_prelude_exports_symbol("UiWriterUiKitExt"));
+        assert!(!app_prelude_exports_symbol("ResponseExt"));
+        assert!(!app_prelude_exports_symbol("editor"));
+        assert!(!app_prelude_exports_symbol("docking"));
         assert!(!app_prelude_exports_symbol("handle_dock_op"));
         assert!(!app_prelude_exports_symbol("InstallConfig"));
     }
@@ -3866,6 +3916,7 @@ mod authoring_surface_policy_tests {
             "assets",
             "children",
             "env",
+            "imui",
             "icons",
             "integration",
             "overlay",
@@ -3960,6 +4011,32 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("OverlayRequest, OverlayStackEntryKind,"));
         assert!(root_header.contains("WindowOverlayStackEntry,"));
         assert!(root_header.contains("WindowOverlayStackSnapshot,"));
+    }
+
+    #[test]
+    fn root_surface_exposes_explicit_imui_module() {
+        let root_header = root_surface_header_source();
+        let public_surface = crate_public_surface_source();
+
+        assert!(root_header.contains("#[cfg(feature = \"imui\")]"));
+        assert!(root_header.contains("pub mod imui {"));
+        assert!(root_header.contains("pub use fret_imui::{"));
+        assert!(root_header.contains("pub use fret_ui_kit::imui::{"));
+        assert!(public_surface.contains("pub mod kit {"));
+        assert!(public_surface.contains("pub use fret_ui_kit::imui::*;"));
+        assert!(public_surface.contains("pub mod editor {"));
+        assert!(public_surface.contains("pub use fret_ui_editor::imui::*;"));
+        assert!(
+            public_surface
+                .contains("pub use fret_ui_editor::{composites, controls, primitives, theme};")
+        );
+        assert!(public_surface.contains("pub mod docking {"));
+        assert!(public_surface.contains("pub use fret_docking::imui::*;"));
+        assert!(public_surface.contains("pub mod prelude {"));
+        assert!(public_surface.contains("pub use fret_imui::prelude::*;"));
+        assert!(public_surface.contains("docking, editor, imui, imui_build, imui_build_in,"));
+        assert!(public_surface.contains("imui_in, imui_raw, imui_raw_in,"));
+        assert!(public_surface.contains("kit,"));
     }
 
     #[test]
