@@ -55,6 +55,22 @@ Tracker highlights:
   `docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md`,
   `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`, and
   `docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md`.
+- ImUi facade internal modularization closeout record (closed narrow structural lane for internal
+  `fret-ui-kit::imui` owner decomposition that kept the public surface frozen while shrinking the
+  mixed internal owner files; the landed slices turned `options.rs` and `response.rs` into stable
+  re-export hubs over smaller private modules, turned `interaction_runtime.rs` into a stable root
+  hub over five private owner modules, moved root-hub support helpers plus floating facade types
+  into dedicated owners, and finally moved the remaining `ImUiFacade` /
+  `UiWriterImUiFacadeExt` writer glue into one dedicated owner file):
+  `docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/M0_BASELINE_AUDIT_2026-04-21.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/M1_OPTIONS_RESPONSE_SLICE_2026-04-21.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/M2_INTERACTION_RUNTIME_SLICE_2026-04-21.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/M3_ROOT_FACADE_HUB_SLICE_2026-04-21.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/M4_FACADE_WRITER_GLUE_SLICE_2026-04-21.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md`,
+  `docs/workstreams/imui-facade-internal-modularization-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-facade-internal-modularization-v1/WORKSTREAM.json`.
 - ImUi control-chrome fearless refactor closeout record (closed narrow lane that landed the shared
   `fret-ui-kit::imui` default control-surface rewrite so button/switch/slider/combo/input helpers
   now read as controls and compact editor rails no longer need demo-level width workarounds):

@@ -121,6 +121,18 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-collection-pane-proof-v1/MILESTONES.md`
   - `docs/workstreams/imui-collection-pane-proof-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json`
+- Closed narrow closeout record for internal `fret-ui-kit::imui` modularization:
+  - `docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M1_OPTIONS_RESPONSE_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M2_INTERACTION_RUNTIME_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M3_ROOT_FACADE_HUB_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M4_FACADE_WRITER_GLUE_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/TODO.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/WORKSTREAM.json`
 - Closed narrow P0 response-status lifecycle closeout record:
   - `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/M0_BASELINE_AUDIT_2026-04-13.md`
@@ -177,6 +189,12 @@ It complements (but does not replace) ADRs:
   the lane now records the asset-grid/file-browser style collection proof and the shell-mounted
   `child_region` pane composition proof together, while keeping key ownership, shell-helper
   promotion, and runner/backend multi-window parity out of this folder.
+- Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
+  internal `fret-ui-kit::imui` cleanup:
+  the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the
+  `interaction_runtime.rs` owner split, the root `imui.rs` support/type split, and the final
+  facade-writer owner split, and future helper/policy pressure should now move to a different
+  narrow lane instead of reopening this generic structural folder.
 - Use `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` as the closed closeout record
   for the shared IMUI control affordance / compact-field behavior rewrite; if future pressure
   shifts to field-width policy or family-specific parity, start a narrower follow-on instead of

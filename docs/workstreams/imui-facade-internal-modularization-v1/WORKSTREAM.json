@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "slug": "imui-facade-internal-modularization-v1",
+  "title": "ImUi Facade Internal Modularization v1",
+  "status": "closed",
+  "updated": "2026-04-21",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "The remaining immediate-mode parity pressure is now dominated by narrow policy/proof lanes, but `ecosystem/fret-ui-kit::imui` still concentrates too much internal ownership in a few large files. Fret needs a narrow follow-on that reduces refactor hazard by modularizing the immediate facade internals without widening public surface, reopening runtime contracts, or conflating internal structure cleanup with menu/tab policy depth, collection breadth, or key-owner follow-ons.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/M0_BASELINE_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/M1_OPTIONS_RESPONSE_SLICE_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/M2_INTERACTION_RUNTIME_SLICE_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/M3_ROOT_FACADE_HUB_SLICE_2026-04-21.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/M4_FACADE_WRITER_GLUE_SLICE_2026-04-21.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/facade_support.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/floating_options.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/facade_writer.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/interaction_runtime.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/options.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/response.rs"
+    }
+  ],
+  "repro": {
+    "summary": "Use the `fret-ui-kit` crate audit snapshot plus the current first-party immediate proof build/test surfaces to confirm that internal module motion does not change the shipped `fret-ui-kit::imui` authoring surface while progressively shrinking the highest-risk files.",
+    "commands": [
+      "python3 tools/audit_crate.py --crate fret-ui-kit",
+      "cargo build -p fret-demo --bin imui_editor_proof_demo",
+      "cargo nextest run -p fret-imui --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "imui-facade-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on --no-fail-fast"
+    },
+    {
+      "name": "imui-facade-public-surface-floor",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui-facade-interaction-floor",
+      "command": "cargo nextest run -p fret-imui --no-fail-fast"
+    },
+    {
+      "name": "imui-editor-proof-build",
+      "command": "cargo build -p fret-demo --bin imui_editor_proof_demo"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-facade-internal-modularization-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/M0_BASELINE_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/M1_OPTIONS_RESPONSE_SLICE_2026-04-21.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/M2_INTERACTION_RUNTIME_SLICE_2026-04-21.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/M3_ROOT_FACADE_HUB_SLICE_2026-04-21.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/M4_FACADE_WRITER_GLUE_SLICE_2026-04-21.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/TODO.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/MILESTONES.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-facade-internal-modularization-v1/WORKSTREAM.json",
+    "docs/workstreams/README.md",
+    "docs/roadmap.md",
+    "docs/todo-tracker.md",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_support.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_options.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime",
+    "ecosystem/fret-ui-kit/src/imui/options.rs",
+    "ecosystem/fret-ui-kit/src/imui/response.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "new_follow_on",
+    "notes": "This lane is closed. Future work should open a narrower follow-on for writer-family decomposition, additive helper surface, stronger menu/tab policy, collection interaction depth, or runtime changes rather than reopening this generic internal modularization folder."
+  }
+}

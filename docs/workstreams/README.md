@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 241
+- Dedicated directories: 242
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -125,6 +125,23 @@ Current source of truth for the in-tree immediate-mode stack:
     future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
     review, and implementation-heavy work should stay in narrower follow-ons or the active docking
     parity lane.
+
+- Closed narrow P0 internal modularization closeout record:
+  - `docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M1_OPTIONS_RESPONSE_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M2_INTERACTION_RUNTIME_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M3_ROOT_FACADE_HUB_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/M4_FACADE_WRITER_GLUE_SLICE_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/TODO.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/MILESTONES.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-facade-internal-modularization-v1/WORKSTREAM.json`
+  - Scope: records the shipped internal `fret-ui-kit::imui` owner decomposition without widening
+    public surface; the landed slices split `options.rs`, `response.rs`, `interaction_runtime.rs`,
+    the root `imui.rs` support/type block, and the remaining facade writer glue into explicit
+    owners, and future work should reopen the topic only through a narrower follow-on.
 
 - Closed narrow P0 key-owner surface closeout record:
   - `docs/workstreams/imui-key-owner-surface-v1/DESIGN.md`
@@ -488,6 +505,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
+- `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-key-owner-surface-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the immediate key-owner / item-local shortcut ownership verdict above the maintenance IMUI umbrella)
