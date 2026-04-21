@@ -2522,13 +2522,33 @@ mod authoring_surface_policy_tests {
             &[
                 "Showcase surface for immediate-mode interaction affordances.",
                 "Current proof/contract surface stays in `imui_response_signals_demo`.",
+                "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
                 "use fret_ui_shadcn::facade as shadcn;",
-                "fret_imui::imui(cx, move |ui| {",
+                "imui(cx, move |ui| {",
+                "kit::ButtonOptions {",
+                "kit::MenuBarOptions {",
+                "kit::ChildRegionOptions {",
                 "ui.begin_menu_with_options(",
                 "ui.tab_bar_with_options(",
                 "ui.begin_popup_context_menu(",
             ],
-            &[],
+            &[
+                "fret_imui::imui(cx, move |ui| {",
+                "UiWriterImUiFacadeExt as _",
+                "UiWriterUiKitExt as _",
+                "fret_ui_kit::imui::ChildRegionOptions",
+                "fret_ui_kit::imui::ScrollOptions",
+                "fret_ui_kit::imui::ButtonOptions",
+                "fret_ui_kit::imui::SliderOptions",
+                "fret_ui_kit::imui::ComboModelOptions",
+                "fret_ui_kit::imui::InputTextOptions",
+                "fret_ui_kit::imui::MenuBarOptions",
+                "fret_ui_kit::imui::BeginMenuOptions",
+                "fret_ui_kit::imui::BeginSubmenuOptions",
+                "fret_ui_kit::imui::MenuItemOptions",
+                "fret_ui_kit::imui::TabBarOptions",
+                "fret_ui_kit::imui::TabItemOptions",
+            ],
         );
 
         assert_current_imui_teaching_surface(
@@ -4584,6 +4604,38 @@ mod authoring_surface_policy_tests {
         );
         assert!(
             !IMUI_RESPONSE_SIGNALS_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
+        );
+    }
+
+    #[test]
+    fn imui_interaction_showcase_demo_prefers_root_fret_imui_facade_lane() {
+        assert!(
+            IMUI_INTERACTION_SHOWCASE_DEMO
+                .contains("use fret::{FretApp, advanced::prelude::*, imui::prelude::*};")
+        );
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("imui(cx, move |ui| {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::ButtonOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::ButtonArrowDirection::Left"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::RadioOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::SliderOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::ComboModelOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::InputTextOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::MenuBarOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::BeginMenuOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::BeginSubmenuOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::MenuItemOptions::default()"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::TabBarOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::TabItemOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::ChildRegionOptions {"));
+        assert!(IMUI_INTERACTION_SHOWCASE_DEMO.contains("kit::ScrollOptions {"));
+        assert!(!IMUI_INTERACTION_SHOWCASE_DEMO.contains("fret_imui::imui(cx, move |ui| {"));
+        assert!(
+            !IMUI_INTERACTION_SHOWCASE_DEMO
+                .contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;")
+        );
+        assert!(
+            !IMUI_INTERACTION_SHOWCASE_DEMO
+                .contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
         );
     }
 

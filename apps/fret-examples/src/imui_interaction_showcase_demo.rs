@@ -14,11 +14,10 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
-use fret_ui_kit::imui::ChildRegionOptions;
 use fret_ui_kit::{ColorRef, LayoutRefinement, LengthRefinement, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -625,13 +624,7 @@ fn render_interaction_lab_card(
             status_row,
             summary,
             ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
-                fret_imui::imui(cx, move |ui| {
-                    use fret_ui_kit::imui::{
-                        ButtonArrowDirection, ButtonOptions, ComboModelOptions, InputTextOptions,
-                        RadioOptions, SliderOptions, UiWriterImUiFacadeExt as _,
-                        UiWriterUiKitExt as _,
-                    };
-
+                imui(cx, move |ui| {
                     let pulse_count = pulse_count.clone();
                     let secondary_pulse_count = secondary_pulse_count.clone();
                     let long_press_count = long_press_count.clone();
@@ -675,7 +668,7 @@ fn render_interaction_lab_card(
                     ui.separator_text("Pulse");
                     let pulse = ui.button_with_options(
                         "Pulse interaction surface",
-                        ButtonOptions {
+                        kit::ButtonOptions {
                             test_id: Some(Arc::from("imui-showcase.lab.pulse")),
                             ..Default::default()
                         },
@@ -713,7 +706,7 @@ fn render_interaction_lab_card(
 
                     let drag = ui.button_with_options(
                         "Drag to scrub the stage",
-                        ButtonOptions {
+                        kit::ButtonOptions {
                             test_id: Some(Arc::from("imui-showcase.lab.drag")),
                             ..Default::default()
                         },
@@ -742,7 +735,7 @@ fn render_interaction_lab_card(
 
                     let quick_save = ui.small_button_with_options(
                         "Quick save",
-                        ButtonOptions {
+                        kit::ButtonOptions {
                             test_id: Some(Arc::from("imui-showcase.lab.small-save")),
                             ..Default::default()
                         },
@@ -759,8 +752,8 @@ fn render_interaction_lab_card(
                     ui.horizontal(|ui| {
                         let previous = ui.arrow_button_with_options(
                             "imui-showcase.lab.bookmark.prev",
-                            ButtonArrowDirection::Left,
-                            ButtonOptions {
+                            kit::ButtonArrowDirection::Left,
+                            kit::ButtonOptions {
                                 a11y_label: Some(Arc::from("Previous bookmark")),
                                 test_id: Some(Arc::from("imui-showcase.lab.bookmark.prev")),
                                 ..Default::default()
@@ -783,8 +776,8 @@ fn render_interaction_lab_card(
 
                         let next = ui.arrow_button_with_options(
                             "imui-showcase.lab.bookmark.next",
-                            ButtonArrowDirection::Right,
-                            ButtonOptions {
+                            kit::ButtonArrowDirection::Right,
+                            kit::ButtonOptions {
                                 a11y_label: Some(Arc::from("Next bookmark")),
                                 test_id: Some(Arc::from("imui-showcase.lab.bookmark.next")),
                                 ..Default::default()
@@ -809,7 +802,7 @@ fn render_interaction_lab_card(
                         let response = ui.radio_with_options(
                             candidate,
                             chosen,
-                            RadioOptions {
+                            kit::RadioOptions {
                                 test_id: Some(Arc::from(format!(
                                     "imui-showcase.lab.tool.{}",
                                     candidate.to_lowercase()
@@ -843,7 +836,7 @@ fn render_interaction_lab_card(
                     let exposure = ui.slider_f32_model_with_options(
                         "Exposure bias",
                         exposure_value.model(),
-                        SliderOptions {
+                        kit::SliderOptions {
                             min: 0.0,
                             max: 100.0,
                             step: 1.0,
@@ -865,7 +858,7 @@ fn render_interaction_lab_card(
                         "Review mode",
                         review_mode.model(),
                         &mode_items,
-                        ComboModelOptions {
+                        kit::ComboModelOptions {
                             placeholder: Some(Arc::from("Choose a review mode")),
                             ..Default::default()
                         },
@@ -884,7 +877,7 @@ fn render_interaction_lab_card(
 
                     let notes = ui.input_text_model_with_options(
                         draft_note.model(),
-                        InputTextOptions {
+                        kit::InputTextOptions {
                             placeholder: Some(Arc::from("Narrate what this interaction should feel like")),
                             ..Default::default()
                         },
@@ -974,13 +967,7 @@ fn render_shell_showcase_card(
         vec![
             shell_summary,
             ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
-                fret_imui::imui(cx, move |ui| {
-                    use fret_ui_kit::imui::{
-                        BeginMenuOptions, BeginSubmenuOptions, ButtonOptions, MenuBarOptions,
-                        MenuItemOptions, TabBarOptions, TabItemOptions, UiWriterImUiFacadeExt as _,
-                        UiWriterUiKitExt as _,
-                    };
-
+                imui(cx, move |ui| {
                     let menu_open_count = menu_open_count.clone();
                     let submenu_toggle_count = submenu_toggle_count.clone();
                     let tab_switch_count = tab_switch_count.clone();
@@ -1005,7 +992,7 @@ fn render_shell_showcase_card(
                     ui.add_ui(shell_hint);
 
                     ui.menu_bar_with_options(
-                        MenuBarOptions {
+                        kit::MenuBarOptions {
                             test_id: Some(Arc::from("imui-showcase.menu.root")),
                             ..Default::default()
                         },
@@ -1013,7 +1000,7 @@ fn render_shell_showcase_card(
                             let file_menu = ui.begin_menu_with_options(
                                 "imui-showcase.menu.file",
                                 "File",
-                                BeginMenuOptions {
+                                kit::BeginMenuOptions {
                                     test_id: Some(Arc::from("imui-showcase.menu.file")),
                                     ..Default::default()
                                 },
@@ -1021,18 +1008,18 @@ fn render_shell_showcase_card(
                                     let staging = ui.begin_submenu_with_options(
                                         "imui-showcase.menu.staging",
                                         "Staging",
-                                        BeginSubmenuOptions {
+                                        kit::BeginSubmenuOptions {
                                             test_id: Some(Arc::from("imui-showcase.menu.staging")),
                                             ..Default::default()
                                         },
                                         |ui| {
                                             let _ = ui.menu_item_with_options(
                                                 "Capture review frame",
-                                                MenuItemOptions::default(),
+                                                kit::MenuItemOptions::default(),
                                             );
                                             let _ = ui.menu_item_with_options(
                                                 "Queue lighting pass",
-                                                MenuItemOptions::default(),
+                                                kit::MenuItemOptions::default(),
                                             );
                                         },
                                     );
@@ -1051,7 +1038,7 @@ fn render_shell_showcase_card(
 
                                     let _ = ui.menu_item_with_options(
                                         "Open recent capture",
-                                        MenuItemOptions::default(),
+                                        kit::MenuItemOptions::default(),
                                     );
                                 },
                             );
@@ -1070,7 +1057,7 @@ fn render_shell_showcase_card(
 
                     let tabs = ui.tab_bar_with_options(
                         "imui-showcase.tabs",
-                        TabBarOptions {
+                        kit::TabBarOptions {
                             selected: Some(selected_tab.model().clone()),
                             test_id: Some(Arc::from("imui-showcase.tabs.root")),
                             ..Default::default()
@@ -1079,7 +1066,7 @@ fn render_shell_showcase_card(
                             tabs.begin_tab_item_with_options(
                                 "overview",
                                 "Overview",
-                                TabItemOptions {
+                                kit::TabItemOptions {
                                     test_id: Some(Arc::from("imui-showcase.tabs.overview")),
                                     panel_test_id: Some(Arc::from("imui-showcase.tabs.overview.panel")),
                                     ..Default::default()
@@ -1093,7 +1080,7 @@ fn render_shell_showcase_card(
                             tabs.begin_tab_item_with_options(
                                 "scene",
                                 "Scene",
-                                TabItemOptions {
+                                kit::TabItemOptions {
                                     test_id: Some(Arc::from("imui-showcase.tabs.scene")),
                                     panel_test_id: Some(Arc::from("imui-showcase.tabs.scene.panel")),
                                     ..Default::default()
@@ -1107,7 +1094,7 @@ fn render_shell_showcase_card(
                             tabs.begin_tab_item_with_options(
                                 "notes",
                                 "Notes",
-                                TabItemOptions {
+                                kit::TabItemOptions {
                                     test_id: Some(Arc::from("imui-showcase.tabs.notes")),
                                     panel_test_id: Some(Arc::from("imui-showcase.tabs.notes.panel")),
                                     ..Default::default()
@@ -1137,7 +1124,7 @@ fn render_shell_showcase_card(
                     ui.separator_text("Quick actions");
                     let quick_actions = ui.button_with_options(
                         "Right-click this review surface",
-                        ButtonOptions {
+                        kit::ButtonOptions {
                             test_id: Some(Arc::from("imui-showcase.quick-actions.trigger")),
                             ..Default::default()
                         },
@@ -1145,7 +1132,7 @@ fn render_shell_showcase_card(
                     ui.begin_popup_context_menu("imui-showcase.quick-actions", quick_actions, |ui| {
                         let toggle = ui.menu_item_with_options(
                             "Pin diagnostics rail",
-                            MenuItemOptions {
+                            kit::MenuItemOptions {
                                 test_id: Some(Arc::from("imui-showcase.quick-actions.toggle")),
                                 ..Default::default()
                             },
@@ -1166,7 +1153,7 @@ fn render_shell_showcase_card(
                         let close_popup = ui.popup_open_model("imui-showcase.quick-actions");
                         let close = ui.menu_item_with_options(
                             "Dismiss quick actions",
-                            MenuItemOptions {
+                            kit::MenuItemOptions {
                                 close_popup: Some(close_popup),
                                 ..Default::default()
                             },
@@ -1185,9 +1172,9 @@ fn render_shell_showcase_card(
 
                     ui.child_region_with_options(
                         TEST_ID_PREVIEW,
-                        ChildRegionOptions {
+                        kit::ChildRegionOptions {
                             layout: LayoutRefinement::default().h_px(Px(112.0)),
-                            scroll: fret_ui_kit::imui::ScrollOptions {
+                            scroll: kit::ScrollOptions {
                                 viewport_test_id: Some(Arc::from(TEST_ID_PREVIEW_VIEWPORT)),
                                 ..Default::default()
                             },
