@@ -792,10 +792,14 @@ mod authoring_surface_policy_tests {
             "imui_action_basics",
             IMUI_ACTION_EXAMPLE,
             &[
-                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "use fret::imui::{kit::ButtonOptions, prelude::*};",
+                "imui_raw(cx, |ui| {",
                 "ui.action_button_with_options(",
             ],
-            &[],
+            &[
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "fret_imui::imui_raw(cx, |ui| {",
+            ],
         );
     }
 

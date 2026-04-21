@@ -2651,10 +2651,10 @@ mod authoring_surface_policy_tests {
     fn immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw() {
         for marker in [
             "Mounting rule for the immediate-mode lane:",
-            "`fret_imui::imui(...)` is now the safe default",
-            "`fret_imui::imui_raw(cx, ...)`.",
+            "On the explicit `fret::imui` lane, `imui(...)` is now the safe default",
+            "`use fret::imui::prelude::*;`.",
             "`imui_raw(...)` is the advanced seam",
-            "`imui_action_basics` demonstrates the explicit layout-host + raw shape; `imui_hello_demo`",
+            "`imui_action_basics` demonstrates the explicit layout-host + raw shape on the root `fret::imui`",
         ] {
             assert!(
                 EXAMPLES_DOCS_README.contains(marker),

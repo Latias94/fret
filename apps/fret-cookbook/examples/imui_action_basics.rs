@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::imui::{kit::ButtonOptions, prelude::*};
 use fret::semantics::SemanticsRole;
 use fret::style::Space;
 use fret_genui_core::catalog::CatalogActionV1;
@@ -10,8 +11,6 @@ use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};
-use fret_ui_kit::imui::ButtonOptions;
-use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use serde_json::{Value, json};
 
 mod act {
@@ -130,7 +129,7 @@ impl View for ImUiActionBasicsView {
             let imui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 // This panel already sits inside an explicit Column host, so use the raw entrypoint
                 // instead of asking `imui(...)` to add another stacked host.
-                fret_imui::imui_raw(cx, |ui| {
+                imui_raw(cx, |ui| {
                     ui.text("IMUI");
                     ui.action_button_with_options(
                         Arc::from("Increment (imui)"),
@@ -159,7 +158,7 @@ impl View for ImUiActionBasicsView {
         .size_full()
         .gap(Space::N4)
         .test_id(TEST_ID_ROOT)
-        .into_element(cx)
+        .into_element_in(cx)
         .into()
     }
 }

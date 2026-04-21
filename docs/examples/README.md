@@ -146,13 +146,15 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
 
 Mounting rule for the immediate-mode lane:
 
-- `fret_imui::imui(...)` is now the safe default: it adds the stacked host needed for view roots
-  and non-layout parents.
+- On the explicit `fret::imui` lane, `imui(...)` is now the safe default: it adds the stacked host
+  needed for view roots and non-layout parents.
 - If your IMUI content already lives under an explicit layout host such as `Column`, `Row`, or
-  `v_flex`, and you explicitly want bare sibling emission, use `fret_imui::imui_raw(cx, ...)`.
+  `v_flex`, and you explicitly want bare sibling emission, use `imui_raw(cx, ...)` from
+  `use fret::imui::prelude::*;`.
 - `imui_raw(...)` is the advanced seam, not the default first-open teaching surface.
-- `imui_action_basics` demonstrates the explicit layout-host + raw shape; `imui_hello_demo`
-  remains the small smoke/reference proof of the default root-hosted shape.
+- `imui_action_basics` demonstrates the explicit layout-host + raw shape on the root `fret::imui`
+  lane; `imui_hello_demo` remains the small smoke/reference proof of the default root-hosted
+  shape.
 
 Stable identity rule for the immediate-mode lane:
 
