@@ -114,6 +114,32 @@
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
 //!   runtime-captured config on `UiAppBuilder::setup_with(...)`
+//!
+//! ## Immediate-mode lane (optional)
+//!
+//! `fret::imui` is the explicit imgui-style lane. Keep `fret::app::prelude::*` as the default
+//! declarative-first story, and opt into `use fret::imui::prelude::*;` when a view wants
+//! immediate-mode control flow.
+//!
+//! ```ignore
+//! use fret::app::prelude::*;
+//! use fret::imui::prelude::*;
+//!
+//! struct InspectorView;
+//!
+//! impl View for InspectorView {
+//!     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+//!         imui_in(cx, |ui| {
+//!             if ui.button("Save").clicked() {
+//!                 // Trigger an app-facing action or mutate shared state here.
+//!             }
+//!         })
+//!     }
+//! }
+//! ```
+//!
+//! Reach for `fret::imui::kit` for policy-heavy widgets, `fret::imui::editor` for editor-grade
+//! controls, and `fret::imui::docking` for docking helpers.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 use crate::advanced::KernelApp;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -2814,6 +2840,35 @@ mod authoring_surface_policy_tests {
         assert!(!public_surface.contains("register_router_commands"));
         assert!(!public_surface.contains("pub fn install_app(app: &mut crate::app::App) {"));
         assert!(!public_surface.contains("pub use fret_router_ui::*;"));
+    }
+
+    #[test]
+    fn readme_and_rustdoc_expose_imui_as_explicit_optional_surface() {
+        assert!(CRATE_README.contains("features = [\"imui\"]"));
+        assert!(CRATE_README.contains("## Immediate-mode lane (optional)"));
+        assert!(CRATE_README.contains("`fret::imui` is the explicit imgui-style lane."));
+        assert!(CRATE_README.contains("`use fret::imui::prelude::*;`"));
+        assert!(CRATE_README.contains("if ui.button(\"Save\").clicked() {"));
+        assert!(CRATE_README.contains("`fret::imui::kit`"));
+        assert!(CRATE_README.contains("`fret::imui::editor`"));
+        assert!(CRATE_README.contains("`fret::imui::docking`"));
+        assert!(
+            CRATE_README.contains("- `imui`: enable the explicit immediate-mode authoring lane")
+        );
+
+        let rustdoc = crate_rustdoc();
+        let public_surface = crate_public_surface_source();
+        assert!(rustdoc.contains("## Immediate-mode lane (optional)"));
+        assert!(rustdoc.contains("`fret::imui` is the explicit imgui-style lane."));
+        assert!(rustdoc.contains("`use fret::imui::prelude::*;`"));
+        assert!(rustdoc.contains("if ui.button(\"Save\").clicked() {"));
+        assert!(rustdoc.contains("Reach for `fret::imui::kit` for policy-heavy widgets,"));
+        assert!(rustdoc.contains("`fret::imui::{prelude::*, kit, editor, docking}`"));
+        assert!(public_surface.contains("pub mod imui {"));
+        assert!(!app_prelude_exports_symbol("ImUi"));
+        assert!(!app_prelude_exports_symbol("ImUiFacade"));
+        assert!(!app_prelude_exports_symbol("UiWriterImUiFacadeExt"));
+        assert!(!app_prelude_exports_symbol("UiWriterUiKitExt"));
     }
 
     #[test]

@@ -97,6 +97,13 @@ Enable the explicit router extension surface (optional):
 fret = { path = "../fret", features = ["router"] }
 ```
 
+Enable the explicit immediate-mode lane (optional):
+
+```toml
+[dependencies]
+fret = { path = "../fret", features = ["imui"] }
+```
+
 For editor-grade docking workflows, depend on `fret-docking` directly:
 
 ```toml
@@ -139,6 +146,32 @@ fn main() -> fret::Result<()> {
         .run()
 }
 ```
+
+## Immediate-mode lane (optional)
+
+`fret::imui` is the explicit imgui-style lane. Keep `fret::app::prelude::*` as the default
+declarative-first story, and opt into `use fret::imui::prelude::*;` when a view wants
+immediate-mode control flow.
+
+```rust,ignore
+use fret::app::prelude::*;
+use fret::imui::prelude::*;
+
+struct InspectorView;
+
+impl View for InspectorView {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        imui_in(cx, |ui| {
+            if ui.button("Save").clicked() {
+                // Trigger an app-facing action or mutate shared state here.
+            }
+        })
+    }
+}
+```
+
+Reach for `fret::imui::kit` for policy-heavy widgets, `fret::imui::editor` for editor-grade
+controls, and `fret::imui::docking` for docking helpers.
 
 If app code needs explicit style/token nouns or icon helpers/IDs beyond the default lane, import
 them from `fret::style::{...}` and `fret::icons::{icon, IconId}` instead of expecting them from
@@ -208,6 +241,9 @@ The same ordered builder surface now also includes compile-time/static entries t
   the explicit `fret::selector::*` / `fret::query::*`
   secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
+- `imui`: enable the explicit immediate-mode authoring lane
+  (`fret::imui::{prelude::*, kit, editor, docking}`) for imgui-style control flow while keeping
+  `fret::app::prelude::*` declarative-first.
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
