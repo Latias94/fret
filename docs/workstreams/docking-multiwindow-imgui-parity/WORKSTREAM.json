@@ -32,6 +32,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
     {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"
     },
@@ -61,13 +65,14 @@
       "python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host --json-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-summary.json --note-out target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host/latest.acceptance-note.md",
       "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
       "cargo nextest run -p fret-docking --lib request_float_degrades_to_in_window_when_window_hover_detection_is_none --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice --no-fail-fast"
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice immediate_mode_workstream_freezes_the_p3_wayland_compositor_acceptance_runbook --no-fail-fast",
+      "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json --dir target/fret-diag/docking-multiwindow-imgui-parity/wayland-real-host --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"
     ]
   },
   "gates": [
     {
       "name": "p3-multiwindow-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice --no-fail-fast"
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice immediate_mode_workstream_freezes_the_p3_wayland_compositor_acceptance_runbook --no-fail-fast"
     },
     {
       "name": "p3-wayland-capability-posture",
@@ -110,6 +115,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",
     "docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md",
@@ -127,6 +133,7 @@
     "crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs",
     "crates/fret-launch/src/runner/desktop/runner/window.rs",
     "ecosystem/fret-docking/src/runtime.rs",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",

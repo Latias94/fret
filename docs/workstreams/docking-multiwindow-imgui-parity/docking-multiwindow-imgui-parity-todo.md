@@ -265,8 +265,13 @@ Each TODO is labeled:
       - Wayland sets `ui.window_hover_detection=none`
       - Wayland sets `ui.window_z_level=none`
     - [x] Docking runtime fallback is now explicitly locked for `window_hover_detection == None`.
+    - [x] Real-host acceptance runbook is now explicit:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`
+      - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`
+      - Bounded review: `diag windows`, `diag dock-graph`, optional `target/fret-dock-tearoff.log` grep
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
+    - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
     - Run `cargo run -p fret-demo --bin docking_arbitration_demo`.
     - Attempt to tear off a tab: no new OS window should be created; the panel should float inside the same OS window.
     - Optional: with `FRET_DOCK_TEAROFF_LOG=1`, the log should not contain `[effect-window-create]` lines for DockFloating.

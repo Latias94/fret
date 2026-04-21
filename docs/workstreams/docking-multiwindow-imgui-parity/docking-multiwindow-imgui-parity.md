@@ -248,6 +248,8 @@ Current policy (Wayland):
   `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md` `DW-P1-linux-003`).
 - Source-policy freeze for that posture now lives in
   `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`.
+- Real-host compositor acceptance for that posture now uses
+  `docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

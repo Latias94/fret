@@ -390,6 +390,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_ACCEPTANCE_RUNBOOK_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
+    );
     const DIAG_MONITOR_TOPOLOGY_ENVIRONMENT_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json"
     );
@@ -3501,6 +3504,49 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the docking parity TODO should keep the Wayland degradation progress explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_wayland_compositor_acceptance_runbook() {
+        for marker in [
+            "\"role\": \"next\"",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+            "docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the Wayland compositor runbook reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "Run this only on a Linux native Wayland session.",
+            "`XDG_SESSION_TYPE=wayland`",
+            "`docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`",
+            "`known_window_count_is(n=1)`",
+            "`diag windows`",
+            "`diag dock-graph`",
+            "`[effect-window-create]`",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_ACCEPTANCE_RUNBOOK_NOTE.contains(marker),
+                "the docking parity lane should keep the Wayland compositor acceptance runbook explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Real-host acceptance runbook is now explicit",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+            "docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
+            "`diag windows`",
+            "`diag dock-graph`",
+            "Manual Wayland compositor acceptance remains open.",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the docking parity TODO should keep the Wayland acceptance package explicit: {marker}"
             );
         }
     }
