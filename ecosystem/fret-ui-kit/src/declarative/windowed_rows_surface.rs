@@ -517,7 +517,9 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
 
         vec![cx.pointer_region(pointer, move |cx| {
             if let Some(on_timer) = on_timer.clone() {
-                cx.timer_on_timer_for(cx.root_id(), on_timer);
+                // Surface hooks may share the pointer region root with other helper-installed
+                // timers, so compose rather than replacing an existing handler.
+                cx.timer_add_on_timer_for(cx.root_id(), on_timer);
             }
 
             if let Some(on_pointer_down) = on_pointer_down.clone() {

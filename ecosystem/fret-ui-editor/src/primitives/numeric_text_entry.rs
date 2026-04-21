@@ -89,7 +89,8 @@ pub(crate) fn sync_numeric_text_entry_focus_handoff<H: UiHost>(
     }
 
     let handoff_for_timer = handoff.clone();
-    cx.timer_on_timer_for(
+    // Shared numeric-entry helpers may be layered with control-owned timer hooks.
+    cx.timer_add_on_timer_for(
         timer_target,
         Arc::new(move |host, action_cx, token| {
             let mut state = handoff_for_timer.lock().unwrap_or_else(|e| e.into_inner());

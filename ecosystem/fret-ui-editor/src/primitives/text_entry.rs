@@ -83,7 +83,8 @@ pub(crate) fn sync_editor_text_entry_focus_selection<H: UiHost>(
     }
 
     let focus_state_for_timer = focus_state.clone();
-    cx.timer_on_timer_for(
+    // Shared text-entry helpers may be composed with control-local timer hooks on the same input.
+    cx.timer_add_on_timer_for(
         input_id,
         Arc::new(move |host, action_cx, token| {
             let mut state = focus_state_for_timer
