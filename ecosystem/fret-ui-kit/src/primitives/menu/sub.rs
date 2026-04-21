@@ -961,7 +961,10 @@ pub fn install_timer_handler<H: UiHost>(
     models: MenuSubmenuModels,
     cfg: MenuSubmenuConfig,
 ) {
-    cx.timer_on_timer_for(element, on_timer_handler(models, cfg));
+    // Submenu timers are often wired onto trigger/root elements that may also host other helper
+    // timer hooks. Compose instead of overwrite so submenu routing stays compatible with layered
+    // policy hooks on the same element.
+    cx.timer_add_on_timer_for(element, on_timer_handler(models, cfg));
 }
 
 pub fn handle_dismissible_pointer_move(
