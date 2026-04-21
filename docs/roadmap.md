@@ -38,6 +38,15 @@ Tracker highlights:
   `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
   `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`, and
   `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
+- ImUi key-owner surface closeout record (closed narrow P0 lane that audited the remaining
+  immediate key-owner / item-local shortcut ownership gap after focused `activate_shortcut`
+  coverage and command metadata seams landed, then closed on a no-new-surface verdict until
+  stronger first-party proof warrants another narrow lane):
+  `docs/workstreams/imui-key-owner-surface-v1/DESIGN.md`,
+  `docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md`, and
+  `docs/workstreams/imui-key-owner-surface-v1/M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md`,
+  `docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md`, and
+  `docs/workstreams/imui-key-owner-surface-v1/EVIDENCE_AND_GATES.md`.
 - ImUi collection + pane proof closeout record (closed narrow P0/P1 lane that proved the current
   first-party asset-browser collection breadth and shell-mounted pane composition breadth, then
   closed on a no-helper-widening verdict without reopening runtime widening, key-owner work,

@@ -138,7 +138,13 @@ implementation-heavy work in this folder while the remaining P3 execution contin
       (key ownership, item-status lifecycle, richer collection/pane proof), split a narrow follow-on
       instead of widening this umbrella folder.
       Result: `docs/workstreams/imui-response-status-lifecycle-v1/` now owns the narrow
-      `ResponseExt` lifecycle vocabulary slice, and
+      `ResponseExt` lifecycle vocabulary slice,
+      `docs/workstreams/imui-key-owner-surface-v1/` now records the closed key-owner /
+      item-local shortcut ownership follow-on with
+      `M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md` plus
+      `CLOSEOUT_AUDIT_2026-04-21.md`, so the current helper-local
+      `activate_shortcut` + command-metadata seams remain the shipped answer until stronger
+      first-party proof warrants a different narrow lane, and
       `docs/workstreams/imui-collection-pane-proof-v1/` now records the closed collection-first /
       pane-first proof pair with a no-helper-widening verdict, while this umbrella keeps phase
       ordering and the remaining cross-phase backlog read.

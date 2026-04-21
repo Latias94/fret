@@ -103,6 +103,16 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+- Closed narrow closeout record for immediate key-owner / item-local shortcut ownership:
+  - `docs/workstreams/imui-key-owner-surface-v1/DESIGN.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/TODO.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/MILESTONES.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json`
 - Closed narrow closeout record for collection-first and pane-first proof breadth:
   - `docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md`
   - `docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md`
@@ -155,6 +165,13 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-response-status-lifecycle-v1/` as the closed closeout record for the
   first P0 `ResponseExt` lifecycle vocabulary slice; if future pressure shifts to key ownership or
   broader proof depth, start a narrower follow-on instead of widening this folder again.
+- Use `docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json` as the closed closeout record
+  for immediate key-owner surface work:
+  the lane now keeps the M2 no-new-surface verdict explicit, preserves item-local shortcut
+  ownership as a separate problem from lifecycle vocabulary, collection/pane proof breadth,
+  broader menu/tab policy, and runtime keymap arbitration, and requires stronger first-party proof
+  before another narrow lane can justify a `SetNextItemShortcut()` / `SetItemKeyOwner()`-scale
+  surface.
 - Use `docs/workstreams/imui-collection-pane-proof-v1/` as the closed closeout record for the
   shipped collection/pane proof pair:
   the lane now records the asset-grid/file-browser style collection proof and the shell-mounted

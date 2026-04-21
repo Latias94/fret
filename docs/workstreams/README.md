@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 240
+- Dedicated directories: 241
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -125,6 +125,22 @@ Current source of truth for the in-tree immediate-mode stack:
     future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
     review, and implementation-heavy work should stay in narrower follow-ons or the active docking
     parity lane.
+
+- Closed narrow P0 key-owner surface closeout record:
+  - `docs/workstreams/imui-key-owner-surface-v1/DESIGN.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/TODO.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/MILESTONES.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json`
+  - Scope: records the shipped no-new-surface verdict for the remaining immediate key-owner /
+    item-local shortcut ownership question after the focused shortcut floor and command-metadata
+    seams landed; reopen only with stronger first-party proof in a different narrow lane, while
+    keeping lifecycle vocabulary, collection/pane proof breadth, broader menu/tab policy, and
+    runtime keymap arbitration in their separate lanes.
 
 - Closed narrow P0/P1 collection + pane proof closeout record:
   - `docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md`
@@ -474,6 +490,7 @@ Rule:
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
+- `docs/workstreams/imui-key-owner-surface-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the immediate key-owner / item-local shortcut ownership verdict above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)

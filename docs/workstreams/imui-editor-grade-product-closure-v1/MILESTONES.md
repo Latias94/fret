@@ -75,7 +75,8 @@ Current status:
 - The tested shortcut repeat rule is now explicit at the immediate layer:
   default key repeat does not retrigger activation, and `shortcut_repeat=true` is the opt-in seam.
 - The remaining credible P0 backlog is now narrower:
-  the separate key-owner surface,
+  the closed key-owner closeout record at
+  `docs/workstreams/imui-key-owner-surface-v1/`,
   the split item-status lifecycle follow-on at
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the closed collection/pane proof-breadth closeout record at
@@ -85,7 +86,12 @@ Current status:
   and the closed helper-owned trigger response-surface follow-on at
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`.
 - Execution consequence:
-  keep this lane as the umbrella recorder. The `ResponseExt` lifecycle vocabulary slice now lives in
+  keep this lane as the umbrella recorder. The key-owner / item-local shortcut ownership slice now
+  stays closed in `docs/workstreams/imui-key-owner-surface-v1/`,
+  where `M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md` plus `CLOSEOUT_AUDIT_2026-04-21.md` now freeze
+  the no-new-surface verdict over `imui_response_signals_demo` plus the bounded targeted
+  `fret-imui` shortcut floor,
+  the `ResponseExt` lifecycle vocabulary slice now lives in
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the collection/pane proof-breadth closeout record now lives in
   `docs/workstreams/imui-collection-pane-proof-v1/`,

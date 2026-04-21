@@ -50,6 +50,26 @@
     },
     {
       "role": "reference",
+      "path": "docs/workstreams/imui-key-owner-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-key-owner-surface-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-key-owner-surface-v1/M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "reference",
       "path": "docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md"
     },
     {
@@ -265,6 +285,12 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-key-owner-surface-v1/DESIGN.md",
+    "docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-key-owner-surface-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md",
+    "docs/workstreams/imui-key-owner-surface-v1/M2_NO_NEW_SURFACE_VERDICT_2026-04-21.md",
+    "docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json",
     "docs/workstreams/imui-collection-pane-proof-v1/DESIGN.md",
     "docs/workstreams/imui-collection-pane-proof-v1/M0_BASELINE_AUDIT_2026-04-21.md",
     "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md",
