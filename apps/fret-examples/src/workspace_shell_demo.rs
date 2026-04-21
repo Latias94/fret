@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
-use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
+use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};
@@ -24,9 +24,7 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
-use fret_ui_kit::imui::{
-    ChildRegionOptions, HorizontalOptions, ScrollOptions, UiWriterImUiFacadeExt as _,
-};
+use fret_ui_kit::imui::{ChildRegionOptions, HorizontalOptions, ScrollOptions};
 use fret_ui_kit::{
     LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space,
     TreeItem, TreeState,
@@ -303,7 +301,7 @@ where
 {
     let cx = cx.elements();
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
-        fret_imui::imui_build(cx, out, move |ui| {
+        imui_build(cx, out, move |ui| {
             let WorkspaceShellPaneProofState {
                 pane_id,
                 active_tab_label,

@@ -3304,7 +3304,8 @@ mod authoring_surface_policy_tests {
         for marker in [
             "struct WorkspaceShellPaneProofState {",
             "fn workspace_shell_pane_proof<'a, Cx>(",
-            "fret_imui::imui_build(cx, out, move |ui| {",
+            "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
+            "imui_build(cx, out, move |ui| {",
             "workspace-shell-pane-{}-proof.shell",
             "workspace-shell-pane-{}-proof.toolbar",
             "workspace-shell-pane-{}-proof.tabs",
@@ -6634,6 +6635,18 @@ mod authoring_surface_policy_tests {
             ],
             &["fn workspace_shell_editor_rail(cx: &mut fret_ui::ElementContext<'_, App>,"],
         );
+    }
+
+    #[test]
+    fn workspace_shell_demo_prefers_root_fret_imui_entry_surface() {
+        assert!(
+            WORKSPACE_SHELL_DEMO.contains(
+                "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};"
+            )
+        );
+        assert!(WORKSPACE_SHELL_DEMO.contains("imui_build(cx, out, move |ui| {"));
+        assert!(!WORKSPACE_SHELL_DEMO.contains("fret_imui::imui_build(cx, out, move |ui| {"));
+        assert!(!WORKSPACE_SHELL_DEMO.contains("UiWriterImUiFacadeExt as _"));
     }
 
     #[test]

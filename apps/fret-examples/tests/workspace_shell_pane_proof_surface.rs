@@ -5,7 +5,8 @@ fn workspace_shell_demo_keeps_shell_mounted_imui_pane_proof_explicit() {
     for needle in [
         "struct WorkspaceShellPaneProofState {",
         "fn workspace_shell_pane_proof<'a, Cx>(",
-        "fret_imui::imui_build(cx, out, move |ui| {",
+        "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
+        "imui_build(cx, out, move |ui| {",
         "ui.child_region_with_options(",
         "\"workspace-shell-pane-{}-proof.shell\"",
         "\"workspace-shell-pane-{}-proof.toolbar\"",
@@ -18,6 +19,16 @@ fn workspace_shell_demo_keeps_shell_mounted_imui_pane_proof_explicit() {
         assert!(
             source.contains(needle),
             "workspace shell demo should keep the shell-mounted pane proof explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fret_imui::imui_build(cx, out, move |ui| {",
+        "UiWriterImUiFacadeExt as _",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "workspace shell demo should keep the pane proof on the root fret::imui entry surface; unexpected `{needle}`"
         );
     }
 }
