@@ -1,15 +1,15 @@
 # ImUi Menu/Tab Policy Depth v1
 
-Status: active execution lane
+Status: closed lane
 Last updated: 2026-04-22
 
 Status note (2026-04-22): the first admitted generic IMUI policy-depth floor has now landed:
 top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with an end-to-end
 enforced grace corridor, alongside the same-frame reverse-direction top-level focus handoff fix.
-The remaining scope is narrower than the original baseline audit: editor-grade tab overflow /
-scroll / reorder / close stays in `fret-workspace`, and outer-scope mnemonic / roving posture now
-has an explicit shell-owned verdict, so the only open generic IMUI question is whether any richer
-submenu-intent tuning beyond the current enforced corridor should remain generic.
+The lane is now closed on a no-new-generic-surface verdict:
+editor-grade tab overflow / scroll / reorder / close stays in `fret-workspace`, outer-scope
+mnemonic / roving posture stays shell-owned, and the remaining submenu-intent pressure no longer
+has enough first-party evidence to justify more generic helper growth.
 
 Related:
 
@@ -17,6 +17,7 @@ Related:
 - `M0_BASELINE_AUDIT_2026-04-21.md`
 - `M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
 - `M2_TAB_OWNER_VERDICT_2026-04-22.md`
+- `CLOSEOUT_AUDIT_2026-04-22.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -34,9 +35,16 @@ The helper-owned menu/submenu/tab outward-response question is already closed:
 - `tab_bar[_with_options]` now returns `TabBarResponse`,
 - and the canonical naming cleanup already removed the duplicate `*_response*` alias layer.
 
-What remains open is a different problem:
+What remained open at lane start was a different problem:
 
 - richer submenu intent tuning beyond the current enforced corridor.
+
+That question is now closed by `CLOSEOUT_AUDIT_2026-04-22.md`:
+
+- the current generic submenu floor is sufficient for the first-party evidence this repo actually
+  has,
+- and any future wider submenu-intent pressure must reopen as a new narrower follow-on with a fresh
+  repro.
 
 This lane exists so that follow-on work does not reopen:
 

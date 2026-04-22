@@ -16,6 +16,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -103,16 +104,21 @@ This gate package currently proves:
   with submenu primitive hover handlers instead of overwriting them, so submenu delay / grace
   ownership remains in the shared primitive path rather than in helper-local hover state.
 
-## Remaining gap after the current landed floor
+## Closeout posture
 
-Still missing before this lane can close:
+This lane is now closed.
 
-- an explicit verdict on whether any richer submenu-intent tuning beyond the current grace
-  corridor stays generic,
-- or an explicit owner verdict that leaves that pressure to shell/product layers,
-- and a close-or-land decision for any richer submenu intent beyond the current corridor.
-- the remaining pressure is now no longer keyboard focus arbitration:
-  the current landed owner split plus keyboard slices cover trigger-local keyboard-open, in-menu
-  top-level switching, and reverse-direction same-frame focus handoff, while outer-scope
-  active-menubar mnemonic / roving posture stays shell-owned by verdict; the unresolved generic
-  question is therefore richer submenu-intent tuning beyond the current enforced grace corridor.
+The closeout verdict is:
+
+- the current generic IMUI floor already covers the first-party submenu outcomes this repo can
+  justify,
+- the remaining pressure is no longer keyboard focus arbitration or missing end-to-end grace
+  behavior,
+- and further submenu-intent growth would currently be heuristic micro-tuning without a fresh
+  first-party generic consumer proof.
+
+If new evidence appears later:
+
+- do not reopen this lane from historical TODO rows,
+- start a narrower follow-on with the exact failing repro,
+- and require that new lane to prove why the current generic submenu floor is insufficient.

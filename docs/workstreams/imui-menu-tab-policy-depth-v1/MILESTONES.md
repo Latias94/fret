@@ -1,6 +1,6 @@
 # ImUi Menu/Tab Policy Depth v1 - Milestones
 
-Status: active execution lane
+Status: closed lane
 Last updated: 2026-04-22
 
 ## M0 - Baseline and owner freeze
@@ -68,13 +68,14 @@ Primary evidence:
 - `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
 - `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md`
 - `M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md`
+- `CLOSEOUT_AUDIT_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
 
 Current status:
 
-- In progress.
+- Closed on 2026-04-22 via `CLOSEOUT_AUDIT_2026-04-22.md`.
 - A first landed generic IMUI floor now exists:
   top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with an
   end-to-end enforced grace corridor, including void-corridor close-timer cancellation, locked by
@@ -104,5 +105,7 @@ Current status:
   hover state no longer bypasses primitive delay / grace ownership; the focused IMUI proof now
   locks both sibling-switch deferral inside the grace polygon and safe-corridor close-timer
   cancellation while moving through submenu-side void.
-- The lane stays open only because richer submenu-intent tuning beyond the current enforced grace
-  corridor still needs a land or close verdict.
+- `CLOSEOUT_AUDIT_2026-04-22.md` now closes the remaining question on a no-new-generic-surface
+  verdict:
+  the current generic floor is sufficient for the first-party evidence on hand, and any future
+  wider submenu-intent pressure must reopen as a narrower follow-on.

@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "imui-menu-tab-policy-depth-v1",
   "title": "ImUi Menu/Tab Policy Depth v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-22",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The maintenance IMUI product-closure umbrella and the closed menu/tab trigger-response lanes already settled outward response shape and canonical helper naming, and the current follow-on has now landed top-level menubar hover-switch, submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor including safe-corridor close-timer cancellation, menubar keyboard-open / top-level left-right switching, and the reverse-direction same-frame focus handoff fix while also freezing the verdict that editor-grade tab overflow / reorder / close stays in `fret-workspace` and outer-scope active-menubar mnemonic / roving posture stays shell-owned. Fret still needs a narrow owner that can decide whether richer submenu-intent tuning belongs in generic `fret-ui-kit::imui`, without reopening response-surface naming, key-owner work, shell helpers, workspace tabstrip policy, or runtime widening.",
   "authoritative_docs": [
@@ -51,6 +51,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md"
     },
     {
       "role": "execution",
@@ -131,6 +135,7 @@
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md",
@@ -172,7 +177,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane until the repo freezes the remaining richer submenu-intent question or reaches an explicit no-new-generic-surface verdict for that pressure. Do not reopen the closed trigger-response lanes, workspace tabstrip policy, the reverse-direction keyboard slice, or the umbrella lane for implementation work."
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this lane from historical TODO rows. Start a narrower follow-on only if fresh first-party evidence shows the current generic submenu floor is insufficient."
   }
 }

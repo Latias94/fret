@@ -245,8 +245,10 @@ The real remaining gaps are narrower:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md` keeps
      Dear ImGui-like overflow / reorder / close / action-tab behavior in
      `fret-workspace::WorkspaceTabStrip`, so generic IMUI should not grow that surface by default.
-   - This gap now has a dedicated narrow owner:
-     `docs/workstreams/imui-menu-tab-policy-depth-v1/`.
+   - This gap now has a closed narrow owner:
+     `docs/workstreams/imui-menu-tab-policy-depth-v1/` now closes on a no-new-generic-surface
+     verdict, so any future submenu-intent widening must reopen as a new narrower follow-on with a
+     fresh first-party repro.
 4. First-cut immediate command metadata seam now exists, and the current lane explicitly closed on
    a no-new-surface verdict for broader key-owner APIs
    - `fret-ui-kit::imui` now exposes `menu_item_command[_with_options]` and

@@ -1,6 +1,6 @@
 # ImUi Menu/Tab Policy Depth v1 - TODO
 
-Status: active execution lane
+Status: closed lane
 Last updated: 2026-04-22
 
 ## Lane setup
@@ -26,15 +26,17 @@ Last updated: 2026-04-22
       hover-switch with an end-to-end enforced grace corridor as the current admitted
       policy-depth floor.
 - [x] Freeze one first-party proof surface and one focused gate package for that slice.
-- [ ] Keep the remaining owner questions explicit instead of widening the slice by accident:
+- [x] Keep the remaining owner questions explicit instead of widening the slice by accident:
       - richer submenu intent tuning beyond the current grace corridor,
       - or a no-new-generic-surface verdict for that extra submenu tuning pressure.
       Current blocker: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps
       outer-scope active-menubar mnemonic / roving posture shell-owned by default,
       `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` kept reverse-direction focus inside
       generic IMUI, and `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md` has now landed
-      that keyboard handoff fix, so the only explicit remaining policy-depth question is richer
+      that keyboard handoff fix, so the only explicit remaining policy-depth question was richer
       submenu intent beyond the current grace corridor.
+      Result: `CLOSEOUT_AUDIT_2026-04-22.md` now closes that remaining question on a
+      no-new-generic-surface verdict.
 
 ## M2 - Land or close
 
@@ -43,8 +45,11 @@ Last updated: 2026-04-22
       and submenu persistence can share one generic IMUI floor without popup-store churn.
       Result: `M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md` now records the landed `row_open ->
       popup_open` projection and the parent-menu dismiss fix for submenu focus transfers.
-- [ ] Decide whether any richer submenu grace / intent tuning beyond the current corridor belongs
+- [x] Decide whether any richer submenu grace / intent tuning beyond the current corridor belongs
       in generic IMUI or closes on a shell/product owner verdict.
+      Result: `CLOSEOUT_AUDIT_2026-04-22.md` now closes this lane because the current generic IMUI
+      floor already covers the first-party submenu outcomes this repo can justify, while the
+      remaining pressure is only micro-tuning without a new generic consumer proof.
 - [x] Prove that the current grace corridor is actually enforced end-to-end in generic IMUI rather
       than only existing in the submenu primitive.
       Result: `M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md` now records the landed fix for
@@ -71,5 +76,7 @@ Last updated: 2026-04-22
       generic IMUI by parity instinct alone.
       Result: `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tabstrip policy in
       `fret-workspace::WorkspaceTabStrip` and out of generic `imui::tab_bar` by default.
-- [ ] If the evidence shows the remaining pressure belongs to shell/product owners instead, close
+- [x] If the evidence shows the remaining pressure belongs to shell/product owners instead, close
       this lane on a no-new-generic-surface verdict rather than widening IMUI anyway.
+      Result: `CLOSEOUT_AUDIT_2026-04-22.md` now treats this lane as historical closeout evidence
+      and requires any future submenu-intent growth to reopen as a narrower follow-on.
