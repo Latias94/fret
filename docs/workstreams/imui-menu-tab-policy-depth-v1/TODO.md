@@ -27,12 +27,13 @@ Last updated: 2026-04-22
 - [x] Freeze one first-party proof surface and one focused gate package for that slice.
 - [ ] Keep the remaining owner questions explicit instead of widening the slice by accident:
       - richer submenu intent tuning beyond the current grace corridor,
-      - reverse-direction focus arbitration after top-level left/right switching.
+      - or a no-new-generic-surface verdict for that extra submenu tuning pressure.
       Current blocker: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps
-      outer-scope active-menubar mnemonic / roving posture shell-owned by default, and
-      `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` now keeps the reverse-direction
-      question inside generic IMUI, so the remaining generic keyboard pressure is the landed
-      implementation slice rather than another owner split.
+      outer-scope active-menubar mnemonic / roving posture shell-owned by default,
+      `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` kept reverse-direction focus inside
+      generic IMUI, and `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md` has now landed
+      that keyboard handoff fix, so the only explicit remaining policy-depth question is richer
+      submenu intent beyond the current grace corridor.
 
 ## M2 - Land or close
 
@@ -53,9 +54,11 @@ Last updated: 2026-04-22
       Result: `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` now keeps the owner inside
       generic IMUI because the focused `fret-imui` repro fails without any shell/product
       menubar surface in play.
-- [ ] Land a narrow generic IMUI fix for reverse-direction top-level switching so keyboard focus
+- [x] Land a narrow generic IMUI fix for reverse-direction top-level switching so keyboard focus
       enters the reopened earlier sibling instead of dropping to trigger-level fallback or
       collapsing on the next frame.
+      Result: `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md` now records the landed
+      same-frame handoff fix in popup teardown / initial-focus replay.
 - [x] Run the explicit owner audit for tab overflow / scroll / reorder / close instead of growing
       generic IMUI by parity instinct alone.
       Result: `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tabstrip policy in

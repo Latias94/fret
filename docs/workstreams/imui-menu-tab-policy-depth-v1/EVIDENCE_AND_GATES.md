@@ -14,6 +14,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -25,6 +26,8 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs`
+- `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- `ecosystem/fret-ui-kit/src/window_overlays/tests/cached_requests.rs`
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
 - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
 - `ecosystem/fret-workspace/src/tab_strip/interaction.rs`
@@ -60,6 +63,7 @@ Read these in order:
 
 - `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast`
 - `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`
+- `cargo nextest run -p fret-ui-kit cached_requests dismissible_popover --no-fail-fast`
 - `cargo nextest run -p fret-workspace tab_strip_overflow_menu_lists_overflowed_tabs tab_strip_focus_restore_after_close_command tab_strip_pinned_boundary_has_test_id tab_strip_keyboard_roving_arrow_activates_tab --no-fail-fast`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
@@ -85,6 +89,9 @@ This gate package currently proves:
 - the lane now also has an explicit owner verdict keeping reverse-direction top-level focus
   arbitration inside generic IMUI because the focused repro fails without any shell/product
   menubar owner in play.
+- the lane now also has a landed same-frame handoff fix for reverse-direction top-level switching,
+  so the reopened earlier sibling keeps popup entry focus instead of losing it to hidden-popover
+  trigger restore.
 
 ## Remaining gap after the current landed floor
 
@@ -93,11 +100,9 @@ Still missing before this lane can close:
 - an explicit verdict on whether any richer submenu-intent tuning beyond the current grace
   corridor stays generic,
 - or an explicit owner verdict that leaves that pressure to shell/product layers,
-- plus a landed implementation slice for reverse-direction top-level switching after the owner
-  verdict.
-- the remaining keyboard/product blocker is now narrower than popup ownership:
-  the current landed owner split plus keyboard slice resolved trigger-local keyboard-open and
-  in-menu top-level switching, while the new owner verdict keeps outer-scope active-menubar
-  mnemonic / roving posture shell-owned and the new reverse-direction owner verdict keeps the
-  remaining failure inside generic IMUI; the unresolved keyboard pressure is therefore the narrow
-  reverse-direction implementation slice.
+- and a close-or-land decision for any richer submenu intent beyond the current corridor.
+- the remaining pressure is now no longer keyboard focus arbitration:
+  the current landed owner split plus keyboard slices cover trigger-local keyboard-open, in-menu
+  top-level switching, and reverse-direction same-frame focus handoff, while outer-scope
+  active-menubar mnemonic / roving posture stays shell-owned by verdict; the unresolved generic
+  question is therefore richer submenu-intent tuning beyond the current grace corridor.

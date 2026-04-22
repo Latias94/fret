@@ -131,6 +131,248 @@ fn cached_popover_request_is_synthesized_when_open_without_rerender() {
 }
 
 #[test]
+fn hidden_popover_finalizer_does_not_restore_focus_over_same_frame_overlay_handoff() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let open_a = app.models_mut().insert(true);
+    let open_b = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(220.0), Px(140.0)),
+    );
+
+    let popover_a_id = GlobalElementId(0x20);
+    let popover_b_id = GlobalElementId(0x21);
+    let mut trigger_a: Option<GlobalElementId> = None;
+    let mut trigger_b: Option<GlobalElementId> = None;
+    let mut popover_a_focus: Option<GlobalElementId> = None;
+    let mut popover_b_focus: Option<GlobalElementId> = None;
+
+    begin_frame(&mut app, window);
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "cached-popover-handoff",
+        |cx| {
+            vec![
+                cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_a = Some(id);
+                        Vec::new()
+                    },
+                ),
+                cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_b = Some(id);
+                        Vec::new()
+                    },
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    let overlay_a_children = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "cached-popover-handoff.a",
+        |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(96.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    popover_a_focus = Some(id);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: popover_a_id,
+            root_name: "cached-popover-handoff.a".into(),
+            trigger: trigger_a.expect("trigger a"),
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_a.clone(),
+            present: true,
+            initial_focus: popover_a_focus,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: overlay_a_children,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let popover_a_focus_node = fret_ui::elements::node_for_element(
+        &mut app,
+        window,
+        popover_a_focus.expect("popover a focus"),
+    )
+    .expect("popover a focus node");
+    assert_eq!(ui.focus(), Some(popover_a_focus_node));
+
+    let _ = app.models_mut().update(&open_a, |v| *v = false);
+    let _ = app.models_mut().update(&open_b, |v| *v = true);
+
+    begin_frame(&mut app, window);
+    trigger_a = None;
+    trigger_b = None;
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "cached-popover-handoff",
+        |cx| {
+            vec![
+                cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_a = Some(id);
+                        Vec::new()
+                    },
+                ),
+                cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_b = Some(id);
+                        Vec::new()
+                    },
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    let overlay_b_children = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "cached-popover-handoff.b",
+        |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(96.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    popover_b_focus = Some(id);
+                    Vec::new()
+                },
+            )]
+        },
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: popover_b_id,
+            root_name: "cached-popover-handoff.b".into(),
+            trigger: trigger_b.expect("trigger b"),
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_b.clone(),
+            present: true,
+            initial_focus: popover_b_focus,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: overlay_b_children,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let popover_b_focus_node = fret_ui::elements::node_for_element(
+        &mut app,
+        window,
+        popover_b_focus.expect("popover b focus"),
+    )
+    .expect("popover b focus node");
+    assert_eq!(ui.focus(), Some(popover_b_focus_node));
+}
+
+#[test]
 fn cached_hover_overlay_request_is_synthesized_for_short_ttl_when_open_without_rerender() {
     let mut app = App::new();
     let mut ui = UiTree::new();

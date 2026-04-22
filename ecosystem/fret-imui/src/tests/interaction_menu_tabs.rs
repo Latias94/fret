@@ -710,6 +710,38 @@ fn begin_menu_horizontal_arrows_switch_active_top_level_menu() {
         bounds,
         "imui-begin-menu-arrow-switch.edit.copy",
     ));
+    assert_eq!(
+        current_focus_test_id(&mut ui, &mut app, &mut services, bounds),
+        Some(String::from("imui-begin-menu-arrow-switch.file.open"))
+    );
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-begin-menu-arrow-switch",
+        &render,
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-arrow-switch.file.open",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-arrow-switch.edit.copy",
+    ));
+    assert_eq!(
+        current_focus_test_id(&mut ui, &mut app, &mut services, bounds),
+        Some(String::from("imui-begin-menu-arrow-switch.file.open"))
+    );
 }
 
 #[test]

@@ -574,6 +574,19 @@ fn finalize_hidden_non_modal_overlay<H: UiHost>(
 
     let focus_now = ui.focus();
     let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
+    let focus_in_other_open_overlay =
+        focus_now
+            .and_then(|n| ui.node_layer(n))
+            .is_some_and(|focus_layer| {
+                focus_layer != layer
+                    && app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                        overlays.popovers.iter().any(|((w, _id), entry)| {
+                            *w == window && entry.open && entry.layer == focus_layer
+                        }) || overlays.modals.iter().any(|((w, _id), entry)| {
+                            *w == window && entry.open && entry.layer == focus_layer
+                        })
+                    })
+            });
     let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
     let should_restore_focus =
         focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer);
@@ -592,8 +605,10 @@ fn finalize_hidden_non_modal_overlay<H: UiHost>(
 
     // Radix-aligned outcome for menu-like overlays (ADR 0069):
     // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
-    // always restore focus to the trigger on unmount (like modals).
+    // restore focus to the trigger on unmount (like modals), unless another still-open overlay
+    // already owns focus in the same frame.
     if !close_auto_focus_prevented
+        && !focus_in_other_open_overlay
         && (consume_outside_pointer_events
             || (focus_in_layer || (!focus_cleared_by_modal_scope && should_restore_focus)))
         && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
@@ -1520,6 +1535,7 @@ pub fn render<H: UiHost + 'static>(
             let effective_interactive = open_now && !suspend_pointer_gating_for_capture;
 
             if open_now
+                && prev_open
                 && let Some(layer_root) = ui.layer_root(entry.layer)
                 && dismissable_layer_prim::should_dismiss_on_focus_outside(
                     ui,
@@ -1740,6 +1756,31 @@ pub fn render<H: UiHost + 'static>(
         }
 
         let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);
+
+        let retry_pending_initial_focus =
+            app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                overlays
+                    .popovers
+                    .get(&key)
+                    .is_some_and(|entry| entry.pending_initial_focus)
+            });
+        if open_now && retry_pending_initial_focus {
+            let focus = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                overlays
+                    .popovers
+                    .get(&key)
+                    .and_then(|entry| entry.initial_focus)
+            });
+            let applied =
+                focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
+            if applied {
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    if let Some(entry) = overlays.popovers.get_mut(&key) {
+                        entry.pending_initial_focus = false;
+                    }
+                });
+            }
+        }
     }
 
     type HidePopoverEntry = (
@@ -1869,6 +1910,25 @@ pub fn render<H: UiHost + 'static>(
             on_close_auto_focus,
         );
     }
+
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        for ((w, id), entry) in &mut overlays.popovers {
+            if *w != window || seen_popovers.contains(id) {
+                continue;
+            }
+            entry.open = false;
+            entry.pending_initial_focus = false;
+            entry.close_auto_focus_handled = true;
+        }
+        for ((w, id), entry) in &mut overlays.modals {
+            if *w != window || seen_modals.contains(id) {
+                continue;
+            }
+            entry.open = false;
+            entry.pending_initial_focus = false;
+            entry.close_auto_focus_handled = true;
+        }
+    });
 
     for req in hover_overlay_requests {
         let keep_alive_children = req.keep_alive_children;

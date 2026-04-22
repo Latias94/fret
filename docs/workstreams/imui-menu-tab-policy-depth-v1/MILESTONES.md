@@ -66,6 +66,7 @@ Primary evidence:
 - `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
 - `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
 - `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
+- `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
@@ -91,9 +92,9 @@ Current status:
   remaining reverse-direction keyboard problem:
   the failure reproduces in the focused generic `fret-imui` harness, so it remains a generic IMUI
   implementation gap rather than a shell/product posture question.
-- The lane stays open because richer submenu-intent tuning and the reverse-direction implementation
-  slice still need to land.
-- The remaining keyboard question is now narrower than top-level popup ownership:
-  the current unresolved pressure is the remaining reverse-direction focus implementation after
-  top-level left/right switching, not outer-scope mnemonic / roving ownership and not another
-  owner verdict.
+- `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md` now lands that remaining generic IMUI
+  keyboard slice:
+  reverse-direction switching can hand focus to the reopened earlier sibling without hidden-popover
+  cleanup restoring the old trigger over the new popup entry focus.
+- The lane stays open only because richer submenu-intent tuning beyond the current grace corridor
+  still needs a land or close verdict.
