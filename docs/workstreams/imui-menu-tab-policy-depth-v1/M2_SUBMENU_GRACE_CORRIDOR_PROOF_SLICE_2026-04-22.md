@@ -32,6 +32,15 @@ through helper-local hover state:
 - and the focused IMUI proof now demonstrates that hitting a real sibling trigger point inside the
   grace corridor does not switch away from the open submenu.
 
+Proof hardening on the same day also locked the adjacent safe-hover path that Dear ImGui comments
+about in `BeginMenuEx(...)`:
+
+- moving from an unsafe point back into the submenu-side void corridor now cancels the armed
+  close-delay timer in the focused IMUI proof,
+- so the current floor is no longer only "sibling switch is deferred inside the polygon",
+- it also covers "submenu does not collapse while the pointer is moving toward the child through
+  safe corridor space".
+
 This keeps the owner split coherent:
 
 - generic IMUI hover query remains generic infrastructure,
@@ -52,6 +61,7 @@ This keeps the owner split coherent:
 - `cargo nextest run -p fret-imui begin_submenu_helper_hover_opens_submenu_after_pointer_entry --no-fail-fast`
 - `cargo nextest run -p fret-imui begin_submenu_helper_hover_switches_sibling_after_open_delay --no-fail-fast`
 - `cargo nextest run -p fret-imui begin_submenu_helper_defers_sibling_switch_inside_grace_corridor --no-fail-fast`
+- `cargo nextest run -p fret-imui begin_submenu_helper_safe_corridor_cancels_close_timer --no-fail-fast`
 - `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`
 - `cargo nextest run -p fret-imui popup_hover --no-fail-fast`
 - `git diff --check`
@@ -60,6 +70,6 @@ This keeps the owner split coherent:
 
 The remaining open question is now narrower than “does IMUI actually have submenu grace at all?”.
 
-What remains open is only whether any richer submenu-intent tuning beyond the current grace
+What remains open is only whether any richer submenu-intent tuning beyond the current enforced
 corridor belongs in generic IMUI, or whether that pressure should close on a shell/product owner
 verdict without widening the helper family again.

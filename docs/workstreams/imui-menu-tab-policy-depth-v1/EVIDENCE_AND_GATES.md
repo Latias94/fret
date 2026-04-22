@@ -66,7 +66,7 @@ Read these in order:
 
 ## Current gate package
 
-- `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay begin_submenu_helper_defers_sibling_switch_inside_grace_corridor menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast`
+- `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay begin_submenu_helper_defers_sibling_switch_inside_grace_corridor begin_submenu_helper_safe_corridor_cancels_close_timer menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast`
 - `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`
 - `cargo nextest run -p fret-ui-kit cached_requests dismissible_popover --no-fail-fast`
 - `cargo nextest run -p fret-workspace tab_strip_overflow_menu_lists_overflowed_tabs tab_strip_focus_restore_after_close_command tab_strip_pinned_boundary_has_test_id tab_strip_keyboard_roving_arrow_activates_tab --no-fail-fast`
@@ -80,6 +80,8 @@ This gate package currently proves:
 - the shipped menu family now covers click-open triggers, top-level menubar hover-switch, submenu
   hover-open, sibling submenu hover-switch with an end-to-end enforced grace corridor, nested
   submenus, and outward trigger responses,
+- the same generic IMUI floor now also proves that moving from an unsafe point back into the
+  submenu-side void corridor cancels the armed close-delay timer instead of collapsing the submenu,
 - the shipped tab family still covers simple selection and panel switching,
 - the richer editor-grade tabstrip outcomes already stay executable in `fret-workspace`,
 - and the lane remains correctly indexed and anchored as a narrow follow-on.

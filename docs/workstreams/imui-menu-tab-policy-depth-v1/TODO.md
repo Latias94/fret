@@ -49,8 +49,9 @@ Last updated: 2026-04-22
       than only existing in the submenu primitive.
       Result: `M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md` now records the landed fix for
       the IMUI hover-hook override plus helper-local hover bypass, and the focused
-      `begin_submenu_helper_defers_sibling_switch_inside_grace_corridor` gate now locks the
-      current floor.
+      `begin_submenu_helper_defers_sibling_switch_inside_grace_corridor` /
+      `begin_submenu_helper_safe_corridor_cancels_close_timer` gates now lock both sibling-switch
+      deferral and close-timer cancellation on the current floor.
 - [x] Decide whether outer-scope active-menubar roving / mnemonic posture belongs in generic IMUI
       or should remain outside the shared helper family.
       Result: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps Alt/F10

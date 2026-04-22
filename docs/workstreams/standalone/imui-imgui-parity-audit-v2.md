@@ -220,7 +220,8 @@ The real remaining gaps are narrower:
      resize / auto-resize behavior on the generic helper surface.
 3. First-cut immediate menu/tab family now includes click-open menus, top-level menubar
    hover-switch, keyboard-open on `ArrowDown` / `ArrowUp`, open-menu left/right switching,
-   submenu hover-open / sibling hover-switch with a basic grace corridor, and a thin tab-bar seam,
+   submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor, and a
+   thin tab-bar seam,
    but richer depth is still open
    - `fret-ui-kit::imui` now exposes a small `menu_bar[_with_options]` container plus
      `begin_menu[_with_options]` and `begin_submenu[_with_options]` trigger/helper seams for
@@ -229,14 +230,17 @@ The real remaining gaps are narrower:
    - The current generic floor is materially better than the older audit snapshot implied:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
      now records shipped top-level menubar hover-switch plus submenu hover-open / sibling
-     hover-switch with a basic grace corridor in generic IMUI.
+     hover-switch in generic IMUI, and
+     `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md`
+     now locks the end-to-end grace behavior itself:
+     sibling-switch deferral inside the grace polygon plus close-timer cancellation while the
+     pointer moves through submenu-side void corridor space.
    - The remaining gap is now narrower than the older audit implied:
-     richer submenu-intent tuning and reverse-direction top-level focus arbitration remain open in
-     generic IMUI, while outer-scope active-menubar mnemonic / roving posture now has a stronger
-     shell-first owner in `fret::in_window_menubar`.
-     `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
-     now closes the owner split on the reverse-direction problem itself: the remaining gap is a
-     generic IMUI implementation bug, not a shell-owned posture question.
+     reverse-direction same-frame top-level focus handoff is already landed in generic IMUI,
+     while outer-scope active-menubar mnemonic / roving posture now has a stronger shell-first
+     owner in `fret::in_window_menubar`.
+     The only open generic IMUI question left in this lane is richer submenu-intent tuning beyond
+     the current enforced corridor.
    - Richer tab-bar policy now has a stronger first-party owner elsewhere:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md` keeps
      Dear ImGui-like overflow / reorder / close / action-tab behavior in

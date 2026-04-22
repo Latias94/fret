@@ -6,7 +6,7 @@
   "updated": "2026-04-22",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
-  "problem": "The maintenance IMUI product-closure umbrella and the closed menu/tab trigger-response lanes already settled outward response shape and canonical helper naming, and the current follow-on has now landed top-level menubar hover-switch, submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor, menubar keyboard-open / top-level left-right switching, and the reverse-direction same-frame focus handoff fix while also freezing the verdict that editor-grade tab overflow / reorder / close stays in `fret-workspace` and outer-scope active-menubar mnemonic / roving posture stays shell-owned. Fret still needs a narrow owner that can decide whether richer submenu-intent tuning belongs in generic `fret-ui-kit::imui`, without reopening response-surface naming, key-owner work, shell helpers, workspace tabstrip policy, or runtime widening.",
+  "problem": "The maintenance IMUI product-closure umbrella and the closed menu/tab trigger-response lanes already settled outward response shape and canonical helper naming, and the current follow-on has now landed top-level menubar hover-switch, submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor including safe-corridor close-timer cancellation, menubar keyboard-open / top-level left-right switching, and the reverse-direction same-frame focus handoff fix while also freezing the verdict that editor-grade tab overflow / reorder / close stays in `fret-workspace` and outer-scope active-menubar mnemonic / roving posture stays shell-owned. Fret still needs a narrow owner that can decide whether richer submenu-intent tuning belongs in generic `fret-ui-kit::imui`, without reopening response-surface naming, key-owner work, shell helpers, workspace tabstrip policy, or runtime widening.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -92,7 +92,7 @@
   "gates": [
     {
       "name": "menu-tab-current-floor",
-      "command": "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay begin_submenu_helper_defers_sibling_switch_inside_grace_corridor menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast"
+      "command": "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay begin_submenu_helper_defers_sibling_switch_inside_grace_corridor begin_submenu_helper_safe_corridor_cancels_close_timer menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast"
     },
     {
       "name": "ui-kit-overlay-handoff-floor",

@@ -4,12 +4,12 @@ Status: active execution lane
 Last updated: 2026-04-22
 
 Status note (2026-04-22): the first admitted generic IMUI policy-depth floor has now landed:
-top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace
-corridor. The remaining scope is narrower than the original baseline audit: a same-day owner audit
-keeps editor-grade tab overflow / scroll / reorder / close in `fret-workspace`, so the open
-generic IMUI question is now whether richer submenu-intent tuning should remain generic and how to
-land reverse-direction top-level focus arbitration; outer-scope mnemonic / roving posture now has
-an explicit shell-owned verdict.
+top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with an end-to-end
+enforced grace corridor, alongside the same-frame reverse-direction top-level focus handoff fix.
+The remaining scope is narrower than the original baseline audit: editor-grade tab overflow /
+scroll / reorder / close stays in `fret-workspace`, and outer-scope mnemonic / roving posture now
+has an explicit shell-owned verdict, so the only open generic IMUI question is whether any richer
+submenu-intent tuning beyond the current enforced corridor should remain generic.
 
 Related:
 
@@ -36,9 +36,7 @@ The helper-owned menu/submenu/tab outward-response question is already closed:
 
 What remains open is a different problem:
 
-- richer menubar policy,
-- richer submenu intent tuning beyond the current hover-switch corridor,
-- and whether any roving or mnemonic posture belongs in generic IMUI.
+- richer submenu intent tuning beyond the current enforced corridor.
 
 This lane exists so that follow-on work does not reopen:
 
@@ -60,9 +58,7 @@ Fret's immediate menu/tab family already covers:
 
 But editor-grade parity still lacks a narrow owner for:
 
-- menubar hover-switch behavior,
-- richer submenu grace / intent behavior beyond the current hover-switch corridor,
-- and roving or mnemonic posture decisions.
+- richer submenu grace / intent behavior beyond the current enforced corridor.
 
 ## Owner split
 
