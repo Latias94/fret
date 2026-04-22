@@ -28,10 +28,11 @@ Last updated: 2026-04-22
 - [ ] Keep the remaining owner questions explicit instead of widening the slice by accident:
       - richer submenu intent tuning beyond the current grace corridor,
       - roving or mnemonic posture.
-      Current blocker: top-level `begin_menu_with_options(...)` still owns focus/open state
-      differently from `begin_popup_menu_with_options(...)`, so the existing `trigger_row`
-      keyboard helpers are not yet a plug-compatible generic IMUI landing path. See
-      `M2_MENUBAR_KEYBOARD_AUDIT_2026-04-22.md`.
+      Current blocker: generic IMUI now admits trigger-local keyboard-open plus in-menu top-level
+      left/right switching, but the remaining owner pressure is narrower:
+      outer-scope active-menubar mnemonic / roving posture and reverse-direction focus arbitration
+      still need an explicit verdict. See
+      `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`.
 
 ## M2 - Land or close
 
@@ -43,8 +44,10 @@ Last updated: 2026-04-22
 - [ ] Decide whether any richer submenu grace / intent tuning beyond the current corridor belongs
       in generic IMUI or closes on a shell/product owner verdict.
 - [ ] Decide whether roving or mnemonic posture belongs in generic IMUI or should remain outside
-      the shared helper family. The current evidence says this is now a top-level menu
-      focus/overlay-owner question, not just a missing key handler.
+      the shared helper family. The current evidence now says generic IMUI already owns a smaller
+      keyboard floor (`ArrowDown` / `ArrowUp` open plus in-menu left/right switching), so the
+      unresolved part is the outer-scope active-menubar shell posture and the remaining
+      reverse-direction focus arbitration.
 - [x] Run the explicit owner audit for tab overflow / scroll / reorder / close instead of growing
       generic IMUI by parity instinct alone.
       Result: `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tabstrip policy in

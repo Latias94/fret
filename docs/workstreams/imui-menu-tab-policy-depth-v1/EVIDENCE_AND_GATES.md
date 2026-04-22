@@ -11,6 +11,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -74,6 +75,8 @@ This gate package currently proves:
 - the current generic IMUI floor now also proves that top-level menubar keyboard-open focus,
   hover-switch, Escape close, and submenu parent persistence share one owner split instead of
   fighting popup-store stale pruning.
+- the current generic IMUI floor now also proves focused-trigger `ArrowDown` / `ArrowUp` open and
+  in-menu top-level `ArrowLeft` / `ArrowRight` switching on the shared menubar owner path.
 
 ## Remaining gap after the current landed floor
 
@@ -84,5 +87,7 @@ Still missing before this lane can close:
 - or an explicit owner verdict that leaves that pressure to shell/product layers,
 - plus any explicit decision on whether roving / mnemonic posture stays generic or not.
 - the remaining keyboard/product blocker is now narrower than popup ownership:
-  the current landed owner split resolved top-level popup/focus arbitration, but the lane still
-  lacks an explicit verdict on whether richer roving / mnemonic posture belongs in generic IMUI.
+  the current landed owner split plus keyboard slice resolved trigger-local keyboard-open and
+  in-menu top-level switching, but the lane still lacks an explicit verdict on whether outer-scope
+  active-menubar mnemonic / roving posture and reverse-direction focus arbitration belong in
+  generic IMUI.

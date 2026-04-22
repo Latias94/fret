@@ -4,6 +4,12 @@ Purpose: record what the current generic IMUI top-level menu architecture actual
 menubar keyboard posture, and prevent the lane from widening on the false assumption that the
 existing `trigger_row` primitives can be wired in without another owner/refactor pass.
 
+Update after this audit:
+`M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md` has since landed a narrower generic IMUI
+keyboard slice: trigger `ArrowDown` / `ArrowUp` open plus in-menu top-level left/right switching.
+This note remains useful as the precondition record for why outer-scope mnemonic / active-menubar
+posture is still not a straight primitive-plumbing task.
+
 ## Evidence reviewed
 
 Lane docs:

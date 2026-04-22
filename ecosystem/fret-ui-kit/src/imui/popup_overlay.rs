@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, Rect, SemanticsRole, Size};
-use fret_ui::action::{DismissReason, DismissRequestCx, OnDismissRequest};
+use fret_ui::action::{DismissReason, DismissRequestCx, OnCloseAutoFocus, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
     PositionStyle, SpacingLength,
@@ -116,6 +116,7 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     root_name: &str,
     options: PopupMenuOptions,
     popup_policy: ImUiPopupMenuPolicyState,
+    menubar_policy: Option<super::menu_family_controls::ImUiMenubarPolicyState>,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> Option<PopupMenuBuilt> {
     ui.with_cx_mut(|cx| {
@@ -168,6 +169,7 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         let mut menu_id_for_focus: Option<GlobalElementId> = None;
         let mut build = Some(f);
         let popup_policy_for_panel = popup_policy.clone();
+        let menubar_policy_for_panel = menubar_policy.clone();
         let panel = cx.with_root_name(root_name, |cx| {
             cx.named("fret-ui-kit.imui.popup.panel", |cx| {
                 let mut semantics = fret_ui::element::SemanticsProps::default();
@@ -206,7 +208,7 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         col.layout.size.width = Length::Auto;
                         col.layout.size.height = Length::Auto;
                         vec![cx.column(col, move |cx| {
-                            cx.provide(popup_policy_for_panel.clone(), move |cx| {
+                            let render_children = move |cx: &mut fret_ui::ElementContext<'_, H>| {
                                 let mut out: Vec<AnyElement> = Vec::new();
                                 let mut ui = ImUiFacade {
                                     cx,
@@ -217,7 +219,14 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                                     f(&mut ui);
                                 }
                                 out
-                            })
+                            };
+                            if let Some(menubar_policy) = menubar_policy_for_panel.clone() {
+                                cx.provide(menubar_policy, move |cx| {
+                                    cx.provide(popup_policy_for_panel.clone(), render_children)
+                                })
+                            } else {
+                                cx.provide(popup_policy_for_panel.clone(), render_children)
+                            }
                         })]
                     })]
                 });
@@ -250,9 +259,19 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
     });
     let root_name = OverlayController::popover_root_name(overlay_id);
     let popup_policy = popup_menu_policy_state_for_root(ui, id, root_name.as_str());
-    let Some(built) =
-        build_popup_menu(ui, id, root_name.as_str(), options, popup_policy.clone(), f)
-    else {
+    let menubar_policy = ui.with_cx_mut(|cx| {
+        cx.provided::<super::menu_family_controls::ImUiMenubarPolicyState>()
+            .cloned()
+    });
+    let Some(built) = build_popup_menu(
+        ui,
+        id,
+        root_name.as_str(),
+        options,
+        popup_policy.clone(),
+        menubar_policy.clone(),
+        f,
+    ) else {
         return false;
     };
 
@@ -284,12 +303,35 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                             return;
                         }
                     }
-                    let _ = host.models_mut().update(&open_for_dismiss, |value| *value = false);
+                    let _ = host
+                        .models_mut()
+                        .update(&open_for_dismiss, |value| *value = false);
                 },
             ) as OnDismissRequest)
         } else {
             None
         };
+        let on_close_auto_focus = menubar_policy.as_ref().map(|policy| {
+            let suppress_close_auto_focus = policy.suppress_close_auto_focus_once.clone();
+            Arc::new(
+                move |host: &mut dyn fret_ui::action::UiFocusActionHost,
+                      _acx,
+                      req: &mut fret_ui::action::AutoFocusRequestCx| {
+                    let suppress = host
+                        .models_mut()
+                        .read(&suppress_close_auto_focus, |value| *value)
+                        .ok()
+                        .unwrap_or(false);
+                    if !suppress {
+                        return;
+                    }
+                    let _ = host
+                        .models_mut()
+                        .update(&suppress_close_auto_focus, |value| *value = false);
+                    req.prevent_default();
+                },
+            ) as OnCloseAutoFocus
+        });
         let req = menu_root::dismissible_menu_request_with_modal_and_dismiss_handler(
             cx,
             overlay_id,
@@ -300,7 +342,7 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             root_name.clone(),
             initial_focus,
             None,
-            None,
+            on_close_auto_focus,
             on_dismiss_request,
             Some(menu_root::submenu_pointer_move_handler(
                 popup_policy.submenu_models.clone(),

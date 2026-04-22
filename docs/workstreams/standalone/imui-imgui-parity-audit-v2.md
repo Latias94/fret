@@ -219,8 +219,9 @@ The real remaining gaps are narrower:
      child-flag surface, no richer menu-bar-in-child story, and no Dear ImGui-style axis-specific
      resize / auto-resize behavior on the generic helper surface.
 3. First-cut immediate menu/tab family now includes click-open menus, top-level menubar
-   hover-switch, submenu hover-open / sibling hover-switch with a basic grace corridor, and a thin
-   tab-bar seam, but richer depth is still open
+   hover-switch, keyboard-open on `ArrowDown` / `ArrowUp`, open-menu left/right switching,
+   submenu hover-open / sibling hover-switch with a basic grace corridor, and a thin tab-bar seam,
+   but richer depth is still open
    - `fret-ui-kit::imui` now exposes a small `menu_bar[_with_options]` container plus
      `begin_menu[_with_options]` and `begin_submenu[_with_options]` trigger/helper seams for
      click-open top-level and nested menus, alongside `tab_bar[_with_options]` +
@@ -229,8 +230,9 @@ The real remaining gaps are narrower:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
      now records shipped top-level menubar hover-switch plus submenu hover-open / sibling
      hover-switch with a basic grace corridor in generic IMUI.
-   - The remaining gap is depth rather than ownership: richer submenu-intent tuning and roving /
-     mnemonic menubar posture remain open in generic IMUI.
+   - The remaining gap is depth rather than ownership: richer submenu-intent tuning, outer-scope
+     active-menubar mnemonic / roving posture, and reverse-direction top-level focus arbitration
+     remain open in generic IMUI.
    - Richer tab-bar policy now has a stronger first-party owner elsewhere:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md` keeps
      Dear ImGui-like overflow / reorder / close / action-tab behavior in

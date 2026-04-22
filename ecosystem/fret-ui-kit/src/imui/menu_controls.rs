@@ -16,6 +16,7 @@ use fret_ui::elements::GlobalElementId;
 
 use super::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 use crate::command::ElementCommandGatingExt as _;
+use crate::primitives::menubar::trigger_row as menubar_trigger_row;
 
 pub(super) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -171,6 +172,9 @@ where
         let expanded = options.expanded;
         let activate_shortcut = options.activate_shortcut;
         let shortcut_repeat = options.shortcut_repeat;
+        let menubar_policy = cx
+            .provided::<super::menu_family_controls::ImUiMenubarPolicyState>()
+            .cloned();
         let mut enabled = options.enabled && !super::imui_is_disabled(cx);
         if let Some(action) = action.as_ref() {
             enabled = enabled && cx.action_is_enabled(action);
@@ -257,6 +261,7 @@ where
 
             let pressable = cx.pressable_with_id(props, move |cx, state, id| {
                 let pressable_hook = pressable_hook.clone();
+                let menubar_policy = menubar_policy.clone();
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
@@ -407,6 +412,30 @@ where
                                 host.notify(acx);
                                 true
                             }),
+                        );
+                    }
+                    if let Some(menubar_policy) = menubar_policy.as_ref() {
+                        let suppress_close_auto_focus =
+                            menubar_policy.suppress_close_auto_focus_once.clone();
+                        cx.key_prepend_on_key_down_for(
+                            id,
+                            Arc::new(move |host, _acx, down| {
+                                if down.repeat || down.modifiers != Modifiers::default() {
+                                    return false;
+                                }
+                                if matches!(down.key, KeyCode::ArrowLeft | KeyCode::ArrowRight) {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&suppress_close_auto_focus, |value| *value = true);
+                                }
+                                false
+                            }),
+                        );
+                        menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                            cx,
+                            id,
+                            menubar_policy.group_active.clone(),
+                            menubar_policy.registry.clone(),
                         );
                     }
                 }

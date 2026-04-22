@@ -63,6 +63,7 @@ Primary evidence:
 
 - `M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
 - `M2_TAB_OWNER_VERDICT_2026-04-22.md`
+- `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
@@ -77,8 +78,12 @@ Current status:
   `trigger_row` switching and popup overlay visibility:
   keyboard-open focus, top-level hover-switch, Escape close, and submenu parent persistence now
   share one generic IMUI floor instead of fighting popup-store stale pruning.
+- `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md` now lands a smaller generic IMUI keyboard
+  slice on top of that owner split:
+  focused triggers open on `ArrowDown` / `ArrowUp`, and focused menu items can switch top-level
+  menus on `ArrowLeft` / `ArrowRight`.
 - The lane stays open because richer submenu-intent tuning and any generic roving / mnemonic
   posture still need an explicit verdict.
 - The remaining keyboard question is now narrower than top-level popup ownership:
-  the current unresolved pressure is whether richer roving / mnemonic posture belongs in generic
-  IMUI at all.
+  the current unresolved pressure is whether outer-scope active-menubar mnemonic / roving posture
+  and the remaining reverse-direction focus arbitration belong in generic IMUI at all.
