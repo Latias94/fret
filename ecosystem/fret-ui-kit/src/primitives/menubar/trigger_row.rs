@@ -845,7 +845,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
     patient_click_sticky: Model<bool>,
     patient_click_timer: Model<Option<TimerToken>>,
     enabled: bool,
-    _hovered: bool,
+    hovered: bool,
     pressed: bool,
     focused: bool,
 ) {
@@ -919,6 +919,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
     let active_value = cx.watch_model(&group_active).cloned().flatten();
     if enabled
         && focused
+        && hovered
         && !pressed
         && active_value
             .as_ref()

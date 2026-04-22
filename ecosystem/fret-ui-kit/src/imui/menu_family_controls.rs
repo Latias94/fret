@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_runtime::Model;
 use fret_ui::action::{ActivateReason, PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, Length, PressableA11y, PressableProps, TextProps,
@@ -15,6 +16,15 @@ use super::{
     BeginMenuOptions, BeginSubmenuOptions, DisclosureResponse, ImUiFacade, MenuBarOptions,
     MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt,
 };
+use crate::primitives::menu::sub_trigger;
+use crate::primitives::menubar::trigger_row as menubar_trigger_row;
+
+#[derive(Debug, Clone)]
+pub(in crate::imui) struct ImUiMenubarPolicyState {
+    pub(super) open_menu: Model<Option<Arc<str>>>,
+    pub(super) group_active: Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
+    pub(super) registry: Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
+}
 
 pub(super) fn menu_bar_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -22,19 +32,39 @@ pub(super) fn menu_bar_element<H: UiHost>(
     options: MenuBarOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
-    let mut builder = crate::ui::h_flex_build(move |cx, out| {
-        super::containers::build_imui_children_with_focus(cx, out, build_focus, f);
-    });
-    builder = builder
-        .gap_metric(options.gap)
-        .justify(crate::Justify::Start)
-        .items(crate::Items::Center)
-        .no_wrap()
-        .role(SemanticsRole::MenuBar);
-    if let Some(test_id) = options.test_id {
-        builder = builder.test_id(test_id);
-    }
-    builder.into_element(cx)
+    let gap = options.gap;
+    let test_id = options.test_id;
+    cx.named("fret-ui-kit.imui.menu-bar", move |cx| {
+        let group = cx.root_id();
+        let open_menu = cx.local_model_keyed("open_menu", || None::<Arc<str>>);
+        let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
+        let registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
+        let policy = ImUiMenubarPolicyState {
+            open_menu,
+            group_active,
+            registry,
+        };
+
+        let mut builder = crate::ui::h_flex_build(move |cx: &mut ElementContext<'_, H>, out| {
+            let _ = cx.app.models_mut().update(
+                &policy.registry,
+                |entries: &mut Vec<menubar_trigger_row::MenubarTriggerRowEntry>| entries.clear(),
+            );
+            cx.provide(policy.clone(), move |cx| {
+                super::containers::build_imui_children_with_focus(cx, out, build_focus, f);
+            });
+        });
+        builder = builder
+            .gap_metric(gap)
+            .justify(crate::Justify::Start)
+            .items(crate::Items::Center)
+            .no_wrap()
+            .role(SemanticsRole::MenuBar);
+        if let Some(test_id) = test_id {
+            builder = builder.test_id(test_id);
+        }
+        builder.into_element(cx)
+    })
 }
 
 pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -46,18 +76,32 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
 ) -> DisclosureResponse {
     let enabled = options.enabled && ui.with_cx_mut(|cx| !super::imui_is_disabled(cx));
     let popup_open = ui.popup_open_model(id);
+    let menubar_policy = ui.with_cx_mut(|cx| cx.provided::<ImUiMenubarPolicyState>().cloned());
+    let was_open_model =
+        ui.with_cx_mut(|cx| cx.local_model_keyed(format!("was_open.{id}"), || false));
     let open_before = ui.with_cx_mut(|cx| {
         cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
             *value
         })
         .unwrap_or(false)
     });
+    let was_open_before_render = ui.with_cx_mut(|cx| {
+        cx.read_model(
+            &was_open_model,
+            fret_ui::Invalidation::Paint,
+            |_app, value| *value,
+        )
+        .unwrap_or(false)
+    });
 
     let trigger = ui.push_id(format!("{id}.trigger"), |ui| {
         menu_trigger_with_options(
             ui,
+            Arc::from(id),
             label.clone(),
             open_before,
+            popup_open.clone(),
+            menubar_policy.clone(),
             enabled,
             options.test_id.clone(),
             options.activate_shortcut,
@@ -65,36 +109,134 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
         )
     });
 
+    let open_menu_before = menubar_policy.as_ref().and_then(|policy| {
+        ui.with_cx_mut(|cx| {
+            cx.read_model(
+                &policy.open_menu,
+                fret_ui::Invalidation::Paint,
+                |_app, value| value.clone(),
+            )
+            .unwrap_or(None)
+        })
+    });
+    if let Some(policy) = menubar_policy.as_ref()
+        && !open_before
+        && was_open_before_render
+    {
+        ui.with_cx_mut(|cx| {
+            let _ = cx.app.models_mut().update(&policy.open_menu, |value| {
+                if value.as_ref().is_some_and(|current| current.as_ref() == id) {
+                    *value = None;
+                }
+            });
+        });
+    }
+
     if enabled && trigger.clicked() {
-        if open_before {
+        if let Some(policy) = menubar_policy.as_ref() {
+            ui.with_cx_mut(|cx| {
+                let _ = cx.app.models_mut().update(&policy.open_menu, |value| {
+                    if open_before && value.as_ref().is_some_and(|current| current.as_ref() == id) {
+                        *value = None;
+                    } else {
+                        *value = Some(Arc::from(id));
+                    }
+                });
+            });
+        } else if open_before {
             ui.close_popup(id);
-        } else if let Some(anchor) = trigger.core.rect {
-            ui.open_popup_at(id, anchor);
         }
     }
 
+    if let Some(policy) = menubar_policy.as_ref()
+        && !open_before
+        && trigger.core.hovered
+        && open_menu_before.is_some()
+        && open_menu_before
+            .as_ref()
+            .is_some_and(|current| current.as_ref() != id)
+    {
+        ui.with_cx_mut(|cx| {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&policy.open_menu, |value| *value = Some(Arc::from(id)));
+        });
+    }
+
+    let open_requested = if let Some(policy) = menubar_policy.as_ref() {
+        let open_menu_now = ui.with_cx_mut(|cx| {
+            cx.read_model(
+                &policy.open_menu,
+                fret_ui::Invalidation::Paint,
+                |_app, value| value.clone(),
+            )
+            .unwrap_or(None)
+        });
+        let should_close = open_before
+            && (open_menu_now
+                .as_ref()
+                .is_some_and(|current| current.as_ref() != id)
+                || (open_menu_before
+                    .as_ref()
+                    .is_some_and(|current| current.as_ref() == id)
+                    && open_menu_now.is_none()));
+        if should_close {
+            ui.close_popup(id);
+        }
+        let requested_by_policy = open_menu_now
+            .as_ref()
+            .is_some_and(|current| current.as_ref() == id);
+        requested_by_policy || (open_before && !should_close)
+    } else {
+        ui.with_cx_mut(|cx| {
+            cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
+                *value
+            })
+            .unwrap_or(false)
+        })
+    };
+
+    if open_requested
+        && let Some(menubar_policy) = menubar_policy.as_ref()
+        && let Some(trigger_id) = trigger.id
+    {
+        ui.with_cx_mut(|cx| {
+            let open_for_state = popup_open.clone();
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&menubar_policy.group_active, |value| {
+                    *value = Some(menubar_trigger_row::MenubarActiveTrigger {
+                        trigger: trigger_id,
+                        open: open_for_state,
+                    });
+                });
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&popup_open, |value| *value = true);
+        });
+    }
+    if open_requested && let Some(anchor) = trigger.core.rect {
+        ui.open_popup_at(id, anchor);
+    }
+
     let submenu_root_name = format!("fret-ui-kit.imui.popup.inline.{id}");
+    let popup_policy =
+        super::popup_overlay::popup_menu_policy_state_for_root(ui, id, submenu_root_name.as_str());
     let built_popup = super::popup_overlay::build_popup_menu(
         ui,
         id,
         submenu_root_name.as_str(),
         options.popup,
+        popup_policy,
         f,
     );
     let popup_opened = built_popup.is_some();
-    if let Some(mut built) = built_popup {
-        let mut attached_to_parent = false;
-        ui.with_cx_mut(|cx| {
-            if let Some(state) = cx.provided::<super::popup_overlay::ImUiMenuOpenDescendantState>()
-            {
-                state.children.borrow_mut().extend(built.children.drain(..));
-                attached_to_parent = true;
-            }
-        });
-        if !attached_to_parent {
-            for child in built.children {
-                ui.add(child);
-            }
+    if let Some(built) = built_popup {
+        for child in built.children {
+            ui.add(child);
         }
     }
     if !enabled && popup_opened {
@@ -106,6 +248,12 @@ pub(super) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?
             *value
         })
         .unwrap_or(false)
+    });
+    ui.with_cx_mut(|cx| {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&was_open_model, |value| *value = open_after);
     });
 
     DisclosureResponse {
@@ -124,15 +272,31 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
 ) -> DisclosureResponse {
     let enabled = options.enabled && ui.with_cx_mut(|cx| !super::imui_is_disabled(cx));
     let popup_open = ui.popup_open_model(id);
+    let popup_policy = ui.with_cx_mut(|cx| {
+        cx.provided::<super::popup_overlay::ImUiPopupMenuPolicyState>()
+            .cloned()
+    });
+    let was_open_model =
+        ui.with_cx_mut(|cx| cx.local_model_keyed(format!("was_open.{id}"), || false));
     let open_before = ui.with_cx_mut(|cx| {
         cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
             *value
         })
         .unwrap_or(false)
     });
+    let was_open_before_render = ui.with_cx_mut(|cx| {
+        cx.read_model(
+            &was_open_model,
+            fret_ui::Invalidation::Paint,
+            |_app, value| *value,
+        )
+        .unwrap_or(false)
+    });
+    let submenu_value = Arc::<str>::from(id);
+    let popup_estimated_size = options.popup.estimated_size;
 
     let trigger = ui.push_id(format!("{id}.trigger"), |ui| {
-        super::menu_controls::menu_item_with_options(
+        super::menu_controls::menu_item_with_options_and_pressable_hook(
             ui,
             label.clone(),
             MenuItemOptions {
@@ -144,13 +308,91 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
                 shortcut_repeat: options.shortcut_repeat,
                 ..Default::default()
             },
+            {
+                let popup_policy = popup_policy.clone();
+                let submenu_value = submenu_value.clone();
+                move |cx, state, item_id, item_enabled| {
+                    let Some(popup_policy) = popup_policy.as_ref() else {
+                        return;
+                    };
+                    let geometry_hint = sub_trigger::MenuSubTriggerGeometryHint {
+                        outer: cx.environment_viewport_bounds(fret_ui::Invalidation::Layout),
+                        desired: popup_estimated_size,
+                    };
+                    let _ = sub_trigger::wire(
+                        cx,
+                        state,
+                        item_id,
+                        !item_enabled,
+                        true,
+                        submenu_value.clone(),
+                        &popup_policy.submenu_models,
+                        popup_policy.submenu_cfg,
+                        Some(geometry_hint),
+                    );
+                }
+            },
         )
     });
 
-    if enabled && trigger.clicked() {
-        if open_before {
+    if let Some(policy) = popup_policy.as_ref() {
+        let open_submenu_before = ui.with_cx_mut(|cx| {
+            cx.read_model(
+                &policy.submenu_models.open_value,
+                fret_ui::Invalidation::Paint,
+                |_app, value| value.clone(),
+            )
+            .unwrap_or(None)
+        });
+        let is_selected_before = open_submenu_before
+            .as_ref()
+            .is_some_and(|value| value.as_ref() == id);
+        if enabled && trigger.clicked() {
+            if open_before && is_selected_before {
+                clear_imui_submenu(
+                    ui,
+                    policy,
+                    submenu_value.as_ref(),
+                    trigger.id,
+                    trigger.core.rect.is_none(),
+                );
+            } else if !is_selected_before {
+                select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id);
+            }
+        }
+
+        let hovered_signal = trigger.core.hovered
+            || trigger.pointer_hovered_raw
+            || trigger.pointer_hovered_raw_below_barrier;
+        if !open_before
+            && hovered_signal
+            && open_submenu_before
+                .as_ref()
+                .is_none_or(|current| current.as_ref() != id)
+        {
+            select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id);
+        }
+
+        if !open_before && was_open_before_render {
+            clear_imui_submenu(ui, policy, submenu_value.as_ref(), trigger.id, true);
+        }
+
+        let open_submenu_now = ui.with_cx_mut(|cx| {
+            cx.read_model(
+                &policy.submenu_models.open_value,
+                fret_ui::Invalidation::Paint,
+                |_app, value| value.clone(),
+            )
+            .unwrap_or(None)
+        });
+        let should_open = open_submenu_now
+            .as_ref()
+            .is_some_and(|value| value.as_ref() == id);
+        let should_close = open_before && !should_open;
+
+        if should_close {
             ui.close_popup(id);
-        } else if let Some(anchor) = trigger.core.rect {
+        } else if should_open && let Some(anchor) = trigger.core.rect {
             ui.open_popup_at(id, anchor);
         }
     }
@@ -166,6 +408,12 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
         })
         .unwrap_or(false)
     });
+    ui.with_cx_mut(|cx| {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&was_open_model, |value| *value = open_after);
+    });
 
     DisclosureResponse {
         trigger,
@@ -174,10 +422,150 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
     }
 }
 
+fn clear_imui_submenu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    popup_policy: &super::popup_overlay::ImUiPopupMenuPolicyState,
+    submenu_value: &str,
+    trigger_id: Option<GlobalElementId>,
+    clear_geometry: bool,
+) {
+    ui.with_cx_mut(|cx| {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.open_value, |value| {
+                if value
+                    .as_ref()
+                    .is_some_and(|current| current.as_ref() == submenu_value)
+                {
+                    *value = None;
+                }
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.trigger, |value| {
+                if *value == trigger_id {
+                    *value = None;
+                }
+            });
+        if clear_geometry {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&popup_policy.submenu_models.geometry, |value| *value = None);
+        }
+        let _ =
+            cx.app
+                .models_mut()
+                .update(&popup_policy.submenu_models.pending_open_value, |value| {
+                    if value
+                        .as_ref()
+                        .is_some_and(|current| current.as_ref() == submenu_value)
+                    {
+                        *value = None;
+                    }
+                });
+        let _ = cx.app.models_mut().update(
+            &popup_policy.submenu_models.pending_open_trigger,
+            |value| {
+                if *value == trigger_id {
+                    *value = None;
+                }
+            },
+        );
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.pointer_grace_intent, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.pointer_grace_timer, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.close_timer, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.focus_target, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.focus_timer, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.focus_retry_attempts, |value| {
+                *value = 0
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.open_timer, |value| {
+                *value = None
+            });
+    });
+}
+
+fn select_imui_submenu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    popup_policy: &super::popup_overlay::ImUiPopupMenuPolicyState,
+    submenu_value: Arc<str>,
+    trigger_id: Option<GlobalElementId>,
+) {
+    ui.with_cx_mut(|cx| {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.open_value, |value| {
+                *value = Some(submenu_value.clone());
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.trigger, |value| {
+                *value = trigger_id
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.pending_open_value, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.pending_open_trigger, |value| {
+                *value = None
+            });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&popup_policy.submenu_models.open_timer, |value| {
+                *value = None
+            });
+    });
+}
+
 fn menu_trigger_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
+    logical_key: Arc<str>,
     label: Arc<str>,
     open: bool,
+    open_model: Model<bool>,
+    menubar_policy: Option<ImUiMenubarPolicyState>,
     enabled: bool,
     test_id: Option<Arc<str>>,
     activate_shortcut: Option<fret_runtime::KeyChord>,
@@ -200,6 +588,9 @@ fn menu_trigger_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         };
 
         cx.pressable_with_id(props, move |cx, state, id| {
+            let open_model = open_model.clone();
+            let menubar_policy = menubar_policy.clone();
+            let logical_key = logical_key.clone();
             cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_pointer_up();
             cx.key_clear_on_key_down_for(id);
@@ -251,6 +642,39 @@ fn menu_trigger_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         false
                     }),
                 );
+            }
+
+            if let Some(menubar_policy) = menubar_policy.as_ref() {
+                let (patient_click_sticky, patient_click_timer) =
+                    menubar_trigger_row::ensure_trigger_patient_click_models(cx, id);
+                menubar_trigger_row::register_trigger_in_registry(
+                    cx,
+                    menubar_policy.registry.clone(),
+                    logical_key.clone(),
+                    id,
+                    open_model.clone(),
+                    enabled,
+                    None,
+                );
+                menubar_trigger_row::sync_trigger_row_state(
+                    cx,
+                    menubar_policy.group_active.clone(),
+                    id,
+                    open_model.clone(),
+                    patient_click_sticky.clone(),
+                    patient_click_timer.clone(),
+                    enabled,
+                    state.hovered,
+                    state.pressed,
+                    state.focused,
+                );
+                cx.pressable_add_on_activate(menubar_trigger_row::toggle_on_activate(
+                    menubar_policy.group_active.clone(),
+                    id,
+                    open_model.clone(),
+                    patient_click_sticky,
+                    patient_click_timer,
+                ));
             }
 
             cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {

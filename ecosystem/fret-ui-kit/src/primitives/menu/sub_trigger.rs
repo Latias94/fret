@@ -89,7 +89,7 @@ pub fn wire<H: UiHost>(
     let cfg_for_key = cfg;
     let trigger_id_for_key = item_id;
     let dir = direction_prim::use_direction_in_scope(cx, None);
-    cx.key_on_key_down_for(
+    cx.key_add_on_key_down_for(
         item_id,
         Arc::new(move |host, acx, down| {
             if down.repeat {
