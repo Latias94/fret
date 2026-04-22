@@ -1200,7 +1200,7 @@ fn render_floating_layer_with_overlay(
 mod composition;
 mod floating;
 mod interaction;
-mod models;
 mod models_combo;
+mod models_controls;
 mod models_text;
 mod popup_hover;
