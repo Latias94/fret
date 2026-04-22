@@ -334,6 +334,7 @@ where
                     },
                     test_id: Some(Arc::from(shell_id.clone())),
                     content_test_id: Some(Arc::from(shell_content_id)),
+                    ..Default::default()
                 },
                 |ui| {
                     ui.text(format!("Shell-mounted pane proof for {pane_id}"));
@@ -351,6 +352,7 @@ where
                             },
                             test_id: Some(Arc::from(toolbar_id.clone())),
                             content_test_id: Some(Arc::from(format!("{toolbar_id}.content"))),
+                            ..Default::default()
                         },
                         |ui| {
                             ui.separator_text("Toolbar");
@@ -386,6 +388,7 @@ where
                                     },
                                     test_id: Some(Arc::from(tabs_id.clone())),
                                     content_test_id: Some(Arc::from(format!("{tabs_id}.content"))),
+                                    ..Default::default()
                                 },
                                 |ui| {
                                     ui.separator_text("Tabs");
@@ -411,6 +414,7 @@ where
                                     content_test_id: Some(Arc::from(format!(
                                         "{inspector_id}.content"
                                     ))),
+                                    ..Default::default()
                                 },
                                 |ui| {
                                     ui.separator_text("Inspector");
@@ -436,6 +440,7 @@ where
                             },
                             test_id: Some(Arc::from(status_id.clone())),
                             content_test_id: Some(Arc::from(format!("{status_id}.content"))),
+                            ..Default::default()
                         },
                         |ui| {
                             ui.separator_text("Status");

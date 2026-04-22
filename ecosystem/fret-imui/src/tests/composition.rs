@@ -1,7 +1,7 @@
 use super::*;
 
 use fret_ui::ScrollHandle;
-use fret_ui_kit::imui::ChildRegionOptions;
+use fret_ui_kit::imui::{ChildRegionChrome, ChildRegionOptions};
 
 #[test]
 fn ui_writer_imui_facade_ext_compiles() {
@@ -659,6 +659,7 @@ fn child_region_helper_stacks_content_and_forwards_scroll_options() {
                     },
                     test_id: Some(Arc::from("imui-child-region")),
                     content_test_id: Some(Arc::from("imui-child-region.content")),
+                    ..Default::default()
                 },
                 |ui| {
                     for index in 0..24 {
@@ -773,9 +774,7 @@ fn child_region_helper_can_host_menu_bar_and_popup_menu() {
                                 "file",
                                 "File",
                                 fret_ui_kit::imui::BeginMenuOptions {
-                                    test_id: Some(Arc::from(
-                                        "imui-child-region-with-menu.file",
-                                    )),
+                                    test_id: Some(Arc::from("imui-child-region-with-menu.file")),
                                     ..Default::default()
                                 },
                                 |ui| {
@@ -869,6 +868,130 @@ fn child_region_helper_can_host_menu_bar_and_popup_menu() {
         bounds,
         "imui-child-region-with-menu.file.open",
     ));
+}
+
+#[test]
+fn child_region_helper_can_switch_between_framed_and_bare_chrome() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(160.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui_raw(cx, |ui| {
+            ui.horizontal_with_options(
+                HorizontalOptions {
+                    gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N2),
+                    ..Default::default()
+                },
+                |ui| {
+                    ui.child_region_with_options(
+                        "imui-child-region.chrome.framed",
+                        ChildRegionOptions {
+                            layout: fret_ui_kit::LayoutRefinement::default()
+                                .w_px(Px(148.0))
+                                .h_px(Px(84.0)),
+                            test_id: Some(Arc::from("imui-child-region.chrome.framed")),
+                            content_test_id: Some(Arc::from(
+                                "imui-child-region.chrome.framed.content",
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_with_options(
+                                "Framed",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-child-region.chrome.framed.row")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    );
+
+                    ui.child_region_with_options(
+                        "imui-child-region.chrome.bare",
+                        ChildRegionOptions {
+                            chrome: ChildRegionChrome::Bare,
+                            layout: fret_ui_kit::LayoutRefinement::default()
+                                .w_px(Px(148.0))
+                                .h_px(Px(84.0)),
+                            test_id: Some(Arc::from("imui-child-region.chrome.bare")),
+                            content_test_id: Some(Arc::from(
+                                "imui-child-region.chrome.bare.content",
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_with_options(
+                                "Bare",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-child-region.chrome.bare.row")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    );
+                },
+            );
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-child-region-chrome",
+        render,
+    );
+
+    let framed_region = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-child-region.chrome.framed",
+    );
+    let bare_region = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-child-region.chrome.bare",
+    );
+    let framed_bounds = ui.debug_node_bounds(framed_region).expect("framed bounds");
+    let bare_bounds = ui.debug_node_bounds(bare_region).expect("bare bounds");
+    let framed_row = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-child-region.chrome.framed.row",
+    );
+    let bare_row = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-child-region.chrome.bare.row",
+    );
+
+    let framed_dx = framed_row.x.0 - framed_bounds.origin.x.0;
+    let bare_dx = bare_row.x.0 - bare_bounds.origin.x.0;
+    let framed_dy = framed_row.y.0 - framed_bounds.origin.y.0;
+    let bare_dy = bare_row.y.0 - bare_bounds.origin.y.0;
+
+    assert!(framed_dx > bare_dx + 1.0);
+    assert!(framed_dy > bare_dy + 1.0);
 }
 
 #[test]

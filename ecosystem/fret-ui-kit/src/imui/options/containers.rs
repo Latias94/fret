@@ -1,5 +1,12 @@
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChildRegionChrome {
+    #[default]
+    Framed,
+    Bare,
+}
+
 #[derive(Debug, Clone)]
 pub struct HorizontalOptions {
     pub layout: crate::LayoutRefinement,
@@ -98,6 +105,7 @@ impl Default for ScrollOptions {
 
 #[derive(Debug, Clone, Default)]
 pub struct ChildRegionOptions {
+    pub chrome: ChildRegionChrome,
     pub layout: crate::LayoutRefinement,
     pub scroll: ScrollOptions,
     pub test_id: Option<Arc<str>>,

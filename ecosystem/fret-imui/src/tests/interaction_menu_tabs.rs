@@ -2255,7 +2255,9 @@ fn begin_submenu_helper_safe_corridor_cancels_close_timer() {
                             let _ = ui.menu_item_with_options(
                                 "Other",
                                 MenuItemOptions {
-                                    test_id: Some(Arc::from("imui-submenu-safe-corridor.file.other")),
+                                    test_id: Some(Arc::from(
+                                        "imui-submenu-safe-corridor.file.other",
+                                    )),
                                     ..Default::default()
                                 },
                             );

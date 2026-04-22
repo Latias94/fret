@@ -103,9 +103,20 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
-- Active narrow follow-on for broader menu/submenu/tab policy depth:
+- Closed narrow closeout record for `BeginChild()`-scale child-region depth:
+  - `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/TODO.md`
+  - `docs/workstreams/imui-child-region-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-child-region-depth-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json`
+- Closed narrow closeout record for broader menu/submenu/tab policy depth:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`
@@ -196,6 +207,12 @@ It complements (but does not replace) ADRs:
   the lane now records the asset-grid/file-browser style collection proof and the shell-mounted
   `child_region` pane composition proof together, while keeping key ownership, shell-helper
   promotion, and runner/backend multi-window parity out of this folder.
+- Use `docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json` as the closed closeout record
+  for `BeginChild()`-scale child-region depth:
+  the lane starts from the closed pane-proof floor, lands `ChildRegionChrome::{Framed, Bare}` as
+  the bounded generic answer, keeps `workspace_shell_demo` and `editor_notes_demo` as the
+  pane-first proofs, and requires a different narrow follow-on before any future resize /
+  auto-resize / focus-boundary widening can resume.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the
@@ -211,11 +228,10 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed
   helper-owned menu/submenu/tab outward-response verdict; start another follow-on if the remaining
   gap is broader menu/tab policy.
-- Use `docs/workstreams/imui-menu-tab-policy-depth-v1/` as the current active execution lane for
-  the broader menu/submenu/tab policy question:
-  it starts from the shipped click-open/simple-tab floor, keeps response-surface naming in the
-  closed trigger-response lanes, and decides which richer hover-switch/grace/overflow/reorder/
-  close behavior actually belongs in generic `imui` versus shell/product owners.
+- Use `docs/workstreams/imui-menu-tab-policy-depth-v1/` as the closed closeout record for the
+  broader menu/submenu/tab policy question:
+  the lane now records the shipped generic floor plus the no-new-generic-surface verdict, and any
+  future submenu-intent widening must start a narrower follow-on instead of reopening this folder.
 - Use the closed P1 shell follow-on only for the latest no-new-helper-yet verdict on promoted
   first-party shell helpers.
 - Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and

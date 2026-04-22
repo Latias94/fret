@@ -10,7 +10,8 @@ pub use collections::{
     TableColumn, TableColumnWidth, TableOptions, TableRowOptions, VirtualListOptions,
 };
 pub use containers::{
-    ChildRegionOptions, GridOptions, HorizontalOptions, ScrollOptions, VerticalOptions,
+    ChildRegionChrome, ChildRegionOptions, GridOptions, HorizontalOptions, ScrollOptions,
+    VerticalOptions,
 };
 pub use controls::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, CheckboxOptions, CollapsingHeaderOptions,

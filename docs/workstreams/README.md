@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-21
+Catalog updated: 2026-04-22
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 243
+- Dedicated directories: 244
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -126,19 +126,34 @@ Current source of truth for the in-tree immediate-mode stack:
     review, and implementation-heavy work should stay in narrower follow-ons or the active docking
     parity lane.
 
-- Active narrow P0 menu/tab policy-depth follow-on:
+- Closed narrow P1 child-region depth closeout record:
+  - `docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/M1_TARGET_SURFACE_FREEZE_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-child-region-depth-v1/TODO.md`
+  - `docs/workstreams/imui-child-region-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-child-region-depth-v1/EVIDENCE_AND_GATES.md`
+  - Scope: records the landed bounded `ChildRegionChrome::{Framed, Bare}` slice after the
+    collection/pane proof lane closed, then freezes that resize / auto-resize, focus-boundary
+    flattening, and begin-return posture still require stronger first-party proof in a different
+    narrow lane instead of widening generic `fret-ui-kit::imui` here.
+
+- Closed narrow P0 menu/tab policy-depth closeout record:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`
-  - Scope: owns the remaining richer menu/submenu/tab policy depth gap after the outward-response
-    lanes closed; hover-switch, submenu grace, roving/mnemonic posture, and tab overflow/reorder/
-    close ownership must be decided here without reopening response-surface naming, key ownership,
-    shell helpers, or runtime widening.
+  - Scope: records the shipped generic menu/submenu floor and the no-new-generic-surface verdict
+    after the outward-response lanes closed; future submenu-intent widening now requires a fresh
+    narrower follow-on instead of reopening this folder.
 
 - Closed narrow P0 internal modularization closeout record:
   - `docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md`
@@ -518,12 +533,13 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
+- `docs/workstreams/imui-child-region-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the landed `ChildRegionChrome::{Framed, Bare}` slice and the no-further-generic-growth verdict for `BeginChild()`-scale child-region depth above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-key-owner-surface-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the immediate key-owner / item-local shortcut ownership verdict above the maintenance IMUI umbrella)
-- `docs/workstreams/imui-menu-tab-policy-depth-v1/` — first n/a, latest n/a, 7 markdown docs (active narrow follow-on for richer generic menu/submenu/tab policy depth above the maintenance IMUI umbrella)
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the shipped generic menu/submenu floor and no-new-generic-surface verdict above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)

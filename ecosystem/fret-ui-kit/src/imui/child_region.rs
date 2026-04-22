@@ -6,7 +6,9 @@ use std::rc::Rc;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::{ChildRegionOptions, ImUiFacade, containers::build_imui_children_with_focus};
+use super::{
+    ChildRegionChrome, ChildRegionOptions, ImUiFacade, containers::build_imui_children_with_focus,
+};
 
 pub(super) fn child_region_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -16,6 +18,7 @@ pub(super) fn child_region_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     cx.keyed(id, |cx| {
+        let chrome = options.chrome;
         let layout = options.layout.clone();
         let scroll_options = options.scroll.clone();
         let test_id = options.test_id.clone();
@@ -39,18 +42,22 @@ pub(super) fn child_region_element<H: UiHost>(
             scroll_options.show_scrollbar_x,
             scroll_options.show_scrollbar_y,
         )
-        .layout(layout)
-        .p_2()
-        .rounded_md()
-        .border_1()
-        .bg(crate::ColorRef::Token {
-            key: "card",
-            fallback: crate::ColorFallback::ThemePanelBackground,
-        })
-        .border_color(crate::ColorRef::Token {
-            key: "border",
-            fallback: crate::ColorFallback::ThemePanelBorder,
-        });
+        .layout(layout);
+
+        if chrome == ChildRegionChrome::Framed {
+            builder = builder
+                .p_2()
+                .rounded_md()
+                .border_1()
+                .bg(crate::ColorRef::Token {
+                    key: "card",
+                    fallback: crate::ColorFallback::ThemePanelBackground,
+                })
+                .border_color(crate::ColorRef::Token {
+                    key: "border",
+                    fallback: crate::ColorFallback::ThemePanelBorder,
+                });
+        }
 
         if let Some(handle) = scroll_options.handle {
             builder = builder.handle(handle);

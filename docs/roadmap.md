@@ -31,12 +31,20 @@ Tracker highlights:
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
-- ImUi menu/tab policy-depth follow-on (active narrow P0 lane that now owns the remaining richer
-  menubar/submenu/tab policy depth question after the helper-owned outward-response lanes closed;
-  this is where hover-switch, submenu grace, roving/mnemonic posture, and tab overflow/reorder/
-  close ownership are evaluated without widening `fret-authoring::Response` or `crates/fret-ui`):
+- ImUi child-region depth closeout record (closed narrow P1 lane that landed the bounded
+  `ChildRegionChrome::{Framed, Bare}` slice and froze that resize / auto-resize /
+  focus-boundary posture still do not belong in generic `child_region` on current first-party
+  proof):
+  `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`,
+  `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`,
+  `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`, and
+  `docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`.
+- ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
+  generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
+  instead of widening `fret-authoring::Response` or `crates/fret-ui` again):
   `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`,
-  `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`, and
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`,
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`, and
   `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`.
 - ImUi response-status lifecycle closeout record (closed narrow P0 lane that landed the first
   `ResponseExt` lifecycle vocabulary around activation/deactivation/edit sequencing without

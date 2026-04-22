@@ -103,13 +103,13 @@ use interaction_runtime::{
 pub use multi_select::{ImUiMultiSelectState, multi_select_use_model};
 pub use options::{
     BeginMenuOptions, BeginSubmenuOptions, BulletTextOptions, ButtonArrowDirection, ButtonOptions,
-    ButtonVariant, CheckboxOptions, ChildRegionOptions, CollapsingHeaderOptions, ComboModelOptions,
-    ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions, HorizontalOptions,
-    InputTextMode, InputTextOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,
-    PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions, SeparatorTextOptions,
-    SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn, TableColumnWidth,
-    TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions, TreeNodeOptions,
-    VerticalOptions, VirtualListOptions,
+    ButtonVariant, CheckboxOptions, ChildRegionChrome, ChildRegionOptions, CollapsingHeaderOptions,
+    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
+    HorizontalOptions, InputTextMode, InputTextOptions, MenuBarOptions, MenuItemOptions,
+    PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions,
+    SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn,
+    TableColumnWidth, TableOptions, TableRowOptions, TextAreaOptions, TooltipOptions,
+    TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,

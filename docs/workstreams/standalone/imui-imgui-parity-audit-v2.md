@@ -63,9 +63,14 @@ Fret implementation and planning anchors:
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md`
 - `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`
-- `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
+- `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
+- `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-child-region-depth-v1/M1_TARGET_SURFACE_FREEZE_2026-04-22.md`
+- `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
 - `ecosystem/fret-imui/src/frontend.rs`
@@ -209,7 +214,7 @@ The real remaining gaps are narrower:
    - What still remains is Dear ImGui-class collection depth: no marquee/box-select bridge, no
      lasso/drag-rectangle story, and no richer keyboard-owner story around the collection helper.
 2. First-cut immediate child-region helper now exists, and the current first-party pane proof is
-   real, but the helper depth is still intentionally narrow
+   real, while the generic helper depth is now intentionally closed on one bounded chrome slice
    - `fret-ui-kit::imui` now exposes a keyed `child_region[_with_options]` helper that wraps a
      framed scroll surface with default vertical item flow and coarse clipping.
    - `apps/fret-examples/src/workspace_shell_demo.rs`, `apps/fret-examples/src/editor_notes_demo.rs`,
@@ -219,14 +224,23 @@ The real remaining gaps are narrower:
      `child_region_helper_can_host_menu_bar_and_popup_menu` proves the current helper can host
      `menu_bar` + popup menu composition inside child content without a new child-specific menu
      mechanism.
-   - The remaining gap is therefore depth rather than basic embedded composition:
-     there is still no `BeginChild()`-scale child-flag surface and no Dear ImGui-style
-     axis-specific resize / auto-resize behavior on the generic helper surface.
+   - The active owner question has now closed on a bounded answer:
+     `docs/workstreams/imui-child-region-depth-v1/` landed
+     `ChildRegionChrome::{Framed, Bare}` as the only admitted generic child-depth slice for this
+     cycle.
+   - Focused proof now also locks the chrome posture itself:
+     `child_region_helper_can_switch_between_framed_and_bare_chrome` proves the helper can drop
+     the built-in frame/padding inset without widening the runtime contract shape.
+   - The remaining gap is now narrower than the older audit implied:
+     generic `child_region` still does not admit Dear ImGui-style axis-specific resize /
+     auto-resize behavior, focus-boundary flattening, or a `BeginChild() -> bool` return posture,
+     and the closeout lane now treats those as deferred/rejected until stronger first-party proof
+     starts a different narrower follow-on.
 3. First-cut immediate menu/tab family now includes click-open menus, top-level menubar
    hover-switch, keyboard-open on `ArrowDown` / `ArrowUp`, open-menu left/right switching,
    submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor, and a
    thin tab-bar seam,
-   but richer depth is still open
+   and the generic floor is now closed for this cycle
    - `fret-ui-kit::imui` now exposes a small `menu_bar[_with_options]` container plus
      `begin_menu[_with_options]` and `begin_submenu[_with_options]` trigger/helper seams for
      click-open top-level and nested menus, alongside `tab_bar[_with_options]` +

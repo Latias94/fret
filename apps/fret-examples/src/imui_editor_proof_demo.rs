@@ -3407,6 +3407,7 @@ fn render_authoring_parity_imui_group(
                 content_test_id: Some(Arc::from(
                     "imui-editor-proof.authoring.imui.collection.browser.content",
                 )),
+                ..Default::default()
             },
             |ui| {
                 ui.grid_with_options(

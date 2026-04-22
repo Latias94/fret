@@ -1,11 +1,11 @@
 # ImUi Editor-Grade Product Closure v1 - TODO
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-21
+Last updated: 2026-04-22
 
-Status note (2026-04-20): keep phase ordering and follow-on decisions here. Do not resume
-implementation-heavy work in this folder while the active P0 menu/tab policy execution lives in
-`docs/workstreams/imui-menu-tab-policy-depth-v1/` and the remaining P3 execution continues in
+Status note (2026-04-22): keep phase ordering and follow-on decisions here. Do not resume
+implementation-heavy work in this folder while the closed child-region depth closeout record lives
+in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution continues in
 `docs/workstreams/docking-multiwindow-imgui-parity/`.
 
 ## Lane setup
@@ -171,6 +171,13 @@ implementation-heavy work in this folder while the active P0 menu/tab policy exe
       Result: `docs/workstreams/imui-menu-tab-policy-depth-v1/` now owns the current hover-switch /
       submenu grace / tab ownership audit, keeping response-surface naming, key ownership,
       collection breadth, shell helpers, and runtime widening in their separate lanes.
+- [x] If the remaining P1 pressure becomes `BeginChild()`-scale child-region depth instead of
+      proof breadth, split another narrow follow-on instead of reopening the closed
+      collection/pane lane.
+      Result: `docs/workstreams/imui-child-region-depth-v1/` now records the closed child-region
+      depth verdict: the bounded `ChildRegionChrome::{Framed, Bare}` slice is landed, while
+      pane-proof breadth, shell-helper promotion, menu/tab policy, and runtime widening remain in
+      their separate lanes.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella

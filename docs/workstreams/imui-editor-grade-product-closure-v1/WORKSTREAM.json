@@ -82,6 +82,22 @@
     },
     {
       "role": "reference",
+      "path": "docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "reference",
       "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md"
     },
     {
@@ -127,18 +143,6 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md"
-    },
-    {
-      "role": "next",
-      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json"
-    },
-    {
-      "role": "next",
-      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md"
-    },
-    {
-      "role": "next",
-      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md"
     },
     {
       "role": "next",
@@ -296,9 +300,15 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
+    "docs/workstreams/imui-child-region-depth-v1/DESIGN.md",
+    "docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md",
+    "docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-child-region-depth-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-key-owner-surface-v1/DESIGN.md",
@@ -383,6 +393,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, continue the active broader menu/tab policy work in `imui-menu-tab-policy-depth-v1`, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }
