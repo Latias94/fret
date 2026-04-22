@@ -1,6 +1,14 @@
 # P0 Footgun Audit - 2026-04-12
 
-Status: focused audit
+Status: Historical reference (partially superseded by the later root-hosting and parity notes)
+
+Status note (2026-04-21): this document remains useful as the original P0 footgun classification
+pass, but the current shipped root-host guidance now lives in
+`docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`,
+`docs/examples/README.md`, and `ecosystem/fret-imui/src/frontend.rs`. References below to
+`imui_vstack(...)` or to `imui(...)` as bare sibling emission should be read as historical:
+today `fret_imui::imui(...)` is the safe default stacked host, while `fret_imui::imui_raw(...)`
+is the advanced explicit-layout seam.
 
 Related:
 

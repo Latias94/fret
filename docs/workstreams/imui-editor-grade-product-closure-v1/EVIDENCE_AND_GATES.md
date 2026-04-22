@@ -15,6 +15,10 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
@@ -44,14 +48,22 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `ecosystem/fret-ui-kit/src/imui/combo_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs`
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
+- `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs`
+- `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
 - `ecosystem/fret-imui/src/tests/mod.rs`
-- `ecosystem/fret-imui/src/tests/interaction.rs`
-- `ecosystem/fret-imui/src/tests/models.rs`
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
+- `ecosystem/fret-imui/src/tests/models_controls.rs`
+- `ecosystem/fret-imui/src/tests/models_combo.rs`
+- `ecosystem/fret-imui/src/tests/models_text.rs`
 - `ecosystem/fret-imui/src/tests/popup_hover.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/src/imui_hello_demo.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
+- `apps/fret-examples/src/imui_interaction_showcase_demo.rs`
 - `apps/fret-examples/src/imui_floating_windows_demo.rs`
 - `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
 - `apps/fret-examples/src/imui_node_graph_demo.rs`
@@ -91,7 +103,7 @@ without reopening older workstreams first.
 - `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy`
 - `cargo nextest run -p fret-imui`
 - `cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface`
-- `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
+- `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
 
 This package now locks the current immediate-mode product message at the source-policy layer:
 
@@ -103,6 +115,19 @@ This package now locks the current immediate-mode product message at the source-
 - focused item-local shortcuts now span direct pressables, popup/menu triggers, and
   combo/combo-model triggers at the ecosystem layer,
 - and repeat keydown stays ignored by default unless `shortcut_repeat=true` is explicitly requested.
+
+### Active narrow follow-on: menu/tab policy depth
+
+- `cargo run -p fret-demo --bin imui_interaction_showcase_demo`
+- `cargo run -p fret-demo --bin imui_response_signals_demo`
+- `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast`
+
+This package currently proves the shipped floor that the new narrow follow-on now owns:
+
+- top-level menus are click-open and can hover-switch once a menubar session is active,
+- submenus open, hover-open, sibling-switch with a basic grace corridor, and report outward
+  trigger edges,
+- and tab bars currently cover simple selection/panel switching rather than richer shell policy.
 
 ### Editor shell gates
 

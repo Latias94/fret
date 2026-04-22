@@ -1,7 +1,17 @@
 # P0 Immediate Parity Status - 2026-04-13
 
-Status: phase status note
-Last updated: 2026-04-13
+Status: Historical reference (partially superseded by later narrow P0 follow-ons)
+Last updated: 2026-04-22
+
+Status note (2026-04-22): this document remains useful as the original post-shortcut-batch P0
+snapshot, but the current shipped P0 state now lives in later narrow follow-ons:
+`docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`,
+`docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md`,
+`docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`,
+`docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`, and
+`docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`. References below to the remaining P0
+gap around collection/pane proof breadth, key-owner surface growth, or richer menu/tab policy
+should therefore be read as the 2026-04-13 snapshot, not the current shipped verdict.
 
 Related:
 
@@ -9,7 +19,6 @@ Related:
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
-- `WORKSTREAM.json`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
 
 ## Why this note exists
@@ -40,8 +49,10 @@ workstream.
 
 - Evidence:
   - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
-  - `ecosystem/fret-imui/src/tests/interaction.rs`
-  - `ecosystem/fret-imui/src/tests/models.rs`
+  - `ecosystem/fret-imui/src/tests/interaction_shortcuts.rs`
+  - `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
+  - `ecosystem/fret-imui/src/tests/models_controls.rs`
+  - `ecosystem/fret-imui/src/tests/models_combo.rs`
   - `ecosystem/fret-imui/src/tests/popup_hover.rs`
 - Confidence:
   - Likely

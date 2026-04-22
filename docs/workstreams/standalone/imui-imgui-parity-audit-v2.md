@@ -1,7 +1,7 @@
 # imui ↔ Dear ImGui Parity Audit (v2)
 
 Status: current audit snapshot (not an ADR)
-Last updated: 2026-04-13
+Last updated: 2026-04-22
 
 ## Purpose
 
@@ -60,13 +60,27 @@ Fret implementation and planning anchors:
 - `docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
+- `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
+- `docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+- `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
 - `ecosystem/fret-imui/src/frontend.rs`
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-kit/src/imui/response.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs`
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
+- `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs`
+- `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `apps/fret-examples/src/imui_interaction_showcase_demo.rs`
+- `apps/fret-examples/src/imui_response_signals_demo.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/docking_arbitration_demo.rs`
 
@@ -182,31 +196,46 @@ Already present in Fret's current immediate stack:
 
 The real remaining gaps are narrower:
 
-1. First-cut generic immediate multi-select collection primitive now exists, but the proof breadth
-   is still narrower than Dear ImGui
+1. First-cut generic immediate multi-select collection primitive now exists, and the current
+   first-party collection proof is real, but the breadth is still narrower than Dear ImGui
    - `fret-ui-kit::imui` now exposes a reusable `ImUiMultiSelectState<K>` model plus
      model-backed `multi_selectable[_with_options]` helpers with plain click, primary-modifier
      toggle, and shift-range selection semantics.
-   - The remaining gap is breadth rather than ownership: there is still no large first-party
-     asset-grid/file-browser proof, no marquee/box-select bridge, and no richer keyboard-owner
-     story around the collection helper.
-2. First-cut immediate child-region helper now exists, but it is still intentionally narrow
+   - `apps/fret-examples/src/imui_editor_proof_demo.rs` and the closed
+     `docs/workstreams/imui-collection-pane-proof-v1/` lane now freeze the current asset-browser /
+     file-browser style proof, so the remaining gap is breadth rather than first-party proof
+     absence.
+   - What still remains is Dear ImGui-class collection depth: no marquee/box-select bridge, no
+     lasso/drag-rectangle story, and no richer keyboard-owner story around the collection helper.
+2. First-cut immediate child-region helper now exists, and the current first-party pane proof is
+   real, but the helper depth is still intentionally narrow
    - `fret-ui-kit::imui` now exposes a keyed `child_region[_with_options]` helper that wraps a
      framed scroll surface with default vertical item flow and coarse clipping.
+   - `apps/fret-examples/src/workspace_shell_demo.rs`, `apps/fret-examples/src/editor_notes_demo.rs`,
+     and the closed `docs/workstreams/imui-collection-pane-proof-v1/` lane now freeze the current
+     pane-first proof that exercises nested toolbar / tabs / inspector / status composition.
    - The remaining gap is depth rather than ownership: there is still no `BeginChild()`-scale
-     flag surface, no menu-bar nesting story, and no larger first-party pane proof that exercises
-     mixed child regions with tabs/toolbars/status chrome.
-3. First-cut immediate menu/tab family now includes top-level menus, a submenu seam, and a thin
-   tab-bar seam, but richer menubar/tab policy is still open
+     child-flag surface, no richer menu-bar-in-child story, and no Dear ImGui-style axis-specific
+     resize / auto-resize behavior on the generic helper surface.
+3. First-cut immediate menu/tab family now includes click-open menus, top-level menubar
+   hover-switch, submenu hover-open / sibling hover-switch with a basic grace corridor, and a thin
+   tab-bar seam, but richer depth is still open
    - `fret-ui-kit::imui` now exposes a small `menu_bar[_with_options]` container plus
      `begin_menu[_with_options]` and `begin_submenu[_with_options]` trigger/helper seams for
      click-open top-level and nested menus, alongside `tab_bar[_with_options]` +
      `begin_tab_item[_with_options]` for simple immediate tab selection and panel switching.
-   - The remaining gap is depth rather than ownership: there is still no hover-switch/roving/
-     mnemonic menubar policy in the `imui` layer, no overflow/scroll/reorder/close-button tab-bar
-     policy, and no richer submenu policy around grace intent, hover switching, or keyboard-owner
-     orchestration.
-4. First-cut immediate command metadata seam now exists, but key ownership is still open
+   - The current generic floor is materially better than the older audit snapshot implied:
+     `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+     now records shipped top-level menubar hover-switch plus submenu hover-open / sibling
+     hover-switch with a basic grace corridor in generic IMUI.
+   - The remaining gap is depth rather than ownership: richer submenu-intent tuning, roving /
+     mnemonic menubar posture, and richer tab-bar policy remain open; Fret still has no generic
+     equivalent to Dear ImGui's fitting-policy flags, reorderable tabs, close buttons, tab-list
+     popup button, or leading/trailing `TabItemButton()` action tabs.
+   - This gap now has a dedicated narrow owner:
+     `docs/workstreams/imui-menu-tab-policy-depth-v1/`.
+4. First-cut immediate command metadata seam now exists, and the current lane explicitly closed on
+   a no-new-surface verdict for broader key-owner APIs
    - `fret-ui-kit::imui` now exposes `menu_item_command[_with_options]` and
      `button_command[_with_options]`, which resolve command title, enabled state, and menu-item
      shortcut hints from Fret's command/keymap layer without widening `crates/fret-ui`.
@@ -218,17 +247,19 @@ The real remaining gaps are narrower:
    - Representative `fret-imui` proof now also locks `shortcut_repeat` as opt-in on focused direct
      pressables, popup items, menu/menu-submenu triggers, and combo/combo-model triggers, so held
      chords do not retrigger by default.
-   - The remaining gap is depth rather than ownership: there is still no immediate equivalent to
-     `SetNextItemShortcut()` / `SetItemKeyOwner()`, no broader item-local shortcut registration
-     seam beyond focused button/selectable/checkbox/switch/disclosure/tab/menu/combo pressables,
-     and no richer first-party proof surface beyond menu/button command affordances plus focused
-     selectable/checkbox/switch/disclosure/tab/menu/combo/model-backed-combo rows, menubar
-     triggers, and submenu triggers.
+   - The closed key-owner lane now freezes the current verdict:
+     do not add a generic `SetNextItemShortcut()` / `SetItemKeyOwner()`-scale facade yet.
+   - The remaining gap is therefore no longer "missing admission." It is "missing stronger first-
+     party proof": there is still no broader item-local shortcut registration seam beyond focused
+     button/selectable/checkbox/switch/disclosure/tab/menu/combo pressables, and no evidence yet
+     that generic IMUI, rather than product/shell owners, needs a broader key-owner contract.
 5. Partial item-status parity
-   - `ResponseExt` covers a useful subset of hover, click, drag, context-menu, and nav-highlight
-     behavior.
-   - It still does not expose the broader Dear ImGui-style status vocabulary around
-     activation/deactivation/edit lifecycle and key ownership.
+   - `ResponseExt` now covers hover, click, drag, context-menu, nav-highlight, and a first
+     lifecycle slice around activation/deactivation/edit sequencing for direct pressables, menu
+     items, boolean controls, slider, input text, textarea, combo, and combo-model helpers.
+   - The remaining gap is no longer basic lifecycle presence. It is breadth and owner separation:
+     broader Dear ImGui-style status vocabulary, richer menu/tab policy, and any future key-owner
+     surface still live in separate narrow lanes.
 
 Owner:
 
@@ -241,7 +272,7 @@ Owner:
 - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
 - `ecosystem/fret-ui-kit/src/command.rs`
-- `ecosystem/fret-imui/src/tests/interaction.rs`
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
 - `ecosystem/fret-imui/src/tests/composition.rs`
 
 Not the owner:

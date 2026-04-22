@@ -31,6 +31,13 @@ Tracker highlights:
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
+- ImUi menu/tab policy-depth follow-on (active narrow P0 lane that now owns the remaining richer
+  menubar/submenu/tab policy depth question after the helper-owned outward-response lanes closed;
+  this is where hover-switch, submenu grace, roving/mnemonic posture, and tab overflow/reorder/
+  close ownership are evaluated without widening `fret-authoring::Response` or `crates/fret-ui`):
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`,
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`, and
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`.
 - ImUi response-status lifecycle closeout record (closed narrow P0 lane that landed the first
   `ResponseExt` lifecycle vocabulary around activation/deactivation/edit sequencing without
   widening `fret-authoring::Response`, `crates/fret-ui`, or the still-separate key-owner

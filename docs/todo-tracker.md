@@ -103,6 +103,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+- Active narrow follow-on for broader menu/submenu/tab policy depth:
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
 - Closed narrow closeout record for immediate key-owner / item-local shortcut ownership:
   - `docs/workstreams/imui-key-owner-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md`
@@ -204,6 +211,11 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed
   helper-owned menu/submenu/tab outward-response verdict; start another follow-on if the remaining
   gap is broader menu/tab policy.
+- Use `docs/workstreams/imui-menu-tab-policy-depth-v1/` as the current active execution lane for
+  the broader menu/submenu/tab policy question:
+  it starts from the shipped click-open/simple-tab floor, keeps response-surface naming in the
+  closed trigger-response lanes, and decides which richer hover-switch/grace/overflow/reorder/
+  close behavior actually belongs in generic `imui` versus shell/product owners.
 - Use the closed P1 shell follow-on only for the latest no-new-helper-yet verdict on promoted
   first-party shell helpers.
 - Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and

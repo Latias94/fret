@@ -4,7 +4,8 @@ Status: maintenance umbrella lane
 Last updated: 2026-04-21
 
 Status note (2026-04-20): this file now records umbrella phase state only. Implementation-heavy
-execution has moved into closed narrow follow-ons or the active docking parity lane.
+execution has moved into closed narrow follow-ons, the active
+`docs/workstreams/imui-menu-tab-policy-depth-v1/` follow-on, or the active docking parity lane.
 
 ## M0 - Baseline and owner freeze
 
@@ -81,6 +82,8 @@ Current status:
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the closed collection/pane proof-breadth closeout record at
   `docs/workstreams/imui-collection-pane-proof-v1/`,
+  the active broader menu/tab policy follow-on at
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
   the closed trigger-response canonicalization closeout at
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
   and the closed helper-owned trigger response-surface follow-on at
@@ -95,6 +98,8 @@ Current status:
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the collection/pane proof-breadth closeout record now lives in
   `docs/workstreams/imui-collection-pane-proof-v1/`,
+  the broader menu/submenu/tab policy execution now lives in
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
   the helper-owned menu/submenu/tab trigger response verdict now lives in
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`, the naming cleanup closeout now lives in
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
@@ -220,6 +225,11 @@ Primary evidence:
 Current status:
 
 - In progress, but the active execution lives in the docking parity lane rather than this folder.
+- The current active execution split is now explicit:
+  the immediate menu/tab policy-depth slice lives in
+  `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
+  while runner/backend multi-window work stays in
+  `docs/workstreams/docking-multiwindow-imgui-parity/`.
 - The first P3 checklist is now explicit:
   `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md` freezes hovered-window, peek-behind,
   transparent payload, and mixed-DPI follow-drag as the runner-owned parity budget for this lane.

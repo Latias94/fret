@@ -4,7 +4,8 @@ Status: maintenance umbrella lane
 Last updated: 2026-04-21
 
 Status note (2026-04-20): keep phase ordering and follow-on decisions here. Do not resume
-implementation-heavy work in this folder while the remaining P3 execution continues in
+implementation-heavy work in this folder while the active P0 menu/tab policy execution lives in
+`docs/workstreams/imui-menu-tab-policy-depth-v1/` and the remaining P3 execution continues in
 `docs/workstreams/docking-multiwindow-imgui-parity/`.
 
 ## Lane setup
@@ -164,6 +165,12 @@ implementation-heavy work in this folder while the remaining P3 execution contin
       split a second narrow follow-on for canonicalization instead of rewriting the historical lane.
       Result: `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` now owns the
       cleanup closeout that removes the duplicate alias layer after the response surface landed.
+- [x] If the remaining P0 pressure becomes broader menu/submenu/tab policy depth instead of
+      helper-owned outward response shape, split another narrow follow-on instead of reopening the
+      closed response lanes.
+      Result: `docs/workstreams/imui-menu-tab-policy-depth-v1/` now owns the current hover-switch /
+      submenu grace / tab ownership audit, keeping response-surface naming, key ownership,
+      collection breadth, shell helpers, and runtime widening in their separate lanes.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella

@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-04-21",
+  "updated": "2026-04-22",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, and one runner-grade multi-window hand-feel story.",
@@ -21,7 +21,7 @@
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_TEACHING_SURFACE_INVENTORY_2026-04-12.md"
     },
     {
-      "role": "status",
+      "role": "reference",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_FOOTGUN_AUDIT_2026-04-12.md"
     },
     {
@@ -41,7 +41,7 @@
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
     },
     {
-      "role": "status",
+      "role": "reference",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md"
     },
     {
@@ -130,6 +130,18 @@
     },
     {
       "role": "next",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md"
+    },
+    {
+      "role": "next",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
     },
     {
@@ -175,7 +187,7 @@
       "cargo run -p fret-demo --bin docking_arbitration_demo",
       "cargo nextest run -p fret-imui",
       "cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface",
-      "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
+      "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke",
       "cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy"
     ]
@@ -203,7 +215,7 @@
     },
     {
       "name": "examples-imui-teaching-classification",
-      "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_vstack immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
+      "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
     },
     {
       "name": "workspace-shell-source-surfaces",
@@ -284,6 +296,10 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-key-owner-surface-v1/DESIGN.md",
     "docs/workstreams/imui-key-owner-surface-v1/M0_BASELINE_AUDIT_2026-04-21.md",
@@ -333,14 +349,20 @@
     "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_overlay.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-imui/src/tests/mod.rs",
-    "ecosystem/fret-imui/src/tests/interaction.rs",
-    "ecosystem/fret-imui/src/tests/models.rs",
+    "ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs",
+    "ecosystem/fret-imui/src/tests/models_controls.rs",
+    "ecosystem/fret-imui/src/tests/models_combo.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
     "ecosystem/fret-imui/src/tests/popup_hover.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_hello_demo.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
     "apps/fret-examples/src/imui_floating_windows_demo.rs",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples/src/imui_node_graph_demo.rs",
@@ -361,6 +383,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, continue the active broader menu/tab policy work in `imui-menu-tab-policy-depth-v1`, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, and start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }
