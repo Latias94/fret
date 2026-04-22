@@ -7,8 +7,9 @@ Status note (2026-04-22): the first admitted generic IMUI policy-depth floor has
 top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace
 corridor. The remaining scope is narrower than the original baseline audit: a same-day owner audit
 keeps editor-grade tab overflow / scroll / reorder / close in `fret-workspace`, so the open
-generic IMUI question is now whether richer submenu-intent tuning or roving/mnemonic posture
-belongs in the shared helper family.
+generic IMUI question is now whether richer submenu-intent tuning should remain generic and how to
+land reverse-direction top-level focus arbitration; outer-scope mnemonic / roving posture now has
+an explicit shell-owned verdict.
 
 Related:
 

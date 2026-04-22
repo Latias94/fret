@@ -65,6 +65,7 @@ Primary evidence:
 - `M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
 - `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
+- `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
@@ -86,8 +87,13 @@ Current status:
 - `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps outer-scope
   active-menubar mnemonic / roving posture in shell-owned `in_window_menubar`-style surfaces
   instead of growing generic IMUI by primitive availability alone.
-- The lane stays open because richer submenu-intent tuning and reverse-direction focus arbitration
-  still need an explicit verdict.
+- `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` now closes the owner split for the
+  remaining reverse-direction keyboard problem:
+  the failure reproduces in the focused generic `fret-imui` harness, so it remains a generic IMUI
+  implementation gap rather than a shell/product posture question.
+- The lane stays open because richer submenu-intent tuning and the reverse-direction implementation
+  slice still need to land.
 - The remaining keyboard question is now narrower than top-level popup ownership:
-  the current unresolved pressure is the remaining reverse-direction focus arbitration after
-  top-level left/right switching, not outer-scope mnemonic / roving ownership.
+  the current unresolved pressure is the remaining reverse-direction focus implementation after
+  top-level left/right switching, not outer-scope mnemonic / roving ownership and not another
+  owner verdict.

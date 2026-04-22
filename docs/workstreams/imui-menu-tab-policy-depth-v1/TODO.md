@@ -29,9 +29,10 @@ Last updated: 2026-04-22
       - richer submenu intent tuning beyond the current grace corridor,
       - reverse-direction focus arbitration after top-level left/right switching.
       Current blocker: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps
-      outer-scope active-menubar mnemonic / roving posture shell-owned by default, so the remaining
-      generic keyboard pressure is reverse-direction focus arbitration rather than mnemonic
-      admission.
+      outer-scope active-menubar mnemonic / roving posture shell-owned by default, and
+      `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` now keeps the reverse-direction
+      question inside generic IMUI, so the remaining generic keyboard pressure is the landed
+      implementation slice rather than another owner split.
 
 ## M2 - Land or close
 
@@ -47,8 +48,14 @@ Last updated: 2026-04-22
       Result: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps Alt/F10
       activation, mnemonic display/open, closed-state Escape exit, and trigger-row roving/typeahead
       in shell-owned `fret::in_window_menubar`-style surfaces by default.
-- [ ] Decide whether reverse-direction focus arbitration after top-level left/right switching
+- [x] Decide whether reverse-direction focus arbitration after top-level left/right switching
       belongs in generic IMUI or can close as an accepted current floor gap.
+      Result: `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md` now keeps the owner inside
+      generic IMUI because the focused `fret-imui` repro fails without any shell/product
+      menubar surface in play.
+- [ ] Land a narrow generic IMUI fix for reverse-direction top-level switching so keyboard focus
+      enters the reopened earlier sibling instead of dropping to trigger-level fallback or
+      collapsing on the next frame.
 - [x] Run the explicit owner audit for tab overflow / scroll / reorder / close instead of growing
       generic IMUI by parity instinct alone.
       Result: `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tabstrip policy in

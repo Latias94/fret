@@ -234,6 +234,9 @@ The real remaining gaps are narrower:
      richer submenu-intent tuning and reverse-direction top-level focus arbitration remain open in
      generic IMUI, while outer-scope active-menubar mnemonic / roving posture now has a stronger
      shell-first owner in `fret::in_window_menubar`.
+     `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
+     now closes the owner split on the reverse-direction problem itself: the remaining gap is a
+     generic IMUI implementation bug, not a shell-owned posture question.
    - Richer tab-bar policy now has a stronger first-party owner elsewhere:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md` keeps
      Dear ImGui-like overflow / reorder / close / action-tab behavior in

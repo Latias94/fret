@@ -13,6 +13,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -81,6 +82,9 @@ This gate package currently proves:
 - the lane now also has an explicit owner verdict keeping outer-scope active-menubar mnemonic /
   roving posture in shell-owned `in_window_menubar`-style surfaces rather than widening generic
   IMUI by default.
+- the lane now also has an explicit owner verdict keeping reverse-direction top-level focus
+  arbitration inside generic IMUI because the focused repro fails without any shell/product
+  menubar owner in play.
 
 ## Remaining gap after the current landed floor
 
@@ -89,10 +93,11 @@ Still missing before this lane can close:
 - an explicit verdict on whether any richer submenu-intent tuning beyond the current grace
   corridor stays generic,
 - or an explicit owner verdict that leaves that pressure to shell/product layers,
-- plus any explicit decision on reverse-direction focus arbitration after top-level left/right
-  switching.
+- plus a landed implementation slice for reverse-direction top-level switching after the owner
+  verdict.
 - the remaining keyboard/product blocker is now narrower than popup ownership:
   the current landed owner split plus keyboard slice resolved trigger-local keyboard-open and
   in-menu top-level switching, while the new owner verdict keeps outer-scope active-menubar
-  mnemonic / roving posture shell-owned; the remaining unresolved keyboard pressure is therefore
-  reverse-direction focus arbitration.
+  mnemonic / roving posture shell-owned and the new reverse-direction owner verdict keeps the
+  remaining failure inside generic IMUI; the unresolved keyboard pressure is therefore the narrow
+  reverse-direction implementation slice.
