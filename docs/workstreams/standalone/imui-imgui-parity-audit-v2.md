@@ -211,8 +211,11 @@ The real remaining gaps are narrower:
      `docs/workstreams/imui-collection-pane-proof-v1/` lane now freeze the current asset-browser /
      file-browser style proof, so the remaining gap is breadth rather than first-party proof
      absence.
-   - What still remains is Dear ImGui-class collection depth: no marquee/box-select bridge, no
-     lasso/drag-rectangle story, and no richer keyboard-owner story around the collection helper.
+   - `docs/workstreams/imui-collection-box-select-v1/` now closes the narrow app-owned background
+     marquee / box-select slice without widening `fret-ui-kit::imui`.
+   - What still remains is narrower Dear ImGui-class collection depth: no lasso / drag-rectangle
+     story, no richer keyboard-owner story around the collection helper, and no second proof
+     surface that would justify shared helper growth.
 2. First-cut immediate child-region helper now exists, and the current first-party pane proof is
    real, while the generic helper depth is now intentionally closed on one bounded chrome slice
    - `fret-ui-kit::imui` now exposes a keyed `child_region[_with_options]` helper that wraps a

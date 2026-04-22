@@ -20,6 +20,11 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-child-region-depth-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-box-select-v1/DESIGN.md`
+- `docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-collection-box-select-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`

@@ -81,6 +81,8 @@ Current status:
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the closed collection/pane proof-breadth closeout record at
   `docs/workstreams/imui-collection-pane-proof-v1/`,
+  the closed collection box-select closeout record at
+  `docs/workstreams/imui-collection-box-select-v1/`,
   the closed menu/tab policy closeout at
   `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
   the closed child-region depth closeout record at
@@ -99,6 +101,8 @@ Current status:
   `docs/workstreams/imui-response-status-lifecycle-v1/`,
   the collection/pane proof-breadth closeout record now lives in
   `docs/workstreams/imui-collection-pane-proof-v1/`,
+  the collection box-select closeout record now lives in
+  `docs/workstreams/imui-collection-box-select-v1/`,
   the broader menu/submenu/tab policy closeout record now lives in
   `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
   the closed `BeginChild()`-scale child-region depth closeout record now lives in

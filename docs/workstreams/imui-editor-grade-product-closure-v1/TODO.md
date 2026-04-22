@@ -178,6 +178,13 @@ in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution
       depth verdict: the bounded `ChildRegionChrome::{Framed, Bare}` slice is landed, while
       pane-proof breadth, shell-helper promotion, menu/tab policy, and runtime widening remain in
       their separate lanes.
+- [x] If the remaining collection depth becomes narrower background marquee / box-select proof
+      rather than generic helper widening, split another narrow follow-on and keep it app-owned
+      until the frozen proof budget is satisfied.
+      Result: `docs/workstreams/imui-collection-box-select-v1/` now records the closed
+      background-only box-select slice in `imui_editor_proof_demo`, keeps lasso /
+      keyboard-owner depth and shared helper growth out of generic `fret-ui-kit::imui`, and
+      leaves broader collection depth to future narrower follow-ons.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella

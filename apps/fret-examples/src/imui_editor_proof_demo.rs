@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
@@ -7,7 +9,7 @@ use fret::imui::prelude::*;
 use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
-use fret_core::{Color, Corners, Edges, PanelKind, Px, TextAlign};
+use fret_core::{Color, Corners, Edges, PanelKind, Point, PointerId, Px, Rect, Size, TextAlign};
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
     DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
@@ -17,6 +19,7 @@ use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
+use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
@@ -58,6 +61,7 @@ const EDITOR_HOST_BASE_COLOR: shadcn::themes::ShadcnBaseColor =
     shadcn::themes::ShadcnBaseColor::Slate;
 const EDITOR_HOST_DEFAULT_SCHEME: shadcn::themes::ShadcnColorScheme =
     shadcn::themes::ShadcnColorScheme::Dark;
+const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX: f32 = 6.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum ImUiEditorProofLayout {
@@ -340,6 +344,27 @@ struct ProofCollectionDragPayload {
     asset_paths: Arc<[Arc<str>]>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct ProofCollectionRenderedItem {
+    id: Arc<str>,
+    local_bounds: Rect,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ProofCollectionBoxSelectSession {
+    pointer_id: PointerId,
+    origin_local: Point,
+    current_local: Point,
+    baseline_selected: Vec<Arc<str>>,
+    append_mode: bool,
+    threshold_met: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+struct ProofCollectionBoxSelectState {
+    session: Option<ProofCollectionBoxSelectSession>,
+}
+
 #[derive(Clone, PartialEq, Eq)]
 struct ProofOutlinerItem {
     id: Arc<str>,
@@ -394,7 +419,7 @@ fn proof_collection_selection_line(
 ) -> String {
     let selected = proof_collection_selected_assets(assets, selection);
     if selected.is_empty() {
-        return "Selection: none. Click to select, primary-modifier click to toggle, shift-click to extend.".to_string();
+        return "Selection: none. Click to select, primary-modifier click to toggle, shift-click to extend, or drag background to box-select.".to_string();
     }
 
     let labels = selected
@@ -412,6 +437,130 @@ fn proof_collection_visible_order_line(assets: &[ProofCollectionAsset]) -> Strin
         .collect::<Vec<_>>()
         .join(" -> ");
     format!("Visible order: {labels}")
+}
+
+fn proof_collection_point_sub(a: Point, b: Point) -> Point {
+    Point::new(Px(a.x.0 - b.x.0), Px(a.y.0 - b.y.0))
+}
+
+fn proof_collection_localize_rect(rect: Rect, origin: Point) -> Rect {
+    Rect::new(proof_collection_point_sub(rect.origin, origin), rect.size)
+}
+
+fn proof_collection_drag_rect(origin_local: Point, current_local: Point) -> Rect {
+    let left = origin_local.x.0.min(current_local.x.0);
+    let top = origin_local.y.0.min(current_local.y.0);
+    let right = origin_local.x.0.max(current_local.x.0);
+    let bottom = origin_local.y.0.max(current_local.y.0);
+
+    Rect::new(
+        Point::new(Px(left), Px(top)),
+        Size::new(Px(right - left), Px(bottom - top)),
+    )
+}
+
+fn proof_collection_drag_threshold_met(origin_local: Point, current_local: Point) -> bool {
+    let dx = current_local.x.0 - origin_local.x.0;
+    let dy = current_local.y.0 - origin_local.y.0;
+    let distance_squared = dx * dx + dy * dy;
+    distance_squared >= PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX.powi(2)
+}
+
+fn proof_collection_rects_intersect(a: Rect, b: Rect) -> bool {
+    let ax1 = a.origin.x.0 + a.size.width.0;
+    let ay1 = a.origin.y.0 + a.size.height.0;
+    let bx1 = b.origin.x.0 + b.size.width.0;
+    let by1 = b.origin.y.0 + b.size.height.0;
+
+    a.origin.x.0 < bx1 && ax1 > b.origin.x.0 && a.origin.y.0 < by1 && ay1 > b.origin.y.0
+}
+
+fn proof_collection_normalize_selection(
+    collection_keys: &[Arc<str>],
+    selected: Vec<Arc<str>>,
+) -> Vec<Arc<str>> {
+    let mut ordered = Vec::new();
+
+    for key in collection_keys {
+        if selected.iter().any(|item| item == key) && !ordered.iter().any(|item| item == key) {
+            ordered.push(key.clone());
+        }
+    }
+
+    for key in selected {
+        if !ordered.iter().any(|item| item == &key) {
+            ordered.push(key);
+        }
+    }
+
+    ordered
+}
+
+fn proof_collection_box_select_hits(
+    collection_keys: &[Arc<str>],
+    rendered_items: &[ProofCollectionRenderedItem],
+    drag_rect: Rect,
+) -> Vec<Arc<str>> {
+    let bounds_by_id = rendered_items
+        .iter()
+        .map(|item| (item.id.as_ref(), item.local_bounds))
+        .collect::<HashMap<_, _>>();
+
+    collection_keys
+        .iter()
+        .filter(|key| {
+            bounds_by_id
+                .get(key.as_ref())
+                .is_some_and(|bounds| proof_collection_rects_intersect(*bounds, drag_rect))
+        })
+        .cloned()
+        .collect()
+}
+
+fn proof_collection_box_select_state_for_hits(
+    collection_keys: &[Arc<str>],
+    baseline_selected: &[Arc<str>],
+    hits: &[Arc<str>],
+    append_mode: bool,
+) -> ImUiMultiSelectState<Arc<str>> {
+    let selected = if append_mode {
+        let mut merged = baseline_selected.to_vec();
+        for hit in hits {
+            if !merged.iter().any(|item| item == hit) {
+                merged.push(hit.clone());
+            }
+        }
+        proof_collection_normalize_selection(collection_keys, merged)
+    } else {
+        proof_collection_normalize_selection(collection_keys, hits.to_vec())
+    };
+
+    ImUiMultiSelectState {
+        anchor: selected.first().cloned(),
+        selected,
+    }
+}
+
+fn proof_collection_box_select_selection(
+    collection_keys: &[Arc<str>],
+    rendered_items: &[ProofCollectionRenderedItem],
+    session: &ProofCollectionBoxSelectSession,
+) -> ImUiMultiSelectState<Arc<str>> {
+    let drag_rect = proof_collection_drag_rect(session.origin_local, session.current_local);
+    let hits = proof_collection_box_select_hits(collection_keys, rendered_items, drag_rect);
+    proof_collection_box_select_state_for_hits(
+        collection_keys,
+        &session.baseline_selected,
+        &hits,
+        session.append_mode,
+    )
+}
+
+fn proof_collection_box_select_active_rect(state: &ProofCollectionBoxSelectState) -> Option<Rect> {
+    let session = state.session.as_ref()?;
+    session
+        .threshold_met
+        .then(|| proof_collection_drag_rect(session.origin_local, session.current_local))
 }
 
 fn proof_collection_drag_payload_for_asset(
@@ -3336,12 +3485,13 @@ fn render_authoring_parity_imui_group(
             "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
         );
         ui.text(
-            "Marquee / box-select stays deferred for M2 while click, range, and toggle proof remains sufficient.",
+            "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
         );
 
         let collection_selection_model = authoring_parity_collection_selection_model(ui.cx_mut());
         let collection_reverse_order_model =
             authoring_parity_collection_reverse_order_model(ui.cx_mut());
+        let collection_box_select_model = authoring_parity_collection_box_select_model(ui.cx_mut());
         let collection_drop_status_model =
             authoring_parity_collection_drop_status_model(ui.cx_mut());
         let collection_assets = authoring_parity_collection_assets();
@@ -3349,6 +3499,10 @@ fn render_authoring_parity_imui_group(
             .cx_mut()
             .data()
             .selector_model_paint(&collection_selection_model, |state| state);
+        let collection_box_select = ui
+            .cx_mut()
+            .data()
+            .selector_model_paint(&collection_box_select_model, |state| state);
         let mut collection_reverse_order = ui
             .cx_mut()
             .data()
@@ -3410,88 +3564,346 @@ fn render_authoring_parity_imui_group(
                 ..Default::default()
             },
             |ui| {
-                ui.grid_with_options(
-                    fret_ui_kit::imui::GridOptions {
-                        columns: 3,
-                        column_gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N2),
-                        row_gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N2),
-                        row_items: fret_ui_kit::Items::Stretch,
-                        test_id: Some(Arc::from(
-                            "imui-editor-proof.authoring.imui.collection.grid",
-                        )),
-                        ..Default::default()
-                    },
-                    |ui| {
-                        for asset in &collection_assets {
-                            let payload = proof_collection_drag_payload_for_asset(
-                                &collection_assets,
-                                &collection_selection,
-                                asset,
-                            );
-                            let preview_title = proof_collection_drag_preview_title(&payload);
-                            let preview_subtitle = proof_collection_drag_preview_subtitle(&payload);
-                            let ghost_id = format!(
-                                "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
-                                asset.id
-                            );
+                let collection_assets = collection_assets.clone();
+                let collection_keys = collection_keys.clone();
+                let collection_selection = collection_selection.clone();
+                let collection_selection_model = collection_selection_model.clone();
+                let collection_box_select_model = collection_box_select_model.clone();
+                let collection_box_select = collection_box_select.clone();
 
-                            ui.id(asset.id.clone(), |ui| {
-                                ui.vertical_with_options(
-                                    fret_ui_kit::imui::VerticalOptions {
-                                        layout: fret_ui_kit::LayoutRefinement::default()
-                                            .flex_1()
-                                            .min_h(Px(80.0)),
-                                        gap: fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N1),
-                                        test_id: Some(Arc::from(format!(
-                                            "imui-editor-proof.authoring.imui.collection.asset.{}",
-                                            asset.id
-                                        ))),
-                                        ..Default::default()
-                                    },
-                                    |ui| {
-                                        let trigger = ui.multi_selectable_with_options(
-                                            asset.label.clone(),
-                                            &collection_selection_model,
-                                            &collection_keys,
-                                            asset.id.clone(),
-                                            fret_ui_kit::imui::SelectableOptions {
-                                                test_id: Some(Arc::from(format!(
-                                                    "imui-editor-proof.authoring.imui.collection.asset.{}.select",
-                                                    asset.id
-                                                ))),
-                                                ..Default::default()
-                                            },
-                                        );
-                                        let source = ui.drag_source_with_options(
-                                            trigger,
-                                            payload.clone(),
-                                            fret_ui_kit::imui::DragSourceOptions::default(),
-                                        );
-                                        let _ = drag_preview_ghost_with_options(
-                                            ui,
-                                            ghost_id.as_str(),
-                                            source,
-                                            DragPreviewGhostOptions {
-                                                test_id: Some(Arc::from(format!(
-                                                    "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
-                                                    asset.id
-                                                ))),
-                                                ..Default::default()
-                                            },
-                                            proof_drag_preview_card(
-                                                preview_title.clone(),
-                                                preview_subtitle.clone(),
-                                            ),
-                                        );
+                ui.add_ui(fret_ui_kit::ui::container_build(move |cx, out| {
+                    let rendered_items = Rc::new(RefCell::new(Vec::<ProofCollectionRenderedItem>::new()));
+                    let mut props = fret_ui::element::PointerRegionProps::default();
+                    props.layout.size.width = Length::Fill;
+                    props.capture_phase_pointer_moves = true;
 
-                                        ui.text(format!("{} | {} KiB", asset.kind, asset.size_kib));
-                                        ui.text(asset.path.clone());
-                                    },
-                                );
+                    out.push(cx.pointer_region(props, move |cx| {
+                        let scope_origin = cx
+                            .last_visual_bounds_for_element(cx.root_id())
+                            .or_else(|| cx.last_bounds_for_element(cx.root_id()))
+                            .map(|rect| rect.origin);
+
+                        let rendered_items_for_move = rendered_items.clone();
+                        let rendered_items_for_up = rendered_items.clone();
+                        let selection_model_for_down = collection_selection_model.clone();
+                        let selection_model_for_move = collection_selection_model.clone();
+                        let selection_model_for_up = collection_selection_model.clone();
+                        let box_select_model_for_down = collection_box_select_model.clone();
+                        let box_select_model_for_move = collection_box_select_model.clone();
+                        let box_select_model_for_up = collection_box_select_model.clone();
+                        let box_select_model_for_cancel = collection_box_select_model.clone();
+                        let collection_keys_for_move = collection_keys.clone();
+                        let collection_keys_for_up = collection_keys.clone();
+
+                        cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
+                            if down.button != fret_core::MouseButton::Left || down.hit_is_pressable {
+                                return false;
+                            }
+
+                            let baseline_selected = host
+                                .models_mut()
+                                .read(&selection_model_for_down, |state| state.selected.clone())
+                                .unwrap_or_default();
+                            let append_mode = down.modifiers.ctrl || down.modifiers.meta;
+                            let _ = host.update_model(&box_select_model_for_down, |state| {
+                                state.session = Some(ProofCollectionBoxSelectSession {
+                                    pointer_id: down.pointer_id,
+                                    origin_local: down.position_local,
+                                    current_local: down.position_local,
+                                    baseline_selected,
+                                    append_mode,
+                                    threshold_met: false,
+                                });
                             });
-                        }
-                    },
-                );
+                            host.capture_pointer();
+                            host.notify(acx);
+                            true
+                        }));
+
+                        cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+                            if !mv.buttons.left {
+                                return false;
+                            }
+
+                            let session = host
+                                .update_model(&box_select_model_for_move, |state| {
+                                    let Some(session) = state.session.as_mut() else {
+                                        return None;
+                                    };
+                                    if session.pointer_id != mv.pointer_id {
+                                        return None;
+                                    }
+
+                                    session.current_local = mv.position_local;
+                                    if !session.threshold_met {
+                                        session.threshold_met = proof_collection_drag_threshold_met(
+                                            session.origin_local,
+                                            session.current_local,
+                                        );
+                                    }
+
+                                    Some(session.clone())
+                                })
+                                .flatten();
+
+                            let Some(session) = session else {
+                                return false;
+                            };
+
+                            if session.threshold_met {
+                                let next_selection = proof_collection_box_select_selection(
+                                    &collection_keys_for_move,
+                                    &rendered_items_for_move.borrow(),
+                                    &session,
+                                );
+                                let _ = host.update_model(&selection_model_for_move, |state| {
+                                    *state = next_selection;
+                                });
+                            }
+
+                            host.notify(acx);
+                            true
+                        }));
+
+                        cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+                            let session = host
+                                .update_model(&box_select_model_for_up, |state| {
+                                    let Some(mut session) = state.session.take() else {
+                                        return None;
+                                    };
+                                    if session.pointer_id != up.pointer_id {
+                                        state.session = Some(session);
+                                        return None;
+                                    }
+
+                                    session.current_local = up.position_local;
+                                    if !session.threshold_met {
+                                        session.threshold_met = proof_collection_drag_threshold_met(
+                                            session.origin_local,
+                                            session.current_local,
+                                        );
+                                    }
+
+                                    Some(session)
+                                })
+                                .flatten();
+
+                            let Some(session) = session else {
+                                return false;
+                            };
+
+                            host.release_pointer_capture();
+                            if session.threshold_met {
+                                let next_selection = proof_collection_box_select_selection(
+                                    &collection_keys_for_up,
+                                    &rendered_items_for_up.borrow(),
+                                    &session,
+                                );
+                                let _ = host.update_model(&selection_model_for_up, |state| {
+                                    *state = next_selection;
+                                });
+                            } else if !session.append_mode {
+                                let _ = host.update_model(&selection_model_for_up, |state| {
+                                    state.selected.clear();
+                                    state.anchor = None;
+                                });
+                            }
+
+                            host.notify(acx);
+                            true
+                        }));
+
+                        cx.pointer_region_on_pointer_cancel(Arc::new(move |host, _acx, cancel| {
+                            let cleared = host
+                                .update_model(&box_select_model_for_cancel, |state| {
+                                    let matches_pointer = state
+                                        .session
+                                        .as_ref()
+                                        .is_some_and(|session| session.pointer_id == cancel.pointer_id);
+                                    if matches_pointer {
+                                        state.session = None;
+                                    }
+                                    matches_pointer
+                                })
+                                .unwrap_or(false);
+                            if cleared {
+                                host.release_pointer_capture();
+                            }
+                            cleared
+                        }));
+
+                        vec![
+                            fret_ui_kit::ui::stack(move |cx| {
+                                let rendered_items_for_grid = rendered_items.clone();
+                                let grid = fret_ui_kit::ui::container_build(move |cx, out| {
+                                    imui_build(cx, out, |ui| {
+                                        ui.grid_with_options(
+                                            fret_ui_kit::imui::GridOptions {
+                                                columns: 3,
+                                                column_gap: fret_ui_kit::MetricRef::space(
+                                                    fret_ui_kit::Space::N2,
+                                                ),
+                                                row_gap: fret_ui_kit::MetricRef::space(
+                                                    fret_ui_kit::Space::N2,
+                                                ),
+                                                row_items: fret_ui_kit::Items::Stretch,
+                                                test_id: Some(Arc::from(
+                                                    "imui-editor-proof.authoring.imui.collection.grid",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                            |ui| {
+                                                for asset in &collection_assets {
+                                                    let payload = proof_collection_drag_payload_for_asset(
+                                                        &collection_assets,
+                                                        &collection_selection,
+                                                        asset,
+                                                    );
+                                                    let preview_title =
+                                                        proof_collection_drag_preview_title(&payload);
+                                                    let preview_subtitle =
+                                                        proof_collection_drag_preview_subtitle(&payload);
+                                                    let ghost_id = format!(
+                                                        "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
+                                                        asset.id
+                                                    );
+
+                                                    ui.id(asset.id.clone(), |ui| {
+                                                        ui.vertical_with_options(
+                                                            fret_ui_kit::imui::VerticalOptions {
+                                                                layout: fret_ui_kit::LayoutRefinement::default()
+                                                                    .flex_1()
+                                                                    .min_h(Px(80.0)),
+                                                                gap: fret_ui_kit::MetricRef::space(
+                                                                    fret_ui_kit::Space::N1,
+                                                                ),
+                                                                test_id: Some(Arc::from(format!(
+                                                                    "imui-editor-proof.authoring.imui.collection.asset.{}",
+                                                                    asset.id
+                                                                ))),
+                                                                ..Default::default()
+                                                            },
+                                                            |ui| {
+                                                                let trigger =
+                                                                    ui.multi_selectable_with_options(
+                                                                        asset.label.clone(),
+                                                                        &collection_selection_model,
+                                                                        &collection_keys,
+                                                                        asset.id.clone(),
+                                                                        fret_ui_kit::imui::SelectableOptions {
+                                                                            test_id: Some(Arc::from(format!(
+                                                                                "imui-editor-proof.authoring.imui.collection.asset.{}.select",
+                                                                                asset.id
+                                                                            ))),
+                                                                            ..Default::default()
+                                                                        },
+                                                                    );
+                                                                let source = ui
+                                                                    .drag_source_with_options(
+                                                                        trigger,
+                                                                        payload.clone(),
+                                                                        fret_ui_kit::imui::DragSourceOptions::default(),
+                                                                    );
+                                                                let _ = drag_preview_ghost_with_options(
+                                                                    ui,
+                                                                    ghost_id.as_str(),
+                                                                    source,
+                                                                    DragPreviewGhostOptions {
+                                                                        test_id: Some(Arc::from(format!(
+                                                                            "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
+                                                                            asset.id
+                                                                        ))),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    proof_drag_preview_card(
+                                                                        preview_title.clone(),
+                                                                        preview_subtitle.clone(),
+                                                                    ),
+                                                                );
+
+                                                                if let (Some(scope_origin), Some(element_id)) =
+                                                                    (scope_origin, trigger.id)
+                                                                {
+                                                                    if let Some(bounds) = ui
+                                                                        .cx_mut()
+                                                                        .last_visual_bounds_for_element(
+                                                                            element_id,
+                                                                        )
+                                                                        .or(trigger.core.rect)
+                                                                    {
+                                                                        rendered_items_for_grid
+                                                                            .borrow_mut()
+                                                                            .push(
+                                                                                ProofCollectionRenderedItem {
+                                                                                    id: asset.id.clone(),
+                                                                                    local_bounds:
+                                                                                        proof_collection_localize_rect(
+                                                                                            bounds,
+                                                                                            scope_origin,
+                                                                                        ),
+                                                                                },
+                                                                            );
+                                                                    }
+                                                                }
+
+                                                                ui.text(format!(
+                                                                    "{} | {} KiB",
+                                                                    asset.kind, asset.size_kib
+                                                                ));
+                                                                ui.text(asset.path.clone());
+                                                            },
+                                                        );
+                                                    });
+                                                }
+                                            },
+                                        );
+                                    });
+                                })
+                                .w_full()
+                                .into_element(cx);
+
+                                let mut layers = vec![grid];
+                                if let Some(drag_rect) =
+                                    proof_collection_box_select_active_rect(&collection_box_select)
+                                {
+                                    let theme = fret_ui::Theme::global(&*cx.app);
+                                    let ring = theme.color_token("ring");
+                                    let fill = Color {
+                                        a: 0.14,
+                                        ..ring
+                                    };
+                                    let border = Color {
+                                        a: 0.88,
+                                        ..ring
+                                    };
+                                    layers.push(
+                                        fret_ui_kit::ui::container(
+                                            |_cx| Vec::<fret_ui::element::AnyElement>::new(),
+                                        )
+                                        .absolute()
+                                        .left_px(drag_rect.origin.x)
+                                        .top_px(drag_rect.origin.y)
+                                        .w_px(drag_rect.size.width)
+                                        .h_px(drag_rect.size.height)
+                                        .bg(fret_ui_kit::ColorRef::Color(fill))
+                                        .border_1()
+                                        .border_color(fret_ui_kit::ColorRef::Color(border))
+                                        .test_id(
+                                            "imui-editor-proof.authoring.imui.collection.box-select.marquee",
+                                        )
+                                        .into_element(cx),
+                                    );
+                                }
+                                layers
+                            })
+                            .relative()
+                            .w_full()
+                            .h_full()
+                            .test_id("imui-editor-proof.authoring.imui.collection.box-select.scope")
+                            .into_element(cx),
+                        ]
+                    }));
+                }));
             },
         );
 
@@ -4326,6 +4738,20 @@ fn authoring_parity_collection_reverse_order_model<H: UiHost>(
     )
 }
 
+fn authoring_parity_collection_box_select_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<ProofCollectionBoxSelectState> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.authoring_parity.collection_box_select",
+        |cx| {
+            cx.app
+                .models_mut()
+                .insert(ProofCollectionBoxSelectState::default())
+        },
+    )
+}
+
 fn authoring_parity_collection_drop_status_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<String> {
@@ -4740,5 +5166,95 @@ mod tests {
             proof_outliner_order_line(&items),
             "Order: Camera -> Post FX -> Cube -> Key light"
         );
+    }
+
+    #[test]
+    fn proof_collection_drag_rect_normalizes_drag_direction() {
+        let rect = proof_collection_drag_rect(
+            Point::new(Px(48.0), Px(60.0)),
+            Point::new(Px(12.0), Px(18.0)),
+        );
+
+        assert_eq!(rect.origin, Point::new(Px(12.0), Px(18.0)));
+        assert_eq!(rect.size, Size::new(Px(36.0), Px(42.0)));
+    }
+
+    #[test]
+    fn proof_collection_box_select_replace_uses_visible_collection_order() {
+        let assets = authoring_parity_collection_assets();
+        let collection_keys = assets
+            .iter()
+            .map(|asset| asset.id.clone())
+            .collect::<Vec<_>>();
+        let rendered_items = vec![
+            ProofCollectionRenderedItem {
+                id: Arc::from("stone-orm"),
+                local_bounds: Rect::new(
+                    Point::new(Px(112.0), Px(0.0)),
+                    Size::new(Px(96.0), Px(72.0)),
+                ),
+            },
+            ProofCollectionRenderedItem {
+                id: Arc::from("stone-albedo"),
+                local_bounds: Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(96.0), Px(72.0)),
+                ),
+            },
+            ProofCollectionRenderedItem {
+                id: Arc::from("stone-normal"),
+                local_bounds: Rect::new(
+                    Point::new(Px(0.0), Px(84.0)),
+                    Size::new(Px(96.0), Px(72.0)),
+                ),
+            },
+        ];
+        let session = ProofCollectionBoxSelectSession {
+            pointer_id: PointerId(0),
+            origin_local: Point::new(Px(4.0), Px(4.0)),
+            current_local: Point::new(Px(124.0), Px(152.0)),
+            baseline_selected: vec![Arc::from("dust-mask")],
+            append_mode: false,
+            threshold_met: true,
+        };
+
+        let selection =
+            proof_collection_box_select_selection(&collection_keys, &rendered_items, &session);
+
+        assert_eq!(
+            selection.selected,
+            vec![
+                Arc::from("stone-albedo"),
+                Arc::from("stone-normal"),
+                Arc::from("stone-orm"),
+            ]
+        );
+        assert_eq!(selection.anchor, Some(Arc::from("stone-albedo")));
+    }
+
+    #[test]
+    fn proof_collection_box_select_append_preserves_baseline_and_adds_hits() {
+        let collection_keys = authoring_parity_collection_assets()
+            .iter()
+            .map(|asset| asset.id.clone())
+            .collect::<Vec<_>>();
+        let hits = vec![Arc::from("stone-albedo"), Arc::from("stone-orm")];
+
+        let selection = proof_collection_box_select_state_for_hits(
+            &collection_keys,
+            &[Arc::from("dust-mask")],
+            &hits,
+            true,
+        );
+
+        assert_eq!(
+            selection.selected,
+            vec![
+                Arc::from("stone-albedo"),
+                Arc::from("stone-orm"),
+                Arc::from("dust-mask"),
+            ]
+        );
+        assert_eq!(selection.anchor, Some(Arc::from("stone-albedo")));
     }
 }

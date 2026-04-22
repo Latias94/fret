@@ -367,6 +367,19 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_CHILD_REGION_DEPTH_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_BOX_SELECT_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-box-select-v1/DESIGN.md");
+    const IMUI_COLLECTION_BOX_SELECT_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_BOX_SELECT_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_BOX_SELECT_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_BOX_SELECT_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -3281,11 +3294,12 @@ mod authoring_surface_policy_tests {
     fn immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit() {
         for marker in [
             "Collection-first asset browser proof",
-            "Marquee / box-select stays deferred for M2 while click, range, and toggle proof remains sufficient.",
+            "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
             "imui-editor-proof.authoring.imui.collection.order-toggle",
             "imui-editor-proof.authoring.imui.collection.browser",
             "imui-editor-proof.authoring.imui.collection.grid",
             "imui_editor_proof_demo.model.authoring_parity.collection_selection",
+            "imui_editor_proof_demo.model.authoring_parity.collection_box_select",
             "imui_editor_proof_demo.model.authoring_parity.collection_reverse_order",
             "imui_editor_proof_demo.model.authoring_parity.collection_drop_status",
             "ui.id(asset.id.clone(), |ui| {",
@@ -3318,6 +3332,121 @@ mod authoring_surface_policy_tests {
                 "the collection/pane proof lane state should keep the M2 collection-first gates explicit: {marker}"
             );
         }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_box_select_follow_on() {
+        for marker in [
+            "land one app-owned background marquee / box-select slice on the existing proof surface",
+            "The frozen two-surface proof budget blocks a new public `fret-ui-kit::imui` helper here.",
+            "The first correct target is:",
+            "background-only marquee / box-select slice inside",
+            "Do not begin by designing a shared helper surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_BOX_SELECT_DESIGN.contains(marker),
+                "the collection box-select design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection/pane proof lane explicitly deferred marquee / box-select for M2.",
+            "The frozen two-surface proof budget blocks a new public `fret-ui-kit::imui` helper here.",
+            "The current proof surface already has the right ingredients for a narrow app-owned box-select",
+            "Dear ImGui treats box-select as part of collection depth",
+        ] {
+            assert!(
+                IMUI_COLLECTION_BOX_SELECT_M0_NOTE.contains(marker),
+                "the collection box-select baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Background drag now draws a marquee overlay and updates collection selection app-locally.",
+            "Selection stays normalized to visible collection order",
+            "Plain background click clears the selection;",
+            "baseline set.",
+            "No new public `fret-ui-kit::imui` box-select helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_BOX_SELECT_M1_NOTE.contains(marker),
+                "the collection box-select M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-box-select-v1` as:",
+            "a closeout record for the landed app-owned background marquee / box-select slice",
+            "Start a different narrower follow-on only if stronger first-party proof shows either:",
+        ] {
+            assert!(
+                IMUI_COLLECTION_BOX_SELECT_CLOSEOUT.contains(marker),
+                "the collection box-select closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-box-select-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-pane-proof-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_box_select_follow_on",
+            "proof_collection_drag_rect_normalizes_drag_direction",
+            "proof_collection_box_select_replace_uses_visible_collection_order",
+            "proof_collection_box_select_append_preserves_baseline_and_adds_hits",
+            "imui_editor_collection_box_select_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_BOX_SELECT_WORKSTREAM.contains(marker),
+                "the collection box-select lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-box-select-v1/` now records the closed",
+            "background-only box-select slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection box-select follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-box-select-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+            "`docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`",
+            "`docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection box-select lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection box-select lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection box-select lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection box-select lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection box-select lane state file explicitly"
+        );
     }
 
     #[test]

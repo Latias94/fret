@@ -112,6 +112,15 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-child-region-depth-v1/MILESTONES.md`
   - `docs/workstreams/imui-child-region-depth-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection box-select depth:
+  - `docs/workstreams/imui-collection-box-select-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`
+  - `docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-box-select-v1/TODO.md`
+  - `docs/workstreams/imui-collection-box-select-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-box-select-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`
 - Closed narrow closeout record for broader menu/submenu/tab policy depth:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
@@ -213,6 +222,12 @@ It complements (but does not replace) ADRs:
   the bounded generic answer, keeps `workspace_shell_demo` and `editor_notes_demo` as the
   pane-first proofs, and requires a different narrow follow-on before any future resize /
   auto-resize / focus-boundary widening can resume.
+- Use `docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json` as the closed closeout
+  record for app-owned collection box-select depth:
+  the lane starts from the closed collection-first proof, lands background-only marquee /
+  box-select in `imui_editor_proof_demo`, keeps lasso and keyboard-owner pressure out of this
+  folder, and preserves the frozen two-surface proof budget before any shared helper growth can
+  reopen.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the

@@ -39,6 +39,13 @@ Tracker highlights:
   `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`,
   `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`, and
   `docs/workstreams/imui-child-region-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md`.
+- ImUi collection box-select closeout record (closed narrow P1 lane that landed app-owned
+  background marquee / box-select on the collection-first proof surface while freezing that lasso,
+  keyboard-owner depth, and shared helper widening still require a different narrower follow-on):
+  `docs/workstreams/imui-collection-box-select-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`,
+  `docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`,
+  and `docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
   instead of widening `fret-authoring::Response` or `crates/fret-ui` again):

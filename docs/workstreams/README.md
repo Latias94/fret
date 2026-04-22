@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 244
+- Dedicated directories: 245
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -140,6 +140,20 @@ Current source of truth for the in-tree immediate-mode stack:
     collection/pane proof lane closed, then freezes that resize / auto-resize, focus-boundary
     flattening, and begin-return posture still require stronger first-party proof in a different
     narrow lane instead of widening generic `fret-ui-kit::imui` here.
+
+- Closed narrow P1 collection box-select closeout record:
+  - `docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-collection-box-select-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`
+  - `docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-box-select-v1/TODO.md`
+  - `docs/workstreams/imui-collection-box-select-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-box-select-v1/EVIDENCE_AND_GATES.md`
+  - Scope: records the landed app-owned background marquee / box-select slice inside
+    `imui_editor_proof_demo`, then freezes that lasso, keyboard-owner depth, and any public
+    `fret-ui-kit::imui` helper widening still require a different narrow follow-on with stronger
+    first-party proof.
 
 - Closed narrow P0 menu/tab policy-depth closeout record:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
@@ -534,6 +548,7 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-child-region-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the landed `ChildRegionChrome::{Framed, Bare}` slice and the no-further-generic-growth verdict for `BeginChild()`-scale child-region depth above the maintenance IMUI umbrella)
+- `docs/workstreams/imui-collection-box-select-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned background marquee / box-select slice on the collection-first proof surface while the frozen proof-budget rule still blocks shared helper growth)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
