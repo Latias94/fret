@@ -13,6 +13,7 @@ use fret_ui::{GlobalElementId, UiHost};
 use super::{ImUiFacade, PopupMenuOptions, PopupModalOptions, ResponseExt, UiWriterImUiFacadeExt};
 use crate::primitives::dialog;
 use crate::primitives::menu::root as menu_root;
+use crate::primitives::menu::sub as menu_sub;
 use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -22,8 +23,9 @@ pub(in crate::imui) struct ImUiMenuNavState {
 }
 
 #[derive(Debug, Clone)]
-pub(in crate::imui) struct ImUiMenuOpenDescendantState {
-    pub(super) children: Rc<RefCell<Vec<AnyElement>>>,
+pub(in crate::imui) struct ImUiPopupMenuPolicyState {
+    pub(super) submenu_models: menu_sub::MenuSubmenuModels,
+    pub(super) submenu_cfg: menu_sub::MenuSubmenuConfig,
 }
 
 pub(super) fn popup_open_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -31,6 +33,28 @@ pub(super) fn popup_open_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     id: &str,
 ) -> fret_runtime::Model<bool> {
     ui.with_cx_mut(|cx| super::with_popup_store_for_id(cx, id, |st, _app| st.open.clone()))
+}
+
+pub(super) fn popup_menu_policy_state_for_root<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    id: &str,
+    root_name: &str,
+) -> ImUiPopupMenuPolicyState {
+    ui.with_cx_mut(|cx| {
+        let open = super::with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
+        let is_open = cx
+            .read_model(&open, fret_ui::Invalidation::Paint, |_app, value| *value)
+            .unwrap_or(false);
+        let submenu_cfg = menu_sub::MenuSubmenuConfig::default();
+        let submenu_models = cx.with_root_name(root_name, |cx| {
+            let timer_handler = cx.named("fret-ui-kit.imui.popup.menu-policy", |cx| cx.root_id());
+            menu_root::sync_root_open_and_ensure_submenu(cx, is_open, timer_handler, submenu_cfg)
+        });
+        ImUiPopupMenuPolicyState {
+            submenu_models,
+            submenu_cfg,
+        }
+    })
 }
 
 pub(super) fn drop_popup_scope<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -91,6 +115,7 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     id: &str,
     root_name: &str,
     options: PopupMenuOptions,
+    popup_policy: ImUiPopupMenuPolicyState,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> Option<PopupMenuBuilt> {
     ui.with_cx_mut(|cx| {
@@ -140,10 +165,9 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
         let nav_items = Rc::new(RefCell::new(Vec::<GlobalElementId>::new()));
         let nav_items_for_state = nav_items.clone();
-        let extra_children = Rc::new(RefCell::new(Vec::<AnyElement>::new()));
-        let extra_children_for_state = extra_children.clone();
         let mut menu_id_for_focus: Option<GlobalElementId> = None;
         let mut build = Some(f);
+        let popup_policy_for_panel = popup_policy.clone();
         let panel = cx.with_root_name(root_name, |cx| {
             cx.named("fret-ui-kit.imui.popup.panel", |cx| {
                 let mut semantics = fret_ui::element::SemanticsProps::default();
@@ -182,23 +206,18 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         col.layout.size.width = Length::Auto;
                         col.layout.size.height = Length::Auto;
                         vec![cx.column(col, move |cx| {
-                            cx.provide(
-                                ImUiMenuOpenDescendantState {
-                                    children: extra_children_for_state.clone(),
-                                },
-                                move |cx| {
-                                    let mut out: Vec<AnyElement> = Vec::new();
-                                    let mut ui = ImUiFacade {
-                                        cx,
-                                        out: &mut out,
-                                        build_focus: None,
-                                    };
-                                    if let Some(f) = build.take() {
-                                        f(&mut ui);
-                                    }
-                                    out
-                                },
-                            )
+                            cx.provide(popup_policy_for_panel.clone(), move |cx| {
+                                let mut out: Vec<AnyElement> = Vec::new();
+                                let mut ui = ImUiFacade {
+                                    cx,
+                                    out: &mut out,
+                                    build_focus: None,
+                                };
+                                if let Some(f) = build.take() {
+                                    f(&mut ui);
+                                }
+                                out
+                            })
                         })]
                     })]
                 });
@@ -209,10 +228,8 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         });
 
         let first_item = nav_items.borrow().first().copied();
-        let mut children = vec![panel];
-        children.extend(extra_children.borrow_mut().drain(..));
         Some(PopupMenuBuilt {
-            children,
+            children: vec![panel],
             first_item,
             content_focus: menu_id_for_focus,
         })
@@ -231,7 +248,10 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
         cx.named(overlay_key.as_str(), |cx| cx.root_id())
     });
     let root_name = OverlayController::popover_root_name(overlay_id);
-    let Some(built) = build_popup_menu(ui, id, root_name.as_str(), options, f) else {
+    let popup_policy = popup_menu_policy_state_for_root(ui, id, root_name.as_str());
+    let Some(built) =
+        build_popup_menu(ui, id, root_name.as_str(), options, popup_policy.clone(), f)
+    else {
         return false;
     };
 
@@ -256,7 +276,10 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             initial_focus,
             None,
             None,
-            None,
+            Some(menu_root::submenu_pointer_move_handler(
+                popup_policy.submenu_models.clone(),
+                popup_policy.submenu_cfg,
+            )),
             options.modal,
         );
         OverlayController::request(cx, req);

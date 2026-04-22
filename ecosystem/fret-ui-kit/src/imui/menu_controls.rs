@@ -9,8 +9,10 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{ActivateReason, PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
-    PressableProps, RowProps, SemanticsDecoration, SpacerProps, SpacingLength, TextProps,
+    PressableProps, PressableState, RowProps, SemanticsDecoration, SpacerProps, SpacingLength,
+    TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 
 use super::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 use crate::command::ElementCommandGatingExt as _;
@@ -20,7 +22,12 @@ pub(super) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?S
     label: Arc<str>,
     options: MenuItemOptions,
 ) -> ResponseExt {
-    menu_item_impl(ui, label, options, SemanticsRole::MenuItem, None, None)
+    menu_item_with_options_and_pressable_hook(
+        ui,
+        label,
+        options,
+        noop_menu_item_pressable_hook::<H>,
+    )
 }
 
 pub(super) fn menu_item_checkbox_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -79,10 +86,68 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     checked: Option<bool>,
     action: Option<ActionId>,
 ) -> ResponseExt {
+    menu_item_impl_with_pressable_hook(
+        ui,
+        label,
+        options,
+        role,
+        checked,
+        action,
+        noop_menu_item_pressable_hook::<H>,
+    )
+}
+
+pub(super) fn menu_item_with_options_and_pressable_hook<
+    H: UiHost,
+    W: UiWriterImUiFacadeExt<H> + ?Sized,
+    F,
+>(
+    ui: &mut W,
+    label: Arc<str>,
+    options: MenuItemOptions,
+    pressable_hook: F,
+) -> ResponseExt
+where
+    F: Clone
+        + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
+{
+    menu_item_impl_with_pressable_hook(
+        ui,
+        label,
+        options,
+        SemanticsRole::MenuItem,
+        None,
+        None,
+        pressable_hook,
+    )
+}
+
+fn noop_menu_item_pressable_hook<H: UiHost>(
+    _cx: &mut fret_ui::ElementContext<'_, H>,
+    _state: PressableState,
+    _item_id: GlobalElementId,
+    _enabled: bool,
+) {
+}
+
+fn menu_item_impl_with_pressable_hook<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
+    ui: &mut W,
+    label: Arc<str>,
+    options: MenuItemOptions,
+    role: SemanticsRole,
+    checked: Option<bool>,
+    action: Option<ActionId>,
+    pressable_hook: F,
+) -> ResponseExt
+where
+    F: Clone
+        + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
+{
     let mut response = ResponseExt::default();
 
     let element = ui.with_cx_mut(|cx| {
         let response = &mut response;
+        let pressable_hook = pressable_hook.clone();
         let mut panel = ContainerProps::default();
         panel.layout.size.width = Length::Fill;
         panel.layout.size.height = Length::Auto;
@@ -191,6 +256,7 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             };
 
             let pressable = cx.pressable_with_id(props, move |cx, state, id| {
+                let pressable_hook = pressable_hook.clone();
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
@@ -344,6 +410,8 @@ fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         );
                     }
                 }
+
+                pressable_hook(cx, state, id, enabled);
 
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
