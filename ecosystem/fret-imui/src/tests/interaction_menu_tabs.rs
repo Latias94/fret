@@ -292,6 +292,137 @@ fn begin_menu_activate_shortcut_is_scoped_to_focused_trigger() {
         "imui-begin-menu-shortcut.edit.copy",
     ));
 }
+
+#[test]
+fn begin_menu_activate_shortcut_keyboard_open_focuses_first_item_and_escape_restores_trigger() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let shortcut = ctrl_shortcut(KeyCode::KeyK);
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui_raw(cx, |ui| {
+            ui.menu_bar_with_options(
+                fret_ui_kit::imui::MenuBarOptions {
+                    test_id: Some(Arc::from("imui-begin-menu-focus.root")),
+                    ..Default::default()
+                },
+                |ui| {
+                    let _ = ui.begin_menu_with_options(
+                        "file",
+                        "File",
+                        fret_ui_kit::imui::BeginMenuOptions {
+                            test_id: Some(Arc::from("imui-begin-menu-focus.file")),
+                            activate_shortcut: Some(shortcut),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let _ = ui.menu_item_with_options(
+                                "Open",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-begin-menu-focus.file.open")),
+                                    ..Default::default()
+                                },
+                            );
+                            let _ = ui.menu_item_with_options(
+                                "Save",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-begin-menu-focus.file.save")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    );
+                },
+            );
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-begin-menu-focus",
+        render,
+    );
+
+    let file_node = focus_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-focus.file",
+    );
+
+    key_down_ctrl(&mut ui, &mut app, &mut services, KeyCode::KeyK);
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-begin-menu-focus",
+        &render,
+    );
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-focus.file.open",
+    ));
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let focus = ui.focus().expect("focus after keyboard-opened menu");
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let focused_test_id = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == focus)
+        .and_then(|n| n.test_id.as_deref());
+    assert_eq!(focused_test_id, Some("imui-begin-menu-focus.file.open"));
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::Escape,
+        Modifiers::default(),
+    );
+
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-begin-menu-focus",
+        &render,
+    );
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-focus.file.open",
+    ));
+    assert_eq!(ui.focus(), Some(file_node));
+}
+
 #[test]
 fn begin_menu_activate_shortcut_repeat_is_opt_in() {
     let window = AppWindowId::default();
@@ -397,6 +528,14 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
         "imui-begin-menu-repeat.default.item",
     ));
 
+    let _default_node = focus_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-repeat.default",
+    );
+
     key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyJ);
 
     let _root = advance_and_run_frame(
@@ -445,6 +584,14 @@ fn begin_menu_activate_shortcut_repeat_is_opt_in() {
         bounds,
         "imui-begin-menu-repeat.repeat.item",
     ));
+
+    let _repeat_node = focus_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-begin-menu-repeat.repeat",
+    );
 
     key_down_ctrl_repeat(&mut ui, &mut app, &mut services, KeyCode::KeyK);
 
@@ -664,8 +811,18 @@ fn begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics() {
         "imui-begin-submenu",
         |cx| render(cx, &command),
     );
-    assert!(file_open.get(), "expected parent menu to remain open");
-    assert!(recent_open.get(), "expected submenu to remain open");
+    assert!(
+        file_open.get(),
+        "expected parent menu to remain open (file_open={} recent_open={})",
+        file_open.get(),
+        recent_open.get()
+    );
+    assert!(
+        recent_open.get(),
+        "expected submenu to remain open (file_open={} recent_open={})",
+        file_open.get(),
+        recent_open.get()
+    );
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -853,7 +1010,6 @@ fn begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay() 
         "imui-menu-hover-switch",
         &render,
     );
-
     let _root = advance_and_run_frame(
         &mut ui,
         &mut app,

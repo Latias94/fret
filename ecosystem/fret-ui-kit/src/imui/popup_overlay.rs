@@ -241,6 +241,7 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
     id: &str,
     trigger: Option<GlobalElementId>,
     options: PopupMenuOptions,
+    preserve_focus_outside_while_submenu_open: bool,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> bool {
     let overlay_id = ui.with_cx_mut(|cx| {
@@ -265,7 +266,31 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
         } else {
             menu_root::MenuInitialFocusTargets::new()
         };
-        let req = menu_root::dismissible_menu_request_with_modal(
+        let on_dismiss_request = if preserve_focus_outside_while_submenu_open {
+            let submenu_models = popup_policy.submenu_models.clone();
+            let open_for_dismiss = open.clone();
+            Some(Arc::new(
+                move |host: &mut dyn fret_ui::action::UiActionHost,
+                      _acx,
+                      req: &mut fret_ui::action::DismissRequestCx| {
+                    if matches!(req.reason, DismissReason::FocusOutside) {
+                        let submenu_open = host
+                            .models_mut()
+                            .read(&submenu_models.open_value, |value| value.clone())
+                            .ok()
+                            .flatten();
+                        if submenu_open.is_some() {
+                            req.prevent_default();
+                            return;
+                        }
+                    }
+                    let _ = host.models_mut().update(&open_for_dismiss, |value| *value = false);
+                },
+            ) as OnDismissRequest)
+        } else {
+            None
+        };
+        let req = menu_root::dismissible_menu_request_with_modal_and_dismiss_handler(
             cx,
             overlay_id,
             trigger_id,
@@ -276,6 +301,7 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             initial_focus,
             None,
             None,
+            on_dismiss_request,
             Some(menu_root::submenu_pointer_move_handler(
                 popup_policy.submenu_models.clone(),
                 popup_policy.submenu_cfg,
@@ -483,5 +509,5 @@ pub(super) fn begin_popup_context_menu_with_options<
         }
     }
 
-    begin_popup_menu_with_options(ui, id, trigger.id, options, f)
+    begin_popup_menu_with_options(ui, id, trigger.id, options, false, f)
 }

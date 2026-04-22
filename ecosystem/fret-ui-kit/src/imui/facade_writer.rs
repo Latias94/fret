@@ -1218,7 +1218,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: PopupMenuOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
-        popup_overlay::begin_popup_menu_with_options(self, id, trigger, options, f)
+        popup_overlay::begin_popup_menu_with_options(self, id, trigger, options, false, f)
     }
 
     fn begin_popup_modal(

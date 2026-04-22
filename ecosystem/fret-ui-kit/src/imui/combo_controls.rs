@@ -310,7 +310,15 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         }
     }
 
-    let popup_opened = ui.begin_popup_menu_with_options(id, trigger.id, popup_options, f);
+    let popup_opened =
+        super::popup_overlay::begin_popup_menu_with_options(
+            ui,
+            id,
+            trigger.id,
+            popup_options,
+            false,
+            f,
+        );
     if !enabled && popup_opened {
         ui.close_popup(id);
     }

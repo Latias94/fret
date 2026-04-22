@@ -343,6 +343,36 @@ fn arm_hover_switch_timer(
     token
 }
 
+fn cancel_hover_switch_timer_for_ui_host<H: UiHost>(
+    host: &mut H,
+    timer: &Model<Option<TimerToken>>,
+) {
+    let pending = host.models_mut().read(timer, |v| *v).ok().flatten();
+    let Some(token) = pending else {
+        return;
+    };
+    host.push_effect(Effect::CancelTimer { token });
+    let _ = host.models_mut().update(timer, |v| *v = None);
+}
+
+fn arm_hover_switch_timer_for_ui_host<H: UiHost>(
+    host: &mut H,
+    window: fret_core::AppWindowId,
+    delay: Duration,
+    timer: &Model<Option<TimerToken>>,
+) -> TimerToken {
+    cancel_hover_switch_timer_for_ui_host(host, timer);
+    let token = host.next_timer_token();
+    host.push_effect(Effect::SetTimer {
+        window: Some(window),
+        token,
+        after: delay,
+        repeat: None,
+    });
+    let _ = host.models_mut().update(timer, |v| *v = Some(token));
+    token
+}
+
 fn hover_switch_on_timer_handler(
     group_active: Model<Option<MenubarActiveTrigger>>,
     trigger_id: GlobalElementId,
@@ -890,6 +920,32 @@ pub fn sync_trigger_row_state<H: UiHost>(
         hovered_model.clone(),
         hover_timer.clone(),
     ));
+
+    let hovered_before = cx.watch_model(&hovered_model).copied_or_default();
+    if hovered != hovered_before {
+        let _ = cx.app.models_mut().update(&hovered_model, |v| *v = hovered);
+        if !hovered {
+            cancel_hover_switch_timer_for_ui_host(cx.app, &hover_timer);
+        } else if enabled
+            && let Some(active) = active_value.as_ref()
+            && active.trigger != trigger_id
+        {
+            let active_open = cx
+                .app
+                .models_mut()
+                .read(&active.open, |v| *v)
+                .ok()
+                .unwrap_or(false);
+            if active_open {
+                arm_hover_switch_timer_for_ui_host(
+                    cx.app,
+                    cx.window,
+                    DEFAULT_HOVER_SWITCH_DELAY,
+                    &hover_timer,
+                );
+            }
+        }
+    }
 
     if active_value
         .as_ref()

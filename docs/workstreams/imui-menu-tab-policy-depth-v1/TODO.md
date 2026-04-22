@@ -36,6 +36,10 @@ Last updated: 2026-04-22
 ## M2 - Land or close
 
 - [x] Land the first justified slice with focused tests and source/evidence updates.
+- [x] Close the top-level menubar popup-owner split so keyboard-open focus, top-level hover-switch,
+      and submenu persistence can share one generic IMUI floor without popup-store churn.
+      Result: `M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md` now records the landed `row_open ->
+      popup_open` projection and the parent-menu dismiss fix for submenu focus transfers.
 - [ ] Decide whether any richer submenu grace / intent tuning beyond the current corridor belongs
       in generic IMUI or closes on a shell/product owner verdict.
 - [ ] Decide whether roving or mnemonic posture belongs in generic IMUI or should remain outside

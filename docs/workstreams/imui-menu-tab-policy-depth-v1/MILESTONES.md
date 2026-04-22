@@ -73,7 +73,12 @@ Current status:
 - A first landed generic IMUI floor now exists:
   top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace
   corridor, locked by focused `fret-imui` tests.
+- `M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md` now closes the top-level owner split between
+  `trigger_row` switching and popup overlay visibility:
+  keyboard-open focus, top-level hover-switch, Escape close, and submenu parent persistence now
+  share one generic IMUI floor instead of fighting popup-store stale pruning.
 - The lane stays open because richer submenu-intent tuning and any generic roving / mnemonic
   posture still need an explicit verdict.
-- The latest audit narrows the remaining keyboard question to top-level menu focus/overlay
-  ownership rather than a missing primitive.
+- The remaining keyboard question is now narrower than top-level popup ownership:
+  the current unresolved pressure is whether richer roving / mnemonic posture belongs in generic
+  IMUI at all.
