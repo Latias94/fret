@@ -215,9 +215,13 @@ The real remaining gaps are narrower:
    - `apps/fret-examples/src/workspace_shell_demo.rs`, `apps/fret-examples/src/editor_notes_demo.rs`,
      and the closed `docs/workstreams/imui-collection-pane-proof-v1/` lane now freeze the current
      pane-first proof that exercises nested toolbar / tabs / inspector / status composition.
-   - The remaining gap is depth rather than ownership: there is still no `BeginChild()`-scale
-     child-flag surface, no richer menu-bar-in-child story, and no Dear ImGui-style axis-specific
-     resize / auto-resize behavior on the generic helper surface.
+   - Focused `fret-imui` composition proof now also locks a basic embedded menu surface:
+     `child_region_helper_can_host_menu_bar_and_popup_menu` proves the current helper can host
+     `menu_bar` + popup menu composition inside child content without a new child-specific menu
+     mechanism.
+   - The remaining gap is therefore depth rather than basic embedded composition:
+     there is still no `BeginChild()`-scale child-flag surface and no Dear ImGui-style
+     axis-specific resize / auto-resize behavior on the generic helper surface.
 3. First-cut immediate menu/tab family now includes click-open menus, top-level menubar
    hover-switch, keyboard-open on `ArrowDown` / `ArrowUp`, open-menu left/right switching,
    submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor, and a
