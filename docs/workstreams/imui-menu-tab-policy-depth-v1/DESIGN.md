@@ -5,15 +5,17 @@ Last updated: 2026-04-22
 
 Status note (2026-04-22): the first admitted generic IMUI policy-depth floor has now landed:
 top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace
-corridor. The remaining scope is narrower than the original baseline audit: whether richer
-submenu-intent tuning, roving or mnemonic posture, and the owner split for tab overflow / scroll /
-reorder / close belong in generic IMUI still needs explicit verdicts.
+corridor. The remaining scope is narrower than the original baseline audit: a same-day owner audit
+keeps editor-grade tab overflow / scroll / reorder / close in `fret-workspace`, so the open
+generic IMUI question is now whether richer submenu-intent tuning or roving/mnemonic posture
+belongs in the shared helper family.
 
 Related:
 
 - `WORKSTREAM.json`
 - `M0_BASELINE_AUDIT_2026-04-21.md`
 - `M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+- `M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `TODO.md`
 - `MILESTONES.md`
 - `EVIDENCE_AND_GATES.md`
@@ -35,7 +37,7 @@ What remains open is a different problem:
 
 - richer menubar policy,
 - richer submenu intent tuning beyond the current hover-switch corridor,
-- and the ownership split for richer tab policy.
+- and whether any roving or mnemonic posture belongs in generic IMUI.
 
 This lane exists so that follow-on work does not reopen:
 
@@ -59,8 +61,7 @@ But editor-grade parity still lacks a narrow owner for:
 
 - menubar hover-switch behavior,
 - richer submenu grace / intent behavior beyond the current hover-switch corridor,
-- roving or mnemonic posture decisions,
-- and the ownership split for tab overflow / scroll / reorder / close affordances.
+- and roving or mnemonic posture decisions.
 
 ## Owner split
 
@@ -87,9 +88,8 @@ The lane starts from one explicit assumption:
 Current working posture:
 
 1. Generic menubar/submenu hover-switch depth is the most credible first IMUI-owned slice.
-2. Tab overflow/reorder/close behavior needs an owner audit before any new IMUI surface lands,
-   because shell-mounted tabstrip product behavior may remain a `fret-workspace` or app/recipe
-   concern.
+2. Editor-grade tab overflow / reorder / close remains a `fret-workspace` shell concern until a
+   different first-party consumer proves the policy is generic.
 3. Roving focus / mnemonic policy should not be widened casually; it needs explicit evidence that
    the generic IMUI family, not shell/product owners, benefits from the added contract.
 
@@ -101,9 +101,9 @@ The current preferred order is:
 
 1. audit and, if justified, land top-level menubar hover-switch plus submenu hover-switch/basic
    grace corridor;
-2. re-evaluate whether any generic roving/mnemonic policy belongs in the same family;
-3. keep tab overflow/reorder/close as an owner-audit question until the shell/product split is
-   explicit.
+2. keep richer editor-grade tab policy in `fret-workspace` unless a new first-party consumer
+   proves it belongs in generic IMUI;
+3. re-evaluate whether any generic roving/mnemonic policy belongs in the same family.
 
 ## Non-goals
 

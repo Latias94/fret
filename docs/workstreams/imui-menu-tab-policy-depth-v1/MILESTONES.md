@@ -34,6 +34,7 @@ Primary evidence:
 
 - `DESIGN.md`
 - `M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+- `M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - `apps/fret-examples/src/imui_interaction_showcase_demo.rs`
@@ -46,8 +47,9 @@ Current status:
 - The landed first slice is narrower than the original broad menu-depth ask:
   generic IMUI now carries top-level menubar hover-switch plus submenu hover-open / sibling
   hover-switch with a basic grace corridor.
-- Richer submenu intent tuning, roving / mnemonic posture, and tab overflow / scroll / reorder /
-  close remain explicit follow-on owner questions.
+- `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tab overflow / scroll / reorder /
+  close in `fret-workspace`, so the remaining generic IMUI follow-on questions are narrower:
+  richer submenu intent tuning and roving / mnemonic posture.
 
 ## M2 - Land or close with an explicit verdict
 
@@ -60,6 +62,7 @@ Exit criteria:
 Primary evidence:
 
 - `M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+- `M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
@@ -70,5 +73,5 @@ Current status:
 - A first landed generic IMUI floor now exists:
   top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace
   corridor, locked by focused `fret-imui` tests.
-- The lane stays open because richer submenu-intent tuning and the remaining owner split still
-  need an explicit verdict.
+- The lane stays open because richer submenu-intent tuning and any generic roving / mnemonic
+  posture still need an explicit verdict.

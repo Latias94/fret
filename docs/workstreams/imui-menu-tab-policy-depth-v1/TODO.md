@@ -27,8 +27,7 @@ Last updated: 2026-04-22
 - [x] Freeze one first-party proof surface and one focused gate package for that slice.
 - [ ] Keep the remaining owner questions explicit instead of widening the slice by accident:
       - richer submenu intent tuning beyond the current grace corridor,
-      - roving or mnemonic posture,
-      - tab overflow / scroll / reorder / close affordances.
+      - roving or mnemonic posture.
 
 ## M2 - Land or close
 
@@ -37,7 +36,9 @@ Last updated: 2026-04-22
       in generic IMUI or closes on a shell/product owner verdict.
 - [ ] Decide whether roving or mnemonic posture belongs in generic IMUI or should remain outside
       the shared helper family.
-- [ ] Run the explicit owner audit for tab overflow / scroll / reorder / close instead of growing
+- [x] Run the explicit owner audit for tab overflow / scroll / reorder / close instead of growing
       generic IMUI by parity instinct alone.
+      Result: `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tabstrip policy in
+      `fret-workspace::WorkspaceTabStrip` and out of generic `imui::tab_bar` by default.
 - [ ] If the evidence shows the remaining pressure belongs to shell/product owners instead, close
       this lane on a no-new-generic-surface verdict rather than widening IMUI anyway.

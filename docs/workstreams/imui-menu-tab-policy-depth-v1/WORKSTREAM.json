@@ -6,7 +6,7 @@
   "updated": "2026-04-22",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
-  "problem": "The maintenance IMUI product-closure umbrella and the closed menu/tab trigger-response lanes already settled outward response shape and canonical helper naming, and the current follow-on has now landed top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace corridor. Fret still needs a narrow owner that can decide whether richer submenu-intent tuning, roving or mnemonic posture, and any tab overflow/reorder/close behavior belong in generic `fret-ui-kit::imui` or in shell/product layers, without reopening response-surface naming, key-owner work, shell helpers, or runtime widening.",
+  "problem": "The maintenance IMUI product-closure umbrella and the closed menu/tab trigger-response lanes already settled outward response shape and canonical helper naming, and the current follow-on has now landed top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace corridor while also freezing the verdict that editor-grade tab overflow / reorder / close stays in `fret-workspace`. Fret still needs a narrow owner that can decide whether richer submenu-intent tuning or roving/mnemonic posture belong in generic `fret-ui-kit::imui`, without reopening response-surface naming, key-owner work, shell helpers, workspace tabstrip policy, or runtime widening.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -19,6 +19,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md"
     },
     {
       "role": "execution",
@@ -63,6 +67,10 @@
       "command": "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast"
     },
     {
+      "name": "workspace-tabstrip-owner-floor",
+      "command": "cargo nextest run -p fret-workspace tab_strip_overflow_menu_lists_overflowed_tabs tab_strip_focus_restore_after_close_command tab_strip_pinned_boundary_has_test_id tab_strip_keyboard_roving_arrow_activates_tab --no-fail-fast"
+    },
+    {
       "name": "diff-check",
       "command": "git diff --check"
     },
@@ -83,12 +91,14 @@
     "docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md",
+    "docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md",
     "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md",
     "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
@@ -98,9 +108,15 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
+    "ecosystem/fret-workspace/src/tab_strip/mod.rs",
+    "ecosystem/fret-workspace/src/tab_strip/interaction.rs",
     "ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs",
     "ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs",
+    "ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs",
+    "ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs",
+    "ecosystem/fret-workspace/tests/tab_strip_pinned_boundary_has_test_id.rs",
+    "ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs",
     "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
@@ -112,6 +128,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane until the repo freezes either the remaining richer submenu/tab owner questions or an explicit no-new-generic-surface verdict. Do not reopen the closed trigger-response lanes or the umbrella lane for implementation work."
+    "notes": "Continue this lane until the repo freezes the remaining richer submenu-intent and roving/mnemonic questions or reaches an explicit no-new-generic-surface verdict. Do not reopen the closed trigger-response lanes, workspace tabstrip policy, or the umbrella lane for implementation work."
   }
 }

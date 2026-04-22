@@ -65,6 +65,7 @@ Fret implementation and planning anchors:
 - `docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
 - `ecosystem/fret-imui/src/frontend.rs`
@@ -228,10 +229,12 @@ The real remaining gaps are narrower:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
      now records shipped top-level menubar hover-switch plus submenu hover-open / sibling
      hover-switch with a basic grace corridor in generic IMUI.
-   - The remaining gap is depth rather than ownership: richer submenu-intent tuning, roving /
-     mnemonic menubar posture, and richer tab-bar policy remain open; Fret still has no generic
-     equivalent to Dear ImGui's fitting-policy flags, reorderable tabs, close buttons, tab-list
-     popup button, or leading/trailing `TabItemButton()` action tabs.
+   - The remaining gap is depth rather than ownership: richer submenu-intent tuning and roving /
+     mnemonic menubar posture remain open in generic IMUI.
+   - Richer tab-bar policy now has a stronger first-party owner elsewhere:
+     `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md` keeps
+     Dear ImGui-like overflow / reorder / close / action-tab behavior in
+     `fret-workspace::WorkspaceTabStrip`, so generic IMUI should not grow that surface by default.
    - This gap now has a dedicated narrow owner:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/`.
 4. First-cut immediate command metadata seam now exists, and the current lane explicitly closed on

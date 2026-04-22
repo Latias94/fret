@@ -131,6 +131,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
+  - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md`
@@ -522,7 +523,7 @@ Rule:
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-key-owner-surface-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the immediate key-owner / item-local shortcut ownership verdict above the maintenance IMUI umbrella)
-- `docs/workstreams/imui-menu-tab-policy-depth-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for richer generic menu/submenu/tab policy depth above the maintenance IMUI umbrella)
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/` — first n/a, latest n/a, 7 markdown docs (active narrow follow-on for richer generic menu/submenu/tab policy depth above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)
