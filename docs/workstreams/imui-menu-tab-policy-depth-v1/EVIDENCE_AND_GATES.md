@@ -9,6 +9,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -77,3 +78,7 @@ Still missing before this lane can close:
   corridor stays generic,
 - or an explicit owner verdict that leaves that pressure to shell/product layers,
 - plus any explicit decision on whether roving / mnemonic posture stays generic or not.
+- the current keyboard blocker is now explicit:
+  generic IMUI top-level `begin_menu_with_options(...)` still uses a different focus/overlay
+  contract than popup/context menu surfaces, so richer menubar keyboard policy is not yet a
+  straight plumbing task.

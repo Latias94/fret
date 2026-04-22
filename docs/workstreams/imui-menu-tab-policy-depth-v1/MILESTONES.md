@@ -75,3 +75,5 @@ Current status:
   corridor, locked by focused `fret-imui` tests.
 - The lane stays open because richer submenu-intent tuning and any generic roving / mnemonic
   posture still need an explicit verdict.
+- The latest audit narrows the remaining keyboard question to top-level menu focus/overlay
+  ownership rather than a missing primitive.
