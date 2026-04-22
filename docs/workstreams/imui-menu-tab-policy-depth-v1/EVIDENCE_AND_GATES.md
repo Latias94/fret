@@ -15,6 +15,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -24,6 +25,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/reference-stack-ui-behavior.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs`
 - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs`
 - `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
@@ -32,6 +34,8 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
 - `ecosystem/fret-workspace/src/tab_strip/interaction.rs`
 - `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs`
+- `ecosystem/fret-ui-kit/src/primitives/menu/sub.rs`
+- `ecosystem/fret-ui-kit/src/primitives/menu/pointer_grace_intent.rs`
 - `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs`
 - `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
 - `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`
@@ -43,6 +47,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `repo-ref/imgui/imgui.cpp`
 - `repo-ref/imgui/imgui_demo.cpp`
+- `repo-ref/imgui/imgui_widgets.cpp`
 
 ## First-open repro surfaces
 
@@ -61,7 +66,7 @@ Read these in order:
 
 ## Current gate package
 
-- `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast`
+- `cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics begin_submenu_helper_hover_opens_submenu_after_pointer_entry begin_submenu_helper_hover_switches_sibling_after_open_delay begin_submenu_helper_defers_sibling_switch_inside_grace_corridor menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast`
 - `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`
 - `cargo nextest run -p fret-ui-kit cached_requests dismissible_popover --no-fail-fast`
 - `cargo nextest run -p fret-workspace tab_strip_overflow_menu_lists_overflowed_tabs tab_strip_focus_restore_after_close_command tab_strip_pinned_boundary_has_test_id tab_strip_keyboard_roving_arrow_activates_tab --no-fail-fast`
@@ -73,8 +78,8 @@ Read these in order:
 This gate package currently proves:
 
 - the shipped menu family now covers click-open triggers, top-level menubar hover-switch, submenu
-  hover-open, sibling submenu hover-switch with a basic grace corridor, nested submenus, and
-  outward trigger responses,
+  hover-open, sibling submenu hover-switch with an end-to-end enforced grace corridor, nested
+  submenus, and outward trigger responses,
 - the shipped tab family still covers simple selection and panel switching,
 - the richer editor-grade tabstrip outcomes already stay executable in `fret-workspace`,
 - and the lane remains correctly indexed and anchored as a narrow follow-on.
@@ -92,6 +97,9 @@ This gate package currently proves:
 - the lane now also has a landed same-frame handoff fix for reverse-direction top-level switching,
   so the reopened earlier sibling keeps popup entry focus instead of losing it to hidden-popover
   trigger restore.
+- the lane now also has a landed proof slice showing that IMUI hover-query infrastructure composes
+  with submenu primitive hover handlers instead of overwriting them, so submenu delay / grace
+  ownership remains in the shared primitive path rather than in helper-local hover state.
 
 ## Remaining gap after the current landed floor
 
@@ -105,4 +113,4 @@ Still missing before this lane can close:
   the current landed owner split plus keyboard slices cover trigger-local keyboard-open, in-menu
   top-level switching, and reverse-direction same-frame focus handoff, while outer-scope
   active-menubar mnemonic / roving posture stays shell-owned by verdict; the unresolved generic
-  question is therefore richer submenu-intent tuning beyond the current grace corridor.
+  question is therefore richer submenu-intent tuning beyond the current enforced grace corridor.

@@ -443,18 +443,6 @@ pub(super) fn begin_submenu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
             }
         }
 
-        let hovered_signal = trigger.core.hovered
-            || trigger.pointer_hovered_raw
-            || trigger.pointer_hovered_raw_below_barrier;
-        if !open_before
-            && hovered_signal
-            && open_submenu_before
-                .as_ref()
-                .is_none_or(|current| current.as_ref() != id)
-        {
-            select_imui_submenu(ui, policy, submenu_value.clone(), trigger.id);
-        }
-
         if !open_before && was_open_before_render {
             clear_imui_submenu(ui, policy, submenu_value.as_ref(), trigger.id, true);
         }

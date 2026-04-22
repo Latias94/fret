@@ -23,7 +23,8 @@ Last updated: 2026-04-22
 
 - [x] Freeze one smallest landable slice instead of trying to solve the whole matrix at once:
       generic IMUI now owns top-level menubar hover-switch plus submenu hover-open / sibling
-      hover-switch with a basic grace corridor as the current admitted policy-depth floor.
+      hover-switch with an end-to-end enforced grace corridor as the current admitted
+      policy-depth floor.
 - [x] Freeze one first-party proof surface and one focused gate package for that slice.
 - [ ] Keep the remaining owner questions explicit instead of widening the slice by accident:
       - richer submenu intent tuning beyond the current grace corridor,
@@ -44,6 +45,12 @@ Last updated: 2026-04-22
       popup_open` projection and the parent-menu dismiss fix for submenu focus transfers.
 - [ ] Decide whether any richer submenu grace / intent tuning beyond the current corridor belongs
       in generic IMUI or closes on a shell/product owner verdict.
+- [x] Prove that the current grace corridor is actually enforced end-to-end in generic IMUI rather
+      than only existing in the submenu primitive.
+      Result: `M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md` now records the landed fix for
+      the IMUI hover-hook override plus helper-local hover bypass, and the focused
+      `begin_submenu_helper_defers_sibling_switch_inside_grace_corridor` gate now locks the
+      current floor.
 - [x] Decide whether outer-scope active-menubar roving / mnemonic posture belongs in generic IMUI
       or should remain outside the shared helper family.
       Result: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps Alt/F10

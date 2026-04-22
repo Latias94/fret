@@ -208,7 +208,7 @@ pub(in super::super) fn install_hover_query_hooks_for_pressable<H: UiHost>(
 ) -> HoverQueryDelayRead {
     let shared_delay_model = shared_hover_delay_model_for_window(cx);
     let shared_delay_model_for_hover = shared_delay_model.clone();
-    cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
+    cx.pressable_add_on_hover_change(Arc::new(move |host, action_cx, hovered| {
         let stationary = hover_timer_token_for(HOVER_TIMER_KIND_STATIONARY, action_cx.target);
         let delay_short = hover_timer_token_for(HOVER_TIMER_KIND_DELAY_SHORT, action_cx.target);
         let delay_normal = hover_timer_token_for(HOVER_TIMER_KIND_DELAY_NORMAL, action_cx.target);

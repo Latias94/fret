@@ -67,6 +67,7 @@ Primary evidence:
 - `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
 - `M2_REVERSE_DIRECTION_FOCUS_OWNER_VERDICT_2026-04-22.md`
 - `M2_REVERSE_DIRECTION_FOCUS_HANDOFF_SLICE_2026-04-22.md`
+- `M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
@@ -75,8 +76,8 @@ Current status:
 
 - In progress.
 - A first landed generic IMUI floor now exists:
-  top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with a basic grace
-  corridor, locked by focused `fret-imui` tests.
+  top-level menubar hover-switch plus submenu hover-open / sibling hover-switch with an
+  end-to-end enforced grace corridor, locked by focused `fret-imui` tests.
 - `M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md` now closes the top-level owner split between
   `trigger_row` switching and popup overlay visibility:
   keyboard-open focus, top-level hover-switch, Escape close, and submenu parent persistence now
@@ -96,5 +97,9 @@ Current status:
   keyboard slice:
   reverse-direction switching can hand focus to the reopened earlier sibling without hidden-popover
   cleanup restoring the old trigger over the new popup entry focus.
-- The lane stays open only because richer submenu-intent tuning beyond the current grace corridor
-  still needs a land or close verdict.
+- `M2_SUBMENU_GRACE_CORRIDOR_PROOF_SLICE_2026-04-22.md` now closes the gap between primitive
+  submenu grace capability and IMUI end-to-end behavior:
+  IMUI hover-query hooks no longer overwrite submenu primitive hover handlers, and helper-local
+  hover state no longer bypasses primitive delay / grace ownership.
+- The lane stays open only because richer submenu-intent tuning beyond the current enforced grace
+  corridor still needs a land or close verdict.
