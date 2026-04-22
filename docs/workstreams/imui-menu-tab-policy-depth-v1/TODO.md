@@ -27,12 +27,11 @@ Last updated: 2026-04-22
 - [x] Freeze one first-party proof surface and one focused gate package for that slice.
 - [ ] Keep the remaining owner questions explicit instead of widening the slice by accident:
       - richer submenu intent tuning beyond the current grace corridor,
-      - roving or mnemonic posture.
-      Current blocker: generic IMUI now admits trigger-local keyboard-open plus in-menu top-level
-      left/right switching, but the remaining owner pressure is narrower:
-      outer-scope active-menubar mnemonic / roving posture and reverse-direction focus arbitration
-      still need an explicit verdict. See
-      `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`.
+      - reverse-direction focus arbitration after top-level left/right switching.
+      Current blocker: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps
+      outer-scope active-menubar mnemonic / roving posture shell-owned by default, so the remaining
+      generic keyboard pressure is reverse-direction focus arbitration rather than mnemonic
+      admission.
 
 ## M2 - Land or close
 
@@ -43,11 +42,13 @@ Last updated: 2026-04-22
       popup_open` projection and the parent-menu dismiss fix for submenu focus transfers.
 - [ ] Decide whether any richer submenu grace / intent tuning beyond the current corridor belongs
       in generic IMUI or closes on a shell/product owner verdict.
-- [ ] Decide whether roving or mnemonic posture belongs in generic IMUI or should remain outside
-      the shared helper family. The current evidence now says generic IMUI already owns a smaller
-      keyboard floor (`ArrowDown` / `ArrowUp` open plus in-menu left/right switching), so the
-      unresolved part is the outer-scope active-menubar shell posture and the remaining
-      reverse-direction focus arbitration.
+- [x] Decide whether outer-scope active-menubar roving / mnemonic posture belongs in generic IMUI
+      or should remain outside the shared helper family.
+      Result: `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps Alt/F10
+      activation, mnemonic display/open, closed-state Escape exit, and trigger-row roving/typeahead
+      in shell-owned `fret::in_window_menubar`-style surfaces by default.
+- [ ] Decide whether reverse-direction focus arbitration after top-level left/right switching
+      belongs in generic IMUI or can close as an accepted current floor gap.
 - [x] Run the explicit owner audit for tab overflow / scroll / reorder / close instead of growing
       generic IMUI by parity instinct alone.
       Result: `M2_TAB_OWNER_VERDICT_2026-04-22.md` now keeps editor-grade tabstrip policy in

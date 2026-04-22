@@ -230,9 +230,10 @@ The real remaining gaps are narrower:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
      now records shipped top-level menubar hover-switch plus submenu hover-open / sibling
      hover-switch with a basic grace corridor in generic IMUI.
-   - The remaining gap is depth rather than ownership: richer submenu-intent tuning, outer-scope
-     active-menubar mnemonic / roving posture, and reverse-direction top-level focus arbitration
-     remain open in generic IMUI.
+   - The remaining gap is now narrower than the older audit implied:
+     richer submenu-intent tuning and reverse-direction top-level focus arbitration remain open in
+     generic IMUI, while outer-scope active-menubar mnemonic / roving posture now has a stronger
+     shell-first owner in `fret::in_window_menubar`.
    - Richer tab-bar policy now has a stronger first-party owner elsewhere:
      `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_TAB_OWNER_VERDICT_2026-04-22.md` keeps
      Dear ImGui-like overflow / reorder / close / action-tab behavior in

@@ -37,6 +37,10 @@
       "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md"
     },
@@ -107,6 +111,7 @@
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_AUDIT_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/TODO.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/MILESTONES.md",
     "docs/workstreams/imui-menu-tab-policy-depth-v1/EVIDENCE_AND_GATES.md",

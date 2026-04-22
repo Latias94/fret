@@ -64,6 +64,7 @@ Primary evidence:
 - `M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
 - `M2_TAB_OWNER_VERDICT_2026-04-22.md`
 - `M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
+- `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
 - `TODO.md`
 - `EVIDENCE_AND_GATES.md`
 - future landed status note or closeout note
@@ -82,8 +83,11 @@ Current status:
   slice on top of that owner split:
   focused triggers open on `ArrowDown` / `ArrowUp`, and focused menu items can switch top-level
   menus on `ArrowLeft` / `ArrowRight`.
-- The lane stays open because richer submenu-intent tuning and any generic roving / mnemonic
-  posture still need an explicit verdict.
+- `M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md` now keeps outer-scope
+  active-menubar mnemonic / roving posture in shell-owned `in_window_menubar`-style surfaces
+  instead of growing generic IMUI by primitive availability alone.
+- The lane stays open because richer submenu-intent tuning and reverse-direction focus arbitration
+  still need an explicit verdict.
 - The remaining keyboard question is now narrower than top-level popup ownership:
-  the current unresolved pressure is whether outer-scope active-menubar mnemonic / roving posture
-  and the remaining reverse-direction focus arbitration belong in generic IMUI at all.
+  the current unresolved pressure is the remaining reverse-direction focus arbitration after
+  top-level left/right switching, not outer-scope mnemonic / roving ownership.

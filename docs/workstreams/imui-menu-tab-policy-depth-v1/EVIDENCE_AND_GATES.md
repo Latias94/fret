@@ -12,6 +12,7 @@ single narrow follow-on, instead of reopening already-closed response-surface wo
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_POPUP_OWNER_SYNC_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_MENUBAR_KEYBOARD_POSTURE_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_ACTIVE_MENUBAR_MNEMONIC_ROVING_OWNER_VERDICT_2026-04-22.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
@@ -77,6 +78,9 @@ This gate package currently proves:
   fighting popup-store stale pruning.
 - the current generic IMUI floor now also proves focused-trigger `ArrowDown` / `ArrowUp` open and
   in-menu top-level `ArrowLeft` / `ArrowRight` switching on the shared menubar owner path.
+- the lane now also has an explicit owner verdict keeping outer-scope active-menubar mnemonic /
+  roving posture in shell-owned `in_window_menubar`-style surfaces rather than widening generic
+  IMUI by default.
 
 ## Remaining gap after the current landed floor
 
@@ -85,9 +89,10 @@ Still missing before this lane can close:
 - an explicit verdict on whether any richer submenu-intent tuning beyond the current grace
   corridor stays generic,
 - or an explicit owner verdict that leaves that pressure to shell/product layers,
-- plus any explicit decision on whether roving / mnemonic posture stays generic or not.
+- plus any explicit decision on reverse-direction focus arbitration after top-level left/right
+  switching.
 - the remaining keyboard/product blocker is now narrower than popup ownership:
   the current landed owner split plus keyboard slice resolved trigger-local keyboard-open and
-  in-menu top-level switching, but the lane still lacks an explicit verdict on whether outer-scope
-  active-menubar mnemonic / roving posture and reverse-direction focus arbitration belong in
-  generic IMUI.
+  in-menu top-level switching, while the new owner verdict keeps outer-scope active-menubar
+  mnemonic / roving posture shell-owned; the remaining unresolved keyboard pressure is therefore
+  reverse-direction focus arbitration.
