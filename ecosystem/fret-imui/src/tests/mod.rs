@@ -1199,7 +1199,10 @@ fn render_floating_layer_with_overlay(
 
 mod composition;
 mod floating;
-mod interaction;
+mod interaction_drag;
+mod interaction_menu_tabs;
+mod interaction_press;
+mod interaction_shortcuts;
 mod models_combo;
 mod models_controls;
 mod models_text;
