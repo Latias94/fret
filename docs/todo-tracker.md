@@ -99,6 +99,7 @@ It complements (but does not replace) ADRs:
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
@@ -121,6 +122,78 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-collection-box-select-v1/MILESTONES.md`
   - `docs/workstreams/imui-collection-box-select-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection keyboard-owner depth:
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/TODO.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection delete-selected depth:
+  - `docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/TODO.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection context-menu depth:
+  - `docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/TODO.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection zoom/layout depth:
+  - `docs/workstreams/imui-collection-zoom-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md`
+  - `docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-zoom-v1/TODO.md`
+  - `docs/workstreams/imui-collection-zoom-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-zoom-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection select-all depth:
+  - `docs/workstreams/imui-collection-select-all-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md`
+  - `docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-select-all-v1/TODO.md`
+  - `docs/workstreams/imui-collection-select-all-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-select-all-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection rename depth:
+  - `docs/workstreams/imui-collection-rename-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md`
+  - `docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-rename-v1/TODO.md`
+  - `docs/workstreams/imui-collection-rename-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-rename-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json`
+- Closed narrow closeout record for app-owned collection inline rename depth:
+  - `docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/TODO.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`
+- Closed narrow closeout record for demo-local collection modularization:
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/TODO.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json`
 - Closed narrow closeout record for broader menu/submenu/tab policy depth:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
@@ -228,6 +301,77 @@ It complements (but does not replace) ADRs:
   box-select in `imui_editor_proof_demo`, keeps lasso and keyboard-owner pressure out of this
   folder, and preserves the frozen two-surface proof budget before any shared helper growth can
   reopen.
+- Use `docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json` as the closed closeout
+  record for app-owned collection keyboard-owner depth:
+  the lane starts from the closed collection box-select proof, lands a focusable collection-scope
+  keyboard owner in `imui_editor_proof_demo`, keeps the generic key-owner no-new-surface verdict
+  intact, and preserves the frozen proof budget before any shared helper growth can reopen.
+- Use `docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json` as the closed closeout
+  record for app-owned collection delete-selected depth:
+  the lane starts from the closed collection keyboard-owner proof, lands one explicit
+  delete-selected slice in `imui_editor_proof_demo`, keeps select-all / rename / context-menu
+  pressure out of this folder, and preserves the frozen proof budget before any shared helper
+  growth can reopen.
+- Use `docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json` as the closed closeout
+  record for app-owned collection context-menu depth:
+  the lane starts from the closed collection delete-action proof, lands one shared popup scope in
+  `imui_editor_proof_demo`, keeps select-all / rename / broader command pressure out of this
+  folder, and preserves the frozen proof budget before any shared helper growth can reopen.
+- Use `docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json` as the closed closeout record for
+  app-owned collection zoom/layout depth:
+  the lane starts from the closed collection context-menu proof, lands viewport-plus-zoom-derived
+  layout metrics in `imui_editor_proof_demo`, keeps select-all / rename / second-proof-surface
+  pressure out of this folder, and preserves the frozen proof budget before any shared helper
+  growth can reopen.
+- Use `docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json` as the closed closeout
+  record for app-owned collection select-all depth:
+  the lane starts from the closed collection zoom proof, lands a Primary+A collection-scope
+  select-all slice in `imui_editor_proof_demo`, keeps rename / second-proof-surface pressure out
+  of this folder, and preserves the frozen proof budget before any shared helper growth can
+  reopen.
+- Use `docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json` as the closed closeout record
+  for app-owned collection rename depth:
+  the lane starts from the closed collection select-all proof, lands an F2 plus context-menu
+  rename slice in `imui_editor_proof_demo`, keeps second-proof-surface pressure out of this
+  folder, and preserves the frozen proof budget before any shared helper growth can reopen.
+- Use `docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json` as the closed closeout record
+  for app-owned collection inline rename depth:
+  the lane starts from the closed modal rename proof, lands an app-owned collection inline rename
+  slice in `imui_editor_proof_demo`, keeps second-proof-surface pressure out of this folder, and
+  preserves the frozen proof budget before any shared helper growth can reopen.
+- Use `docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json` as the closed closeout record
+  for demo-local collection modularization:
+  the lane starts from the closed inline-rename proof, moves collection implementation into
+  `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`, keeps the host on explicit
+  routing only, and resets the default next non-multi-window priority to broader command-package
+  depth instead of shared helper growth.
+- Use `docs/workstreams/imui-collection-command-package-v1/WORKSTREAM.json` as the closed closeout record
+  for broader app-owned collection command-package depth:
+  `docs/workstreams/imui-collection-command-package-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md`,
+  `docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md`,
+  and `docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+  Execution note:
+  the lane starts from the closed modularization verdict, lands duplicate-selected plus explicit
+  rename-trigger slices in `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`, keeps
+  those routes app-owned on the existing keyboard/button/context-menu owner paths, rejects a third
+  command verb in this folder, and moves default next priority to a second proof surface rather
+  than shared-helper growth.
+- Use `docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json` as the closed closeout record
+  for the shell-mounted collection second proof surface:
+  `docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md`.
+  Execution note:
+  `docs/workstreams/imui-collection-second-proof-surface-v1/` now records the closed
+  second-proof-surface follow-on after the command-package verdict, lands the `Scene collection`
+  left-rail surface in `editor_notes_demo.rs` with stable collection summary/list test ids, keeps
+  `workspace_shell_demo.rs` as supporting evidence, and closes on a no-helper-widening verdict
+  because the second surface does not yet prove that both collection proof surfaces need the same
+  shared helper.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the

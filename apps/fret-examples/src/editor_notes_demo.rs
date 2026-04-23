@@ -24,6 +24,9 @@ const HOST_DEFAULT_SCHEME: shadcn::themes::ShadcnColorScheme =
 const TEST_ID_ROOT: &str = "editor-notes-demo.root";
 const TEST_ID_LEFT_RAIL: &str = "editor-notes-demo.left-rail";
 const TEST_ID_SELECTION: &str = "editor-notes-demo.selection";
+const TEST_ID_COLLECTION: &str = "editor-notes-demo.collection";
+const TEST_ID_COLLECTION_SUMMARY: &str = "editor-notes-demo.collection.summary";
+const TEST_ID_COLLECTION_LIST: &str = "editor-notes-demo.collection.list";
 const TEST_ID_SELECT_MATERIAL: &str = "editor-notes-demo.selection.material";
 const TEST_ID_SELECT_LIGHT: &str = "editor-notes-demo.selection.light";
 const TEST_ID_SELECT_CAMERA: &str = "editor-notes-demo.selection.camera";
@@ -243,7 +246,7 @@ fn make_asset_state(
 
 fn selection_button<'a, Cx>(
     cx: &mut Cx,
-    label: &'static str,
+    label: impl Into<Arc<str>>,
     selected: bool,
     action: CommandId,
     test_id: &'static str,
@@ -265,6 +268,38 @@ where
         .into_element_in(cx)
 }
 
+fn editor_selection_label(selection: EditorAssetSelection) -> &'static str {
+    match selection {
+        EditorAssetSelection::Material => "Material",
+        EditorAssetSelection::Light => "Key Light",
+        EditorAssetSelection::Camera => "Camera",
+    }
+}
+
+fn editor_selection_subtitle(selection: EditorAssetSelection) -> &'static str {
+    match selection {
+        EditorAssetSelection::Material => "Surface authoring metadata",
+        EditorAssetSelection::Light => "Shot review notes",
+        EditorAssetSelection::Camera => "Sequence continuity notes",
+    }
+}
+
+fn editor_collection_row_label(selection: EditorAssetSelection, selected: bool) -> Arc<str> {
+    let state = if selected { "active" } else { "available" };
+    Arc::from(format!(
+        "{} · {} · {state}",
+        editor_selection_label(selection),
+        editor_selection_subtitle(selection)
+    ))
+}
+
+fn editor_collection_status_label(selected: EditorAssetSelection) -> String {
+    format!(
+        "3 shell-mounted assets · active: {} · app-owned collection proof",
+        editor_selection_label(selected)
+    )
+}
+
 pub(crate) fn render_selection_panel<'a, Cx>(
     cx: &mut Cx,
     selected: EditorAssetSelection,
@@ -276,9 +311,9 @@ where
         ui::v_flex(|cx| {
             ui::children![
                 cx;
-                shadcn::CardTitle::new("Scene outline"),
+                shadcn::CardTitle::new("Scene collection"),
                 shadcn::CardDescription::new(
-                    "Select an editor-owned surface, then blur Notes to Name to keep a local draft alive.",
+                    "Shell-mounted collection proof: choose an editor-owned surface, then blur Notes to Name to keep a local draft alive.",
                 ),
             ]
         })
@@ -288,29 +323,53 @@ where
 
     let material_button = selection_button(
         cx,
-        "Material",
+        editor_collection_row_label(
+            EditorAssetSelection::Material,
+            selected == EditorAssetSelection::Material,
+        ),
         selected == EditorAssetSelection::Material,
         act::SelectMaterial.into(),
         TEST_ID_SELECT_MATERIAL,
     );
     let light_button = selection_button(
         cx,
-        "Key Light",
+        editor_collection_row_label(
+            EditorAssetSelection::Light,
+            selected == EditorAssetSelection::Light,
+        ),
         selected == EditorAssetSelection::Light,
         act::SelectLight.into(),
         TEST_ID_SELECT_LIGHT,
     );
     let camera_button = selection_button(
         cx,
-        "Camera",
+        editor_collection_row_label(
+            EditorAssetSelection::Camera,
+            selected == EditorAssetSelection::Camera,
+        ),
         selected == EditorAssetSelection::Camera,
         act::SelectCamera.into(),
         TEST_ID_SELECT_CAMERA,
     );
 
-    let body = ui::v_flex(|_cx| [material_button, light_button, camera_button])
-        .gap(Space::N2)
-        .into_element_in(cx);
+    let body = ui::v_flex(move |cx| {
+        let collection_summary = ui::text(editor_collection_status_label(selected))
+            .text_sm()
+            .text_color(ColorRef::Color(
+                cx.theme_snapshot().color_token("muted-foreground"),
+            ))
+            .wrap(fret_core::TextWrap::Word)
+            .test_id(TEST_ID_COLLECTION_SUMMARY)
+            .into_element(cx);
+        let collection_list = ui::v_flex(|_cx| [material_button, light_button, camera_button])
+            .gap(Space::N2)
+            .test_id(TEST_ID_COLLECTION_LIST)
+            .into_element(cx);
+        ui::children![cx; collection_summary, collection_list]
+    })
+    .gap(Space::N3)
+    .into_element_in(cx)
+    .test_id(TEST_ID_COLLECTION);
 
     shadcn::Card::new(ui::children![
         cx;

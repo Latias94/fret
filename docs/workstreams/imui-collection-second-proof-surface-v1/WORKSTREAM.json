@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "slug": "imui-collection-second-proof-surface-v1",
+  "title": "ImUi Collection Second Proof Surface v1",
+  "status": "closed",
+  "updated": "2026-04-23",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-collection-command-package-v1",
+  "problem": "The collection-first proof owns a coherent bounded command package locally, and this follow-on landed a smaller shell-mounted Scene collection proof in `editor_notes_demo`. The lane closes on a no-helper-widening verdict because the second surface exists but does not yet prove that both proof surfaces need the same shared collection helper.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout only if fresh evidence names an exact shared helper needed by both collection proof surfaces. The current first-open package starts from the landed `editor_notes_demo` shell-mounted Scene collection surface and the supporting workspace shell proof floor.",
+    "commands": [
+      "cargo run -p fret-demo --bin editor_notes_demo",
+      "cargo run -p fret-demo --bin workspace_shell_demo",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast",
+      "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test workspace_shell_pane_proof_surface --test workspace_shell_editor_rail_surface --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "collection-second-proof-closeout-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast"
+    },
+    {
+      "name": "collection-second-proof-surface-floor",
+      "command": "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test workspace_shell_pane_proof_surface --test workspace_shell_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/TODO.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/MILESTONES.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
+    "docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
+    "apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs",
+    "apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this folder just because the second proof now exists. Start a different narrow helper-readiness follow-on only if fresh evidence names the exact shared helper, both first-party proof surfaces that need it, and the gate package that keeps app policy out of generic IMUI."
+  }
+}

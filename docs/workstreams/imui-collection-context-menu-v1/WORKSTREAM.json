@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "slug": "imui-collection-context-menu-v1",
+  "title": "ImUi Collection Context Menu v1",
+  "status": "closed",
+  "updated": "2026-04-23",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-collection-delete-action-v1",
+  "problem": "The closed collection delete-action lane already proved that the current asset-browser proof can own deeper collection action policy locally, but it explicitly deferred context-menu breadth. This follow-on closes that narrower gap by landing an app-owned collection context-menu slice in `imui_editor_proof_demo` while keeping the frozen proof-budget rule, the closed generic menu/key-owner verdicts, and shared helper widening out of scope.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-context-menu-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout only if stronger first-party evidence shows that app-owned collection context-menu quick actions are insufficient: `imui_editor_proof_demo` now carries the landed slice, the lane-local source-policy and unit tests keep right-click selection/adoption explicit, and the proof-budget rule still blocks shared helper widening on one proof surface.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_editor_proof_demo",
+      "cargo nextest run -p fret-examples --test imui_editor_collection_context_menu_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_context_menu_follow_on proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "collection-context-menu-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_context_menu_follow_on proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile --no-fail-fast"
+    },
+    {
+      "name": "collection-context-menu-surface-floor",
+      "command": "cargo nextest run -p fret-examples --test imui_editor_collection_context_menu_surface --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-collection-context-menu-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-context-menu-v1/TODO.md",
+    "docs/workstreams/imui-collection-context-menu-v1/MILESTONES.md",
+    "docs/workstreams/imui-collection-context-menu-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-menu-tab-policy-depth-v1/CLOSEOUT_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/tests/imui_editor_collection_context_menu_surface.rs",
+    "apps/fret-examples/src/lib.rs",
+    "repo-ref/imgui/imgui_demo.cpp"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0084-virtualized-accessibility-and-collection-semantics.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this folder from historical TODO rows. Treat it as the closeout record for the landed app-owned collection context-menu slice. If future first-party proof demands shared helper growth or broader collection action semantics such as select-all, rename, or richer command breadth, start a different narrower follow-on instead."
+  }
+}

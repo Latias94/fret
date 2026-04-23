@@ -307,6 +307,8 @@ mod authoring_surface_policy_tests {
     const HELLO_WORLD_COMPARE_DEMO: &str = include_str!("hello_world_compare_demo.rs");
     const IMAGE_HEAVY_MEMORY_DEMO: &str = include_str!("image_heavy_memory_demo.rs");
     const IMUI_EDITOR_PROOF_DEMO: &str = include_str!("imui_editor_proof_demo.rs");
+    const IMUI_EDITOR_PROOF_DEMO_COLLECTION_MODULE: &str =
+        include_str!("imui_editor_proof_demo/collection.rs");
     const IMUI_FLOATING_WINDOWS_DEMO: &str = include_str!("imui_floating_windows_demo.rs");
     const IMUI_HELLO_DEMO: &str = include_str!("imui_hello_demo.rs");
     const IMUI_INTERACTION_SHOWCASE_DEMO: &str = include_str!("imui_interaction_showcase_demo.rs");
@@ -320,6 +322,8 @@ mod authoring_surface_policy_tests {
     const IMUI_STABLE_IDENTITY_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md"
     );
+    const IMUI_IMGUI_PARITY_AUDIT_V2: &str =
+        include_str!("../../../docs/workstreams/standalone/imui-imgui-parity-audit-v2.md");
     const IMUI_RESPONSE_STATUS_LIFECYCLE_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md");
     const IMUI_RESPONSE_STATUS_LIFECYCLE_WORKSTREAM: &str =
@@ -380,6 +384,143 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_COLLECTION_BOX_SELECT_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_KEYBOARD_OWNER_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md");
+    const IMUI_COLLECTION_KEYBOARD_OWNER_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_KEYBOARD_OWNER_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_KEYBOARD_OWNER_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_KEYBOARD_OWNER_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_DELETE_ACTION_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-delete-action-v1/DESIGN.md");
+    const IMUI_COLLECTION_DELETE_ACTION_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_DELETE_ACTION_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_DELETE_ACTION_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    );
+    const IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_CONTEXT_MENU_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-context-menu-v1/DESIGN.md");
+    const IMUI_COLLECTION_CONTEXT_MENU_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_CONTEXT_MENU_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_CONTEXT_MENU_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_CONTEXT_MENU_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_ZOOM_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-zoom-v1/DESIGN.md");
+    const IMUI_COLLECTION_ZOOM_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_ZOOM_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_ZOOM_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_ZOOM_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_SELECT_ALL_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-select-all-v1/DESIGN.md");
+    const IMUI_COLLECTION_SELECT_ALL_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_SELECT_ALL_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_SELECT_ALL_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_SELECT_ALL_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_RENAME_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-rename-v1/DESIGN.md");
+    const IMUI_COLLECTION_RENAME_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_RENAME_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_RENAME_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_RENAME_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_INLINE_RENAME_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md");
+    const IMUI_COLLECTION_INLINE_RENAME_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_INLINE_RENAME_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_INLINE_RENAME_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json");
+    const IMUI_COLLECTION_MODULARIZATION_DESIGN: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md"
+    );
+    const IMUI_COLLECTION_MODULARIZATION_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_MODULARIZATION_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_MODULARIZATION_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_MODULARIZATION_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json"
+    );
+    const IMUI_COLLECTION_COMMAND_PACKAGE_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-command-package-v1/DESIGN.md");
+    const IMUI_COLLECTION_COMMAND_PACKAGE_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_COMMAND_PACKAGE_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_COMMAND_PACKAGE_M2_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_COMMAND_PACKAGE_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_COMMAND_PACKAGE_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-command-package-v1/WORKSTREAM.json"
+    );
+    const IMUI_COLLECTION_SECOND_PROOF_SURFACE_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md");
+    const IMUI_COLLECTION_SECOND_PROOF_SURFACE_M0_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_SECOND_PROOF_SURFACE_M2_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_SECOND_PROOF_SURFACE_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    );
+    const IMUI_COLLECTION_SECOND_PROOF_SURFACE_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json"
+    );
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -420,6 +561,9 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO: &str =
         include_str!("../../../docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md");
+    const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_NEXT_PRIORITY: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md"
+    );
     const IMUI_RESPONSE_STATUS_LIFECYCLE_TODO: &str =
         include_str!("../../../docs/workstreams/imui-response-status-lifecycle-v1/TODO.md");
     const WORKSTREAMS_INDEX_DOC: &str = include_str!("../../../docs/workstreams/README.md");
@@ -3446,6 +3590,1267 @@ mod authoring_surface_policy_tests {
             TODO_TRACKER_DOC
                 .contains("`docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`"),
             "the todo tracker should list the collection box-select lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on() {
+        for marker in [
+            "The generic key-owner lane stays closed; this lane is collection proof depth, not generic helper growth.",
+            "The first landable target is therefore narrow:",
+            "make the collection scope itself a focusable keyboard owner in the proof demo,",
+            "`Arrow` / `Home` / `End` to move the active tile in visible order,",
+            "Do not start by designing a shared helper or a new generic shortcut facade.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_KEYBOARD_OWNER_DESIGN.contains(marker),
+                "the collection keyboard-owner design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection box-select lane explicitly deferred collection keyboard-owner depth.",
+            "The generic key-owner lane already closed on a no-new-surface verdict and should stay closed.",
+            "The current proof surface already has the right ingredients for a narrow app-owned keyboard",
+            "The smallest credible slice is still narrower than \"full parity\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_KEYBOARD_OWNER_M0_NOTE.contains(marker),
+                "the collection keyboard-owner baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection scope now owns a focusable keyboard region locally in the proof demo.",
+            "`Arrow` / `Home` / `End` now move the active tile",
+            "`Shift+Arrow` / `Shift+Home` / `Shift+End` now extend the selected range",
+            "`Escape` now clears the selected set while keeping the current keyboard location app-defined.",
+            "No new generic `SetNextItemShortcut()` / `SetItemKeyOwner()`-scale facade is admitted here.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_KEYBOARD_OWNER_M1_NOTE.contains(marker),
+                "the collection keyboard-owner M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-keyboard-owner-v1` as:",
+            "generic key-owner no-new-surface verdict remains closed",
+            "No reopening of the generic key-owner lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_KEYBOARD_OWNER_CLOSEOUT.contains(marker),
+                "the collection keyboard-owner closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-keyboard-owner-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-box-select-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on",
+            "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+            "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+            "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+            "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
+            "imui_editor_collection_keyboard_owner_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_KEYBOARD_OWNER_WORKSTREAM.contains(marker),
+                "the collection keyboard-owner lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-keyboard-owner-v1/` now records the closed",
+            "app-owned collection keyboard-owner slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection keyboard-owner follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+            "`docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`",
+            "`docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection keyboard-owner lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection keyboard-owner lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection keyboard-owner lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection keyboard-owner lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection keyboard-owner lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_delete_action_follow_on() {
+        for marker in [
+            "The closed collection keyboard-owner lane already deferred collection action semantics.",
+            "The first landable target is therefore narrow:",
+            "make `Delete` / `Backspace` remove the current selected set in visible collection order,",
+            "add one explicit button-owned affordance for the same action,",
+            "Do not start by designing a shared collection command facade or helper.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_DELETE_ACTION_DESIGN.contains(marker),
+                "the collection delete-action design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection keyboard-owner lane explicitly deferred collection action semantics.",
+            "The proof-budget rule and runtime contract posture remain unchanged for this lane.",
+            "The current proof surface already has the right ingredients for a narrow app-owned delete slice:",
+            "Dear ImGui keeps delete requests at the collection proof surface rather than using them as a reason to widen unrelated runtime or shared-helper contracts.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_DELETE_ACTION_M0_NOTE.contains(marker),
+                "the collection delete-action baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now supports one app-owned delete-selected action slice.",
+            "`Delete` / `Backspace` now remove the selected set from the stored asset model.",
+            "The explicit action button reuses the same delete helper instead of forking policy.",
+            "Remaining assets, selection, and keyboard active tile now reflow app-locally after deletion.",
+            "No new public `fret-ui-kit::imui` collection action helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_DELETE_ACTION_M1_NOTE.contains(marker),
+                "the collection delete-action M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-delete-action-v1` as:",
+            "a closeout record for the landed app-owned collection delete-selected slice",
+            "No reopening of the generic key-owner lane or the closed keyboard-owner folder.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_DELETE_ACTION_CLOSEOUT.contains(marker),
+                "the collection delete-action closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-delete-action-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-keyboard-owner-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_delete_action_follow_on",
+            "proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item",
+            "proof_collection_delete_selection_picks_previous_visible_item_at_end",
+            "imui_editor_collection_delete_action_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM.contains(marker),
+                "the collection delete-action lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-delete-action-v1/` now records the closed",
+            "app-owned collection delete-selected slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection delete-action follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+            "`docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`",
+            "`docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection delete-action lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection delete-action lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection delete-action lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection delete-action lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection delete-action lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_context_menu_follow_on() {
+        for marker in [
+            "The closed collection delete-action lane already deferred context-menu action breadth.",
+            "The first landable target is therefore narrow:",
+            "reuse the current app-owned delete helper inside one shared collection popup scope,",
+            "support right-click on both assets and collection background,",
+            "Do not start by designing a shared collection context-menu helper or broader command surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_CONTEXT_MENU_DESIGN.contains(marker),
+                "the collection context-menu design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection delete-action lane explicitly deferred context-menu breadth.",
+            "The current proof surface already has the right ingredients for a narrow app-owned collection context menu:",
+            "The menu/popup helper floor already exists generically, so this lane is not a justification to widen shared helper ownership.",
+            "Dear ImGui keeps the asset-browser context menu at the proof surface and routes delete through the same selection model instead of inventing a separate command contract.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_CONTEXT_MENU_M0_NOTE.contains(marker),
+                "the collection context-menu baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now supports one shared popup scope for app-owned quick actions.",
+            "Right-click on an unselected asset now replaces selection with that asset before opening the popup.",
+            "Right-click on collection background now opens the same popup without widening helper surface.",
+            "The popup reuses the existing delete helper instead of forking collection action policy.",
+            "No new public `fret-ui-kit::imui` collection context-menu helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_CONTEXT_MENU_M1_NOTE.contains(marker),
+                "the collection context-menu M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-context-menu-v1` as:",
+            "a closeout record for the landed app-owned collection context-menu slice",
+            "No reopening of the closed delete-action lane or the generic menu/key-owner lanes.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_CONTEXT_MENU_CLOSEOUT.contains(marker),
+                "the collection context-menu closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-context-menu-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-delete-action-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_context_menu_follow_on",
+            "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
+            "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
+            "imui_editor_collection_context_menu_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_CONTEXT_MENU_WORKSTREAM.contains(marker),
+                "the collection context-menu lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-context-menu-v1/` now records the closed",
+            "app-owned collection context-menu slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection context-menu follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection context-menu lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection context-menu lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection context-menu lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection context-menu lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection context-menu lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_zoom_follow_on() {
+        for marker in [
+            "The closed collection context-menu lane already deferred collection zoom/layout depth.",
+            "The first landable target is therefore narrow:",
+            "derive collection layout metrics from viewport width plus an app-owned zoom model,",
+            "route primary+wheel through one collection-scope zoom policy,",
+            "Do not start by designing a shared collection zoom helper or runtime-owned layout contract.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_ZOOM_DESIGN.contains(marker),
+                "the collection zoom design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection context-menu lane explicitly deferred collection zoom/layout depth.",
+            "The current proof surface already has the right ingredients for a narrow app-owned collection zoom slice:",
+            "The scroll handle and wheel hooks already exist generically, so this lane is not a justification to widen shared helper ownership.",
+            "Dear ImGui keeps asset-browser zoom and layout recomputation at the proof surface instead of turning them into a generic runtime contract.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_ZOOM_M0_NOTE.contains(marker),
+                "the collection zoom baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now derives layout metrics from viewport width plus app-owned zoom state.",
+            "Primary+Wheel now adjusts tile extent without widening generic IMUI helper ownership.",
+            "Keyboard grid navigation now reads the derived layout columns instead of a frozen constant.",
+            "The zoom slice reuses the existing child-region scroll handle to keep hovered rows anchored while columns change.",
+            "No new public `fret-ui-kit::imui` collection zoom helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_ZOOM_M1_NOTE.contains(marker),
+                "the collection zoom M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-zoom-v1` as:",
+            "a closeout record for the landed app-owned collection zoom/layout slice",
+            "No reopening of the closed context-menu lane or wider generic layout/helper questions.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_ZOOM_CLOSEOUT.contains(marker),
+                "the collection zoom closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-zoom-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-context-menu-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_zoom_follow_on",
+            "proof_collection_layout_metrics_fall_back_before_viewport_binding_exists",
+            "proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor",
+            "proof_collection_zoom_request_ignores_non_primary_wheel",
+            "imui_editor_collection_zoom_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_ZOOM_WORKSTREAM.contains(marker),
+                "the collection zoom lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-zoom-v1/` now records the closed",
+            "app-owned collection zoom/layout slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection zoom follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-zoom-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection zoom lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection zoom lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection zoom lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection zoom lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC.contains("`docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection zoom lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_select_all_follow_on() {
+        for marker in [
+            "The closed collection zoom lane already deferred collection select-all breadth.",
+            "The first landable target is therefore narrow:",
+            "route Primary+A through one collection-scope select-all policy,",
+            "select all visible assets in current visible order,",
+            "Do not start by designing a shared collection select-all helper or broader command surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SELECT_ALL_DESIGN.contains(marker),
+                "the collection select-all design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection zoom lane explicitly deferred collection select-all breadth.",
+            "The current proof surface already has the right ingredients for a narrow app-owned collection select-all slice:",
+            "The collection-scope key-owner and visible-order helpers already exist locally, so this lane is not a justification to widen shared helper ownership.",
+            "Dear ImGui keeps Ctrl+A selection breadth in the multi-select proof surface instead of turning it into a generic runtime contract.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SELECT_ALL_M0_NOTE.contains(marker),
+                "the collection select-all baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now supports one app-owned select-all shortcut slice.",
+            "Primary+A now selects all visible assets within the focused collection scope.",
+            "Select-all keeps the current active tile when possible instead of widening generic key-owner ownership.",
+            "The popup/menu surface stays unchanged in this lane.",
+            "No new public `fret-ui-kit::imui` collection select-all helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SELECT_ALL_M1_NOTE.contains(marker),
+                "the collection select-all M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-select-all-v1` as:",
+            "a closeout record for the landed app-owned collection select-all slice",
+            "No reopening of the closed zoom lane or wider generic key-owner/helper questions.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SELECT_ALL_CLOSEOUT.contains(marker),
+                "the collection select-all closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-select-all-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-zoom-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_select_all_follow_on",
+            "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+            "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+            "proof_collection_select_all_shortcut_matches_primary_a_only",
+            "imui_editor_collection_select_all_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SELECT_ALL_WORKSTREAM.contains(marker),
+                "the collection select-all lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-select-all-v1/` now records the closed",
+            "app-owned collection select-all slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection select-all follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-select-all-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection select-all lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection select-all lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection select-all lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection select-all lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection select-all lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_rename_follow_on() {
+        for marker in [
+            "The closed collection select-all lane already deferred rename breadth.",
+            "The first landable target is therefore narrow:",
+            "route F2 through the existing collection-scope keyboard owner,",
+            "open one app-owned rename modal from the current active asset or context-menu selection,",
+            "Do not start by designing a shared collection rename helper or generic inline-edit surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_RENAME_DESIGN.contains(marker),
+                "the collection rename design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection select-all lane explicitly deferred rename breadth.",
+            "The current proof surface already has the right ingredients for a narrow app-owned collection rename slice:",
+            "The current proof already has popup and text-input seams, so this lane is not a justification to widen shared helper ownership.",
+            "Dear ImGui keeps rename breadth close to the current proof surface instead of turning it into a generic runtime contract.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_RENAME_M0_NOTE.contains(marker),
+                "the collection rename baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now supports one app-owned rename slice.",
+            "F2 and the existing context-menu entry now open one app-owned rename modal for the active collection asset.",
+            "Committing rename updates the visible label while preserving stable asset ids and collection order.",
+            "The popup stays product-owned and uses the existing input/popup seams instead of widening `fret-ui-kit::imui`.",
+            "No new public `fret-ui-kit::imui` collection rename helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_RENAME_M1_NOTE.contains(marker),
+                "the collection rename M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-rename-v1` as:",
+            "a closeout record for the landed app-owned collection rename slice",
+            "No reopening of the closed select-all lane or wider generic key-owner/helper questions.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_RENAME_CLOSEOUT.contains(marker),
+                "the collection rename closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-rename-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-select-all-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_rename_follow_on",
+            "proof_collection_begin_rename_session_prefers_active_visible_asset",
+            "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
+            "proof_collection_rename_shortcut_matches_plain_f2_only",
+            "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+            "imui_editor_collection_rename_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_RENAME_WORKSTREAM.contains(marker),
+                "the collection rename lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-rename-v1/` now records the closed",
+            "app-owned collection rename slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection rename follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-rename-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection rename lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection rename lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection rename lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection rename lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection rename lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on() {
+        for marker in [
+            "The closed collection rename lane already landed modal/dialog breadth and left inline product depth open.",
+            "The first landable target is therefore still narrow:",
+            "route F2 plus the existing context-menu entry through one app-owned inline rename session,",
+            "render the editor inside the existing active asset tile,",
+            "Do not reopen the closed modal lane by widening `fret-ui-kit::imui` with a generic inline-edit helper.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_INLINE_RENAME_DESIGN.contains(marker),
+                "the collection inline-rename design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection rename lane already landed modal/dialog rename breadth.",
+            "The current proof surface already has the right ingredients for a narrow app-owned inline rename slice:",
+            "The repo already has an editor-owned inline text-entry control we can embed locally without widening `fret-ui-kit::imui`.",
+            "Dear ImGui-class collection/product depth now points at inline rename posture more than another popup contract.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_INLINE_RENAME_M0_NOTE.contains(marker),
+                "the collection inline-rename baseline audit should keep the new-lane justification explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now supports one app-owned inline rename slice.",
+            "F2 and the existing context-menu entry now start one app-owned inline rename editor for the active collection asset.",
+            "The inline editor uses `TextField` plus a proof-local focus handoff instead of widening `fret-ui-kit::imui`.",
+            "Committing rename still updates the visible label while preserving stable asset ids and collection order.",
+            "No new public `fret-ui-kit::imui` inline-edit or collection rename helper is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_INLINE_RENAME_M1_NOTE.contains(marker),
+                "the collection inline-rename M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-collection-inline-rename-v1` as:",
+            "a closeout record for the landed app-owned collection inline rename slice",
+            "No reopening of the closed modal rename lane or wider generic key-owner/helper questions.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_INLINE_RENAME_CLOSEOUT.contains(marker),
+                "the collection inline-rename closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-inline-rename-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-rename-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on",
+            "proof_collection_commit_rename_rejects_empty_trimmed_label",
+            "imui_editor_collection_rename_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM.contains(marker),
+                "the collection inline-rename lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-inline-rename-v1/` now records the closed",
+            "app-owned collection inline rename slice in `imui_editor_proof_demo`",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection inline-rename follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection inline-rename lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection inline-rename lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection inline-rename lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection inline-rename lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection inline-rename lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on() {
+        for marker in [
+            "The closed collection inline rename lane already landed the current app-owned collection product depth, but the host proof still kept too much collection implementation in one file.",
+            "The first correct target is therefore structural rather than behavioral:",
+            "move the collection proof into `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`,",
+            "keep the host file on `mod collection;` plus one render call and drag-asset delegation,",
+            "Do not widen `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` for a demo-local maintenance problem.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_MODULARIZATION_DESIGN.contains(marker),
+                "the collection modularization design should keep the structural target explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection inline rename lane already landed the current app-owned collection product depth.",
+            "The current collection proof now spans enough owner-local helpers and models that host-file shape is a real maintenance concern.",
+            "A demo-local `collection.rs` module is sufficient to reduce that pressure without widening any public surface.",
+            "The frozen proof-budget rule still blocks shared helper growth from one proof surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_MODULARIZATION_M0_NOTE.contains(marker),
+                "the collection modularization baseline audit should keep the owner/problem framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now lives in one demo-local `collection.rs` module under `imui_editor_proof_demo`.",
+            "The host file now routes collection rendering through `collection::render_collection_first_asset_browser_proof(ui)` and uses `collection::authoring_parity_collection_assets()` for the drag-chip seed set.",
+            "Collection unit tests now live beside the module and the new modularization surface test freezes the host/module boundary explicitly.",
+            "Existing collection surface tests now read `collection.rs` for behavior anchors instead of pretending the host still owns the implementation inline.",
+            "No new public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API is admitted in this lane.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_MODULARIZATION_M1_NOTE.contains(marker),
+                "the collection modularization M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed closeout record",
+            "Treat `imui-editor-proof-collection-modularization-v1` as:",
+            "a closeout record for the landed demo-local collection module slice",
+            "No reopening of the closed inline-rename lane or premature shared-helper growth from one proof surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_MODULARIZATION_CLOSEOUT.contains(marker),
+                "the collection modularization closeout should keep the shipped verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-editor-proof-collection-modularization-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-inline-rename-v1\"",
+            "\"path\": \"docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on",
+            "proof_collection_drag_rect_normalizes_drag_direction",
+            "proof_collection_commit_rename_rejects_empty_trimmed_label",
+            "imui_editor_collection_modularization_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_MODULARIZATION_WORKSTREAM.contains(marker),
+                "the collection modularization lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-editor-proof-collection-modularization-v1/` now records the closed demo-local collection module slice",
+            "resets the default next non-multi-window priority to broader app-owned command-package breadth",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection modularization follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md`",
+            "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection modularization lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection modularization lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection modularization lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC.contains(
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json`"
+            ),
+            "the workstream index should list the collection modularization lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC.contains(
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json`"
+            ),
+            "the todo tracker should list the collection modularization lane state file explicitly"
+        );
+
+        for marker in [
+            "mod collection;",
+            "collection::render_collection_first_asset_browser_proof(ui);",
+            "collection::authoring_parity_collection_assets()",
+        ] {
+            assert!(
+                IMUI_EDITOR_PROOF_DEMO.contains(marker),
+                "the host proof should keep the collection boundary explicit after modularization: {marker}"
+            );
+        }
+
+        for marker in [
+            "fn proof_collection_assets_in_visible_order(",
+            "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
+            "struct ProofCollectionAsset {",
+            "fn proof_collection_drag_rect_normalizes_drag_direction()",
+        ] {
+            assert!(
+                !IMUI_EDITOR_PROOF_DEMO.contains(marker),
+                "the host proof should not keep the collection implementation inline after modularization: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
+            "pub(super) fn render_collection_first_asset_browser_proof(",
+            "ui: &mut fret_imui::ImUi<'_, '_, KernelApp>,",
+            "#[cfg(test)]",
+            "fn proof_collection_drag_rect_normalizes_drag_direction() {",
+        ] {
+            assert!(
+                IMUI_EDITOR_PROOF_DEMO_COLLECTION_MODULE.contains(marker),
+                "the demo-local collection module should keep the modularized implementation and test floor explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on() {
+        for marker in [
+            "historical execution reference (closed lane)",
+            "The closed collection modularization lane already proved the host file can stay slim without widening any public surface.",
+            "The first landable target is therefore command-package breadth rather than helper growth:",
+            "land `Primary+D` duplicate-selected on the existing proof surface,",
+            "route the same duplicate command through the explicit button and context menu,",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/`",
+            "Do not introduce a shared `collection_commands(...)` or `duplicate_selected(...)` helper in `fret-ui-kit::imui`.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_COMMAND_PACKAGE_DESIGN.contains(marker),
+                "the collection command-package design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The closed collection modularization lane already reset the default next non-multi-window priority to broader app-owned command-package depth.",
+            "The current collection proof already has enough local substrate for a first duplicate-selected slice: stable ids, selection owner, context menu, button affordance, and status readouts.",
+            "A proof-local command status model is sufficient for this lane; system clipboard, platform reveal, or generic command buses are unnecessary.",
+            "The frozen proof-budget rule still blocks shared helper growth from one proof surface.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_COMMAND_PACKAGE_M0_NOTE.contains(marker),
+                "the collection command-package baseline audit should keep the owner/problem framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now lands the first app-owned command-package slice with `Primary+D` duplicate-selected.",
+            "The same duplicate command now routes through keyboard, the explicit button, and the collection context menu.",
+            "Duplicate results now reselect the copied set, preserve an active copied tile when possible, and publish app-owned command status feedback.",
+            "No public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API changed.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_COMMAND_PACKAGE_M1_NOTE.contains(marker),
+                "the collection command-package M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The collection proof now routes the existing inline rename command through an explicit",
+            "`Rename active asset` button in addition to `F2` and the collection context menu.",
+            "Button and context-menu rename activation now share one demo-local app helper for the render",
+            "No public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API changed.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_COMMAND_PACKAGE_M2_NOTE.contains(marker),
+                "the collection command-package M2 note should keep the landed rename-trigger slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-collection-command-package-v1` as:",
+            "duplicate-selected plus explicit rename-trigger breadth is coherent enough",
+            "the default next non-multi-window follow-on is now",
+            "`imui-collection-second-proof-surface-v1`, not a third command verb in this lane.",
+            "No public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API changed.",
+            "Do not reopen this folder just to add one more verb.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_COMMAND_PACKAGE_CLOSEOUT.contains(marker),
+                "the collection command-package closeout should keep the closed verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-command-package-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-editor-proof-collection-modularization-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json\"",
+            "immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on",
+            "proof_collection_duplicate_shortcut_matches_primary_d_only",
+            "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
+            "proof_collection_begin_rename_session_prefers_active_visible_asset",
+            "proof_collection_rename_shortcut_matches_plain_f2_only",
+            "imui_editor_collection_command_package_surface",
+            "imui_editor_collection_rename_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_COMMAND_PACKAGE_WORKSTREAM.contains(marker),
+                "the collection command-package lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-command-package-v1/` now records the closed",
+            "lands duplicate-selected plus explicit rename-trigger slices in",
+            "moves the next non-multi-window priority to a second proof surface.",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the collection command-package follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-command-package-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection command-package lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection command-package lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection command-package lane: {marker}"
+            );
+        }
+
+        assert!(
+            WORKSTREAMS_INDEX_DOC
+                .contains("`docs/workstreams/imui-collection-command-package-v1/WORKSTREAM.json`"),
+            "the workstream index should list the collection command-package lane state file explicitly"
+        );
+        assert!(
+            TODO_TRACKER_DOC
+                .contains("`docs/workstreams/imui-collection-command-package-v1/WORKSTREAM.json`"),
+            "the todo tracker should list the collection command-package lane state file explicitly"
+        );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on() {
+        for marker in [
+            "Status: historical execution reference (closed lane)",
+            "this lane starts immediately after the bounded command-package lane",
+            "freeze and then land a materially different second collection proof surface",
+            "`CLOSEOUT_AUDIT_2026-04-23.md` now closes this lane on a no-helper-widening verdict.",
+            "`apps/fret-examples/src/editor_notes_demo.rs`",
+            "`apps/fret-examples/src/workspace_shell_demo.rs`",
+            "This work should not be forced back into",
+            "`imui-collection-command-package-v1`.",
+            "This lane also should not create a new dedicated asset-grid/file-browser demo.",
+            "Prefer existing demos, with `editor_notes_demo.rs` as the primary candidate and",
+            "`workspace_shell_demo.rs` as supporting proof.",
+            "Widening `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui`.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SECOND_PROOF_SURFACE_DESIGN.contains(marker),
+                "the second proof-surface design should keep the target-surface framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`imui_editor_proof_demo` plus the closed command-package lane still count as only one current",
+            "`editor_notes_demo.rs` is the smallest materially different shell-mounted second proof",
+            "`workspace_shell_demo.rs` remains supporting evidence for shell-mounted proof pressure",
+            "No dedicated asset-grid/file-browser demo should be introduced yet.",
+            "The frozen proof-budget rule still blocks shared helper growth until a second real proof",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SECOND_PROOF_SURFACE_M0_NOTE.contains(marker),
+                "the second proof-surface baseline audit should keep the owner/problem framing explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`editor_notes_demo.rs` now carries the first materially different shell-mounted collection proof",
+            "the old single-purpose button group is now an explicit `Scene collection` surface",
+            "a stable collection summary test id",
+            "a stable collection list test id",
+            "app-owned row labels that include title, role, and active/available state",
+            "no `fret-ui-kit::imui` collection helper widening",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SECOND_PROOF_SURFACE_M2_NOTE.contains(marker),
+                "the second proof-surface M2 note should keep the landed shell-mounted surface explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-collection-second-proof-surface-v1` as:",
+            "explicit evidence that the second collection proof surface now exists outside",
+            "a no-helper-widening verdict for this cycle",
+            "the two surfaces do not yet demand the same reusable helper shape",
+            "No public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API changed.",
+            "Do not reopen this folder just because the second proof now exists.",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SECOND_PROOF_SURFACE_CLOSEOUT.contains(marker),
+                "the second proof-surface closeout should keep the no-helper-widening verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "const TEST_ID_COLLECTION: &str = \"editor-notes-demo.collection\";",
+            "const TEST_ID_COLLECTION_SUMMARY: &str = \"editor-notes-demo.collection.summary\";",
+            "const TEST_ID_COLLECTION_LIST: &str = \"editor-notes-demo.collection.list\";",
+            "fn editor_collection_row_label(",
+            "fn editor_collection_status_label(",
+            "shadcn::CardTitle::new(\"Scene collection\")",
+            "Shell-mounted collection proof: choose an editor-owned surface",
+            "editor_collection_row_label(",
+            "ui::text(editor_collection_status_label(selected))",
+            ".test_id(TEST_ID_COLLECTION)",
+        ] {
+            assert!(
+                EDITOR_NOTES_DEMO.contains(marker),
+                "editor_notes_demo should keep the shell-mounted second collection proof explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-second-proof-surface-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-command-package-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "Reopen this closeout only if fresh evidence names an exact shared helper",
+            "immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on",
+            "editor_notes_demo",
+            "workspace_shell_demo",
+            "editor_notes_editor_rail_surface",
+            "workspace_shell_pane_proof_surface",
+            "workspace_shell_editor_rail_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_SECOND_PROOF_SURFACE_WORKSTREAM.contains(marker),
+                "the second proof-surface lane state should keep the source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/` now records the closed",
+            "lands the `Scene collection` left-rail",
+            "does not yet prove that both collection proof surfaces",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
+                "the umbrella lane should keep the second proof-surface follow-on explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json`",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the collection second proof-surface lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the collection second proof-surface lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the collection second proof-surface lane: {marker}"
+            );
+        }
+
+        for marker in [
+            "closed primary surface: `apps/fret-examples/src/editor_notes_demo.rs`",
+            "no-helper-widening verdict:",
+            "the two collection proof surfaces do not yet demand the same reusable helper shape",
+            "do not reopen shared collection helpers directly from this lane.",
+        ] {
+            assert!(
+                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_NEXT_PRIORITY.contains(marker),
+                "the priority audit should move the default next priority to the second proof surface: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-command-package-v1/` now closes the bounded app-owned",
+            "`docs/workstreams/imui-collection-second-proof-surface-v1/` now lands a smaller",
+            "What still remains is narrower Dear ImGui-class collection depth: a future helper-readiness proposal",
+            "### R3) Keep shared collection helpers closed after the second proof",
+            "the app-owned collection command package and smaller shell-mounted second proof are now closed",
+        ] {
+            assert!(
+                IMUI_IMGUI_PARITY_AUDIT_V2.contains(marker),
+                "the ImGui parity audit should now point at second proof-surface pressure: {marker}"
+            );
+        }
+
+        assert!(
+            !WORKSTREAMS_INDEX_DOC.contains(
+                "imui-collection-second-proof-surface-v1/` — first n/a, latest n/a, 0 markdown docs"
+            ),
+            "the workstream index should not leave the second proof-surface lane as an empty placeholder"
         );
     }
 

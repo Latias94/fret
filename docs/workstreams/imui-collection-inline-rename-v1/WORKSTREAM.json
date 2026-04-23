@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "slug": "imui-collection-inline-rename-v1",
+  "title": "ImUi Collection Inline Rename v1",
+  "status": "closed",
+  "updated": "2026-04-23",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-collection-rename-v1",
+  "problem": "The closed collection rename lane already proved that the current asset-browser proof can own deeper rename breadth locally, but it left inline product depth open. This follow-on closes that narrower gap by landing an app-owned collection inline rename slice in `imui_editor_proof_demo` while keeping the frozen proof-budget rule, the closed generic key-owner/helper verdicts, and runtime widening out of scope.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-inline-rename-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout only if stronger first-party evidence shows that app-owned collection inline rename is insufficient: `imui_editor_proof_demo` now carries the landed slice, the lane-local source-policy and unit tests keep F2 plus the context-menu entry and inline `TextField` explicit, and the proof-budget rule still blocks shared helper widening on one proof surface.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_editor_proof_demo",
+      "cargo nextest run -p fret-examples --test imui_editor_collection_rename_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "collection-inline-rename-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast"
+    },
+    {
+      "name": "collection-inline-rename-surface-floor",
+      "command": "cargo nextest run -p fret-examples --test imui_editor_collection_rename_surface --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/TODO.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/MILESTONES.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/tests/imui_editor_collection_rename_surface.rs",
+    "apps/fret-examples/src/lib.rs",
+    "repo-ref/imgui/imgui.h"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0084-virtualized-accessibility-and-collection-semantics.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this folder from historical TODO rows. Treat it as the closeout record for the landed app-owned collection inline rename slice. If future first-party proof demands shared helper growth, a second real proof surface, or a broader collection command package, start a different narrower follow-on instead."
+  }
+}

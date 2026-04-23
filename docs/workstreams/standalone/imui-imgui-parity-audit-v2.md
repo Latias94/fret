@@ -1,7 +1,7 @@
 # imui ↔ Dear ImGui Parity Audit (v2)
 
 Status: current audit snapshot (not an ADR)
-Last updated: 2026-04-22
+Last updated: 2026-04-23
 
 ## Purpose
 
@@ -213,9 +213,31 @@ The real remaining gaps are narrower:
      absence.
    - `docs/workstreams/imui-collection-box-select-v1/` now closes the narrow app-owned background
      marquee / box-select slice without widening `fret-ui-kit::imui`.
-   - What still remains is narrower Dear ImGui-class collection depth: no lasso / drag-rectangle
-     story, no richer keyboard-owner story around the collection helper, and no second proof
-     surface that would justify shared helper growth.
+   - `docs/workstreams/imui-collection-keyboard-owner-v1/` now closes the narrow app-owned
+     collection-scope keyboard owner slice without reopening the generic key-owner lane.
+   - `docs/workstreams/imui-collection-delete-action-v1/` now closes the narrow app-owned
+     delete-selected slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-collection-context-menu-v1/` now closes the narrow app-owned
+     collection context-menu slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-collection-zoom-v1/` now closes the narrow app-owned collection
+     zoom/layout slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-collection-select-all-v1/` now closes the narrow app-owned collection
+     select-all slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-collection-rename-v1/` now closes the narrow app-owned collection
+     rename slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-collection-inline-rename-v1/` now closes the narrow app-owned
+     collection inline rename slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-editor-proof-collection-modularization-v1/` now closes the narrow
+     demo-local collection modularization slice without widening `fret-ui-kit::imui`.
+   - `docs/workstreams/imui-collection-command-package-v1/` now closes the bounded app-owned
+     command-package slice with duplicate-selected plus explicit rename-trigger breadth on the
+     same proof surface.
+   - `docs/workstreams/imui-collection-second-proof-surface-v1/` now lands a smaller
+     shell-mounted `Scene collection` surface in `editor_notes_demo.rs`, with
+     `workspace_shell_demo.rs` kept as supporting proof evidence.
+   - What still remains is narrower Dear ImGui-class collection depth: a future helper-readiness proposal
+     would need to name the exact shared helper and prove both collection surfaces need it; current
+     evidence still says app/product owners should keep broader collection action contracts explicit.
 2. First-cut immediate child-region helper now exists, and the current first-party pane proof is
    real, while the generic helper depth is now intentionally closed on one bounded chrome slice
    - `fret-ui-kit::imui` now exposes a keyed `child_region[_with_options]` helper that wraps a
@@ -443,18 +465,42 @@ Do next:
 - finish mixed-DPI real-device/manual acceptance,
 - and continue narrowing platform-specific follow-on work inside the docking parity lane.
 
-### R2) Add a narrow ecosystem-level immediate collection package
+If multi-window acceptance is not currently available on the working machine, the default local
+execution order should temporarily shift to R2-R4 below instead of reopening generic helper lanes.
 
-Focus on the missing editor collection conveniences:
+### R2) Keep the current collection proof modularized locally
 
-- shortcut/key-owner convenience seam,
-- optional immediate tab/menu-bar helpers only if shell proofs justify them.
+Why this is now a closed local posture:
+
+- `imui_editor_proof_demo` no longer carries the full collection implementation inline; the current
+  collection owner now lives in `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`.
+- The follow-on command package also landed there without widening generic IMUI.
+- The remaining non-multi-window question is therefore no longer structural cleanup of the first
+  proof.
+
+Keep doing:
+
+- keep the current collection surface and unit-test package as the gate floor,
+- keep the current owner split demo-local,
+- and do not add new `fret-imui` / `fret-ui-kit::imui` API from first-proof maintainability
+  pressure alone.
+
+### R3) Keep shared collection helpers closed after the second proof
+
+Focus on the no-helper-widening verdict after the second proof surface landed:
+
+- `editor_notes_demo.rs` now carries the smaller shell-mounted `Scene collection` proof,
+- `workspace_shell_demo.rs` remains supporting shell-mounted evidence,
+- and the two collection surfaces do not yet demand the same reusable helper shape.
 
 Constraint:
 
-- no runtime widening unless a proof shows the mechanism is truly missing.
+- keep collection action breadth app-owned/evidence-driven,
+- do not create a new dedicated asset-grid/file-browser demo yet,
+- keep generic key-owner, child-region, and tab/menu helper widening closed,
+- and require a future separate helper-readiness follow-on before widening shared helpers.
 
-### R3) Strengthen the shell-first editor proof
+### R4) Strengthen the shell-first editor proof
 
 Treat this as the main product maturity lane:
 
@@ -463,7 +509,7 @@ Treat this as the main product maturity lane:
 - `docking_arbitration_demo` should remain the multi-window stress surface,
 - and the repo should keep converging those proofs into one clearer editor-grade composition story.
 
-### R4) Only then consider opt-in porting sugar
+### R5) Only then consider opt-in porting sugar
 
 If first-party proofs keep paying a tax for explicit layout/identity translation, add thin
 compatibility helpers in the immediate facade.
@@ -477,8 +523,10 @@ From this audit forward:
 
 1. The top remaining gap to Dear ImGui-grade editor feel is runner/backend and shell closure, not
    runtime architecture.
-2. The next generic immediate work should be narrow:
-   shortcut/key-owner ergonomics, optional tab/menu helpers, and stronger first-party pane proofs.
+2. The next non-multi-window immediate work should stay proof-local first:
+   the app-owned collection command package and smaller shell-mounted second proof are now closed,
+   so any shared helper widening now needs a future helper-readiness follow-on with stronger
+   matching pressure across both collection surfaces.
 3. `crates/fret-ui` should resist parity-driven growth unless an ADR-backed mechanism hole is
    proven.
 4. The historical v1 parity audit remains useful as archive evidence, but this v2 note is the

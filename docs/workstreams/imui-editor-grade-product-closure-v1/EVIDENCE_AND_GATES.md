@@ -25,6 +25,32 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`
 - `docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-collection-box-select-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`
+- `docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-collection-keyboard-owner-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`
+- `docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`
+- `docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`
+- `docs/workstreams/imui-collection-delete-action-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`
+- `docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+- `docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`
+- `docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+- `docs/workstreams/imui-collection-context-menu-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-command-package-v1/DESIGN.md`
+- `docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+- `docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md`
+- `docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md`
+- `docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+- `docs/workstreams/imui-collection-command-package-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md`
+- `docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md`
+- `docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md`
+- `docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`
+- `docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/DESIGN.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M0_BASELINE_AUDIT_2026-04-21.md`
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/M2_LANDED_MENU_POLICY_FLOOR_2026-04-22.md`
@@ -156,6 +182,91 @@ This package remains the historical proof floor for the now-closed menu/tab lane
 - submenus open, hover-open, sibling-switch with a basic grace corridor, and report outward
   trigger edges,
 - and tab bars currently cover simple selection/panel switching rather than richer shell policy.
+
+### Closed narrow closeout: collection delete action
+
+- `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_delete_action_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_delete_action_follow_on proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item proof_collection_delete_selection_picks_previous_visible_item_at_end --no-fail-fast`
+
+This package now proves:
+
+- `imui_editor_proof_demo` keeps collection delete-selected semantics explicit and app-owned,
+- `Delete` / `Backspace` and the explicit button route through one proof-local delete helper,
+- next selection plus keyboard active tile reflow stay reviewable at the unit-test layer,
+- and broader collection command breadth still does not justify shared helper or runtime widening.
+
+### Closed narrow closeout: collection context menu
+
+- `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_context_menu_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_context_menu_follow_on proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile --no-fail-fast`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_zoom_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_zoom_follow_on proof_collection_layout_metrics_fall_back_before_viewport_binding_exists proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor proof_collection_zoom_request_ignores_non_primary_wheel --no-fail-fast`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_select_all_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_select_all_follow_on proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile proof_collection_select_all_selection_falls_back_to_first_visible_asset proof_collection_select_all_shortcut_matches_primary_a_only --no-fail-fast`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_rename_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
+
+This package now proves:
+
+- `imui_editor_proof_demo` keeps collection context-menu quick actions explicit and app-owned,
+- right-click on item/background routes through one shared popup scope,
+- right-click selection adoption plus delete reuse stay reviewable at the unit-test layer,
+- collection zoom/layout metrics stay explicit and app-owned on the same proof surface,
+- primary+wheel zoom and derived keyboard columns stay reviewable at the unit-test layer,
+- collection select-all stays explicit and app-owned on the same proof surface,
+- Primary+A plus visible-order-aware select-all stay reviewable at the unit-test layer,
+- collection rename plus inline rename stay explicit and app-owned on the same proof surface,
+- F2/context-menu rename posture plus label-only commit stay reviewable at the unit-test layer,
+- and broader collection command breadth still does not justify shared helper or runtime widening.
+
+### Closed narrow closeout: collection modularization
+
+- `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
+
+This package now proves:
+
+- `imui_editor_proof_demo` keeps the collection boundary explicit while delegating implementation to `collection.rs`,
+- the collection module still exposes the full app-owned behavior surface and unit-test floor,
+- the structural cleanup is reviewable independently from product-depth slices,
+- and the next default non-multi-window priority is broader app-owned command-package depth rather than more host-file accretion.
+
+### Closed narrow execution: collection command package
+
+- `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast`
+
+This package now proves:
+
+- `collection.rs` owns the current broader command-package slices locally on the existing proof surface,
+- duplicate-selected plus explicit rename-trigger routing stay app-owned across keyboard, explicit button, and context-menu paths without generic helper widening,
+- command status feedback stays app-owned in the collection module,
+- the command-package lane is closed without a third verb,
+- and the closed second proof-surface record is now the evidence gate before any future
+  helper-readiness follow-on can reopen shared collection helpers.
+
+### Closed narrow closeout: collection second proof surface
+
+- `cargo run -p fret-demo --bin editor_notes_demo`
+- `cargo run -p fret-demo --bin workspace_shell_demo`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast`
+- `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test workspace_shell_pane_proof_surface --test workspace_shell_editor_rail_surface --no-fail-fast`
+
+This package now proves:
+
+- the second proof-surface follow-on is closed after command-package closeout,
+- `editor_notes_demo.rs` is the primary existing shell-mounted candidate,
+- `editor_notes_demo.rs` now carries a `Scene collection` left-rail surface with stable collection
+  summary/list test ids,
+- `workspace_shell_demo.rs` stays supporting shell-mounted proof evidence,
+- no dedicated asset-grid/file-browser demo is introduced yet,
+- and shared helper/runtime widening stays closed because the two collection proof surfaces do not
+  yet need the same reusable helper shape.
 
 ### Editor shell gates
 

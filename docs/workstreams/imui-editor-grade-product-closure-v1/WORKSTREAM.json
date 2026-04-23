@@ -3,10 +3,10 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-04-22",
+  "updated": "2026-04-23",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
-  "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, and one runner-grade multi-window hand-feel story.",
+  "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -43,6 +43,50 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-command-package-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json"
     },
     {
       "role": "reference",
@@ -182,7 +226,7 @@
     }
   ],
   "repro": {
-    "summary": "Use the frozen golden pair, the workspace shell and DevTools proofs, and the docking parity first-open state to decide whether this umbrella only needs a status refresh or whether execution should stay in an existing narrow lane.",
+    "summary": "Use the frozen golden pair, the closed command-package record, the closed second-proof closeout, the workspace shell and DevTools proofs, and the docking parity first-open state to decide whether this umbrella only needs a status refresh or whether execution should stay in an existing narrow lane.",
     "commands": [
       "cargo build -p fret-cookbook --example imui_action_basics --features cookbook-imui",
       "cargo build -p fret-demo --bin imui_editor_proof_demo",
@@ -220,6 +264,18 @@
     {
       "name": "examples-imui-teaching-classification",
       "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
+    },
+    {
+      "name": "imui-collection-command-package-closeout",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
+    },
+    {
+      "name": "imui-collection-second-proof-closeout-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast"
+    },
+    {
+      "name": "imui-collection-second-proof-surface-floor",
+      "command": "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test workspace_shell_pane_proof_surface --test workspace_shell_editor_rail_surface --no-fail-fast"
     },
     {
       "name": "workspace-shell-source-surfaces",
@@ -300,6 +356,19 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-command-package-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-command-package-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json",
     "docs/workstreams/imui-child-region-depth-v1/DESIGN.md",
     "docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md",
     "docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md",
@@ -383,7 +452,14 @@
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools-mcp/src/main.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
-    "tools/diag-campaigns/devtools-first-open-smoke.json"
+    "tools/diag-campaigns/devtools-first-open-smoke.json",
+    "docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md",
+    "docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md",
+    "docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",

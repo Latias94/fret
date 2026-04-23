@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - Milestones
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-22
+Last updated: 2026-04-23
 
 Status note (2026-04-22): this file now records umbrella phase state only. Implementation-heavy
 execution has moved into closed narrow follow-ons or the active docking parity lane.
@@ -83,6 +83,22 @@ Current status:
   `docs/workstreams/imui-collection-pane-proof-v1/`,
   the closed collection box-select closeout record at
   `docs/workstreams/imui-collection-box-select-v1/`,
+  the closed collection keyboard-owner closeout record at
+  `docs/workstreams/imui-collection-keyboard-owner-v1/`,
+  the closed collection delete-action closeout record at
+  `docs/workstreams/imui-collection-delete-action-v1/`,
+  the closed collection context-menu closeout record at
+  `docs/workstreams/imui-collection-context-menu-v1/`,
+  the closed collection zoom closeout record at
+  `docs/workstreams/imui-collection-zoom-v1/`,
+  the closed collection select-all closeout record at
+  `docs/workstreams/imui-collection-select-all-v1/`,
+  the closed collection rename closeout record at
+  `docs/workstreams/imui-collection-rename-v1/`,
+  the closed collection inline-rename closeout record at
+  `docs/workstreams/imui-collection-inline-rename-v1/`,
+  the closed collection modularization closeout record at
+  `docs/workstreams/imui-editor-proof-collection-modularization-v1/`,
   the closed menu/tab policy closeout at
   `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
   the closed child-region depth closeout record at
@@ -91,6 +107,19 @@ Current status:
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
   and the closed helper-owned trigger response-surface follow-on at
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`.
+- A 2026-04-23 priority refresh now freezes the next non-multi-window execution order in
+  `P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md`:
+  the app-owned collection command-package closeout first, second proof-surface promotion next,
+  and only later reconsideration of any generic collection helper growth.
+- The command-package priority is now closed in
+  `docs/workstreams/imui-collection-command-package-v1/`,
+  where the landed slices are `Primary+D` duplicate-selected plus an explicit rename trigger,
+  both kept on the existing collection-local keyboard/button/context-menu owner paths.
+- The collection second proof-surface follow-on is now closed in
+  `docs/workstreams/imui-collection-second-proof-surface-v1/`, with `editor_notes_demo.rs` as the
+  primary shell-mounted second proof candidate, the `Scene collection` left-rail surface landed
+  there, `workspace_shell_demo.rs` as supporting evidence, and a no-helper-widening verdict because
+  the two collection proof surfaces do not yet need the same shared helper.
 - Execution consequence:
   keep this lane as the umbrella recorder. The key-owner / item-local shortcut ownership slice now
   stays closed in `docs/workstreams/imui-key-owner-surface-v1/`,
@@ -103,10 +132,32 @@ Current status:
   `docs/workstreams/imui-collection-pane-proof-v1/`,
   the collection box-select closeout record now lives in
   `docs/workstreams/imui-collection-box-select-v1/`,
+  the collection keyboard-owner closeout record now lives in
+  `docs/workstreams/imui-collection-keyboard-owner-v1/`,
+  the collection delete-action closeout record now lives in
+  `docs/workstreams/imui-collection-delete-action-v1/`,
+  the collection context-menu closeout record now lives in
+  `docs/workstreams/imui-collection-context-menu-v1/`,
+  the collection zoom closeout record now lives in
+  `docs/workstreams/imui-collection-zoom-v1/`,
+  the collection select-all closeout record now lives in
+  `docs/workstreams/imui-collection-select-all-v1/`,
+  the collection rename closeout record now lives in
+  `docs/workstreams/imui-collection-rename-v1/`,
+  the collection inline-rename closeout record now lives in
+  `docs/workstreams/imui-collection-inline-rename-v1/`,
+  the collection modularization closeout record now lives in
+  `docs/workstreams/imui-editor-proof-collection-modularization-v1/`,
+  the collection command-package closeout record now lives in
+  `docs/workstreams/imui-collection-command-package-v1/`,
+  the closed second proof-surface closeout record now lives in
+  `docs/workstreams/imui-collection-second-proof-surface-v1/`,
   the broader menu/submenu/tab policy closeout record now lives in
   `docs/workstreams/imui-menu-tab-policy-depth-v1/`,
   the closed `BeginChild()`-scale child-region depth closeout record now lives in
   `docs/workstreams/imui-child-region-depth-v1/`,
+  the next non-multi-window order is now frozen in
+  `docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md`,
   the helper-owned menu/submenu/tab trigger response verdict now lives in
   `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/`, the naming cleanup closeout now lives in
   `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/`,
@@ -249,7 +300,9 @@ Current status:
   `tools/diag-campaigns/imui-p3-multiwindow-parity.json` now binds four repo-owned scripts into one
   lane-owned package over `docking_arbitration_demo`, and keeps `diag-hardening-smoke-docking`
   small instead of overloading it with all P3 stress coverage.
-- P3 is now the next active execution priority after the P1 shell closeout.
+- P3 remains the active global parity lane when real backend/runner acceptance is available, while
+  the latest non-multi-window local follow-on is now closed in
+  `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.
   Continue multi-window implementation-heavy work in the existing docking parity lane or a narrower
   runner follow-on instead of widening this folder.
 - The docking parity lane now has an explicit first-open state:

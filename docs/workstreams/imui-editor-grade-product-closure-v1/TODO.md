@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - TODO
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-22
+Last updated: 2026-04-23
 
 Status note (2026-04-22): keep phase ordering and follow-on decisions here. Do not resume
 implementation-heavy work in this folder while the closed child-region depth closeout record lives
@@ -21,6 +21,11 @@ in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution
       Result: this folder now records phase ordering and cross-phase status, while the narrow P0/P1
       closeout records stay closed and the remaining active P3 execution continues in
       `docs/workstreams/docking-multiwindow-imgui-parity/`.
+- [x] Close the second proof-surface follow-on without widening shared IMUI helpers.
+      Result: `docs/workstreams/imui-collection-second-proof-surface-v1/` now records the closed
+      second-proof-surface follow-on, lands the `Scene collection` left-rail surface in
+      `editor_notes_demo.rs`, and records that it does not yet prove that both collection proof surfaces
+      need the same shared helper.
 
 ## P0 - Default authoring lane closure
 
@@ -185,6 +190,67 @@ in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution
       background-only box-select slice in `imui_editor_proof_demo`, keeps lasso /
       keyboard-owner depth and shared helper growth out of generic `fret-ui-kit::imui`, and
       leaves broader collection depth to future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned keyboard-owner proof rather than
+      a reopened generic key-owner or helper-widening question, split another narrow follow-on and
+      keep it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-keyboard-owner-v1/` now records the closed
+      app-owned collection keyboard-owner slice in `imui_editor_proof_demo`, keeps the generic
+      key-owner verdict closed, and leaves lasso / action semantics / shared helper growth to
+      future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned delete-selected semantics rather
+      than broader collection command breadth or helper growth, split another narrow follow-on and
+      keep it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-delete-action-v1/` now records the closed
+      app-owned collection delete-selected slice in `imui_editor_proof_demo`, keeps select-all /
+      rename / context-menu breadth and shared helper growth out of generic `fret-ui-kit::imui`,
+      and leaves lasso / second-proof-surface questions to future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned context-menu quick actions
+      rather than broader collection command breadth or helper growth, split another narrow
+      follow-on and keep it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-context-menu-v1/` now records the closed
+      app-owned collection context-menu slice in `imui_editor_proof_demo`, keeps select-all /
+      rename / broader command breadth and shared helper growth out of generic `fret-ui-kit::imui`,
+      and leaves lasso / second-proof-surface questions to future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned zoom/layout depth rather than
+      broader collection command breadth or helper growth, split another narrow follow-on and keep
+      it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-zoom-v1/` now records the closed app-owned collection zoom/layout slice in `imui_editor_proof_demo`, replaces the frozen column count with viewport-plus-zoom-derived layout metrics, keeps select-all / rename / second-proof-surface / shared helper growth out of generic `fret-ui-kit::imui`, and leaves broader collection product depth to future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned select-all breadth rather than
+      broader collection command breadth or helper growth, split another narrow follow-on and keep
+      it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-select-all-v1/` now records the closed app-owned collection select-all slice in `imui_editor_proof_demo`, routes Primary+A through the existing collection-scope owner, keeps rename / second-proof-surface / shared helper growth out of generic `fret-ui-kit::imui`, and leaves broader collection product depth to future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned rename breadth rather than
+      broader collection command breadth or helper growth, split another narrow follow-on and keep
+      it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-rename-v1/` now records the closed app-owned collection rename slice in `imui_editor_proof_demo`, routes F2 plus the existing context-menu entry through one rename modal, keeps second-proof-surface / shared helper growth out of generic `fret-ui-kit::imui`, and leaves broader collection product depth to future narrower follow-ons.
+- [x] If the remaining collection depth becomes narrower app-owned inline rename posture rather than
+      broader collection command breadth or helper growth, split another narrow follow-on and keep
+      it local to the existing proof surface.
+      Result: `docs/workstreams/imui-collection-inline-rename-v1/` now records the closed app-owned collection inline rename slice in `imui_editor_proof_demo`, routes F2 plus the existing context-menu entry through one inline editor mounted inside the active asset tile, keeps second-proof-surface / shared helper growth out of generic `fret-ui-kit::imui`, and leaves broader collection product depth to future narrower follow-ons.
+- [x] If the collection-first proof starts carrying too much app-owned implementation in one host file,
+      split a narrow demo-local modularization follow-on before arguing for shared helpers from
+      maintenance pressure alone.
+      Result: `docs/workstreams/imui-editor-proof-collection-modularization-v1/` now records the closed demo-local collection module slice in `imui_editor_proof_demo`, moves collection assets/models/render/unit tests into `collection.rs`, keeps the host on `mod collection;` plus one render call and drag-asset delegation, and reset the default next non-multi-window priority to broader app-owned command-package breadth before that command-package lane later closed.
+- [x] After the inline rename closeout lands, refresh the next non-multi-window IMUI follow-on
+      order instead of reopening older collection, key-owner, or generic helper lanes by habit.
+      Result: `P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md` now freezes the current order as
+      closed app-owned collection command-package breadth first, second proof-surface promotion
+      next, and only later any reconsideration of shared helper growth, while child-region resize,
+      submenu-intent tuning, key-owner reopening, and generic helper widening stay explicitly deferred.
+- [x] Start the broader app-owned collection command-package lane locally on the same proof surface
+      instead of inventing another generic helper or reopening the structural modularization folder.
+      Result: `docs/workstreams/imui-collection-command-package-v1/` now records the closed
+      command-package lane, lands duplicate-selected plus explicit rename-trigger slices in
+      `imui_editor_proof_demo/collection.rs`, keeps those routes app-owned on the existing
+      keyboard/button/context-menu owner paths, rejects a third command verb in this folder, and
+      moves the next non-multi-window priority to a second proof surface.
+- [x] After the command-package closeout lands, start and close the second proof-surface follow-on instead of
+      reopening the closed package or widening shared helpers from one proof.
+      Result: `docs/workstreams/imui-collection-second-proof-surface-v1/` now records the closed
+      follow-on, names `editor_notes_demo.rs` as the primary shell-mounted candidate, keeps
+      `workspace_shell_demo.rs` as supporting evidence, lands the `Scene collection` left-rail
+      surface in `editor_notes_demo.rs`, and closes on a no-helper-widening verdict because the two
+      collection proof surfaces do not yet need the same shared helper.
 - [x] If P1 becomes mostly shell composition work, split it into a narrow workbench-shell follow-on.
       Result: `docs/workstreams/imui-workbench-shell-closure-v1/` now records the narrow P1 shell
       closure decision and already closes on a no-new-helper-yet verdict, leaving this umbrella

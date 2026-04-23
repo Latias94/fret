@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "slug": "imui-collection-keyboard-owner-v1",
+  "title": "ImUi Collection Keyboard Owner v1",
+  "status": "closed",
+  "updated": "2026-04-22",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-collection-box-select-v1",
+  "problem": "The closed collection box-select lane already proved that the current asset-browser proof can own deeper collection policy locally, but it explicitly deferred richer keyboard-owner depth. This follow-on closes that narrower gap by landing an app-owned collection-scope keyboard-owner slice in `imui_editor_proof_demo` while keeping the closed generic key-owner verdict intact and leaving shared helper widening out of scope.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-keyboard-owner-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reopen this closeout only if stronger first-party evidence shows that app-owned collection keyboard-owner depth is insufficient: `imui_editor_proof_demo` now carries the landed slice, the lane-local source-policy and unit tests keep the selection math and owner split explicit, and both the generic key-owner verdict and the proof-budget rule still block shared helper widening on one proof surface.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_editor_proof_demo",
+      "cargo nextest run -p fret-examples --test imui_editor_collection_keyboard_owner_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "collection-keyboard-owner-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast"
+    },
+    {
+      "name": "collection-keyboard-owner-surface-floor",
+      "command": "cargo nextest run -p fret-examples --test imui_editor_collection_keyboard_owner_surface --no-fail-fast"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json > /dev/null"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/TODO.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/MILESTONES.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md",
+    "docs/workstreams/imui-key-owner-surface-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs",
+    "apps/fret-examples/src/lib.rs",
+    "repo-ref/imgui/imgui_demo.cpp",
+    "repo-ref/imgui/imgui.h"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0084-virtualized-accessibility-and-collection-semantics.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this folder from historical TODO rows. Treat it as the closeout record for the landed app-owned collection keyboard-owner slice. If future first-party proof demands shared helper growth, collection action semantics, or deeper collection policy such as lasso, start a different narrower follow-on instead."
+  }
+}

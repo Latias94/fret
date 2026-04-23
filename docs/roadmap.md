@@ -46,6 +46,83 @@ Tracker highlights:
   `docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`,
   `docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`,
   and `docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`.
+- ImUi collection keyboard-owner closeout record (closed narrow P1 lane that landed app-owned
+  collection-scope keyboard-owner depth on the collection-first proof surface while keeping the
+  generic key-owner verdict closed and freezing that lasso, collection action semantics, and shared
+  helper widening still require a different narrower follow-on):
+  `docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`,
+  `docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`,
+  and `docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`.
+- ImUi collection delete-action closeout record (closed narrow P1 lane that landed app-owned
+  delete-selected semantics on the collection-first proof surface while freezing broader
+  select-all / rename / context-menu breadth and shared helper widening for a different narrower
+  follow-on):
+  `docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`,
+  `docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`,
+  and `docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`.
+- ImUi collection context-menu closeout record (closed narrow P1 lane that landed app-owned
+  collection quick actions on the collection-first proof surface while freezing broader
+  select-all / rename / command breadth and shared helper widening for a different narrower
+  follow-on):
+  `docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`,
+  and `docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi collection zoom closeout record (closed narrow P1 lane that landed app-owned collection
+  zoom/layout depth on the collection-first proof surface while freezing select-all / rename /
+  second-proof-surface pressure and shared helper widening for a different narrower follow-on):
+  `docs/workstreams/imui-collection-zoom-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi collection select-all closeout record (closed narrow P1 lane that landed app-owned
+  collection select-all breadth on the collection-first proof surface while freezing rename /
+  second-proof-surface pressure and shared helper widening for a different narrower follow-on):
+  `docs/workstreams/imui-collection-select-all-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md`,
+  and `docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi collection rename closeout record (closed narrow P1 lane that landed app-owned collection
+  rename breadth on the collection-first proof surface while freezing second-proof-surface
+  pressure and shared helper widening for a different narrower follow-on):
+  `docs/workstreams/imui-collection-rename-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi collection inline-rename closeout record (closed narrow P1 lane that landed app-owned
+  collection inline rename posture on the collection-first proof surface while freezing
+  second-proof-surface pressure and shared helper widening for a different narrower follow-on):
+  `docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi editor-proof collection modularization closeout record (closed narrow P1 lane that landed
+a demo-local collection module slice on the collection-first proof surface while resetting the
+next default non-multi-window priority to broader app-owned command-package depth):
+  `docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md`,
+  `docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md`, and
+  `docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi collection command-package closeout record (closed narrow P1 lane that landed the broader
+  app-owned command-package follow-on with duplicate-selected plus explicit rename-trigger slices
+  on the same proof surface, then moved default next priority to a second proof surface):
+  `docs/workstreams/imui-collection-command-package-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-command-package-v1/M1_APP_OWNED_DUPLICATE_COMMAND_SLICE_2026-04-23.md`,
+  `docs/workstreams/imui-collection-command-package-v1/M2_APP_OWNED_RENAME_TRIGGER_SLICE_2026-04-23.md`,
+  and `docs/workstreams/imui-collection-command-package-v1/CLOSEOUT_AUDIT_2026-04-23.md`.
+- ImUi collection second proof-surface closeout record (closed narrow P1 lane that landed the first
+  shell-mounted `Scene collection` proof surface in `editor_notes_demo.rs`, kept
+  `workspace_shell_demo.rs` as supporting evidence, and closed on a no-helper-widening verdict
+  because the two collection proof surfaces do not yet need the same shared helper):
+  `docs/workstreams/imui-collection-second-proof-surface-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-second-proof-surface-v1/M0_BASELINE_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-second-proof-surface-v1/M2_SHELL_MOUNTED_COLLECTION_SURFACE_SLICE_2026-04-23.md`, and
+  `docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`,
+  `docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md`,
+  plus `docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
   instead of widening `fret-authoring::Response` or `crates/fret-ui` again):
