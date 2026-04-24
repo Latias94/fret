@@ -30,6 +30,8 @@ const TEST_ID_HEADER_LATEST_LABEL: &str = "imui-interaction-showcase.header.late
 const TEST_ID_HERO: &str = "imui-interaction-showcase.hero";
 const TEST_ID_LAB: &str = "imui-interaction-showcase.lab";
 const TEST_ID_SHELL: &str = "imui-interaction-showcase.shell";
+const TEST_ID_INSPECTOR: &str = "imui-interaction-showcase.inspector";
+const TEST_ID_INSPECTOR_FLAGS: &str = "imui-interaction-showcase.inspector.flags";
 const TEST_ID_TIMELINE: &str = "imui-interaction-showcase.timeline";
 const TEST_ID_PREVIEW: &str = "imui-showcase.preview";
 const TEST_ID_PREVIEW_VIEWPORT: &str = "imui-showcase.preview.viewport";
@@ -46,6 +48,34 @@ const SHOWCASE_REGULAR_SIDE_COLUMN_WIDTH: Px = Px(336.0);
 struct ShowcaseEvent {
     id: u64,
     label: Arc<str>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ShowcaseInspectorFlag {
+    label: Arc<str>,
+    active: bool,
+    detail: Arc<str>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ShowcaseInspectorState {
+    source: Arc<str>,
+    summary: Arc<str>,
+    flags: Vec<ShowcaseInspectorFlag>,
+}
+
+impl Default for ShowcaseInspectorState {
+    fn default() -> Self {
+        Self {
+            source: Arc::from("Showcase"),
+            summary: Arc::from("Waiting for the first IMUI response."),
+            flags: vec![
+                inspector_flag("clicked", false, "no edge yet"),
+                inspector_flag("changed", false, "no edit yet"),
+                inspector_flag("active", false, "idle"),
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -116,6 +146,8 @@ impl View for ImUiInteractionShowcaseView {
         let long_press_count = cx.state().local_init(|| 0u32);
         let drag_count = cx.state().local_init(|| 0u32);
         let drag_distance = cx.state().local_init(|| 0.0f32);
+        let pulse_holding = cx.state().local_init(|| false);
+        let drag_active = cx.state().local_init(|| false);
         let autosave_enabled = cx.state().local_init(|| true);
         let exposure_value = cx.state().local_init(|| 38.0f32);
         let review_mode = cx.state().local_init(|| Some(Arc::<str>::from("Studio")));
@@ -133,6 +165,7 @@ impl View for ImUiInteractionShowcaseView {
         let selected_tab = cx.state().local_init(|| Some(Arc::<str>::from("overview")));
 
         let timeline_next_id = cx.state().local_init(|| 1u64);
+        let inspector = cx.state().local_init(ShowcaseInspectorState::default);
         let timeline = cx.state().local_init(|| {
             vec![ShowcaseEvent {
                 id: 0,
@@ -147,6 +180,8 @@ impl View for ImUiInteractionShowcaseView {
         let long_press_count_value = long_press_count.layout_value(cx);
         let drag_count_value = drag_count.layout_value(cx);
         let drag_distance_value = drag_distance.layout_value(cx);
+        let pulse_holding_value = pulse_holding.layout_value(cx);
+        let drag_active_value = drag_active.layout_value(cx);
         let autosave_enabled_value = autosave_enabled.layout_value(cx);
         let exposure_value_value = exposure_value.layout_value(cx);
         let review_mode_value = review_mode.layout_value(cx);
@@ -159,6 +194,7 @@ impl View for ImUiInteractionShowcaseView {
         let context_action_count_value = context_action_count.layout_value(cx);
         let context_toggle_value = context_toggle.layout_value(cx);
         let selected_tab_value = selected_tab.layout_value(cx);
+        let inspector_value = inspector.layout_value(cx);
         let timeline_value = timeline.layout_value(cx);
         let latest_event = timeline_value.first().map(|event| event.label.clone());
         let cx = cx.elements();
@@ -196,6 +232,8 @@ impl View for ImUiInteractionShowcaseView {
             long_press_count.clone(),
             drag_count.clone(),
             drag_distance.clone(),
+            pulse_holding.clone(),
+            drag_active.clone(),
             autosave_enabled.clone(),
             exposure_value.clone(),
             review_mode.clone(),
@@ -204,6 +242,7 @@ impl View for ImUiInteractionShowcaseView {
             draft_note.clone(),
             timeline_next_id.clone(),
             timeline.clone(),
+            inspector.clone(),
             pulse_count_value,
             secondary_pulse_count_value,
             long_press_count_value,
@@ -227,6 +266,7 @@ impl View for ImUiInteractionShowcaseView {
             selected_tab.clone(),
             timeline_next_id.clone(),
             timeline.clone(),
+            inspector.clone(),
             menu_open_count_value,
             submenu_toggle_count_value,
             tab_switch_count_value,
@@ -235,10 +275,22 @@ impl View for ImUiInteractionShowcaseView {
             selected_tab_value.clone(),
         );
 
+        let inspector_card = render_response_inspector_card(
+            cx,
+            &inspector_value,
+            pulse_holding_value,
+            drag_active_value,
+            autosave_enabled_value,
+            exposure_value_value,
+            review_mode_value.clone(),
+            selected_tab_value.as_deref().unwrap_or("overview"),
+            context_toggle_value,
+        );
+
         let timeline_card = render_timeline_card(cx, &timeline_value);
 
         let body = if responsive.stack_body {
-            ui::v_flex(move |cx| vec![hero, shell, lab, timeline_card])
+            ui::v_flex(move |cx| vec![hero, inspector_card, shell, lab, timeline_card])
                 .gap(responsive.section_gap)
                 .w_full()
                 .min_w_0()
@@ -271,11 +323,11 @@ impl View for ImUiInteractionShowcaseView {
                     .into_element(cx),
                     ui::h_flex(move |cx| {
                         vec![
-                            ui::container(move |_cx| [timeline_card])
+                            ui::container(move |_cx| [lab])
                                 .flex_1()
                                 .min_w_0()
                                 .into_element(cx),
-                            ui::container(move |_cx| [lab])
+                            ui::container(move |_cx| [inspector_card])
                                 .layout(
                                     LayoutRefinement::default()
                                         .basis(LengthRefinement::Fraction(0.32))
@@ -292,6 +344,10 @@ impl View for ImUiInteractionShowcaseView {
                     .w_full()
                     .min_w_0()
                     .into_element(cx),
+                    ui::container(move |_cx| [timeline_card])
+                        .w_full()
+                        .min_w_0()
+                        .into_element(cx),
                 ]
             })
             .gap(responsive.section_gap)
@@ -301,7 +357,7 @@ impl View for ImUiInteractionShowcaseView {
         } else {
             ui::h_flex(move |cx| {
                 vec![
-                    ui::v_flex(move |cx| vec![hero, shell])
+                    ui::v_flex(move |cx| vec![hero, inspector_card, shell])
                         .gap(responsive.section_gap)
                         .flex_1()
                         .min_w_0()
@@ -533,6 +589,8 @@ fn render_interaction_lab_card(
     long_press_count: LocalState<u32>,
     drag_count: LocalState<u32>,
     drag_distance: LocalState<f32>,
+    pulse_holding: LocalState<bool>,
+    drag_active: LocalState<bool>,
     autosave_enabled: LocalState<bool>,
     exposure_value: LocalState<f32>,
     review_mode: LocalState<Option<Arc<str>>>,
@@ -541,6 +599,7 @@ fn render_interaction_lab_card(
     draft_note: LocalState<String>,
     timeline_next_id: LocalState<u64>,
     timeline: LocalState<Vec<ShowcaseEvent>>,
+    inspector: LocalState<ShowcaseInspectorState>,
     pulse_count_value: u32,
     secondary_pulse_count_value: u32,
     long_press_count_value: u32,
@@ -630,6 +689,8 @@ fn render_interaction_lab_card(
                     let long_press_count = long_press_count.clone();
                     let drag_count = drag_count.clone();
                     let drag_distance = drag_distance.clone();
+                    let pulse_holding = pulse_holding.clone();
+                    let drag_active = drag_active.clone();
                     let autosave_enabled = autosave_enabled.clone();
                     let exposure_value = exposure_value.clone();
                     let review_mode = review_mode.clone();
@@ -638,6 +699,7 @@ fn render_interaction_lab_card(
                     let draft_note = draft_note.clone();
                     let timeline_next_id = timeline_next_id.clone();
                     let timeline = timeline.clone();
+                    let inspector = inspector.clone();
 
                     let mode_items = [
                         Arc::<str>::from("Studio"),
@@ -673,6 +735,7 @@ fn render_interaction_lab_card(
                             ..Default::default()
                         },
                     );
+                    set_bool_if_changed(ui.cx_mut().app, &pulse_holding, pulse.press_holding());
                     if pulse.clicked() {
                         let _ =
                             pulse_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
@@ -681,6 +744,18 @@ fn render_interaction_lab_card(
                             &timeline_next_id,
                             &timeline,
                             "Primary pulse registered.",
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Pulse button",
+                            "Primary click response returned by the IMUI button.",
+                            vec![
+                                inspector_flag("clicked", true, "primary edge"),
+                                inspector_flag("secondary_clicked", false, "not this frame"),
+                                inspector_flag("long_pressed", false, "below threshold"),
+                                inspector_flag("press_holding", pulse.press_holding(), "level state"),
+                            ],
                         );
                     }
                     if pulse.secondary_clicked() {
@@ -692,6 +767,18 @@ fn render_interaction_lab_card(
                             &timeline,
                             "Secondary pulse opened the alternate path.",
                         );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Pulse button",
+                            "Secondary click response opened the alternate path.",
+                            vec![
+                                inspector_flag("clicked", false, "not primary"),
+                                inspector_flag("secondary_clicked", true, "secondary edge"),
+                                inspector_flag("long_pressed", false, "below threshold"),
+                                inspector_flag("press_holding", pulse.press_holding(), "level state"),
+                            ],
+                        );
                     }
                     if pulse.long_pressed() {
                         let _ = long_press_count
@@ -701,6 +788,18 @@ fn render_interaction_lab_card(
                             &timeline_next_id,
                             &timeline,
                             "Long press crossed the hold threshold.",
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Pulse button",
+                            "Long-press response crossed the hold threshold.",
+                            vec![
+                                inspector_flag("clicked", false, "held instead"),
+                                inspector_flag("secondary_clicked", false, "not secondary"),
+                                inspector_flag("long_pressed", true, "threshold crossed"),
+                                inspector_flag("press_holding", pulse.press_holding(), "level state"),
+                            ],
                         );
                     }
 
@@ -712,6 +811,7 @@ fn render_interaction_lab_card(
                         },
                     );
                     if drag.drag_started() {
+                        set_bool_if_changed(ui.cx_mut().app, &drag_active, true);
                         let _ =
                             drag_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
                         push_showcase_event(
@@ -720,12 +820,62 @@ fn render_interaction_lab_card(
                             &timeline,
                             "Drag probe started.",
                         );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Drag probe",
+                            "Drag response started and the live level state is now active.",
+                            vec![
+                                inspector_flag("drag_started", true, "edge"),
+                                inspector_flag("dragging", drag.dragging(), "level state"),
+                                inspector_flag("drag_stopped", false, "not stopped"),
+                                inspector_flag(
+                                    "drag_delta",
+                                    false,
+                                    format!(
+                                        "{:.0},{:.0}",
+                                        drag.drag_delta().x.0,
+                                        drag.drag_delta().y.0
+                                    ),
+                                ),
+                            ],
+                        );
                     }
                     if drag.dragging() {
+                        set_bool_if_changed(ui.cx_mut().app, &drag_active, true);
                         let delta = drag.drag_delta();
                         let _ = drag_distance.update_in(ui.cx_mut().app.models_mut(), |value| {
                             *value += delta.x.0.abs() + delta.y.0.abs();
                         });
+                    }
+                    if drag.drag_stopped() {
+                        set_bool_if_changed(ui.cx_mut().app, &drag_active, false);
+                        push_showcase_event(
+                            ui.cx_mut().app,
+                            &timeline_next_id,
+                            &timeline,
+                            "Drag probe stopped.",
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Drag probe",
+                            "Drag stop response closed the active scrub session.",
+                            vec![
+                                inspector_flag("drag_started", false, "already active"),
+                                inspector_flag("dragging", false, "released"),
+                                inspector_flag("drag_stopped", true, "edge"),
+                                inspector_flag(
+                                    "drag_total",
+                                    false,
+                                    format!(
+                                        "{:.0},{:.0}",
+                                        drag.drag_total().x.0,
+                                        drag.drag_total().y.0
+                                    ),
+                                ),
+                            ],
+                        );
                     }
 
                     ui.separator_text("Button family");
@@ -746,6 +896,13 @@ fn render_interaction_lab_card(
                             &timeline_next_id,
                             &timeline,
                             "Small button committed a quick-save style action.",
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Small button",
+                            "Compact button returned a click response.",
+                            vec![inspector_flag("clicked", true, "quick-save action")],
                         );
                     }
 
@@ -768,6 +925,13 @@ fn render_interaction_lab_card(
                                 &timeline_next_id,
                                 &timeline,
                                 Arc::<str>::from(format!("Bookmark focus moved to slot {next}.")),
+                            );
+                            record_showcase_response(
+                                ui.cx_mut().app,
+                                &inspector,
+                                "Arrow button",
+                                Arc::<str>::from(format!("Previous bookmark clicked; slot {next}.")),
+                                vec![inspector_flag("clicked", true, "left arrow")],
                             );
                         }
 
@@ -792,6 +956,13 @@ fn render_interaction_lab_card(
                                 &timeline_next_id,
                                 &timeline,
                                 Arc::<str>::from(format!("Bookmark focus moved to slot {next}.")),
+                            );
+                            record_showcase_response(
+                                ui.cx_mut().app,
+                                &inspector,
+                                "Arrow button",
+                                Arc::<str>::from(format!("Next bookmark clicked; slot {next}.")),
+                                vec![inspector_flag("clicked", true, "right arrow")],
                             );
                         }
                     });
@@ -819,18 +990,43 @@ fn render_interaction_lab_card(
                                 &timeline,
                                 Arc::<str>::from(format!("Tool mode switched to {candidate}.")),
                             );
+                            record_showcase_response(
+                                ui.cx_mut().app,
+                                &inspector,
+                                "Radio option",
+                                Arc::<str>::from(format!("Tool mode clicked: {candidate}.")),
+                                vec![
+                                    inspector_flag("clicked", true, "radio response"),
+                                    inspector_flag("selected", true, candidate),
+                                ],
+                            );
                         }
                     }
 
                     ui.separator_text("Controls");
                     let toggle = ui.switch_model("Autosave snapshots", autosave_enabled.model());
                     if toggle.changed() {
-                        let label = if autosave_enabled.layout_value_in(ui.cx_mut()) {
+                        let autosave_now = autosave_enabled.layout_value_in(ui.cx_mut());
+                        let label = if autosave_now {
                             "Autosave re-armed."
                         } else {
                             "Autosave paused for experimentation."
                         };
                         push_showcase_event(ui.cx_mut().app, &timeline_next_id, &timeline, label);
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Switch",
+                            label,
+                            vec![
+                                inspector_flag("changed", true, "model toggled"),
+                                inspector_flag(
+                                    "value",
+                                    autosave_now,
+                                    if autosave_now { "armed" } else { "paused" },
+                                ),
+                            ],
+                        );
                     }
 
                     let exposure = ui.slider_f32_model_with_options(
@@ -850,6 +1046,16 @@ fn render_interaction_lab_card(
                             &timeline_next_id,
                             &timeline,
                             Arc::<str>::from(format!("Exposure settled at {:.0}.", value)),
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Slider",
+                            Arc::<str>::from(format!("Exposure edit committed at {:.0}.", value)),
+                            vec![
+                                inspector_flag("deactivated_after_edit", true, "commit edge"),
+                                inspector_flag("edited_value", true, format!("{value:.0}")),
+                            ],
                         );
                     }
 
@@ -873,6 +1079,16 @@ fn render_interaction_lab_card(
                             &timeline,
                             Arc::<str>::from(format!("Review mode switched to {mode}.")),
                         );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Combo",
+                            Arc::<str>::from(format!("Review mode committed: {mode}.")),
+                            vec![
+                                inspector_flag("deactivated_after_edit", true, "commit edge"),
+                                inspector_flag("selected", true, mode),
+                            ],
+                        );
                     }
 
                     let notes = ui.input_text_model_with_options(
@@ -888,6 +1104,16 @@ fn render_interaction_lab_card(
                             &timeline_next_id,
                             &timeline,
                             "Draft note committed after blur.",
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Text input",
+                            "Draft note deactivated after edit.",
+                            vec![
+                                inspector_flag("deactivated_after_edit", true, "blur commit"),
+                                inspector_flag("text_changed", true, "draft note"),
+                            ],
                         );
                     }
                 })
@@ -922,6 +1148,7 @@ fn render_shell_showcase_card(
     selected_tab: LocalState<Option<Arc<str>>>,
     timeline_next_id: LocalState<u64>,
     timeline: LocalState<Vec<ShowcaseEvent>>,
+    inspector: LocalState<ShowcaseInspectorState>,
     menu_open_count_value: u32,
     submenu_toggle_count_value: u32,
     tab_switch_count_value: u32,
@@ -976,6 +1203,7 @@ fn render_shell_showcase_card(
                     let selected_tab = selected_tab.clone();
                     let timeline_next_id = timeline_next_id.clone();
                     let timeline = timeline.clone();
+                    let inspector = inspector.clone();
 
                     let shell_title = ui::text("Shell preview")
                         .text_sm()
@@ -1034,6 +1262,17 @@ fn render_shell_showcase_card(
                                             &timeline,
                                             "Submenu choreography toggled.",
                                         );
+                                        record_showcase_response(
+                                            ui.cx_mut().app,
+                                            &inspector,
+                                            "Submenu trigger",
+                                            "Submenu trigger toggled its popup state.",
+                                            vec![
+                                                inspector_flag("toggled", true, "submenu edge"),
+                                                inspector_flag("opened", staging.opened(), "open edge"),
+                                                inspector_flag("closed", staging.closed(), "close edge"),
+                                            ],
+                                        );
                                     }
 
                                     let _ = ui.menu_item_with_options(
@@ -1050,6 +1289,17 @@ fn render_shell_showcase_card(
                                     &timeline_next_id,
                                     &timeline,
                                     "Menu trigger opened with outward response feedback.",
+                                );
+                                record_showcase_response(
+                                    ui.cx_mut().app,
+                                    &inspector,
+                                    "Menu trigger",
+                                    "Menu trigger reported an opened response.",
+                                    vec![
+                                        inspector_flag("opened", true, "menu edge"),
+                                        inspector_flag("closed", false, "not this frame"),
+                                        inspector_flag("activated", file_menu.trigger.activated(), "trigger lifecycle"),
+                                    ],
                                 );
                             }
                         },
@@ -1119,6 +1369,16 @@ fn render_shell_showcase_card(
                             &timeline,
                             Arc::<str>::from(format!("Tab focus moved to {selected}.")),
                         );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Tab bar",
+                            Arc::<str>::from(format!("Selected tab changed to {selected}.")),
+                            vec![
+                                inspector_flag("selected_changed", true, "tab bar edge"),
+                                inspector_flag("selected", true, selected),
+                            ],
+                        );
                     }
 
                     ui.separator_text("Quick actions");
@@ -1129,6 +1389,29 @@ fn render_shell_showcase_card(
                             ..Default::default()
                         },
                     );
+                    if quick_actions.context_menu_requested() {
+                        push_showcase_event(
+                            ui.cx_mut().app,
+                            &timeline_next_id,
+                            &timeline,
+                            "Context menu requested from the review surface.",
+                        );
+                        record_showcase_response(
+                            ui.cx_mut().app,
+                            &inspector,
+                            "Context trigger",
+                            "Right-click response requested the context popup.",
+                            vec![
+                                inspector_flag("context_menu_requested", true, "secondary press"),
+                                inspector_flag("clicked", quick_actions.clicked(), "primary edge"),
+                                inspector_flag(
+                                    "secondary_clicked",
+                                    quick_actions.secondary_clicked(),
+                                    "alternate edge",
+                                ),
+                            ],
+                        );
+                    }
                     ui.begin_popup_context_menu("imui-showcase.quick-actions", quick_actions, |ui| {
                         let toggle = ui.menu_item_with_options(
                             "Pin diagnostics rail",
@@ -1142,11 +1425,26 @@ fn render_shell_showcase_card(
                                 .update_in(ui.cx_mut().app.models_mut(), |value| *value = !*value);
                             let _ = context_action_count
                                 .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                            let pinned_now = context_toggle.layout_value_in(ui.cx_mut());
                             push_showcase_event(
                                 ui.cx_mut().app,
                                 &timeline_next_id,
                                 &timeline,
                                 "Context action flipped the diagnostics rail state.",
+                            );
+                            record_showcase_response(
+                                ui.cx_mut().app,
+                                &inspector,
+                                "Context menu item",
+                                "Context menu item clicked and toggled the diagnostics rail.",
+                                vec![
+                                    inspector_flag("clicked", true, "menu item edge"),
+                                    inspector_flag(
+                                        "pinned",
+                                        pinned_now,
+                                        if pinned_now { "pinned" } else { "floating" },
+                                    ),
+                                ],
                             );
                         }
 
@@ -1166,6 +1464,16 @@ fn render_shell_showcase_card(
                                 &timeline_next_id,
                                 &timeline,
                                 "Context surface dismissed cleanly.",
+                            );
+                            record_showcase_response(
+                                ui.cx_mut().app,
+                                &inspector,
+                                "Context menu item",
+                                "Dismiss item clicked and closed the context popup.",
+                                vec![
+                                    inspector_flag("clicked", true, "menu item edge"),
+                                    inspector_flag("close_popup", true, "dismiss requested"),
+                                ],
                             );
                         }
                     });
@@ -1507,6 +1815,128 @@ fn render_timeline_card(
     )
 }
 
+fn render_response_inspector_card(
+    cx: &mut ElementContext<'_, KernelApp>,
+    inspector: &ShowcaseInspectorState,
+    pulse_holding: bool,
+    drag_active: bool,
+    autosave_enabled: bool,
+    exposure_value: f32,
+    review_mode: Option<Arc<str>>,
+    active_tab: &str,
+    context_pinned: bool,
+) -> AnyElement {
+    let source = inspector.source.clone();
+    let summary = inspector.summary.clone();
+    let review_mode = review_mode.unwrap_or_else(|| Arc::from("Unassigned"));
+
+    let flag_rows = ui::v_flex({
+        let flags = inspector.flags.clone();
+        move |cx| {
+            flags
+                .into_iter()
+                .map(|flag| inspector_signal_row(cx, flag.label, flag.active, flag.detail))
+                .collect::<Vec<_>>()
+        }
+    })
+    .gap(Space::N1p5)
+    .w_full()
+    .into_element(cx)
+    .test_id(TEST_ID_INSPECTOR_FLAGS);
+
+    let live_state = ui::v_flex(move |cx| {
+        vec![
+            ui::h_flex(move |cx| {
+                vec![
+                    inspector_signal_pill(cx, "holding", pulse_holding, "pulse"),
+                    inspector_signal_pill(cx, "dragging", drag_active, "scrub"),
+                    inspector_signal_pill(
+                        cx,
+                        "autosave",
+                        autosave_enabled,
+                        if autosave_enabled { "armed" } else { "paused" },
+                    ),
+                ]
+            })
+            .gap(Space::N1p5)
+            .items_center()
+            .wrap()
+            .w_full()
+            .into_element(cx),
+            ui::h_flex(move |cx| {
+                vec![
+                    inspector_signal_pill(
+                        cx,
+                        "rail",
+                        context_pinned,
+                        if context_pinned { "pinned" } else { "floating" },
+                    ),
+                    inspector_signal_pill(cx, "tab", true, active_tab),
+                    inspector_signal_pill(cx, "exposure", true, format!("{exposure_value:.0}")),
+                ]
+            })
+            .gap(Space::N1p5)
+            .items_center()
+            .wrap()
+            .w_full()
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .w_full()
+    .into_element(cx);
+
+    let body = ui::v_flex(move |cx| {
+        vec![
+            ui::v_flex(move |cx| {
+                vec![
+                    ui::h_flex(move |cx| {
+                        vec![
+                            badge(cx, source, shadcn::BadgeVariant::Secondary),
+                            badge(
+                                cx,
+                                format!("mode {review_mode}"),
+                                shadcn::BadgeVariant::Outline,
+                            ),
+                        ]
+                    })
+                    .gap(Space::N1p5)
+                    .items_center()
+                    .wrap()
+                    .w_full()
+                    .into_element(cx),
+                    ui::text(summary)
+                        .text_sm()
+                        .wrap(fret_core::TextWrap::Word)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .p_3()
+            .rounded_md()
+            .border_1()
+            .border_color(ColorRef::Color(cx.theme().color_token("border")))
+            .bg(ColorRef::Color(cx.theme().color_token("background")))
+            .w_full()
+            .into_element(cx),
+            flag_rows,
+            live_state,
+        ]
+    })
+    .gap(Space::N3)
+    .w_full()
+    .into_element(cx);
+
+    showcase_card(
+        cx,
+        TEST_ID_INSPECTOR,
+        "INSPECTOR",
+        "Live response inspector",
+        "A product-facing view of the latest IMUI response edge plus the current hold and drag levels.",
+        body,
+    )
+}
+
 fn showcase_card(
     cx: &mut ElementContext<'_, KernelApp>,
     test_id: &'static str,
@@ -1622,6 +2052,94 @@ fn compact_metric_tile(
     .into_element(cx)
 }
 
+fn inspector_signal_row(
+    cx: &mut ElementContext<'_, KernelApp>,
+    label: impl Into<Arc<str>>,
+    active: bool,
+    detail: impl Into<Arc<str>>,
+) -> AnyElement {
+    let label = label.into();
+    let detail = detail.into();
+    ui::h_flex(move |cx| {
+        vec![
+            shadcn::Badge::new(if active { "on" } else { "off" })
+                .variant(if active {
+                    shadcn::BadgeVariant::Default
+                } else {
+                    shadcn::BadgeVariant::Outline
+                })
+                .into_element(cx),
+            ui::v_flex(move |cx| {
+                vec![
+                    ui::text(label).text_sm().font_semibold().into_element(cx),
+                    ui::text(detail)
+                        .text_xs()
+                        .wrap(fret_core::TextWrap::Word)
+                        .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N0p5)
+            .flex_1()
+            .min_w_0()
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .p_2()
+    .rounded_md()
+    .border_1()
+    .border_color(ColorRef::Color(cx.theme().color_token("border")))
+    .bg(ColorRef::Color(cx.theme().color_token("muted")))
+    .w_full()
+    .into_element(cx)
+}
+
+fn inspector_signal_pill(
+    cx: &mut ElementContext<'_, KernelApp>,
+    label: &'static str,
+    active: bool,
+    detail: impl Into<Arc<str>>,
+) -> AnyElement {
+    let detail = detail.into();
+    ui::h_flex(move |cx| {
+        vec![
+            ui::text(label)
+                .text_xs()
+                .font_semibold()
+                .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
+                .into_element(cx),
+            ui::text(detail).text_xs().font_medium().into_element(cx),
+        ]
+    })
+    .gap(Space::N1)
+    .items_center()
+    .px_2()
+    .py_1()
+    .rounded_md()
+    .border_1()
+    .border_color(ColorRef::Color(cx.theme().color_token("border")))
+    .bg(ColorRef::Color(cx.theme().color_token(if active {
+        "secondary"
+    } else {
+        "background"
+    })))
+    .into_element(cx)
+}
+
+fn inspector_flag(
+    label: impl Into<Arc<str>>,
+    active: bool,
+    detail: impl Into<Arc<str>>,
+) -> ShowcaseInspectorFlag {
+    ShowcaseInspectorFlag {
+        label: label.into(),
+        active,
+        detail: detail.into(),
+    }
+}
+
 fn badge(
     cx: &mut ElementContext<'_, KernelApp>,
     label: impl Into<Arc<str>>,
@@ -1646,4 +2164,27 @@ fn push_showcase_event(
             events.truncate(8);
         }
     });
+}
+
+fn record_showcase_response(
+    app: &mut KernelApp,
+    inspector: &LocalState<ShowcaseInspectorState>,
+    source: impl Into<Arc<str>>,
+    summary: impl Into<Arc<str>>,
+    flags: Vec<ShowcaseInspectorFlag>,
+) {
+    let _ = inspector.set_in(
+        app.models_mut(),
+        ShowcaseInspectorState {
+            source: source.into(),
+            summary: summary.into(),
+            flags,
+        },
+    );
+}
+
+fn set_bool_if_changed(app: &mut KernelApp, state: &LocalState<bool>, next: bool) {
+    if state.value_in_or_default(app.models()) != next {
+        let _ = state.set_in(app.models_mut(), next);
+    }
 }
