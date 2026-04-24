@@ -1629,6 +1629,91 @@ fn collect_demo_footprint_json(
     out
 }
 
+#[derive(Default)]
+struct PlatformFootprintAttachments {
+    #[cfg(target_os = "macos")]
+    macos_vmmap: Option<serde_json::Value>,
+    #[cfg(target_os = "macos")]
+    macos_vmmap_steady: Option<serde_json::Value>,
+    #[cfg(target_os = "macos")]
+    macos_footprint_tool_steady: Option<serde_json::Value>,
+    #[cfg(target_os = "macos")]
+    macos_vmmap_regions_sorted_steady: Option<serde_json::Value>,
+}
+
+impl PlatformFootprintAttachments {
+    fn collect_steady(_pid: u32, _out_dir: &Path) -> Self {
+        #[cfg(target_os = "macos")]
+        {
+            Self {
+                macos_vmmap: None,
+                macos_vmmap_steady: crate::macos_vmmap::collect_macos_vmmap_summary_best_effort(
+                    _pid,
+                    _out_dir,
+                    "resource.vmmap_summary.steady.txt",
+                ),
+                macos_footprint_tool_steady:
+                    crate::macos_footprint_tool::collect_macos_footprint_tool_best_effort(
+                        _pid,
+                        _out_dir,
+                        "resource.macos_footprint.steady.json",
+                    ),
+                macos_vmmap_regions_sorted_steady:
+                    crate::macos_vmmap::collect_macos_vmmap_regions_sorted_best_effort(
+                        _pid,
+                        _out_dir,
+                        "resource.vmmap_regions_sorted.steady.txt",
+                        18,
+                    ),
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = (_pid, _out_dir);
+            Self::default()
+        }
+    }
+
+    fn collect_exit(&mut self, _pid: u32, _out_dir: &Path) {
+        #[cfg(target_os = "macos")]
+        {
+            self.macos_vmmap = crate::macos_vmmap::collect_macos_vmmap_summary_best_effort(
+                _pid,
+                _out_dir,
+                "resource.vmmap_summary.txt",
+            );
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        let _ = (_pid, _out_dir);
+    }
+
+    fn attach_to(&self, _footprint: &mut serde_json::Value) {
+        #[cfg(target_os = "macos")]
+        {
+            let Some(obj) = _footprint.as_object_mut() else {
+                return;
+            };
+            if let Some(v) = self.macos_vmmap.as_ref() {
+                obj.insert("macos_vmmap".to_string(), v.clone());
+            }
+            if let Some(v) = self.macos_vmmap_steady.as_ref() {
+                obj.insert("macos_vmmap_steady".to_string(), v.clone());
+            }
+            if let Some(v) = self.macos_footprint_tool_steady.as_ref() {
+                obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
+            }
+            if let Some(v) = self.macos_vmmap_regions_sorted_steady.as_ref() {
+                obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        let _ = _footprint;
+    }
+}
+
 fn kill_launched_demo(child: &mut Option<LaunchedDemo>) {
     let Some(demo) = child.take() else {
         return;
@@ -1667,37 +1752,11 @@ pub(crate) fn stop_launched_demo(
     let demo = child.as_mut()?;
     let out_dir = exit_path.parent().unwrap_or_else(|| Path::new("."));
     let footprint_path = out_dir.join("resource.footprint.json");
-
-    #[cfg(target_os = "macos")]
-    let macos_vmmap_steady = crate::macos_vmmap::collect_macos_vmmap_summary_best_effort(
-        demo.child.id(),
-        out_dir,
-        "resource.vmmap_summary.steady.txt",
-    );
-    #[cfg(target_os = "macos")]
-    let macos_footprint_tool_steady =
-        crate::macos_footprint_tool::collect_macos_footprint_tool_best_effort(
-            demo.child.id(),
-            out_dir,
-            "resource.macos_footprint.steady.json",
-        );
-    #[cfg(target_os = "macos")]
-    let macos_vmmap_regions_sorted_steady =
-        crate::macos_vmmap::collect_macos_vmmap_regions_sorted_best_effort(
-            demo.child.id(),
-            out_dir,
-            "resource.vmmap_regions_sorted.steady.txt",
-            18,
-        );
+    let mut platform_footprint_attachments =
+        PlatformFootprintAttachments::collect_steady(demo.child.id(), out_dir);
 
     let _ = touch(exit_path);
-
-    #[cfg(target_os = "macos")]
-    let macos_vmmap = crate::macos_vmmap::collect_macos_vmmap_summary_best_effort(
-        demo.child.id(),
-        out_dir,
-        "resource.vmmap_summary.txt",
-    );
+    platform_footprint_attachments.collect_exit(demo.child.id(), out_dir);
 
     let deadline = Instant::now() + Duration::from_millis(20_000);
     while Instant::now() < deadline {
@@ -1718,31 +1777,7 @@ pub(crate) fn stop_launched_demo(
                     None
                 }
             });
-
-            #[cfg(target_os = "macos")]
-            if let Some(v) = macos_vmmap.as_ref()
-                && let Some(obj) = footprint.as_object_mut()
-            {
-                obj.insert("macos_vmmap".to_string(), v.clone());
-            }
-            #[cfg(target_os = "macos")]
-            if let Some(v) = macos_vmmap_steady.as_ref()
-                && let Some(obj) = footprint.as_object_mut()
-            {
-                obj.insert("macos_vmmap_steady".to_string(), v.clone());
-            }
-            #[cfg(target_os = "macos")]
-            if let Some(v) = macos_footprint_tool_steady.as_ref()
-                && let Some(obj) = footprint.as_object_mut()
-            {
-                obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
-            }
-            #[cfg(target_os = "macos")]
-            if let Some(v) = macos_vmmap_regions_sorted_steady.as_ref()
-                && let Some(obj) = footprint.as_object_mut()
-            {
-                obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
-            }
+            platform_footprint_attachments.attach_to(&mut footprint);
 
             let footprint = Some(footprint);
             if let Some(footprint) = &footprint {
@@ -1771,31 +1806,7 @@ pub(crate) fn stop_launched_demo(
             None
         }
     });
-
-    #[cfg(target_os = "macos")]
-    if let Some(v) = macos_vmmap.as_ref()
-        && let Some(obj) = footprint.as_object_mut()
-    {
-        obj.insert("macos_vmmap".to_string(), v.clone());
-    }
-    #[cfg(target_os = "macos")]
-    if let Some(v) = macos_vmmap_steady.as_ref()
-        && let Some(obj) = footprint.as_object_mut()
-    {
-        obj.insert("macos_vmmap_steady".to_string(), v.clone());
-    }
-    #[cfg(target_os = "macos")]
-    if let Some(v) = macos_footprint_tool_steady.as_ref()
-        && let Some(obj) = footprint.as_object_mut()
-    {
-        obj.insert("macos_footprint_tool_steady".to_string(), v.clone());
-    }
-    #[cfg(target_os = "macos")]
-    if let Some(v) = macos_vmmap_regions_sorted_steady.as_ref()
-        && let Some(obj) = footprint.as_object_mut()
-    {
-        obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
-    }
+    platform_footprint_attachments.attach_to(&mut footprint);
 
     let footprint = Some(footprint);
     if let Some(footprint) = &footprint {
