@@ -1,7 +1,7 @@
 # ImUi Edit Lifecycle Hardening v1 Milestones
 
 Status: active
-Last updated: 2026-04-24
+Last updated: 2026-04-25
 
 ## M0 - Baseline And Lane Start
 
@@ -36,7 +36,9 @@ Exit criteria:
 - Existing public runtime and authoring contracts remain stable unless explicitly justified.
 - Focused unit tests cover the changed behavior.
 
-Status: first private `DragValueCore` slice landed. Remaining M2 scope should stay open only for
+Status: first private `DragValueCore` slice landed. Retained node portal text/number editors now
+also share fixed input sizing and fixed control line-box policy through
+`M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md`. Remaining M2 scope should stay open only for
 additional concrete mismatches found by diagnostics or editor-control harnesses.
 
 ## M3 - Diagnostics Proof

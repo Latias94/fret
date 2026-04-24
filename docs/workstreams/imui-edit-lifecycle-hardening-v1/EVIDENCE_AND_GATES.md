@@ -1,7 +1,7 @@
 # ImUi Edit Lifecycle Hardening v1 Evidence And Gates
 
 Status: active gate list
-Last updated: 2026-04-24
+Last updated: 2026-04-25
 
 ## Smallest Repros
 
@@ -9,12 +9,16 @@ Last updated: 2026-04-24
 cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit
 cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges
 cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edges
+cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2
+cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2
+cargo check -p fret-node --features compat-retained-canvas --jobs 2
 cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
 cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo
 ```
 
-The first three commands are the focused lifecycle floor. The two diag suites keep the proof demos
-from drifting while this lane hardens value-edit behavior.
+The first three commands are the focused lifecycle floor. The `fret-node` commands cover retained
+portal editor input sizing policy. The two diag suites keep the proof demos from drifting while
+this lane hardens value-edit behavior.
 
 ## Required Gates
 
@@ -24,6 +28,9 @@ cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_aft
 cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges
 cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edges
 cargo check -p fret-examples
+cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2
+cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2
+cargo check -p fret-node --features compat-retained-canvas --jobs 2
 cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
 cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo
 python tools/check_workstream_catalog.py
@@ -45,6 +52,9 @@ git diff --check
 - `ecosystem/fret-ui-editor/src/controls/numeric_input.rs`
 - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
+- `ecosystem/fret-node/src/ui/editors/chrome.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_number.rs`
 - `ecosystem/fret-imui/src/tests/models_controls.rs`
 - `ecosystem/fret-imui/src/tests/models_text.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
@@ -82,4 +92,13 @@ cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --
 python tools/check_workstream_catalog.py
 python -m json.tool docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json
 git diff --check
+```
+
+Passed on 2026-04-25 for the retained node portal input sizing slice:
+
+```bash
+cargo fmt --package fret-node --check
+cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2
+cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2
+cargo check -p fret-node --features compat-retained-canvas --jobs 2
 ```

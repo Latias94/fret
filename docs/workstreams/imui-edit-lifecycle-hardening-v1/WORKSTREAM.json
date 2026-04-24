@@ -3,7 +3,7 @@
   "slug": "imui-edit-lifecycle-hardening-v1",
   "title": "ImUi Edit Lifecycle Hardening v1",
   "status": "active",
-  "updated": "2026-04-24",
+  "updated": "2026-04-25",
   "scope_kind": "execution",
   "follow_on_of": "imui-edit-lifecycle-diag-gate-v1",
   "problem": "The previous diagnostics follow-on proved the first edit lifecycle gates, but value-editing still needs a Dear ImGui-aligned hardening pass for slider, drag-value, and numeric/text entry session semantics. This lane owns private IMUI lifecycle internals, editor control proof, and diagnostics coverage without widening `crates/fret-ui`, `fret-authoring::Response`, or public `fret-imui` contracts by default.",
@@ -19,6 +19,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md"
     },
     {
       "role": "execution",
@@ -47,6 +51,9 @@
       "cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit",
       "cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges",
       "cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edges",
+      "cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2",
+      "cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2",
+      "cargo check -p fret-node --features compat-retained-canvas --jobs 2",
       "cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo",
       "cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo"
     ]
@@ -71,6 +78,18 @@
     {
       "name": "examples-check",
       "command": "cargo check -p fret-examples"
+    },
+    {
+      "name": "node-portal-input-unit",
+      "command": "cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2"
+    },
+    {
+      "name": "node-portal-button-stack-unit",
+      "command": "cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2"
+    },
+    {
+      "name": "node-portal-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas --jobs 2"
     },
     {
       "name": "response-lifecycle-suite",
@@ -106,6 +125,9 @@
     "ecosystem/fret-ui-editor/src/controls/numeric_input.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-node/src/ui/editors/chrome.rs",
+    "ecosystem/fret-node/src/ui/editors/portal_text.rs",
+    "ecosystem/fret-node/src/ui/editors/portal_number.rs",
     "ecosystem/fret-imui/src/tests/models_controls.rs",
     "ecosystem/fret-imui/src/tests/models_text.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
@@ -115,6 +137,7 @@
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md",

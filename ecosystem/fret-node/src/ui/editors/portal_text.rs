@@ -6,14 +6,17 @@ use fret_runtime::Model;
 use fret_ui::action::PressablePointerDownResult;
 use fret_ui::element::{
     ColumnProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, RowProps,
-    SizeStyle, TextInputProps, TextProps,
+    SizeStyle, TextProps,
 };
 use fret_ui::elements::ElementContext;
-use fret_ui::{TextInputStyle, ThemeSnapshot, UiHost};
+use fret_ui::{ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
 use crate::ops::GraphTransaction;
-use crate::ui::editors::chrome::{PortalSmallButtonUi, render_pressable_small_button};
+use crate::ui::editors::chrome::{
+    PORTAL_BUTTON_STACK_GAP, PortalSmallButtonUi, PortalTextInputUi, portal_button_stack_height,
+    portal_text_input_props, render_pressable_small_button,
+};
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
     PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
@@ -90,8 +93,9 @@ impl PortalTextEditor {
     ) -> Vec<fret_ui::element::AnyElement> {
         self.sync_session_for_graph(ecx.app, ecx.window, graph);
 
-        let ui = PortalTextEditorUi::from_theme(ecx.theme().snapshot());
-        let chrome = TextInputStyle::from_theme(ecx.theme().snapshot());
+        let theme = ecx.theme().snapshot();
+        let ui = PortalTextEditorUi::from_theme(theme.clone());
+        let input_ui = PortalTextInputUi::from_theme(theme);
 
         let desired_text = spec.initial_text(graph, node);
         let input_model = self.ensure_input_model(ecx.app, ecx.window, graph, node, spec);
@@ -151,14 +155,16 @@ impl PortalTextEditor {
                 row.layout.size.width = Length::Fill;
 
                 cx.row(row, |cx| {
-                    let mut props = TextInputProps::new(input_model.clone());
-                    props.chrome = chrome.clone();
-                    props.submit_command = Some(submit.clone());
-                    props.cancel_command = Some(cancel.clone());
-                    props.layout.size.width = Length::Fill;
+                    let props = portal_text_input_props(
+                        input_model.clone(),
+                        &input_ui,
+                        Some(submit.clone()),
+                        Some(cancel.clone()),
+                        portal_button_stack_height(&ui.stepper_button, 2),
+                    );
 
                     let mut btn_col = ColumnProps::default();
-                    btn_col.gap = Px(2.0).into();
+                    btn_col.gap = PORTAL_BUTTON_STACK_GAP.into();
                     btn_col.padding = Edges::all(Px(0.0)).into();
                     btn_col.layout.size.width = Length::Px(Px(ui.stepper_button.size));
 
@@ -242,11 +248,13 @@ impl PortalTextEditor {
                     ]
                 })
             } else {
-                let mut props = TextInputProps::new(input_model);
-                props.chrome = chrome;
-                props.submit_command = Some(submit);
-                props.cancel_command = Some(cancel);
-                props.layout.size.width = Length::Fill;
+                let props = portal_text_input_props(
+                    input_model,
+                    &input_ui,
+                    Some(submit),
+                    Some(cancel),
+                    input_ui.height,
+                );
                 cx.text_input(props)
             };
 
