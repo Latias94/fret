@@ -1,7 +1,89 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
-    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-palette" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-palette" }
+    },
+    { "type": "wait_frames", "n": 3 },
+    { "type": "type_text", "text": "Settings" },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "cmd.settings"
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": true
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" },
+      "timeout_frames": 300
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "settings.apply"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": false
+      },
+      "timeout_frames": 300
+    },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
@@ -11,18 +93,6 @@
       },
       "timeout_frames": 240
     },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }
-      },
-      "timeout_frames": 240
-    },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" } },
-    { "type": "wait_frames", "n": 2 },
-
     { "type": "press_key", "key": "f10" },
     { "type": "wait_frames", "n": 2 },
     {
@@ -33,7 +103,7 @@
       },
       "timeout_frames": 120
     },
-
+    { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "f" },
     { "type": "wait_frames", "n": 6 },
     {
@@ -51,8 +121,6 @@
         "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" }
       }
     },
-
     { "type": "capture_bundle", "label": "ui-gallery-menubar-active-mnemonic" }
   ]
 }
-
