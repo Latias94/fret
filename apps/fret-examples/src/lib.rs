@@ -521,6 +521,18 @@ mod authoring_surface_policy_tests {
     const IMUI_COLLECTION_SECOND_PROOF_SURFACE_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json"
     );
+    const IMUI_COLLECTION_HELPER_READINESS_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md");
+    const IMUI_COLLECTION_HELPER_READINESS_TODO: &str =
+        include_str!("../../../docs/workstreams/imui-collection-helper-readiness-v1/TODO.md");
+    const IMUI_COLLECTION_HELPER_READINESS_MILESTONES: &str =
+        include_str!("../../../docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md");
+    const IMUI_COLLECTION_HELPER_READINESS_EVIDENCE: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md"
+    );
+    const IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json"
+    );
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -4852,6 +4864,111 @@ mod authoring_surface_policy_tests {
             ),
             "the workstream index should not leave the second proof-surface lane as an empty placeholder"
         );
+    }
+
+    #[test]
+    fn immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on() {
+        for marker in [
+            "Status: active narrow audit lane",
+            "can fresh first-party evidence name an exact shared",
+            "No `fret-imui` facade widening.",
+            "No `fret-ui-kit::imui` public helper implementation until the audit names an exact helper.",
+            "both proof surfaces need the same helper shape",
+            "If no candidate passes, close this lane as another no-helper-widening verdict",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_DESIGN.contains(marker),
+                "the helper-readiness design should keep the audit boundary explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Create the helper-readiness follow-on instead of reopening the closed second proof-surface lane.",
+            "Compare the asset-browser grid and shell-mounted `Scene collection` outline for reusable helper pressure.",
+            "Classify each candidate seam as helper-ready, app-owned policy, recipe policy, or not worth extracting.",
+            "current evidence still says app-owned collection",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_TODO.contains(marker),
+                "the helper-readiness TODO should keep the current audit tasks explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "M0 - Lane Opened",
+            "Kept `imui-collection-second-proof-surface-v1` closed.",
+            "M1 - Candidate Seam Audit",
+            "M2 - Verdict Or Split",
+            "follow-on for one exact helper shape",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_MILESTONES.contains(marker),
+                "the helper-readiness milestones should keep the audit sequence explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "keep helper-readiness separate from helper implementation",
+            "Collection-first asset-browser proof",
+            "Shell-mounted `Scene collection` proof",
+            "immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on",
+            "Do not add a shared `collection(...)`, `collection_list(...)`, or `collection_commands(...)`",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_EVIDENCE.contains(marker),
+                "the helper-readiness evidence doc should keep gates and non-goals explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-collection-helper-readiness-v1\"",
+            "\"status\": \"active\"",
+            "\"scope_kind\": \"audit\"",
+            "\"follow_on_of\": \"imui-collection-second-proof-surface-v1\"",
+            "\"path\": \"docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
+            "collection-helper-readiness-source-policy",
+            "imui_editor_proof_demo",
+            "editor_notes_demo",
+            "\"default_action\": \"continue\"",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM.contains(marker),
+                "the helper-readiness workstream state should keep source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`",
+            "`docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`",
+            "`docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`",
+            "`docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`",
+            "`docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should list the helper-readiness lane: {marker}"
+            );
+            assert!(
+                ROADMAP_DOC.contains(marker),
+                "the roadmap should list the helper-readiness lane: {marker}"
+            );
+            assert!(
+                TODO_TRACKER_DOC.contains(marker),
+                "the todo tracker should list the helper-readiness lane: {marker}"
+            );
+        }
+
+        for marker in [
+            "Active narrow P1 collection helper-readiness audit lane:",
+            "compares the collection-first asset-browser grid with the shell-mounted `Scene collection`",
+            "blocks `fret-ui-kit::imui` helper widening until both proof surfaces need the same",
+        ] {
+            assert!(
+                WORKSTREAMS_INDEX_DOC.contains(marker),
+                "the workstream index should keep the helper-readiness scope explicit: {marker}"
+            );
+        }
     }
 
     #[test]

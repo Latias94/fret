@@ -123,6 +123,14 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`,
   `docs/workstreams/imui-collection-second-proof-surface-v1/EVIDENCE_AND_GATES.md`,
   plus `docs/workstreams/imui-collection-second-proof-surface-v1/WORKSTREAM.json`.
+- ImUi collection helper-readiness lane (active narrow P1 audit lane that starts after the second
+  proof-surface closeout and asks whether both collection proof surfaces need the same policy-light
+  shared helper before any `fret-ui-kit::imui` API widening):
+  `docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
   instead of widening `fret-authoring::Response` or `crates/fret-ui` again):

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "slug": "imui-collection-helper-readiness-v1",
+  "title": "ImUi Collection Helper Readiness v1",
+  "status": "active",
+  "updated": "2026-04-24",
+  "scope_kind": "audit",
+  "follow_on_of": "imui-collection-second-proof-surface-v1",
+  "problem": "The second collection proof surface now exists, but the closeout verdict kept shared helper widening closed because the asset-browser grid and shell-mounted Scene collection outline do not yet prove the same helper shape. This lane owns the narrow helper-readiness audit before any `fret-ui-kit::imui` public helper is designed or implemented.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-helper-readiness-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the two existing collection proof surfaces and the source-policy gate that keeps helper-readiness distinct from helper implementation.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_editor_proof_demo",
+      "cargo run -p fret-demo --bin editor_notes_demo",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on --no-fail-fast",
+      "cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test editor_notes_editor_rail_surface --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "collection-helper-readiness-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on --no-fail-fast"
+    },
+    {
+      "name": "collection-helper-readiness-proof-surfaces",
+      "command": "cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test editor_notes_editor_rail_surface --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "anchor-validate",
+      "command": "python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md",
+    "docs/workstreams/imui-collection-helper-readiness-v1/TODO.md",
+    "docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md",
+    "docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane only while the work remains a helper-readiness audit or a narrow API-shape proposal. If the audit names an exact helper, open a separate implementation slice before widening `fret-ui-kit::imui`; if it does not, close this lane with a no-helper-widening verdict."
+  }
+}

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 255
+- Dedicated directories: 256
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -296,6 +296,17 @@ Current source of truth for the in-tree immediate-mode stack:
     `workspace_shell_demo.rs` as supporting evidence, lands the first shell-mounted `Scene
     collection` surface in `editor_notes_demo.rs`, and closes on a no-helper-widening verdict
     because the two collection proof surfaces do not yet need the same shared helper.
+
+- Active narrow P1 collection helper-readiness audit lane:
+  - `docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`
+  - `docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`
+  - `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`
+  - `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`
+  - Scope: records the active helper-readiness follow-on after second proof-surface closeout,
+    compares the collection-first asset-browser grid with the shell-mounted `Scene collection`
+    outline, and blocks `fret-ui-kit::imui` helper widening until both proof surfaces need the same
+    policy-light helper shape.
 
 - Closed narrow P0 menu/tab policy-depth closeout record:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
@@ -701,6 +712,7 @@ Rule:
 - `docs/workstreams/imui-editor-proof-collection-modularization-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed demo-local collection module slice that keeps the host proof slim while broader command-package depth remains the next default non-multi-window follow-on)
 - `docs/workstreams/imui-collection-command-package-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the landed app-owned collection command-package slice; duplicate-selected plus explicit rename-trigger parity now close this folder while second-proof-surface pressure has moved through the closed follow-on)
 - `docs/workstreams/imui-collection-second-proof-surface-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the second shell-mounted collection proof surface after command-package closeout; `editor_notes_demo.rs` now carries the landed `Scene collection` surface with `workspace_shell_demo.rs` as supporting evidence, while the no-helper-widening verdict keeps shared collection helpers closed)
+- `docs/workstreams/imui-collection-helper-readiness-v1/` — first n/a, latest n/a, 4 markdown docs (active narrow audit lane for deciding whether the two existing collection proof surfaces need the same policy-light shared helper before any `fret-ui-kit::imui` widening)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)

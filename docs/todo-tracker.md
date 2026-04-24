@@ -372,6 +372,17 @@ It complements (but does not replace) ADRs:
   `workspace_shell_demo.rs` as supporting evidence, and closes on a no-helper-widening verdict
   because the second surface does not yet prove that both collection proof surfaces need the same
   shared helper.
+- Use `docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json` as the active audit
+  record for collection helper readiness:
+  `docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`, and
+  `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`.
+  Execution note:
+  this lane starts after the closed second proof-surface verdict, compares the collection-first
+  asset-browser grid with the shell-mounted `Scene collection` outline, and blocks
+  `fret-ui-kit::imui` helper widening until both proof surfaces need the same policy-light helper
+  shape.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the
