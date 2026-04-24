@@ -1,6 +1,6 @@
 # ImUi Collection Helper Readiness v1 - TODO
 
-Status: active narrow audit lane
+Status: closed closeout record
 Last updated: 2026-04-24
 
 - [x] Create the helper-readiness follow-on instead of reopening the closed second proof-surface lane.
@@ -9,7 +9,9 @@ Last updated: 2026-04-24
       Result: `M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md` records that the current shared pressure is vocabulary/test-id discipline, not a reusable helper contract.
 - [x] Classify each candidate seam as helper-ready, app-owned policy, recipe policy, or not worth extracting.
       Result: the M1 seam table rejects generic container/list/command/status helpers for now and keeps command semantics app-owned.
-- [ ] Decide whether to close with no-helper-widening or split a separate implementation follow-on.
+- [x] Decide whether to close with no-helper-widening or split a separate implementation follow-on.
+      Result: `CLOSEOUT_AUDIT_2026-04-24.md` closes this lane on a no-helper-widening verdict;
+      future implementation requires a different narrow follow-on with one exact helper shape.
 
 ## Current Bias
 

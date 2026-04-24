@@ -533,6 +533,9 @@ mod authoring_surface_policy_tests {
     const IMUI_COLLECTION_HELPER_READINESS_M1_AUDIT: &str = include_str!(
         "../../../docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md"
     );
+    const IMUI_COLLECTION_HELPER_READINESS_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-helper-readiness-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    );
     const IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json"
     );
@@ -4870,7 +4873,7 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on() {
+    fn immediate_mode_workstream_closes_the_p1_collection_helper_readiness_follow_on() {
         for marker in [
             "Status: active narrow audit lane",
             "can fresh first-party evidence name an exact shared",
@@ -4904,6 +4907,9 @@ mod authoring_surface_policy_tests {
             "Status: complete",
             "M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md",
             "M2 - Verdict Or Split",
+            "CLOSEOUT_AUDIT_2026-04-24.md",
+            "Status: complete",
+            "closes the lane with no helper widening",
             "follow-on for one exact helper shape",
         ] {
             assert!(
@@ -4916,9 +4922,10 @@ mod authoring_surface_policy_tests {
             "keep helper-readiness separate from helper implementation",
             "Collection-first asset-browser proof",
             "Shell-mounted `Scene collection` proof",
-            "immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on",
+            "immediate_mode_workstream_closes_the_p1_collection_helper_readiness_follow_on",
             "Do not add a shared `collection(...)`, `collection_list(...)`, or `collection_commands(...)`",
             "generic collection command helpers remain app-owned policy",
+            "`CLOSEOUT_AUDIT_2026-04-24.md` closes the lane on a no-helper-widening verdict.",
         ] {
             assert!(
                 IMUI_COLLECTION_HELPER_READINESS_EVIDENCE.contains(marker),
@@ -4944,16 +4951,17 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "\"slug\": \"imui-collection-helper-readiness-v1\"",
-            "\"status\": \"active\"",
-            "\"scope_kind\": \"audit\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
             "\"follow_on_of\": \"imui-collection-second-proof-surface-v1\"",
             "\"path\": \"docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md\"",
             "\"path\": \"docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-helper-readiness-v1/CLOSEOUT_AUDIT_2026-04-24.md\"",
             "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
-            "collection-helper-readiness-source-policy",
+            "collection-helper-readiness-closeout-source-policy",
             "imui_editor_proof_demo",
             "editor_notes_demo",
-            "\"default_action\": \"continue\"",
+            "\"default_action\": \"start_follow_on\"",
         ] {
             assert!(
                 IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM.contains(marker),
@@ -4965,6 +4973,7 @@ mod authoring_surface_policy_tests {
             "`docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`",
             "`docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`",
             "`docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`",
+            "`docs/workstreams/imui-collection-helper-readiness-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
             "`docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`",
             "`docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`",
         ] {
@@ -4983,13 +4992,26 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
-            "Active narrow P1 collection helper-readiness audit lane:",
-            "compares the collection-first asset-browser grid with the shell-mounted `Scene collection`",
-            "blocks `fret-ui-kit::imui` helper widening until both proof surfaces need the same",
+            "Closed narrow P1 collection helper-readiness closeout record:",
+            "records the closed helper-readiness follow-on after second proof-surface closeout",
+            "closes without `fret-ui-kit::imui` helper widening because both proof surfaces do",
         ] {
             assert!(
                 WORKSTREAMS_INDEX_DOC.contains(marker),
                 "the workstream index should keep the helper-readiness scope explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-collection-helper-readiness-v1` as a closed no-helper-widening verdict.",
+            "No public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API changed.",
+            "The overlap is stable evidence vocabulary and test-id discipline, not runtime/helper behavior.",
+            "Do not reopen this folder for generic collection helper implementation.",
+            "one exact helper shape",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_CLOSEOUT.contains(marker),
+                "the helper-readiness closeout should keep the no-helper-widening verdict explicit: {marker}"
             );
         }
     }

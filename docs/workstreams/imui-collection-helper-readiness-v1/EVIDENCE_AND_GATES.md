@@ -10,6 +10,7 @@ slipping into generic IMUI.
 - `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`
 - `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md`
+- `docs/workstreams/imui-collection-helper-readiness-v1/CLOSEOUT_AUDIT_2026-04-24.md`
 - `docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`
 - `docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
@@ -29,11 +30,11 @@ slipping into generic IMUI.
 2. Shell-mounted `Scene collection` proof
    - `cargo run -p fret-demo --bin editor_notes_demo`
 3. Source-policy gate
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on --no-fail-fast`
+   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_helper_readiness_follow_on --no-fail-fast`
 
 ## Focused Gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on --no-fail-fast`
+- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_helper_readiness_follow_on --no-fail-fast`
 - `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
@@ -55,3 +56,9 @@ slipping into generic IMUI.
 - generic collection command helpers remain app-owned policy,
 - selection summary text is not worth extracting yet,
 - stable collection test IDs are documentation/recipe guidance rather than a public helper API.
+
+## Closeout Result
+
+`CLOSEOUT_AUDIT_2026-04-24.md` closes the lane on a no-helper-widening verdict. Reopen pressure
+must move to a different narrow follow-on with one exact helper shape and proof that both current
+collection surfaces need it.

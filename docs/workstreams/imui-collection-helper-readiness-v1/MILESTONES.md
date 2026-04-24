@@ -1,6 +1,6 @@
 # ImUi Collection Helper Readiness v1 - Milestones
 
-Status: active narrow audit lane
+Status: closed closeout record
 Last updated: 2026-04-24
 
 ## M0 - Lane Opened
@@ -30,7 +30,10 @@ helper API.
 
 ## M2 - Verdict Or Split
 
-Status: planned
+Status: complete
 
 Goal: either close this lane with a no-helper-widening verdict or split a separate implementation
 follow-on for one exact helper shape.
+
+Result: `CLOSEOUT_AUDIT_2026-04-24.md` closes the lane with no helper widening. No implementation
+follow-on is justified from the current two proof surfaces.
