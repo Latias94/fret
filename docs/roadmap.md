@@ -175,6 +175,16 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
   `docs/workstreams/imui-editor-notes-draft-actions-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-editor-notes-draft-actions-v1/WORKSTREAM.json`.
+- ImUi TextField draft-buffer contract audit closeout record (closed narrow P1 audit lane that
+  keeps `TextField` preserved draft-buffer internals private until a future API-proof lane proves a
+  concrete external commit/discard contract):
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/DESIGN.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/TODO.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/MILESTONES.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/M1_DRAFT_BUFFER_CONTRACT_AUDIT_2026-04-24.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
   instead of widening `fret-authoring::Response` or `crates/fret-ui` again):

@@ -601,6 +601,29 @@ mod authoring_surface_policy_tests {
     const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-editor-notes-draft-actions-v1/WORKSTREAM.json"
     );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_DESIGN: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/DESIGN.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_TODO: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/TODO.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_MILESTONES: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/MILESTONES.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_EVIDENCE: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/EVIDENCE_AND_GATES.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/M1_DRAFT_BUFFER_CONTRACT_AUDIT_2026-04-24.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json"
+    );
+    const IMUI_TEXT_FIELD_RS: &str =
+        include_str!("../../../ecosystem/fret-ui-editor/src/controls/text_field.rs");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -5426,6 +5449,93 @@ mod authoring_surface_policy_tests {
                     || IMUI_EDITOR_NOTES_DRAFT_ACTIONS_MILESTONES.contains(marker)
                     || IMUI_EDITOR_NOTES_DRAFT_ACTIONS_EVIDENCE.contains(marker),
                 "the editor-notes draft-actions execution docs should record startup markers: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_closes_the_p1_textfield_draft_buffer_contract_audit() {
+        for marker in [
+            "Status: closed narrow P1 audit lane",
+            "whether Fret should expose a",
+            "Audit the current `TextField` buffered draft implementation.",
+            "No `TextFieldOptions` or `TextField` API changes.",
+            "No public model handles for the internal draft buffer.",
+            "Close with an explicit verdict on whether to expose a draft-buffer contract now",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_DESIGN.contains(marker),
+                "the TextField draft-buffer contract audit design should keep the audit scope explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-textfield-draft-buffer-contract-audit-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-editor-notes-draft-actions-v1\"",
+            "textfield-draft-buffer-contract-audit-source-policy",
+            "ecosystem/fret-ui-editor/src/controls/text_field.rs",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM.contains(marker),
+                "the TextField draft-buffer contract audit state should keep source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "The preserved draft buffer is an internal keyed local model.",
+            "draft = buffered.then(|| draft_model(cx))",
+            "Commit/cancel behavior is tied to internal focus/session state.",
+            "Do not expose a public `TextField` preserved draft-buffer API now.",
+            "A future API-proof lane must provide all of the following",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_M1_NOTE.contains(marker),
+                "the TextField draft-buffer M1 audit should keep the no-public-API finding explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-textfield-draft-buffer-contract-audit-v1` as a closed no-public-API verdict.",
+            "Do not expose a `TextField` preserved draft-buffer contract yet.",
+            "Public draft model handles from `TextFieldOptions`.",
+            "Generic app-facing commit/discard buttons wired into hidden `TextField` draft state.",
+            "Start a new API-proof lane only when a proof surface truly needs external preserved-draft commit/discard.",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_CLOSEOUT.contains(marker)
+                    || IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM.contains(marker),
+                "the TextField draft-buffer closeout should keep the closed verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String>",
+            "cx.local_model(String::new)",
+            "fn commit_buffered_text_field(",
+            "fn cancel_buffered_text_field(",
+            "TextFieldBlurBehavior::PreserveDraft => BufferedTextFieldPendingBlurPlan::Clear",
+            "install_buffered_text_field_blur_handler",
+        ] {
+            assert!(
+                IMUI_TEXT_FIELD_RS.contains(marker),
+                "TextField implementation should keep the audited internal draft-buffer mechanics visible: {marker}"
+            );
+        }
+
+        for marker in [
+            "- [x] Decide whether to expose a public draft-buffer API now.",
+            "## M1 - Draft Buffer Contract Audit",
+            "Status: complete",
+            "immediate_mode_workstream_closes_the_p1_textfield_draft_buffer_contract_audit",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_TODO.contains(marker)
+                    || IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_MILESTONES.contains(marker)
+                    || IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_EVIDENCE.contains(marker),
+                "the TextField draft-buffer audit execution docs should record closure markers: {marker}"
             );
         }
     }

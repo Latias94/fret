@@ -438,6 +438,17 @@ It complements (but does not replace) ADRs:
   this lane starts from the next-gap audit recommendation and adds local inspector action/status
   affordances without claiming access to the preserved `TextField` draft buffer or widening public
   IMUI/editor APIs.
+- Use `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json` as the
+  closed no-public-API verdict for `TextField` preserved draft-buffer contracts:
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/DESIGN.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/TODO.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/MILESTONES.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/M1_DRAFT_BUFFER_CONTRACT_AUDIT_2026-04-24.md`,
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`, and
+  `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/EVIDENCE_AND_GATES.md`.
+  Execution note:
+  this audit keeps preserved draft internals private and requires a future API-proof lane before
+  external commit/discard or draft model handles are admitted.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the
