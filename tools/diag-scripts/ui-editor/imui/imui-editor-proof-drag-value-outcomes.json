@@ -6,7 +6,8 @@
     "tags": ["ui_editor", "imui", "drag_value", "outcome", "commit", "cancel", "regression"],
     "target_hints": [
       "Uses the review-only editor inspector layout in imui_editor_proof_demo.",
-      "Proves DragValue exposes explicit commit/cancel outcomes plus shared clamp/step policy across scrub and typed-edit paths, including Escape cancel during an active scrub session."
+      "Proves DragValue exposes explicit commit/cancel outcomes plus shared clamp/step policy across scrub and typed-edit paths, including Escape cancel during an active scrub session.",
+      "The active scrub assertion is tied to the current ImGui-like dense preset: 0.035 scrub speed, 2px threshold, and 0.025 step quantization."
     ],
     "env_defaults": {
       "FRET_IMUI_EDITOR_PROOF_LAYOUT": "editor_review"
@@ -112,7 +113,7 @@
       "predicate": {
         "kind": "label_contains",
         "target": { "kind": "test_id", "id": "imui-editor-proof.editor.drag-value-demo.value" },
-        "text": "0.875"
+        "text": "0.725"
       },
       "timeout_frames": 240
     },

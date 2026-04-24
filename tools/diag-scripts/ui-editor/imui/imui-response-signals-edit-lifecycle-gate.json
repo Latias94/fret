@@ -1,0 +1,119 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-response-signals-edit-lifecycle-gate",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_editor", "imui", "response", "lifecycle", "slider", "text_input", "commit", "regression"],
+    "target_hints": [
+      "Uses imui_response_signals_demo as the proof/contract surface for ResponseExt lifecycle vocabulary.",
+      "Drives a real slider pointer edit and a text edit/blur cycle, then asserts the demo-level lifecycle counters through stable selectors."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-slider" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-slider-after-edit" },
+        "text": "slider after edit: 0"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text-report" },
+        "text": "text a/d/after: 0/0/0"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-slider" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.down" },
+      "timeout_frames": 120
+    },
+    { "type": "pointer_move", "delta_x": 140.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-slider-after-edit" },
+        "text": "slider after edit: 1"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+      "text": "typed"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "text": "typed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-button" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text-report" },
+        "text": "text a/d/after: 1/1/1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-report" },
+        "text": "text a/d/after=1/1/1"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-response-signals-edit-lifecycle-gate"
+    }
+  ]
+}

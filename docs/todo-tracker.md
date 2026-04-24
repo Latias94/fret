@@ -273,6 +273,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-response-status-lifecycle-v1/MILESTONES.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json`
+- Closed narrow P1 edit lifecycle diagnostics gate closeout record:
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/DESIGN.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/TODO.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/MILESTONES.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/WORKSTREAM.json`
 - Closed narrow IMUI control-chrome closeout record:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`
@@ -309,6 +316,9 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-response-status-lifecycle-v1/` as the closed closeout record for the
   first P0 `ResponseExt` lifecycle vocabulary slice; if future pressure shifts to key ownership or
   broader proof depth, start a narrower follow-on instead of widening this folder again.
+- Use `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` as the closed diagnostics follow-on for
+  the lifecycle proof gate and editor-proof script drift repair; future lifecycle breadth should
+  start a narrower lane rather than reopening the response-status closeout.
 - Use `docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json` as the closed closeout record
   for immediate key-owner surface work:
   the lane now keeps the M2 no-new-surface verdict explicit, preserves item-local shortcut

@@ -196,17 +196,45 @@ impl View for ImUiResponseSignalsView {
                 "lifecycle: button a/d={lifecycle_button_activations_value}/{lifecycle_button_deactivations_value} checkbox edit/after={lifecycle_checkbox_edits_value}/{lifecycle_checkbox_after_edit_value} slider edit/after={lifecycle_slider_edits_value}/{lifecycle_slider_after_edit_value} text a/d/after={lifecycle_text_activations_value}/{lifecycle_text_deactivations_value}/{lifecycle_text_after_edit_value}"
             ))
             .text_sm()
-            .font_medium();
+            .font_medium()
+            .test_id("imui-resp-demo.lifecycle-report");
             ui.add_ui(lifecycle_report);
 
             let lifecycle_more_report = fret_ui_kit::ui::text(format!(
                 "more lifecycle: menu a/d={lifecycle_menu_activations_value}/{lifecycle_menu_deactivations_value} combo a/d={lifecycle_combo_activations_value}/{lifecycle_combo_deactivations_value} combo_model edit/after={lifecycle_combo_model_edits_value}/{lifecycle_combo_model_after_edit_value}"
             ))
             .text_sm()
-            .font_medium();
+            .font_medium()
+            .test_id("imui-resp-demo.lifecycle-more-report");
             ui.add_ui(lifecycle_more_report);
 
-            let lifecycle_button = ui.button("Lifecycle button (hold and release)");
+            ui.add_ui(
+                fret_ui_kit::ui::text(format!("slider edits: {lifecycle_slider_edits_value}"))
+                    .text_xs()
+                    .test_id("imui-resp-demo.lifecycle-slider-edits"),
+            );
+            ui.add_ui(
+                fret_ui_kit::ui::text(format!(
+                    "slider after edit: {lifecycle_slider_after_edit_value}"
+                ))
+                .text_xs()
+                .test_id("imui-resp-demo.lifecycle-slider-after-edit"),
+            );
+            ui.add_ui(
+                fret_ui_kit::ui::text(format!(
+                    "text a/d/after: {lifecycle_text_activations_value}/{lifecycle_text_deactivations_value}/{lifecycle_text_after_edit_value}"
+                ))
+                .text_xs()
+                .test_id("imui-resp-demo.lifecycle-text-report"),
+            );
+
+            let lifecycle_button = ui.button_with_options(
+                "Lifecycle button (hold and release)",
+                kit::ButtonOptions {
+                    test_id: Some(Arc::from("imui-resp-demo.lifecycle-button")),
+                    ..Default::default()
+                },
+            );
             if lifecycle_button.activated() {
                 let _ = lifecycle_button_activations
                     .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
@@ -234,6 +262,7 @@ impl View for ImUiResponseSignalsView {
                     min: 0.0,
                     max: 100.0,
                     step: 1.0,
+                    test_id: Some(Arc::from("imui-resp-demo.lifecycle-slider")),
                     ..Default::default()
                 },
             );
@@ -250,6 +279,7 @@ impl View for ImUiResponseSignalsView {
                 lifecycle_text_value.model(),
                 kit::InputTextOptions {
                     placeholder: Some(Arc::from("Focus, type, and blur")),
+                    test_id: Some(Arc::from("imui-resp-demo.lifecycle-text")),
                     ..Default::default()
                 },
             );
@@ -343,7 +373,8 @@ impl View for ImUiResponseSignalsView {
                     .as_deref()
                     .unwrap_or("none")
             ))
-            .text_xs();
+            .text_xs()
+            .test_id("imui-resp-demo.lifecycle-values");
             ui.add_ui(lifecycle_details);
 
             ui.separator();

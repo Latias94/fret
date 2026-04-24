@@ -33,7 +33,7 @@ use fret_ui_editor::composites::{
     PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
-    Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOutcome,
+    Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOptions, DragValueOutcome,
     EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
     FieldStatusBadge, NumericInput, NumericInputOptions, NumericPresentation, NumericValidateFn,
     NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
@@ -113,6 +113,34 @@ fn authoring_parity_blend_slider_options(
     }
 }
 
+fn authoring_parity_drag_value_options(
+    presentation: &NumericPresentation<f64>,
+    id_source: &'static str,
+    test_id: &'static str,
+) -> DragValueOptions {
+    DragValueOptions {
+        id_source: Some(Arc::from(id_source)),
+        test_id: Some(Arc::from(test_id)),
+        prefix: presentation.chrome_prefix().cloned(),
+        suffix: presentation.chrome_suffix().cloned(),
+        ..Default::default()
+    }
+}
+
+fn authoring_parity_numeric_input_options(
+    presentation: &NumericPresentation<f64>,
+    id_source: &'static str,
+    test_id: &'static str,
+) -> NumericInputOptions {
+    NumericInputOptions {
+        id_source: Some(Arc::from(id_source)),
+        test_id: Some(Arc::from(test_id)),
+        prefix: presentation.chrome_prefix().cloned(),
+        suffix: presentation.chrome_suffix().cloned(),
+        ..Default::default()
+    }
+}
+
 fn editor_fixed_decimals_presentation() -> NumericPresentation<f64> {
     NumericPresentation::fixed_decimals(3)
 }
@@ -149,8 +177,8 @@ fn authoring_parity_blend_presentation() -> NumericPresentation<f64> {
 
 fn edit_session_outcome_label(outcome: EditSessionOutcome) -> &'static str {
     match outcome {
-        EditSessionOutcome::Committed => "Commit",
-        EditSessionOutcome::Canceled => "Cancel",
+        EditSessionOutcome::Committed => "Committed",
+        EditSessionOutcome::Canceled => "Canceled",
     }
 }
 
@@ -440,14 +468,26 @@ fn editor_text_field_readout(
     committed_model: &Model<String>,
     outcome_model: &Model<String>,
 ) -> EditorTextFieldReadout {
-    cx.data()
-        .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
-            EditorTextFieldReadout { committed, outcome }
-        })
+    cx.keyed(
+        (
+            "imui-editor-proof.editor-text-field-readout",
+            committed_model.id(),
+            outcome_model.id(),
+        ),
+        |cx| {
+            cx.data()
+                .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
+                    EditorTextFieldReadout { committed, outcome }
+                })
+        },
+    )
 }
 
 fn editor_string_model_readout(cx: &mut AppComponentCx<'_>, model: &Model<String>) -> String {
-    cx.data().selector_model_paint(model, |value| value)
+    cx.keyed(
+        ("imui-editor-proof.string-model-readout", model.id()),
+        |cx| cx.data().selector_model_paint(model, |value| value),
+    )
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -2660,15 +2700,11 @@ fn render_authoring_parity_declarative_group(
                                     drag_value_model.clone(),
                                     value_presentation.clone(),
                                 )
-                                .options(fret_ui_editor::controls::DragValueOptions {
-                                    id_source: Some(Arc::from(
-                                        "authoring-parity.declarative.drag-value",
-                                    )),
-                                    test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.value",
-                                    )),
-                                    ..Default::default()
-                                })
+                                .options(authoring_parity_drag_value_options(
+                                    &value_presentation,
+                                    "authoring-parity.declarative.drag-value",
+                                    "imui-editor-proof.authoring.declarative.value",
+                                ))
                                 .into_element(cx)
                             },
                             |_cx| None,
@@ -2683,15 +2719,11 @@ fn render_authoring_parity_declarative_group(
                                     numeric_input_model.clone(),
                                     value_presentation.clone(),
                                 )
-                                .options(NumericInputOptions {
-                                    id_source: Some(Arc::from(
-                                        "authoring-parity.declarative.numeric-input",
-                                    )),
-                                    test_id: Some(Arc::from(
-                                        "imui-editor-proof.authoring.declarative.numeric",
-                                    )),
-                                    ..Default::default()
-                                })
+                                .options(authoring_parity_numeric_input_options(
+                                    &value_presentation,
+                                    "authoring-parity.declarative.numeric-input",
+                                    "imui-editor-proof.authoring.declarative.numeric",
+                                ))
                                 .into_element(cx)
                             },
                             |_cx| None,
@@ -2857,23 +2889,18 @@ fn render_authoring_parity_imui_group(
                             |cx| {
                                 let value_presentation = value_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
+                                    let options = authoring_parity_drag_value_options(
+                                        &value_presentation,
+                                        "authoring-parity.imui.drag-value",
+                                        "imui-editor-proof.authoring.imui.value",
+                                    );
                                     editor_imui::drag_value(
                                         ui,
                                         DragValue::from_presentation(
                                             drag_value_model.clone(),
                                             value_presentation.clone(),
                                         )
-                                        .options(
-                                            fret_ui_editor::controls::DragValueOptions {
-                                                id_source: Some(Arc::from(
-                                                    "authoring-parity.imui.drag-value",
-                                                )),
-                                                test_id: Some(Arc::from(
-                                                    "imui-editor-proof.authoring.imui.value",
-                                                )),
-                                                ..Default::default()
-                                            },
-                                        ),
+                                        .options(options),
                                     );
                                 })
                                 .into_element(cx)
@@ -2887,23 +2914,18 @@ fn render_authoring_parity_imui_group(
                             |cx| {
                                 let value_presentation = value_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
+                                    let options = authoring_parity_numeric_input_options(
+                                        &value_presentation,
+                                        "authoring-parity.imui.numeric-input",
+                                        "imui-editor-proof.authoring.imui.numeric",
+                                    );
                                     editor_imui::numeric_input(
                                         ui,
                                         NumericInput::from_presentation(
                                             numeric_input_model.clone(),
                                             value_presentation.clone(),
                                         )
-                                        .options(
-                                            NumericInputOptions {
-                                                id_source: Some(Arc::from(
-                                                    "authoring-parity.imui.numeric-input",
-                                                )),
-                                                test_id: Some(Arc::from(
-                                                    "imui-editor-proof.authoring.imui.numeric",
-                                                )),
-                                                ..Default::default()
-                                            },
-                                        ),
+                                        .options(options),
                                     );
                                 })
                                 .into_element(cx)
@@ -4265,6 +4287,42 @@ mod tests {
     }
 
     #[test]
+    fn authoring_parity_value_options_preserve_presentation_chrome() {
+        let presentation = authoring_parity_value_presentation();
+        let drag = authoring_parity_drag_value_options(
+            &presentation,
+            "authoring-parity.declarative.drag-value",
+            "imui-editor-proof.authoring.declarative.value",
+        );
+        assert_eq!(drag.prefix.as_deref(), Some("$"));
+        assert_eq!(drag.suffix.as_deref(), Some("ms"));
+        assert_eq!(
+            drag.id_source.as_deref(),
+            Some("authoring-parity.declarative.drag-value")
+        );
+        assert_eq!(
+            drag.test_id.as_deref(),
+            Some("imui-editor-proof.authoring.declarative.value")
+        );
+
+        let input = authoring_parity_numeric_input_options(
+            &presentation,
+            "authoring-parity.declarative.numeric-input",
+            "imui-editor-proof.authoring.declarative.numeric",
+        );
+        assert_eq!(input.prefix.as_deref(), Some("$"));
+        assert_eq!(input.suffix.as_deref(), Some("ms"));
+        assert_eq!(
+            input.id_source.as_deref(),
+            Some("authoring-parity.declarative.numeric-input")
+        );
+        assert_eq!(
+            input.test_id.as_deref(),
+            Some("imui-editor-proof.authoring.declarative.numeric")
+        );
+    }
+
+    #[test]
     fn advanced_transform_proof_uses_heterogeneous_numeric_presentations() {
         let position = editor_position_presentation();
         let rotation = editor_rotation_presentation();
@@ -4296,6 +4354,26 @@ mod tests {
         assert_eq!(committed_char_count_label(""), "0 chars");
         assert_eq!(committed_char_count_label("a"), "1 char");
         assert_eq!(committed_char_count_label("abc"), "3 chars");
+    }
+
+    #[test]
+    fn edit_session_outcome_labels_separate_state_from_compact_action() {
+        assert_eq!(
+            edit_session_outcome_label(EditSessionOutcome::Committed),
+            "Committed"
+        );
+        assert_eq!(
+            edit_session_outcome_label(EditSessionOutcome::Canceled),
+            "Canceled"
+        );
+        assert_eq!(
+            compact_edit_session_outcome_label(EditSessionOutcome::Committed),
+            "Commit"
+        );
+        assert_eq!(
+            compact_edit_session_outcome_label(EditSessionOutcome::Canceled),
+            "Cancel"
+        );
     }
 
     #[test]

@@ -223,6 +223,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md`,
   `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`, and
   `docs/workstreams/imui-response-status-lifecycle-v1/EVIDENCE_AND_GATES.md`.
+- ImUi edit lifecycle diagnostics gate closeout record (closed narrow P1 follow-on that promotes
+  `imui_response_signals_demo` lifecycle counters plus editor-proof drag/text/numeric outcomes
+  into matching `fretboard diag` suites without widening public IMUI or runtime contracts):
+  `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/DESIGN.md`,
+  `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`.
 - ImUi key-owner surface closeout record (closed narrow P0 lane that audited the remaining
   immediate key-owner / item-local shortcut ownership gap after focused `activate_shortcut`
   coverage and command metadata seams landed, then closed on a no-new-surface verdict until

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 264
+- Dedicated directories: 265
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -489,6 +489,17 @@ Current source of truth for the in-tree immediate-mode stack:
     menu items, boolean controls, slider, input text, textarea, combo, and combo-model helpers all
     gained focused proof without widening `fret-authoring::Response` or `crates/fret-ui`.
 
+- Closed narrow P1 edit lifecycle diagnostics gate follow-on:
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/DESIGN.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/TODO.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/MILESTONES.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - Scope: records the promoted edit lifecycle diag gates and the demo-local proof fixes required
+    to keep `imui_response_signals_demo` and `imui_editor_proof_demo` aligned with current
+    behavior.
+
 - Closed narrow IMUI control-chrome closeout record:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`
@@ -839,6 +850,7 @@ Rule:
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)
+- `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on for promoted edit lifecycle gates and editor-proof script drift repair)
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)
