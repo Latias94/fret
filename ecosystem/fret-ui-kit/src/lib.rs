@@ -438,6 +438,7 @@ mod source_policy_tests {
     const DECLARATIVE_VISUALLY_HIDDEN_RS: &str = include_str!("declarative/visually_hidden.rs");
     const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
+    const IMUI_FACADE_SUPPORT_RS: &str = include_str!("imui/facade_support.rs");
     const PRIMITIVES_DISMISSABLE_LAYER_RS: &str = include_str!("primitives/dismissable_layer.rs");
     const PRIMITIVES_ALERT_DIALOG_RS: &str = include_str!("primitives/alert_dialog.rs");
     const PRIMITIVES_DIALOG_RS: &str = include_str!("primitives/dialog.rs");
@@ -540,12 +541,13 @@ mod source_policy_tests {
     fn child_pipeline_stays_on_unified_component_conversion_trait() {
         assert!(!UI_RS.contains("trait UiChildIntoElement"));
         assert!(!IMUI_RS.contains("UiChildIntoElement"));
+        assert!(!IMUI_FACADE_SUPPORT_RS.contains("UiChildIntoElement"));
         assert!(UI_RS.contains("I::Item: IntoUiElement<H>"));
         assert!(UI_RS.contains("crate::land_child(cx, child)"));
         assert!(
             LIB_RS.contains("crate::ui_builder::IntoUiElement::into_element(child, cx.elements())")
         );
-        assert!(IMUI_RS.contains("B: IntoUiElement<H>"));
+        assert!(IMUI_FACADE_SUPPORT_RS.contains("B: IntoUiElement<H>"));
     }
 
     #[test]

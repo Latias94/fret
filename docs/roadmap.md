@@ -31,6 +31,12 @@ Tracker highlights:
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
+- ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
+  converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
+  controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):
+  `docs/workstreams/imui-item-behavior-kernel-v1/DESIGN.md`,
+  `docs/workstreams/imui-item-behavior-kernel-v1/M3_SELECTABLE_COMBO_CLOSEOUT_2026-04-24.md`, and
+  `docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`.
 - ImUi child-region depth closeout record (closed narrow P1 lane that landed the bounded
   `ChildRegionChrome::{Framed, Bare}` slice and froze that resize / auto-resize /
   focus-boundary posture still do not belong in generic `child_region` on current first-party

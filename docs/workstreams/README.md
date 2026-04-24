@@ -126,6 +126,21 @@ Current source of truth for the in-tree immediate-mode stack:
     review, and implementation-heavy work should stay in narrower follow-ons or the active docking
     parity lane.
 
+- Closed narrow P1 item-behavior kernel follow-on:
+  - `docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/DESIGN.md`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/M0_M2_KERNEL_SLICE_2026-04-24.md`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/M3_SELECTABLE_COMBO_CLOSEOUT_2026-04-24.md`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/TODO.md`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/MILESTONES.md`
+  - `docs/workstreams/imui-item-behavior-kernel-v1/EVIDENCE_AND_GATES.md`
+  - Scope: closed after the fearless private `fret-ui-kit::imui` full pressable item-behavior
+    kernel migrated button, checkbox/radio, selectable, and combo trigger behavior with obsolete
+    family-local paths deleted instead of preserved as compatibility fallback; switch/menu/tab
+    active-only cleanup, menu/tab policy, slider editing, public `fret-imui` widening, and runtime
+    contracts must start as narrower follow-ons or ADR work instead of reopening this lane.
+
 - Closed narrow P1 child-region depth closeout record:
   - `docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
@@ -647,7 +662,6 @@ Rule:
 - `docs/workstreams/a11y-range-semantics-fearless-refactor-v1/` — first 2026-02-23, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/a11y-semantics-closure-v1/` — first 2026-02-23, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-16, 50 markdown docs
-- `docs/workstreams/action-payload-surface-dedup-v1/` — first n/a, latest n/a, 0 markdown docs
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/` — first 2026-03-17, latest 2026-03-17, 8 markdown docs
 - `docs/workstreams/adaptive-layout-contract-closure-v1/` — first 2026-04-10, latest 2026-04-10, 13 markdown docs
 - `docs/workstreams/adaptive-presentation-surface-v1/` — first 2026-04-11, latest 2026-04-11, 8 markdown docs
@@ -783,6 +797,7 @@ Rule:
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
+- `docs/workstreams/imui-item-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private item-behavior kernel follow-on that migrated full pressable behavior for button, checkbox/radio, selectable, and combo trigger controls without widening `fret-imui` or runtime contracts by default)
 - `docs/workstreams/imui-key-owner-surface-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the immediate key-owner / item-local shortcut ownership verdict above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the shipped generic menu/submenu floor and no-new-generic-surface verdict above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the canonical helper naming cleanup after the additive trigger-response lane landed)

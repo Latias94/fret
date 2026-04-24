@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "slug": "imui-item-behavior-kernel-v1",
+  "title": "ImUi Item Behavior Kernel v1",
+  "status": "closed",
+  "updated": "2026-04-24",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-facade-internal-modularization-v1",
+  "problem": "`ecosystem/fret-ui-kit::imui` had repeated full pressable item behavior spread across button, boolean, selectable, and combo trigger families after facade modularization and shared control chrome landed. This lane owned the fearless internal rewrite that converged that behavior into one private kernel without preserving obsolete duplicate paths or widening `fret-imui`, `fret-ui`, or runtime contracts.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/M0_M2_KERNEL_SLICE_2026-04-24.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/M3_SELECTABLE_COMBO_CLOSEOUT_2026-04-24.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use the crate audit, current first-party immediate-mode proof demos, and focused `fret-ui-kit` / `fret-imui` tests to prove the private behavior kernel preserves shipped behavior while deleting obsolete family-local duplication.",
+    "commands": [
+      "cargo check -p fret-ui-kit --features imui",
+      "python3 tools/audit_crate.py --crate fret-ui-kit",
+      "cargo nextest run -p fret-imui --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_combo_smoke --test imui_button_smoke --test imui_response_contract_smoke --no-fail-fast",
+      "cargo build -p fret-demo --bin imui_interaction_showcase_demo",
+      "cargo build -p fret-demo --bin imui_editor_proof_demo"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format",
+      "command": "cargo fmt --package fret-ui-kit"
+    },
+    {
+      "name": "imui-kit-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "fret-ui-kit-audit",
+      "command": "python3 tools/audit_crate.py --crate fret-ui-kit"
+    },
+    {
+      "name": "imui-public-facade-floor",
+      "command": "cargo nextest run -p fret-imui --no-fail-fast"
+    },
+    {
+      "name": "imui-kit-focused-floor",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_combo_smoke --test imui_button_smoke --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui-kit-full",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --no-fail-fast"
+    },
+    {
+      "name": "interaction-showcase-build",
+      "command": "cargo build -p fret-demo --bin imui_interaction_showcase_demo"
+    },
+    {
+      "name": "editor-proof-build",
+      "command": "cargo build -p fret-demo --bin imui_editor_proof_demo"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-item-behavior-kernel-v1/DESIGN.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/M0_M2_KERNEL_SLICE_2026-04-24.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/M3_SELECTABLE_COMBO_CLOSEOUT_2026-04-24.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/TODO.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/MILESTONES.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-facade-internal-modularization-v1/CLOSEOUT_AUDIT_2026-04-21.md",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md",
+    "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/item_behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime",
+    "ecosystem/fret-ui-kit/src/imui/response",
+    "ecosystem/fret-ui-kit/src/lib.rs",
+    "ecosystem/fret-imui/src/tests",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "repo-ref/imgui/imgui.cpp"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This full pressable item behavior kernel lane is closed after button, checkbox/radio, selectable, and combo trigger migration. Start a narrower follow-on for active-only trigger response cleanup, menu/tab policy, slider value editing, public API widening, or runtime mechanism changes."
+  }
+}
