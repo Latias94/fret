@@ -39,6 +39,8 @@ const TEST_ID_NAME: &str = "editor-notes-demo.inspector.name";
 const TEST_ID_NOTES: &str = "editor-notes-demo.inspector.notes";
 const TEST_ID_NOTES_COMMITTED: &str = "editor-notes-demo.inspector.notes.committed";
 const TEST_ID_NOTES_OUTCOME: &str = "editor-notes-demo.inspector.notes.outcome";
+const TEST_ID_SUMMARY_COMMAND: &str = "editor-notes-demo.inspector.summary-command";
+const TEST_ID_SUMMARY_STATUS: &str = "editor-notes-demo.inspector.summary-status";
 
 pub(crate) mod act {
     fret::actions!([
@@ -66,6 +68,7 @@ pub(crate) struct EditorAssetState {
     pub(crate) name_model: Model<String>,
     pub(crate) notes_model: Model<String>,
     pub(crate) notes_outcome_model: Model<String>,
+    pub(crate) summary_status_model: Model<String>,
 }
 
 struct EditorNotesDemoView {
@@ -119,14 +122,18 @@ impl View for EditorNotesDemoView {
         let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = self.asset(selected).clone();
-        let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(
-            (
-                &asset.name_model,
-                &asset.notes_model,
-                &asset.notes_outcome_model,
-            ),
-            |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
-        );
+        let (name_value, committed_notes, notes_outcome, summary_status) =
+            cx.data().selector_model_paint(
+                (
+                    &asset.name_model,
+                    &asset.notes_model,
+                    &asset.notes_outcome_model,
+                    &asset.summary_status_model,
+                ),
+                |(name, committed_notes, notes_outcome, summary_status)| {
+                    (name, committed_notes, notes_outcome, summary_status)
+                },
+            );
 
         let selection_panel = render_selection_panel(cx, selected);
 
@@ -144,6 +151,7 @@ impl View for EditorNotesDemoView {
             asset,
             committed_line_count_label(&committed_notes),
             notes_outcome,
+            summary_status,
         );
         let left_rail = ui::container(|_cx| [selection_panel])
             .w_px(Px(256.0))
@@ -241,7 +249,14 @@ fn make_asset_state(
         name_model: app.models_mut().insert(name.to_string()),
         notes_model: app.models_mut().insert(notes.to_string()),
         notes_outcome_model: app.models_mut().insert("Idle".to_string()),
+        summary_status_model: app
+            .models_mut()
+            .insert(format!("Ready to copy summary for {title}.")),
     }
+}
+
+fn editor_asset_summary_command_status(asset: &EditorAssetState) -> String {
+    format!("Copied summary: {} · {}", asset.title, asset.subtitle)
 }
 
 fn selection_button<'a, Cx>(
@@ -518,6 +533,7 @@ pub(crate) fn render_inspector_panel<'a, Cx>(
     asset: EditorAssetState,
     committed_label: String,
     outcome_label: String,
+    summary_status: String,
 ) -> AnyElement
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
@@ -525,6 +541,8 @@ where
     let subtitle = asset.subtitle.clone();
     let title = asset.title.clone();
     let notes_outcome_model = asset.notes_outcome_model.clone();
+    let summary_status_model = asset.summary_status_model.clone();
+    let summary_status_next = editor_asset_summary_command_status(&asset);
 
     InspectorPanel::new(None)
         .options(InspectorPanelOptions {
@@ -646,6 +664,47 @@ where
                                         |cx| {
                                             cx.text(outcome_label.clone())
                                                 .test_id(TEST_ID_NOTES_OUTCOME)
+                                        },
+                                        |_cx| None,
+                                    ));
+
+                                    rows.push(row_cx.row_with(
+                                        cx,
+                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        |cx| cx.text("Summary command"),
+                                        |cx| {
+                                            shadcn::Button::new("Copy asset summary")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .on_activate(fret_ui_kit::on_activate({
+                                                    let summary_status_model =
+                                                        summary_status_model.clone();
+                                                    let summary_status_next =
+                                                        summary_status_next.clone();
+                                                    move |host, action_cx, _reason| {
+                                                        let _ = host.models_mut().update(
+                                                            &summary_status_model,
+                                                            |text: &mut String| {
+                                                                *text = summary_status_next.clone();
+                                                            },
+                                                        );
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                }))
+                                                .test_id(TEST_ID_SUMMARY_COMMAND)
+                                                .ui()
+                                                .into_element_in(cx)
+                                        },
+                                        |_cx| None,
+                                    ));
+
+                                    rows.push(row_cx.row_with(
+                                        cx,
+                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        |cx| cx.text("Summary status"),
+                                        |cx| {
+                                            cx.text(summary_status.clone())
+                                                .test_id(TEST_ID_SUMMARY_STATUS)
                                         },
                                         |_cx| None,
                                     ));

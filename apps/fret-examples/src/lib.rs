@@ -539,6 +539,17 @@ mod authoring_surface_policy_tests {
     const IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json"
     );
+    const IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-editor-notes-inspector-command-v1/DESIGN.md");
+    const IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md"
+    );
+    const IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    );
+    const IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json"
+    );
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -5012,6 +5023,81 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_COLLECTION_HELPER_READINESS_CLOSEOUT.contains(marker),
                 "the helper-readiness closeout should keep the no-helper-widening verdict explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_closes_the_p1_editor_notes_inspector_command_follow_on() {
+        for marker in [
+            "Status: active narrow P1 lane",
+            "deepen app-owned editor-grade behavior in an existing",
+            "Add one explicit inspector-local command affordance to `editor_notes_demo.rs`.",
+            "No generic command palette or command bus.",
+            "No platform clipboard integration.",
+            "Add a `Copy asset summary` inspector command",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_DESIGN.contains(marker),
+                "the editor-notes inspector command design should keep the app-owned scope explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-editor-notes-inspector-command-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-collection-helper-readiness-v1\"",
+            "\"path\": \"docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md\"",
+            "\"path\": \"docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md\"",
+            "editor-notes-inspector-command-closeout-source-policy",
+            "editor_notes_demo",
+            "editor_notes_editor_rail_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_WORKSTREAM.contains(marker),
+                "the editor-notes inspector command lane state should keep source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`editor_notes_demo.rs` now carries one inspector-local command/status loop:",
+            "`Copy asset summary` is rendered inside the existing `InspectorPanel` / `PropertyGrid` surface.",
+            "The command updates an app-owned summary status model for the selected asset.",
+            "no generic command palette",
+            "no platform clipboard integration",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_M1_NOTE.contains(marker),
+                "the editor-notes inspector command M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "const TEST_ID_SUMMARY_COMMAND: &str = \"editor-notes-demo.inspector.summary-command\";",
+            "const TEST_ID_SUMMARY_STATUS: &str = \"editor-notes-demo.inspector.summary-status\";",
+            "fn editor_asset_summary_command_status(",
+            "summary_status_model: Model<String>",
+            "shadcn::Button::new(\"Copy asset summary\")",
+            ".test_id(TEST_ID_SUMMARY_COMMAND)",
+            ".test_id(TEST_ID_SUMMARY_STATUS)",
+        ] {
+            assert!(
+                EDITOR_NOTES_DEMO.contains(marker),
+                "editor_notes_demo should keep the inspector-local command/status slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-editor-notes-inspector-command-v1` as a closed app-owned inspector command proof.",
+            "The first `Copy asset summary` slice is coherent enough to close the lane",
+            "Do not reopen this folder for generic command, clipboard, inspector, or IMUI helper implementation.",
+            "the exact app-owned editor behavior still missing",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_CLOSEOUT.contains(marker),
+                "the editor-notes inspector command closeout should keep the closed app-owned verdict explicit: {marker}"
             );
         }
     }

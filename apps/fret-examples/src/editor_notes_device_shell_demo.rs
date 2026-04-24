@@ -71,14 +71,18 @@ impl View for EditorNotesDeviceShellDemoView {
         let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = editor_notes_demo::editor_asset_for_selection(&self.assets, selected).clone();
-        let (name_value, committed_notes, notes_outcome) = cx.data().selector_model_paint(
-            (
-                &asset.name_model,
-                &asset.notes_model,
-                &asset.notes_outcome_model,
-            ),
-            |(name, committed_notes, notes_outcome)| (name, committed_notes, notes_outcome),
-        );
+        let (name_value, committed_notes, notes_outcome, summary_status) =
+            cx.data().selector_model_paint(
+                (
+                    &asset.name_model,
+                    &asset.notes_model,
+                    &asset.notes_outcome_model,
+                    &asset.summary_status_model,
+                ),
+                |(name, committed_notes, notes_outcome, summary_status)| {
+                    (name, committed_notes, notes_outcome, summary_status)
+                },
+            );
         let committed_label = editor_notes_demo::committed_line_count_label(&committed_notes);
         let desktop_background = theme.color_token("background");
 
@@ -87,12 +91,14 @@ impl View for EditorNotesDeviceShellDemoView {
         let desktop_committed_notes = committed_notes.clone();
         let desktop_notes_outcome = notes_outcome.clone();
         let desktop_committed_label = committed_label.clone();
+        let desktop_summary_status = summary_status.clone();
 
         let mobile_asset = asset;
         let mobile_name_value = name_value;
         let mobile_committed_notes = committed_notes;
         let mobile_notes_outcome = notes_outcome;
         let mobile_committed_label = committed_label;
+        let mobile_summary_status = summary_status;
 
         let shell = device_shell_switch(
             cx,
@@ -114,6 +120,7 @@ impl View for EditorNotesDeviceShellDemoView {
                     desktop_asset.clone(),
                     desktop_committed_label.clone(),
                     desktop_notes_outcome.clone(),
+                    desktop_summary_status.clone(),
                 );
                 let left_rail = ui::container(|_cx| [selection_panel])
                     .w_px(Px(256.0))
@@ -148,6 +155,7 @@ impl View for EditorNotesDeviceShellDemoView {
                 let drawer_asset = mobile_asset.clone();
                 let drawer_committed_label = mobile_committed_label.clone();
                 let drawer_notes_outcome = mobile_notes_outcome.clone();
+                let drawer_summary_status = mobile_summary_status.clone();
                 let drawer = shadcn::Drawer::new(drawer_open.clone())
                     .children([
                         shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
@@ -164,6 +172,7 @@ impl View for EditorNotesDeviceShellDemoView {
                                 drawer_asset.clone(),
                                 drawer_committed_label.clone(),
                                 drawer_notes_outcome.clone(),
+                                drawer_summary_status.clone(),
                             );
                             let body = ui::v_flex(|_cx| [selection_panel, inspector])
                                 .gap(Space::N4)
