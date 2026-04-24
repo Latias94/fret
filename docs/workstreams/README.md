@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 265
+- Dedicated directories: 266
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -500,6 +500,17 @@ Current source of truth for the in-tree immediate-mode stack:
     to keep `imui_response_signals_demo` and `imui_editor_proof_demo` aligned with current
     behavior.
 
+- Active narrow P1 edit lifecycle hardening follow-on:
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`
+  - Scope: owns the next bounded value-edit lifecycle hardening slice for slider, drag-value,
+    numeric input, and text-entry semantics against Dear ImGui-style active/deactivated-after-edit
+    outcomes without widening runtime or authoring contracts by default.
+
 - Closed narrow IMUI control-chrome closeout record:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`
@@ -663,8 +674,10 @@ Current + historical companion/audit notes retained under `standalone/`:
 
 Rule:
 
-- Prefer the active P0 response-status lifecycle follow-on for current `ResponseExt` lifecycle
-  vocabulary work.
+- Prefer the closed P0 response-status lifecycle closeout for the shipped `ResponseExt` lifecycle
+  vocabulary record.
+- Prefer the active P1 edit lifecycle hardening follow-on for current slider / drag-value /
+  numeric-input / text-entry edit lifecycle hardening.
 - Prefer the active P0 menu/tab trigger response canonicalization follow-on for current cleanup of
   helper-owned menu/submenu/tab outward response naming.
 - Prefer the closed P0 menu/tab trigger response-surface follow-on for the latest helper-owned
@@ -851,6 +864,7 @@ Rule:
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)
 - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on for promoted edit lifecycle gates and editor-proof script drift repair)
+- `docs/workstreams/imui-edit-lifecycle-hardening-v1/` — first n/a, latest n/a, 6 markdown docs (active follow-on for slider, drag-value, numeric-input, and text-entry edit lifecycle hardening against Dear ImGui-style active/deactivated-after-edit outcomes)
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)

@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "slug": "imui-edit-lifecycle-hardening-v1",
+  "title": "ImUi Edit Lifecycle Hardening v1",
+  "status": "active",
+  "updated": "2026-04-24",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-edit-lifecycle-diag-gate-v1",
+  "problem": "The previous diagnostics follow-on proved the first edit lifecycle gates, but value-editing still needs a Dear ImGui-aligned hardening pass for slider, drag-value, and numeric/text entry session semantics. This lane owns private IMUI lifecycle internals, editor control proof, and diagnostics coverage without widening `crates/fret-ui`, `fret-authoring::Response`, or public `fret-imui` contracts by default.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start with the existing unit and diagnostics floors for slider/text lifecycle, then add drag-value and numeric-input proof as the lane lands slices.",
+    "commands": [
+      "cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit",
+      "cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges",
+      "cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edges",
+      "cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo",
+      "cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo"
+    ]
+  },
+  "gates": [
+    {
+      "name": "diag-check",
+      "command": "cargo check -p fret-diag"
+    },
+    {
+      "name": "imui-unit-slider",
+      "command": "cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit"
+    },
+    {
+      "name": "imui-unit-input-text",
+      "command": "cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges"
+    },
+    {
+      "name": "imui-unit-textarea",
+      "command": "cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edges"
+    },
+    {
+      "name": "examples-check",
+      "command": "cargo check -p fret-examples"
+    },
+    {
+      "name": "response-lifecycle-suite",
+      "command": "cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo"
+    },
+    {
+      "name": "editor-proof-suite",
+      "command": "cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui.cpp",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "ecosystem/fret-ui-kit/src/imui/response/hover.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime/models.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/numeric_input.rs",
+    "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-imui/src/tests/models_controls.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "tools/diag-scripts/suites/imui-response-signals-edit-lifecycle/suite.json",
+    "tools/diag-scripts/suites/imui-editor-proof-edit-outcomes/suite.json",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for bounded slider/drag-value/numeric/text edit lifecycle hardening. Start a narrower follow-on if the work turns into public runtime API, key ownership, docking, or broad editor workbench scope."
+  }
+}

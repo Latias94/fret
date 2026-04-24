@@ -229,6 +229,13 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/DESIGN.md`,
   `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`.
+- ImUi edit lifecycle hardening follow-on (active narrow P1 lane for slider, drag-value,
+  numeric-input, and text-entry lifecycle hardening against Dear ImGui-style
+  active/deactivated-after-edit outcomes without widening runtime or authoring contracts by
+  default):
+  `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`,
+  `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`, and
+  `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`.
 - ImUi key-owner surface closeout record (closed narrow P0 lane that audited the remaining
   immediate key-owner / item-local shortcut ownership gap after focused `activate_shortcut`
   coverage and command metadata seams landed, then closed on a no-new-surface verdict until

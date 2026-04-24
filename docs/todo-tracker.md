@@ -280,6 +280,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`
   - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/WORKSTREAM.json`
+- Active narrow P1 edit lifecycle hardening follow-on:
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json`
 - Closed narrow IMUI control-chrome closeout record:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-04-14.md`
@@ -319,6 +326,8 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` as the closed diagnostics follow-on for
   the lifecycle proof gate and editor-proof script drift repair; future lifecycle breadth should
   start a narrower lane rather than reopening the response-status closeout.
+- Use `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json` as the active follow-on
+  for current slider / drag-value / numeric-input / text-entry edit lifecycle hardening.
 - Use `docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json` as the closed closeout record
   for immediate key-owner surface work:
   the lane now keeps the M2 no-new-surface verdict explicit, preserves item-local shortcut
