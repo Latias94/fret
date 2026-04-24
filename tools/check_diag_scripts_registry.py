@@ -21,7 +21,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 
 REPO_ROOT_SENTINEL = "Cargo.toml"
@@ -55,6 +55,26 @@ def is_redirect_stub(obj: Any) -> bool:
 
 def is_suite_manifest(obj: Any) -> bool:
     return isinstance(obj, dict) and obj.get("kind") == "diag_script_suite_manifest"
+
+
+def find_suite_manifest_path(suite_dir: Path) -> Optional[Path]:
+    for name in SUITE_MANIFEST_FILENAMES:
+        candidate = suite_dir / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def path_is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def suite_name_from_dir(repo_root: Path, suite_dir: Path) -> str:
+    return suite_dir.relative_to(repo_root / SUITES_DIR).as_posix()
 
 
 def suite_manifest_script_paths(obj: Any) -> list[str]:
@@ -133,52 +153,82 @@ def build_registry(repo_root: Path) -> dict[str, Any]:
 
     canonical_to_suites: dict[Path, set[str]] = {}
 
-    # 1) Suites: either stubs under tools/diag-scripts/suites/<suite>/**/*.json,
-    # or a single suite manifest under tools/diag-scripts/suites/<suite>/suite.json.
-    for suite_dir in sorted((repo_root / SUITES_DIR).iterdir()):
+    # 1) Suites: either legacy stubs under tools/diag-scripts/suites/<suite>/**/*.json,
+    # or a suite manifest under tools/diag-scripts/suites/<suite>/suite.json.
+    #
+    # A suite directory may also contain nested suite manifests, e.g.
+    # tools/diag-scripts/suites/docking-arbitration/{common,windows}/suite.json.
+    # Those child manifests are owned by their own suite names and are not legacy stubs.
+    suite_root = repo_root / SUITES_DIR
+    manifest_dirs: dict[Path, Path] = {}
+    for suite_dir in sorted([p for p in suite_root.rglob("*") if p.is_dir()]):
+        manifest_path = find_suite_manifest_path(suite_dir)
+        if manifest_path is not None:
+            manifest_dirs[suite_dir.resolve()] = manifest_path
+
+    for suite_dir_resolved, manifest_path in sorted(
+        manifest_dirs.items(), key=lambda item: suite_name_from_dir(repo_root, item[0])
+    ):
+        suite_dir = suite_dir_resolved
+        suite_name = suite_name_from_dir(repo_root, suite_dir)
+        nested_manifest_dirs = [
+            d
+            for d in manifest_dirs
+            if d != suite_dir and path_is_relative_to(d, suite_dir)
+        ]
+
+        # Do not allow mixing a manifest with legacy stubs in the same suite ownership area.
+        # Nested suite manifests are allowed and skipped here because they own their own membership.
+        other_json = [
+            p
+            for p in suite_dir.rglob("*.json")
+            if p.resolve() != manifest_path.resolve()
+            and not any(path_is_relative_to(p, nested) for nested in nested_manifest_dirs)
+        ]
+        if other_json:
+            shown = "\n".join(
+                f"  - {p.relative_to(repo_root).as_posix()}" for p in other_json[:10]
+            )
+            raise SystemExit(
+                "error: suite directory mixes suite manifest with legacy *.json stubs:\n"
+                f"- suite: {suite_name}\n"
+                f"- manifest: {manifest_path.relative_to(repo_root).as_posix()}\n"
+                f"- other json files (first 10):\n{shown}\n"
+                "hint: delete legacy stubs, move them under a nested suite manifest, or remove the manifest"
+            )
+
+        manifest_obj = read_json(manifest_path)
+        if not is_suite_manifest(manifest_obj):
+            raise SystemExit(
+                "error: suite manifest must have kind=diag_script_suite_manifest: "
+                f"{manifest_path}"
+            )
+        script_paths = suite_manifest_script_paths(manifest_obj)
+        if not script_paths:
+            raise SystemExit(f"error: suite manifest contains no scripts: {manifest_path}")
+        for to in script_paths:
+            canonical = resolve_redirect_path(repo_root, repo_root / Path(to))
+            canonical_to_suites.setdefault(canonical, set()).add(suite_name)
+
+    for suite_dir in sorted(suite_root.iterdir()):
         if not suite_dir.is_dir():
             continue
         suite_name = suite_dir.name
 
-        manifest_path = None
-        for name in SUITE_MANIFEST_FILENAMES:
-            candidate = suite_dir / name
-            if candidate.is_file():
-                manifest_path = candidate
-                break
-
-        if manifest_path is not None:
-            # Do not allow mixing manifest + legacy stubs: it makes membership ambiguous.
-            other_json = [p for p in suite_dir.rglob("*.json") if p.resolve() != manifest_path.resolve()]
-            if other_json:
-                shown = "\n".join(
-                    f"  - {p.relative_to(repo_root).as_posix()}" for p in other_json[:10]
-                )
-                raise SystemExit(
-                    "error: suite directory mixes suite manifest with legacy *.json stubs:\n"
-                    f"- suite: {suite_name}\n"
-                    f"- manifest: {manifest_path.relative_to(repo_root).as_posix()}\n"
-                    f"- other json files (first 10):\n{shown}\n"
-                    "hint: delete legacy stubs or remove the manifest"
-                )
-
-            manifest_obj = read_json(manifest_path)
-            if not is_suite_manifest(manifest_obj):
-                raise SystemExit(
-                    "error: suite manifest must have kind=diag_script_suite_manifest: "
-                    f"{manifest_path}"
-                )
-            script_paths = suite_manifest_script_paths(manifest_obj)
-            if not script_paths:
-                raise SystemExit(
-                    f"error: suite manifest contains no scripts: {manifest_path}"
-                )
-            for to in script_paths:
-                canonical = resolve_redirect_path(repo_root, repo_root / Path(to))
-                canonical_to_suites.setdefault(canonical, set()).add(suite_name)
+        if suite_dir.resolve() in manifest_dirs:
             continue
 
-        for stub in sorted(suite_dir.rglob("*.json")):
+        nested_manifest_dirs = [
+            d
+            for d in manifest_dirs
+            if path_is_relative_to(d, suite_dir)
+        ]
+        stubs = [
+            p
+            for p in sorted(suite_dir.rglob("*.json"))
+            if not any(path_is_relative_to(p, nested) for nested in nested_manifest_dirs)
+        ]
+        for stub in stubs:
             stub_obj = read_json(stub)
             if not is_redirect_stub(stub_obj):
                 raise SystemExit(
@@ -252,7 +302,7 @@ def build_registry(repo_root: Path) -> dict[str, Any]:
 
 
 def canonical_json_bytes(obj: Any) -> bytes:
-    return (json.dumps(obj, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    return (json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def main() -> None:

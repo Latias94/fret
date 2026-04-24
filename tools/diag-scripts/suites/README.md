@@ -43,6 +43,9 @@ Notes:
 
 - Tooling resolves redirects before pushing scripts to the runtime; redirects are not part of the runtime contract.
 - Suite execution order is deterministic and derived from the expanded input paths (lexicographic path ordering).
+- Nested suite manifests are valid when a broad suite needs named subsets, e.g.
+  `tools/diag-scripts/suites/docking-arbitration/common/suite.json` and
+  `tools/diag-scripts/suites/docking-arbitration/windows/suite.json`.
 - `fretboard-dev diag suite <name>` prefers `tools/diag-scripts/suites/<name>/` when it exists, so adding a new suite does not
   require Rust-side edits (suite-specific env defaults can still live in tooling or script `meta.env_defaults`).
 - `diag perf` suite membership is also expressed via suite directories (typically `tools/diag-scripts/suites/perf-*/`),

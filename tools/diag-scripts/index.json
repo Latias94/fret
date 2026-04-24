@@ -535,6 +535,25 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-mutation-toast-feedback-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/mutation-toast-feedback-basics/cookbook-mutation-toast-feedback-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-mutation-toast-feedback-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "mutation",
+        "mutation_toast_feedback_basics",
+        "smoke",
+        "sonner"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "cookbook-overlay-basics-dialog-close",
       "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
       "required_capabilities": [
@@ -788,7 +807,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "close",
@@ -808,7 +828,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "close",
@@ -827,7 +848,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "close",
@@ -847,7 +869,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -867,7 +890,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -945,7 +969,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -964,7 +989,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -988,7 +1014,8 @@
       ],
       "suite_memberships": [
         "diag-hardening-smoke-docking",
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1010,7 +1037,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1035,7 +1063,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1058,7 +1087,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1082,7 +1112,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/windows"
       ],
       "tags": [
         "docking",
@@ -1104,7 +1135,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1195,7 +1227,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1217,7 +1250,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1233,7 +1267,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1252,7 +1287,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1268,7 +1304,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1284,7 +1321,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1325,7 +1363,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1362,7 +1401,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1377,7 +1417,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1393,7 +1434,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1413,7 +1455,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "docking",
@@ -1432,7 +1475,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "docking-arbitration/common"
       ],
       "tags": [
         "autoscroll",
@@ -5146,7 +5190,7 @@
       "target_hints": [
         "Sets theme preset to zinc/light.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
       ]
     },
     {
@@ -5169,7 +5213,7 @@
       "target_hints": [
         "Sets theme preset to zinc/dark.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
       ]
     },
     {
