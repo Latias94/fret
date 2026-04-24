@@ -283,6 +283,7 @@ It complements (but does not replace) ADRs:
 - Active narrow P1 edit lifecycle hardening follow-on:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`

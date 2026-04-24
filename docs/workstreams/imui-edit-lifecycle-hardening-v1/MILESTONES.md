@@ -24,6 +24,9 @@ Exit criteria:
 - Any needed refactor is described as a private-kernel cleanup or a proof-surface repair before
   code changes land.
 
+Status: completed for the first hardening slice by
+`M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`.
+
 ## M2 - Hardening Slice
 
 Exit criteria:
@@ -33,6 +36,9 @@ Exit criteria:
 - Existing public runtime and authoring contracts remain stable unless explicitly justified.
 - Focused unit tests cover the changed behavior.
 
+Status: first private `DragValueCore` slice landed. Remaining M2 scope should stay open only for
+additional concrete mismatches found by diagnostics or editor-control harnesses.
+
 ## M3 - Diagnostics Proof
 
 Exit criteria:
@@ -40,6 +46,10 @@ Exit criteria:
 - Existing response-signals and editor-proof suites still pass.
 - Drag-value and numeric-input lifecycle coverage is added or promoted if M1 finds a real gap.
 - Selectors remain stable and demo-matched.
+
+Status: focused `DragState` unit coverage landed and the existing response-signals plus
+editor-proof diagnostics suites pass. M3 remains open only for adding or promoting additional
+rendered `DragValue` / `NumericInput` proof if a future mismatch appears.
 
 ## M4 - Closeout
 

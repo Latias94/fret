@@ -504,6 +504,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`
@@ -864,7 +865,7 @@ Rule:
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)
 - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on for promoted edit lifecycle gates and editor-proof script drift repair)
-- `docs/workstreams/imui-edit-lifecycle-hardening-v1/` — first n/a, latest n/a, 6 markdown docs (active follow-on for slider, drag-value, numeric-input, and text-entry edit lifecycle hardening against Dear ImGui-style active/deactivated-after-edit outcomes)
+- `docs/workstreams/imui-edit-lifecycle-hardening-v1/` — first n/a, latest n/a, 7 markdown docs (active follow-on for slider, drag-value, numeric-input, and text-entry edit lifecycle hardening against Dear ImGui-style active/deactivated-after-edit outcomes)
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)

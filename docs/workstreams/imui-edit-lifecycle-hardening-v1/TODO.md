@@ -5,13 +5,13 @@ Last updated: 2026-04-24
 
 - [x] Keep `imui-edit-lifecycle-diag-gate-v1` closed and create this narrow follow-on.
 - [x] Record a Dear ImGui-aligned baseline audit for the next value-edit lifecycle slice.
-- [ ] M1: audit slider, text, drag-value, and numeric input against the target invariant.
-- [ ] M1: classify any mismatch as private IMUI runtime state, editor control behavior, demo proof,
+- [x] M1: audit slider, text, drag-value, and numeric input against the target invariant.
+- [x] M1: classify any mismatch as private IMUI runtime state, editor control behavior, demo proof,
   or diagnostics drift before changing code.
-- [ ] M2: delete duplicated or misleading lifecycle plumbing if the audit finds a cleaner shared
+- [x] M2: delete duplicated or misleading lifecycle plumbing if the audit finds a cleaner shared
   private kernel.
 - [ ] M2: keep runtime and authoring public contracts stable unless the audit proves a hard
   contract change is unavoidable.
-- [ ] M3: add or promote focused proof for drag-value and numeric input edit outcomes.
-- [ ] M3: keep the response-signals and editor-proof diag suites green after hardening.
+- [ ] M3: add or promote rendered proof for drag-value and numeric input edit outcomes.
+- [x] M3: keep the response-signals and editor-proof diag suites green after hardening.
 - [ ] M4: close out with evidence, gates, and residual gap routing.

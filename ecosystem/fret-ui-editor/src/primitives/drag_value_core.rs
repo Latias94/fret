@@ -19,7 +19,7 @@ use super::{
     EditSession, EditorDensity, EditorTokenKeys, NumericValueConstraints, constrain_numeric_value,
 };
 
-pub trait DragValueScalar: Copy + 'static {
+pub trait DragValueScalar: Copy + PartialEq + 'static {
     fn to_f64(self) -> f64;
     fn from_f64(v: f64) -> Self;
 }
@@ -91,8 +91,6 @@ impl Default for DragValueCoreOptions {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DragValueCoreResponse {
     pub dragging: bool,
-    pub canceled: bool,
-    pub committed: bool,
     pub hovered: bool,
     pub pressed: bool,
     pub focused: bool,
@@ -102,6 +100,7 @@ pub struct DragValueCoreResponse {
 struct DragState<T> {
     current_value: T,
     session: EditSession<T>,
+    edited_during_session: bool,
     armed: bool,
     dragging: bool,
     pointer_id: Option<PointerId>,
@@ -115,6 +114,7 @@ impl<T: Copy + Default> Default for DragState<T> {
         Self {
             current_value: T::default(),
             session: EditSession::default(),
+            edited_during_session: false,
             armed: false,
             dragging: false,
             pointer_id: None,
@@ -122,6 +122,50 @@ impl<T: Copy + Default> Default for DragState<T> {
             start_x: 0.0,
             start_value: T::default(),
         }
+    }
+}
+
+impl<T: Copy + Default + PartialEq> DragState<T> {
+    fn begin_session(&mut self, pointer_id: PointerId, position: Point) {
+        let current_value = self.current_value;
+        self.session.begin(current_value);
+        self.edited_during_session = false;
+        self.armed = true;
+        self.dragging = false;
+        self.pointer_id = Some(pointer_id);
+        self.down_pos = position;
+        self.start_x = position.x.0 as f64;
+        self.start_value = current_value;
+    }
+
+    fn apply_live_value(&mut self, next: T) -> bool {
+        if self.current_value == next {
+            return false;
+        }
+
+        self.current_value = next;
+        self.edited_during_session = true;
+        true
+    }
+
+    fn commit_session(&mut self) -> bool {
+        let edited = self.edited_during_session;
+        if self.session.is_active() {
+            let _ = self.session.commit();
+        }
+        self.edited_during_session = false;
+        edited
+    }
+
+    fn cancel_session(&mut self) -> Option<T> {
+        self.edited_during_session = false;
+        self.session.cancel()
+    }
+
+    fn clear_pointer_session(&mut self) {
+        self.armed = false;
+        self.dragging = false;
+        self.pointer_id = None;
     }
 }
 
@@ -196,10 +240,8 @@ where
 
         if !opts.enabled {
             let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.armed = false;
-            st.dragging = false;
-            st.pointer_id = None;
-            let _ = st.session.commit();
+            st.clear_pointer_session();
+            let _ = st.commit_session();
         }
 
         let on_change_live = self.on_change_live.clone();
@@ -244,16 +286,10 @@ where
                     // Own focus for the active scrub session so Escape cancel routes to this
                     // control even when the gesture started from a pointer-only interaction.
                     host.request_focus(pressable_id);
+                    host.capture_pointer();
 
                     let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                    let current_value = st.current_value;
-                    st.session.begin(current_value);
-                    st.armed = true;
-                    st.dragging = false;
-                    st.pointer_id = Some(down.pointer_id);
-                    st.down_pos = down.position_local;
-                    st.start_x = down.position_local.x.0 as f64;
-                    st.start_value = current_value;
+                    st.begin_session(down.pointer_id, down.position_local);
                     PressablePointerDownResult::Continue
                 }));
 
@@ -265,7 +301,7 @@ where
                     enum MoveAction<T> {
                         None,
                         Live(T),
-                        Commit,
+                        Commit { edited: bool },
                         Cancel(Option<T>),
                     }
 
@@ -280,15 +316,13 @@ where
                         // treat it like "pointer up/cancel" to avoid stuck sessions.
                         if !mv.buttons.left {
                             let was_dragging = st.dragging;
-                            st.armed = false;
-                            st.dragging = false;
-                            st.pointer_id = None;
+                            st.clear_pointer_session();
                             if st.session.is_active() {
                                 if was_dragging {
-                                    let _ = st.session.commit();
-                                    MoveAction::Commit
+                                    let edited = st.commit_session();
+                                    MoveAction::Commit { edited }
                                 } else {
-                                    let pre = st.session.cancel();
+                                    let pre = st.cancel_session();
                                     MoveAction::Cancel(pre)
                                 }
                             } else {
@@ -321,7 +355,11 @@ where
                                 opts.constraints,
                                 T::from_f64(st.start_value.to_f64() + delta),
                             );
-                            MoveAction::Live(next)
+                            if st.apply_live_value(next) {
+                                MoveAction::Live(next)
+                            } else {
+                                MoveAction::None
+                            }
                         }
                     };
 
@@ -331,9 +369,9 @@ where
                             (on_change_live_for_move)(host, action_cx, next);
                             true
                         }
-                        MoveAction::Commit => {
+                        MoveAction::Commit { edited } => {
                             host.release_pointer_capture();
-                            if let Some(cb) = on_commit_for_move.as_ref() {
+                            if edited && let Some(cb) = on_commit_for_move.as_ref() {
                                 cb(host, action_cx);
                             }
                             host.request_redraw(action_cx.window);
@@ -365,13 +403,13 @@ where
                         return PressablePointerUpResult::Continue;
                     }
                     let was_dragging = st.dragging;
-                    st.armed = false;
-                    st.dragging = false;
-                    st.pointer_id = None;
-                    if st.session.is_active() {
-                        st.session.commit();
-                    }
-                    if was_dragging && let Some(cb) = on_commit_for_up.as_ref() {
+                    st.clear_pointer_session();
+                    let edited = st.commit_session();
+                    host.release_pointer_capture();
+                    if was_dragging
+                        && edited
+                        && let Some(cb) = on_commit_for_up.as_ref()
+                    {
                         cb(host, action_cx);
                     }
                     PressablePointerUpResult::Continue
@@ -391,10 +429,8 @@ where
                             return false;
                         }
 
-                        st.armed = false;
-                        st.dragging = false;
-                        st.pointer_id = None;
-                        if let Some(pre) = st.session.cancel() {
+                        st.clear_pointer_session();
+                        if let Some(pre) = st.cancel_session() {
                             (on_change_live)(host, action_cx, pre);
                         }
                         if let Some(cb) = on_cancel_for_key.as_ref() {
@@ -469,4 +505,48 @@ fn resolve_options(theme: &Theme, mut opts: DragValueCoreOptions) -> DragValueCo
         Px(4.0)
     };
     opts
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DragState;
+    use fret_core::{Point, PointerId, Px};
+
+    fn origin() -> Point {
+        Point::new(Px(0.0), Px(0.0))
+    }
+
+    #[test]
+    fn drag_state_commit_requires_a_live_value_change() {
+        let mut state = DragState::<f64>::default();
+        state.current_value = 10.0;
+        state.begin_session(PointerId(1), origin());
+
+        assert!(!state.apply_live_value(10.0));
+        assert!(!state.commit_session());
+    }
+
+    #[test]
+    fn drag_state_commit_remembers_any_live_edit_in_the_session() {
+        let mut state = DragState::<f64>::default();
+        state.current_value = 10.0;
+        state.begin_session(PointerId(1), origin());
+
+        assert!(state.apply_live_value(12.0));
+        assert!(state.apply_live_value(10.0));
+        assert!(state.commit_session());
+    }
+
+    #[test]
+    fn drag_state_cancel_clears_live_edit_tracking() {
+        let mut state = DragState::<f64>::default();
+        state.current_value = 10.0;
+        state.begin_session(PointerId(1), origin());
+        assert!(state.apply_live_value(12.0));
+
+        assert_eq!(state.cancel_session(), Some(10.0));
+
+        state.begin_session(PointerId(1), origin());
+        assert!(!state.commit_session());
+    }
 }
