@@ -583,6 +583,24 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_NEXT_GAP_AUDIT_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json");
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-editor-notes-draft-actions-v1/DESIGN.md");
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_TODO: &str =
+        include_str!("../../../docs/workstreams/imui-editor-notes-draft-actions-v1/TODO.md");
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_MILESTONES: &str =
+        include_str!("../../../docs/workstreams/imui-editor-notes-draft-actions-v1/MILESTONES.md");
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_EVIDENCE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-draft-actions-v1/EVIDENCE_AND_GATES.md"
+    );
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-draft-actions-v1/M1_APP_OWNED_DRAFT_ACTIONS_SLICE_2026-04-24.md"
+    );
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    );
+    const IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-editor-notes-draft-actions-v1/WORKSTREAM.json"
+    );
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -5063,7 +5081,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn immediate_mode_workstream_closes_the_p1_editor_notes_inspector_command_follow_on() {
         for marker in [
-            "Status: active narrow P1 lane",
+            "Status: closed narrow P1 lane",
             "deepen app-owned editor-grade behavior in an existing",
             "Add one explicit inspector-local command affordance to `editor_notes_demo.rs`.",
             "No generic command palette or command bus.",
@@ -5317,6 +5335,97 @@ mod authoring_surface_policy_tests {
                     || IMUI_NEXT_GAP_AUDIT_MILESTONES.contains(marker)
                     || IMUI_NEXT_GAP_AUDIT_EVIDENCE.contains(marker),
                 "the IMUI next-gap audit execution docs should record closure markers: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_closes_the_p1_editor_notes_draft_actions_follow_on() {
+        for marker in [
+            "Status: closed narrow P1 lane",
+            "deepen app-owned editor-note draft actions",
+            "Add app-owned draft action affordances to the existing editor-notes inspector surface.",
+            "No `TextField` draft-buffer API widening.",
+            "No `fret-ui-kit::imui`, `fret-imui`, `fret-authoring`, or `crates/fret-ui` API changes.",
+            "These are action/status affordances, not hidden-buffer commit/discard APIs.",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_DRAFT_ACTIONS_DESIGN.contains(marker),
+                "the editor-notes draft-actions design should keep the app-owned scope explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-editor-notes-draft-actions-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-next-gap-audit-v1\"",
+            "editor-notes-draft-actions-closeout-source-policy",
+            "editor_notes_demo",
+            "editor_notes_editor_rail_surface",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM.contains(marker),
+                "the editor-notes draft-actions lane state should keep source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "const TEST_ID_DRAFT_READY_COMMAND: &str = \"editor-notes-demo.inspector.notes.mark-draft-ready\";",
+            "const TEST_ID_DRAFT_CLEAR_COMMAND: &str = \"editor-notes-demo.inspector.notes.clear-draft-marker\";",
+            "fn editor_notes_draft_action_status(",
+            "cx.text(\"Draft actions\")",
+            "shadcn::Button::new(\"Mark draft ready\")",
+            "shadcn::Button::new(\"Clear draft marker\")",
+            ".test_id(TEST_ID_DRAFT_READY_COMMAND)",
+            ".test_id(TEST_ID_DRAFT_CLEAR_COMMAND)",
+            "Draft marked ready",
+            "Draft marker cleared",
+            "local inspector state only",
+        ] {
+            assert!(
+                EDITOR_NOTES_DEMO.contains(marker),
+                "editor_notes_demo should keep the inspector-local draft-actions slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`editor_notes_demo.rs` now carries one inspector-local draft action row:",
+            "`Mark draft ready` updates app-owned outcome/status feedback.",
+            "`Clear draft marker` updates app-owned outcome/status feedback.",
+            "The status copy is explicitly local inspector state only.",
+            "No `TextField` draft-buffer API widening.",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_DRAFT_ACTIONS_M1_NOTE.contains(marker),
+                "the editor-notes draft-actions M1 note should keep the landed slice explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-editor-notes-draft-actions-v1` as a closed app-owned draft action proof.",
+            "The first `Draft actions` row is coherent enough to close the lane",
+            "Do not reopen this folder for persistence, workspace dirty-close prompts, command-bus integration,",
+            "preserved `TextField` draft buffer",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_DRAFT_ACTIONS_CLOSEOUT.contains(marker),
+                "the editor-notes draft-actions closeout should keep the closed app-owned verdict explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "- [x] Add app-owned draft action buttons to `editor_notes_demo.rs`.",
+            "## M1 - App-Owned Draft Actions",
+            "Status: complete",
+            "immediate_mode_workstream_closes_the_p1_editor_notes_draft_actions_follow_on",
+        ] {
+            assert!(
+                IMUI_EDITOR_NOTES_DRAFT_ACTIONS_TODO.contains(marker)
+                    || IMUI_EDITOR_NOTES_DRAFT_ACTIONS_MILESTONES.contains(marker)
+                    || IMUI_EDITOR_NOTES_DRAFT_ACTIONS_EVIDENCE.contains(marker),
+                "the editor-notes draft-actions execution docs should record startup markers: {marker}"
             );
         }
     }

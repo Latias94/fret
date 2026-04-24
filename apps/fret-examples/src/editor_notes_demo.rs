@@ -40,6 +40,8 @@ const TEST_ID_NOTES: &str = "editor-notes-demo.inspector.notes";
 const TEST_ID_NOTES_COMMITTED: &str = "editor-notes-demo.inspector.notes.committed";
 const TEST_ID_NOTES_OUTCOME: &str = "editor-notes-demo.inspector.notes.outcome";
 const TEST_ID_NOTES_DRAFT_STATUS: &str = "editor-notes-demo.inspector.notes.draft-status";
+const TEST_ID_DRAFT_READY_COMMAND: &str = "editor-notes-demo.inspector.notes.mark-draft-ready";
+const TEST_ID_DRAFT_CLEAR_COMMAND: &str = "editor-notes-demo.inspector.notes.clear-draft-marker";
 const TEST_ID_SUMMARY_COMMAND: &str = "editor-notes-demo.inspector.summary-command";
 const TEST_ID_SUMMARY_STATUS: &str = "editor-notes-demo.inspector.summary-status";
 
@@ -258,6 +260,10 @@ fn make_asset_state(
 
 fn editor_asset_summary_command_status(asset: &EditorAssetState) -> String {
     format!("Copied summary: {} · {}", asset.title, asset.subtitle)
+}
+
+fn editor_notes_draft_action_status(asset: &EditorAssetState, action: &str) -> String {
+    format!("{action}: {} · local inspector state only", asset.title)
 }
 
 fn selection_button<'a, Cx>(
@@ -544,6 +550,8 @@ where
     let notes_outcome_model = asset.notes_outcome_model.clone();
     let summary_status_model = asset.summary_status_model.clone();
     let summary_status_next = editor_asset_summary_command_status(&asset);
+    let draft_ready_status = editor_notes_draft_action_status(&asset, "Draft marked ready");
+    let draft_clear_status = editor_notes_draft_action_status(&asset, "Draft marker cleared");
     let draft_status_label = editor_notes_draft_status_label(&outcome_label, &committed_label);
 
     InspectorPanel::new(None)
@@ -677,6 +685,88 @@ where
                                         |cx| {
                                             cx.text(draft_status_label.clone())
                                                 .test_id(TEST_ID_NOTES_DRAFT_STATUS)
+                                        },
+                                        |_cx| None,
+                                    ));
+
+                                    rows.push(row_cx.row_with(
+                                        cx,
+                                        PropertyRow::new().options(row_cx.row_options.clone()),
+                                        |cx| cx.text("Draft actions"),
+                                        |cx| {
+                                            ui::h_flex(|cx| {
+                                                ui::children![
+                                                    cx;
+                                                    shadcn::Button::new("Mark draft ready")
+                                                        .variant(shadcn::ButtonVariant::Secondary)
+                                                        .size(shadcn::ButtonSize::Sm)
+                                                        .on_activate(fret_ui_kit::on_activate({
+                                                            let notes_outcome_model =
+                                                                notes_outcome_model.clone();
+                                                            let summary_status_model =
+                                                                summary_status_model.clone();
+                                                            let draft_ready_status =
+                                                                draft_ready_status.clone();
+                                                            move |host, action_cx, _reason| {
+                                                                let _ = host.models_mut().update(
+                                                                    &notes_outcome_model,
+                                                                    |text: &mut String| {
+                                                                        text.clear();
+                                                                        text.push_str(
+                                                                            "Draft marked ready",
+                                                                        );
+                                                                    },
+                                                                );
+                                                                let _ = host.models_mut().update(
+                                                                    &summary_status_model,
+                                                                    |text: &mut String| {
+                                                                        *text =
+                                                                            draft_ready_status.clone();
+                                                                    },
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            }
+                                                        }))
+                                                        .test_id(TEST_ID_DRAFT_READY_COMMAND)
+                                                        .ui()
+                                                        .into_element_in(cx),
+                                                    shadcn::Button::new("Clear draft marker")
+                                                        .variant(shadcn::ButtonVariant::Ghost)
+                                                        .size(shadcn::ButtonSize::Sm)
+                                                        .on_activate(fret_ui_kit::on_activate({
+                                                            let notes_outcome_model =
+                                                                notes_outcome_model.clone();
+                                                            let summary_status_model =
+                                                                summary_status_model.clone();
+                                                            let draft_clear_status =
+                                                                draft_clear_status.clone();
+                                                            move |host, action_cx, _reason| {
+                                                                let _ = host.models_mut().update(
+                                                                    &notes_outcome_model,
+                                                                    |text: &mut String| {
+                                                                        text.clear();
+                                                                        text.push_str(
+                                                                            "Draft marker cleared",
+                                                                        );
+                                                                    },
+                                                                );
+                                                                let _ = host.models_mut().update(
+                                                                    &summary_status_model,
+                                                                    |text: &mut String| {
+                                                                        *text =
+                                                                            draft_clear_status.clone();
+                                                                    },
+                                                                );
+                                                                host.request_redraw(action_cx.window);
+                                                            }
+                                                        }))
+                                                        .test_id(TEST_ID_DRAFT_CLEAR_COMMAND)
+                                                        .ui()
+                                                        .into_element_in(cx),
+                                                ]
+                                            })
+                                            .gap(Space::N2)
+                                            .into_element_in(cx)
                                         },
                                         |_cx| None,
                                     ));

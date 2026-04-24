@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-editor-notes-draft-actions-v1",
+  "title": "ImUi Editor Notes Draft Actions v1",
+  "status": "closed",
+  "updated": "2026-04-24",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-next-gap-audit-v1",
+  "problem": "The next-gap audit recommends a locally testable app-owned editor-notes draft action slice. This lane adds explicit inspector-local draft action affordances without persistence, workspace dirty-close, command-bus, clipboard, TextField draft-buffer APIs, or public IMUI helper widening.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "evidence",
+      "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/M1_APP_OWNED_DRAFT_ACTIONS_SLICE_2026-04-24.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the editor notes rail proof and source-policy gate for the draft action buttons.",
+    "commands": [
+      "cargo run -p fret-demo --bin editor_notes_demo",
+      "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast",
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_draft_actions_follow_on --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "editor-notes-draft-actions-closeout-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_draft_actions_follow_on --no-fail-fast"
+    },
+    {
+      "name": "editor-notes-rail-surface",
+      "command": "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-editor-notes-draft-actions-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/DESIGN.md",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/TODO.md",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/MILESTONES.md",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/M1_APP_OWNED_DRAFT_ACTIONS_SLICE_2026-04-24.md",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after app-owned draft action markers. Start a new narrow API-proof lane for persistence, workspace dirty-close, command-bus integration, preserved TextField draft-buffer contracts, or public IMUI helper APIs."
+  }
+}

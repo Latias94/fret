@@ -164,6 +164,17 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
   `docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json`.
+- ImUi editor-notes draft-actions closeout record (narrow P1 implementation lane that starts from the
+  next-gap audit recommendation and closes one app-owned inspector-local draft action affordance slice without
+  persistence, dirty-close, command-bus, `TextField` draft-buffer APIs, or public IMUI/helper API
+  widening):
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/DESIGN.md`,
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/TODO.md`,
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/MILESTONES.md`,
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/M1_APP_OWNED_DRAFT_ACTIONS_SLICE_2026-04-24.md`,
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-editor-notes-draft-actions-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
   instead of widening `fret-authoring::Response` or `crates/fret-ui` again):
