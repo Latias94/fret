@@ -530,6 +530,9 @@ mod authoring_surface_policy_tests {
     const IMUI_COLLECTION_HELPER_READINESS_EVIDENCE: &str = include_str!(
         "../../../docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md"
     );
+    const IMUI_COLLECTION_HELPER_READINESS_M1_AUDIT: &str = include_str!(
+        "../../../docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md"
+    );
     const IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json"
     );
@@ -4898,6 +4901,8 @@ mod authoring_surface_policy_tests {
             "M0 - Lane Opened",
             "Kept `imui-collection-second-proof-surface-v1` closed.",
             "M1 - Candidate Seam Audit",
+            "Status: complete",
+            "M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md",
             "M2 - Verdict Or Split",
             "follow-on for one exact helper shape",
         ] {
@@ -4913,10 +4918,27 @@ mod authoring_surface_policy_tests {
             "Shell-mounted `Scene collection` proof",
             "immediate_mode_workstream_starts_the_p1_collection_helper_readiness_follow_on",
             "Do not add a shared `collection(...)`, `collection_list(...)`, or `collection_commands(...)`",
+            "generic collection command helpers remain app-owned policy",
         ] {
             assert!(
                 IMUI_COLLECTION_HELPER_READINESS_EVIDENCE.contains(marker),
                 "the helper-readiness evidence doc should keep gates and non-goals explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "No shared collection helper is helper-ready yet.",
+            "The shared part is currently vocabulary and test-id discipline, not a reusable helper contract.",
+            "`collection(...)` container helper",
+            "`collection_list(...)` / `collection_rows(...)`",
+            "`collection_commands(...)`",
+            "Stable collection test-id convention",
+            "Keep shared helper widening closed for M1.",
+            "prefer docs/recipe naming guidance over public helper implementation",
+        ] {
+            assert!(
+                IMUI_COLLECTION_HELPER_READINESS_M1_AUDIT.contains(marker),
+                "the helper-readiness M1 audit should keep the no-helper-ready verdict explicit: {marker}"
             );
         }
 
@@ -4926,6 +4948,7 @@ mod authoring_surface_policy_tests {
             "\"scope_kind\": \"audit\"",
             "\"follow_on_of\": \"imui-collection-second-proof-surface-v1\"",
             "\"path\": \"docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md\"",
+            "\"path\": \"docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md\"",
             "\"path\": \"docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
             "collection-helper-readiness-source-policy",
             "imui_editor_proof_demo",

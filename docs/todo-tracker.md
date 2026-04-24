@@ -376,13 +376,17 @@ It complements (but does not replace) ADRs:
   record for collection helper readiness:
   `docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`,
   `docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`,
-  `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`, and
+  `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md`, and
   `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`.
   Execution note:
   this lane starts after the closed second proof-surface verdict, compares the collection-first
   asset-browser grid with the shell-mounted `Scene collection` outline, and blocks
   `fret-ui-kit::imui` helper widening until both proof surfaces need the same policy-light helper
   shape.
+  M1 note:
+  `M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md` currently keeps shared helper widening closed and treats
+  stable collection test IDs as docs/recipe guidance rather than a public helper API.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the

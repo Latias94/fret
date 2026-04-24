@@ -129,6 +129,7 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-collection-helper-readiness-v1/DESIGN.md`,
   `docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`,
   `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`,
+  `docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md`,
   `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted

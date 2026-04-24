@@ -13,7 +13,7 @@ Status: complete
 
 ## M1 - Candidate Seam Audit
 
-Status: planned
+Status: complete
 
 Goal: compare the two existing collection proof surfaces and name candidate helper seams without
 implementing a public helper.
@@ -23,6 +23,10 @@ Exit criteria:
 - each candidate names both proof surfaces,
 - each candidate states what policy stays app-owned,
 - and rejected candidates explain why app-owned code is still better.
+
+Result: `M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md` keeps shared helper widening closed for M1 and
+classifies the current shared pressure as documentation/test-id convention rather than a public
+helper API.
 
 ## M2 - Verdict Or Split
 

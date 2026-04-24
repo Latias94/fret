@@ -9,6 +9,7 @@ slipping into generic IMUI.
 - `docs/workstreams/imui-collection-helper-readiness-v1/TODO.md`
 - `docs/workstreams/imui-collection-helper-readiness-v1/MILESTONES.md`
 - `docs/workstreams/imui-collection-helper-readiness-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-collection-helper-readiness-v1/M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md`
 - `docs/workstreams/imui-collection-helper-readiness-v1/WORKSTREAM.json`
 - `docs/workstreams/imui-collection-second-proof-surface-v1/CLOSEOUT_AUDIT_2026-04-23.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md`
@@ -45,3 +46,12 @@ slipping into generic IMUI.
   helper in this lane.
 - Do not widen `fret-imui` or `crates/fret-ui`.
 - Do not make the compact `Scene collection` outline inherit asset-browser grid policy.
+
+## M1 Audit Result
+
+`M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md` keeps shared helper widening closed for now:
+
+- generic collection container/list helpers are not helper-ready,
+- generic collection command helpers remain app-owned policy,
+- selection summary text is not worth extracting yet,
+- stable collection test IDs are documentation/recipe guidance rather than a public helper API.

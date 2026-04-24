@@ -5,8 +5,10 @@ Last updated: 2026-04-24
 
 - [x] Create the helper-readiness follow-on instead of reopening the closed second proof-surface lane.
 - [x] Record the proof-budget and no-helper-widening assumptions before any public helper design.
-- [ ] Compare the asset-browser grid and shell-mounted `Scene collection` outline for reusable helper pressure.
-- [ ] Classify each candidate seam as helper-ready, app-owned policy, recipe policy, or not worth extracting.
+- [x] Compare the asset-browser grid and shell-mounted `Scene collection` outline for reusable helper pressure.
+      Result: `M1_CANDIDATE_SEAM_AUDIT_2026-04-24.md` records that the current shared pressure is vocabulary/test-id discipline, not a reusable helper contract.
+- [x] Classify each candidate seam as helper-ready, app-owned policy, recipe policy, or not worth extracting.
+      Result: the M1 seam table rejects generic container/list/command/status helpers for now and keeps command semantics app-owned.
 - [ ] Decide whether to close with no-helper-widening or split a separate implementation follow-on.
 
 ## Current Bias
