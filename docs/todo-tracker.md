@@ -414,6 +414,18 @@ It complements (but does not replace) ADRs:
   this lane starts after inspector-command closeout and lands one local `editor_notes_demo.rs`
   `Draft status` row without workspace dirty-close, save/persistence, generic document-state,
   inspector, or IMUI helper APIs.
+- Use `docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json` as the closed decision record for
+  the next non-multi-window IMUI gap:
+  `docs/workstreams/imui-next-gap-audit-v1/DESIGN.md`,
+  `docs/workstreams/imui-next-gap-audit-v1/TODO.md`,
+  `docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md`,
+  `docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md`,
+  `docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`, and
+  `docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md`.
+  Execution note:
+  this audit recommends `imui-editor-notes-draft-actions-v1` as the next app-owned,
+  locally testable implementation lane, while parking public IMUI helper widening and
+  macOS/multi-window work until stronger evidence exists.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the

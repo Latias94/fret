@@ -567,6 +567,22 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_EDITOR_NOTES_DIRTY_STATUS_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json");
+    const IMUI_NEXT_GAP_AUDIT_DESIGN: &str =
+        include_str!("../../../docs/workstreams/imui-next-gap-audit-v1/DESIGN.md");
+    const IMUI_NEXT_GAP_AUDIT_TODO: &str =
+        include_str!("../../../docs/workstreams/imui-next-gap-audit-v1/TODO.md");
+    const IMUI_NEXT_GAP_AUDIT_MILESTONES: &str =
+        include_str!("../../../docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md");
+    const IMUI_NEXT_GAP_AUDIT_EVIDENCE: &str =
+        include_str!("../../../docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md");
+    const IMUI_NEXT_GAP_AUDIT_M1_NOTE: &str = include_str!(
+        "../../../docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md"
+    );
+    const IMUI_NEXT_GAP_AUDIT_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    );
+    const IMUI_NEXT_GAP_AUDIT_WORKSTREAM: &str =
+        include_str!("../../../docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-facade-internal-modularization-v1/DESIGN.md");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_M0_NOTE: &str = include_str!(
@@ -5225,6 +5241,82 @@ mod authoring_surface_policy_tests {
             assert!(
                 IMUI_EDITOR_NOTES_DIRTY_STATUS_EVIDENCE.contains(marker),
                 "the editor-notes dirty-status evidence doc should name the canonical gates: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_closes_the_p1_imui_next_gap_audit() {
+        for marker in [
+            "Status: closed narrow P1 audit lane",
+            "The recent IMUI lanes closed collection helper readiness",
+            "Rank the next locally testable, non-macOS-dependent IMUI follow-on candidates.",
+            "No `fret-ui-kit::imui`, `fret-imui`, `fret-authoring`, or `crates/fret-ui` API widening.",
+            "No macOS-only or multi-window runner implementation.",
+            "Close this audit with a ranked next-gap decision",
+        ] {
+            assert!(
+                IMUI_NEXT_GAP_AUDIT_DESIGN.contains(marker),
+                "the IMUI next-gap audit design should keep the narrow audit scope explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-next-gap-audit-v1\"",
+            "\"status\": \"closed\"",
+            "\"scope_kind\": \"closeout\"",
+            "\"follow_on_of\": \"imui-editor-notes-dirty-status-v1\"",
+            "\"path\": \"docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md\"",
+            "\"path\": \"docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md\"",
+            "imui-next-gap-audit-source-policy",
+            "imui-editor-notes-draft-actions-v1",
+            "\"default_action\": \"start_follow_on\"",
+        ] {
+            assert!(
+                IMUI_NEXT_GAP_AUDIT_WORKSTREAM.contains(marker),
+                "the IMUI next-gap audit lane state should keep source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Recommended: `imui-editor-notes-draft-actions-v1`.",
+            "add app-owned `Commit draft` / `Discard draft` or equivalent draft action affordances",
+            "Multi-window/tear-off remains important but is not the right next local slice",
+            "Public IMUI helper growth still needs stronger two-surface proof.",
+            "Parked: generic IMUI/public helper widening.",
+            "without persistence, dirty-close,",
+        ] {
+            assert!(
+                IMUI_NEXT_GAP_AUDIT_M1_NOTE.contains(marker),
+                "the IMUI next-gap M1 audit should keep the ranking explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Treat `imui-next-gap-audit-v1` as a closed decision record.",
+            "implementation should start `imui-editor-notes-draft-actions-v1`",
+            "Do not reopen `imui-editor-grade-product-closure-v1` for implementation-heavy work.",
+            "Keep macOS/multi-window/tear-off work parked in runner/backend-owned lanes",
+            "Gate with `editor_notes_editor_rail_surface` plus a source-policy test.",
+        ] {
+            assert!(
+                IMUI_NEXT_GAP_AUDIT_CLOSEOUT.contains(marker),
+                "the IMUI next-gap closeout should keep the follow-on decision explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "- [x] Rank locally testable next-gap candidates.",
+            "- [x] Record a recommended next lane and explicit non-goals.",
+            "## M1 - Next-Gap Audit",
+            "Status: complete",
+            "immediate_mode_workstream_closes_the_p1_imui_next_gap_audit",
+        ] {
+            assert!(
+                IMUI_NEXT_GAP_AUDIT_TODO.contains(marker)
+                    || IMUI_NEXT_GAP_AUDIT_MILESTONES.contains(marker)
+                    || IMUI_NEXT_GAP_AUDIT_EVIDENCE.contains(marker),
+                "the IMUI next-gap audit execution docs should record closure markers: {marker}"
             );
         }
     }

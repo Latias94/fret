@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 258
+- Dedicated directories: 259
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -333,6 +333,18 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: records the closed app-owned editor-grade follow-on after inspector-command closeout,
     landing one local `editor_notes_demo.rs` `Draft status` row without workspace dirty-close,
     save/persistence, generic document-state, inspector, or IMUI helper APIs.
+
+- Closed narrow P1 IMUI next-gap audit record:
+  - `docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-next-gap-audit-v1/DESIGN.md`
+  - `docs/workstreams/imui-next-gap-audit-v1/TODO.md`
+  - `docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md`
+  - `docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md`
+  - Scope: records the closed decision to start `imui-editor-notes-draft-actions-v1` next for
+    locally testable app-owned editor depth while keeping public IMUI helper widening and
+    macOS/multi-window work parked.
 
 - Closed narrow P0 menu/tab policy-depth closeout record:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
@@ -741,6 +753,7 @@ Rule:
 - `docs/workstreams/imui-collection-helper-readiness-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the helper-readiness audit over the two existing collection proof surfaces; M2 keeps shared helper widening closed because no policy-light helper shape is needed by both surfaces)
 - `docs/workstreams/imui-editor-notes-inspector-command-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` inspector command/status loop after helper-readiness closeout)
 - `docs/workstreams/imui-editor-notes-dirty-status-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` `Draft status` row after inspector-command closeout)
+- `docs/workstreams/imui-next-gap-audit-v1/` — first n/a, latest n/a, 6 markdown docs (closed decision record recommending `imui-editor-notes-draft-actions-v1` as the next locally testable IMUI follow-on)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)

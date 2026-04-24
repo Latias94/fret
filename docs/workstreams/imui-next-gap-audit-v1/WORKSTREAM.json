@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "slug": "imui-next-gap-audit-v1",
+  "title": "ImUi Next Gap Audit v1",
+  "status": "closed",
+  "updated": "2026-04-24",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-editor-notes-dirty-status-v1",
+  "problem": "Recent IMUI follow-ons closed collection helper readiness and editor-notes inspector/draft-status depth. This audit chooses the next locally testable non-multi-window IMUI gap without reopening umbrella lanes or widening public helper APIs by default.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "evidence",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the source-policy gate that locks the next-gap audit decision.",
+    "commands": [
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_imui_next_gap_audit --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "imui-next-gap-audit-source-policy",
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_imui_next_gap_audit --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json > /dev/null"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-next-gap-audit-v1/DESIGN.md",
+    "docs/workstreams/imui-next-gap-audit-v1/TODO.md",
+    "docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md",
+    "docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This audit is closed. Start `imui-editor-notes-draft-actions-v1` for the recommended next app-owned implementation slice; do not reopen this folder for implementation work."
+  }
+}
