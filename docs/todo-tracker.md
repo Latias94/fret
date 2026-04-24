@@ -402,6 +402,18 @@ It complements (but does not replace) ADRs:
   Execution note:
   this lane starts after helper-readiness closeout and lands one local `editor_notes_demo.rs`
   inspector command/status loop without generic command, clipboard, inspector, or IMUI helper APIs.
+- Use `docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json` as the closed closeout
+  record for the app-owned editor-notes draft-status proof:
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`, and
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md`.
+  Execution note:
+  this lane starts after inspector-command closeout and lands one local `editor_notes_demo.rs`
+  `Draft status` row without workspace dirty-close, save/persistence, generic document-state,
+  inspector, or IMUI helper APIs.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the

@@ -39,6 +39,7 @@ const TEST_ID_NAME: &str = "editor-notes-demo.inspector.name";
 const TEST_ID_NOTES: &str = "editor-notes-demo.inspector.notes";
 const TEST_ID_NOTES_COMMITTED: &str = "editor-notes-demo.inspector.notes.committed";
 const TEST_ID_NOTES_OUTCOME: &str = "editor-notes-demo.inspector.notes.outcome";
+const TEST_ID_NOTES_DRAFT_STATUS: &str = "editor-notes-demo.inspector.notes.draft-status";
 const TEST_ID_SUMMARY_COMMAND: &str = "editor-notes-demo.inspector.summary-command";
 const TEST_ID_SUMMARY_STATUS: &str = "editor-notes-demo.inspector.summary-status";
 
@@ -543,6 +544,7 @@ where
     let notes_outcome_model = asset.notes_outcome_model.clone();
     let summary_status_model = asset.summary_status_model.clone();
     let summary_status_next = editor_asset_summary_command_status(&asset);
+    let draft_status_label = editor_notes_draft_status_label(&outcome_label, &committed_label);
 
     InspectorPanel::new(None)
         .options(InspectorPanelOptions {
@@ -671,6 +673,17 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new().options(row_cx.row_options.clone()),
+                                        |cx| cx.text("Draft status"),
+                                        |cx| {
+                                            cx.text(draft_status_label.clone())
+                                                .test_id(TEST_ID_NOTES_DRAFT_STATUS)
+                                        },
+                                        |_cx| None,
+                                    ));
+
+                                    rows.push(row_cx.row_with(
+                                        cx,
+                                        PropertyRow::new().options(row_cx.row_options.clone()),
                                         |cx| cx.text("Summary command"),
                                         |cx| {
                                             shadcn::Button::new("Copy asset summary")
@@ -724,5 +737,13 @@ pub(crate) fn committed_line_count_label(text: &str) -> String {
         0 => "No committed notes".to_string(),
         1 => "1 line committed".to_string(),
         n => format!("{n} lines committed"),
+    }
+}
+
+pub(crate) fn editor_notes_draft_status_label(outcome: &str, committed_label: &str) -> String {
+    match outcome {
+        "Committed" => format!("Clean draft · {committed_label}"),
+        "Canceled" => format!("Draft canceled · preserved editor text · {committed_label}"),
+        _ => format!("Draft preserved until commit · {committed_label}"),
     }
 }

@@ -143,6 +143,16 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
   `docs/workstreams/imui-editor-notes-inspector-command-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json`.
+- ImUi editor-notes dirty-status closeout record (closed narrow P1 lane that deepened the same
+  `editor_notes_demo.rs` proof with one app-owned `Draft status` row rather than reopening
+  workspace dirty-close, save/persistence, generic document-state, inspector, or IMUI helper APIs):
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle
   instead of widening `fret-authoring::Response` or `crates/fret-ui` again):

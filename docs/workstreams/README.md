@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-23
+Catalog updated: 2026-04-24
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 257
+- Dedicated directories: 258
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -321,6 +321,18 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: records the closed app-owned editor-grade follow-on after helper-readiness closeout,
     landing one local `editor_notes_demo.rs` inspector command/status loop without generic command,
     clipboard, inspector, or IMUI helper APIs.
+
+- Closed narrow P1 editor-notes dirty-status closeout record:
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md`
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md`
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md`
+  - Scope: records the closed app-owned editor-grade follow-on after inspector-command closeout,
+    landing one local `editor_notes_demo.rs` `Draft status` row without workspace dirty-close,
+    save/persistence, generic document-state, inspector, or IMUI helper APIs.
 
 - Closed narrow P0 menu/tab policy-depth closeout record:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
@@ -728,6 +740,7 @@ Rule:
 - `docs/workstreams/imui-collection-second-proof-surface-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the second shell-mounted collection proof surface after command-package closeout; `editor_notes_demo.rs` now carries the landed `Scene collection` surface with `workspace_shell_demo.rs` as supporting evidence, while the no-helper-widening verdict keeps shared collection helpers closed)
 - `docs/workstreams/imui-collection-helper-readiness-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the helper-readiness audit over the two existing collection proof surfaces; M2 keeps shared helper widening closed because no policy-light helper shape is needed by both surfaces)
 - `docs/workstreams/imui-editor-notes-inspector-command-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` inspector command/status loop after helper-readiness closeout)
+- `docs/workstreams/imui-editor-notes-dirty-status-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` `Draft status` row after inspector-command closeout)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
