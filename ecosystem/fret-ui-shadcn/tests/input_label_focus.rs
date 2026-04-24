@@ -1,5 +1,7 @@
 use fret_app::App;
-use fret_core::{AppWindowId, Modifiers, MouseButton, Point, Px, Rect, Size as CoreSize};
+use fret_core::{
+    AppWindowId, Modifiers, MouseButton, Point, Px, Rect, SemanticsRole, Size as CoreSize,
+};
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::tree::UiTree;
@@ -21,6 +23,34 @@ fn center_of(bounds: fret_core::Rect) -> Point {
         Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
         Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
     )
+}
+
+fn click_at(ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, position: Point) {
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(7),
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        app,
+        services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId(7),
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
 }
 
 #[test]
@@ -82,31 +112,61 @@ fn field_label_click_focuses_input_control() {
     let label_bounds = ui.debug_node_bounds(label_node).expect("label bounds");
     let label_center = center_of(label_bounds);
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-            pointer_id: fret_core::PointerId(7),
-            position: label_center,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            pointer_type: fret_core::PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-            pointer_id: fret_core::PointerId(7),
-            position: label_center,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            is_click: true,
-            click_count: 1,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
+    click_at(&mut ui, &mut app, &mut services, label_center);
 
     assert_eq!(ui.focus(), Some(input_node));
+}
+
+#[test]
+fn input_pointer_focus_keeps_control_bounds_stable() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
+        &mut app,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "input-focus-layout-stability",
+        |cx: &mut ElementContext<'_, App>| {
+            vec![
+                shadcn::Input::new(model.clone())
+                    .test_id("input.control")
+                    .into_element(cx),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+    let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+    let input_node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.test_id.as_deref() == Some("input.control") && n.role == SemanticsRole::TextField
+        })
+        .map(|n| n.id)
+        .expect("input node");
+
+    let before = ui.debug_node_bounds(input_node).expect("input bounds");
+    click_at(&mut ui, &mut app, &mut services, center_of(before));
+    ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+    let after = ui
+        .debug_node_bounds(input_node)
+        .expect("input bounds after focus");
+
+    assert_eq!(after, before);
 }

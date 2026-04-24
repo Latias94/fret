@@ -70,15 +70,12 @@ pub(in crate::ui) fn preview_virtual_list_torture(
         .flatten();
 
     let controls = (!minimal_harness).then(|| {
-        let jump_input = {
-            let mut props =
-                fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
-            props.a11y_label = Some(Arc::<str>::from("Jump to row"));
-            props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
-            props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
-            props.layout.size.width = fret_ui::element::Length::Fill;
-            cx.text_input(props)
-        };
+        let jump_input = shadcn::Input::new(virtual_list_torture_jump.clone())
+            .a11y_label("Jump to row")
+            .test_id("ui-gallery-virtual-list-jump-input")
+            .placeholder("Row index (e.g. 9000)")
+            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
         doc_layout::wrap_controls_row(cx, theme, Space::N2, |cx| {
             let jump_model = virtual_list_torture_jump.clone();
@@ -375,15 +372,14 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             .into_element(cx);
 
                         let right = if is_editing {
-                            let mut props =
-                                fret_ui::element::TextInputProps::new(edit_text.clone());
-                            props.a11y_label = Some(Arc::<str>::from("Inline edit"));
-                            props.test_id =
-                                Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
-                            props.placeholder = Some(Arc::<str>::from("Type to edit…"));
-                            props.layout.size.width = fret_ui::element::Length::Fill;
+                            let input = shadcn::Input::new(edit_text.clone())
+                                .a11y_label("Inline edit")
+                                .test_id("ui-gallery-virtual-list-edit-input")
+                                .placeholder("Type to edit…")
+                                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                                .into_element(cx);
 
-                            ui::h_flex(|cx| [cx.text_input(props)])
+                            ui::h_flex(|_cx| [input])
                                 .layout(LayoutRefinement::default().w_full())
                                 .gap(Space::N2)
                                 .items_center()
@@ -491,16 +487,17 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .into_element(cx);
 
                             let right = if is_editing {
-                                let mut props = fret_ui::element::TextInputProps::new(
-                                    virtual_list_torture_edit_text.clone(),
-                                );
-                                props.a11y_label = Some(Arc::<str>::from("Inline edit"));
-                                props.test_id =
-                                    Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
-                                props.placeholder = Some(Arc::<str>::from("Type to edit…"));
-                                props.layout.size.width = fret_ui::element::Length::Fill;
+                                let input =
+                                    shadcn::Input::new(virtual_list_torture_edit_text.clone())
+                                        .a11y_label("Inline edit")
+                                        .test_id("ui-gallery-virtual-list-edit-input")
+                                        .placeholder("Type to edit…")
+                                        .refine_layout(
+                                            LayoutRefinement::default().w_full().min_w_0(),
+                                        )
+                                        .into_element(cx);
 
-                                ui::h_flex(|cx| vec![cx.text_input(props)])
+                                ui::h_flex(|_cx| vec![input])
                                     .layout(LayoutRefinement::default().w_full())
                                     .gap(Space::N2)
                                     .items_center()
