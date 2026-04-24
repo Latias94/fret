@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "slug": "imui-active-trigger-behavior-kernel-v1",
+  "title": "ImUi Active Trigger Behavior Kernel v1",
+  "status": "closed",
+  "updated": "2026-04-24",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-item-behavior-kernel-v1",
+  "problem": "`fret-ui-kit::imui` still has repeated active-only trigger behavior after the full pressable item kernel closed. This lane owns the narrower private kernel for switch, menu item, menu trigger, submenu trigger, and tab trigger response/lifecycle wiring while keeping popup, roving focus, menubar, submenu, value editing, and public API policy out of the kernel.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-active-trigger-behavior-kernel-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-active-trigger-behavior-kernel-v1/M0_M1_ACTIVE_TRIGGER_SLICE_2026-04-24.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-active-trigger-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-active-trigger-behavior-kernel-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-active-trigger-behavior-kernel-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-active-trigger-behavior-kernel-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused IMUI menu/tab/control tests, the public `fret-imui` facade floor, and the first-party IMUI proof demos to verify that the private active-trigger kernel deletes duplicate behavior without widening public contracts.",
+      "commands": [
+      "cargo check -p fret-ui-kit --features imui",
+      "cargo nextest run -p fret-imui switch_model_reports_changed_once_after_click --no-fail-fast",
+      "cargo nextest run -p fret-imui interaction_menu_tabs:: --no-fail-fast",
+      "cargo nextest run -p fret-imui menu_item_lifecycle_edges_follow_press_session --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_selectable_smoke --test imui_combo_smoke --no-fail-fast",
+      "cargo build -p fret-demo --bin imui_interaction_showcase_demo",
+      "cargo build -p fret-demo --bin imui_editor_proof_demo"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format",
+      "command": "cargo fmt --package fret-ui-kit"
+    },
+    {
+      "name": "imui-kit-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "imui-public-focused",
+      "command": "cargo nextest run -p fret-imui switch_model_reports_changed_once_after_click --no-fail-fast && cargo nextest run -p fret-imui interaction_menu_tabs:: --no-fail-fast && cargo nextest run -p fret-imui menu_item_lifecycle_edges_follow_press_session --no-fail-fast"
+    },
+    {
+      "name": "imui-public-facade-floor",
+      "command": "cargo nextest run -p fret-imui --no-fail-fast"
+    },
+    {
+      "name": "imui-kit-full",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --no-fail-fast"
+    },
+    {
+      "name": "interaction-showcase-build",
+      "command": "cargo build -p fret-demo --bin imui_interaction_showcase_demo"
+    },
+    {
+      "name": "editor-proof-build",
+      "command": "cargo build -p fret-demo --bin imui_editor_proof_demo"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python3 -m json.tool docs/workstreams/imui-active-trigger-behavior-kernel-v1/WORKSTREAM.json"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/DESIGN.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/M0_M1_ACTIVE_TRIGGER_SLICE_2026-04-24.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/TODO.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/MILESTONES.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
+    "ecosystem/fret-imui/src/tests"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This active-only trigger behavior kernel lane is closed after switch, menu item, menu trigger, submenu trigger, and tab trigger migration. Start a narrower follow-on for slider value editing, text focus/edit lifecycle, disclosure context/double-click cleanup, public `fret-imui` API widening, or runtime mechanism changes."
+  }
+}

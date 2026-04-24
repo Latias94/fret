@@ -20,6 +20,7 @@ use fret_runtime::{ActionId, CommandId};
 use fret_ui::element::{AnyElement, PointerRegionProps};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+mod active_trigger_behavior;
 pub mod adapters;
 mod boolean_controls;
 mod bullet_text_controls;

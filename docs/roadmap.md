@@ -37,6 +37,12 @@ Tracker highlights:
   `docs/workstreams/imui-item-behavior-kernel-v1/DESIGN.md`,
   `docs/workstreams/imui-item-behavior-kernel-v1/M3_SELECTABLE_COMBO_CLOSEOUT_2026-04-24.md`, and
   `docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`.
+- ImUi active-trigger behavior kernel follow-on (closed fearless private `fret-ui-kit::imui`
+  refactor that converged the smaller switch/menu/tab trigger lifecycle and response duplication
+  left after the full pressable item kernel closeout):
+  `docs/workstreams/imui-active-trigger-behavior-kernel-v1/DESIGN.md`,
+  `docs/workstreams/imui-active-trigger-behavior-kernel-v1/M0_M1_ACTIVE_TRIGGER_SLICE_2026-04-24.md`, and
+  `docs/workstreams/imui-active-trigger-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`.
 - ImUi child-region depth closeout record (closed narrow P1 lane that landed the bounded
   `ChildRegionChrome::{Framed, Bare}` slice and froze that resize / auto-resize /
   focus-boundary posture still do not belong in generic `child_region` on current first-party

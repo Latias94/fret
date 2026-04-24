@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 261
+- Dedicated directories: 262
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -140,6 +140,20 @@ Current source of truth for the in-tree immediate-mode stack:
     family-local paths deleted instead of preserved as compatibility fallback; switch/menu/tab
     active-only cleanup, menu/tab policy, slider editing, public `fret-imui` widening, and runtime
     contracts must start as narrower follow-ons or ADR work instead of reopening this lane.
+
+- Closed narrow P1 active-trigger behavior kernel follow-on:
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/DESIGN.md`
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/M0_M1_ACTIVE_TRIGGER_SLICE_2026-04-24.md`
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/TODO.md`
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/MILESTONES.md`
+  - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/EVIDENCE_AND_GATES.md`
+  - Scope: closed after the narrower private `fret-ui-kit::imui` active-only trigger behavior
+    kernel migrated switch/menu item/menu trigger/submenu trigger/tab trigger response and lifecycle
+    duplication; popup, roving focus, menubar, submenu, tab selection, slider editing, text
+    focus/edit lifecycle, disclosure context/double-click cleanup, public `fret-imui`, and runtime
+    contracts stay out by default.
 
 - Closed narrow P1 child-region depth closeout record:
   - `docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json`
@@ -797,6 +811,7 @@ Rule:
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
+- `docs/workstreams/imui-active-trigger-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private active-trigger behavior follow-on for deleting switch/menu/tab trigger response and lifecycle duplication without widening `fret-imui` or runtime contracts by default)
 - `docs/workstreams/imui-item-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private item-behavior kernel follow-on that migrated full pressable behavior for button, checkbox/radio, selectable, and combo trigger controls without widening `fret-imui` or runtime contracts by default)
 - `docs/workstreams/imui-key-owner-surface-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the immediate key-owner / item-local shortcut ownership verdict above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-menu-tab-policy-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the shipped generic menu/submenu floor and no-new-generic-surface verdict above the maintenance IMUI umbrella)
