@@ -49,6 +49,12 @@ Tracker highlights:
   `docs/workstreams/imui-interaction-inspector-v1/DESIGN.md`,
   `docs/workstreams/imui-interaction-inspector-v1/CLOSEOUT_AUDIT_2026-04-24.md`, and
   `docs/workstreams/imui-interaction-inspector-v1/EVIDENCE_AND_GATES.md`.
+- ImUi interaction inspector diagnostics gate follow-on (closed narrow suite promotion that drives
+  the showcase pulse response and asserts the inspector summary/flag state via stable diagnostics
+  selectors):
+  `docs/workstreams/imui-interaction-inspector-diag-gate-v1/DESIGN.md`,
+  `docs/workstreams/imui-interaction-inspector-diag-gate-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-interaction-inspector-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`.
 - ImUi child-region depth closeout record (closed narrow P1 lane that landed the bounded
   `ChildRegionChrome::{Framed, Bare}` slice and froze that resize / auto-resize /
   focus-boundary posture still do not belong in generic `child_region` on current first-party

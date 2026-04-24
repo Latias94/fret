@@ -131,6 +131,11 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-interaction-inspector-v1/MILESTONES.md`
   - `docs/workstreams/imui-interaction-inspector-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-interaction-inspector-v1/WORKSTREAM.json`
+- Closed narrow follow-on for the IMUI response inspector diagnostics gate:
+  - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/DESIGN.md`
+  - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`
+  - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/WORKSTREAM.json`
 - Closed narrow closeout record for `BeginChild()`-scale child-region depth:
   - `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
   - `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`

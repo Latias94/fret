@@ -2802,6 +2802,8 @@ mod authoring_surface_policy_tests {
                 "use fret_ui_shadcn::facade as shadcn;",
                 "imui(cx, move |ui| {",
                 "const TEST_ID_INSPECTOR",
+                "TEST_ID_INSPECTOR_SUMMARY",
+                "imui-interaction-showcase.inspector.flag.",
                 "ShowcaseInspectorState::default",
                 "render_response_inspector_card(",
                 "record_showcase_response(",

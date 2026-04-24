@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-interaction-showcase-inspector-response-gate",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["imui", "showcase", "inspector", "response", "gate", "ui_editor"],
+    "target_hints": [
+      "Promoted gate for the product-facing IMUI response inspector in imui_interaction_showcase_demo.",
+      "Clicks the pulse control, then asserts that the inspector summary and clicked flag detail expose the response edge."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1360.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.inspector.summary" },
+        "text": "Waiting for the first IMUI response."
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-interaction-showcase.inspector.flag.clicked.detail"
+        },
+        "text": "no edge yet"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-showcase.lab.pulse" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-showcase.lab.pulse" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.header.latest.label" },
+        "text": "Primary pulse registered."
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "imui-interaction-showcase.inspector.summary" },
+        "text": "Primary click response returned by the IMUI button."
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-interaction-showcase.inspector.flag.clicked.detail"
+        },
+        "text": "primary edge"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_bundle",
+      "label": "imui-interaction-showcase.inspector-response-gate"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-interaction-showcase.inspector-response-gate"
+    }
+  ]
+}

@@ -1716,6 +1716,29 @@
       ]
     },
     {
+      "id": "imui-interaction-showcase-inspector-response-gate",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-inspector-response-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-interaction-inspector-diag-gate"
+      ],
+      "tags": [
+        "gate",
+        "imui",
+        "inspector",
+        "response",
+        "showcase",
+        "ui_editor"
+      ],
+      "target_hints": [
+        "Promoted gate for the product-facing IMUI response inspector in imui_interaction_showcase_demo.",
+        "Clicks the pulse control, then asserts that the inspector summary and clicked flag detail expose the response edge."
+      ]
+    },
+    {
       "id": "liquid-glass-backdrop-warp-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "required_capabilities": [],

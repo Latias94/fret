@@ -31,6 +31,7 @@ const TEST_ID_HERO: &str = "imui-interaction-showcase.hero";
 const TEST_ID_LAB: &str = "imui-interaction-showcase.lab";
 const TEST_ID_SHELL: &str = "imui-interaction-showcase.shell";
 const TEST_ID_INSPECTOR: &str = "imui-interaction-showcase.inspector";
+const TEST_ID_INSPECTOR_SUMMARY: &str = "imui-interaction-showcase.inspector.summary";
 const TEST_ID_INSPECTOR_FLAGS: &str = "imui-interaction-showcase.inspector.flags";
 const TEST_ID_TIMELINE: &str = "imui-interaction-showcase.timeline";
 const TEST_ID_PREVIEW: &str = "imui-showcase.preview";
@@ -1908,7 +1909,8 @@ fn render_response_inspector_card(
                     ui::text(summary)
                         .text_sm()
                         .wrap(fret_core::TextWrap::Word)
-                        .into_element(cx),
+                        .into_element(cx)
+                        .test_id(TEST_ID_INSPECTOR_SUMMARY),
                 ]
             })
             .gap(Space::N2)
@@ -2060,6 +2062,9 @@ fn inspector_signal_row(
 ) -> AnyElement {
     let label = label.into();
     let detail = detail.into();
+    let row_test_id = Arc::<str>::from(format!("imui-interaction-showcase.inspector.flag.{label}"));
+    let label_test_id = Arc::<str>::from(format!("{row_test_id}.label"));
+    let detail_test_id = Arc::<str>::from(format!("{row_test_id}.detail"));
     ui::h_flex(move |cx| {
         vec![
             shadcn::Badge::new(if active { "on" } else { "off" })
@@ -2071,12 +2076,17 @@ fn inspector_signal_row(
                 .into_element(cx),
             ui::v_flex(move |cx| {
                 vec![
-                    ui::text(label).text_sm().font_semibold().into_element(cx),
+                    ui::text(label)
+                        .text_sm()
+                        .font_semibold()
+                        .into_element(cx)
+                        .test_id(label_test_id),
                     ui::text(detail)
                         .text_xs()
                         .wrap(fret_core::TextWrap::Word)
                         .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
-                        .into_element(cx),
+                        .into_element(cx)
+                        .test_id(detail_test_id),
                 ]
             })
             .gap(Space::N0p5)
@@ -2094,6 +2104,7 @@ fn inspector_signal_row(
     .bg(ColorRef::Color(cx.theme().color_token("muted")))
     .w_full()
     .into_element(cx)
+    .test_id(row_test_id)
 }
 
 fn inspector_signal_pill(
