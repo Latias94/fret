@@ -12,13 +12,15 @@ cargo nextest run -p fret-imui textarea_lifecycle_tracks_focus_edit_and_blur_edg
 cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2
 cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2
 cargo check -p fret-node --features compat-retained-canvas --jobs 2
+cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2
+cargo check -p fret-ui-kit --features imui --jobs 2
 cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
 cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo
 ```
 
 The first three commands are the focused lifecycle floor. The `fret-node` commands cover retained
-portal editor input sizing policy. The two diag suites keep the proof demos from drifting while
-this lane hardens value-edit behavior.
+portal editor input sizing policy. The IMUI input bounds test covers the public single-line helper.
+The two diag suites keep the proof demos from drifting while this lane hardens value-edit behavior.
 
 ## Required Gates
 
@@ -31,6 +33,8 @@ cargo check -p fret-examples
 cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2
 cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2
 cargo check -p fret-node --features compat-retained-canvas --jobs 2
+cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2
+cargo check -p fret-ui-kit --features imui --jobs 2
 cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
 cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo
 python tools/check_workstream_catalog.py
@@ -101,4 +105,13 @@ cargo fmt --package fret-node --check
 cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2
 cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2
 cargo check -p fret-node --features compat-retained-canvas --jobs 2
+```
+
+Passed on 2026-04-25 for the public IMUI single-line input sizing slice:
+
+```bash
+cargo fmt --package fret-ui-kit --package fret-imui --check
+cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2
+cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges --jobs 2
+cargo check -p fret-ui-kit --features imui --jobs 2
 ```

@@ -11,6 +11,7 @@ Last updated: 2026-04-25
 - [x] M2: delete duplicated or misleading lifecycle plumbing if the audit finds a cleaner shared
   private kernel.
 - [x] M2: stabilize retained node portal text/number input sizing through an editor-layer helper.
+- [x] M2: stabilize public IMUI single-line input sizing through an IMUI-layer helper.
 - [x] M2: keep runtime and authoring public contracts stable unless the audit proves a hard
   contract change is unavoidable.
 - [ ] M3: add or promote rendered proof for drag-value and numeric input edit outcomes.

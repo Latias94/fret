@@ -38,7 +38,9 @@ Exit criteria:
 
 Status: first private `DragValueCore` slice landed. Retained node portal text/number editors now
 also share fixed input sizing and fixed control line-box policy through
-`M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md`. Remaining M2 scope should stay open only for
+`M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md`. Public IMUI single-line inputs now share the same
+fixed field-height/control-line-box direction through
+`M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md`. Remaining M2 scope should stay open only for
 additional concrete mismatches found by diagnostics or editor-control harnesses.
 
 ## M3 - Diagnostics Proof

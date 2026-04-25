@@ -1,7 +1,7 @@
 //! Immediate-mode text input and textarea helpers.
 
 use fret_ui::UiHost;
-use fret_ui::element::Length;
+use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 
 use super::{InputTextMode, InputTextOptions, ResponseExt, TextAreaOptions, UiWriterImUiFacadeExt};
 
@@ -33,6 +33,29 @@ fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAr
         caret_color: input_style.caret_color,
         preedit_bg_color,
         preedit_underline_color: input_style.preedit_color,
+    }
+}
+
+fn default_input_text_style_from_theme(theme: &fret_ui::Theme) -> fret_core::TextStyle {
+    crate::typography::control_text_style_for_font_size(
+        theme,
+        fret_core::FontId::ui(),
+        theme
+            .metric_by_key("font.size")
+            .unwrap_or_else(|| theme.metric_token("font.size")),
+    )
+}
+
+fn input_text_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Px(super::control_chrome::FIELD_MIN_HEIGHT),
+            min_height: Some(Length::Px(super::control_chrome::FIELD_MIN_HEIGHT)),
+            max_height: Some(Length::Px(super::control_chrome::FIELD_MIN_HEIGHT)),
+            ..Default::default()
+        },
+        ..Default::default()
     }
 }
 
@@ -69,17 +92,22 @@ pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             props.enabled = enabled;
             props.focusable = enabled && options.focusable;
             props.obscure_text = matches!(options.mode, InputTextMode::Password);
-            props.layout.size.width = Length::Fill;
+            props.layout = input_text_layout();
             props.a11y_label = options.a11y_label.clone();
             props.a11y_role = options.a11y_role;
             props.test_id = options.test_id.clone();
             props.placeholder = options.placeholder.clone();
             props.submit_command = options.submit_command.clone();
             props.cancel_command = options.cancel_command.clone();
-            props.chrome = {
+            let (chrome, text_style) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
-                crate::recipes::input::default_text_input_style(theme)
+                (
+                    crate::recipes::input::default_text_input_style(theme),
+                    default_input_text_style_from_theme(theme),
+                )
             };
+            props.chrome = chrome;
+            props.text_style = text_style;
 
             let mut element = cx.text_input(props);
             element.id = id;

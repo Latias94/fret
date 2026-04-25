@@ -25,6 +25,10 @@
       "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md"
     },
@@ -54,6 +58,8 @@
       "cargo nextest run -p fret-node --features compat-retained-canvas portal_text_input_ --jobs 2",
       "cargo nextest run -p fret-node --features compat-retained-canvas portal_button_stack_height --jobs 2",
       "cargo check -p fret-node --features compat-retained-canvas --jobs 2",
+      "cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2",
+      "cargo check -p fret-ui-kit --features imui --jobs 2",
       "cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo",
       "cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo"
     ]
@@ -90,6 +96,14 @@
     {
       "name": "node-portal-check",
       "command": "cargo check -p fret-node --features compat-retained-canvas --jobs 2"
+    },
+    {
+      "name": "imui-input-bounds-unit",
+      "command": "cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 2"
     },
     {
       "name": "response-lifecycle-suite",
@@ -138,6 +152,7 @@
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md",

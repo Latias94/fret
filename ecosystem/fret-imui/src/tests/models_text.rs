@@ -159,6 +159,91 @@ fn input_text_password_mode_obscures_paint_text_without_mutating_model() {
 }
 
 #[test]
+fn input_text_focus_keeps_control_bounds_stable() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(140.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(String::new());
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui_raw(cx, |ui| {
+            ui.vertical(|ui| {
+                let _ = ui.input_text_model_with_options(
+                    &model,
+                    InputTextOptions {
+                        test_id: Some(Arc::from("imui-input-text-stable-bounds")),
+                        ..Default::default()
+                    },
+                );
+                let _ = ui.button_with_options(
+                    "Sibling",
+                    ButtonOptions {
+                        test_id: Some(Arc::from("imui-input-text-stable-bounds.sibling")),
+                        ..Default::default()
+                    },
+                );
+            });
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-stable-bounds",
+        |cx| render(cx),
+    );
+    let input_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-input-text-stable-bounds",
+    );
+    let before = ui.debug_node_bounds(input_node).expect("input bounds");
+
+    let at = Point::new(
+        Px(before.origin.x.0 + before.size.width.0 * 0.5),
+        Px(before.origin.y.0 + before.size.height.0 * 0.5),
+    );
+    click_at(&mut ui, &mut app, &mut services, at);
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-stable-bounds",
+        |cx| render(cx),
+    );
+    let input_node = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-input-text-stable-bounds",
+    );
+    let after = ui.debug_node_bounds(input_node).expect("input bounds");
+
+    assert_eq!(after.origin, before.origin);
+    assert_eq!(after.size, before.size);
+}
+
+#[test]
 fn input_text_lifecycle_tracks_focus_edit_and_blur_edges() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
