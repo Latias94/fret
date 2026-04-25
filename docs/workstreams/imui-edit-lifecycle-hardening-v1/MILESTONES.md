@@ -52,8 +52,10 @@ Exit criteria:
 - Selectors remain stable and demo-matched.
 
 Status: focused `DragState` unit coverage landed and the existing response-signals plus
-editor-proof diagnostics suites pass. M3 remains open only for adding or promoting additional
-rendered `DragValue` / `NumericInput` proof if a future mismatch appears.
+editor-proof diagnostics suites pass. Public IMUI single-line input bounds stability now has a
+rendered diagnostics gate through `M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md`. M3 remains open
+only for adding or promoting additional rendered `DragValue` / `NumericInput` proof if a future
+mismatch appears.
 
 ## M4 - Closeout
 

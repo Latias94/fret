@@ -2,6 +2,7 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
-    "tools/diag-scripts/ui-editor/imui/imui-response-signals-edit-lifecycle-gate.json"
+    "tools/diag-scripts/ui-editor/imui/imui-response-signals-edit-lifecycle-gate.json",
+    "tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json"
   ]
 }

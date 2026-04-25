@@ -1812,6 +1812,29 @@
       ]
     },
     {
+      "id": "imui-response-signals-input-bounds-stability",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-response-signals-edit-lifecycle"
+      ],
+      "tags": [
+        "bounds",
+        "focus",
+        "imui",
+        "regression",
+        "response",
+        "text_input",
+        "ui_editor"
+      ],
+      "target_hints": [
+        "Uses imui_response_signals_demo as the rendered proof surface for public IMUI single-line input sizing.",
+        "Clicks/focuses the lifecycle text input, edits it, and gates that each phase keeps the control at the fixed 24px IMUI field height while layout sidecars capture before/focus/edit evidence."
+      ]
+    },
+    {
       "id": "liquid-glass-backdrop-warp-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "required_capabilities": [],

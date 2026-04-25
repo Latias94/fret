@@ -1,0 +1,164 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-response-signals-input-bounds-stability",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui_editor",
+      "imui",
+      "response",
+      "text_input",
+      "bounds",
+      "focus",
+      "regression"
+    ],
+    "target_hints": [
+      "Uses imui_response_signals_demo as the rendered proof surface for public IMUI single-line input sizing.",
+      "Clicks/focuses the lifecycle text input, edits it, and gates that each phase keeps the control at the fixed 24px IMUI field height while layout sidecars capture before/focus/edit evidence."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 720.0, "height_px": 520.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "min_w_px": 120.0,
+        "min_h_px": 24.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "max_w_px": 10000.0,
+        "max_h_px": 24.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-response-signals-input-bounds-before-focus"
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "min_w_px": 120.0,
+        "min_h_px": 24.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "max_w_px": 10000.0,
+        "max_h_px": 24.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-response-signals-input-bounds-after-focus"
+    },
+
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+      "text": "typed"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "text": "typed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "min_w_px": 120.0,
+        "min_h_px": 24.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "imui-resp-demo.lifecycle-text" },
+        "max_w_px": 10000.0,
+        "max_h_px": 24.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-response-signals-input-bounds-after-edit"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-response-signals-input-bounds-stability"
+    }
+  ]
+}

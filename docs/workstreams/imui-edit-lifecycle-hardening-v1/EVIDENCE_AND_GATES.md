@@ -14,13 +14,17 @@ cargo nextest run -p fret-node --features compat-retained-canvas portal_button_s
 cargo check -p fret-node --features compat-retained-canvas --jobs 2
 cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2
 cargo check -p fret-ui-kit --features imui --jobs 2
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
+cargo run -p fretboard-dev -- diag registry check
 cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
 cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo
 ```
 
 The first three commands are the focused lifecycle floor. The `fret-node` commands cover retained
 portal editor input sizing policy. The IMUI input bounds test covers the public single-line helper.
-The two diag suites keep the proof demos from drifting while this lane hardens value-edit behavior.
+The input-bounds diag script renders the click/focus/type path and captures layout sidecars. The
+registry check keeps named suite membership in sync with promoted scripts. The two diag suites keep
+the proof demos from drifting while this lane hardens value-edit behavior.
 
 ## Required Gates
 
@@ -35,9 +39,13 @@ cargo nextest run -p fret-node --features compat-retained-canvas portal_button_s
 cargo check -p fret-node --features compat-retained-canvas --jobs 2
 cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2
 cargo check -p fret-ui-kit --features imui --jobs 2
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
+cargo run -p fretboard-dev -- diag registry check
 cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
 cargo run -p fretboard-dev -- diag suite imui-editor-proof-edit-outcomes --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo
 python tools/check_workstream_catalog.py
+python -m json.tool tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json
+python -m json.tool tools/diag-scripts/suites/imui-response-signals-edit-lifecycle/suite.json
 python -m json.tool docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json
 git diff --check
 ```
@@ -63,7 +71,9 @@ git diff --check
 - `ecosystem/fret-imui/src/tests/models_text.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json`
 - `tools/diag-scripts/suites/imui-response-signals-edit-lifecycle/suite.json`
+- `tools/diag-scripts/index.json`
 - `tools/diag-scripts/suites/imui-editor-proof-edit-outcomes/suite.json`
 - `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json`
 
@@ -114,4 +124,17 @@ cargo fmt --package fret-ui-kit --package fret-imui --check
 cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --jobs 2
 cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges --jobs 2
 cargo check -p fret-ui-kit --features imui --jobs 2
+```
+
+Passed on 2026-04-25 for the rendered IMUI input bounds diagnostics gate:
+
+```bash
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
+cargo run -p fretboard-dev -- diag registry check
+cargo run -p fretboard-dev -- diag suite imui-response-signals-edit-lifecycle --launch -- cargo run -p fret-demo --bin imui_response_signals_demo
+python -m json.tool tools/diag-scripts/ui-editor/imui/imui-response-signals-input-bounds-stability.json
+python -m json.tool tools/diag-scripts/suites/imui-response-signals-edit-lifecycle/suite.json
+python tools/check_workstream_catalog.py
+python -m json.tool docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json
+git diff --check
 ```
