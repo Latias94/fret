@@ -1,6 +1,6 @@
 # ImUi Edit Lifecycle Hardening v1 TODO
 
-Status: active
+Status: closed
 Last updated: 2026-04-25
 
 - [x] Keep `imui-edit-lifecycle-diag-gate-v1` closed and create this narrow follow-on.
@@ -17,4 +17,4 @@ Last updated: 2026-04-25
 - [x] M3: add rendered diagnostics proof for public IMUI single-line input bounds stability.
 - [x] M3: add or promote rendered proof for drag-value and numeric input edit outcomes.
 - [x] M3: keep the response-signals and editor-proof diag suites green after hardening.
-- [ ] M4: close out with evidence, gates, and residual gap routing.
+- [x] M4: close out with evidence, gates, and residual gap routing.

@@ -2,11 +2,11 @@
   "schema_version": 1,
   "slug": "imui-edit-lifecycle-hardening-v1",
   "title": "ImUi Edit Lifecycle Hardening v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-25",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "follow_on_of": "imui-edit-lifecycle-diag-gate-v1",
-  "problem": "The previous diagnostics follow-on proved the first edit lifecycle gates, but value-editing still needs a Dear ImGui-aligned hardening pass for slider, drag-value, and numeric/text entry session semantics. This lane owns private IMUI lifecycle internals, editor control proof, and diagnostics coverage without widening `crates/fret-ui`, `fret-authoring::Response`, or public `fret-imui` contracts by default.",
+  "problem": "The previous diagnostics follow-on proved the first edit lifecycle gates, and this closeout records the shipped Dear ImGui-aligned hardening pass for slider, drag-value, and numeric/text entry session semantics. The lane owns private IMUI lifecycle internals, editor control proof, and diagnostics coverage without widening `crates/fret-ui`, `fret-authoring::Response`, or public `fret-imui` contracts by default.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -37,6 +37,10 @@
       "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/CLOSEOUT_AUDIT_2026-04-25.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md"
     },
@@ -58,7 +62,7 @@
     }
   ],
   "repro": {
-    "summary": "Start with the existing unit and diagnostics floors for slider/text lifecycle, then add drag-value and numeric-input proof as the lane lands slices.",
+    "summary": "Closed lane gate set for slider/text lifecycle, drag-value hardening, input bounds stability, and numeric-input rendered proof.",
     "commands": [
       "cargo nextest run -p fret-imui slider_lifecycle_reports_edit_and_deactivated_after_pointer_commit",
       "cargo nextest run -p fret-imui input_text_lifecycle_tracks_focus_edit_and_blur_edges",
@@ -209,6 +213,7 @@
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/CLOSEOUT_AUDIT_2026-04-25.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md",
     "docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md",
@@ -218,7 +223,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane for bounded slider/drag-value/numeric/text edit lifecycle hardening. Start a narrower follow-on if the work turns into public runtime API, key ownership, docking, or broad editor workbench scope."
+    "default_action": "start_follow_on",
+    "notes": "Keep this lane closed as the shipped slider/drag-value/numeric/text edit lifecycle hardening record. Start a narrower follow-on for public runtime API, key ownership, docking, multi-window, or broad editor workbench scope."
   }
 }

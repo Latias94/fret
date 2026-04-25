@@ -1,6 +1,6 @@
 # ImUi Edit Lifecycle Hardening v1 Evidence And Gates
 
-Status: active gate list
+Status: closed final gate list
 Last updated: 2026-04-25
 
 ## Smallest Repros
@@ -99,6 +99,7 @@ git diff --check
 - `tools/diag-scripts/index.json`
 - `tools/diag-scripts/suites/imui-editor-proof-edit-outcomes/suite.json`
 - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md`
+- `docs/workstreams/imui-edit-lifecycle-hardening-v1/CLOSEOUT_AUDIT_2026-04-25.md`
 - `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json`
 
 ## Verified Gates

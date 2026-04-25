@@ -280,7 +280,7 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md`
   - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/WORKSTREAM.json`
-- Active narrow P1 edit lifecycle hardening follow-on:
+- Closed narrow P1 edit lifecycle hardening closeout record:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`
@@ -288,6 +288,7 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/CLOSEOUT_AUDIT_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`
@@ -331,8 +332,10 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` as the closed diagnostics follow-on for
   the lifecycle proof gate and editor-proof script drift repair; future lifecycle breadth should
   start a narrower lane rather than reopening the response-status closeout.
-- Use `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json` as the active follow-on
-  for current slider / drag-value / numeric-input / text-entry edit lifecycle hardening.
+- Use `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json` as the closed closeout
+  record for current slider / drag-value / numeric-input / text-entry edit lifecycle hardening;
+  future public API, key-owner, docking, multi-window, or broader editor workbench scope should
+  start as narrower follow-ons.
 - Use `docs/workstreams/imui-key-owner-surface-v1/WORKSTREAM.json` as the closed closeout record
   for immediate key-owner surface work:
   the lane now keeps the M2 no-new-surface verdict explicit, preserves item-local shortcut

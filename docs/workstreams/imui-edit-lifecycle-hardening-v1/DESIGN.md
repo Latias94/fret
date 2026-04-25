@@ -1,7 +1,12 @@
 # ImUi Edit Lifecycle Hardening v1
 
-Status: active follow-on
-Last updated: 2026-04-24
+Status: Closed closeout record
+Last updated: 2026-04-25
+
+Status note (2026-04-25): this lane closed after the M4 closeout audit. It remains the evidence
+record for the shipped slider, drag-value, numeric-input, and text-entry hardening slices. New
+public IMUI API, key-owner, docking, multi-window, or broader editor-workbench work should start as
+a narrower follow-on instead of reopening this folder.
 
 ## Scope
 

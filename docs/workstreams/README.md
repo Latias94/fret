@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-24
+Catalog updated: 2026-04-25
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -500,7 +500,7 @@ Current source of truth for the in-tree immediate-mode stack:
     to keep `imui_response_signals_demo` and `imui_editor_proof_demo` aligned with current
     behavior.
 
-- Active narrow P1 edit lifecycle hardening follow-on:
+- Closed narrow P1 edit lifecycle hardening closeout record:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
@@ -509,12 +509,15 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/CLOSEOUT_AUDIT_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`
-  - Scope: owns the next bounded value-edit lifecycle hardening slice for slider, drag-value,
-    numeric input, and text-entry semantics against Dear ImGui-style active/deactivated-after-edit
-    outcomes without widening runtime or authoring contracts by default.
+  - Scope: records the shipped bounded value-edit lifecycle hardening slices for slider,
+    drag-value, numeric input, and text-entry semantics against Dear ImGui-style
+    active/deactivated-after-edit outcomes without widening runtime or authoring contracts by
+    default; future public API, key-owner, docking, multi-window, or broader editor workbench scope
+    should start as narrower follow-ons.
 
 - Closed narrow IMUI control-chrome closeout record:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`
@@ -869,7 +872,7 @@ Rule:
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/imui-response-status-lifecycle-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the first `ResponseExt` lifecycle vocabulary after single-line and multiline text-entry lifecycle proof landed)
 - `docs/workstreams/imui-edit-lifecycle-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on for promoted edit lifecycle gates and editor-proof script drift repair)
-- `docs/workstreams/imui-edit-lifecycle-hardening-v1/` — first n/a, latest n/a, 10 markdown docs (active follow-on for slider, drag-value, numeric-input, and text-entry edit lifecycle hardening against Dear ImGui-style active/deactivated-after-edit outcomes)
+- `docs/workstreams/imui-edit-lifecycle-hardening-v1/` — first n/a, latest n/a, 11 markdown docs (closed closeout record for slider, drag-value, numeric-input, and text-entry edit lifecycle hardening against Dear ImGui-style active/deactivated-after-edit outcomes)
 - `docs/workstreams/imui-workbench-shell-closure-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/imui-editor-grade-surface-closure-v1/` — first 2026-03-29, latest 2026-03-29, 6 markdown docs (closed closeout record; sortable recipe follow-on lives in `docs/workstreams/imui-sortable-recipe-v1/`)
 - `docs/workstreams/imui-shell-ghost-choreography-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped docking-owned shell ghost choreography follow-on)

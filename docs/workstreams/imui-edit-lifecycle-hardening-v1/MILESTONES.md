@@ -1,6 +1,6 @@
 # ImUi Edit Lifecycle Hardening v1 Milestones
 
-Status: active
+Status: closed
 Last updated: 2026-04-25
 
 ## M0 - Baseline And Lane Start
@@ -66,3 +66,5 @@ Exit criteria:
   state.
 - A closeout note records what remains out of scope.
 - Residual gaps route to narrower follow-ons instead of reopening this folder indefinitely.
+
+Status: completed by `CLOSEOUT_AUDIT_2026-04-25.md`.
