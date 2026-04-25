@@ -1740,6 +1740,51 @@
       ]
     },
     {
+      "id": "imui-editor-proof-numeric-input-escape-cancel",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-escape-cancel.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-editor-proof-edit-outcomes"
+      ],
+      "tags": [
+        "cancel",
+        "escape",
+        "imui",
+        "numeric_input",
+        "regression",
+        "ui_editor"
+      ],
+      "target_hints": [
+        "Uses the Advanced editor section in imui_editor_proof_demo.",
+        "Proves Escape cancels a focused NumericInput edit session, including clearing a visible validation error.",
+        "The full proof layout is taller than the native test window, so the script scrolls the exposure control into view before interacting with it."
+      ]
+    },
+    {
+      "id": "imui-editor-proof-numeric-input-validation",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-editor-proof-edit-outcomes"
+      ],
+      "tags": [
+        "imui",
+        "numeric_input",
+        "regression",
+        "ui_editor",
+        "validation"
+      ],
+      "target_hints": [
+        "Uses the Advanced editor section in imui_editor_proof_demo.",
+        "Proves standalone NumericInput commit, validation error surface, and reset flow.",
+        "The full proof layout is taller than the native test window, so the script scrolls the exposure control into view before interacting with it."
+      ]
+    },
+    {
       "id": "imui-editor-proof-text-numeric-baseline-policy",
       "path": "tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-numeric-baseline-policy.json",
       "required_capabilities": [

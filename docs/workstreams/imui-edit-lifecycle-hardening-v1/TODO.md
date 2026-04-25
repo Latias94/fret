@@ -15,6 +15,6 @@ Last updated: 2026-04-25
 - [x] M2: keep runtime and authoring public contracts stable unless the audit proves a hard
   contract change is unavoidable.
 - [x] M3: add rendered diagnostics proof for public IMUI single-line input bounds stability.
-- [ ] M3: add or promote rendered proof for drag-value and numeric input edit outcomes.
+- [x] M3: add or promote rendered proof for drag-value and numeric input edit outcomes.
 - [x] M3: keep the response-signals and editor-proof diag suites green after hardening.
 - [ ] M4: close out with evidence, gates, and residual gap routing.

@@ -128,15 +128,43 @@ pub(crate) fn sync_numeric_text_entry_focus<H: UiHost>(
             NumericInputSelectionBehavior::ReplaceAllOnFocus
         ) && !current_text.is_empty();
     } else if !is_focused {
-        let _ = cx
-            .app
-            .models_mut()
-            .update(draft, |text| *text = current_text.as_ref().to_string());
-        let _ = cx.app.models_mut().update(error, |value| *value = None);
+        let draft_changed = sync_draft_from_current_text(cx, draft, current_text.as_ref());
+        let error_changed = clear_error_if_present(cx, error);
+        if draft_changed || error_changed {
+            cx.request_frame();
+        }
         state.replace_on_next_edit = false;
     }
 
     state.was_focused = is_focused;
+}
+
+fn sync_draft_from_current_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    draft: &Model<String>,
+    current_text: &str,
+) -> bool {
+    let needs_sync = cx
+        .app
+        .models()
+        .get_cloned(draft)
+        .is_none_or(|text| text != current_text);
+    if needs_sync {
+        let next = current_text.to_string();
+        let _ = cx.app.models_mut().update(draft, |text| *text = next);
+    }
+    needs_sync
+}
+
+fn clear_error_if_present<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    error: &Model<Option<Arc<str>>>,
+) -> bool {
+    let has_error = cx.app.models().get_cloned(error).flatten().is_some();
+    if has_error {
+        let _ = cx.app.models_mut().update(error, |value| *value = None);
+    }
+    has_error
 }
 
 pub(crate) fn handle_numeric_text_entry_replace_key(

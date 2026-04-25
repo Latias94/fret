@@ -51,11 +51,12 @@ Exit criteria:
 - Drag-value and numeric-input lifecycle coverage is added or promoted if M1 finds a real gap.
 - Selectors remain stable and demo-matched.
 
-Status: focused `DragState` unit coverage landed and the existing response-signals plus
-editor-proof diagnostics suites pass. Public IMUI single-line input bounds stability now has a
-rendered diagnostics gate through `M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md`. M3 remains open
-only for adding or promoting additional rendered `DragValue` / `NumericInput` proof if a future
-mismatch appears.
+Status: completed for the current hardening scope. Focused `DragState` unit coverage landed and the
+existing response-signals plus editor-proof diagnostics suites pass. Public IMUI single-line input
+bounds stability now has a rendered diagnostics gate through
+`M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md`. Numeric-input validation, reset, and Escape-cancel
+proof are promoted into the editor-proof suite through
+`M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md`.
 
 ## M4 - Closeout
 

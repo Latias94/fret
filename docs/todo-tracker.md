@@ -284,6 +284,10 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_PORTAL_INPUT_STABILITY_SLICE_2026-04-25.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M2_IMUI_INPUT_STABILITY_SLICE_2026-04-25.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_IMUI_INPUT_BOUNDS_DIAG_GATE_2026-04-25.md`
+  - `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/TODO.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/MILESTONES.md`
   - `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`

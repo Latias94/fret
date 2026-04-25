@@ -116,6 +116,8 @@ impl BoundTextInput {
     }
 
     pub fn semantics<H: UiHost>(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+        let force = cx.focus != Some(cx.node) || !self.dirty_since_sync;
+        self.sync_from_model(cx.app, force);
         self.input.semantics(cx);
     }
 
@@ -124,7 +126,6 @@ impl BoundTextInput {
         if revision == self.last_revision {
             return;
         }
-        self.last_revision = revision;
 
         let text = match app.models().try_get_cloned(&self.model) {
             Ok(Some(text)) => text,
@@ -143,6 +144,7 @@ impl BoundTextInput {
         if force || !self.dirty_since_sync {
             self.input.set_text(text.clone());
             self.dirty_since_sync = false;
+            self.last_revision = revision;
         }
     }
 
@@ -324,7 +326,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
     }
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         if cx.focus != Some(cx.node) {
-            self.sync_from_model(cx.app, false);
+            self.sync_from_model(cx.app, true);
         }
 
         if !self.enabled {
@@ -371,12 +373,61 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         cx.observe_model(&self.model, Invalidation::Layout);
         cx.observe_model(&self.model, Invalidation::Paint);
-        let force = !self.dirty_since_sync;
+        let force = cx.focus != Some(cx.node) || !self.dirty_since_sync;
         self.sync_from_model(cx.app, force);
         self.input.layout(cx)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.input.paint(cx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::test_host::TestHost;
+
+    #[test]
+    fn deferred_dirty_sync_does_not_consume_model_revision() {
+        let mut host = TestHost::new();
+        let model = host.models_mut().insert(String::from("initial"));
+        let mut input = BoundTextInput::new(model.clone());
+
+        input.sync_from_model(&host, true);
+        assert_eq!(input.input.text(), "initial");
+
+        input.dirty_since_sync = true;
+        let _ = host
+            .models_mut()
+            .update(&model, |value| *value = String::from("external"));
+
+        input.sync_from_model(&host, false);
+        assert_eq!(input.input.text(), "initial");
+        assert_ne!(input.last_revision, host.models().revision(&model));
+
+        input.dirty_since_sync = false;
+        input.sync_from_model(&host, true);
+        assert_eq!(input.input.text(), "external");
+        assert_eq!(input.last_revision, host.models().revision(&model));
+    }
+
+    #[test]
+    fn forced_sync_applies_model_revision_even_when_dirty() {
+        let mut host = TestHost::new();
+        let model = host.models_mut().insert(String::from("initial"));
+        let mut input = BoundTextInput::new(model.clone());
+
+        input.sync_from_model(&host, true);
+        input.dirty_since_sync = true;
+        let _ = host
+            .models_mut()
+            .update(&model, |value| *value = String::from("external"));
+
+        input.sync_from_model(&host, true);
+        assert_eq!(input.input.text(), "external");
+        assert!(!input.dirty_since_sync);
+        assert_eq!(input.last_revision, host.models().revision(&model));
     }
 }

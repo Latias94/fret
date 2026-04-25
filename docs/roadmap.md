@@ -235,7 +235,8 @@ next default non-multi-window priority to broader app-owned command-package dept
   default):
   `docs/workstreams/imui-edit-lifecycle-hardening-v1/DESIGN.md`,
   `docs/workstreams/imui-edit-lifecycle-hardening-v1/M0_BASELINE_AUDIT_2026-04-24.md`,
-  `docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`, and
+  `docs/workstreams/imui-edit-lifecycle-hardening-v1/M1_DRAG_VALUE_CORE_SLICE_2026-04-24.md`,
+  `docs/workstreams/imui-edit-lifecycle-hardening-v1/M3_NUMERIC_INPUT_RENDERED_PROOF_2026-04-25.md`, and
   `docs/workstreams/imui-edit-lifecycle-hardening-v1/EVIDENCE_AND_GATES.md`.
 - ImUi key-owner surface closeout record (closed narrow P0 lane that audited the remaining
   immediate key-owner / item-local shortcut ownership gap after focused `activate_shortcut`

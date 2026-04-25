@@ -3,6 +3,8 @@
   "kind": "diag_script_suite_manifest",
   "scripts": [
     "tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json",
-    "tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-numeric-baseline-policy.json"
+    "tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-numeric-baseline-policy.json",
+    "tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-validation.json",
+    "tools/diag-scripts/ui-editor/imui/imui-editor-proof-numeric-input-escape-cancel.json"
   ]
 }
