@@ -268,6 +268,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .unwrap_or_default();
         let want_transparent_payload = settings.transparent_payload_during_follow
             || env_flag_is_true("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD");
+        let allow_diag_follow = env_flag_is_true("FRET_DOCK_TEAROFF_FOLLOW_IN_DIAG");
         let diag_pointer_input_isolation_active = self.diag_pointer_input_isolation_active();
 
         // Scripted diagnostics drive cursor position via overrides. Tear-off follow intentionally
@@ -278,7 +279,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // Preserve transparent payload state when explicitly requested, but freeze the actual
         // follow motion so overlap diagnostics can still observe peek-behind behavior without
         // chasing the synthetic cursor.
-        if diag_pointer_input_isolation_active && !want_transparent_payload {
+        if diag_pointer_input_isolation_active && !want_transparent_payload && !allow_diag_follow {
             if self.dock_tearoff_follow.is_some() {
                 self.stop_dock_tearoff_follow(Instant::now(), false);
                 return true;

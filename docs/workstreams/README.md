@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-25
+Catalog updated: 2026-04-26
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -569,19 +569,23 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
-    bounded P3 package and the mixed-DPI execution slice rather than reopening the umbrella lane.
+    bounded P3 package, preserving the accepted monitor-topology-admitted mixed-DPI proof surface,
+    and continuing with the remaining platform-specific acceptance slices rather than reopening the
+    umbrella lane.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
   - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
   - `docs/workstreams/diag-monitor-topology-environment-v1/DESIGN.md`
   - `docs/workstreams/diag-monitor-topology-environment-v1/CLOSEOUT_AUDIT_2026-04-20.md`
   - Scope: records the shipped runner-owned host monitor-topology environment fingerprint after
-    the docking lane froze `scale_factors_seen` as evidence-only; future host-environment
-    predicates still need a different follow-on instead of reopening the docking lane or this
-    folder.
+    the docking lane froze `scale_factors_seen` as evidence-only. The first source-scoped
+    admission predicate later landed in `diag-environment-predicate-contract-v1`; wider predicate
+    grammar still needs a different follow-on instead of reopening this folder.
 
 - Closed narrow diagnostics closeout record for the first environment-predicate contract:
   - `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json`
@@ -774,7 +778,7 @@ Rule:
 - `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 11 markdown docs (closed narrow diagnostics closeout record that classifies existing environment snapshot families, lands the first `host.monitor_topology` environment-admission contract, and defers wider grammar until a second admitted source exists)
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
-- `docs/workstreams/diag-monitor-topology-environment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that adds a runner-owned host monitor-topology environment fingerprint without adding mixed-DPI-only campaign gating or environment predicates)
+- `docs/workstreams/diag-monitor-topology-environment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that adds a runner-owned host monitor-topology environment fingerprint; the source-scoped admission predicate lives in `diag-environment-predicate-contract-v1`)
 - `docs/workstreams/diag-perf-attribution-v1/` — first 2026-02-14, latest 2026-02-14, 4 markdown docs
 - `docs/workstreams/diag-perf-profiling-infra-v1/` — first 2026-02-15, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs
@@ -783,7 +787,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-04-21, 8 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-04-26, 9 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs

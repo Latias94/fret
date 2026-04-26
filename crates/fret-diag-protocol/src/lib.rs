@@ -1257,6 +1257,26 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level cursor screen position override from the published host monitor
+    /// topology.
+    ///
+    /// This is intended for real-host diagnostics that need to drive OS-window follow behavior
+    /// across monitors without hardcoding virtual-desktop coordinates. Scripts that use this step
+    /// should pair it with a campaign `requires_environment` admission check for
+    /// `host.monitor_topology`.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
+    SetCursorAtHostMonitor {
+        selector: UiHostMonitorSelectorV1,
+        #[serde(default = "default_monitor_fraction")]
+        x_fraction: f32,
+        #[serde(default = "default_monitor_fraction")]
+        y_fraction: f32,
+        #[serde(default)]
+        offset_x_px: f32,
+        #[serde(default)]
+        offset_y_px: f32,
+    },
     /// Set a runner-level cursor screen position override using window-local client coordinates.
     ///
     /// This is intended for cross-window scripted diagnostics where the runner must synthesize a
@@ -1491,6 +1511,10 @@ fn default_action_timeout_frames() -> u32 {
     180
 }
 
+fn default_monitor_fraction() -> f32 {
+    0.5
+}
+
 fn default_true() -> bool {
     true
 }
@@ -1540,6 +1564,15 @@ pub enum UiPointerKindV1 {
     Mouse,
     Touch,
     Pen,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiHostMonitorSelectorV1 {
+    First,
+    Last,
+    LowestScaleFactor,
+    HighestScaleFactor,
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]

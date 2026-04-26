@@ -531,11 +531,16 @@ It complements (but does not replace) ADRs:
   first-party shell helpers.
 - Use `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` and
   `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md` as the
-  current active execution lane for the remaining P3 multi-window hand-feel problem.
+  current active execution lane for the remaining P3 multi-window hand-feel problem; the
+  mixed-DPI real-host proof item is accepted in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`.
 - Use `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json` as the closed
   diagnostics follow-on for the M3 mixed-DPI automation decision:
-  the repo now has a runner-owned host monitor-topology environment fingerprint, but host
-  predicates and mixed-DPI-only campaign selection still require a different narrower lane.
+  the repo now has a runner-owned host monitor-topology environment fingerprint. The first
+  source-scoped host predicate is closed under `diag-environment-predicate-contract-v1`, and the
+  docking lane now keeps `M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md`,
+  `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`, and `imui-p3-mixed-dpi-real-host`
+  for the dedicated real-host acceptance surface.
 - Use `docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json` as the closed
   verdict for the first diagnostics host-environment predicate contract:
   it classifies the current per-window UI environment, renderer font environment, and bundle env
@@ -902,7 +907,9 @@ It complements (but does not replace) ADRs:
   - Goal: editor-grade “tear off → hover another window → re-dock → close empty window” experience.
   - Workstream:
     - Lane state: `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
-    - Current baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
+    - Mixed-DPI gate: `docs/workstreams/docking-multiwindow-imgui-parity/M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md`
+    - Mixed-DPI accepted run: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
+    - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
     - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
     - macOS detail: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`

@@ -215,11 +215,11 @@ Footgun / recommendation:
       - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
       - `scale_factors_seen` / `mixed_dpi_signal_observed` (top-level mixed-DPI signal summary from drag evidence),
       - `under` (hover selection source: platform vs heuristic).
-    - For the docking mixed-DPI outer-position sweep runbook, prefer
+    - For the docking mixed-DPI monitor-scale sweep runbook, prefer
       `python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py <diag_out_dir_or_session_dir>`
-      to reuse `diag dock-routing --json` across the three canonical bundle labels and emit one bounded
-      acceptance summary (`--json-out <path>`). Add `--note-out <path>` when you also want one
-      Markdown evidence-note draft for the workstream lane.
+      to reuse `diag dock-routing --json` across the three canonical bundle labels and emit one
+      bounded acceptance summary (`--json-out <path>`). Add `--note-out <path>` when you also want
+      one Markdown evidence-note draft for the workstream lane.
   - `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard-dev diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
   - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
@@ -964,6 +964,7 @@ Supported selectors (v1 MVP):
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
+- `set_cursor_at_host_monitor` (schema v2 only; runner-level cursor override resolved from `host.monitor_topology`; use with `requires_environment` for monitor-topology-admitted mixed-DPI scripts)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
 - `set_cursor_in_window_logical` (schema v2 only; runner-level cursor override using window-client logical pixels; preferred when you need to seed a cross-window `pointer_down` session for later `pointer_move`/`pointer_up` window migration)
 - `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
@@ -1078,6 +1079,7 @@ Supported intent steps (v2):
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
 - `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags; screen-space physical pixels)
+- `set_cursor_at_host_monitor` (resolve a monitor point from the published `host.monitor_topology` source, then write the same screen-space physical cursor override)
 - `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags; window-client physical pixels)
 - `drag_pointer_until` (drag until a predicate passes, holding the session active across frames; optional `release_on_success: false` to keep the drag pressed for follow-up evidence steps like screenshots)
 

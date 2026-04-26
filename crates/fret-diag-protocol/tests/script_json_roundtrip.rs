@@ -569,6 +569,25 @@ fn script_v2_roundtrip_set_window_outer_position_last_seen() {
 }
 
 #[test]
+fn script_v2_roundtrip_set_cursor_at_host_monitor() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_cursor_at_host_monitor",
+      "selector": "highest_scale_factor",
+      "x_fraction": 0.5,
+      "y_fraction": 0.5,
+      "offset_x_px": 0.0,
+      "offset_y_px": 0.0
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_inner_size_first_seen() {
     assert_script_v2_roundtrip(
         r#"{

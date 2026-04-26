@@ -716,6 +716,12 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_MONITOR_SCALE_GATE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md"
+    );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_REAL_HOST_ACCEPTANCE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md"
+    );
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
     );
@@ -6233,10 +6239,10 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "This lane is the current active execution lane for the remaining P3 multi-window hand-feel problem",
-            "`DW-P0-dpi-006` is the smallest real open blocker in this lane",
+            "references below to `DW-P0-dpi-006` as the current open blocker are historical",
             "do not reopen generic `imui` helper growth or widen `crates/fret-ui`",
             "`tools/diag-campaigns/imui-p3-multiwindow-parity.json` as the bounded P3 regression entry",
-            "capture one real mixed-DPI acceptance pair",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_BASELINE_NOTE.contains(marker),
@@ -6272,12 +6278,12 @@ mod authoring_surface_policy_tests {
         for marker in [
             "Keep the existing bounded P3 campaign generic",
             "`mixed_dpi_signal_observed` is evidence, not a host capability contract",
-            "Do not add a new `requires mixed-dpi` campaign or script schema key yet",
+            "The \"no mixed-DPI campaign yet\" portion is superseded",
             "real-host acceptance pair",
             "\"pre-crossing\" bundle",
             "\"post-crossing\" bundle",
-            "`DW-P0-dpi-006` stays open until both the real-host acceptance pair",
-            "the automation decision",
+            "`DW-P0-dpi-006` is no longer open",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_NOTE.contains(marker),
@@ -6315,11 +6321,11 @@ mod authoring_surface_policy_tests {
         for marker in [
             "Windows native runner",
             "preferred setup: `100% + 150%`",
-            "docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json",
+            "docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json",
             "target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host",
-            "multiwindow-drag-back-outer-sweep-after-tearoff",
-            "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x",
-            "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x",
+            "multiwindow-drag-back-monitor-sweep-after-tearoff",
+            "multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor",
+            "multiwindow-drag-back-monitor-sweep-after-highest-scale-monitor",
             "latest.acceptance-summary.json",
             "latest.acceptance-note.md",
             "tools/diag_pick_docking_mixed_dpi_acceptance_pair.py",
@@ -6340,8 +6346,9 @@ mod authoring_surface_policy_tests {
             "pre-crossing",
             "post-crossing",
             "diag_pick_docking_mixed_dpi_acceptance_pair.py",
-            "`TODO`",
-            "manual checklist",
+            "imui-p3-mixed-dpi-real-host",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
+            "Manual acceptance run on a real mixed-DPI setup",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
@@ -6365,11 +6372,10 @@ mod authoring_surface_policy_tests {
         for marker in [
             "`bundle.json.env.scale_factors_seen` is not a host monitor-topology contract",
             "`mixed_dpi_signal_observed` remains drag evidence, not a preflight capability",
-            "Campaign manifests still only gate on stable `requires_capabilities`",
-            "Do not add an automated mixed-DPI gate in this lane yet.",
-            "Keep the bounded P3 campaign generic and portable across single-monitor and mixed-DPI hosts.",
-            "the real Windows mixed-DPI acceptance pair as the only remaining open proof item",
-            "start a narrow diagnostics follow-on",
+            "historical decision note, superseded",
+            "`host.monitor_topology` + `host_monitor_topology` admission",
+            "Keep the bounded P3 campaign generic",
+            "dedicated real-host mixed-DPI campaign",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_AUTOMATION_DECISION_NOTE
@@ -6380,13 +6386,94 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
-            "do not add a mixed-DPI-only automated gate",
+            "M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
             "Manual acceptance run on a real mixed-DPI setup",
-            "Result: no, not honestly in this lane yet.",
+            "host.monitor_topology",
+            "Result: yes for this narrow source-scoped shape",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the mixed-DPI TODO state should keep the automation decision explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_scale_gate() {
+        for marker in [
+            "\"role\": \"status\"",
+            "M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md",
+            "imui-p3-mixed-dpi-real-host",
+            "docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the mixed-DPI monitor-scale gate reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "`host.monitor_topology` + `host_monitor_topology` admission",
+            "set_cursor_at_host_monitor",
+            "lowest-scale monitor",
+            "highest-scale monitor",
+            "Keep `imui-p3-multiwindow-parity` generic and portable.",
+            "Add `imui-p3-mixed-dpi-real-host` as the dedicated mixed-DPI real-host campaign.",
+            "`mixed_dpi_signal_observed: true`",
+            "at least two observed scale factors",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
+            "closes `DW-P0-dpi-006`",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_MONITOR_SCALE_GATE_NOTE.contains(marker),
+                "the mixed-DPI monitor-scale gate note should keep the current posture explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_mixed_dpi_real_host_acceptance() {
+        for marker in [
+            "\"role\": \"status\"",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
+            "target/release/docking_arbitration_demo.exe",
+            "imui-p3-mixed-dpi-real-host",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the mixed-DPI accepted run reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: accepted real-host evidence; closes `DW-P0-dpi-006`",
+            "scale factor `1.25`",
+            "scale factor `1.50`",
+            "multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor",
+            "mixed_dpi=true scale_factors=1.250, 1.500",
+            "canonical_ok=true",
+            "floatings=[]",
+            "Keep the dedicated",
+            "generic `imui-p3-multiwindow-parity`",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_REAL_HOST_ACCEPTANCE_NOTE
+                    .contains(marker),
+                "the mixed-DPI accepted-run note should keep bounded evidence explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "- [x] DW-P0-dpi-006 Mixed-DPI multi-monitor follow",
+            "Real-host acceptance evidence is now recorded",
+            "M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
+            "post-crossing bundle reports `mixed_dpi_signal_observed: true`",
+            "final bundle reports one window, `canonical_ok=true`, and `floatings=[]`",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the docking parity TODO should keep the mixed-DPI acceptance closure explicit: {marker}"
             );
         }
     }

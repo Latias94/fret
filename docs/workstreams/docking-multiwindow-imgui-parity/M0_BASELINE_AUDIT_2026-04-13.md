@@ -1,6 +1,12 @@
 # M0 Baseline Audit - 2026-04-13
 
-Status: active baseline audit
+Status: historical baseline audit; mixed-DPI open-blocker state superseded by
+`M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
+
+Status note (2026-04-25): this baseline still explains why the docking lane owned the P3
+multi-window work, but references below to `DW-P0-dpi-006` as the current open blocker are
+historical. The real-host mixed-DPI acceptance pair is now recorded in
+`M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`.
 
 Related:
 
@@ -11,6 +17,7 @@ Related:
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
 - `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
+- `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
 
 ## Assumptions-first baseline
 

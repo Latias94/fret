@@ -1,18 +1,19 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: drag a torn-off tab back to the main window (outer position sweep +X/-X, mixed-DPI evidence)",
+    "name": "Docking arbitration demo: drag a torn-off tab back to the main window (host monitor scale sweep, mixed-DPI evidence)",
     "tags": ["docking", "multiwindow", "drag", "dpi", "local-debug"],
-    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window", "diag.cursor_screen_pos_override"],
     "env_defaults": {
-      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1",
+      "FRET_DOCK_TEAROFF_FOLLOW_IN_DIAG": "1"
     },
     "target_hints": [
       "This is a local-debug variant of the multi-window drag-back flow.",
-      "After tear-off creates a floating OS window and a cross-window dock drag is active, the script sweeps the floating window outer position far along +X and -X, capturing bundles after each move.",
-      "Use this when validating mixed-DPI multi-monitor setups (e.g. 125% + 150%). One of the outer moves may cross the monitor boundary depending on monitor arrangement.",
+      "After tear-off creates a floating OS window and a cross-window dock drag is active, the script drives the runner cursor override to the lowest-scale and highest-scale host monitors.",
+      "Use this through a campaign that declares `requires_environment` for `host.monitor_topology` with at least two monitors and at least two distinct scale factors.",
       "Evidence: use `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` to inspect `sf_cur/sf_move` and coordinate-space hints (`scr/scr_used/origin`).",
-      "Note: if the host only has a single monitor (or OS clamps window positions), the sweep still exercises large-coordinate paths and must remain stable."
+      "If the host does not publish monitor topology, the `set_cursor_at_host_monitor` step fails explicitly rather than pretending the run crossed a mixed-DPI boundary."
     ]
   },
   "steps": [
@@ -75,34 +76,33 @@
       "timeout_frames": 240,
       "timeout_ms": 15000
     },
-    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-tearoff" },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-monitor-sweep-after-tearoff" },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
-    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 4200.0, "y_px": 120.0 },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x" },
+    {
+      "type": "set_cursor_at_host_monitor",
+      "selector": "lowest_scale_factor",
+      "x_fraction": 0.5,
+      "y_fraction": 0.5
+    },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor" },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
-    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": -2400.0, "y_px": 120.0 },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x" },
+    {
+      "type": "set_cursor_at_host_monitor",
+      "selector": "highest_scale_factor",
+      "x_fraction": 0.5,
+      "y_fraction": 0.5
+    },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-monitor-sweep-after-highest-scale-monitor" },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" }
-    },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
-      "timeout_frames": 240
-    },
-    {
-      "type": "move_pointer",
-      "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" }
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" }
     },
     { "type": "wait_frames", "n": 2 },
     { "type": "pointer_up", "window": { "kind": "first_seen" } },
@@ -140,7 +140,6 @@
       "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
     },
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep" }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep" }
   ]
 }
-

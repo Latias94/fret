@@ -1,6 +1,7 @@
 # M2 Windows Mixed-DPI Capture Plan - 2026-04-13
 
-Status: active capture runbook
+Status: repeatable capture runbook; fulfilled by
+`M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
 
 Related:
 
@@ -9,9 +10,10 @@ Related:
 - `docking-multiwindow-imgui-parity-todo.md`
 - `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json`
-- `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json`
+- `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json`
 - `tools/diag_pick_docking_mixed_dpi_acceptance_pair.py`
 - `docs/ui-diagnostics-and-scripted-tests.md`
+- `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
 
 ## Purpose
 
@@ -20,7 +22,8 @@ Related:
 > when a maintainer is on a real Windows mixed-DPI host, what exact commands and bundle-selection
 > rules should they use to capture the minimum acceptance evidence without improvising?
 
-This note freezes that runbook.
+This note freezes that runbook. The first accepted run from this runbook is recorded in
+`M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; keep this document as the rerun procedure.
 
 ## Target host
 
@@ -31,8 +34,9 @@ Use this runbook only on a Windows native runner with:
 - acceptable fallback: any two distinct scale factors,
 - and working multi-window docking support.
 
-If the host only has one monitor, or both monitors expose the same scale factor, this note does not
-close `DW-P0-dpi-006`; use the bounded campaign or generic large-outer-move stress script instead.
+If the host only has one monitor, or both monitors expose the same scale factor, this runbook should
+skip rather than claim fresh mixed-DPI evidence; use the bounded campaign or generic
+large-outer-move stress script instead.
 
 ## Canonical command set
 
@@ -42,11 +46,11 @@ close `DW-P0-dpi-006`; use the bounded campaign or generic large-outer-move stre
 cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json
 ```
 
-### 2) Run the local-debug outer-position sweep capture
+### 2) Run the local-debug monitor-scale sweep capture
 
 ```bash
 cargo run -p fretboard-dev -- diag run \
-  tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json \
+  tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json \
   --dir target/fret-diag/docking-multiwindow-imgui-parity/mixed-dpi-real-host \
   --session-auto \
   --timeout-ms 240000 \
@@ -56,9 +60,10 @@ cargo run -p fretboard-dev -- diag run \
 Why this script:
 
 - it captures one bundle immediately after tear-off,
-- then one bundle after a large `+X` outer move,
-- then one bundle after a large `-X` outer move,
+- then one bundle after moving the diagnostics cursor to the lowest-scale host monitor,
+- then one bundle after moving the diagnostics cursor to the highest-scale host monitor,
 - and finally verifies drag-back + re-dock closure.
+- it opts into real follow movement during diagnostics with `FRET_DOCK_TEAROFF_FOLLOW_IN_DIAG=1`.
 
 ### 3) Summarize the session and pick the best acceptance pair
 
@@ -83,7 +88,7 @@ python3 tools/diag_pick_docking_mixed_dpi_acceptance_pair.py \
 
 What this helper does:
 
-- recursively finds the three expected outer-sweep bundle labels,
+- recursively finds the three expected monitor-sweep bundle labels,
 - selects the latest complete session when multiple sessions exist under the out dir,
 - runs `diag dock-routing --json` for each candidate bundle,
 - recommends one `pre-crossing` bundle and one `post-crossing` bundle,
@@ -94,9 +99,9 @@ What this helper does:
 
 The run should leave bundle directories with these labels inside the session directory:
 
-- `multiwindow-drag-back-outer-sweep-after-tearoff`
-- `multiwindow-drag-back-outer-sweep-after-outer-move-pos-x`
-- `multiwindow-drag-back-outer-sweep-after-outer-move-neg-x`
+- `multiwindow-drag-back-monitor-sweep-after-tearoff`
+- `multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor`
+- `multiwindow-drag-back-monitor-sweep-after-highest-scale-monitor`
 
 Use `fretboard-dev diag dock-routing` on the candidate bundle directories when the helper output is
 not enough, or when you want to inspect the losing post-crossing candidate manually:
@@ -116,11 +121,11 @@ cargo run -p fretboard-dev -- diag dock-routing <bundle_dir> --json
 For the acceptance pair, use:
 
 1. `pre-crossing` bundle:
-   - the helper-selected `multiwindow-drag-back-outer-sweep-after-tearoff` bundle
+   - the helper-selected `multiwindow-drag-back-monitor-sweep-after-tearoff` bundle
 2. `post-crossing` bundle:
    - the helper-selected bundle, or whichever of
-     `multiwindow-drag-back-outer-sweep-after-outer-move-pos-x` or
-     `multiwindow-drag-back-outer-sweep-after-outer-move-neg-x`
+     `multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor` or
+     `multiwindow-drag-back-monitor-sweep-after-highest-scale-monitor`
      first shows the monitor crossing evidence most clearly.
 
 Prefer the post-crossing bundle that shows:
@@ -141,7 +146,7 @@ If neither post-move bundle shows mixed-DPI signal evidence, do not mark the run
 Record whether:
 
 - monitor arrangement never crossed the boundary,
-- Windows clamped the requested outer position,
+- the diagnostics cursor/follow window was clamped before reaching a distinct-scale monitor,
 - or the host was not actually mixed-DPI.
 
 ## Acceptance checklist
@@ -177,9 +182,9 @@ Minimum contents for that note:
 
 - host summary:
   - Windows version,
-  - monitor arrangement,
-  - scale factors used,
-  - whether the successful crossing came from `+X` or `-X`,
+- monitor arrangement,
+- scale factors used,
+- whether the successful crossing came from the lowest-scale or highest-scale monitor target,
 - canonical command used,
 - session directory,
 - chosen `pre-crossing` and `post-crossing` bundle directories,
@@ -199,7 +204,7 @@ If the run fails, or no bundle shows mixed-DPI signal, record at least:
 
 - which bundle labels were produced,
 - what `scale_factors_seen` reported,
-- whether Windows clamped outer positions,
+- whether the diagnostics cursor/follow window was clamped,
 - and whether the failure looks like:
   - host/setup mismatch,
   - routing drift,
@@ -210,7 +215,7 @@ If the run fails, or no bundle shows mixed-DPI signal, record at least:
 From this point forward:
 
 1. this runbook is the default real-host capture path for `DW-P0-dpi-006`,
-2. the local-debug outer-position sweep script is the preferred acceptance capture helper,
+2. the local-debug monitor-scale sweep script is the preferred acceptance capture helper,
 3. `dock-routing` is the canonical bounded evidence readout for selecting the acceptance pair,
 4. and future Windows mixed-DPI closure notes should reference this runbook instead of inventing a
    one-off command sequence.

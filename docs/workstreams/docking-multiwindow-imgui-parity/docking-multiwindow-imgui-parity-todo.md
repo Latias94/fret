@@ -143,7 +143,7 @@ Each TODO is labeled:
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
-- [~] DW-P0-dpi-006 Mixed-DPI multi-monitor follow (drag active across monitors).
+- [x] DW-P0-dpi-006 Mixed-DPI multi-monitor follow (drag active across monitors).
   - Goal: while a tear-off follow drag is active, moving the DockFloating OS window across monitors with different DPI
     should not cause large cursor-to-grab offsets, and docking hints/preview should remain usable.
   - Rationale: ImGui multi-viewports workflows commonly cross monitors; DPI jumps are the fastest way to make docking
@@ -162,8 +162,8 @@ Each TODO is labeled:
     - Dock hints remain stable; drop still resolves in the intended target window; no large “grab jumps”.
   - Gate plan:
     - Start with a manual checklist + bundle captures (pre/post boundary crossing) in the docking arbitration demo.
-    - Promote to an automated diag script only if we can reliably detect a mixed-DPI environment (or explicitly mark the
-      script as “requires mixed-dpi” and skip otherwise).
+    - Use the dedicated real-host campaign when the runner publishes a qualifying monitor topology:
+      `cargo run -p fretboard-dev -- diag campaign run imui-p3-mixed-dpi-real-host --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`.
     - Tip: `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` records:
       - `pos/start/grab/follow` (window-local cursor position + cursor grab anchor),
       - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
@@ -171,8 +171,10 @@ Each TODO is labeled:
         `mixed_dpi_signal_observed` (mixed-DPI signal evidence),
       and will regenerate stale `dock.routing.json` from the adjacent bundle artifact (no manual deletion needed).
     - Local debug helper:
-      - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json`
-        sweeps the floating window outer position along +X and -X and captures bundles after each move.
+      - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json`
+        drives the diagnostics cursor to the lowest-scale and highest-scale host monitors and captures bundles after each move.
+      - The script sets `FRET_DOCK_TEAROFF_FOLLOW_IN_DIAG=1` so this one proof surface can exercise
+        real follow movement under scripted diagnostics.
   - Progress:
     - [x] Evidence surface area: `dock-routing` includes `current_window_scale_factor_x1000` / `moving_window_scale_factor_x1000`.
     - [x] `dock-routing` now rolls drag scale-factor evidence into top-level `observed_scale_factors_x1000` /
@@ -180,10 +182,10 @@ Each TODO is labeled:
     - [x] Acceptance posture is now explicit:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M1_MIXED_DPI_ACCEPTANCE_POSTURE_2026-04-13.md`
       - Keep the bounded P3 campaign generic, treat `mixed_dpi_signal_observed` as evidence-only,
-        and defer any `requires mixed-dpi` gate shape until diagnostics has a real environment source.
+        and keep real-host mixed-DPI admission separate from the generic P3 campaign.
     - [x] Real-host capture runbook is now explicit:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md`
-      - Use the local-debug outer-position sweep script as the default Windows mixed-DPI capture path,
+      - Use the local-debug monitor-scale sweep script as the default Windows mixed-DPI capture path,
         then choose one `pre-crossing` and one `post-crossing` bundle via `diag dock-routing`.
     - [x] Real-host bundle triage helper is now explicit:
       - `tools/diag_pick_docking_mixed_dpi_acceptance_pair.py`
@@ -196,19 +198,29 @@ Each TODO is labeled:
         by itself.
     - [x] Automation decision is now explicit:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md`
-      - Keep `bundle.json.env.scale_factors_seen` and `dock-routing mixed_dpi_signal_observed` as
-        evidence-only signals; do not add a mixed-DPI-only automated gate until diagnostics grows a
-        real monitor-topology environment source plus environment predicates.
+      - Superseded by `M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md` after the diagnostics
+        environment-predicate lane shipped `host.monitor_topology` admission.
+    - [x] Real-host mixed-DPI campaign admission is now explicit:
+      - `tools/diag-campaigns/imui-p3-mixed-dpi-real-host.json`
+      - Requires `host.monitor_topology` with at least two monitors and two distinct scale factors.
+      - Keeps the bounded P3 campaign generic while giving `DW-P0-dpi-006` an honest mixed-DPI-only
+        acceptance surface.
+    - [x] Real-host acceptance evidence is now recorded:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
+      - The accepted Windows host reported monitors at scale factors `1.25` and `1.50`; the selected
+        post-crossing bundle reports `mixed_dpi_signal_observed: true` and scale factors `1.250, 1.500`.
+      - The final bundle reports one window, `canonical_ok=true`, and `floatings=[]`.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.
     - [x] Coordinate conversion evidence is visible in `dock-routing`:
       - PASS: run id `1772616085355` (`target/fret-diag-screen-conv-evidence-check`)
       - Evidence: `dock-routing` report surfaces `scr/origin/sf_run` alongside `pos/grab`.
-    - [ ] Manual acceptance run on a real mixed-DPI setup (100% + 150%) with “pre-crossing” and “post-crossing” bundles captured.
+    - [x] Manual acceptance run on a real mixed-DPI setup with “pre-crossing” and “post-crossing” bundles captured.
+      - Evidence: `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`.
     - [x] Decide if we can auto-detect mixed-DPI reliably enough to add an automated gate.
-      - Result: no, not honestly in this lane yet. Keep the gate manual until diagnostics exports a
-        monitor-topology environment source and a stable environment-predicate contract.
+      - Result: yes for this narrow source-scoped shape: use `host.monitor_topology` campaign
+        admission and keep `mixed_dpi_signal_observed` as post-run evidence.
 
 ## P1 — Cross-platform robustness and capability modeling
 

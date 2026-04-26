@@ -148,6 +148,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::InjectRunnerAccessibilityActivation
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
+        | UiActionStepV2::SetCursorAtHostMonitor { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
         | UiActionStepV2::SetCursorInWindowLogical { .. }
         | UiActionStepV2::SetMouseButtons { .. }
@@ -208,6 +209,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
             "inspect_help_tree_lock_best_match_and_copy_selector"
         }
         UiActionStepV2::SetWindowStyle { .. } => "set_window_style",
+        UiActionStepV2::SetCursorAtHostMonitor { .. } => "set_cursor_at_host_monitor",
         _ => "step",
     }
 }
@@ -422,6 +424,7 @@ pub(super) fn dispatch_drive_script_step(
         | UiActionStepV2::SetWindowStyle { .. }
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
+        | UiActionStepV2::SetCursorAtHostMonitor { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
         | UiActionStepV2::SetCursorInWindowLogical { .. }
         | UiActionStepV2::SetMouseButtons { .. }
@@ -2221,6 +2224,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::SetWindowStyle { .. }
             | UiActionStepV2::SetWindowOuterPosition { .. }
             | UiActionStepV2::SetCursorScreenPos { .. }
+            | UiActionStepV2::SetCursorAtHostMonitor { .. }
             | UiActionStepV2::SetCursorInWindow { .. }
             | UiActionStepV2::SetCursorInWindowLogical { .. }
             | UiActionStepV2::SetMouseButtons { .. }

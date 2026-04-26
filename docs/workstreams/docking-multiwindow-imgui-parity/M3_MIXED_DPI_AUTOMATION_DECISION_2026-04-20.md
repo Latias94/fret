@@ -1,6 +1,20 @@
 # M3 Mixed-DPI Automation Decision - 2026-04-20
 
-Status: active decision note
+Status: historical decision note, superseded by
+`M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md` and closed by
+`M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
+
+Supersession note (2026-04-25):
+
+- This note was correct when the docking lane still lacked a diagnostics-owned
+  monitor-topology environment source and source-scoped campaign predicate.
+- The separate diagnostics environment-predicate lane has since shipped
+  `host.monitor_topology` + `host_monitor_topology` admission.
+- The current stance is now captured in
+  `M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md`: keep the bounded P3 campaign generic, but allow
+  a dedicated real-host mixed-DPI campaign with honest environment admission.
+- The first accepted real-host run is recorded in
+  `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`.
 
 Related:
 

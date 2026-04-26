@@ -4285,6 +4285,17 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
         }),
     });
     v2.push(StepTemplate {
+        label: "set_cursor_at_host_monitor",
+        step: serde_json::json!({
+            "type": "set_cursor_at_host_monitor",
+            "selector": "highest_scale_factor",
+            "x_fraction": 0.5,
+            "y_fraction": 0.5,
+            "offset_x_px": 0.0,
+            "offset_y_px": 0.0
+        }),
+    });
+    v2.push(StepTemplate {
         label: "set_cursor_in_window",
         step: serde_json::json!({
             "type": "set_cursor_in_window",

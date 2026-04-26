@@ -838,6 +838,7 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(
             step,
             UiActionStepV2::SetCursorScreenPos { .. }
+                | UiActionStepV2::SetCursorAtHostMonitor { .. }
                 | UiActionStepV2::SetCursorInWindow { .. }
                 | UiActionStepV2::SetCursorInWindowLogical { .. }
         ) {

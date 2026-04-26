@@ -12,20 +12,12 @@ from datetime import date
 from pathlib import Path
 
 SCHEMA_VERSION = 1
-PRE_LABEL = "multiwindow-drag-back-outer-sweep-after-tearoff"
+PRE_LABEL = "multiwindow-drag-back-monitor-sweep-after-tearoff"
 POST_LABELS = (
-    "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x",
-    "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x",
+    "multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor",
+    "multiwindow-drag-back-monitor-sweep-after-highest-scale-monitor",
 )
 ALL_LABELS = (PRE_LABEL, *POST_LABELS)
-SESSION_MARKERS = (
-    "script.result.json",
-    "latest.txt",
-    "diag.config.json",
-    "trigger.touch",
-    "ready.touch",
-    "exit.touch",
-)
 
 
 @dataclass(frozen=True)
@@ -81,7 +73,7 @@ class CandidateSummary:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Summarize the docking mixed-DPI outer-position sweep capture and recommend "
+            "Summarize the docking mixed-DPI monitor-scale sweep capture and recommend "
             "one pre-crossing + one post-crossing bundle."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -144,7 +136,9 @@ def repo_root() -> Path:
 
 
 def looks_like_session_root(path: Path) -> bool:
-    return any((path / marker).exists() for marker in SESSION_MARKERS)
+    return (path / "diag.config.json").exists() or (
+        (path / "trigger.touch").exists() and (path / "ready.touch").exists()
+    )
 
 
 def resolve_bundle_artifact_path(bundle_dir: Path) -> Path | None:
@@ -555,10 +549,10 @@ def write_text(path: Path, content: str) -> None:
 
 
 def crossing_direction_for_label(label: str | None) -> str:
-    if label == "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x":
-        return "+X"
-    if label == "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x":
-        return "-X"
+    if label == "multiwindow-drag-back-monitor-sweep-after-lowest-scale-monitor":
+        return "lowest-scale monitor"
+    if label == "multiwindow-drag-back-monitor-sweep-after-highest-scale-monitor":
+        return "highest-scale monitor"
     return "TODO"
 
 
@@ -583,17 +577,17 @@ def likely_failure_reason(
     post_candidates: list[CandidateSummary],
 ) -> str:
     if post_candidate is None:
-        return "No post-crossing candidate bundle was summarized; verify the run completed and captured the outer-move bundles."
+        return "No post-crossing candidate bundle was summarized; verify the run completed and captured the monitor-sweep bundles."
     if post_candidate.mixed_dpi_signal_observed and post_candidate.distinct_scale_factor_count >= 2:
         return "No immediate failure classification from bounded routing evidence."
     if post_candidate.clamped_observed:
-        return "Likely host/setup mismatch or Windows-clamped outer positions; verify monitor layout before reopening routing logic."
+        return "Likely host/setup mismatch or cursor/follow clamping; verify monitor layout before reopening routing logic."
     if post_candidate.distinct_scale_factor_count < 2:
         return "Likely host/setup mismatch; the selected post-crossing bundle still exposed only one scale factor."
     if any(candidate.clamped_observed for candidate in post_candidates):
-        return "Possible initial-placement or window-decoration drift (`DW-P1-win-002`) because one post candidate reported clamped cursor/outer-position evidence."
+        return "Possible initial-placement or window-decoration drift (`DW-P1-win-002`) because one post candidate reported clamped cursor/follow evidence."
     if pre_candidate and pre_candidate.cross_window_hover_observed and not post_candidate.cross_window_hover_observed:
-        return "Possible routing drift; cross-window hover evidence weakened after the outer move."
+        return "Possible routing drift; cross-window hover evidence weakened after the monitor sweep."
     return "Possible routing drift; inspect the losing post-crossing candidate and the raw `diag dock-routing --json` output."
 
 
@@ -664,7 +658,7 @@ def render_note_markdown(
         f"- Windows version: {placeholder(windows_version)}",
         f"- Monitor arrangement: {placeholder(monitor_arrangement)}",
         f"- Scale factors used: {placeholder(scale_factors_used)}",
-        f"- Successful crossing direction: {crossing_direction_for_label(selected_post_label)}",
+        f"- Successful crossing target: {crossing_direction_for_label(selected_post_label)}",
         "",
         "## Commands",
         "",

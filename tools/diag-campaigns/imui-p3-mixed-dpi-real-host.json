@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "imui-p3-mixed-dpi-real-host",
+  "description": "Windows real-host mixed-DPI docking follow-drag acceptance capture with host monitor-topology admission.",
+  "lane": "smoke",
+  "profile": "local-debug",
+  "items": [
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json"
+    }
+  ],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "manual",
+  "expected_duration_ms": 240000,
+  "requires_capabilities": ["diag.script_v2", "diag.multi_window", "diag.cursor_screen_pos_override"],
+  "requires_environment": [
+    {
+      "source_id": "host.monitor_topology",
+      "predicate": {
+        "kind": "host_monitor_topology",
+        "monitor_count_ge": 2,
+        "distinct_scale_factor_count_ge": 2
+      }
+    }
+  ],
+  "tags": ["imui", "docking", "multiwindow", "mixed-dpi", "real-host", "editor-grade"]
+}

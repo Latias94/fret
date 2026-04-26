@@ -1,6 +1,17 @@
 # M1 Mixed-DPI Acceptance Posture - 2026-04-13
 
-Status: active next-slice decision
+Status: historical next-slice decision, superseded where noted by
+`M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md` and closed by
+`M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
+
+Supersession note (2026-04-25):
+
+- The posture to keep the bounded P3 campaign generic remains active.
+- The "no mixed-DPI campaign yet" portion is superseded because diagnostics now has
+  `host.monitor_topology` environment admission.
+- The current real-host gate shape lives in `M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md`.
+- The real-host acceptance evidence lives in
+  `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; `DW-P0-dpi-006` is no longer open.
 
 Related:
 
@@ -10,7 +21,7 @@ Related:
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
 - `tools/diag-campaigns/imui-p3-multiwindow-parity.json`
 - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json`
-- `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json`
+- `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-monitor-scale-sweep.debug.json`
 
 ## Purpose
 
@@ -51,7 +62,7 @@ campaign/schema branch.
 - Confidence: Confident
 - Consequence if wrong: we would overstate a bounded evidence summary into a portable gating contract.
 
-### 3) Do not add a new `requires mixed-dpi` campaign or script schema key yet
+### 3) Historical: do not add a new `requires mixed-dpi` campaign or script schema key yet
 
 - Area: diagnostics contract
 - Assumption: current diag manifests only know stable capabilities such as `diag.script_v2` and
@@ -115,7 +126,7 @@ From this point forward:
    on single-monitor hosts.
 2. Treat `mixed_dpi_signal_observed` as evidence, not as a host capability contract.
    It is a bounded report summary, not yet a portable skip/branch signal.
-3. Do not add a new `requires mixed-dpi` campaign or script schema key yet.
+3. Historical: do not add a new `requires mixed-dpi` campaign or script schema key yet.
    If future automation needs this, it should come from an explicit diagnostics environment or
    capability source, not from an ad hoc manifest string.
 4. `DW-P0-dpi-006` stays open until both the real-host acceptance pair and the automation decision
@@ -129,7 +140,7 @@ For this lane:
    "post-crossing" bundles,
 2. `fretboard-dev diag dock-routing <bundle_dir|bundle.schema2.json>` should be used to record
    `scale_factors_seen` and `mixed_dpi_signal_observed` for both bundles,
-3. the local outer-position sweep debug script remains the easiest bounded helper for host setup and
+3. the local monitor-scale sweep debug script remains the easiest bounded helper for host setup and
    bundle capture,
 4. and any future auto-gate proposal must first explain where mixed-DPI host detection lives as a
    diagnostics contract.

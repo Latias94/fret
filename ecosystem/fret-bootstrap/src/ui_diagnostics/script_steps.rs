@@ -1,6 +1,78 @@
 use super::*;
 
 use fret_diag_protocol::{DiagScreenshotRequestV1, DiagScreenshotWindowRequestV1};
+use std::path::Path;
+
+fn write_cursor_screen_pos_override(
+    out_dir: &Path,
+    x_px: f32,
+    y_px: f32,
+) -> Result<(), std::io::Error> {
+    let payload = format!("schema_version=1\nkind=screen_physical\nx_px={x_px}\ny_px={y_px}\n");
+    let text_path = out_dir.join("cursor_screen_pos.override.txt");
+    let trigger_path = out_dir.join("cursor_screen_pos.touch");
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(text_path, payload)?;
+    touch_file(&trigger_path)
+}
+
+fn host_monitor_cursor_position(
+    topology: Option<&fret_runtime::RunnerMonitorTopologySnapshotV1>,
+    selector: UiHostMonitorSelectorV1,
+    x_fraction: f32,
+    y_fraction: f32,
+    offset_x_px: f32,
+    offset_y_px: f32,
+) -> Result<(f32, f32), &'static str> {
+    if !x_fraction.is_finite()
+        || !y_fraction.is_finite()
+        || !offset_x_px.is_finite()
+        || !offset_y_px.is_finite()
+    {
+        return Err("non_finite_coordinate");
+    }
+    if !(0.0..=1.0).contains(&x_fraction) || !(0.0..=1.0).contains(&y_fraction) {
+        return Err("fraction_out_of_range");
+    }
+
+    let Some(topology) = topology else {
+        return Err("topology_unavailable");
+    };
+    if topology.monitors.is_empty() {
+        return Err("monitor_unavailable");
+    }
+
+    let monitor = match selector {
+        UiHostMonitorSelectorV1::First => topology.monitors.first(),
+        UiHostMonitorSelectorV1::Last => topology.monitors.last(),
+        UiHostMonitorSelectorV1::LowestScaleFactor => topology
+            .monitors
+            .iter()
+            .min_by(|a, b| monitor_order_by_scale_then_geometry(a, b)),
+        UiHostMonitorSelectorV1::HighestScaleFactor => topology
+            .monitors
+            .iter()
+            .max_by(|a, b| monitor_order_by_scale_then_geometry(a, b)),
+    }
+    .ok_or("monitor_unavailable")?;
+
+    let bounds = monitor.bounds_physical;
+    let x = bounds.x as f32 + bounds.width as f32 * x_fraction + offset_x_px;
+    let y = bounds.y as f32 + bounds.height as f32 * y_fraction + offset_y_px;
+    Ok((x, y))
+}
+
+fn monitor_order_by_scale_then_geometry(
+    a: &fret_runtime::RunnerMonitorInfoV1,
+    b: &fret_runtime::RunnerMonitorInfoV1,
+) -> std::cmp::Ordering {
+    a.scale_factor
+        .total_cmp(&b.scale_factor)
+        .then_with(|| a.bounds_physical.x.cmp(&b.bounds_physical.x))
+        .then_with(|| a.bounds_physical.y.cmp(&b.bounds_physical.y))
+        .then_with(|| a.bounds_physical.width.cmp(&b.bounds_physical.width))
+        .then_with(|| a.bounds_physical.height.cmp(&b.bounds_physical.height))
+}
 
 pub(super) fn handle_window_effect_steps(
     svc: &mut UiDiagnosticsService,
@@ -140,12 +212,7 @@ pub(super) fn handle_window_effect_steps(
             }
         }
         UiActionStepV2::SetCursorScreenPos { x_px, y_px } => {
-            let payload =
-                format!("schema_version=1\nkind=screen_physical\nx_px={x_px}\ny_px={y_px}\n");
-            let text_path = svc.cfg.out_dir.join("cursor_screen_pos.override.txt");
-            let trigger_path = svc.cfg.out_dir.join("cursor_screen_pos.touch");
-            let _ = std::fs::create_dir_all(&svc.cfg.out_dir);
-            if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+            if write_cursor_screen_pos_override(&svc.cfg.out_dir, x_px, y_px).is_ok() {
                 active.last_explicit_cursor_override = Some(CursorOverrideTarget::ScreenPhysical);
                 active.last_explicit_cursor_override_pos = Some(ExplicitCursorOverridePos {
                     target: CursorOverrideTarget::ScreenPhysical,
@@ -165,6 +232,51 @@ pub(super) fn handle_window_effect_steps(
                 output.request_redraw = true;
             }
         }
+        UiActionStepV2::SetCursorAtHostMonitor {
+            selector,
+            x_fraction,
+            y_fraction,
+            offset_x_px,
+            offset_y_px,
+        } => match host_monitor_cursor_position(
+            svc.host_monitor_topology.as_ref(),
+            selector,
+            x_fraction,
+            y_fraction,
+            offset_x_px,
+            offset_y_px,
+        ) {
+            Ok((x_px, y_px)) => {
+                if write_cursor_screen_pos_override(&svc.cfg.out_dir, x_px, y_px).is_ok() {
+                    active.last_explicit_cursor_override =
+                        Some(CursorOverrideTarget::ScreenPhysical);
+                    active.last_explicit_cursor_override_pos = Some(ExplicitCursorOverridePos {
+                        target: CursorOverrideTarget::ScreenPhysical,
+                        x_px,
+                        y_px,
+                    });
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_at_host_monitor-write-failed"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some("cursor_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
+            Err(reason) => {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_cursor_at_host_monitor-{reason}"
+                ));
+                *stop_script = true;
+                *failure_reason = Some(format!("host_monitor_cursor_position_{reason}"));
+                output.request_redraw = true;
+            }
+        },
         UiActionStepV2::SetCursorInWindow {
             window: target_window,
             x_px,
@@ -1012,4 +1124,73 @@ pub(super) fn handle_capture_layout_sidecar_step(
     active.next_step = active.next_step.saturating_add(1);
     output.request_redraw = true;
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rect(x: i32, y: i32, width: u32, height: u32) -> fret_runtime::RunnerMonitorRectPhysicalV1 {
+        fret_runtime::RunnerMonitorRectPhysicalV1 {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn host_monitor_cursor_position_selects_scale_factor_extremes() {
+        let topology = fret_runtime::RunnerMonitorTopologySnapshotV1 {
+            virtual_desktop_bounds_physical: Some(rect(-1920, 0, 5760, 2160)),
+            monitors: vec![
+                fret_runtime::RunnerMonitorInfoV1 {
+                    bounds_physical: rect(0, 0, 3840, 2160),
+                    scale_factor: 1.5,
+                },
+                fret_runtime::RunnerMonitorInfoV1 {
+                    bounds_physical: rect(-1920, 200, 1920, 1080),
+                    scale_factor: 1.25,
+                },
+            ],
+        };
+
+        assert_eq!(
+            host_monitor_cursor_position(
+                Some(&topology),
+                UiHostMonitorSelectorV1::LowestScaleFactor,
+                0.5,
+                0.5,
+                0.0,
+                0.0
+            ),
+            Ok((-960.0, 740.0))
+        );
+        assert_eq!(
+            host_monitor_cursor_position(
+                Some(&topology),
+                UiHostMonitorSelectorV1::HighestScaleFactor,
+                0.5,
+                0.5,
+                0.0,
+                0.0
+            ),
+            Ok((1920.0, 1080.0))
+        );
+    }
+
+    #[test]
+    fn host_monitor_cursor_position_rejects_missing_topology() {
+        assert_eq!(
+            host_monitor_cursor_position(
+                None,
+                UiHostMonitorSelectorV1::HighestScaleFactor,
+                0.5,
+                0.5,
+                0.0,
+                0.0
+            ),
+            Err("topology_unavailable")
+        );
+    }
 }
