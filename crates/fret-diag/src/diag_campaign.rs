@@ -3,10 +3,10 @@ use super::*;
 use crate::registry::campaigns::{
     CampaignDefinition, CampaignEnvironmentPredicateDefinition,
     CampaignEnvironmentRequirementDefinition, CampaignFilterOptions, CampaignItemDefinition,
-    CampaignItemKind, CampaignRegistry, HostMonitorTopologyPredicateDefinition, campaign_to_json,
-    campaigns_dir_from_workspace_root, item_kind_str, lane_to_str,
-    load_manifest_campaigns_from_dir, load_manifest_campaigns_from_paths, parse_lane,
-    source_kind_str,
+    CampaignItemKind, CampaignRegistry, HostMonitorTopologyPredicateDefinition,
+    PlatformCapabilitiesPredicateDefinition, campaign_to_json, campaigns_dir_from_workspace_root,
+    item_kind_str, lane_to_str, load_manifest_campaigns_from_dir,
+    load_manifest_campaigns_from_paths, parse_lane, source_kind_str,
 };
 use crate::regression_summary::{
     DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
@@ -248,6 +248,8 @@ struct CampaignEnvironmentAdmissionAttempt {
     environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
     host_monitor_topology_environment:
         Option<fret_diag_protocol::HostMonitorTopologyEnvironmentPayloadV1>,
+    platform_capabilities_environment:
+        Option<fret_diag_protocol::PlatformCapabilitiesEnvironmentPayloadV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -2050,11 +2052,14 @@ fn build_existing_filesystem_environment_admission_attempt(
         crate::read_filesystem_published_environment_sources_with_provenance(&ctx.resolved_out_dir);
     let host_monitor_topology_environment =
         crate::read_published_host_monitor_topology_environment_payload(&environment_sources);
+    let platform_capabilities_environment =
+        crate::read_published_platform_capabilities_environment_payload(&environment_sources);
     CampaignEnvironmentAdmissionAttempt {
         acquisition: CampaignEnvironmentAcquisition::ExistingFilesystem,
         source_catalog_provenance,
         environment_sources,
         host_monitor_topology_environment,
+        platform_capabilities_environment,
     }
 }
 
@@ -2087,6 +2092,7 @@ fn maybe_build_transport_session_environment_admission_attempt(
         source_catalog_provenance: connected.environment_source_catalog_provenance,
         environment_sources: connected.environment_sources,
         host_monitor_topology_environment: connected.host_monitor_topology_environment,
+        platform_capabilities_environment: connected.platform_capabilities_environment,
     }))
 }
 
@@ -2128,11 +2134,14 @@ fn maybe_build_launch_time_probe_environment_admission_attempt(
             );
         let host_monitor_topology_environment =
             crate::read_published_host_monitor_topology_environment_payload(&environment_sources);
+        let platform_capabilities_environment =
+            crate::read_published_platform_capabilities_environment_payload(&environment_sources);
         CampaignEnvironmentAdmissionAttempt {
             acquisition: CampaignEnvironmentAcquisition::LaunchTimeProbe,
             source_catalog_provenance,
             environment_sources,
             host_monitor_topology_environment,
+            platform_capabilities_environment,
         }
     };
 
@@ -2179,6 +2188,9 @@ fn evaluate_campaign_environment_requirement(
     match &requirement.predicate {
         CampaignEnvironmentPredicateDefinition::HostMonitorTopology(predicate) => {
             evaluate_host_monitor_topology_environment_requirement(requirement, predicate, attempt)
+        }
+        CampaignEnvironmentPredicateDefinition::PlatformCapabilities(predicate) => {
+            evaluate_platform_capabilities_environment_requirement(requirement, predicate, attempt)
         }
     }
 }
@@ -2288,6 +2300,173 @@ fn evaluate_host_monitor_topology_environment_requirement(
             ),
             reason: Some(format!(
                 "required distinct_scale_factor_count >= {expected}, observed {distinct_scale_factor_count}"
+            )),
+            observed,
+        };
+    }
+
+    CampaignEnvironmentRequirementEvaluation {
+        requirement: requirement.clone(),
+        satisfied: true,
+        reason_code: None,
+        reason: None,
+        observed,
+    }
+}
+
+fn evaluate_platform_capabilities_environment_requirement(
+    requirement: &CampaignEnvironmentRequirementDefinition,
+    predicate: &PlatformCapabilitiesPredicateDefinition,
+    attempt: &CampaignEnvironmentAdmissionAttempt,
+) -> CampaignEnvironmentRequirementEvaluation {
+    let source = attempt
+        .environment_sources
+        .iter()
+        .find(|source| source.source_id == requirement.source_id);
+    let base_observed = serde_json::json!({
+        "acquisition": attempt.acquisition.as_str(),
+        "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+        "environment_sources": attempt
+            .environment_sources
+            .iter()
+            .map(|source| source.to_json_value())
+            .collect::<Vec<_>>(),
+    });
+    let Some(source) = source else {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.source_missing".to_string()),
+            reason: Some(format!(
+                "required environment source `{}` was not published",
+                requirement.source_id
+            )),
+            observed: base_observed,
+        };
+    };
+
+    if source.availability == fret_diag_protocol::EnvironmentSourceAvailabilityV1::PostRunOnly {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.source_post_run_only".to_string()),
+            reason: Some(format!(
+                "required environment source `{}` is only available post-run",
+                requirement.source_id
+            )),
+            observed: serde_json::json!({
+                "acquisition": attempt.acquisition.as_str(),
+                "source": source.to_json_value(),
+                "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+            }),
+        };
+    }
+
+    let Some(payload) = attempt.platform_capabilities_environment.as_ref() else {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.payload_missing".to_string()),
+            reason: Some(format!(
+                "required environment source `{}` did not publish a platform capabilities payload",
+                requirement.source_id
+            )),
+            observed: serde_json::json!({
+                "acquisition": attempt.acquisition.as_str(),
+                "source": source.to_json_value(),
+                "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+            }),
+        };
+    };
+
+    let observed_platform = payload.platform.trim().to_ascii_lowercase();
+    let observed_hover = payload
+        .ui
+        .window_hover_detection
+        .trim()
+        .to_ascii_lowercase();
+    let observed_z_level = payload.ui.window_z_level.trim().to_ascii_lowercase();
+    let observed = serde_json::json!({
+        "acquisition": attempt.acquisition.as_str(),
+        "source": source.to_json_value(),
+        "source_catalog_provenance": attempt.source_catalog_provenance.to_json_value(),
+        "platform": observed_platform.clone(),
+        "ui": {
+            "multi_window": payload.ui.multi_window,
+            "window_tear_off": payload.ui.window_tear_off,
+            "window_hover_detection": observed_hover.clone(),
+            "window_set_outer_position": payload.ui.window_set_outer_position,
+            "window_z_level": observed_z_level.clone(),
+        },
+    });
+
+    if let Some(expected) = predicate.platform_is.as_deref()
+        && observed_platform != expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.platform_capabilities.platform_ne".to_string()),
+            reason: Some(format!(
+                "required platform == {expected}, observed {observed_platform}"
+            )),
+            observed,
+        };
+    }
+    if let Some(expected) = predicate.ui_multi_window_is
+        && payload.ui.multi_window != expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.platform_capabilities.ui_multi_window_ne".to_string()),
+            reason: Some(format!(
+                "required ui.multi_window == {expected}, observed {}",
+                payload.ui.multi_window
+            )),
+            observed,
+        };
+    }
+    if let Some(expected) = predicate.ui_window_tear_off_is
+        && payload.ui.window_tear_off != expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some(
+                "environment.platform_capabilities.ui_window_tear_off_ne".to_string(),
+            ),
+            reason: Some(format!(
+                "required ui.window_tear_off == {expected}, observed {}",
+                payload.ui.window_tear_off
+            )),
+            observed,
+        };
+    }
+    if let Some(expected) = predicate.ui_window_hover_detection_is.as_deref()
+        && observed_hover != expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some(
+                "environment.platform_capabilities.ui_window_hover_detection_ne".to_string(),
+            ),
+            reason: Some(format!(
+                "required ui.window_hover_detection == {expected}, observed {observed_hover}"
+            )),
+            observed,
+        };
+    }
+    if let Some(expected) = predicate.ui_window_z_level_is.as_deref()
+        && observed_z_level != expected
+    {
+        return CampaignEnvironmentRequirementEvaluation {
+            requirement: requirement.clone(),
+            satisfied: false,
+            reason_code: Some("environment.platform_capabilities.ui_window_z_level_ne".to_string()),
+            reason: Some(format!(
+                "required ui.window_z_level == {expected}, observed {observed_z_level}"
             )),
             observed,
         };
@@ -5976,6 +6155,61 @@ mod tests {
         (environment_sources_path, environment_payload_path)
     }
 
+    fn write_platform_capabilities_environment_files(
+        out_dir: &Path,
+        availability: fret_diag_protocol::EnvironmentSourceAvailabilityV1,
+        platform: &str,
+        multi_window: bool,
+        window_tear_off: bool,
+        window_hover_detection: &str,
+        window_z_level: &str,
+    ) -> (PathBuf, PathBuf) {
+        std::fs::create_dir_all(out_dir).unwrap();
+        let environment_sources_path =
+            out_dir.join(fret_diag_protocol::FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        std::fs::write(
+            &environment_sources_path,
+            serde_json::to_vec_pretty(&fret_diag_protocol::FilesystemEnvironmentSourcesV1 {
+                schema_version: 1,
+                sources: vec![fret_diag_protocol::FilesystemEnvironmentSourceV1 {
+                    source_id: fret_diag_protocol::PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+                        .to_string(),
+                    availability,
+                }],
+                runner_kind: Some("fret-bootstrap".to_string()),
+                runner_version: Some("1".to_string()),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+
+        let environment_payload_path = out_dir.join(
+            fret_diag_protocol::FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+        );
+        std::fs::write(
+            &environment_payload_path,
+            serde_json::to_vec_pretty(
+                &fret_diag_protocol::PlatformCapabilitiesEnvironmentPayloadV1 {
+                    schema_version: 1,
+                    source_id: fret_diag_protocol::PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+                        .to_string(),
+                    platform: platform.to_string(),
+                    ui: fret_diag_protocol::PlatformUiCapabilitiesEnvironmentV1 {
+                        multi_window,
+                        window_tear_off,
+                        window_hover_detection: window_hover_detection.to_string(),
+                        window_set_outer_position: "best_effort".to_string(),
+                        window_z_level: window_z_level.to_string(),
+                    },
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        (environment_sources_path, environment_payload_path)
+    }
+
     fn sample_campaign_execution_report(
         campaign_id: &str,
         ok: bool,
@@ -8391,6 +8625,127 @@ mod tests {
                 HostMonitorTopologyPredicateDefinition {
                     monitor_count_ge: Some(2),
                     distinct_scale_factor_count_ge: Some(2),
+                },
+            ),
+        }];
+        let start_plan = build_campaign_execution_start_plan_at(&campaign, &ctx, 42);
+        execute_campaign_start_plan(&start_plan).unwrap();
+
+        let outcome =
+            maybe_execute_campaign_environment_admission(&campaign, &ctx, &start_plan).unwrap();
+
+        assert!(outcome.is_none());
+        assert!(
+            !start_plan
+                .execution
+                .campaign_root
+                .join("check.environment.json")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn environment_admission_skips_when_platform_capabilities_requirement_is_unsatisfied() {
+        let root = temp_test_root("campaign-platform-environment-admission-skip");
+        let ctx = sample_campaign_run_context(&root);
+        let (environment_sources_path, environment_payload_path) =
+            write_platform_capabilities_environment_files(
+                &ctx.resolved_out_dir,
+                fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+                "windows",
+                true,
+                true,
+                "platform_win32",
+                "reliable",
+            );
+
+        let mut campaign = sample_campaign_definition();
+        campaign.requires_environment = vec![CampaignEnvironmentRequirementDefinition {
+            source_id: fret_diag_protocol::PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+                .to_string(),
+            predicate: CampaignEnvironmentPredicateDefinition::PlatformCapabilities(
+                PlatformCapabilitiesPredicateDefinition {
+                    platform_is: Some("linux".to_string()),
+                    ui_multi_window_is: Some(true),
+                    ui_window_tear_off_is: Some(false),
+                    ui_window_hover_detection_is: Some("none".to_string()),
+                    ui_window_z_level_is: Some("none".to_string()),
+                },
+            ),
+        }];
+        let start_plan = build_campaign_execution_start_plan_at(&campaign, &ctx, 42);
+        execute_campaign_start_plan(&start_plan).unwrap();
+
+        let outcome = maybe_execute_campaign_environment_admission(&campaign, &ctx, &start_plan)
+            .unwrap()
+            .expect("expected environment admission outcome");
+
+        let check_path = start_plan
+            .execution
+            .campaign_root
+            .join("check.environment.json");
+        let check_json = read_json_value(&check_path).expect("check json");
+
+        assert_eq!(outcome.items_failed, 0);
+        assert_eq!(
+            outcome.environment_check_path.as_deref(),
+            Some(check_path.as_path())
+        );
+        assert_eq!(
+            outcome.environment_sources_path.as_deref(),
+            Some(environment_sources_path.as_path())
+        );
+        assert_eq!(
+            outcome.environment_sources[0].payload_path.as_deref(),
+            Some(environment_payload_path.as_path())
+        );
+        assert_eq!(
+            check_json
+                .get("results")
+                .and_then(|value| value.as_array())
+                .and_then(|results| results.first())
+                .and_then(|value| value.get("reason_code"))
+                .and_then(|value| value.as_str()),
+            Some("environment.platform_capabilities.platform_ne")
+        );
+        assert_eq!(
+            check_json
+                .get("results")
+                .and_then(|value| value.as_array())
+                .and_then(|results| results.first())
+                .and_then(|value| value.get("observed"))
+                .and_then(|value| value.get("ui"))
+                .and_then(|value| value.get("window_hover_detection"))
+                .and_then(|value| value.as_str()),
+            Some("platform_win32")
+        );
+    }
+
+    #[test]
+    fn environment_admission_allows_satisfied_platform_capabilities_requirement() {
+        let root = temp_test_root("campaign-platform-environment-admission-pass");
+        let ctx = sample_campaign_run_context(&root);
+        let _ = write_platform_capabilities_environment_files(
+            &ctx.resolved_out_dir,
+            fret_diag_protocol::EnvironmentSourceAvailabilityV1::LaunchTime,
+            "linux",
+            true,
+            false,
+            "none",
+            "none",
+        );
+
+        let mut campaign = sample_campaign_definition();
+        campaign.requires_environment = vec![CampaignEnvironmentRequirementDefinition {
+            source_id: fret_diag_protocol::PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+                .to_string(),
+            predicate: CampaignEnvironmentPredicateDefinition::PlatformCapabilities(
+                PlatformCapabilitiesPredicateDefinition {
+                    platform_is: Some("linux".to_string()),
+                    ui_multi_window_is: Some(true),
+                    ui_window_tear_off_is: Some(false),
+                    ui_window_hover_detection_is: Some("none".to_string()),
+                    ui_window_z_level_is: Some("none".to_string()),
                 },
             ),
         }];

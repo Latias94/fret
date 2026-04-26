@@ -19,8 +19,10 @@ use fret_diag_protocol::{
     DevtoolsSessionRemovedV1, EnvironmentSourceAvailabilityV1,
     FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1,
     FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+    FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
     FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
     HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
+    PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1, PlatformCapabilitiesEnvironmentPayloadV1,
     UiArtifactStatsV1, UiCapabilitiesCheckV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
     UiScriptResultV1, UiScriptStageV1,
 };
@@ -598,6 +600,15 @@ pub(crate) fn read_host_monitor_topology_environment_payload(
     serde_json::from_slice::<HostMonitorTopologyEnvironmentPayloadV1>(&bytes).ok()
 }
 
+pub(crate) fn read_platform_capabilities_environment_payload(
+    path: &Path,
+) -> Option<PlatformCapabilitiesEnvironmentPayloadV1> {
+    let Ok(bytes) = std::fs::read(path) else {
+        return None;
+    };
+    serde_json::from_slice::<PlatformCapabilitiesEnvironmentPayloadV1>(&bytes).ok()
+}
+
 pub(crate) fn normalize_filesystem_capabilities(
     parsed: &fret_diag_protocol::FilesystemCapabilitiesV1,
 ) -> Vec<String> {
@@ -923,6 +934,12 @@ pub(crate) fn resolve_filesystem_environment_source_payload_path(
                 FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
             )
         }
+        Some(PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1) => {
+            resolve_named_filesystem_sidecar_path(
+                base_dir,
+                FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+            )
+        }
         _ => None,
     }
 }
@@ -984,6 +1001,18 @@ pub(crate) fn read_transport_host_monitor_topology_environment_payload(
     Some(payload)
 }
 
+pub(crate) fn read_transport_platform_capabilities_environment_payload(
+    ack: &DevtoolsEnvironmentSourcesGetAckV1,
+) -> Option<PlatformCapabilitiesEnvironmentPayloadV1> {
+    let mut payload = ack.platform_capabilities.clone()?;
+    let source_id = normalize_environment_source_id(&payload.source_id)?;
+    if source_id != PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1 {
+        return None;
+    }
+    payload.source_id = source_id;
+    Some(payload)
+}
+
 pub(crate) fn read_published_host_monitor_topology_environment_payload(
     sources: &[PublishedEnvironmentSourceArtifact],
 ) -> Option<HostMonitorTopologyEnvironmentPayloadV1> {
@@ -995,6 +1024,25 @@ pub(crate) fn read_published_host_monitor_topology_environment_payload(
         })
         .and_then(|source| source.payload_path.as_deref())
         .and_then(read_host_monitor_topology_environment_payload)
+}
+
+pub(crate) fn read_published_platform_capabilities_environment_payload(
+    sources: &[PublishedEnvironmentSourceArtifact],
+) -> Option<PlatformCapabilitiesEnvironmentPayloadV1> {
+    let mut payload = sources
+        .iter()
+        .find(|source| {
+            normalize_environment_source_id(&source.source_id).as_deref()
+                == Some(PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1)
+        })
+        .and_then(|source| source.payload_path.as_deref())
+        .and_then(read_platform_capabilities_environment_payload)?;
+    let source_id = normalize_environment_source_id(&payload.source_id)?;
+    if source_id != PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1 {
+        return None;
+    }
+    payload.source_id = source_id;
+    Some(payload)
 }
 
 fn capabilities_check_v1(
@@ -1385,6 +1433,71 @@ mod capability_tests {
     }
 
     #[test]
+    fn published_environment_sources_include_payload_path_for_platform_capabilities() {
+        let parent_dir = make_temp_dir("fret-diag-platform-capabilities-payload-path");
+        let run_dir = parent_dir.join("session").join("bundle");
+        std::fs::create_dir_all(&run_dir).unwrap();
+
+        let sources = FilesystemEnvironmentSourcesV1 {
+            schema_version: 1,
+            sources: vec![FilesystemEnvironmentSourceV1 {
+                source_id: PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+            }],
+            runner_kind: Some("filesystem".to_string()),
+            runner_version: Some("1".to_string()),
+        };
+        std::fs::write(
+            parent_dir
+                .join("session")
+                .join(FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1),
+            serde_json::to_string_pretty(&sources).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let payload = PlatformCapabilitiesEnvironmentPayloadV1 {
+            schema_version: 1,
+            source_id: PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+            platform: "linux".to_string(),
+            ui: fret_diag_protocol::PlatformUiCapabilitiesEnvironmentV1 {
+                multi_window: true,
+                window_tear_off: false,
+                window_hover_detection: "none".to_string(),
+                window_set_outer_position: "best_effort".to_string(),
+                window_z_level: "none".to_string(),
+            },
+        };
+        let payload_path = parent_dir
+            .join("session")
+            .join(FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1);
+        std::fs::write(
+            &payload_path,
+            serde_json::to_string_pretty(&payload).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let (_, published) =
+            read_filesystem_published_environment_sources_with_provenance(&run_dir);
+
+        assert_eq!(published.len(), 1);
+        assert_eq!(
+            published[0].payload_path.as_deref(),
+            Some(payload_path.as_path())
+        );
+        assert_eq!(
+            read_platform_capabilities_environment_payload(
+                published[0].payload_path.as_deref().unwrap()
+            )
+            .unwrap()
+            .ui
+            .window_hover_detection,
+            "none"
+        );
+
+        let _ = std::fs::remove_dir_all(&parent_dir);
+    }
+
+    #[test]
     fn resolve_filesystem_environment_sources_provenance_formats_legacy_label() {
         let parent_dir = make_temp_dir("fret-diag-environment-sources-source-label");
         let run_dir = parent_dir.join("session").join("bundle");
@@ -1454,6 +1567,10 @@ mod capability_tests {
                     source_id: "".to_string(),
                     availability: EnvironmentSourceAvailabilityV1::LaunchTime,
                 },
+                FilesystemEnvironmentSourceV1 {
+                    source_id: " platform.capabilities ".to_string(),
+                    availability: EnvironmentSourceAvailabilityV1::PreflightTransportSession,
+                },
             ],
             runner_kind: Some("fret-bootstrap".to_string()),
             runner_version: Some("1".to_string()),
@@ -1481,21 +1598,44 @@ mod capability_tests {
                     }],
                 },
             }),
+            platform_capabilities: Some(PlatformCapabilitiesEnvironmentPayloadV1 {
+                schema_version: 1,
+                source_id: " platform.capabilities ".to_string(),
+                platform: "linux".to_string(),
+                ui: fret_diag_protocol::PlatformUiCapabilitiesEnvironmentV1 {
+                    multi_window: true,
+                    window_tear_off: false,
+                    window_hover_detection: "none".to_string(),
+                    window_set_outer_position: "best_effort".to_string(),
+                    window_z_level: "none".to_string(),
+                },
+            }),
         };
 
         let published = read_transport_published_environment_sources(&ack);
-        assert_eq!(published.len(), 1);
+        assert_eq!(published.len(), 2);
         assert_eq!(published[0].source_id, "host.monitor_topology");
         assert_eq!(
             published[0].availability,
             EnvironmentSourceAvailabilityV1::PreflightTransportSession
         );
         assert_eq!(published[0].payload_path, None);
+        assert_eq!(published[1].source_id, "platform.capabilities");
+        assert_eq!(
+            published[1].availability,
+            EnvironmentSourceAvailabilityV1::PreflightTransportSession
+        );
+        assert_eq!(published[1].payload_path, None);
 
         let payload =
             read_transport_host_monitor_topology_environment_payload(&ack).expect("payload");
         assert_eq!(payload.source_id, "host.monitor_topology");
         assert_eq!(payload.monitor_topology.monitors.len(), 1);
+
+        let payload =
+            read_transport_platform_capabilities_environment_payload(&ack).expect("payload");
+        assert_eq!(payload.source_id, "platform.capabilities");
+        assert_eq!(payload.ui.window_hover_detection, "none");
     }
 
     #[test]
@@ -2055,6 +2195,8 @@ struct ConnectedToolingTransport {
     environment_sources: Vec<PublishedEnvironmentSourceArtifact>,
     #[allow(dead_code)]
     host_monitor_topology_environment: Option<HostMonitorTopologyEnvironmentPayloadV1>,
+    #[allow(dead_code)]
+    platform_capabilities_environment: Option<PlatformCapabilitiesEnvironmentPayloadV1>,
 }
 
 fn session_supports_environment_sources_query(available_caps: &[String]) -> bool {
@@ -2072,6 +2214,7 @@ fn query_transport_environment_sources(
     (
         Vec<PublishedEnvironmentSourceArtifact>,
         Option<HostMonitorTopologyEnvironmentPayloadV1>,
+        Option<PlatformCapabilitiesEnvironmentPayloadV1>,
     ),
     String,
 > {
@@ -2086,6 +2229,7 @@ fn query_transport_environment_sources(
     Ok((
         read_transport_published_environment_sources(&ack),
         read_transport_host_monitor_topology_environment_payload(&ack),
+        read_transport_platform_capabilities_environment_payload(&ack),
     ))
 }
 
@@ -2148,7 +2292,7 @@ fn connect_devtools_ws_tooling(
 
     let environment_source_catalog_provenance =
         EnvironmentSourceCatalogProvenance::transport_session("devtools_ws", &selected_session_id);
-    let (environment_sources, host_monitor_topology_environment) =
+    let (environment_sources, host_monitor_topology_environment, platform_capabilities_environment) =
         if session_supports_environment_sources_query(&available_caps) {
             match query_transport_environment_sources(
                 &devtools,
@@ -2162,11 +2306,11 @@ fn connect_devtools_ws_tooling(
                         "warning: devtools environment.sources.get failed for session {}: {}",
                         selected_session_id, err
                     );
-                    (Vec::new(), None)
+                    (Vec::new(), None, None)
                 }
             }
         } else {
-            (Vec::new(), None)
+            (Vec::new(), None, None)
         };
 
     Ok(ConnectedToolingTransport {
@@ -2175,6 +2319,7 @@ fn connect_devtools_ws_tooling(
         environment_source_catalog_provenance,
         environment_sources,
         host_monitor_topology_environment,
+        platform_capabilities_environment,
         selected_session_id,
         available_caps,
     })
@@ -2228,6 +2373,8 @@ fn connect_filesystem_tooling(
         read_filesystem_published_environment_sources_with_provenance(&cfg.out_dir);
     let host_monitor_topology_environment =
         read_published_host_monitor_topology_environment_payload(&environment_sources);
+    let platform_capabilities_environment =
+        read_published_platform_capabilities_environment_payload(&environment_sources);
 
     Ok(ConnectedToolingTransport {
         devtools,
@@ -2235,6 +2382,7 @@ fn connect_filesystem_tooling(
         environment_source_catalog_provenance,
         environment_sources,
         host_monitor_topology_environment,
+        platform_capabilities_environment,
         selected_session_id,
         available_caps,
     })

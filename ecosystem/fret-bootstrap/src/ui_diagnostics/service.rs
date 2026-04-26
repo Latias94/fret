@@ -34,6 +34,8 @@ pub struct UiDiagnosticsService {
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     host_monitor_topology: Option<fret_runtime::RunnerMonitorTopologySnapshotV1>,
     published_host_monitor_topology: Option<fret_runtime::RunnerMonitorTopologySnapshotV1>,
+    platform_capabilities: Option<fret_runtime::PlatformCapabilities>,
+    published_platform_capabilities: Option<fret_runtime::PlatformCapabilities>,
     debug_extensions: Option<extensions::DebugExtensionsRegistryV1>,
     #[cfg(feature = "diagnostics-ws")]
     pending_devtools_screenshot:
@@ -898,10 +900,11 @@ impl UiDiagnosticsService {
         self.app_snapshot_provider = provider;
     }
 
-    fn sync_runner_monitor_topology_from_app(&mut self, app: &App) {
+    pub(super) fn sync_runner_monitor_topology_from_app(&mut self, app: &App) {
         self.host_monitor_topology = app
             .global::<fret_runtime::RunnerMonitorTopologyDiagnosticsStore>()
             .and_then(|store| store.snapshot());
+        self.platform_capabilities = app.global::<fret_runtime::PlatformCapabilities>().cloned();
     }
 
     pub(super) fn app_snapshot_for_window(

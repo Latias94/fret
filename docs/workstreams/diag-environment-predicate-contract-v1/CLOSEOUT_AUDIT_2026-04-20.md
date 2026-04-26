@@ -2,6 +2,11 @@
 
 Status: Closed
 
+Follow-on note (2026-04-26): the first approved second source now lives in
+`docs/workstreams/diag-platform-capabilities-environment-v1/WORKSTREAM.json`. This closeout remains
+the source of truth for the first `host.monitor_topology` admission contract and the rule that new
+sources must land through separate narrow follow-ons.
+
 ## Result
 
 This lane landed the first honest diagnostics environment-predicate contract without collapsing the

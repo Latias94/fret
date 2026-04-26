@@ -14,6 +14,9 @@ pub const FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1: &str = "environment.sourc
 pub const HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1: &str = "host.monitor_topology";
 pub const FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1: &str =
     "environment.source.host.monitor_topology.json";
+pub const PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1: &str = "platform.capabilities";
+pub const FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1: &str =
+    "environment.source.platform.capabilities.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Envelope message for diagnostics/devtools transports.
@@ -90,6 +93,8 @@ pub struct DevtoolsEnvironmentSourcesGetAckV1 {
     pub runner_version: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_monitor_topology: Option<HostMonitorTopologyEnvironmentPayloadV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platform_capabilities: Option<PlatformCapabilitiesEnvironmentPayloadV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -297,6 +302,23 @@ pub struct HostMonitorTopologyEnvironmentPayloadV1 {
     pub schema_version: u32,
     pub source_id: String,
     pub monitor_topology: UiDiagnosticsMonitorTopologyV1,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlatformCapabilitiesEnvironmentPayloadV1 {
+    pub schema_version: u32,
+    pub source_id: String,
+    pub platform: String,
+    pub ui: PlatformUiCapabilitiesEnvironmentV1,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlatformUiCapabilitiesEnvironmentV1 {
+    pub multi_window: bool,
+    pub window_tear_off: bool,
+    pub window_hover_detection: String,
+    pub window_set_outer_position: String,
+    pub window_z_level: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -3930,6 +3952,7 @@ mod tests {
             runner_kind: Some("fret-bootstrap".to_string()),
             runner_version: Some("1.2.3".to_string()),
             host_monitor_topology: None,
+            platform_capabilities: None,
         };
         assert_eq!(
             serde_json::to_value(ack).unwrap(),
@@ -3971,6 +3994,18 @@ mod tests {
                             "scale_factor": 1.0
                         }]
                     }
+                },
+                "platform_capabilities": {
+                    "schema_version": 1,
+                    "source_id": "platform.capabilities",
+                    "platform": "linux",
+                    "ui": {
+                        "multi_window": true,
+                        "window_tear_off": false,
+                        "window_hover_detection": "none",
+                        "window_set_outer_position": "best_effort",
+                        "window_z_level": "none"
+                    }
                 }
             }))
             .unwrap();
@@ -3986,6 +4021,13 @@ mod tests {
                 .as_ref()
                 .map(|payload| payload.source_id.as_str()),
             Some("host.monitor_topology")
+        );
+        assert_eq!(
+            parsed
+                .platform_capabilities
+                .as_ref()
+                .map(|payload| payload.ui.window_hover_detection.as_str()),
+            Some("none")
         );
     }
 

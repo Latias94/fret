@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 266
+- Dedicated directories: 267
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -597,6 +597,13 @@ Current source of truth for the in-tree immediate-mode stack:
     wider grammar needs a different narrow follow-on instead of a generic erased runtime snapshot
     abstraction.
 
+- Closed narrow diagnostics follow-on for platform-capabilities campaign admission:
+  - `docs/workstreams/diag-platform-capabilities-environment-v1/WORKSTREAM.json`
+  - `docs/workstreams/diag-platform-capabilities-environment-v1/DESIGN.md`
+  - `docs/workstreams/diag-platform-capabilities-environment-v1/CLOSEOUT_AUDIT_2026-04-26.md`
+  - Scope: adds `platform.capabilities` as a second source-scoped admission surface for exact
+    launch-time platform posture checks, with `imui-p3-wayland-real-host` as the first consumer.
+
 - Most recent closeout record for the compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`
@@ -775,10 +782,11 @@ Rule:
 - `docs/workstreams/diag-cli-main-lanes-hardening-v1/` — first 2026-03-26, latest 2026-03-26, 1 markdown docs
 - `docs/workstreams/diag-devtools-gui-v1/` — first 2026-02-07, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/` — first 2026-02-10, latest 2026-02-28, 9 markdown docs
-- `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 11 markdown docs (closed narrow diagnostics closeout record that classifies existing environment snapshot families, lands the first `host.monitor_topology` environment-admission contract, and defers wider grammar until a second admitted source exists)
+- `docs/workstreams/diag-environment-predicate-contract-v1/` — first n/a, latest n/a, 11 markdown docs (closed narrow diagnostics closeout record that classifies existing environment snapshot families, lands the first `host.monitor_topology` environment-admission contract, and requires future source additions to use separate narrow follow-ons)
 - `docs/workstreams/diag-fearless-refactor-v1/` — first 2026-02-21, latest 2026-03-06, 16 markdown docs
 - `docs/workstreams/diag-fearless-refactor-v2/` — first 2026-03-06, latest 2026-03-10, 35 markdown docs
 - `docs/workstreams/diag-monitor-topology-environment-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that adds a runner-owned host monitor-topology environment fingerprint; the source-scoped admission predicate lives in `diag-environment-predicate-contract-v1`)
+- `docs/workstreams/diag-platform-capabilities-environment-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on that adds `platform.capabilities` launch-time admission for Wayland-only campaign scheduling without widening `requires_environment` into generic expressions)
 - `docs/workstreams/diag-perf-attribution-v1/` — first 2026-02-14, latest 2026-02-14, 4 markdown docs
 - `docs/workstreams/diag-perf-profiling-infra-v1/` — first 2026-02-15, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs

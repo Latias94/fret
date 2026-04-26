@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "slug": "diag-platform-capabilities-environment-v1",
+  "title": "Diagnostics Platform Capabilities Environment Admission",
+  "status": "closed",
+  "updated": "2026-04-26",
+  "scope_kind": "narrow-follow-on",
+  "problem": "Add one source-scoped diagnostics environment admission surface for launch-time platform capability posture so Wayland-only docking campaigns can skip honestly on non-Wayland hosts.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/diag-platform-capabilities-environment-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/diag-platform-capabilities-environment-v1/TODO.md"
+    },
+    {
+      "role": "evidence",
+      "path": "docs/workstreams/diag-platform-capabilities-environment-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/diag-platform-capabilities-environment-v1/CLOSEOUT_AUDIT_2026-04-26.md"
+    }
+  ],
+  "repro": {
+    "summary": "Validate the new platform.capabilities environment source and the Wayland real-host campaign manifest.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-wayland-real-host.json --json",
+      "cargo nextest run -p fret-diag --lib manifest_campaign_parses_platform_capabilities_environment_requirement manifest_campaign_rejects_empty_platform_capabilities_environment_predicate environment_admission_skips_when_platform_capabilities_requirement_is_unsatisfied environment_admission_allows_satisfied_platform_capabilities_requirement --no-fail-fast",
+      "cargo nextest run -p fret-bootstrap --features \"ui-app-driver diagnostics diagnostics-ws\" environment_sources_get_ack_publishes_transport_session_monitor_topology refresh_environment_source_files_publishes_launch_time_platform_capabilities_sidecar --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "platform-capabilities-admission",
+      "command": "cargo nextest run -p fret-diag --lib manifest_campaign_parses_platform_capabilities_environment_requirement environment_admission_skips_when_platform_capabilities_requirement_is_unsatisfied environment_admission_allows_satisfied_platform_capabilities_requirement --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-publication",
+      "command": "cargo nextest run -p fret-bootstrap --features \"ui-app-driver diagnostics diagnostics-ws\" refresh_environment_source_files_publishes_launch_time_platform_capabilities_sidecar environment_sources_get_ack_publishes_transport_session_monitor_topology --no-fail-fast"
+    },
+    {
+      "name": "wayland-campaign-validate",
+      "command": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-wayland-real-host.json --json"
+    }
+  ],
+  "evidence": [
+    "crates/fret-diag-protocol/src/lib.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs",
+    "crates/fret-diag/src/registry/campaigns.rs",
+    "crates/fret-diag/src/diag_campaign.rs",
+    "tools/diag-campaigns/imui-p3-wayland-real-host.json",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
+  ],
+  "continue_policy": {
+    "default_action": "do_not_reopen",
+    "notes": "This follow-on only admits platform.capabilities for exact launch-time platform posture checks. Do not widen requires_environment into generic boolean expressions here; open a new narrow lane if a third source or combination semantics becomes necessary."
+  }
+}

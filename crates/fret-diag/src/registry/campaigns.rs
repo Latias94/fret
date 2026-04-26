@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use fret_diag_protocol::HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1;
+use fret_diag_protocol::{
+    HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1,
+};
 use serde::Deserialize;
 
 use crate::regression_summary::RegressionLaneV1;
@@ -41,6 +43,7 @@ impl CampaignEnvironmentRequirementDefinition {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum CampaignEnvironmentPredicateDefinition {
     HostMonitorTopology(HostMonitorTopologyPredicateDefinition),
+    PlatformCapabilities(PlatformCapabilitiesPredicateDefinition),
 }
 
 impl CampaignEnvironmentPredicateDefinition {
@@ -51,6 +54,14 @@ impl CampaignEnvironmentPredicateDefinition {
                 "monitor_count_ge": predicate.monitor_count_ge,
                 "distinct_scale_factor_count_ge": predicate.distinct_scale_factor_count_ge,
             }),
+            Self::PlatformCapabilities(predicate) => serde_json::json!({
+                "kind": "platform_capabilities",
+                "platform_is": predicate.platform_is,
+                "ui_multi_window_is": predicate.ui_multi_window_is,
+                "ui_window_tear_off_is": predicate.ui_window_tear_off_is,
+                "ui_window_hover_detection_is": predicate.ui_window_hover_detection_is,
+                "ui_window_z_level_is": predicate.ui_window_z_level_is,
+            }),
         }
     }
 }
@@ -59,6 +70,15 @@ impl CampaignEnvironmentPredicateDefinition {
 pub(crate) struct HostMonitorTopologyPredicateDefinition {
     pub monitor_count_ge: Option<u64>,
     pub distinct_scale_factor_count_ge: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PlatformCapabilitiesPredicateDefinition {
+    pub platform_is: Option<String>,
+    pub ui_multi_window_is: Option<bool>,
+    pub ui_window_tear_off_is: Option<bool>,
+    pub ui_window_hover_detection_is: Option<String>,
+    pub ui_window_z_level_is: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,6 +176,18 @@ enum CampaignManifestEnvironmentPredicateV1 {
         monitor_count_ge: Option<u64>,
         #[serde(default)]
         distinct_scale_factor_count_ge: Option<u64>,
+    },
+    PlatformCapabilities {
+        #[serde(default)]
+        platform_is: Option<String>,
+        #[serde(default)]
+        ui_multi_window_is: Option<bool>,
+        #[serde(default)]
+        ui_window_tear_off_is: Option<bool>,
+        #[serde(default)]
+        ui_window_hover_detection_is: Option<String>,
+        #[serde(default)]
+        ui_window_z_level_is: Option<String>,
     },
 }
 
@@ -482,6 +514,11 @@ fn normalize_positive_threshold(
     }
 }
 
+fn normalize_optional_environment_value(raw: Option<String>) -> Option<String> {
+    raw.map(|value| value.trim().to_ascii_lowercase())
+        .filter(|value| !value.is_empty())
+}
+
 pub(crate) fn load_manifest_campaigns_from_dir(
     dir: &Path,
 ) -> Result<Vec<CampaignDefinition>, String> {
@@ -711,6 +748,48 @@ fn parse_manifest_environment_requirements(
                     },
                 )
             }
+            CampaignManifestEnvironmentPredicateV1::PlatformCapabilities {
+                platform_is,
+                ui_multi_window_is,
+                ui_window_tear_off_is,
+                ui_window_hover_detection_is,
+                ui_window_z_level_is,
+            } => {
+                if source_id != PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1 {
+                    return Err(format!(
+                        "campaign manifest platform_capabilities predicate requires source_id `{}`: {}",
+                        PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1,
+                        path.display()
+                    ));
+                }
+
+                let platform_is = normalize_optional_environment_value(platform_is);
+                let ui_window_hover_detection_is =
+                    normalize_optional_environment_value(ui_window_hover_detection_is);
+                let ui_window_z_level_is =
+                    normalize_optional_environment_value(ui_window_z_level_is);
+                if platform_is.is_none()
+                    && ui_multi_window_is.is_none()
+                    && ui_window_tear_off_is.is_none()
+                    && ui_window_hover_detection_is.is_none()
+                    && ui_window_z_level_is.is_none()
+                {
+                    return Err(format!(
+                        "campaign manifest platform_capabilities predicate must declare at least one expectation: {}",
+                        path.display()
+                    ));
+                }
+
+                CampaignEnvironmentPredicateDefinition::PlatformCapabilities(
+                    PlatformCapabilitiesPredicateDefinition {
+                        platform_is,
+                        ui_multi_window_is,
+                        ui_window_tear_off_is,
+                        ui_window_hover_detection_is,
+                        ui_window_z_level_is,
+                    },
+                )
+            }
         };
 
         normalized.push(CampaignEnvironmentRequirementDefinition {
@@ -911,6 +990,63 @@ mod tests {
     }
 
     #[test]
+    fn manifest_campaign_parses_platform_capabilities_environment_requirement() {
+        let root = unique_temp_dir();
+        let manifests_dir = campaigns_dir_from_workspace_root(&root);
+        fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        let manifest_path = manifests_dir.join("wayland.json");
+        fs::write(
+            &manifest_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "wayland",
+  "description": "Wayland-only campaign.",
+  "lane": "smoke",
+  "items": [
+    { "kind": "script", "value": "tools/diag-scripts/docking/arbitration/example.json" }
+  ],
+  "requires_environment": [
+    {
+      "source_id": " PLATFORM.CAPABILITIES ",
+      "predicate": {
+        "kind": "platform_capabilities",
+        "platform_is": " Linux ",
+        "ui_multi_window_is": true,
+        "ui_window_tear_off_is": false,
+        "ui_window_hover_detection_is": " None ",
+        "ui_window_z_level_is": " None "
+      }
+    }
+  ]
+}"#,
+        )
+        .expect("write manifest");
+
+        let registry = CampaignRegistry::load_from_workspace_root(&root).unwrap();
+        let campaign = registry.resolve("wayland").unwrap();
+        assert_eq!(campaign.requires_environment.len(), 1);
+        assert_eq!(
+            campaign.requires_environment[0].source_id,
+            PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            campaign.requires_environment[0].predicate,
+            CampaignEnvironmentPredicateDefinition::PlatformCapabilities(
+                PlatformCapabilitiesPredicateDefinition {
+                    platform_is: Some("linux".to_string()),
+                    ui_multi_window_is: Some(true),
+                    ui_window_tear_off_is: Some(false),
+                    ui_window_hover_detection_is: Some("none".to_string()),
+                    ui_window_z_level_is: Some("none".to_string()),
+                }
+            )
+        );
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn manifest_campaign_rejects_empty_host_monitor_topology_environment_predicate() {
         let root = unique_temp_dir();
         let manifests_dir = campaigns_dir_from_workspace_root(&root);
@@ -942,6 +1078,43 @@ mod tests {
         let error = CampaignRegistry::load_from_workspace_root(&root).unwrap_err();
         assert!(error.contains(
             "campaign manifest host_monitor_topology predicate must declare at least one threshold"
+        ));
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn manifest_campaign_rejects_empty_platform_capabilities_environment_predicate() {
+        let root = unique_temp_dir();
+        let manifests_dir = campaigns_dir_from_workspace_root(&root);
+        fs::create_dir_all(&manifests_dir).expect("create manifests dir");
+        let manifest_path = manifests_dir.join("invalid-platform-env.json");
+        fs::write(
+            &manifest_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "invalid-platform-env",
+  "description": "Invalid platform environment requirement.",
+  "lane": "smoke",
+  "items": [
+    { "kind": "suite", "value": "ui-gallery-lite-smoke" }
+  ],
+  "requires_environment": [
+    {
+      "source_id": "platform.capabilities",
+      "predicate": {
+        "kind": "platform_capabilities"
+      }
+    }
+  ]
+}"#,
+        )
+        .expect("write manifest");
+
+        let error = CampaignRegistry::load_from_workspace_root(&root).unwrap_err();
+        assert!(error.contains(
+            "campaign manifest platform_capabilities predicate must declare at least one expectation"
         ));
 
         let _ = fs::remove_dir_all(&root);

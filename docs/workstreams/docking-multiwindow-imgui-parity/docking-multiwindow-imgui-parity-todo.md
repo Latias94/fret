@@ -286,7 +286,13 @@ Each TODO is labeled:
     - [x] Real-host acceptance runbook is now explicit:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`
       - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`
+      - Host-admitted campaign: `tools/diag-campaigns/imui-p3-wayland-real-host.json`
       - Bounded review: `diag windows`, `diag dock-graph`, optional `target/fret-dock-tearoff.log` grep
+    - [x] Campaign admission now uses the launch-time `platform.capabilities` environment source:
+      - Requires Linux, `ui.multi_window=true`, `ui.window_tear_off=false`,
+        `ui.window_hover_detection=none`, and `ui.window_z_level=none`.
+      - Non-Wayland hosts should policy-skip via `check.environment.json` instead of timing out the
+        direct script.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

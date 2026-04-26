@@ -2336,6 +2336,7 @@ impl UiDiagnosticsService {
             None => true,
         };
 
+        self.sync_runner_monitor_topology_from_app(app);
         self.ensure_ready_file();
         self.poll_script_trigger();
         if self.poll_exit_trigger() {

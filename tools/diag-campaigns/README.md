@@ -18,13 +18,21 @@ Environment requirements:
 
 - `requires_capabilities` stays capabilities-only.
 - `requires_environment` is a separate source-scoped admission surface.
-- v1 currently supports one admitted source/predicate pair:
+- v1 currently supports these admitted source/predicate pairs:
   - `source_id: "host.monitor_topology"`
   - `predicate.kind: "host_monitor_topology"`
-- v1 threshold keys:
+- `source_id: "platform.capabilities"`
+- `predicate.kind: "platform_capabilities"`
+- `host_monitor_topology` threshold keys:
   - `monitor_count_ge`
   - `distinct_scale_factor_count_ge`
-- At least one threshold must be present.
+- `platform_capabilities` expectation keys:
+  - `platform_is`
+  - `ui_multi_window_is`
+  - `ui_window_tear_off_is`
+  - `ui_window_hover_detection_is`
+  - `ui_window_z_level_is`
+- At least one threshold/expectation must be present.
 
 Example:
 
@@ -37,6 +45,21 @@ Example:
         "kind": "host_monitor_topology",
         "monitor_count_ge": 2,
         "distinct_scale_factor_count_ge": 2
+      }
+    }
+  ]
+}
+```
+
+```json
+{
+  "requires_environment": [
+    {
+      "source_id": "platform.capabilities",
+      "predicate": {
+        "kind": "platform_capabilities",
+        "platform_is": "linux",
+        "ui_window_hover_detection_is": "none"
       }
     }
   ]

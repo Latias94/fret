@@ -115,20 +115,30 @@ Environment fingerprint note:
 - Do not treat `scale_factors_seen` as host monitor topology or as a mixed-DPI preflight signal.
 - On native diagnostics runs, the runtime may also publish `environment.sources.json` at the run
   `out_dir` root.
-- `host.monitor_topology` currently maps to `environment.source.host.monitor_topology.json` when
-  that launch-time source is available.
+- `host.monitor_topology` maps to `environment.source.host.monitor_topology.json` when that
+  launch-time source is available.
+- `platform.capabilities` maps to `environment.source.platform.capabilities.json` when the runner
+  publishes launch-time platform capability posture (for example Wayland degradation admission).
 - DevTools WS sessions that advertise `devtools.environment_sources` may also answer
   `environment.sources.get` / `environment.sources.get_ack` with a session-published source
   catalog.
 - Campaign result aggregates may report `environment_sources_path`,
   `environment_source_catalog_provenance`, and `environment_sources`.
 - Campaign manifests may also declare `requires_environment`.
-- The first shipped environment requirement is source-scoped and source-specific:
+- Shipped environment requirements are source-scoped and source-specific:
   - `source_id: "host.monitor_topology"`
   - `predicate.kind: "host_monitor_topology"`
   - thresholds:
     - `monitor_count_ge`
     - `distinct_scale_factor_count_ge`
+  - `source_id: "platform.capabilities"`
+  - `predicate.kind: "platform_capabilities"`
+  - expectations:
+    - `platform_is`
+    - `ui_multi_window_is`
+    - `ui_window_tear_off_is`
+    - `ui_window_hover_detection_is`
+    - `ui_window_z_level_is`
 - `requires_capabilities` remains capabilities-only.
 - `requires_environment` uses the separate source catalog/query family and campaign admission
   rather than `capabilities.json`.

@@ -8,6 +8,7 @@ Related:
 - `M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`
 - `docking-multiwindow-imgui-parity-todo.md`
 - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`
+- `tools/diag-campaigns/imui-p3-wayland-real-host.json`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
 - `docs/adr/0083-multi-window-degradation-policy.md`
@@ -35,9 +36,14 @@ Minimum host assumptions:
 - `WAYLAND_DISPLAY` is non-empty
 - the app is running on the native Wayland backend rather than a forced X11/XWayland fallback
 - the host can launch `docking_arbitration_demo` with diagnostics enabled through `fretboard-dev`
+- the runner publishes `platform.capabilities` in the diagnostics environment source catalog
 
-If the script never reaches `platform_ui_window_hover_detection_is(quality=none)`, do not mark the
-run accepted. Record whether:
+Prefer the campaign wrapper when possible. It admits only hosts whose launch-time
+`platform.capabilities` payload reports Linux plus Wayland-safe docking posture, and it writes a
+policy skip artifact on non-Wayland hosts instead of letting the script time out.
+
+If the direct script never reaches `platform_ui_window_hover_detection_is(quality=none)`, do not
+mark the run accepted. Record whether:
 
 - the session was not actually Wayland,
 - the app was forced onto X11/XWayland,
@@ -45,7 +51,25 @@ run accepted. Record whether:
 
 ## Canonical command set
 
-### 1) Run the bounded Wayland degradation script on a real host
+### 1) Run the host-admitted Wayland campaign on a real host
+
+```bash
+FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag campaign run \
+  imui-p3-wayland-real-host \
+  --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release
+```
+
+The campaign requires:
+
+- `source_id: "platform.capabilities"`
+- `predicate.kind: "platform_capabilities"`
+- `platform_is: "linux"`
+- `ui_multi_window_is: true`
+- `ui_window_tear_off_is: false`
+- `ui_window_hover_detection_is: "none"`
+- `ui_window_z_level_is: "none"`
+
+### 2) Run the bounded Wayland degradation script directly when debugging
 
 ```bash
 FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag run \
@@ -63,7 +87,7 @@ Why this script:
 - it asserts `known_window_count_is(n=1)` after the gesture,
 - and it captures one bounded bundle for later review.
 
-### 2) Resolve the captured bundle from the latest session
+### 3) Resolve the captured bundle from the latest session
 
 ```bash
 cargo run -p fretboard-dev -- diag resolve latest \
@@ -74,7 +98,7 @@ The expected bundle label is:
 
 - `docking-arbitration-demo-wayland-degrade-no-os-tearoff`
 
-### 3) Inspect bounded evidence from that bundle
+### 4) Inspect bounded evidence from that bundle
 
 Window inventory:
 
@@ -95,7 +119,7 @@ What to confirm:
   container rather than a new `DockFloating` OS window,
 - and the script result is `stage=passed`.
 
-### 4) Optionally inspect the tear-off log for forbidden create effects
+### 5) Optionally inspect the tear-off log for forbidden create effects
 
 When `FRET_DOCK_TEAROFF_LOG=1` is enabled, the runner writes:
 
@@ -123,6 +147,11 @@ The real-host Wayland acceptance run is good enough for this lane when all of th
    a second `DockFloating` OS window.
 5. `target/fret-dock-tearoff.log` does not contain `[effect-window-create]` lines for
    `DockFloating` during the attempted tear-off.
+
+Campaign admission is accepted when the campaign runs the script on a qualifying host. A
+non-qualifying host should produce `check.environment.json` with
+`environment.platform_capabilities.*` reason codes and should not be counted as a compositor
+acceptance run.
 
 ## Recording rule
 
@@ -162,7 +191,8 @@ From this point forward:
 1. this runbook is the default real-host acceptance path for `DW-P1-linux-003`,
 2. `docking-arbitration-demo-wayland-degrade-no-os-tearoff.json` is the canonical scripted proof
    surface for this slice,
-3. `diag windows`, `diag dock-graph`, and the optional tear-off log grep are the bounded review
+3. `imui-p3-wayland-real-host` is the canonical host-admitted campaign wrapper,
+4. `diag windows`, `diag dock-graph`, and the optional tear-off log grep are the bounded review
    surfaces for this acceptance,
-4. and future Wayland acceptance notes should reference this runbook instead of inventing a new
+5. and future Wayland acceptance notes should reference this runbook instead of inventing a new
    command sequence.

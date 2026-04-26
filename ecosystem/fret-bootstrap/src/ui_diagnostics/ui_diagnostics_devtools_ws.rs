@@ -7,7 +7,7 @@ use fret_diag_protocol::{
     DevtoolsEnvironmentSourcesGetAckV1, DevtoolsEnvironmentSourcesGetV1, DiagScreenshotRequestV1,
     DiagScreenshotWindowRequestV1, EnvironmentSourceAvailabilityV1, FilesystemEnvironmentSourceV1,
     HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
-    UiInspectConfigV1,
+    PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1, UiInspectConfigV1,
 };
 
 #[cfg(feature = "diagnostics-ws")]
@@ -43,6 +43,7 @@ pub(super) struct PendingDevtoolsHitTestExplainRequest {
 #[cfg(feature = "diagnostics-ws")]
 fn build_environment_sources_get_ack_v1(
     host_monitor_topology: Option<&fret_runtime::RunnerMonitorTopologySnapshotV1>,
+    platform_capabilities: Option<&fret_runtime::PlatformCapabilities>,
 ) -> DevtoolsEnvironmentSourcesGetAckV1 {
     let host_monitor_topology =
         host_monitor_topology.map(|snapshot| HostMonitorTopologyEnvironmentPayloadV1 {
@@ -50,10 +51,18 @@ fn build_environment_sources_get_ack_v1(
             source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
             monitor_topology: ui_diagnostics_monitor_topology_from_runner(snapshot),
         });
+    let platform_capabilities = platform_capabilities
+        .map(super::fs_triggers::ui_diagnostics_platform_capabilities_environment_payload);
     let mut sources = Vec::new();
     if host_monitor_topology.is_some() {
         sources.push(FilesystemEnvironmentSourceV1 {
             source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+            availability: EnvironmentSourceAvailabilityV1::PreflightTransportSession,
+        });
+    }
+    if platform_capabilities.is_some() {
+        sources.push(FilesystemEnvironmentSourceV1 {
+            source_id: PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1.to_string(),
             availability: EnvironmentSourceAvailabilityV1::PreflightTransportSession,
         });
     }
@@ -63,6 +72,7 @@ fn build_environment_sources_get_ack_v1(
         runner_kind: Some("fret-bootstrap".to_string()),
         runner_version: Some(env!("CARGO_PKG_VERSION").to_string()),
         host_monitor_topology,
+        platform_capabilities,
     }
 }
 
@@ -519,6 +529,7 @@ impl UiDiagnosticsService {
                 };
                 let payload = serde_json::to_value(build_environment_sources_get_ack_v1(
                     self.host_monitor_topology.as_ref(),
+                    self.platform_capabilities.as_ref(),
                 ))
                 .unwrap_or(serde_json::Value::Null);
                 self.ws_send_with_request_id(
@@ -773,8 +784,12 @@ mod tests {
 
     #[test]
     fn environment_sources_get_ack_publishes_transport_session_monitor_topology() {
-        let ack = build_environment_sources_get_ack_v1(Some(
-            &fret_runtime::RunnerMonitorTopologySnapshotV1 {
+        let mut caps = fret_runtime::PlatformCapabilities::default();
+        caps.ui.window_tear_off = false;
+        caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+
+        let ack = build_environment_sources_get_ack_v1(
+            Some(&fret_runtime::RunnerMonitorTopologySnapshotV1 {
                 virtual_desktop_bounds_physical: Some(rect(0, 0, 3200, 1080)),
                 monitors: vec![
                     fret_runtime::RunnerMonitorInfoV1 {
@@ -786,10 +801,11 @@ mod tests {
                         scale_factor: 1.25,
                     },
                 ],
-            },
-        ));
+            }),
+            Some(&caps),
+        );
 
-        assert_eq!(ack.sources.len(), 1);
+        assert_eq!(ack.sources.len(), 2);
         assert_eq!(
             ack.sources[0].availability,
             EnvironmentSourceAvailabilityV1::PreflightTransportSession
@@ -803,6 +819,16 @@ mod tests {
                 .as_ref()
                 .map(|payload| payload.monitor_topology.monitors.len()),
             Some(2)
+        );
+        assert_eq!(
+            ack.sources[1].source_id,
+            PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            ack.platform_capabilities
+                .as_ref()
+                .map(|payload| payload.ui.window_hover_detection.as_str()),
+            Some("none")
         );
         assert_eq!(ack.runner_kind.as_deref(), Some("fret-bootstrap"));
     }

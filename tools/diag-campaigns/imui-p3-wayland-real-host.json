@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "imui-p3-wayland-real-host",
+  "description": "Linux Wayland real-host docking degradation acceptance capture with platform-capabilities admission.",
+  "lane": "smoke",
+  "profile": "local-debug",
+  "items": [
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json"
+    }
+  ],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "manual",
+  "expected_duration_ms": 180000,
+  "requires_capabilities": ["diag.script_v2"],
+  "requires_environment": [
+    {
+      "source_id": "platform.capabilities",
+      "predicate": {
+        "kind": "platform_capabilities",
+        "platform_is": "linux",
+        "ui_multi_window_is": true,
+        "ui_window_tear_off_is": false,
+        "ui_window_hover_detection_is": "none",
+        "ui_window_z_level_is": "none"
+      }
+    }
+  ],
+  "tags": ["imui", "docking", "multiwindow", "wayland", "real-host", "editor-grade"]
+}

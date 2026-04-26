@@ -6526,6 +6526,7 @@ mod authoring_surface_policy_tests {
             "\"role\": \"next\"",
             "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
             "docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
+            "imui-p3-wayland-real-host",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
@@ -6536,6 +6537,8 @@ mod authoring_surface_policy_tests {
         for marker in [
             "Run this only on a Linux native Wayland session.",
             "`XDG_SESSION_TYPE=wayland`",
+            "`platform.capabilities`",
+            "`imui-p3-wayland-real-host`",
             "`docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`",
             "`known_window_count_is(n=1)`",
             "`diag windows`",
@@ -6552,6 +6555,8 @@ mod authoring_surface_policy_tests {
             "Real-host acceptance runbook is now explicit",
             "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
             "docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
+            "tools/diag-campaigns/imui-p3-wayland-real-host.json",
+            "Campaign admission now uses the launch-time `platform.capabilities` environment source",
             "`diag windows`",
             "`diag dock-graph`",
             "Manual Wayland compositor acceptance remains open.",

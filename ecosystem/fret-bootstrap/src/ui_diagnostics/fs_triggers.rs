@@ -2,11 +2,13 @@ use std::path::{Path, PathBuf};
 
 use fret_diag_protocol::{
     EnvironmentSourceAvailabilityV1, FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1,
-    FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1, FilesystemCapabilitiesV1,
+    FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1,
+    FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1, FilesystemCapabilitiesV1,
     FilesystemEnvironmentSourceV1, FilesystemEnvironmentSourcesV1,
     HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1, HostMonitorTopologyEnvironmentPayloadV1,
-    UiActionScriptV1, UiActionScriptV2, UiInspectConfigV1, UiScriptEventLogEntryV1,
-    UiScriptResultV1, UiScriptStageV1,
+    PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1, PlatformCapabilitiesEnvironmentPayloadV1,
+    PlatformUiCapabilitiesEnvironmentV1, UiActionScriptV1, UiActionScriptV2, UiInspectConfigV1,
+    UiScriptEventLogEntryV1, UiScriptResultV1, UiScriptStageV1,
 };
 
 use super::{
@@ -90,6 +92,23 @@ fn warn_fs_once(
         error = %err,
         "{message}"
     );
+}
+
+pub(super) fn ui_diagnostics_platform_capabilities_environment_payload(
+    caps: &fret_runtime::PlatformCapabilities,
+) -> PlatformCapabilitiesEnvironmentPayloadV1 {
+    PlatformCapabilitiesEnvironmentPayloadV1 {
+        schema_version: 1,
+        source_id: PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+        platform: fret_runtime::Platform::current().as_str().to_string(),
+        ui: PlatformUiCapabilitiesEnvironmentV1 {
+            multi_window: caps.ui.multi_window,
+            window_tear_off: caps.ui.window_tear_off,
+            window_hover_detection: caps.ui.window_hover_detection.as_str().to_string(),
+            window_set_outer_position: caps.ui.window_set_outer_position.as_str().to_string(),
+            window_z_level: caps.ui.window_z_level.as_str().to_string(),
+        },
+    }
 }
 
 impl UiDiagnosticsService {
@@ -325,8 +344,10 @@ impl UiDiagnosticsService {
         }
 
         let current_topology = self.host_monitor_topology.clone();
+        let current_platform_capabilities = self.platform_capabilities.clone();
         if self.environment_sources_catalog_written
             && self.published_host_monitor_topology == current_topology
+            && self.published_platform_capabilities == current_platform_capabilities
         {
             return;
         }
@@ -348,15 +369,19 @@ impl UiDiagnosticsService {
             return;
         }
 
-        let sources = current_topology
-            .as_ref()
-            .map(|_| {
-                vec![FilesystemEnvironmentSourceV1 {
-                    source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
-                    availability: EnvironmentSourceAvailabilityV1::LaunchTime,
-                }]
-            })
-            .unwrap_or_default();
+        let mut sources = Vec::new();
+        if current_topology.is_some() {
+            sources.push(FilesystemEnvironmentSourceV1 {
+                source_id: HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+            });
+        }
+        if current_platform_capabilities.is_some() {
+            sources.push(FilesystemEnvironmentSourceV1 {
+                source_id: PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1.to_string(),
+                availability: EnvironmentSourceAvailabilityV1::LaunchTime,
+            });
+        }
         let catalog_payload = FilesystemEnvironmentSourcesV1 {
             schema_version: 1,
             sources,
@@ -419,8 +444,46 @@ impl UiDiagnosticsService {
             }
         }
 
+        let platform_payload_path = self
+            .cfg
+            .out_dir
+            .join(FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1);
+        match current_platform_capabilities.as_ref() {
+            Some(caps) => {
+                let payload = ui_diagnostics_platform_capabilities_environment_payload(caps);
+                if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
+                    text.push('\n');
+                    if let Err(err) = std::fs::write(&platform_payload_path, text) {
+                        warn_fs_once(
+                            &mut self.environment_sources_write_warned,
+                            &self.cfg.out_dir,
+                            "ui diagnostics: failed to write platform capabilities environment payload",
+                            &platform_payload_path,
+                            &err,
+                        );
+                        return;
+                    }
+                }
+            }
+            None => {
+                if platform_payload_path.is_file()
+                    && let Err(err) = std::fs::remove_file(&platform_payload_path)
+                {
+                    warn_fs_once(
+                        &mut self.environment_sources_write_warned,
+                        &self.cfg.out_dir,
+                        "ui diagnostics: failed to remove stale platform capabilities environment payload",
+                        &platform_payload_path,
+                        &err,
+                    );
+                    return;
+                }
+            }
+        }
+
         self.environment_sources_catalog_written = true;
         self.published_host_monitor_topology = current_topology;
+        self.published_platform_capabilities = current_platform_capabilities;
     }
 
     pub(super) fn ensure_capabilities_file(&mut self) {
@@ -837,9 +900,11 @@ mod tests {
     use super::*;
     use fret_diag_protocol::{
         FilesystemEnvironmentSourcesV1, HostMonitorTopologyEnvironmentPayloadV1,
+        PlatformCapabilitiesEnvironmentPayloadV1,
     };
     use fret_runtime::{
-        RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1, RunnerMonitorTopologySnapshotV1,
+        PlatformCapabilities, RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1,
+        RunnerMonitorTopologySnapshotV1, WindowHoverDetectionQuality, WindowZLevelQuality,
     };
 
     fn rect(x: i32, y: i32, width: u32, height: u32) -> RunnerMonitorRectPhysicalV1 {
@@ -915,6 +980,74 @@ mod tests {
         assert_eq!(payload.monitor_topology.monitors[1].scale_factor, 1.25);
 
         service.host_monitor_topology = None;
+        service.refresh_environment_source_files();
+
+        let catalog = serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(
+            &std::fs::read(&catalog_path).unwrap(),
+        )
+        .unwrap();
+        assert!(catalog.sources.is_empty());
+        assert!(!payload_path.exists());
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn refresh_environment_source_files_publishes_launch_time_platform_capabilities_sidecar() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-platform-capabilities-source-sidecars-{}-{}",
+            unix_ms_now(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = true;
+        caps.ui.window_tear_off = false;
+        caps.ui.window_hover_detection = WindowHoverDetectionQuality::None;
+        caps.ui.window_z_level = WindowZLevelQuality::None;
+
+        let mut service = UiDiagnosticsService::default();
+        service.cfg.enabled = true;
+        service.cfg.out_dir = root.clone();
+        service.platform_capabilities = Some(caps);
+
+        service.refresh_environment_source_files();
+
+        let catalog_path = root.join(FILESYSTEM_ENVIRONMENT_SOURCES_FILE_NAME_V1);
+        let payload_path =
+            root.join(FILESYSTEM_PLATFORM_CAPABILITIES_ENVIRONMENT_PAYLOAD_FILE_NAME_V1);
+        assert!(catalog_path.is_file());
+        assert!(payload_path.is_file());
+
+        let catalog = serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(
+            &std::fs::read(&catalog_path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(catalog.sources.len(), 1);
+        assert_eq!(
+            catalog.sources[0].source_id,
+            PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(
+            catalog.sources[0].availability,
+            EnvironmentSourceAvailabilityV1::LaunchTime
+        );
+
+        let payload = serde_json::from_slice::<PlatformCapabilitiesEnvironmentPayloadV1>(
+            &std::fs::read(&payload_path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            payload.source_id,
+            PLATFORM_CAPABILITIES_ENVIRONMENT_SOURCE_ID_V1
+        );
+        assert_eq!(payload.platform, fret_runtime::Platform::current().as_str());
+        assert_eq!(payload.ui.window_tear_off, false);
+        assert_eq!(payload.ui.window_hover_detection, "none");
+        assert_eq!(payload.ui.window_z_level, "none");
+
+        service.platform_capabilities = None;
         service.refresh_environment_source_files();
 
         let catalog = serde_json::from_slice::<FilesystemEnvironmentSourcesV1>(

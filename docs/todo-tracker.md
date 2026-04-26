@@ -546,6 +546,10 @@ It complements (but does not replace) ADRs:
   it classifies the current per-window UI environment, renderer font environment, and bundle env
   fingerprint surfaces, ships `host.monitor_topology` as the first admitted source, and freezes
   the rule that wider grammar needs a different narrow follow-on plus a second real source.
+- Use `docs/workstreams/diag-platform-capabilities-environment-v1/WORKSTREAM.json` as the closed
+  verdict for the second admitted diagnostics environment source:
+  `platform.capabilities` exists for exact launch-time platform posture checks, and
+  `imui-p3-wayland-real-host` is the first campaign consumer.
 - Source of truth for the closed `imui` compatibility-retained follow-on:
   - `docs/workstreams/imui-compat-retained-surface-v1/DESIGN.md`
   - `docs/workstreams/imui-compat-retained-surface-v1/TODO.md`
