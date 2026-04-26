@@ -1,0 +1,120 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: Windows tear-off placement capture",
+    "tags": ["docking", "multiwindow", "drag", "windows", "placement", "local-debug"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1",
+      "FRET_DOCK_TEAROFF_FOLLOW_IN_DIAG": "1"
+    },
+    "target_hints": [
+      "This local-debug gate captures the first useful placement evidence after a dock tab tears out into a native OS window.",
+      "The important bounded readout is `fretboard-dev diag dock-routing <bundle_dir>`.",
+      "Inspect `move_outer`, `move_deco`, `move_origin`, `move_local`, `move_grab_delta`, `sf_move_run`, and `sf_move` in the after-tearoff bundles.",
+      "On Windows, `move_origin_src=platform` means the runner used the HWND client-origin path rather than only `outer_position + surface_position`.",
+      "A healthy run keeps `move_grab_delta` near zero after the created window stabilizes and still completes drag-back to a canonical one-window dock graph."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "min_w_px": 700.0,
+        "min_h_px": 500.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "stable_frames": 12,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "release_on_success": false,
+      "delta_x": 2400.0,
+      "delta_y": 0.0,
+      "steps": 120,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    { "type": "capture_bundle", "label": "windows-tearoff-placement-after-tearoff-initial" },
+
+    { "type": "wait_frames", "n": 12 },
+    { "type": "capture_bundle", "label": "windows-tearoff-placement-after-tearoff-settled" },
+
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_is", "n": 1 },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.controls" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-windows-tearoff-placement-capture" }
+  ]
+}

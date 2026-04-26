@@ -2694,6 +2694,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_outer_pos_physical_px: drag
+                        .diag_moving_window_outer_pos_physical_px,
+                    moving_window_decoration_offset_physical_px: drag
+                        .diag_moving_window_decoration_offset_physical_px,
+                    moving_window_client_origin_screen_physical_px: drag
+                        .diag_moving_window_client_origin_screen_physical_px,
+                    moving_window_client_origin_source_platform: drag
+                        .diag_moving_window_client_origin_source_platform,
+                    moving_window_scale_factor_x1000_from_runner: drag
+                        .diag_moving_window_scale_factor_x1000,
+                    moving_window_local_pos_from_screen_logical_px: drag
+                        .diag_moving_window_local_pos_from_screen_logical_px,
                     moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
@@ -6990,6 +7002,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_outer_pos_physical_px: drag
+                        .diag_moving_window_outer_pos_physical_px,
+                    moving_window_decoration_offset_physical_px: drag
+                        .diag_moving_window_decoration_offset_physical_px,
+                    moving_window_client_origin_screen_physical_px: drag
+                        .diag_moving_window_client_origin_screen_physical_px,
+                    moving_window_client_origin_source_platform: drag
+                        .diag_moving_window_client_origin_source_platform,
+                    moving_window_scale_factor_x1000_from_runner: drag
+                        .diag_moving_window_scale_factor_x1000,
+                    moving_window_local_pos_from_screen_logical_px: drag
+                        .diag_moving_window_local_pos_from_screen_logical_px,
                     moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
@@ -7290,6 +7314,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_outer_pos_physical_px: drag
+                        .diag_moving_window_outer_pos_physical_px,
+                    moving_window_decoration_offset_physical_px: drag
+                        .diag_moving_window_decoration_offset_physical_px,
+                    moving_window_client_origin_screen_physical_px: drag
+                        .diag_moving_window_client_origin_screen_physical_px,
+                    moving_window_client_origin_source_platform: drag
+                        .diag_moving_window_client_origin_source_platform,
+                    moving_window_scale_factor_x1000_from_runner: drag
+                        .diag_moving_window_scale_factor_x1000,
+                    moving_window_local_pos_from_screen_logical_px: drag
+                        .diag_moving_window_local_pos_from_screen_logical_px,
                     moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,

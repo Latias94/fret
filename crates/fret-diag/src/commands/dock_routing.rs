@@ -129,6 +129,18 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
         Some(format!("{x:.1},{y:.1}"))
     }
 
+    fn point_delta_string_obj(
+        v: &serde_json::Map<String, Value>,
+        lhs_key: &str,
+        rhs_key: &str,
+    ) -> Option<String> {
+        let lhs = v.get(lhs_key).and_then(|v| v.as_object())?;
+        let rhs = v.get(rhs_key).and_then(|v| v.as_object())?;
+        let dx = lhs.get("x").and_then(|v| v.as_f64())? - rhs.get("x").and_then(|v| v.as_f64())?;
+        let dy = lhs.get("y").and_then(|v| v.as_f64())? - rhs.get("y").and_then(|v| v.as_f64())?;
+        Some(format!("{dx:.1},{dy:.1}"))
+    }
+
     fn str_field<'a>(v: &'a Value, key: &str) -> &'a str {
         v.get(key).and_then(|v| v.as_str()).unwrap_or("")
     }
@@ -244,6 +256,24 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 drag,
                 "current_window_scale_factor_x1000_from_runner",
             );
+            let move_outer = point_xy_string_obj(drag, "moving_window_outer_pos_physical_px");
+            let move_deco =
+                point_xy_string_obj(drag, "moving_window_decoration_offset_physical_px");
+            let move_origin =
+                point_xy_string_obj(drag, "moving_window_client_origin_screen_physical_px");
+            let move_origin_platform = drag
+                .get("moving_window_client_origin_source_platform")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let move_local =
+                point_xy_string_obj(drag, "moving_window_local_pos_from_screen_logical_px");
+            let move_grab_delta = point_delta_string_obj(
+                drag,
+                "moving_window_local_pos_from_screen_logical_px",
+                "cursor_grab_offset",
+            );
+            let sf_moving_runner =
+                scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000_from_runner");
             let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
 
             let mut drag_parts: Vec<String> = Vec::new();
@@ -294,6 +324,27 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
             }
             if let Some(sf_cur) = sf_cur {
                 drag_parts.push(format!("sf_cur={sf_cur}"));
+            }
+            if let Some(move_outer) = move_outer {
+                drag_parts.push(format!("move_outer=({move_outer})"));
+            }
+            if let Some(move_deco) = move_deco {
+                drag_parts.push(format!("move_deco=({move_deco})"));
+            }
+            if let Some(move_origin) = move_origin {
+                drag_parts.push(format!("move_origin=({move_origin})"));
+            }
+            if move_origin_platform {
+                drag_parts.push("move_origin_src=platform".to_string());
+            }
+            if let Some(move_local) = move_local {
+                drag_parts.push(format!("move_local=({move_local})"));
+            }
+            if let Some(move_grab_delta) = move_grab_delta {
+                drag_parts.push(format!("move_grab_delta=({move_grab_delta})"));
+            }
+            if let Some(sf_moving_runner) = sf_moving_runner {
+                drag_parts.push(format!("sf_move_run={sf_moving_runner}"));
             }
             if let Some(sf_moving) = sf_moving {
                 drag_parts.push(format!("sf_move={sf_moving}"));

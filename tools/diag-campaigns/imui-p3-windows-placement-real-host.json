@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "imui-p3-windows-placement-real-host",
+  "description": "Windows real-host docking tear-off placement capture with platform-capabilities admission.",
+  "lane": "smoke",
+  "profile": "local-debug",
+  "items": [
+    {
+      "kind": "script",
+      "value": "tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json"
+    }
+  ],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "manual",
+  "expected_duration_ms": 180000,
+  "requires_capabilities": ["diag.script_v2", "diag.multi_window"],
+  "requires_environment": [
+    {
+      "source_id": "platform.capabilities",
+      "predicate": {
+        "kind": "platform_capabilities",
+        "platform_is": "windows",
+        "ui_multi_window_is": true,
+        "ui_window_tear_off_is": true
+      }
+    }
+  ],
+  "tags": ["imui", "docking", "multiwindow", "windows", "placement", "real-host", "editor-grade"]
+}

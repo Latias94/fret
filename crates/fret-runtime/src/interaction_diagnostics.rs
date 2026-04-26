@@ -67,6 +67,22 @@ pub struct DockDragDiagnostics {
     /// Best-effort diagnostics hint: OS window currently being moved by the runner for this drag
     /// session (ImGui-style "follow window" multi-viewport behavior).
     pub moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: outer position of `moving_window` in screen-space physical
+    /// pixels when routing was computed.
+    pub moving_window_outer_pos_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: decoration offset (client origin relative to outer origin)
+    /// in physical pixels for `moving_window`.
+    pub moving_window_decoration_offset_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: computed client origin (screen-space physical px) for
+    /// `moving_window`.
+    pub moving_window_client_origin_screen_physical_px: Option<Point>,
+    pub moving_window_client_origin_source_platform: bool,
+    /// Best-effort diagnostics hint: scale factor used by the runner when converting screen
+    /// physical pixels into moving-window-local logical pixels.
+    pub moving_window_scale_factor_x1000_from_runner: Option<u32>,
+    /// Best-effort diagnostics hint: local cursor position derived from screen cursor +
+    /// moving-window client origin + scale factor.
+    pub moving_window_local_pos_from_screen_logical_px: Option<Point>,
     /// Best-effort diagnostics hint: scale factor (DPI) of [`Self::moving_window`] at the time
     /// the snapshot was published.
     pub moving_window_scale_factor_x1000: Option<u32>,

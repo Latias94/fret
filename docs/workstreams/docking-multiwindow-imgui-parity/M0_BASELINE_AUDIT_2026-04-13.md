@@ -4,8 +4,8 @@ Status: historical baseline audit; mixed-DPI open-blocker state superseded by
 `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
 
 Status note (2026-04-25): this baseline still explains why the docking lane owned the P3
-multi-window work, but references below to `DW-P0-dpi-006` as the current open blocker are
-historical. The real-host mixed-DPI acceptance pair is now recorded in
+multi-window work, but references below to `DW-P0-dpi-006` as the current open blocker are historical.
+The real-host mixed-DPI acceptance pair is now recorded in
 `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`.
 
 Related:

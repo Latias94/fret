@@ -11,6 +11,74 @@ fn env_flag_is_true(name: &str) -> bool {
     })
 }
 
+fn diagnostics_scale_factor_x1000(scale_factor: f64) -> Option<u32> {
+    if scale_factor.is_finite() && scale_factor > 0.0 {
+        let scaled = (scale_factor * 1000.0).round();
+        Some(scaled.clamp(1.0, u32::MAX as f64) as u32)
+    } else {
+        None
+    }
+}
+
+fn point_from_physical_f64(pos: winit::dpi::PhysicalPosition<f64>) -> Point {
+    Point::new(Px(pos.x as f32), Px(pos.y as f32))
+}
+
+fn point_from_physical_i32(pos: winit::dpi::PhysicalPosition<i32>) -> Point {
+    Point::new(Px(pos.x as f32), Px(pos.y as f32))
+}
+
+fn apply_drag_window_geometry_diagnostics(
+    drag: &mut fret_runtime::DragSession,
+    current_diag: Option<super::window::WindowClientOriginDiagnostics>,
+    moving_diag: Option<super::window::WindowClientOriginDiagnostics>,
+    current_screen_pos: winit::dpi::PhysicalPosition<f64>,
+    moving_screen_pos: winit::dpi::PhysicalPosition<f64>,
+) {
+    if let Some(diag) = current_diag {
+        drag.diag_current_window_outer_pos_physical_px =
+            diag.outer_pos_physical.map(point_from_physical_i32);
+        drag.diag_current_window_decoration_offset_physical_px =
+            Some(point_from_physical_i32(diag.decoration_offset_physical));
+        drag.diag_current_window_client_origin_screen_physical_px =
+            Some(point_from_physical_f64(diag.client_origin_screen));
+        drag.diag_current_window_client_origin_source_platform = diag.client_origin_source_platform;
+        drag.diag_current_window_scale_factor_x1000 =
+            diagnostics_scale_factor_x1000(diag.scale_factor);
+        drag.diag_current_window_local_pos_from_screen_logical_px =
+            Some(super::window::local_pos_for_screen_pos(
+                diag.client_origin_screen,
+                diag.scale_factor,
+                current_screen_pos,
+            ));
+    }
+
+    if let Some(diag) = moving_diag {
+        drag.diag_moving_window_outer_pos_physical_px =
+            diag.outer_pos_physical.map(point_from_physical_i32);
+        drag.diag_moving_window_decoration_offset_physical_px =
+            Some(point_from_physical_i32(diag.decoration_offset_physical));
+        drag.diag_moving_window_client_origin_screen_physical_px =
+            Some(point_from_physical_f64(diag.client_origin_screen));
+        drag.diag_moving_window_client_origin_source_platform = diag.client_origin_source_platform;
+        drag.diag_moving_window_scale_factor_x1000 =
+            diagnostics_scale_factor_x1000(diag.scale_factor);
+        drag.diag_moving_window_local_pos_from_screen_logical_px =
+            Some(super::window::local_pos_for_screen_pos(
+                diag.client_origin_screen,
+                diag.scale_factor,
+                moving_screen_pos,
+            ));
+    } else {
+        drag.diag_moving_window_outer_pos_physical_px = None;
+        drag.diag_moving_window_decoration_offset_physical_px = None;
+        drag.diag_moving_window_client_origin_screen_physical_px = None;
+        drag.diag_moving_window_client_origin_source_platform = false;
+        drag.diag_moving_window_scale_factor_x1000 = None;
+        drag.diag_moving_window_local_pos_from_screen_logical_px = None;
+    }
+}
+
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn internal_drag_routing_pointer_id(&self) -> Option<fret_core::PointerId> {
         if let Some(pointer_id) = self.dock_drag_pointer_id() {
@@ -445,6 +513,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
+        let moving_origin_diag = moving_window
+            .and_then(|window| self.client_origin_screen_diagnostics_for_window(window));
+
         if let Some(d) = self.app.drag_mut(pointer_id) {
             d.current_window = current;
             d.position = pos;
@@ -460,29 +531,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             ));
             d.diag_cursor_screen_pos_was_clamped = screen_pos_was_clamped;
             d.diag_cursor_override_active = diag_override_active;
-            if let Some(diag) = origin_diag {
-                let sf = if diag.scale_factor.is_finite() && diag.scale_factor > 0.0 {
-                    let scaled = (diag.scale_factor * 1000.0).round();
-                    Some(scaled.clamp(1.0, u32::MAX as f64) as u32)
-                } else {
-                    None
-                };
-                d.diag_current_window_outer_pos_physical_px = diag
-                    .outer_pos_physical
-                    .map(|p| Point::new(Px(p.x as f32), Px(p.y as f32)));
-                d.diag_current_window_decoration_offset_physical_px = Some(Point::new(
-                    Px(diag.decoration_offset_physical.x as f32),
-                    Px(diag.decoration_offset_physical.y as f32),
-                ));
-                d.diag_current_window_client_origin_screen_physical_px = Some(Point::new(
-                    Px(diag.client_origin_screen.x as f32),
-                    Px(diag.client_origin_screen.y as f32),
-                ));
-                d.diag_current_window_client_origin_source_platform =
-                    diag.client_origin_source_platform;
-                d.diag_current_window_scale_factor_x1000 = sf;
-                d.diag_current_window_local_pos_from_screen_logical_px = Some(pos);
-            }
+            apply_drag_window_geometry_diagnostics(
+                d,
+                origin_diag,
+                moving_origin_diag,
+                screen_pos_for_pos,
+                screen_pos,
+            );
         }
 
         #[cfg(target_os = "windows")]
@@ -832,6 +887,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.internal_drag_hover_pos = Some(pos);
         self.internal_drag_pointer_id = Some(pointer_id);
 
+        let moving_origin_diag = moving_window
+            .and_then(|window| self.client_origin_screen_diagnostics_for_window(window));
+
         if let Some(d) = self.app.drag_mut(pointer_id) {
             d.current_window = target;
             d.position = pos;
@@ -847,29 +905,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             ));
             d.diag_cursor_screen_pos_was_clamped = screen_pos_was_clamped;
             d.diag_cursor_override_active = diag_override_active;
-            if let Some(diag) = origin_diag {
-                let sf = if diag.scale_factor.is_finite() && diag.scale_factor > 0.0 {
-                    let scaled = (diag.scale_factor * 1000.0).round();
-                    Some(scaled.clamp(1.0, u32::MAX as f64) as u32)
-                } else {
-                    None
-                };
-                d.diag_current_window_outer_pos_physical_px = diag
-                    .outer_pos_physical
-                    .map(|p| Point::new(Px(p.x as f32), Px(p.y as f32)));
-                d.diag_current_window_decoration_offset_physical_px = Some(Point::new(
-                    Px(diag.decoration_offset_physical.x as f32),
-                    Px(diag.decoration_offset_physical.y as f32),
-                ));
-                d.diag_current_window_client_origin_screen_physical_px = Some(Point::new(
-                    Px(diag.client_origin_screen.x as f32),
-                    Px(diag.client_origin_screen.y as f32),
-                ));
-                d.diag_current_window_client_origin_source_platform =
-                    diag.client_origin_source_platform;
-                d.diag_current_window_scale_factor_x1000 = sf;
-                d.diag_current_window_local_pos_from_screen_logical_px = Some(pos);
-            }
+            apply_drag_window_geometry_diagnostics(
+                d,
+                origin_diag,
+                moving_origin_diag,
+                screen_pos_for_pos,
+                screen_pos,
+            );
         }
         diag_dock_drag_trace(format_args!(
             "[drop] tick={} pointer={:?} kind={:?} src={:?} target={:?} local=({:.1},{:.1}) moving={:?} under_moving={:?} cursor_src={:?} under_src={:?}",

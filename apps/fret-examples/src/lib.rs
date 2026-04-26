@@ -722,6 +722,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_MIXED_DPI_REAL_HOST_ACCEPTANCE_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_PLACEMENT_GATE_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md"
+    );
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
     );
@@ -818,6 +821,11 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_P3_MULTIWINDOW_PARITY_CAMPAIGN: &str =
         include_str!("../../../tools/diag-campaigns/imui-p3-multiwindow-parity.json");
+    const IMUI_P3_WINDOWS_PLACEMENT_CAMPAIGN: &str =
+        include_str!("../../../tools/diag-campaigns/imui-p3-windows-placement-real-host.json");
+    const IMUI_P3_WINDOWS_PLACEMENT_SCRIPT: &str = include_str!(
+        "../../../tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json"
+    );
     const IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT: &str =
         include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
     const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
@@ -6474,6 +6482,71 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the docking parity TODO should keep the mixed-DPI acceptance closure explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_windows_placement_capture_gate() {
+        for marker in [
+            "\"role\": \"status\"",
+            "M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md",
+            "imui-p3-windows-placement-real-host",
+            "docking-arbitration-demo-windows-tearoff-placement-capture.debug.json",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the Windows placement gate reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "moving_window_outer_pos_physical_px",
+            "moving_window_client_origin_screen_physical_px",
+            "move_grab_delta",
+            "move_origin_src=platform",
+            "windows-tearoff-placement-after-tearoff-initial",
+            "windows-tearoff-placement-after-tearoff-settled",
+            "Do not mark `DW-P1-win-002` closed yet.",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_PLACEMENT_GATE_NOTE.contains(marker),
+                "the Windows placement gate note should keep the bounded evidence surface explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"id\": \"imui-p3-windows-placement-real-host\"",
+            "\"source_id\": \"platform.capabilities\"",
+            "\"platform_is\": \"windows\"",
+            "\"ui_window_tear_off_is\": true",
+        ] {
+            assert!(
+                IMUI_P3_WINDOWS_PLACEMENT_CAMPAIGN.contains(marker),
+                "the Windows placement campaign should keep platform admission explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"FRET_DOCK_TEAROFF_FOLLOW_IN_DIAG\": \"1\"",
+            "windows-tearoff-placement-after-tearoff-initial",
+            "windows-tearoff-placement-after-tearoff-settled",
+            "docking-arbitration-demo-windows-tearoff-placement-capture",
+        ] {
+            assert!(
+                IMUI_P3_WINDOWS_PLACEMENT_SCRIPT.contains(marker),
+                "the Windows placement script should keep the capture labels explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "`crates/fret-runtime/src/drag.rs` (`diag_moving_window_*`)",
+            "`crates/fret-diag/src/commands/dock_routing.rs` (`move_grab_delta`)",
+            "M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the Windows placement TODO should keep the new proof surface explicit: {marker}"
             );
         }
     }

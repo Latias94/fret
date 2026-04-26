@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use super::{UiDiagnosticsSnapshotV1, UiDiagnosticsWindowBundleV1, UiSemanticsSnapshotV1, bundle};
 
@@ -476,10 +476,49 @@ pub(super) fn build_dock_routing_json(
                 mix(&mut fp, d.pointer_id);
                 mix(&mut fp, d.source_window);
                 mix(&mut fp, d.current_window);
+                mix(&mut fp, d.follow_window.unwrap_or(0));
+                mix(
+                    &mut fp,
+                    d.current_window_scale_factor_x1000.unwrap_or(0) as u64,
+                );
+                mix(
+                    &mut fp,
+                    d.current_window_scale_factor_x1000_from_runner.unwrap_or(0) as u64,
+                );
                 mix(&mut fp, d.dragging as u64);
                 mix(&mut fp, d.cross_window_hover as u64);
                 mix(&mut fp, d.transparent_payload_applied as u64);
                 mix(&mut fp, hash_str_64(d.window_under_cursor_source.as_str()));
+                mix(&mut fp, d.moving_window.unwrap_or(0));
+                mix(
+                    &mut fp,
+                    d.moving_window_scale_factor_x1000.unwrap_or(0) as u64,
+                );
+                mix(
+                    &mut fp,
+                    d.moving_window_scale_factor_x1000_from_runner.unwrap_or(0) as u64,
+                );
+                mix(
+                    &mut fp,
+                    d.moving_window_client_origin_source_platform as u64,
+                );
+                for value in [
+                    serde_json::to_value(d.cursor_screen_pos_raw_physical_px),
+                    serde_json::to_value(d.cursor_screen_pos_used_physical_px),
+                    serde_json::to_value(d.current_window_outer_pos_physical_px),
+                    serde_json::to_value(d.current_window_decoration_offset_physical_px),
+                    serde_json::to_value(d.current_window_client_origin_screen_physical_px),
+                    serde_json::to_value(d.current_window_local_pos_from_screen_logical_px),
+                    serde_json::to_value(d.moving_window_outer_pos_physical_px),
+                    serde_json::to_value(d.moving_window_decoration_offset_physical_px),
+                    serde_json::to_value(d.moving_window_client_origin_screen_physical_px),
+                    serde_json::to_value(d.moving_window_local_pos_from_screen_logical_px),
+                ] {
+                    if let Ok(value) = value {
+                        let label = serde_json::to_string(&value).unwrap_or_default();
+                        mix(&mut fp, hash_str_64(&label));
+                    }
+                }
             }
             if let Some(d) = dock_drop {
                 mix(&mut fp, d.pointer_id);
@@ -513,15 +552,7 @@ pub(super) fn build_dock_routing_json(
                 "timestamp_unix_ms": s.timestamp_unix_ms,
                 "window_snapshot_seq": s.window_snapshot_seq,
                 "ui_window_hover_detection": hover_detection,
-                "dock_drag": dock_drag.map(|d| json!({
-                    "pointer_id": d.pointer_id,
-                    "source_window": d.source_window,
-                    "current_window": d.current_window,
-                    "dragging": d.dragging,
-                    "cross_window_hover": d.cross_window_hover,
-                    "transparent_payload_applied": d.transparent_payload_applied,
-                    "window_under_cursor_source": d.window_under_cursor_source,
-                })),
+                "dock_drag": dock_drag.map(dock_drag_json),
                 "dock_drop_resolve": dock_drop.map(|d| json!({
                     "pointer_id": d.pointer_id,
                     "source": d.source,
@@ -561,6 +592,147 @@ fn hash_str_64(s: &str) -> u64 {
         fp = fp.wrapping_mul(1099511628211);
     }
     fp
+}
+
+fn insert_json_value<T: serde::Serialize + ?Sized>(
+    out: &mut Map<String, Value>,
+    key: &str,
+    value: &T,
+) {
+    let value = serde_json::to_value(value).unwrap_or(Value::Null);
+    out.insert(key.to_string(), value);
+}
+
+fn dock_drag_json(d: &super::UiDockDragDiagnosticsV1) -> Value {
+    let mut out = Map::new();
+    insert_json_value(&mut out, "pointer_id", &d.pointer_id);
+    insert_json_value(&mut out, "source_window", &d.source_window);
+    insert_json_value(&mut out, "current_window", &d.current_window);
+    insert_json_value(&mut out, "position", &d.position);
+    insert_json_value(&mut out, "start_position", &d.start_position);
+    insert_json_value(&mut out, "cursor_grab_offset", &d.cursor_grab_offset);
+    insert_json_value(&mut out, "follow_window", &d.follow_window);
+    insert_json_value(
+        &mut out,
+        "cursor_screen_pos_raw_physical_px",
+        &d.cursor_screen_pos_raw_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "cursor_screen_pos_used_physical_px",
+        &d.cursor_screen_pos_used_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "cursor_screen_pos_was_clamped",
+        &d.cursor_screen_pos_was_clamped,
+    );
+    insert_json_value(
+        &mut out,
+        "cursor_override_active",
+        &d.cursor_override_active,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_outer_pos_physical_px",
+        &d.current_window_outer_pos_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_decoration_offset_physical_px",
+        &d.current_window_decoration_offset_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_client_origin_screen_physical_px",
+        &d.current_window_client_origin_screen_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_client_origin_source_platform",
+        &d.current_window_client_origin_source_platform,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_scale_factor_x1000_from_runner",
+        &d.current_window_scale_factor_x1000_from_runner,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_local_pos_from_screen_logical_px",
+        &d.current_window_local_pos_from_screen_logical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "current_window_scale_factor_x1000",
+        &d.current_window_scale_factor_x1000,
+    );
+    insert_json_value(&mut out, "kind", &d.kind);
+    insert_json_value(&mut out, "dragging", &d.dragging);
+    insert_json_value(&mut out, "cross_window_hover", &d.cross_window_hover);
+    insert_json_value(&mut out, "payload_ghost_visible", &d.payload_ghost_visible);
+    insert_json_value(
+        &mut out,
+        "transparent_payload_applied",
+        &d.transparent_payload_applied,
+    );
+    insert_json_value(
+        &mut out,
+        "transparent_payload_hit_test_passthrough_applied",
+        &d.transparent_payload_hit_test_passthrough_applied,
+    );
+    insert_json_value(
+        &mut out,
+        "window_under_cursor_source",
+        &d.window_under_cursor_source,
+    );
+    insert_json_value(&mut out, "moving_window", &d.moving_window);
+    insert_json_value(
+        &mut out,
+        "moving_window_outer_pos_physical_px",
+        &d.moving_window_outer_pos_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "moving_window_decoration_offset_physical_px",
+        &d.moving_window_decoration_offset_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "moving_window_client_origin_screen_physical_px",
+        &d.moving_window_client_origin_screen_physical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "moving_window_client_origin_source_platform",
+        &d.moving_window_client_origin_source_platform,
+    );
+    insert_json_value(
+        &mut out,
+        "moving_window_scale_factor_x1000_from_runner",
+        &d.moving_window_scale_factor_x1000_from_runner,
+    );
+    insert_json_value(
+        &mut out,
+        "moving_window_local_pos_from_screen_logical_px",
+        &d.moving_window_local_pos_from_screen_logical_px,
+    );
+    insert_json_value(
+        &mut out,
+        "moving_window_scale_factor_x1000",
+        &d.moving_window_scale_factor_x1000,
+    );
+    insert_json_value(
+        &mut out,
+        "window_under_moving_window",
+        &d.window_under_moving_window,
+    );
+    insert_json_value(
+        &mut out,
+        "window_under_moving_window_source",
+        &d.window_under_moving_window_source,
+    );
+    Value::Object(out)
 }
 
 pub(super) fn build_test_ids_index_json(

@@ -621,6 +621,12 @@ fn build_dock_routing_payload_from_json(
             mix(&mut fp, hash_str_64(hover_detection));
 
             if let Some(d) = dock_drag {
+                let mix_json = |fp: &mut u64, value: Option<&Value>| {
+                    if let Some(value) = value {
+                        let label = serde_json::to_string(value).unwrap_or_default();
+                        mix(fp, hash_str_64(&label));
+                    }
+                };
                 mix(
                     &mut fp,
                     d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
@@ -693,6 +699,32 @@ fn build_dock_routing_payload_from_json(
                 );
                 mix(
                     &mut fp,
+                    d.get("moving_window_scale_factor_x1000_from_runner")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    d.get("moving_window_client_origin_source_platform")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false) as u64,
+                );
+                for key in [
+                    "cursor_screen_pos_raw_physical_px",
+                    "cursor_screen_pos_used_physical_px",
+                    "current_window_outer_pos_physical_px",
+                    "current_window_decoration_offset_physical_px",
+                    "current_window_client_origin_screen_physical_px",
+                    "current_window_local_pos_from_screen_logical_px",
+                    "moving_window_outer_pos_physical_px",
+                    "moving_window_decoration_offset_physical_px",
+                    "moving_window_client_origin_screen_physical_px",
+                    "moving_window_local_pos_from_screen_logical_px",
+                ] {
+                    mix_json(&mut fp, d.get(key));
+                }
+                mix(
+                    &mut fp,
                     d.get("window_under_moving_window")
                         .and_then(|v| v.as_u64())
                         .unwrap_or(0),
@@ -748,6 +780,7 @@ fn build_dock_routing_payload_from_json(
                 for key in [
                     "current_window_scale_factor_x1000_from_runner",
                     "current_window_scale_factor_x1000",
+                    "moving_window_scale_factor_x1000_from_runner",
                     "moving_window_scale_factor_x1000",
                 ] {
                     if let Some(scale_factor) = d.get(key).and_then(|v| v.as_u64())
@@ -786,6 +819,12 @@ fn build_dock_routing_payload_from_json(
                     "transparent_payload_hit_test_passthrough_applied": d.get("transparent_payload_hit_test_passthrough_applied").and_then(|v| v.as_bool()).unwrap_or(false),
                     "window_under_cursor_source": d.get("window_under_cursor_source").cloned().unwrap_or(Value::Null),
                     "moving_window": d.get("moving_window").cloned().unwrap_or(Value::Null),
+                    "moving_window_outer_pos_physical_px": d.get("moving_window_outer_pos_physical_px").cloned().unwrap_or(Value::Null),
+                    "moving_window_decoration_offset_physical_px": d.get("moving_window_decoration_offset_physical_px").cloned().unwrap_or(Value::Null),
+                    "moving_window_client_origin_screen_physical_px": d.get("moving_window_client_origin_screen_physical_px").cloned().unwrap_or(Value::Null),
+                    "moving_window_client_origin_source_platform": d.get("moving_window_client_origin_source_platform").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "moving_window_scale_factor_x1000_from_runner": d.get("moving_window_scale_factor_x1000_from_runner").cloned().unwrap_or(Value::Null),
+                    "moving_window_local_pos_from_screen_logical_px": d.get("moving_window_local_pos_from_screen_logical_px").cloned().unwrap_or(Value::Null),
                     "moving_window_scale_factor_x1000": d.get("moving_window_scale_factor_x1000").cloned().unwrap_or(Value::Null),
                     "window_under_moving_window": d.get("window_under_moving_window").cloned().unwrap_or(Value::Null),
                     "window_under_moving_window_source": d.get("window_under_moving_window_source").cloned().unwrap_or(Value::Null),
@@ -1728,6 +1767,12 @@ mod tests {
                                     "window_under_cursor_source": "heuristic_rects"
                                     ,
                                     "moving_window": 2,
+                                    "moving_window_outer_pos_physical_px": { "x": 900.0, "y": 1800.0 },
+                                    "moving_window_decoration_offset_physical_px": { "x": 5.0, "y": 25.0 },
+                                    "moving_window_client_origin_screen_physical_px": { "x": 905.0, "y": 1825.0 },
+                                    "moving_window_client_origin_source_platform": true,
+                                    "moving_window_scale_factor_x1000_from_runner": 1000,
+                                    "moving_window_local_pos_from_screen_logical_px": { "x": 15.0, "y": 35.0 },
                                     "moving_window_scale_factor_x1000": 1000,
                                     "window_under_moving_window": 1,
                                     "window_under_moving_window_source": "platform_win32"
@@ -1754,6 +1799,20 @@ mod tests {
                                     "pointer_id": 1,
                                     "source_window": 1,
                                     "current_window": 2,
+                                    "position": { "x": 12.0, "y": 34.0 },
+                                    "start_position": { "x": 1.0, "y": 2.0 },
+                                    "cursor_grab_offset": { "x": 3.0, "y": 4.0 },
+                                    "follow_window": 9,
+                                    "cursor_screen_pos_raw_physical_px": { "x": 100.0, "y": 200.0 },
+                                    "cursor_screen_pos_used_physical_px": { "x": 110.0, "y": 210.0 },
+                                    "cursor_screen_pos_was_clamped": true,
+                                    "cursor_override_active": true,
+                                    "current_window_outer_pos_physical_px": { "x": 1000.0, "y": 2000.0 },
+                                    "current_window_decoration_offset_physical_px": { "x": 7.0, "y": 31.0 },
+                                    "current_window_client_origin_screen_physical_px": { "x": 1007.0, "y": 2031.0 },
+                                    "current_window_client_origin_source_platform": true,
+                                    "current_window_scale_factor_x1000_from_runner": 1250,
+                                    "current_window_local_pos_from_screen_logical_px": { "x": 8.0, "y": 16.0 },
                                     "current_window_scale_factor_x1000": 1500,
                                     "kind": "dock_panel",
                                     "dragging": true,
@@ -1764,6 +1823,12 @@ mod tests {
                                     "window_under_cursor_source": "heuristic_rects"
                                     ,
                                     "moving_window": 2,
+                                    "moving_window_outer_pos_physical_px": { "x": 900.0, "y": 1800.0 },
+                                    "moving_window_decoration_offset_physical_px": { "x": 5.0, "y": 25.0 },
+                                    "moving_window_client_origin_screen_physical_px": { "x": 905.0, "y": 1825.0 },
+                                    "moving_window_client_origin_source_platform": true,
+                                    "moving_window_scale_factor_x1000_from_runner": 1000,
+                                    "moving_window_local_pos_from_screen_logical_px": { "x": 15.0, "y": 35.0 },
                                     "moving_window_scale_factor_x1000": 1000,
                                     "window_under_moving_window": 1,
                                     "window_under_moving_window_source": "platform_win32"
@@ -2043,6 +2108,33 @@ mod tests {
             Some("heuristic_rects")
         );
         assert_eq!(drag.get("moving_window").and_then(|v| v.as_u64()), Some(2));
+        let moving_origin = drag
+            .get("moving_window_client_origin_screen_physical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(moving_origin.get("x").and_then(|v| v.as_f64()), Some(905.0));
+        assert_eq!(
+            moving_origin.get("y").and_then(|v| v.as_f64()),
+            Some(1825.0)
+        );
+        assert_eq!(
+            drag.get("moving_window_client_origin_source_platform")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            drag.get("moving_window_scale_factor_x1000_from_runner")
+                .and_then(|v| v.as_u64()),
+            Some(1000)
+        );
+        let moving_local = drag
+            .get("moving_window_local_pos_from_screen_logical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(moving_local.get("x").and_then(|v| v.as_f64()), Some(15.0));
+        assert_eq!(moving_local.get("y").and_then(|v| v.as_f64()), Some(35.0));
         assert_eq!(
             drag.get("moving_window_scale_factor_x1000")
                 .and_then(|v| v.as_u64()),

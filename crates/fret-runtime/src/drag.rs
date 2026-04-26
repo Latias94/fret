@@ -120,6 +120,23 @@ pub struct DragSession {
     /// Best-effort diagnostics hint: local cursor position derived from the screen-space cursor
     /// position + client origin + scale factor.
     pub diag_current_window_local_pos_from_screen_logical_px: Option<Point>,
+    /// Best-effort diagnostics hint: outer window position (top-left) in screen-space physical
+    /// pixels for [`Self::moving_window`] at the time routing was computed.
+    pub diag_moving_window_outer_pos_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: window decoration offset (client origin relative to outer
+    /// origin) in physical pixels for [`Self::moving_window`].
+    pub diag_moving_window_decoration_offset_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: computed client origin in screen-space physical pixels for
+    /// [`Self::moving_window`] at the time routing was computed.
+    pub diag_moving_window_client_origin_screen_physical_px: Option<Point>,
+    /// True when the runner obtained the moving-window client origin from a platform API.
+    pub diag_moving_window_client_origin_source_platform: bool,
+    /// Best-effort diagnostics hint: scale factor (DPI) of [`Self::moving_window`] used by the
+    /// runner to convert screen physical pixels into window-local logical pixels.
+    pub diag_moving_window_scale_factor_x1000: Option<u32>,
+    /// Best-effort diagnostics hint: local cursor position derived from the screen-space cursor
+    /// position + moving-window client origin + scale factor.
+    pub diag_moving_window_local_pos_from_screen_logical_px: Option<Point>,
     pub dragging: bool,
     pub phase: DragPhase,
     payload: Box<dyn Any>,
@@ -161,6 +178,12 @@ impl DragSession {
             diag_current_window_client_origin_source_platform: false,
             diag_current_window_scale_factor_x1000: None,
             diag_current_window_local_pos_from_screen_logical_px: None,
+            diag_moving_window_outer_pos_physical_px: None,
+            diag_moving_window_decoration_offset_physical_px: None,
+            diag_moving_window_client_origin_screen_physical_px: None,
+            diag_moving_window_client_origin_source_platform: false,
+            diag_moving_window_scale_factor_x1000: None,
+            diag_moving_window_local_pos_from_screen_logical_px: None,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),
@@ -202,6 +225,12 @@ impl DragSession {
             diag_current_window_client_origin_source_platform: false,
             diag_current_window_scale_factor_x1000: None,
             diag_current_window_local_pos_from_screen_logical_px: None,
+            diag_moving_window_outer_pos_physical_px: None,
+            diag_moving_window_decoration_offset_physical_px: None,
+            diag_moving_window_client_origin_screen_physical_px: None,
+            diag_moving_window_client_origin_source_platform: false,
+            diag_moving_window_scale_factor_x1000: None,
+            diag_moving_window_local_pos_from_screen_logical_px: None,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),

@@ -250,6 +250,13 @@ Each TODO is labeled:
       - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`compute_window_position_from_cursor_grab_estimate`)
       - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`estimated_outer_pos_for_cursor_grab`, `scale_decoration_offset_for_target_scale`)
       - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`outer_pos_for_cursor_grab` tests)
+    - Moving/follow-window placement diagnostics:
+      - `crates/fret-runtime/src/drag.rs` (`diag_moving_window_*`)
+      - `crates/fret-runtime/src/interaction_diagnostics.rs` (`moving_window_*`)
+      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`apply_drag_window_geometry_diagnostics`)
+      - `crates/fret-diag/src/commands/dock_routing.rs` (`move_grab_delta`)
+      - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json`
+      - `tools/diag-campaigns/imui-p3-windows-placement-real-host.json`
   - Acceptance (manual; Windows):
     - Mixed-DPI (100% + 150%): tear off a tab near the cursor; the new window should appear with the cursor over the grabbed tab (no large “jump”).
     - With window decorations enabled: initial placement should not be offset by titlebar height.
@@ -258,6 +265,13 @@ Each TODO is labeled:
       scales source decoration offsets toward that target ratio before the OS window exists.
       This keeps the first placement estimate closer to the eventual post-create follow position on
       mixed-DPI hosts instead of blindly reusing the source window scale.
+    - [x] `dock-routing` now exposes moving/follow-window geometry (`move_outer`, `move_deco`,
+      `move_origin`, `move_local`, `move_grab_delta`, `sf_move_run`) so Windows real-host bundles
+      can prove whether the cursor remains over the grabbed tab after tear-off.
+    - [x] Added `imui-p3-windows-placement-real-host` and a local-debug placement capture script
+      that captures both initial and settled after-tearoff bundles before completing drag-back.
+    - [ ] Run and record a Windows real-host acceptance note using
+      `M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md`.
 
 - [~] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
   - Goal: on platforms where programmatic window movement is best-effort, disable follow-mode and keep

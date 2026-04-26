@@ -412,6 +412,23 @@ pub struct UiDockDragDiagnosticsV1 {
     pub window_under_cursor_source: String,
     #[serde(default)]
     pub moving_window: Option<u64>,
+    /// Outer position of `moving_window` in screen-space physical pixels when routing was computed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_outer_pos_physical_px: Option<PointV1>,
+    /// Decoration offset (client origin relative to outer origin) in physical pixels for `moving_window`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_decoration_offset_physical_px: Option<PointV1>,
+    /// Computed client origin (screen-space physical px) for `moving_window`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_client_origin_screen_physical_px: Option<PointV1>,
+    #[serde(default)]
+    pub moving_window_client_origin_source_platform: bool,
+    /// Scale factor used by the runner when converting screen physical px into moving-window-local logical px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_scale_factor_x1000_from_runner: Option<u32>,
+    /// Local position derived from screen cursor + moving-window client origin + scale factor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_local_pos_from_screen_logical_px: Option<PointV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub moving_window_scale_factor_x1000: Option<u32>,
     #[serde(default)]
@@ -467,6 +484,22 @@ impl UiDockDragDiagnosticsV1 {
             )
             .to_string(),
             moving_window: snapshot.moving_window.map(|w| w.data().as_ffi()),
+            moving_window_outer_pos_physical_px: snapshot
+                .moving_window_outer_pos_physical_px
+                .map(PointV1::from),
+            moving_window_decoration_offset_physical_px: snapshot
+                .moving_window_decoration_offset_physical_px
+                .map(PointV1::from),
+            moving_window_client_origin_screen_physical_px: snapshot
+                .moving_window_client_origin_screen_physical_px
+                .map(PointV1::from),
+            moving_window_client_origin_source_platform: snapshot
+                .moving_window_client_origin_source_platform,
+            moving_window_scale_factor_x1000_from_runner: snapshot
+                .moving_window_scale_factor_x1000_from_runner,
+            moving_window_local_pos_from_screen_logical_px: snapshot
+                .moving_window_local_pos_from_screen_logical_px
+                .map(PointV1::from),
             moving_window_scale_factor_x1000: snapshot.moving_window_scale_factor_x1000,
             window_under_moving_window: snapshot.window_under_moving_window.map(|w| w.data().as_ffi()),
             window_under_moving_window_source: dock_drag_window_under_cursor_source_label(
