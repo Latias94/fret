@@ -1,6 +1,6 @@
 # M8 Windows Tear-Off Placement Capture Gate - 2026-04-26
 
-Status: landed diagnostic evidence surface; awaiting real-host acceptance capture
+Status: landed diagnostic evidence surface; accepted by M9 real-host fix evidence
 
 Related:
 
@@ -13,6 +13,7 @@ Related:
 - `crates/fret-launch/src/runner/desktop/runner/window.rs`
 - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
 - `crates/fret-diag/src/commands/dock_routing.rs`
+- `M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md`
 
 ## Purpose
 
@@ -132,6 +133,7 @@ policy change.
 
 ## Decision
 
-Do not mark `DW-P1-win-002` closed yet. This slice establishes the repeatable proof surface and
-keeps the actual placement algorithm unchanged until a real-host bundle proves the remaining drift
-or confirms the current math.
+M8 established the repeatable proof surface. M9 used that surface to identify and fix the remaining
+cursor-continuity drift in the diagnostics/runner transport and records the accepted real-host
+bundle with `move_grab_error=0.0`. Treat `DW-P1-win-002` as closed by M9 while keeping this note as
+the reusable Windows placement capture runbook.

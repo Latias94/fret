@@ -725,6 +725,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_PLACEMENT_GATE_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_CURSOR_CONTINUITY_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md"
+    );
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
     );
@@ -6491,6 +6494,7 @@ mod authoring_surface_policy_tests {
         for marker in [
             "\"role\": \"status\"",
             "M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md",
+            "M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md",
             "imui-p3-windows-placement-real-host",
             "docking-arbitration-demo-windows-tearoff-placement-capture.debug.json",
         ] {
@@ -6509,11 +6513,25 @@ mod authoring_surface_policy_tests {
             "move_origin_src=platform",
             "windows-tearoff-placement-after-tearoff-initial",
             "windows-tearoff-placement-after-tearoff-settled",
-            "Do not mark `DW-P1-win-002` closed yet.",
+            "M9 used that surface to identify and fix the remaining",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_PLACEMENT_GATE_NOTE.contains(marker),
                 "the Windows placement gate note should keep the bounded evidence surface explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: accepted real-host fix for `DW-P1-win-002`",
+            "move_grab_error=786.7",
+            "move_grab_error=0.0",
+            "crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs",
+            "dock_drag_migration_remaps_drag_pointer_until_after_pointer_down",
+            "1777187535921-windows-tearoff-placement-after-tearoff-settled",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_CURSOR_CONTINUITY_NOTE.contains(marker),
+                "the Windows cursor-continuity fix note should keep acceptance evidence explicit: {marker}"
             );
         }
 
@@ -6543,8 +6561,10 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "`crates/fret-runtime/src/drag.rs` (`diag_moving_window_*`)",
+            "`crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs`",
             "`crates/fret-diag/src/commands/dock_routing.rs` (`move_grab_delta`)",
-            "M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md",
+            "M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md",
+            "move_grab_error=0.0",
         ] {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),

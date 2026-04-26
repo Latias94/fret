@@ -241,7 +241,7 @@ Each TODO is labeled:
     - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
     - Docking UI gating (tear-off affordance): `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
 
-- [~] DW-P1-win-002 Windows placement correctness under DPI and decorations.
+- [x] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
   - Evidence anchors:
     - Position heuristics: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`compute_window_position_from_cursor`, “decoration offset refinement” comments)
@@ -253,10 +253,12 @@ Each TODO is labeled:
     - Moving/follow-window placement diagnostics:
       - `crates/fret-runtime/src/drag.rs` (`diag_moving_window_*`)
       - `crates/fret-runtime/src/interaction_diagnostics.rs` (`moving_window_*`)
+      - `crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs` (screen-space continuity across dock-drag source remaps)
       - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`apply_drag_window_geometry_diagnostics`)
       - `crates/fret-diag/src/commands/dock_routing.rs` (`move_grab_delta`)
       - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json`
       - `tools/diag-campaigns/imui-p3-windows-placement-real-host.json`
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md`
   - Acceptance (manual; Windows):
     - Mixed-DPI (100% + 150%): tear off a tab near the cursor; the new window should appear with the cursor over the grabbed tab (no large “jump”).
     - With window decorations enabled: initial placement should not be offset by titlebar height.
@@ -270,8 +272,11 @@ Each TODO is labeled:
       real-host bundles can prove whether the cursor remains over the grabbed tab after tear-off.
     - [x] Added `imui-p3-windows-placement-real-host` and a local-debug placement capture script
       that captures both initial and settled after-tearoff bundles before completing drag-back.
-    - [ ] Run and record a Windows real-host acceptance note using
-      `M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md`.
+    - [x] Windows real-host acceptance recorded:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md`
+      - Accepted session: `target/fret-diag/docking-multiwindow-imgui-parity/windows-placement-real-host/sessions/1777187533293-68088`
+      - Settled bundle: `1777187535921-windows-tearoff-placement-after-tearoff-settled`
+      - `dock-routing`: `move_local=(16.0,14.0)`, `move_grab_delta=(0.0,0.0)`, `move_grab_error=0.0`, `move_origin_src=platform`.
 
 - [~] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
   - Goal: on platforms where programmatic window movement is best-effort, disable follow-mode and keep

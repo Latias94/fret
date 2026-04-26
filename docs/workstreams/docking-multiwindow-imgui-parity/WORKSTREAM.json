@@ -40,6 +40,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
@@ -148,6 +152,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",
@@ -171,10 +176,13 @@
     "crates/fret-diag/src/registry/campaigns.rs",
     "crates/fret-runtime/src/drag.rs",
     "crates/fret-runtime/src/interaction_diagnostics.rs",
+    "crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs",
     "crates/fret-launch/src/runner/desktop/runner/event_routing.rs",
     "crates/fret-launch/src/runner/desktop/runner/mod.rs",
     "crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs",
     "crates/fret-launch/src/runner/desktop/runner/window.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs",
     "ecosystem/fret-docking/src/runtime.rs",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
@@ -194,6 +202,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for the remaining runner/backend-owned multi-window parity closure. `DW-P0-dpi-006` is accepted by `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; keep `imui-p3-mixed-dpi-real-host` as a manual host-admitted rerun surface, keep the bounded P3 campaign generic, and prefer the Wayland compositor acceptance runbook or narrower platform-placement follow-ons for the next slice."
+    "notes": "Continue this lane for the remaining runner/backend-owned multi-window parity closure. `DW-P0-dpi-006` is accepted by `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; `DW-P1-win-002` is accepted by `M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md` with settled `move_grab_error=0.0`. Keep `imui-p3-mixed-dpi-real-host` and `imui-p3-windows-placement-real-host` as manual host-admitted rerun surfaces, keep the bounded P3 campaign generic, and prefer the Wayland compositor acceptance runbook or a narrower remaining platform follow-on for the next slice."
   }
 }

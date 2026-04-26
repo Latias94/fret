@@ -799,12 +799,20 @@ impl UiDiagnosticsService {
         }
         if let Some(state) = active.v2_step_state.as_mut() {
             match state {
-                V2StepState::DragPointer(state) => state.window = new_window,
+                V2StepState::DragPointer(state) => {
+                    if state.frame == 0 || allow_remap_captured_drag {
+                        state.window = new_window;
+                    }
+                }
                 V2StepState::DragPointerUntil(state) => {
                     // Avoid splitting a captured-pointer gesture across windows. `drag_pointer_until`
                     // is allowed to "hold" the drag across frames; once we've emitted a down/move
                     // segment, keep injecting into the original playback window unless the runner
                     // has migrated the captured drag to a different window (ImGui-style tear-off).
+                    //
+                    // The desktop runner's diagnostics cursor override preserves screen-space
+                    // continuity across that tear-off remap, so the local coordinate owner can
+                    // change without dragging the synthetic cursor along with the new window.
                     if (!state.down_issued && state.playback.frame == 0)
                         || allow_remap_captured_drag
                     {
@@ -813,7 +821,11 @@ impl UiDiagnosticsService {
                 }
                 V2StepState::DragTo(state) => {
                     if let Some(playback) = state.playback.as_mut() {
-                        playback.window = new_window;
+                        if (!state.down_issued && playback.frame == 0)
+                            || allow_remap_captured_drag
+                        {
+                            playback.window = new_window;
+                        }
                     }
                 }
                 _ => {}
@@ -1679,6 +1691,115 @@ mod service_tests {
             last_explicit_cursor_override: None,
             last_explicit_cursor_override_pos: None,
         }
+    }
+
+    fn drag_pointer_until_step() -> UiActionStepV2 {
+        UiActionStepV2::DragPointerUntil {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "drag-anchor".to_string(),
+                root_z_index: None,
+            },
+            button: UiMouseButtonV1::Left,
+            release_on_success: false,
+            delta_x: 100.0,
+            delta_y: 0.0,
+            steps: 10,
+            predicate: UiPredicateV1::KnownWindowCountGe { n: 2 },
+            timeout_frames: 60,
+        }
+    }
+
+    fn drag_pointer_until_state(
+        window: AppWindowId,
+        frame: u32,
+        down_issued: bool,
+    ) -> V2DragPointerUntilState {
+        V2DragPointerUntilState {
+            step_index: 0,
+            remaining_frames: 60,
+            playback: V2DragPointerState {
+                step_index: 0,
+                window,
+                steps: 10,
+                button: UiMouseButtonV1::Left,
+                start: Point::new(Px(10.0), Px(10.0)),
+                end: Point::new(Px(110.0), Px(10.0)),
+                frame,
+            },
+            predicate: UiPredicateV1::KnownWindowCountGe { n: 2 },
+            release_on_success: false,
+            down_issued,
+            mouse_buttons_override_issued: down_issued,
+            release_armed: false,
+        }
+    }
+
+    #[test]
+    fn migration_remaps_drag_pointer_until_before_pointer_down() {
+        let mut active = active_script_for_step(drag_pointer_until_step());
+        active.pointer_session = None;
+        active.v2_step_state = Some(V2StepState::DragPointerUntil(drag_pointer_until_state(
+            app_window(1),
+            0,
+            false,
+        )));
+
+        UiDiagnosticsService::remap_script_per_window_state_for_migration(
+            &mut active,
+            app_window(2),
+            false,
+        );
+
+        let Some(V2StepState::DragPointerUntil(state)) = active.v2_step_state else {
+            panic!("expected drag_pointer_until state");
+        };
+        assert_eq!(state.playback.window, app_window(2));
+    }
+
+    #[test]
+    fn ordinary_migration_keeps_drag_pointer_until_window_after_pointer_down() {
+        let mut active = active_script_for_step(drag_pointer_until_step());
+        active.pointer_session = None;
+        active.v2_step_state = Some(V2StepState::DragPointerUntil(drag_pointer_until_state(
+            app_window(1),
+            4,
+            true,
+        )));
+
+        UiDiagnosticsService::remap_script_per_window_state_for_migration(
+            &mut active,
+            app_window(2),
+            false,
+        );
+
+        let Some(V2StepState::DragPointerUntil(state)) = active.v2_step_state else {
+            panic!("expected drag_pointer_until state");
+        };
+        assert_eq!(state.playback.window, app_window(1));
+    }
+
+    #[test]
+    fn dock_drag_migration_remaps_drag_pointer_until_after_pointer_down() {
+        let mut active = active_script_for_step(drag_pointer_until_step());
+        active.pointer_session = None;
+        active.v2_step_state = Some(V2StepState::DragPointerUntil(drag_pointer_until_state(
+            app_window(1),
+            4,
+            true,
+        )));
+
+        UiDiagnosticsService::remap_script_per_window_state_for_migration(
+            &mut active,
+            app_window(2),
+            true,
+        );
+
+        let Some(V2StepState::DragPointerUntil(state)) = active.v2_step_state else {
+            panic!("expected drag_pointer_until state");
+        };
+        assert_eq!(state.playback.window, app_window(2));
     }
 
     #[test]

@@ -112,6 +112,12 @@ impl DiagCursorScreenPosOverride {
                     return false;
                 };
                 let window = AppWindowId::from(KeyData::from_ffi(window_ffi));
+                let active_drag_source_window =
+                    runner
+                        .internal_drag_routing_pointer_id()
+                        .and_then(|pointer_id| {
+                            runner.app.drag(pointer_id).map(|drag| drag.source_window)
+                        });
                 let Some(state) = runner.windows.get(window) else {
                     return false;
                 };
@@ -141,8 +147,10 @@ impl DiagCursorScreenPosOverride {
                 // To better approximate an OS cursor in screen space, treat consecutive window-client
                 // overrides as *relative motion* deltas and integrate them into the previous screen
                 // position when possible.
+                let same_window = self.last_window == Some(window);
+                let remapped_drag_owner = !same_window && active_drag_source_window == Some(window);
                 let can_integrate_base =
-                    self.last_window == Some(window) && self.last_kind == Some(kind);
+                    self.last_kind == Some(kind) && (same_window || remapped_drag_owner);
 
                 let (dx, dy) = if let Some((last_x, last_y)) = self.last_local_px
                     && can_integrate_base
@@ -155,6 +163,11 @@ impl DiagCursorScreenPosOverride {
                 // Heuristic: only integrate small, stepwise updates. Large jumps are typically
                 // "absolute" cursor placements (e.g. pointer-down targeting a node) and should
                 // snap to the window's current origin.
+                //
+                // Exception: when a dock drag remaps its source to a newly created tear-off
+                // window, the first local coordinate in that window can be a large jump even
+                // though the physical cursor has not moved. Preserve the previous screen position
+                // for that handoff; subsequent same-window updates can integrate normally.
                 let max_delta_px = 256.0;
                 let can_integrate =
                     can_integrate_base && dx.abs() <= max_delta_px && dy.abs() <= max_delta_px;
@@ -168,25 +181,29 @@ impl DiagCursorScreenPosOverride {
                     CursorOverrideKindV1::ScreenPhysical => unreachable!(),
                 };
 
+                let snapped_pos = match kind {
+                    CursorOverrideKindV1::WindowClientPhysical => {
+                        PhysicalPosition::new(origin_x + x_px, origin_y + y_px)
+                    }
+                    CursorOverrideKindV1::WindowClientLogical => {
+                        let scale = state.window.scale_factor().max(0.000_001);
+                        PhysicalPosition::new(origin_x + (x_px * scale), origin_y + (y_px * scale))
+                    }
+                    CursorOverrideKindV1::ScreenPhysical => unreachable!(),
+                };
+
                 let pos = if can_integrate
                     && let Some(prev) = self.last_screen_pos
                     && self.last_local_px.is_some()
                 {
                     PhysicalPosition::new(prev.x + dx_screen, prev.y + dy_screen)
+                } else if remapped_drag_owner
+                    && self.last_kind == Some(kind)
+                    && let Some(prev) = self.last_screen_pos
+                {
+                    prev
                 } else {
-                    match kind {
-                        CursorOverrideKindV1::WindowClientPhysical => {
-                            PhysicalPosition::new(origin_x + x_px, origin_y + y_px)
-                        }
-                        CursorOverrideKindV1::WindowClientLogical => {
-                            let scale = state.window.scale_factor().max(0.000_001);
-                            PhysicalPosition::new(
-                                origin_x + (x_px * scale),
-                                origin_y + (y_px * scale),
-                            )
-                        }
-                        CursorOverrideKindV1::ScreenPhysical => unreachable!(),
-                    }
+                    snapped_pos
                 };
 
                 self.last_window = Some(window);
