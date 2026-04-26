@@ -58,6 +58,8 @@ geometry:
 - `moving_window_client_origin_source_platform`
 - `moving_window_scale_factor_x1000_from_runner`
 - `moving_window_local_pos_from_screen_logical_px`
+- `moving_window_cursor_grab_delta_logical_px`
+- `moving_window_cursor_grab_error_abs_max_logical_px`
 
 `fretboard-dev diag dock-routing` prints these as:
 
@@ -67,12 +69,15 @@ geometry:
 - `move_origin_src=platform`
 - `move_local`
 - `move_grab_delta`
+- `move_grab_error`
 - `sf_move_run`
 - `sf_move`
 
 The important field for `DW-P1-win-002` is `move_grab_delta`: it is the logical-pixel delta between
 the cursor's moving-window local position and the recorded `cursor_grab_offset`. A healthy settled
-Windows run should keep that delta near zero; a large titlebar/DPI error will show up directly.
+Windows run should keep that delta near zero. `moving_window_cursor_grab_error_abs_max_logical_px`
+is the machine-gate-friendly absolute max component of the same delta; a large titlebar/DPI error
+will show up directly.
 
 ## Canonical Commands
 

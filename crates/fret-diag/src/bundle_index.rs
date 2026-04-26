@@ -555,6 +555,38 @@ fn hash_str_64(s: &str) -> u64 {
     fp
 }
 
+fn point_delta_pair_from_keys(
+    value: &serde_json::Map<String, Value>,
+    lhs_key: &str,
+    rhs_key: &str,
+) -> Option<(f64, f64)> {
+    let lhs = value.get(lhs_key).and_then(|v| v.as_object())?;
+    let rhs = value.get(rhs_key).and_then(|v| v.as_object())?;
+    let dx = lhs.get("x").and_then(|v| v.as_f64())? - rhs.get("x").and_then(|v| v.as_f64())?;
+    let dy = lhs.get("y").and_then(|v| v.as_f64())? - rhs.get("y").and_then(|v| v.as_f64())?;
+    Some((dx, dy))
+}
+
+fn point_delta_json_from_keys(
+    value: &serde_json::Map<String, Value>,
+    lhs_key: &str,
+    rhs_key: &str,
+) -> Value {
+    point_delta_pair_from_keys(value, lhs_key, rhs_key)
+        .map(|(x, y)| json!({ "x": x, "y": y }))
+        .unwrap_or(Value::Null)
+}
+
+fn point_delta_abs_max_from_keys(
+    value: &serde_json::Map<String, Value>,
+    lhs_key: &str,
+    rhs_key: &str,
+) -> Value {
+    point_delta_pair_from_keys(value, lhs_key, rhs_key)
+        .map(|(x, y)| Value::from(x.abs().max(y.abs())))
+        .unwrap_or(Value::Null)
+}
+
 fn build_dock_routing_payload_from_json(
     bundle: &Value,
     bundle_label: &str,
@@ -825,6 +857,8 @@ fn build_dock_routing_payload_from_json(
                     "moving_window_client_origin_source_platform": d.get("moving_window_client_origin_source_platform").and_then(|v| v.as_bool()).unwrap_or(false),
                     "moving_window_scale_factor_x1000_from_runner": d.get("moving_window_scale_factor_x1000_from_runner").cloned().unwrap_or(Value::Null),
                     "moving_window_local_pos_from_screen_logical_px": d.get("moving_window_local_pos_from_screen_logical_px").cloned().unwrap_or(Value::Null),
+                    "moving_window_cursor_grab_delta_logical_px": point_delta_json_from_keys(d, "moving_window_local_pos_from_screen_logical_px", "cursor_grab_offset"),
+                    "moving_window_cursor_grab_error_abs_max_logical_px": point_delta_abs_max_from_keys(d, "moving_window_local_pos_from_screen_logical_px", "cursor_grab_offset"),
                     "moving_window_scale_factor_x1000": d.get("moving_window_scale_factor_x1000").cloned().unwrap_or(Value::Null),
                     "window_under_moving_window": d.get("window_under_moving_window").cloned().unwrap_or(Value::Null),
                     "window_under_moving_window_source": d.get("window_under_moving_window_source").cloned().unwrap_or(Value::Null),
@@ -2135,6 +2169,18 @@ mod tests {
             .unwrap();
         assert_eq!(moving_local.get("x").and_then(|v| v.as_f64()), Some(15.0));
         assert_eq!(moving_local.get("y").and_then(|v| v.as_f64()), Some(35.0));
+        let moving_delta = drag
+            .get("moving_window_cursor_grab_delta_logical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(moving_delta.get("x").and_then(|v| v.as_f64()), Some(12.0));
+        assert_eq!(moving_delta.get("y").and_then(|v| v.as_f64()), Some(31.0));
+        assert_eq!(
+            drag.get("moving_window_cursor_grab_error_abs_max_logical_px")
+                .and_then(|v| v.as_f64()),
+            Some(31.0)
+        );
         assert_eq!(
             drag.get("moving_window_scale_factor_x1000")
                 .and_then(|v| v.as_u64()),

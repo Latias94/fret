@@ -145,6 +145,10 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
         v.get(key).and_then(|v| v.as_str()).unwrap_or("")
     }
 
+    fn f64_field_obj(v: &serde_json::Map<String, Value>, key: &str) -> Option<f64> {
+        v.get(key).and_then(|v| v.as_f64())
+    }
+
     println!("dock_routing:");
     println!("  dock_routing_json: {}", routing_path.display());
     if let Some(bundle_path) = bundle_path {
@@ -272,6 +276,8 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 "moving_window_local_pos_from_screen_logical_px",
                 "cursor_grab_offset",
             );
+            let move_grab_error =
+                f64_field_obj(drag, "moving_window_cursor_grab_error_abs_max_logical_px");
             let sf_moving_runner =
                 scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000_from_runner");
             let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
@@ -342,6 +348,9 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
             }
             if let Some(move_grab_delta) = move_grab_delta {
                 drag_parts.push(format!("move_grab_delta=({move_grab_delta})"));
+            }
+            if let Some(move_grab_error) = move_grab_error {
+                drag_parts.push(format!("move_grab_error={move_grab_error:.1}"));
             }
             if let Some(sf_moving_runner) = sf_moving_runner {
                 drag_parts.push(format!("sf_move_run={sf_moving_runner}"));

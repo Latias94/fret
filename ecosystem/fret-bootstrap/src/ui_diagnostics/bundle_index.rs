@@ -603,6 +603,27 @@ fn insert_json_value<T: serde::Serialize + ?Sized>(
     out.insert(key.to_string(), value);
 }
 
+fn point_delta_pair(
+    lhs: Option<super::PointV1>,
+    rhs: Option<super::PointV1>,
+) -> Option<(f32, f32)> {
+    let lhs = lhs?;
+    let rhs = rhs?;
+    Some((lhs.x - rhs.x, lhs.y - rhs.y))
+}
+
+fn point_delta_json(lhs: Option<super::PointV1>, rhs: Option<super::PointV1>) -> Value {
+    point_delta_pair(lhs, rhs)
+        .map(|(x, y)| json!({ "x": x, "y": y }))
+        .unwrap_or(Value::Null)
+}
+
+fn point_delta_abs_max_json(lhs: Option<super::PointV1>, rhs: Option<super::PointV1>) -> Value {
+    point_delta_pair(lhs, rhs)
+        .map(|(x, y)| Value::from(x.abs().max(y.abs())))
+        .unwrap_or(Value::Null)
+}
+
 fn dock_drag_json(d: &super::UiDockDragDiagnosticsV1) -> Value {
     let mut out = Map::new();
     insert_json_value(&mut out, "pointer_id", &d.pointer_id);
@@ -716,6 +737,20 @@ fn dock_drag_json(d: &super::UiDockDragDiagnosticsV1) -> Value {
         &mut out,
         "moving_window_local_pos_from_screen_logical_px",
         &d.moving_window_local_pos_from_screen_logical_px,
+    );
+    out.insert(
+        "moving_window_cursor_grab_delta_logical_px".to_string(),
+        point_delta_json(
+            d.moving_window_local_pos_from_screen_logical_px,
+            d.cursor_grab_offset,
+        ),
+    );
+    out.insert(
+        "moving_window_cursor_grab_error_abs_max_logical_px".to_string(),
+        point_delta_abs_max_json(
+            d.moving_window_local_pos_from_screen_logical_px,
+            d.cursor_grab_offset,
+        ),
     );
     insert_json_value(
         &mut out,

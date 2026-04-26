@@ -6503,7 +6503,9 @@ mod authoring_surface_policy_tests {
         for marker in [
             "moving_window_outer_pos_physical_px",
             "moving_window_client_origin_screen_physical_px",
+            "moving_window_cursor_grab_error_abs_max_logical_px",
             "move_grab_delta",
+            "move_grab_error",
             "move_origin_src=platform",
             "windows-tearoff-placement-after-tearoff-initial",
             "windows-tearoff-placement-after-tearoff-settled",

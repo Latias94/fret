@@ -266,8 +266,8 @@ Each TODO is labeled:
       This keeps the first placement estimate closer to the eventual post-create follow position on
       mixed-DPI hosts instead of blindly reusing the source window scale.
     - [x] `dock-routing` now exposes moving/follow-window geometry (`move_outer`, `move_deco`,
-      `move_origin`, `move_local`, `move_grab_delta`, `sf_move_run`) so Windows real-host bundles
-      can prove whether the cursor remains over the grabbed tab after tear-off.
+      `move_origin`, `move_local`, `move_grab_delta`, `move_grab_error`, `sf_move_run`) so Windows
+      real-host bundles can prove whether the cursor remains over the grabbed tab after tear-off.
     - [x] Added `imui-p3-windows-placement-real-host` and a local-debug placement capture script
       that captures both initial and settled after-tearoff bundles before completing drag-back.
     - [ ] Run and record a Windows real-host acceptance note using
