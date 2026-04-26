@@ -5,8 +5,8 @@ use fret_core::AppWindowId;
 use crate::PlatformCapabilities;
 use crate::window_style::{
     ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
-    WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel, canonicalize_hit_test_regions_v1,
-    hit_test_regions_signature_v1,
+    WindowHitTestRequestV1, WindowOpacity, WindowStyleRequest, WindowZLevel,
+    canonicalize_hit_test_regions_v1, hit_test_regions_signature_v1,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,6 +80,8 @@ pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub taskbar: TaskbarVisibility,
     pub activation: ActivationPolicy,
     pub z_level: WindowZLevel,
+    /// Effective global window opacity hint.
+    pub opacity: WindowOpacity,
 }
 
 impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
@@ -102,6 +104,7 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
             taskbar: TaskbarVisibility::Show,
             activation: ActivationPolicy::Activates,
             z_level: WindowZLevel::Normal,
+            opacity: WindowOpacity(255),
         }
     }
 }
@@ -305,6 +308,11 @@ impl RunnerWindowStyleDiagnosticsStore {
                 z_level
             };
         }
+        if let Some(opacity) = requested.opacity
+            && caps.ui.window_opacity
+        {
+            next.opacity = opacity;
+        }
 
         self.effective.insert(window, next);
     }
@@ -420,6 +428,11 @@ impl RunnerWindowStyleDiagnosticsStore {
             } else {
                 current.z_level = z_level;
             }
+        }
+        if let Some(opacity) = patch.opacity
+            && caps.ui.window_opacity
+        {
+            current.opacity = opacity;
         }
     }
 }
@@ -613,6 +626,73 @@ mod tests {
         assert_eq!(
             have.hit_test_clamp_reason,
             RunnerWindowHitTestClampReasonV1::MissingPassthroughAllCapability
+        );
+    }
+
+    #[test]
+    fn opacity_request_degrades_when_unsupported() {
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.window_opacity = false;
+
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(7);
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                opacity: Some(WindowOpacity(96)),
+                ..Default::default()
+            },
+            &caps,
+        );
+        assert_eq!(
+            store.effective_snapshot(w).unwrap().opacity,
+            WindowOpacity(255)
+        );
+
+        store.apply_style_patch(
+            w,
+            WindowStyleRequest {
+                opacity: Some(WindowOpacity(128)),
+                ..Default::default()
+            },
+            &caps,
+        );
+        assert_eq!(
+            store.effective_snapshot(w).unwrap().opacity,
+            WindowOpacity(255)
+        );
+    }
+
+    #[test]
+    fn opacity_request_records_when_supported() {
+        let caps = PlatformCapabilities::default();
+
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(8);
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                opacity: Some(WindowOpacity(96)),
+                ..Default::default()
+            },
+            &caps,
+        );
+        assert_eq!(
+            store.effective_snapshot(w).unwrap().opacity,
+            WindowOpacity(96)
+        );
+
+        store.apply_style_patch(
+            w,
+            WindowStyleRequest {
+                opacity: Some(WindowOpacity(128)),
+                ..Default::default()
+            },
+            &caps,
+        );
+        assert_eq!(
+            store.effective_snapshot(w).unwrap().opacity,
+            WindowOpacity(128)
         );
     }
 }

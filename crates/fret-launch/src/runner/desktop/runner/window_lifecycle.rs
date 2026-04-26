@@ -43,10 +43,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 resize_increments.height,
             ));
         }
-        if let Some(resizable) = style.resizable {
+        if let Some(resizable) = style.resizable
+            && caps.ui.window_resizable
+        {
             attrs = attrs.with_resizable(resizable);
         }
         if let Some(decorations) = style.decorations
+            && caps.ui.window_decorations
             && matches!(decorations, fret_runtime::WindowDecorationsRequest::None)
         {
             attrs = attrs.with_decorations(false);
@@ -73,7 +76,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // composited for its lifetime even if the material is later set to None at runtime.
             attrs = attrs.with_transparent(effective_surface_composited_alpha);
         }
-        if let Some(policy) = style.activation {
+        if let Some(policy) = style.activation
+            && (policy == ActivationPolicy::Activates || caps.ui.window_non_activating)
+        {
             let active = matches!(policy, ActivationPolicy::Activates);
             attrs = attrs.with_active(active);
         }
@@ -90,7 +95,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         #[cfg(windows)]
         {
-            if let Some(taskbar) = style.taskbar {
+            if let Some(taskbar) = style.taskbar
+                && (taskbar == TaskbarVisibility::Show || caps.ui.window_skip_taskbar)
+            {
                 use winit::platform::windows::WindowAttributesWindows;
 
                 let win = WindowAttributesWindows::default()
@@ -121,7 +128,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             window.set_visible(true);
         }
 
-        if let Some(level) = style.z_level {
+        if let Some(level) = style.z_level
+            && (level == WindowZLevel::Normal
+                || caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None)
+        {
             window.set_window_level(match level {
                 WindowZLevel::Normal => WindowLevel::Normal,
                 WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
@@ -142,7 +152,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 );
             let _ = super::window::set_window_hit_test(window.as_ref(), &effective);
         }
-        if let Some(opacity) = style.opacity {
+        if let Some(opacity) = style.opacity
+            && caps.ui.window_opacity
+        {
             let _ = super::window::set_window_opacity(window.as_ref(), opacity.as_f32());
         }
 

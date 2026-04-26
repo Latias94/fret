@@ -13,6 +13,7 @@ pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
     keys::UI_WINDOW_DECORATIONS,
     keys::UI_WINDOW_RESIZABLE,
     keys::UI_WINDOW_TRANSPARENT,
+    keys::UI_WINDOW_OPACITY,
     keys::UI_WINDOW_ALWAYS_ON_TOP,
     keys::UI_WINDOW_SKIP_TASKBAR,
     keys::UI_WINDOW_NON_ACTIVATING,
@@ -38,6 +39,8 @@ pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
     keys::FS_REAL_PATHS,
     keys::FS_FILE_DIALOGS,
     keys::SHELL_OPEN_URL,
+    keys::SHELL_SHARE_SHEET,
+    keys::SHELL_INCOMING_OPEN,
     keys::GFX_WEBGPU,
     keys::GFX_NATIVE_GPU,
 ];

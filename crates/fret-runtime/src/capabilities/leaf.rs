@@ -52,6 +52,7 @@ pub struct UiCapabilities {
     pub window_decorations: bool,
     pub window_resizable: bool,
     pub window_transparent: bool,
+    pub window_opacity: bool,
     pub window_skip_taskbar: bool,
     pub window_non_activating: bool,
     pub window_hit_test_passthrough_all: bool,

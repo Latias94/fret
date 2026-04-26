@@ -105,6 +105,16 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
       - `none` (cannot request OS z-level changes)
       - `best_effort` (may work inconsistently; avoid relying on AlwaysOnTop during drags)
       - `reliable` (z-level requests behave predictably)
+  - Utility-window style facets (ADR 0139; booleans, all best-effort and runner-clamped):
+    - `ui.window.decorations`
+    - `ui.window.resizable`
+    - `ui.window.transparent`
+    - `ui.window.opacity`
+    - `ui.window.always_on_top`
+    - `ui.window.skip_taskbar`
+    - `ui.window.non_activating`
+    - `ui.window.hit_test.passthrough_all`
+    - `ui.window.hit_test.passthrough_regions`
 - **Clipboard**
   - `clipboard.text`: `bool` (legacy shorthand; true when both read/write are supported)
   - `clipboard.text_read`: `bool`

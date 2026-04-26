@@ -133,7 +133,7 @@ fn script_v1_roundtrip_window_style_effective_hit_test() {
       "predicate": {
         "kind": "window_style_effective_is",
         "window": { "kind": "current" },
-        "style": { "hit_test": "passthrough_all" }
+        "style": { "hit_test": "passthrough_all", "opacity_alpha_u8": 128 }
       },
       "timeout_frames": 1
     }

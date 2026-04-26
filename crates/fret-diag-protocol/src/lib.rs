@@ -1695,6 +1695,8 @@ pub struct UiWindowStyleMatchV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub z_level: Option<UiWindowZLevelV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opacity_alpha_u8: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_test: Option<UiWindowHitTestRequestV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_test_regions_fingerprint64: Option<u64>,

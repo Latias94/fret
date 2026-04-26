@@ -37,6 +37,7 @@ impl Default for PlatformCapabilities {
                 window_decorations: true,
                 window_resizable: true,
                 window_transparent: true,
+                window_opacity: true,
                 window_skip_taskbar: true,
                 window_non_activating: true,
                 window_hit_test_passthrough_all: true,
@@ -101,6 +102,7 @@ impl PlatformCapabilities {
             keys::UI_WINDOW_DECORATIONS => Some(self.ui.window_decorations),
             keys::UI_WINDOW_RESIZABLE => Some(self.ui.window_resizable),
             keys::UI_WINDOW_TRANSPARENT => Some(self.ui.window_transparent),
+            keys::UI_WINDOW_OPACITY => Some(self.ui.window_opacity),
             keys::UI_WINDOW_ALWAYS_ON_TOP => Some(!matches!(
                 self.ui.window_z_level,
                 super::WindowZLevelQuality::None

@@ -1779,7 +1779,11 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                     .cloned()
                                     .unwrap_or_default();
                                 let requested_background_material = style.background_material;
-                                if let Some(level) = style.z_level {
+                                if let Some(level) = style.z_level
+                                    && (level == WindowZLevel::Normal
+                                        || caps.ui.window_z_level
+                                            != fret_runtime::WindowZLevelQuality::None)
+                                {
                                     window_handle.set_window_level(match level {
                                         WindowZLevel::Normal => WindowLevel::Normal,
                                         WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
@@ -1814,7 +1818,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         }
                                     }
                                 }
-                                if let Some(opacity) = style.opacity {
+                                if let Some(opacity) = style.opacity
+                                    && caps.ui.window_opacity
+                                {
                                     let _ = super::window::set_window_opacity(
                                         window_handle.as_ref(),
                                         opacity.as_f32(),

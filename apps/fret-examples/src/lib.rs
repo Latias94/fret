@@ -728,6 +728,9 @@ mod authoring_surface_policy_tests {
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOWS_CURSOR_CONTINUITY_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md"
     );
+    const DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOW_STYLE_OPACITY_NOTE: &str = include_str!(
+        "../../../docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md"
+    );
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WAYLAND_DEGRADATION_NOTE: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md"
     );
@@ -6569,6 +6572,48 @@ mod authoring_surface_policy_tests {
             assert!(
                 DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
                 "the Windows placement TODO should keep the new proof surface explicit: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_freezes_the_p3_window_style_opacity_capability() {
+        for marker in [
+            "M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md",
+            "ui.window.opacity",
+            "crates/fret-runtime/src/runner_window_style_diagnostics.rs",
+            "opacity_alpha_u8",
+            "DW-P2-style-001",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM.contains(marker),
+                "the docking parity lane should keep the window-style opacity closure reachable: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: accepted source-level closure for `DW-P2-style-001`",
+            "`WindowStyleRequest::opacity`",
+            "`PlatformCapabilities.ui.window_opacity`",
+            "`ui.window.opacity`",
+            "`WindowOpacity(255)`",
+            "`window_style_effective_is` predicates can assert `opacity_alpha_u8`",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_WINDOW_STYLE_OPACITY_NOTE.contains(marker),
+                "the window-style opacity note should keep the source-level closure explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "- [x] DW-P2-style-001 DockFloating window style requests",
+            "M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md",
+            "`ui.window.opacity`",
+            "effective `opacity_alpha_u8`",
+        ] {
+            assert!(
+                DOCKING_MULTIWINDOW_IMGUI_PARITY_TODO_DOC.contains(marker),
+                "the docking parity TODO should keep the style closure explicit: {marker}"
             );
         }
     }

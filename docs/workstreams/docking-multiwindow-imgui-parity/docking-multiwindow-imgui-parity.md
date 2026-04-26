@@ -258,13 +258,16 @@ To avoid platform forks inside widgets, use the windowing quality signals in ADR
 - `ui.window_hover_detection`: `None | BestEffort | Reliable`
 - `ui.window_set_outer_position`: `None | BestEffort | Reliable`
 - `ui.window_z_level`: `None | BestEffort | Reliable`
-  - Note: capability enum values are spelled `none|best_effort|reliable` in the contract; this workstream uses TitleCase for readability.
+- `ui.window.opacity`: `bool` for the DockFloating transparent moving payload posture
+
+Note: capability enum values are spelled `none|best_effort|reliable` in the contract; this workstream uses TitleCase for readability.
 
 These should gate policies such as:
 
 - enabling tear-off follow (manual window movement),
 - selecting the “hovered window” under overlap,
 - applying AlwaysOnTop during drags,
+- applying temporary moving-window opacity during transparent payload drags,
 - auto-raising target windows on drop.
 
 Contract source of truth:

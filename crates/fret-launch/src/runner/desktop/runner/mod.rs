@@ -366,6 +366,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // Best-effort / platform-specific window style facets.
             caps.ui.window_skip_taskbar = cfg!(target_os = "windows");
             caps.ui.window_transparent = cfg!(any(target_os = "windows", target_os = "macos"));
+            caps.ui.window_opacity = cfg!(any(target_os = "windows", target_os = "macos"));
             caps.ui.window_hit_test_passthrough_all =
                 cfg!(any(target_os = "windows", target_os = "macos"));
             caps.ui.window_hit_test_passthrough_regions = cfg!(target_os = "windows")
@@ -463,6 +464,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_decorations = false;
             caps.ui.window_resizable = false;
             caps.ui.window_transparent = false;
+            caps.ui.window_opacity = false;
             caps.ui.window_skip_taskbar = false;
             caps.ui.window_non_activating = false;
             caps.ui.window_hit_test_passthrough_all = false;
@@ -508,6 +510,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
             caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
             caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
+            caps.ui.window_opacity = false;
 
             caps.clipboard.text.read = false;
             caps.clipboard.text.write = false;
@@ -552,6 +555,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.window_decorations &= available.ui.window_decorations;
         caps.ui.window_resizable &= available.ui.window_resizable;
         caps.ui.window_transparent &= available.ui.window_transparent;
+        caps.ui.window_opacity &= available.ui.window_opacity;
         caps.ui.window_skip_taskbar &= available.ui.window_skip_taskbar;
         caps.ui.window_non_activating &= available.ui.window_non_activating;
         caps.ui.window_hit_test_passthrough_all &= available.ui.window_hit_test_passthrough_all;

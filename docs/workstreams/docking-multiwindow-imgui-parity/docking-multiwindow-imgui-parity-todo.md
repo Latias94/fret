@@ -347,7 +347,7 @@ Each TODO is labeled:
 
 ## P2 — Style/parenting and future-proofing (ADR 0139 dependent)
 
-- [~] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).
+- [x] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).
   - Gate: `docs/adr/0139-window-styles-and-utility-windows.md` acceptance and implementation.
   - Current implementation (v1 subset; best-effort per backend):
     - `CreateWindowRequest` carries a portable `role` and `style` request (ADR 0139 shape).
@@ -363,9 +363,15 @@ Each TODO is labeled:
     - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
     - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Desktop runner runtime patch handling: `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`WindowRequest::SetStyle`)
+    - Opacity capability + effective diagnostics closure: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
   - Remaining gaps (keep ADR 0139 scope honest):
-    - No portable capabilities for style facets yet (only best-effort application).
-    - Tool-window parenting/alt-tab semantics beyond skip-taskbar are backend-specific.
+    - Native handle escape hatches remain intentionally outside portable crates.
+    - Tool-window parenting/alt-tab semantics beyond the v1 taskbar/activation/z-level/opacity subset remain backend-specific.
+  - Progress:
+    - [x] Portable style request surface exists on `CreateWindowRequest` / `WindowRequest::SetStyle`.
+    - [x] DockFloating creation requests the v1 tool-window posture (`TaskbarVisibility::Hide`, `ActivationPolicy::Activates`).
+    - [x] Runtime follow patches apply z-level, opacity, and hit-test passthrough through the style request surface.
+    - [x] Style facets are capability-gated and diagnostics-visible, including `ui.window.opacity` and effective `opacity_alpha_u8`.
 
 - [x] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
   - Goal: attach DockFloating OS windows as child/tool windows of their source window so ordering and

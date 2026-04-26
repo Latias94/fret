@@ -14,6 +14,7 @@ pub const UI_WINDOW_Z_LEVEL: &str = "ui.window_z_level";
 pub const UI_WINDOW_DECORATIONS: &str = "ui.window.decorations";
 pub const UI_WINDOW_RESIZABLE: &str = "ui.window.resizable";
 pub const UI_WINDOW_TRANSPARENT: &str = "ui.window.transparent";
+pub const UI_WINDOW_OPACITY: &str = "ui.window.opacity";
 pub const UI_WINDOW_ALWAYS_ON_TOP: &str = "ui.window.always_on_top";
 pub const UI_WINDOW_SKIP_TASKBAR: &str = "ui.window.skip_taskbar";
 pub const UI_WINDOW_NON_ACTIVATING: &str = "ui.window.non_activating";

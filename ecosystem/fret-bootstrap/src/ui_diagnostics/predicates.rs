@@ -408,6 +408,11 @@ fn window_style_effective_matches(
     {
         return false;
     }
+    if let Some(opacity) = want.opacity_alpha_u8
+        && have.opacity.0 != opacity
+    {
+        return false;
+    }
     if let Some(hit_test) = want.hit_test
         && !window_hit_test_match(&have.hit_test, hit_test)
     {
@@ -1596,5 +1601,28 @@ mod predicate_tests {
         );
 
         assert_eq!(ok, Some(false));
+    }
+
+    #[test]
+    fn window_style_effective_matches_opacity_alpha() {
+        let have = fret_runtime::RunnerWindowStyleEffectiveSnapshotV1 {
+            opacity: fret_runtime::WindowOpacity(128),
+            ..Default::default()
+        };
+
+        assert!(window_style_effective_matches(
+            &have,
+            &UiWindowStyleMatchV1 {
+                opacity_alpha_u8: Some(128),
+                ..Default::default()
+            }
+        ));
+        assert!(!window_style_effective_matches(
+            &have,
+            &UiWindowStyleMatchV1 {
+                opacity_alpha_u8: Some(255),
+                ..Default::default()
+            }
+        ));
     }
 }

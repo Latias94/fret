@@ -181,6 +181,7 @@ Rationale:
 Extend `PlatformCapabilities.ui` with booleans for the style facets, and add matching string keys:
 
 - `ui.window.transparent`
+- `ui.window.opacity`
 - `ui.window.always_on_top`
 - `ui.window.skip_taskbar`
 - `ui.window.non_activating`
