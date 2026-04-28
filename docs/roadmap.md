@@ -315,6 +315,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-id-stack-diagnostics-v1/M2_IDENTITY_WARNINGS_QUERY_2026-04-28.md`,
   `docs/workstreams/imui-id-stack-diagnostics-v1/M3_IMUI_KEYED_DUPLICATE_PROOF_2026-04-28.md`,
   and `docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
+- ImUi ID stack browser follow-on (active narrow lane for browser-style triage over captured
+  identity diagnostics, starting from schema2 bundle data and `diag query identity-warnings`,
+  without adding `test_id` inference or public runtime identity APIs):
+  `docs/workstreams/imui-id-stack-browser-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-id-stack-browser-v1/DESIGN.md`,
+  and `docs/workstreams/imui-id-stack-browser-v1/EVIDENCE_AND_GATES.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

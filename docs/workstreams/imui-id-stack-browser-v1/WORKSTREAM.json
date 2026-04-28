@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "slug": "imui-id-stack-browser-v1",
+  "title": "ImUi ID Stack Browser v1",
+  "status": "active",
+  "updated": "2026-04-28",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-id-stack-diagnostics-v1",
+  "problem": "Structured IMUI/runtime identity warnings are now captured and queryable, but authors still need a browser-style debugging surface that lets them move from a warning to its window, frame, element path, list identity, key hash, and source location without opening raw bundle JSON.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-id-stack-browser-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-id-stack-browser-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-id-stack-browser-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-id-stack-browser-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the existing identity warning query gate, then evolve a browser-ready identity diagnostics model over captured schema2 bundles.",
+    "commands": [
+      "cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast",
+      "python tools/check_workstream_catalog.py",
+      "python -m json.tool docs/workstreams/imui-id-stack-browser-v1/WORKSTREAM.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "identity-warning-query-baseline",
+      "command": "cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-id-stack-browser-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json",
+    "crates/fret-diag/src/commands/query.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
+    "crates/fret-ui/src/elements/cx.rs",
+    "ecosystem/fret-imui/src/frontend.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for browser-style identity diagnostics over captured bundle data. Start narrower follow-ons for `test_id` inference, localization policy, table column identity, or public runtime identity APIs."
+  }
+}

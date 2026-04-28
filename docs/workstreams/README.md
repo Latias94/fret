@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 272
+- Dedicated directories: 273
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -594,6 +594,16 @@ Current source of truth for the in-tree immediate-mode stack:
     warnings, including bounded `diag query identity-warnings` triage, without exposing
     render-pass/evaluation tokens or inferring `test_id`s.
 
+- Active narrow IMUI ID stack browser follow-on:
+  - `docs/workstreams/imui-id-stack-browser-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-id-stack-browser-v1/DESIGN.md`
+  - `docs/workstreams/imui-id-stack-browser-v1/TODO.md`
+  - `docs/workstreams/imui-id-stack-browser-v1/MILESTONES.md`
+  - `docs/workstreams/imui-id-stack-browser-v1/EVIDENCE_AND_GATES.md`
+  - Scope: active browser-style diagnostics lane for navigating captured identity warnings without
+    reopening public runtime identity APIs, `test_id` inference, localization, or table column
+    identity.
+
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -941,6 +951,7 @@ Rule:
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
 - `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for structured IMUI/runtime identity diagnostics)
+- `docs/workstreams/imui-id-stack-browser-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for browser-style IMUI/runtime identity diagnostics)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)
