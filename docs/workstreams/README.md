@@ -555,16 +555,19 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closeout record for the local, non-Linux base-control geometry floor proving that
     hover/focus/pressed/active/disabled state changes do not alter compact editor control geometry.
 
-- Active narrow IMUI label identity ergonomics follow-on:
+- Closed narrow IMUI label identity ergonomics follow-on:
   - `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/M2_SELECTABLE_MENU_LABEL_IDENTITY_SLICE_2026-04-28.md`
+  - `docs/workstreams/imui-label-identity-ergonomics-v1/M2_MODEL_AND_EXPLICIT_ID_LABEL_IDENTITY_SLICE_2026-04-28.md`
+  - `docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/TODO.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/MILESTONES.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md`
-  - Scope: owns the policy-layer Dear ImGui-style `##` / `###` label identity grammar for IMUI
-    label-bearing controls without widening runtime identity, `test_id`, or localization contracts.
+  - Scope: closeout record for policy-layer Dear ImGui-style `##` / `###` label identity grammar
+    across admitted IMUI label-bearing controls without widening runtime identity, `test_id`, or
+    localization contracts.
 
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
@@ -910,7 +913,7 @@ Rule:
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
 - `docs/workstreams/imui-text-control-chrome-stability-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for compact IMUI text input and textarea chrome stability after the shared control-chrome closeout)
 - `docs/workstreams/imui-control-geometry-stability-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for local base-control geometry stability across IMUI interaction states)
-- `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 7 markdown docs (active narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
+- `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)

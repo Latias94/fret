@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "imui-label-identity-ergonomics-v1",
   "title": "ImUi Label Identity Ergonomics v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-28",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "follow_on_of": "imui-control-geometry-stability-v1",
   "problem": "Fret IMUI has explicit `ui.id` / `ui.push_id` and keyed iteration, but it does not yet provide Dear ImGui-style label identity ergonomics (`Label##suffix`, `Label###stable_id`, `##hidden_id`) for label-bearing controls. This makes same-visible-label controls and dynamic labels more verbose than Dear ImGui and leaves the historical identity TODO without an active owner.",
   "authoritative_docs": [
@@ -13,12 +13,20 @@
       "path": "docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+    },
+    {
       "role": "status",
       "path": "docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md"
     },
     {
       "role": "status",
       "path": "docs/workstreams/imui-label-identity-ergonomics-v1/M2_SELECTABLE_MENU_LABEL_IDENTITY_SLICE_2026-04-28.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-label-identity-ergonomics-v1/M2_MODEL_AND_EXPLICIT_ID_LABEL_IDENTITY_SLICE_2026-04-28.md"
     },
     {
       "role": "execution",
@@ -51,7 +59,11 @@
     },
     {
       "name": "ui-kit-imui-check",
-      "command": "cargo check -p fret-ui-kit --features imui --jobs 2"
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 1"
+    },
+    {
+      "name": "imui-format",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui --check"
     },
     {
       "name": "workstream-catalog",
@@ -72,12 +84,22 @@
     "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
     "docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md",
     "docs/workstreams/imui-label-identity-ergonomics-v1/M2_SELECTABLE_MENU_LABEL_IDENTITY_SLICE_2026-04-28.md",
+    "docs/workstreams/imui-label-identity-ergonomics-v1/M2_MODEL_AND_EXPLICIT_ID_LABEL_IDENTITY_SLICE_2026-04-28.md",
+    "docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "Cargo.toml",
     "ecosystem/fret-imui/src/frontend.rs",
     "ecosystem/fret-imui/src/tests/label_identity.rs",
     "ecosystem/fret-ui-kit/src/imui/label_identity.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",
     "repo-ref/imgui/imgui_widgets.cpp"
@@ -87,7 +109,7 @@
     "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue only for IMUI label identity ergonomics in the policy/authoring layer. Do not widen this lane into runtime identity contracts, app state lanes, localization, or test-id semantics unless a focused proof shows the current mechanism cannot support the Dear ImGui-style label grammar."
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after covering the admitted label-bearing IMUI control helpers. Start a narrower follow-on for runtime ID-stack debugging, table-header policy, localization, test-id inference, or future label-bearing helpers instead of reopening this folder broadly."
   }
 }

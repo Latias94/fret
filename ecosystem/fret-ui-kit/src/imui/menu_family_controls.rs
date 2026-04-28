@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
+use super::label_identity::parse_label_identity;
 use super::{
     BeginMenuOptions, BeginSubmenuOptions, DisclosureResponse, ImUiFacade, MenuBarOptions,
     MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt,
@@ -648,6 +649,8 @@ fn menu_trigger_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     activate_shortcut: Option<fret_runtime::KeyChord>,
     shortcut_repeat: bool,
 ) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let label = Arc::<str>::from(parts.visible);
     let mut response = ResponseExt::default();
 
     let element = ui.with_cx_mut(|cx| {

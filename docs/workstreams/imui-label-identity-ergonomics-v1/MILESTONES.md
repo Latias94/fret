@@ -1,6 +1,6 @@
 # ImUi Label Identity Ergonomics v1 - Milestones
 
-Status: active execution lane
+Status: closed
 Last updated: 2026-04-28
 
 ## M0 - Baseline and Tracking
@@ -37,6 +37,10 @@ Current progress:
   keys for stable focus across visible-label changes and reorder.
 - Selectable rows and menu item rows now share the same parser and have authoring proof coverage
   for suffix hiding and stable `###` identity across reorder.
+- Checkbox, radio, switch, and slider now use parsed label identity as keyed helper-owned subtrees.
+- Explicit-ID controls now keep their explicit IDs while stripping suffixes from visible labels:
+  combo triggers, menu/submenu triggers, tab triggers, collapsing headers, and tree nodes.
+- `separator_text` now strips suffixes from its rendered label.
 
 Exit criteria:
 
@@ -47,9 +51,10 @@ Exit criteria:
 
 ## M3 - Closeout
 
-Exit criteria:
+Result:
 
-- `WORKSTREAM.json` moves to `closed`,
-- adopted and deferred controls are named,
-- final gates are recorded,
-- and future identity debugging/tooling scope is split into narrower follow-ons.
+- `WORKSTREAM.json` moved to `closed`.
+- `CLOSEOUT_AUDIT_2026-04-28.md` names adopted and deferred controls.
+- `EVIDENCE_AND_GATES.md` records the final local gate set.
+- Future runtime ID-stack debugging, table-header policy, localization, and `test_id` inference
+  remain separate follow-on scope.

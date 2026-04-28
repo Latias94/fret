@@ -318,11 +318,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-control-geometry-stability-v1/TODO.md`
   - `docs/workstreams/imui-control-geometry-stability-v1/MILESTONES.md`
   - `docs/workstreams/imui-control-geometry-stability-v1/EVIDENCE_AND_GATES.md`
-- Active narrow IMUI label identity ergonomics follow-on:
+- Closed narrow IMUI label identity ergonomics closeout record:
   - `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/M2_SELECTABLE_MENU_LABEL_IDENTITY_SLICE_2026-04-28.md`
+  - `docs/workstreams/imui-label-identity-ergonomics-v1/M2_MODEL_AND_EXPLICIT_ID_LABEL_IDENTITY_SLICE_2026-04-28.md`
+  - `docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/TODO.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/MILESTONES.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md`
@@ -550,10 +552,10 @@ It complements (but does not replace) ADRs:
   closeout record for base IMUI control geometry stability across interaction states; keep
   Linux/Wayland compositor acceptance in `docs/workstreams/docking-multiwindow-imgui-parity/` and
   start narrower follow-ons for identity ergonomics or floating-window contract cleanup.
-- Use `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json` as the active local
-  follow-on for Dear ImGui-style `##` / `###` label identity ergonomics in IMUI controls; keep
-  runtime identity, localization, and `test_id` inference out of scope unless a focused proof
-  forces a new contract lane.
+- Use `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json` as the closed local
+  closeout record for Dear ImGui-style `##` / `###` label identity ergonomics in admitted IMUI
+  label-bearing controls; start narrower follow-ons for runtime ID-stack debugging, table-header
+  policy, localization, or `test_id` inference.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` as the closed
   closeout record for the helper-owned menu/submenu/tab outward-response naming cleanup.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed

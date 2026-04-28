@@ -1,6 +1,6 @@
 # ImUi Label Identity Ergonomics v1 - TODO
 
-Status: active execution lane
+Status: closed
 Last updated: 2026-04-28
 
 ## M0 - Baseline
@@ -26,11 +26,16 @@ Last updated: 2026-04-28
       and reorder.
 - [x] Extend parser adoption to selectable rows.
 - [x] Extend parser adoption to menu item rows.
-- [ ] Decide whether checkbox/radio/switch/slider should key by label grammar or only render the
+- [x] Decide whether checkbox/radio/switch/slider should key by label grammar or only render the
       visible label in this lane.
+- [x] Route checkbox/radio/switch/slider through parsed label identity as keyed helper-owned
+      subtrees.
+- [x] Keep combo/menu trigger/tab trigger/collapsing header/tree node identity on their explicit
+      IDs while stripping label suffixes from visible text.
+- [x] Strip label suffixes from `separator_text`.
 
 ## M3 - Closeout
 
-- [ ] Update `EVIDENCE_AND_GATES.md` with the final gate set.
-- [ ] Add a closeout note naming adopted and deferred controls.
-- [ ] Update repo-level workstream indexes with the closeout state.
+- [x] Update `EVIDENCE_AND_GATES.md` with the final gate set.
+- [x] Add a closeout note naming adopted and deferred controls.
+- [x] Update repo-level workstream indexes with the closeout state.

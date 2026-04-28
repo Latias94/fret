@@ -1,6 +1,6 @@
 # ImUi Label Identity Ergonomics v1
 
-Status: active execution lane
+Status: closed
 Last updated: 2026-04-28
 
 ## Why This Lane Exists

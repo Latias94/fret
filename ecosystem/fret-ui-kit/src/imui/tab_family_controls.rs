@@ -15,6 +15,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
 use super::containers::build_imui_children_with_focus;
+use super::label_identity::parse_label_identity;
 use super::{
     ImUiFacade, ResponseExt, TabBarOptions, TabBarResponse, TabItemOptions, TabTriggerResponse,
 };
@@ -84,7 +85,9 @@ impl<'cx, 'a, H: UiHost> ImUiTabBar<'cx, 'a, H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         let id = Arc::<str>::from(id);
-        let label = label.into();
+        let raw_label = label.into();
+        let parts = parse_label_identity(raw_label.as_ref());
+        let label = Arc::<str>::from(parts.visible);
         let test_id = options.test_id.clone();
         let panel_test_id = options.panel_test_id.or_else(|| {
             test_id

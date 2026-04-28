@@ -10,6 +10,7 @@ use fret_ui::element::{
     PressableProps,
 };
 
+use super::label_identity::parse_label_identity;
 use super::{CheckboxOptions, RadioOptions, ResponseExt, SwitchOptions, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
@@ -59,6 +60,20 @@ pub(super) fn checkbox_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 }
 
 pub(super) fn checkbox_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    model: &fret_runtime::Model<bool>,
+    options: CheckboxOptions,
+) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("checkbox-label", identity), |ui| {
+        checkbox_model_with_options_inner(ui, visible_label, model, options)
+    })
+}
+
+fn checkbox_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     model: &fret_runtime::Model<bool>,
@@ -201,6 +216,20 @@ pub(super) fn radio_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
     selected: bool,
     options: RadioOptions,
 ) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("radio-label", identity), |ui| {
+        radio_with_options_inner(ui, visible_label, selected, options)
+    })
+}
+
+fn radio_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    selected: bool,
+    options: RadioOptions,
+) -> ResponseExt {
     let mut response = ResponseExt::default();
 
     let element = ui.with_cx_mut(|cx| {
@@ -317,6 +346,20 @@ pub(super) fn radio_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
 }
 
 pub(super) fn switch_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    model: &fret_runtime::Model<bool>,
+    options: SwitchOptions,
+) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("switch-label", identity), |ui| {
+        switch_model_with_options_inner(ui, visible_label, model, options)
+    })
+}
+
+fn switch_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     model: &fret_runtime::Model<bool>,

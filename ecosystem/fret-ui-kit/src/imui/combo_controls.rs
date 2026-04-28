@@ -8,6 +8,7 @@ use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{Length, MainAlign, PressableA11y, PressableProps};
 
+use super::label_identity::parse_label_identity;
 use super::{ComboOptions, ComboResponse, ResponseExt, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
@@ -19,6 +20,8 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
     options: ComboOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut super::ImUiFacade<'cx2, 'a2, H>),
 ) -> ComboResponse {
+    let parts = parse_label_identity(label.as_ref());
+    let label = Arc::<str>::from(parts.visible);
     let enabled = options.enabled && ui.with_cx_mut(|cx| !super::imui_is_disabled(cx));
     let popup_open = ui.popup_open_model(id);
     let open_before = ui.with_cx_mut(|cx| {

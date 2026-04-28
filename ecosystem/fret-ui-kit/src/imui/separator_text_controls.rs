@@ -7,6 +7,7 @@ use fret_ui::UiHost;
 use fret_ui::element::{ContainerProps, Length, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme};
 
+use super::label_identity::parse_label_identity;
 use super::{SeparatorTextOptions, UiWriterImUiFacadeExt};
 
 pub(super) fn separator_text_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -14,6 +15,8 @@ pub(super) fn separator_text_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
     label: Arc<str>,
     options: SeparatorTextOptions,
 ) {
+    let parts = parse_label_identity(label.as_ref());
+    let label = Arc::<str>::from(parts.visible);
     let element = ui.with_cx_mut(|cx| separator_text_element(cx, label, options));
     ui.add(element);
 }

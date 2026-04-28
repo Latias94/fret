@@ -190,3 +190,8 @@ debug = 1
 # runs do not pick up unstable incremental link artifacts between iterations.
 [profile.test.package.fret-ui-shadcn]
 incremental = false
+
+# `fret-ui-kit` unit suites build a broad unified test binary on Windows/MSVC.
+# Keep package-level incremental off so label/parser gates do not pick up unstable link artifacts.
+[profile.test.package.fret-ui-kit]
+incremental = false

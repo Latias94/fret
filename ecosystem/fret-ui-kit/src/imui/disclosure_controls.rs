@@ -9,6 +9,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
+use super::label_identity::parse_label_identity;
 use super::{
     CollapsingHeaderOptions, DisclosureResponse, ImUiFacade, TreeNodeOptions, UiWriterImUiFacadeExt,
 };
@@ -94,6 +95,8 @@ pub(super) fn collapsing_header_with_options<H: UiHost, W: UiWriterImUiFacadeExt
     options: CollapsingHeaderOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> DisclosureResponse {
+    let parts = parse_label_identity(label.as_ref());
+    let label = Arc::<str>::from(parts.visible);
     disclosure_with_options(ui, id, DisclosureSpec::collapsing_header(label, options), f)
 }
 
@@ -104,6 +107,8 @@ pub(super) fn tree_node_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?S
     options: TreeNodeOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> DisclosureResponse {
+    let parts = parse_label_identity(label.as_ref());
+    let label = Arc::<str>::from(parts.visible);
     disclosure_with_options(ui, id, DisclosureSpec::tree_node(label, options), f)
 }
 

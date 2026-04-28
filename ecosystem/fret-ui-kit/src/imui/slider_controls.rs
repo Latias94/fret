@@ -8,10 +8,25 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{ContainerProps, Length, MainAlign, PressableA11y, PressableProps};
 
+use super::label_identity::parse_label_identity;
 use super::{ResponseExt, SliderOptions, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 pub(super) fn slider_f32_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    model: &fret_runtime::Model<f32>,
+    options: SliderOptions,
+) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("slider-label", identity), |ui| {
+        slider_f32_model_with_options_inner(ui, visible_label, model, options)
+    })
+}
+
+fn slider_f32_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     model: &fret_runtime::Model<f32>,
