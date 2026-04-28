@@ -67,6 +67,15 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md`
+- `docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-identity-browser-html-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-identity-browser-visual-gate-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-identity-browser-fixture-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `crates/fret-diag/tests/fixtures/identity_warnings/bundle.schema2.json`
+- `crates/fret-diag/src/identity_browser.rs`
+- `crates/fret-diag/src/identity_browser_html.rs`
+- `crates/fret-diag/src/commands/query.rs`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
@@ -293,6 +302,8 @@ The promoted launched suite now freezes this minimum shell coverage:
 - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_diagnostics_owner_split`
 - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_bounded_devtools_smoke_package`
 - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_discoverability_entry`
+- `cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast`
+- `cargo nextest run -p fret-diag identity_browser_html --no-fail-fast`
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
 - `cargo build -p fret-devtools`
 - `cargo run -p fretboard-dev -- diag doctor campaigns`
@@ -312,6 +323,12 @@ This package currently proves:
   notes,
 - DevTools GUI and MCP stay aligned as consumers of the same artifacts root,
 - and compare remains a shared artifacts-layer contract instead of a GUI-only diff mode.
+- captured immediate/runtime identity warnings now have a bounded first-open path through
+  `diag query identity-warnings --browser --json`,
+- the same identity warning report can be reviewed offline through `--html-out` and smoke-checked
+  through `--html-check-out`,
+- and the committed schema2 sample bundle lets maintainers exercise that path without launching a
+  demo first.
 
 ### Multi-window hand-feel gates
 

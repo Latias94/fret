@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-20
+Last updated: 2026-04-28
 
 Related:
 
@@ -18,6 +18,11 @@ Related:
 - `P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md`
 - `P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md`
 - `P2_DISCOVERABILITY_ENTRY_2026-04-12.md`
+- `docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-identity-browser-html-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-identity-browser-visual-gate-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- `docs/workstreams/imui-identity-browser-fixture-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md`
 - `P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md`
 - `docs/diagnostics-first-open.md`
@@ -38,6 +43,12 @@ rather than the default implementation surface. Keep phase ordering, proof-famil
 and follow-on decisions here; continue the remaining active P3 execution in
 `docs/workstreams/docking-multiwindow-imgui-parity/`, and keep future implementation-heavy P0/P1/P2
 pressure on new narrow follow-ons instead of reopening this folder broadly.
+
+Status note (2026-04-28): the P2 diagnostics/devtools path now includes the closed
+identity-warning diagnostics/browser chain. Captured IMUI/runtime identity warnings are queryable
+through `diag query identity-warnings`, reviewable as grouped JSON or a self-contained HTML sidecar,
+and backed by a committed schema2 sample bundle for first-open review. Keep future live devtools or
+dashboard integration in narrower follow-ons instead of widening this maintenance umbrella.
 
 This umbrella follow-on owns one cross-phase question:
 

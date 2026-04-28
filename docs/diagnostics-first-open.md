@@ -92,13 +92,26 @@ Start with bounded reads instead of opening `bundle.json` directly:
 - `cargo run -p fretboard-dev -- diag resolve latest --dir <base-or-session-dir> --json`
 - `cargo run -p fretboard-dev -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
 - `cargo run -p fretboard-dev -- diag query test-id <source> <pattern> --top 50`
+- `cargo run -p fretboard-dev -- diag query identity-warnings <bundle_dir|bundle.json|bundle.schema2.json> --browser --json`
 - `cargo run -p fretboard-dev -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 
 Use these commands to answer:
 
 - what bundle was produced,
 - which `test_id` exists,
+- whether immediate/runtime identity warnings were captured,
 - and what one bounded slice says about the failing area.
+
+For identity-warning triage without running a demo first, use the committed sample bundle:
+
+```bash
+cargo run -p fretboard-dev -- diag query identity-warnings crates/fret-diag/tests/fixtures/identity_warnings/bundle.schema2.json --browser --json
+cargo run -p fretboard-dev -- diag query identity-warnings crates/fret-diag/tests/fixtures/identity_warnings/bundle.schema2.json --html-out target/identity.html --html-check-out target/check.identity_browser_html.json
+```
+
+The HTML artifact is a self-contained offline sidecar. The check sidecar is
+`check.identity_browser_html` and is intended for quick structural smoke validation before a
+browser-driven review path exists.
 
 ## 5) Compare at the shared artifacts layer
 

@@ -231,11 +231,24 @@ Footgun / recommendation:
       bounded acceptance summary (`--json-out <path>`). Add `--note-out <path>` when you also want
       one Markdown evidence-note draft for the workstream lane.
   - `fretboard-dev diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
+  - `fretboard-dev diag query identity-warnings <bundle_dir|bundle.json|bundle.schema2.json> --browser --json`
+  - `fretboard-dev diag query identity-warnings <bundle_dir|bundle.json|bundle.schema2.json> --html-out <path> --html-check-out <path>`
   - `fretboard-dev diag query snapshots <bundle_dir|bundle.index.json|bundle.schema2.json> --test-id <test_id> --top 10`
   - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard-dev diag slice <bundle_dir|bundle.json|bundle.schema2.json> --step-index <n> --test-id <test_id> --warmup-frames <n>`
   - `fretboard-dev diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
 - When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (it excludes `target/fret-diag/**` and `.fret/diag/**` by default).
+
+Identity warning browser note:
+
+- Use `diag query identity-warnings --browser --json` when schema2 bundles contain
+  `debug.element_runtime.identity_warnings` and you need grouped duplicate-key / unkeyed-order
+  triage.
+- Use `--html-out <path> --html-check-out <path>` when you want a self-contained offline review
+  artifact plus a deterministic `check.identity_browser_html` smoke report.
+- The committed sample bundle is
+  `crates/fret-diag/tests/fixtures/identity_warnings/bundle.schema2.json`; it is the first-open
+  fixture for the identity browser path and does not require launching a demo.
 
 To disable sidecar writing (native-only):
 

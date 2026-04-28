@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - Milestones
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-23
+Last updated: 2026-04-28
 
 Status note (2026-04-22): this file now records umbrella phase state only. Implementation-heavy
 execution has moved into closed narrow follow-ons or the active docking parity lane.
@@ -258,6 +258,12 @@ Current status:
   `docs/diagnostics-first-open.md` is the canonical first-open diagnostics workflow, and the
   inspect, bundles/scripts, GUI dogfood, and diagnostics-v2 navigation docs are now explicit
   branch/reference notes instead of competing start pages.
+- 2026-04-28 identity warning diagnostics are now an explicit closed P2 branch:
+  `diag query identity-warnings` reads captured schema2 identity warnings, `--browser` adds grouped
+  JSON, `--html-out` writes a self-contained offline review artifact,
+  `--html-check-out` writes `check.identity_browser_html`, and
+  `crates/fret-diag/tests/fixtures/identity_warnings/bundle.schema2.json` provides a first-open
+  sample bundle without launching a demo.
 - P2 is now closed for this lane.
   Future diagnostics/devtools work that becomes implementation-heavy should move into a narrower
   devtools follow-on instead of widening this folder.

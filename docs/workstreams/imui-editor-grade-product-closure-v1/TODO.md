@@ -1,7 +1,7 @@
 # ImUi Editor-Grade Product Closure v1 - TODO
 
 Status: maintenance umbrella lane
-Last updated: 2026-04-23
+Last updated: 2026-04-28
 
 Status note (2026-04-22): keep phase ordering and follow-on decisions here. Do not resume
 implementation-heavy work in this folder while the closed child-region depth closeout record lives
@@ -259,6 +259,10 @@ in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution
       becomes implementation-heavy again.
       Result: P2 is closed in this lane; any future tooling UX/productization should start as a
       narrow devtools follow-on instead of widening this folder.
+- [x] Record the identity-warning diagnostics/browser chain as a closed P2 evidence branch.
+      Result: the structured identity diagnostics, browser query model, offline HTML sidecar,
+      structural smoke gate, and committed sample bundle all live in narrow closed follow-ons, while
+      this umbrella records them as part of the first-open diagnostics path.
 - [x] If P3 becomes mostly platform diagnostics and runner work, continue using the existing docking
       parity lane or start a narrower follow-on there instead of bloating this folder.
       Result: after the P1 shell closeout and the umbrella maintenance refresh, the active
