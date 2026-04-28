@@ -289,6 +289,9 @@ pub(crate) struct QueryIdentityWarningsArgs {
 
     #[arg(long = "html-out", value_name = "PATH")]
     pub html_out: Option<PathBuf>,
+
+    #[arg(long = "html-check-out", value_name = "PATH")]
+    pub html_check_out: Option<PathBuf>,
 }
 
 #[derive(Debug)]

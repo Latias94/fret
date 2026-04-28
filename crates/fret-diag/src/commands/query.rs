@@ -9,7 +9,10 @@ use crate::identity_browser::{
     IdentityWarningBrowserFilters, collect_identity_warning_browser_report,
     parse_identity_warning_kind, parse_u64_maybe_hex,
 };
-use crate::identity_browser_html::write_identity_browser_html;
+use crate::identity_browser_html::{
+    render_identity_browser_html, write_identity_browser_html_content,
+    write_identity_browser_html_smoke_report,
+};
 use crate::test_id_bloom::TestIdBloomV1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -366,6 +369,7 @@ fn cmd_query_identity_warnings(
     let mut include_timeline = false;
     let mut include_browser = false;
     let mut html_out: Option<PathBuf> = None;
+    let mut html_check_out: Option<PathBuf> = None;
 
     let mut positionals: Vec<String> = Vec::new();
     let mut i: usize = 0;
@@ -447,6 +451,14 @@ fn cmd_query_identity_warnings(
                 html_out = Some(PathBuf::from(v));
                 i += 1;
             }
+            "--html-check-out" | "--html_check_out" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --html-check-out".to_string());
+                };
+                html_check_out = Some(PathBuf::from(v));
+                i += 1;
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag for query identity-warnings: {other}"));
             }
@@ -516,15 +528,29 @@ fn cmd_query_identity_warnings(
         );
     }
 
-    if let Some(out) = html_out.map(|p| crate::resolve_path(workspace_root, p)) {
-        write_identity_browser_html(
-            &out,
-            &bundle_path.display().to_string(),
-            &report,
-            &browser_filters,
-        )?;
+    let resolved_html_out = html_out.map(|p| crate::resolve_path(workspace_root, p));
+    let resolved_html_check_out = html_check_out.map(|p| crate::resolve_path(workspace_root, p));
+    if resolved_html_out.is_some() || resolved_html_check_out.is_some() {
+        let bundle_display = bundle_path.display().to_string();
+        let html = render_identity_browser_html(&bundle_display, &report, &browser_filters);
+        if let Some(out) = resolved_html_out.as_deref() {
+            write_identity_browser_html_content(out, &html)?;
+        }
+        if let Some(check_out) = resolved_html_check_out.as_deref() {
+            write_identity_browser_html_smoke_report(
+                check_out,
+                resolved_html_out.as_deref(),
+                &bundle_display,
+                &html,
+                &report,
+            )?;
+        }
         if query_out.is_none() && !stats_json {
-            println!("{}", out.display());
+            if let Some(out) = resolved_html_out.as_deref() {
+                println!("{}", out.display());
+            } else if let Some(check_out) = resolved_html_check_out.as_deref() {
+                println!("{}", check_out.display());
+            }
             return Ok(());
         }
     }
@@ -2592,6 +2618,7 @@ mod tests {
         let bundle = write_bundle_schema2_with_identity_warnings(&out_dir);
 
         let html_out = out_dir.join("identity.html");
+        let html_check_out = out_dir.join("check.identity_browser_html.json");
         cmd_query_identity_warnings(
             &[
                 bundle.display().to_string(),
@@ -2599,6 +2626,8 @@ mod tests {
                 "duplicate-keyed-list-item-key-hash".to_string(),
                 "--html-out".to_string(),
                 html_out.display().to_string(),
+                "--html-check-out".to_string(),
+                html_check_out.display().to_string(),
             ],
             Path::new("."),
             &out_dir,
@@ -2614,6 +2643,26 @@ mod tests {
         assert!(html.contains("src/list.rs"));
         assert!(html.contains("key 9001"));
         assert!(!html.contains("unkeyed_list_order_changed"));
+
+        let check_bytes = std::fs::read(&html_check_out).expect("read check json");
+        let check: serde_json::Value =
+            serde_json::from_slice(&check_bytes).expect("parse check json");
+        assert_eq!(
+            check.get("kind").and_then(|value| value.as_str()),
+            Some("check.identity_browser_html")
+        );
+        assert_eq!(
+            check.get("ok").and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            check.get("rows_found").and_then(|value| value.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            check.get("groups_found").and_then(|value| value.as_u64()),
+            Some(1)
+        );
     }
 
     #[test]

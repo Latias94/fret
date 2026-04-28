@@ -2179,6 +2179,8 @@ mod tests {
             "--browser",
             "--html-out",
             "target/query.identity.html",
+            "--html-check-out",
+            "target/check.identity_browser_html.json",
             "--json",
             "--out",
             "target/query.identity.json",
@@ -2206,6 +2208,10 @@ mod tests {
         assert_eq!(
             identity.html_out,
             Some(PathBuf::from("target/query.identity.html"))
+        );
+        assert_eq!(
+            identity.html_check_out,
+            Some(PathBuf::from("target/check.identity_browser_html.json"))
         );
         assert!(identity.output.json);
         assert_eq!(

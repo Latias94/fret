@@ -3,17 +3,36 @@ use std::path::Path;
 
 use crate::identity_browser::{IdentityWarningBrowserFilters, IdentityWarningBrowserReport};
 
-pub(crate) fn write_identity_browser_html(
+pub(crate) fn write_identity_browser_html_content(path: &Path, html: &str) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(path, html.as_bytes()).map_err(|e| e.to_string())
+}
+
+pub(crate) fn write_identity_browser_html_smoke_report(
     path: &Path,
+    html_path: Option<&Path>,
     bundle: &str,
+    html: &str,
     report: &IdentityWarningBrowserReport,
-    filters: &IdentityWarningBrowserFilters,
 ) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    let html = render_identity_browser_html(bundle, report, filters);
-    std::fs::write(path, html.as_bytes()).map_err(|e| e.to_string())
+    let payload = identity_browser_html_smoke_report(html_path, bundle, html, report);
+    let ok = payload
+        .get("ok")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    crate::util::write_json_value(path, &payload)?;
+    if !ok {
+        return Err(format!(
+            "identity browser HTML smoke check failed: {}",
+            path.display()
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn render_identity_browser_html(
@@ -162,10 +181,12 @@ pre {
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="shell" data-testid="identity-browser-shell">
 "#,
     );
-    out.push_str("<aside class=\"groups\">\n<h2>Groups</h2>\n");
+    out.push_str(
+        "<aside class=\"groups\" data-testid=\"identity-browser-groups\">\n<h2>Groups</h2>\n",
+    );
     if report.groups.is_empty() {
         out.push_str("<p class=\"muted\">No groups</p>\n");
     } else {
@@ -182,7 +203,7 @@ pre {
             );
             let _ = writeln!(
                 out,
-                "<div class=\"group\" data-search=\"{}\"><div class=\"group-kind\">{}</div><div class=\"group-meta\"><span>rows: {}</span><span>window: {}</span><span>frame: {}</span><span>file: {}</span><span>list: {}</span><span>key: {}</span></div></div>",
+                "<div class=\"group\" data-testid=\"identity-browser-group\" data-search=\"{}\"><div class=\"group-kind\">{}</div><div class=\"group-meta\"><span>rows: {}</span><span>window: {}</span><span>frame: {}</span><span>file: {}</span><span>list: {}</span><span>key: {}</span></div></div>",
                 escape_html(&search),
                 escape_html(&key.kind),
                 group.rows,
@@ -194,13 +215,15 @@ pre {
             );
         }
     }
-    out.push_str("</aside>\n<main class=\"content\">\n<header>\n");
+    out.push_str(
+        "</aside>\n<main class=\"content\" data-testid=\"identity-browser-content\">\n<header>\n",
+    );
     let _ = writeln!(
         out,
         "<h1>Fret Identity Warnings</h1>\n<div class=\"bundle mono\">{}</div>",
         escape_html(bundle)
     );
-    out.push_str("</header>\n<section class=\"summary\" aria-label=\"Summary\">\n");
+    out.push_str("</header>\n<section class=\"summary\" data-testid=\"identity-browser-summary\" aria-label=\"Summary\">\n");
     metric(&mut out, "Total", report.total_observations);
     metric(&mut out, "Matching", report.matching_observations);
     metric(&mut out, "Deduped", report.deduped_observations);
@@ -221,10 +244,10 @@ pre {
     );
     out.push_str(
         r#"<div class="toolbar">
-<input id="filter" type="search" placeholder="Filter kind, file, path, list id, key hash" autocomplete="off">
+<input id="filter" data-testid="identity-browser-filter" type="search" placeholder="Filter kind, file, path, list id, key hash" autocomplete="off">
 <span id="count" class="muted"></span>
 </div>
-<table>
+<table data-testid="identity-browser-table">
 <thead>
 <tr>
 <th>Kind</th>
@@ -258,7 +281,7 @@ pre {
             serde_json::to_string_pretty(&row.to_query_json()).unwrap_or_else(|_| "{}".to_string());
         let _ = writeln!(
             out,
-            "<tr data-search=\"{}\"><td><span class=\"kind\">{}</span></td><td>window {}<br><span class=\"muted\">frame {} / snapshot {}</span></td><td class=\"mono\">{}</td><td class=\"mono\">{}</td><td>list {}<br><span class=\"muted\">key {}</span></td><td>{}<details><summary>JSON</summary><pre>{}</pre></details></td></tr>",
+            "<tr data-testid=\"identity-browser-row\" data-search=\"{}\"><td><span class=\"kind\">{}</span></td><td>window {}<br><span class=\"muted\">frame {} / snapshot {}</span></td><td class=\"mono\">{}</td><td class=\"mono\">{}</td><td>list {}<br><span class=\"muted\">key {}</span></td><td>{}<details data-testid=\"identity-browser-row-json\"><summary>JSON</summary><pre>{}</pre></details></td></tr>",
             escape_html(&search),
             escape_html(row.kind.as_str()),
             row.window,
@@ -301,6 +324,92 @@ applyFilter();
     out
 }
 
+pub(crate) fn identity_browser_html_smoke_report(
+    html_path: Option<&Path>,
+    bundle: &str,
+    html: &str,
+    report: &IdentityWarningBrowserReport,
+) -> serde_json::Value {
+    let row_markers = html.matches("data-testid=\"identity-browser-row\"").count();
+    let group_markers = html
+        .matches("data-testid=\"identity-browser-group\"")
+        .count();
+    let checks = vec![
+        bool_check(
+            "nonblank_html",
+            html.len() > 1024,
+            html.len().to_string(),
+            ">1024 bytes",
+        ),
+        bool_check(
+            "shell_marker",
+            html.contains("data-testid=\"identity-browser-shell\""),
+            marker_present(html, "data-testid=\"identity-browser-shell\""),
+            "present",
+        ),
+        bool_check(
+            "summary_marker",
+            html.contains("data-testid=\"identity-browser-summary\""),
+            marker_present(html, "data-testid=\"identity-browser-summary\""),
+            "present",
+        ),
+        bool_check(
+            "filter_marker",
+            html.contains("data-testid=\"identity-browser-filter\""),
+            marker_present(html, "data-testid=\"identity-browser-filter\""),
+            "present",
+        ),
+        bool_check(
+            "table_marker",
+            html.contains("data-testid=\"identity-browser-table\""),
+            marker_present(html, "data-testid=\"identity-browser-table\""),
+            "present",
+        ),
+        bool_check(
+            "row_marker_count",
+            row_markers == report.rows.len(),
+            row_markers.to_string(),
+            report.rows.len().to_string(),
+        ),
+        bool_check(
+            "group_marker_count",
+            group_markers == report.groups.len(),
+            group_markers.to_string(),
+            report.groups.len().to_string(),
+        ),
+        bool_check(
+            "filter_script",
+            html.contains("function applyFilter()") && html.contains("[data-search]"),
+            marker_present(html, "function applyFilter()"),
+            "present",
+        ),
+        bool_check(
+            "responsive_css",
+            html.contains("@media (max-width: 900px)"),
+            marker_present(html, "@media (max-width: 900px)"),
+            "present",
+        ),
+    ];
+    let ok = checks
+        .iter()
+        .all(|check| check.get("passed").and_then(|value| value.as_bool()) == Some(true));
+
+    serde_json::json!({
+        "schema_version": 1,
+        "kind": "check.identity_browser_html",
+        "ok": ok,
+        "status": if ok { "passed" } else { "failed" },
+        "bundle": bundle,
+        "html_path": html_path.map(|path| path.display().to_string()),
+        "html_bytes": html.len(),
+        "rows_expected": report.rows.len(),
+        "rows_found": row_markers,
+        "groups_expected": report.groups.len(),
+        "groups_found": group_markers,
+        "checks": checks,
+    })
+}
+
 fn metric(out: &mut String, label: &str, value: usize) {
     let _ = writeln!(
         out,
@@ -308,6 +417,28 @@ fn metric(out: &mut String, label: &str, value: usize) {
         value,
         escape_html(label)
     );
+}
+
+fn marker_present(html: &str, marker: &str) -> String {
+    if html.contains(marker) {
+        "present".to_string()
+    } else {
+        "missing".to_string()
+    }
+}
+
+fn bool_check(
+    name: &str,
+    passed: bool,
+    observed: impl Into<String>,
+    expected: impl Into<String>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "name": name,
+        "passed": passed,
+        "observed": observed.into(),
+        "expected": expected.into(),
+    })
 }
 
 fn detail_badges(row: &crate::identity_browser::IdentityWarningBrowserRow) -> String {
@@ -404,9 +535,39 @@ mod tests {
         assert!(html.contains("<strong>1</strong><span>Total</span>"));
         assert!(html.contains("duplicate_keyed_list_item_key_hash"));
         assert!(html.contains("duplicate indices 1 / 2"));
+        assert!(html.contains("data-testid=\"identity-browser-shell\""));
+        assert!(html.contains("data-testid=\"identity-browser-row\""));
         assert!(html.contains("src/&lt;list&gt;&amp;view.rs"));
         assert!(html.contains("root.&lt;panel&gt;&amp;item[key=0x2]"));
         assert!(html.contains("target/&lt;bundle&gt;&amp;.json"));
         assert!(!html.contains("src/<list>&view.rs"));
+    }
+
+    #[test]
+    fn identity_browser_html_smoke_report_checks_visual_anchors() {
+        let bundle = html_fixture_bundle();
+        let filters = IdentityWarningBrowserFilters::default();
+        let report = collect_identity_warning_browser_report(&bundle, &filters);
+        let html = render_identity_browser_html("target/bundle.schema2.json", &report, &filters);
+
+        let smoke = identity_browser_html_smoke_report(
+            Some(Path::new("target/identity.html")),
+            "target/bundle.schema2.json",
+            &html,
+            &report,
+        );
+
+        assert_eq!(
+            smoke.get("ok").and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            smoke.get("rows_found").and_then(|value| value.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            smoke.get("groups_found").and_then(|value| value.as_u64()),
+            Some(1)
+        );
     }
 }

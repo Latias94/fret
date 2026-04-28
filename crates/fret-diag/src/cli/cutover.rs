@@ -1969,6 +1969,10 @@ fn parse_query_command(
                 rest.push("--html-out".to_string());
                 rest.push(html_out.display().to_string());
             }
+            if let Some(html_check_out) = identity.html_check_out {
+                rest.push("--html-check-out".to_string());
+                rest.push(html_check_out.display().to_string());
+            }
             (
                 rest,
                 identity.output.out,
@@ -5283,6 +5287,8 @@ mod tests {
             "--browser".to_string(),
             "--html-out".to_string(),
             "target/query.identity.html".to_string(),
+            "--html-check-out".to_string(),
+            "target/check.identity_browser_html.json".to_string(),
             "--json".to_string(),
             "--out".to_string(),
             "target/query.identity.json".to_string(),
@@ -5319,6 +5325,8 @@ mod tests {
                 "--browser".to_string(),
                 "--html-out".to_string(),
                 "target/query.identity.html".to_string(),
+                "--html-check-out".to_string(),
+                "target/check.identity_browser_html.json".to_string(),
             ]
         );
         assert_eq!(ctx.warmup_frames, 6);

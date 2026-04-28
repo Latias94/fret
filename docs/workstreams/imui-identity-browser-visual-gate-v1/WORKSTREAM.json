@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-identity-browser-visual-gate-v1",
+  "title": "ImUi Identity Browser Visual Gate v1",
+  "status": "closed",
+  "updated": "2026-04-28",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-identity-browser-html-v1",
+  "problem": "The offline identity browser HTML artifact exists, but it needs a deterministic smoke gate that can run in normal Rust diagnostics tests before any browser-driven screenshot harness is introduced.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-identity-browser-visual-gate-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-identity-browser-visual-gate-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-identity-browser-visual-gate-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-identity-browser-visual-gate-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-identity-browser-visual-gate-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the identity browser HTML smoke tests and the identity warning query tests that write the HTML/check sidecars.",
+    "commands": [
+      "cargo nextest run -p fret-diag identity_browser_html --no-fail-fast",
+      "cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast",
+      "cargo check -p fret-diag --jobs 1",
+      "python tools/check_workstream_catalog.py",
+      "python -m json.tool docs/workstreams/imui-identity-browser-visual-gate-v1/WORKSTREAM.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "identity-browser-html-smoke",
+      "command": "cargo nextest run -p fret-diag identity_browser_html --no-fail-fast"
+    },
+    {
+      "name": "identity-warning-query-html-check",
+      "command": "cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast"
+    },
+    {
+      "name": "fret-diag-check",
+      "command": "cargo check -p fret-diag --jobs 1"
+    },
+    {
+      "name": "fret-diag-format",
+      "command": "cargo fmt --package fret-diag --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-identity-browser-visual-gate-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-identity-browser-html-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/workstreams/imui-identity-browser-html-v1/WORKSTREAM.json",
+    "crates/fret-diag/src/identity_browser_html.rs",
+    "crates/fret-diag/src/commands/query.rs",
+    "crates/fret-diag/src/cli/contracts/commands/query.rs",
+    "crates/fret-diag/src/cli/contracts/mod.rs",
+    "crates/fret-diag/src/cli/cutover.rs",
+    "docs/workstreams/imui-identity-browser-visual-gate-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Keep this lane closed around the deterministic HTML smoke gate. Start separate follow-ons for browser-driven screenshot gates, dashboard integration, live devtools identity panels, `test_id` inference, localization, table column identity, or public runtime identity APIs."
+  }
+}
