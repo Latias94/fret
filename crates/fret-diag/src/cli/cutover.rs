@@ -577,6 +577,18 @@ fn retired_diag_alias_error(args: &[String]) -> Option<String> {
                 "`diag query scroll_observation` was removed; use `diag query scroll-extents-observation`."
                     .to_string(),
             ),
+            Some("identity_warnings") => Some(
+                "`diag query identity_warnings` was removed; use `diag query identity-warnings`."
+                    .to_string(),
+            ),
+            Some("identity-warning") => Some(
+                "`diag query identity-warning` was removed; use `diag query identity-warnings`."
+                    .to_string(),
+            ),
+            Some("identity_warning") => Some(
+                "`diag query identity_warning` was removed; use `diag query identity-warnings`."
+                    .to_string(),
+            ),
             _ => None,
         },
         "triage" if args.iter().skip(1).any(|arg| arg == "--frames-index") => Some(
@@ -1912,6 +1924,49 @@ fn parse_query_command(
                 scroll.output.out,
                 scroll.warmup.warmup_frames,
                 scroll.output.json,
+            )
+        }
+        QuerySubcommandArgs::IdentityWarnings(identity) => {
+            let mut rest = vec!["identity-warnings".to_string()];
+            if let Some(source) = identity.source {
+                rest.push(source);
+            }
+            if identity.top != 50 {
+                rest.push("--top".to_string());
+                rest.push(identity.top.to_string());
+            }
+            if let Some(window) = identity.window {
+                rest.push("--window".to_string());
+                rest.push(window.to_string());
+            }
+            if let Some(kind) = identity.kind {
+                rest.push("--kind".to_string());
+                rest.push(kind);
+            }
+            if let Some(element) = identity.element {
+                rest.push("--element".to_string());
+                rest.push(element.to_string());
+            }
+            if let Some(list_id) = identity.list_id {
+                rest.push("--list-id".to_string());
+                rest.push(list_id.to_string());
+            }
+            if let Some(element_path) = identity.element_path {
+                rest.push("--element-path".to_string());
+                rest.push(element_path);
+            }
+            if let Some(file) = identity.file {
+                rest.push("--file".to_string());
+                rest.push(file);
+            }
+            if identity.timeline {
+                rest.push("--timeline".to_string());
+            }
+            (
+                rest,
+                identity.output.out,
+                identity.warmup.warmup_frames,
+                identity.output.json,
             )
         }
     };
@@ -5191,6 +5246,73 @@ mod tests {
         assert_eq!(
             ctx.query_out,
             Some(PathBuf::from("target/query.snapshots.json"))
+        );
+    }
+
+    #[test]
+    fn migrated_query_identity_warnings_builds_a_real_context() {
+        let workspace_root = workspace_root_for_tests();
+        let args = vec![
+            "query".to_string(),
+            "identity-warnings".to_string(),
+            "target/fret-diag/demo".to_string(),
+            "--warmup-frames".to_string(),
+            "6".to_string(),
+            "--window".to_string(),
+            "2".to_string(),
+            "--top".to_string(),
+            "8".to_string(),
+            "--kind".to_string(),
+            "duplicate-keyed-list-item-key-hash".to_string(),
+            "--element".to_string(),
+            "123".to_string(),
+            "--list-id".to_string(),
+            "0x2a".to_string(),
+            "--element-path".to_string(),
+            "root.panel".to_string(),
+            "--file".to_string(),
+            "src/list.rs".to_string(),
+            "--timeline".to_string(),
+            "--json".to_string(),
+            "--out".to_string(),
+            "target/query.identity.json".to_string(),
+        ];
+
+        let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
+            .expect("query identity-warnings should be intercepted")
+            .expect("query identity-warnings should parse");
+
+        let MigratedDiagCommand::Query(ctx) = parsed else {
+            panic!("expected query context");
+        };
+
+        assert_eq!(
+            ctx.rest,
+            vec![
+                "identity-warnings".to_string(),
+                "target/fret-diag/demo".to_string(),
+                "--top".to_string(),
+                "8".to_string(),
+                "--window".to_string(),
+                "2".to_string(),
+                "--kind".to_string(),
+                "duplicate_keyed_list_item_key_hash".to_string(),
+                "--element".to_string(),
+                "123".to_string(),
+                "--list-id".to_string(),
+                "42".to_string(),
+                "--element-path".to_string(),
+                "root.panel".to_string(),
+                "--file".to_string(),
+                "src/list.rs".to_string(),
+                "--timeline".to_string(),
+            ]
+        );
+        assert_eq!(ctx.warmup_frames, 6);
+        assert!(ctx.stats_json);
+        assert_eq!(
+            ctx.query_out,
+            Some(PathBuf::from("target/query.identity.json"))
         );
     }
 

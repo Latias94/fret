@@ -39,6 +39,28 @@ fn parse_overlay_sticky(raw: &str) -> Result<String, String> {
     }
 }
 
+fn parse_identity_warning_kind(raw: &str) -> Result<String, String> {
+    match raw {
+        "duplicate_keyed_list_item_key_hash" | "duplicate-keyed-list-item-key-hash" => {
+            Ok("duplicate_keyed_list_item_key_hash".to_string())
+        }
+        "unkeyed_list_order_changed" | "unkeyed-list-order-changed" => {
+            Ok("unkeyed_list_order_changed".to_string())
+        }
+        _ => Err("invalid value for --kind (expected duplicate_keyed_list_item_key_hash|unkeyed_list_order_changed)".to_string()),
+    }
+}
+
+fn parse_u64_maybe_hex(raw: &str) -> Result<u64, String> {
+    let raw = raw.trim();
+    if let Some(hex) = raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
+        return u64::from_str_radix(hex, 16)
+            .map_err(|_| "invalid u64 value (expected decimal or 0x-prefixed hex)".to_string());
+    }
+    raw.parse::<u64>()
+        .map_err(|_| "invalid u64 value (expected decimal or 0x-prefixed hex)".to_string())
+}
+
 fn parse_overlay_flipped(raw: &str) -> Result<bool, String> {
     match raw {
         "1" | "true" => Ok(true),
@@ -63,6 +85,7 @@ pub(crate) enum QuerySubcommandArgs {
     Snapshots(QuerySnapshotsArgs),
     OverlayPlacementTrace(QueryOverlayPlacementTraceArgs),
     ScrollExtentsObservation(QueryScrollExtentsObservationArgs),
+    IdentityWarnings(QueryIdentityWarningsArgs),
 }
 
 #[derive(Debug, Args)]
@@ -217,6 +240,46 @@ pub(crate) struct QueryScrollExtentsObservationArgs {
 
     #[arg(long = "deep-scan")]
     pub deep_scan: bool,
+
+    #[arg(long = "timeline")]
+    pub timeline: bool,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct QueryIdentityWarningsArgs {
+    #[arg(value_name = "SOURCE")]
+    pub source: Option<String>,
+
+    #[command(flatten)]
+    pub warmup: WarmupFramesArgs,
+
+    #[command(flatten)]
+    pub output: ReportOutputArgs,
+
+    #[arg(long = "top", default_value_t = 50)]
+    pub top: usize,
+
+    #[arg(long = "window")]
+    pub window: Option<u64>,
+
+    #[arg(
+        long = "kind",
+        value_name = "KIND",
+        value_parser = parse_identity_warning_kind
+    )]
+    pub kind: Option<String>,
+
+    #[arg(long = "element")]
+    pub element: Option<u64>,
+
+    #[arg(long = "list-id", value_name = "LIST_ID", value_parser = parse_u64_maybe_hex)]
+    pub list_id: Option<u64>,
+
+    #[arg(long = "element-path", value_name = "TEXT")]
+    pub element_path: Option<String>,
+
+    #[arg(long = "file", value_name = "TEXT")]
+    pub file: Option<String>,
 
     #[arg(long = "timeline")]
     pub timeline: bool,

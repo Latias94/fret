@@ -23,10 +23,20 @@ Last updated: 2026-04-28
 - [x] Prove `ui.for_each_unkeyed` reorder emits the structured warning via runtime delegation.
 - [x] Keep `ui.id` / `ui.for_each_keyed` as the recommended dynamic-list fix.
 
-## M3 - Closeout Readiness
+## M3 - Diagnostics Query Surface
+
+- [x] Add `fretboard diag query identity-warnings` as the bounded triage entry point for
+  `debug.element_runtime.identity_warnings`.
+- [x] Support focused filters for warning kind, window, element, list id, element path, and source
+  file.
+- [x] Keep the query read-only over existing bundle snapshots; do not expand script capabilities or
+  public IMUI identity APIs.
+- [x] Add focused `fret-diag` gates for handler behavior, clap contract parsing, and cutover
+  command conversion.
+
+## M4 - Closeout Readiness
 
 - [ ] Record final gates and evidence.
-- [ ] Decide whether a full ID-stack browser, diagnostics query command, IMUI `for_each_keyed`
-  duplicate-key proof, label-to-`test_id` inference, or table column identity deserves separate
-  follow-ons.
+- [ ] Decide whether a full ID-stack browser, IMUI `for_each_keyed` duplicate-key proof,
+  label-to-`test_id` inference, or table column identity deserves separate follow-ons.
 - [ ] Close or downgrade the lane to maintenance once the structured diagnostics slice is stable.

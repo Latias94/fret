@@ -2172,8 +2172,7 @@ fn evaluate_campaign_environment_requirements_against_attempt(
     let requirement_results = campaign
         .requires_environment
         .iter()
-        .cloned()
-        .map(|requirement| evaluate_campaign_environment_requirement(&requirement, &attempt))
+        .map(|requirement| evaluate_campaign_environment_requirement(requirement, &attempt))
         .collect();
     CampaignEnvironmentAdmissionEvaluation {
         attempt,

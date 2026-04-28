@@ -27,13 +27,18 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/M2_IDENTITY_WARNINGS_QUERY_2026-04-28.md"
     }
   ],
   "repro": {
-    "summary": "Use the runtime identity tests and the IMUI authoring proof to confirm duplicate keyed lists and unkeyed reorder warnings are captured as structured diagnostics.",
+    "summary": "Use the runtime identity tests, IMUI authoring proof, and fret-diag query tests to confirm duplicate keyed lists and unkeyed reorder warnings are captured and queryable as structured diagnostics.",
     "commands": [
       "cargo nextest run -p fret-ui --features diagnostics identity_diagnostics --no-fail-fast",
-      "cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast"
+      "cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast",
+      "cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast"
     ]
   },
   "gates": [
@@ -54,8 +59,24 @@
       "command": "cargo check -p fret-bootstrap --features ui-app-driver --jobs 1"
     },
     {
+      "name": "diag-identity-warnings-query",
+      "command": "cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast"
+    },
+    {
+      "name": "diag-check",
+      "command": "cargo check -p fret-diag --jobs 1"
+    },
+    {
+      "name": "diag-clippy",
+      "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
+    },
+    {
       "name": "format",
       "command": "cargo fmt --package fret-ui --package fret-imui --package fret-bootstrap --check"
+    },
+    {
+      "name": "diag-format",
+      "command": "cargo fmt --package fret-diag --check"
     },
     {
       "name": "workstream-catalog",
@@ -76,12 +97,18 @@
     "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
     "docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md",
     "docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md",
+    "docs/workstreams/imui-id-stack-diagnostics-v1/M2_IDENTITY_WARNINGS_QUERY_2026-04-28.md",
     "crates/fret-ui/src/elements/cx.rs",
     "crates/fret-ui/src/elements/runtime.rs",
     "crates/fret-ui/src/declarative/tests/identity.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
     "ecosystem/fret-imui/src/frontend.rs",
-    "ecosystem/fret-imui/src/tests/identity_diagnostics.rs"
+    "ecosystem/fret-imui/src/tests/identity_diagnostics.rs",
+    "crates/fret-diag/src/commands/query.rs",
+    "crates/fret-diag/src/cli/contracts/commands/query.rs",
+    "crates/fret-diag/src/cli/cutover.rs",
+    "crates/fret-diag/src/cli/contracts/mod.rs",
+    "crates/fret-diag/src/diag_campaign.rs"
   ],
   "adr_refs": [
     "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",

@@ -311,6 +311,16 @@ pub(crate) fn cmd_query(
             warmup_frames,
             stats_json,
         ),
+        "identity-warnings" | "identity_warnings" | "identity-warning" | "identity_warning" => {
+            cmd_query_identity_warnings(
+                &rest[1..],
+                workspace_root,
+                out_dir,
+                query_out,
+                warmup_frames,
+                stats_json,
+            )
+        }
         other => Err(format!("unknown query kind: {other}")),
     }
 }
@@ -330,6 +340,402 @@ fn read_bundle_artifact_json(path: &Path) -> Result<serde_json::Value, String> {
             e
         )
     })
+}
+
+fn parse_identity_warning_kind(s: &str) -> Option<&'static str> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "duplicate_keyed_list_item_key_hash" | "duplicate-keyed-list-item-key-hash" => {
+            Some("duplicate_keyed_list_item_key_hash")
+        }
+        "unkeyed_list_order_changed" | "unkeyed-list-order-changed" => {
+            Some("unkeyed_list_order_changed")
+        }
+        _ => None,
+    }
+}
+
+fn parse_u64_maybe_hex(s: &str, flag: &str) -> Result<u64, String> {
+    let s = s.trim();
+    if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+        return u64::from_str_radix(hex, 16).map_err(|_| {
+            format!("invalid value for {flag} (expected decimal u64 or 0x-prefixed hex)")
+        });
+    }
+    s.parse::<u64>()
+        .map_err(|_| format!("invalid value for {flag} (expected decimal u64 or 0x-prefixed hex)"))
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct IdentityWarningDedupKey {
+    window: u64,
+    kind: String,
+    frame_id: Option<u64>,
+    element: Option<u64>,
+    list_id: Option<u64>,
+    key_hash: Option<u64>,
+    first_index: Option<u64>,
+    second_index: Option<u64>,
+    previous_len: Option<u64>,
+    next_len: Option<u64>,
+}
+
+fn identity_warning_location_file(warning: &serde_json::Value) -> Option<&str> {
+    warning
+        .get("location")
+        .and_then(|v| v.get("file"))
+        .and_then(|v| v.as_str())
+}
+
+fn identity_warning_matches_filter(
+    warning: &serde_json::Value,
+    kind_filter: Option<&str>,
+    element_filter: Option<u64>,
+    list_id_filter: Option<u64>,
+    element_path_filter: Option<&str>,
+    file_filter: Option<&str>,
+) -> bool {
+    if let Some(want) = kind_filter
+        && warning.get("kind").and_then(|v| v.as_str()) != Some(want)
+    {
+        return false;
+    }
+    if let Some(want) = element_filter
+        && warning.get("element").and_then(|v| v.as_u64()) != Some(want)
+    {
+        return false;
+    }
+    if let Some(want) = list_id_filter
+        && warning.get("list_id").and_then(|v| v.as_u64()) != Some(want)
+    {
+        return false;
+    }
+    if let Some(want) = element_path_filter
+        && !warning
+            .get("element_path")
+            .and_then(|v| v.as_str())
+            .is_some_and(|path| path.contains(want))
+    {
+        return false;
+    }
+    if let Some(want) = file_filter
+        && !identity_warning_location_file(warning).is_some_and(|file| file.contains(want))
+    {
+        return false;
+    }
+    true
+}
+
+fn identity_warning_dedup_key(window: u64, warning: &serde_json::Value) -> IdentityWarningDedupKey {
+    IdentityWarningDedupKey {
+        window,
+        kind: warning
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string(),
+        frame_id: warning.get("frame_id").and_then(|v| v.as_u64()),
+        element: warning.get("element").and_then(|v| v.as_u64()),
+        list_id: warning.get("list_id").and_then(|v| v.as_u64()),
+        key_hash: warning.get("key_hash").and_then(|v| v.as_u64()),
+        first_index: warning.get("first_index").and_then(|v| v.as_u64()),
+        second_index: warning.get("second_index").and_then(|v| v.as_u64()),
+        previous_len: warning.get("previous_len").and_then(|v| v.as_u64()),
+        next_len: warning.get("next_len").and_then(|v| v.as_u64()),
+    }
+}
+
+fn identity_warning_row(
+    window: u64,
+    snapshot: &serde_json::Value,
+    warning: &serde_json::Value,
+) -> serde_json::Value {
+    serde_json::json!({
+        "window": window,
+        "tick_id": snapshot.get("tick_id").and_then(|v| v.as_u64()),
+        "snapshot_frame_id": crate::json_bundle::snapshot_frame_id(snapshot),
+        "window_snapshot_seq": crate::json_bundle::snapshot_window_snapshot_seq(snapshot),
+        "timestamp_unix_ms": snapshot.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+        "kind": warning.get("kind").and_then(|v| v.as_str()),
+        "frame_id": warning.get("frame_id").and_then(|v| v.as_u64()),
+        "element": warning.get("element").and_then(|v| v.as_u64()),
+        "element_path": warning.get("element_path").and_then(|v| v.as_str()),
+        "list_id": warning.get("list_id").and_then(|v| v.as_u64()),
+        "key_hash": warning.get("key_hash").and_then(|v| v.as_u64()),
+        "first_index": warning.get("first_index").and_then(|v| v.as_u64()),
+        "second_index": warning.get("second_index").and_then(|v| v.as_u64()),
+        "previous_len": warning.get("previous_len").and_then(|v| v.as_u64()),
+        "next_len": warning.get("next_len").and_then(|v| v.as_u64()),
+        "location": warning.get("location").cloned().unwrap_or(serde_json::Value::Null),
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_query_identity_warnings(
+    rest: &[String],
+    workspace_root: &Path,
+    out_dir: &Path,
+    query_out: Option<PathBuf>,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    let mut top: usize = 50;
+    let mut window_filter: Option<u64> = None;
+    let mut kind_filter: Option<String> = None;
+    let mut element_filter: Option<u64> = None;
+    let mut list_id_filter: Option<u64> = None;
+    let mut element_path_filter: Option<String> = None;
+    let mut file_filter: Option<String> = None;
+    let mut include_timeline = false;
+
+    let mut positionals: Vec<String> = Vec::new();
+    let mut i: usize = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--top" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --top".to_string());
+                };
+                top = v
+                    .parse::<usize>()
+                    .map_err(|_| "invalid value for --top (expected usize)".to_string())?;
+                i += 1;
+            }
+            "--window" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --window".to_string());
+                };
+                window_filter = Some(parse_u64_maybe_hex(&v, "--window")?);
+                i += 1;
+            }
+            "--kind" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --kind".to_string());
+                };
+                kind_filter = Some(parse_identity_warning_kind(&v).ok_or_else(|| {
+                    "invalid value for --kind (expected duplicate_keyed_list_item_key_hash|unkeyed_list_order_changed)".to_string()
+                })?.to_string());
+                i += 1;
+            }
+            "--element" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --element".to_string());
+                };
+                element_filter = Some(parse_u64_maybe_hex(&v, "--element")?);
+                i += 1;
+            }
+            "--list-id" | "--list_id" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --list-id".to_string());
+                };
+                list_id_filter = Some(parse_u64_maybe_hex(&v, "--list-id")?);
+                i += 1;
+            }
+            "--element-path" | "--element_path" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --element-path".to_string());
+                };
+                element_path_filter = Some(v);
+                i += 1;
+            }
+            "--file" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --file".to_string());
+                };
+                file_filter = Some(v);
+                i += 1;
+            }
+            "--timeline" => {
+                include_timeline = true;
+                i += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag for query identity-warnings: {other}"));
+            }
+            other => {
+                positionals.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    if positionals.len() > 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
+    }
+
+    let bundle_path = match positionals.as_slice() {
+        [bundle_src] => {
+            let bundle_src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
+            let resolved = resolve::resolve_bundle_ref(&bundle_src)?;
+            resolved.bundle_artifact
+        }
+        [] => resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?,
+        _ => unreachable!(),
+    };
+
+    let bundle = read_bundle_artifact_json(&bundle_path)?;
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    let mut encounter_seq = 0u64;
+    let mut results_timeline: Vec<serde_json::Value> = Vec::new();
+    let mut latest_by_warning: HashMap<IdentityWarningDedupKey, (u64, serde_json::Value)> =
+        HashMap::new();
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some(filter) = window_filter
+            && filter != window_id
+        {
+            continue;
+        }
+
+        let snaps_empty = Vec::new();
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&snaps_empty);
+
+        for s in snaps {
+            let snapshot_frame_id = crate::json_bundle::snapshot_frame_id(s);
+            if snapshot_frame_id < warmup_frames {
+                continue;
+            }
+
+            let warnings = s
+                .get("debug")
+                .and_then(|v| v.get("element_runtime"))
+                .and_then(|v| v.get("identity_warnings"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+
+            for warning in warnings {
+                if !identity_warning_matches_filter(
+                    warning,
+                    kind_filter.as_deref(),
+                    element_filter,
+                    list_id_filter,
+                    element_path_filter.as_deref(),
+                    file_filter.as_deref(),
+                ) {
+                    continue;
+                }
+
+                let row = identity_warning_row(window_id, s, warning);
+                encounter_seq = encounter_seq.saturating_add(1);
+                if include_timeline {
+                    results_timeline.push(row);
+                } else {
+                    latest_by_warning.insert(
+                        identity_warning_dedup_key(window_id, warning),
+                        (encounter_seq, row),
+                    );
+                }
+            }
+        }
+    }
+
+    let mut results: Vec<serde_json::Value> = if include_timeline {
+        results_timeline
+    } else {
+        let mut rows: Vec<(u64, serde_json::Value)> = latest_by_warning.into_values().collect();
+        rows.sort_by(|a, b| b.0.cmp(&a.0));
+        rows.into_iter().map(|(_, row)| row).collect()
+    };
+    if top > 0 && results.len() > top {
+        results.truncate(top);
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "kind": "query.identity_warnings",
+        "bundle": bundle_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "top": top,
+        "timeline": include_timeline,
+        "filters": {
+            "window": window_filter,
+            "kind": kind_filter,
+            "element": element_filter,
+            "list_id": list_id_filter,
+            "element_path": element_path_filter,
+            "file": file_filter,
+        },
+        "results": results,
+    });
+
+    if let Some(out) = query_out.map(|p| crate::resolve_path(workspace_root, p)) {
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+        std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+        if !stats_json {
+            println!("{}", out.display());
+            return Ok(());
+        }
+    }
+
+    if stats_json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+        );
+        return Ok(());
+    }
+
+    let results = payload
+        .get("results")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if results.is_empty() {
+        println!("(no matching identity warnings)");
+        return Ok(());
+    }
+
+    for r in results {
+        let window = r.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let frame_id = r.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snapshot_frame_id = r
+            .get("snapshot_frame_id")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let window_snapshot_seq = r.get("window_snapshot_seq").and_then(|v| v.as_u64());
+        let kind = r.get("kind").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let element = r.get("element").and_then(|v| v.as_u64()).unwrap_or(0);
+        let list_id = r.get("list_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let location = r.get("location").and_then(|v| v.as_object());
+        let file = location
+            .and_then(|v| v.get("file"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        let line = location
+            .and_then(|v| v.get("line"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let column = location
+            .and_then(|v| v.get("column"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        println!(
+            "--window {window} (frame_id={frame_id} snapshot_frame_id={snapshot_frame_id} snapshot_seq={window_snapshot_seq:?} kind={kind} element={element} list_id={list_id} file={file}:{line}:{column})"
+        );
+    }
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2078,6 +2484,209 @@ mod tests {
         let bytes = serde_json::to_vec(&bundle).expect("serialize bundle.schema2.json");
         std::fs::write(&path, bytes).expect("write bundle.schema2.json");
         path
+    }
+
+    fn write_bundle_schema2_with_identity_warnings(dir: &Path) -> PathBuf {
+        let warning_a = serde_json::json!({
+            "kind": "unkeyed_list_order_changed",
+            "frame_id": 20u64,
+            "element": 123u64,
+            "element_path": "root.panel.file.rs:1:1[key=0x1] (0x7b)",
+            "list_id": 7u64,
+            "previous_len": 3u64,
+            "next_len": 3u64,
+            "location": {
+                "file": "src/view.rs",
+                "line": 11u64,
+                "column": 9u64
+            }
+        });
+        let warning_b = serde_json::json!({
+            "kind": "duplicate_keyed_list_item_key_hash",
+            "frame_id": 21u64,
+            "element": 456u64,
+            "element_path": "root.panel.other.rs:2:1[key=0x2] (0x1c8)",
+            "list_id": 42u64,
+            "key_hash": 9001u64,
+            "first_index": 1u64,
+            "second_index": 2u64,
+            "location": {
+                "file": "src/list.rs",
+                "line": 31u64,
+                "column": 13u64
+            }
+        });
+
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1u64,
+                "snapshots": [
+                    {
+                        "tick_id": 10u64,
+                        "frame_id": 20u64,
+                        "window_snapshot_seq": 30u64,
+                        "timestamp_unix_ms": 40u64,
+                        "debug": {
+                            "element_runtime": {
+                                "identity_warnings": [warning_a.clone(), warning_b]
+                            }
+                        }
+                    },
+                    {
+                        "tick_id": 11u64,
+                        "frame_id": 22u64,
+                        "window_snapshot_seq": 31u64,
+                        "timestamp_unix_ms": 41u64,
+                        "debug": {
+                            "element_runtime": {
+                                "identity_warnings": [warning_a]
+                            }
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let path = dir.join("bundle.schema2.json");
+        let bytes = serde_json::to_vec(&bundle).expect("serialize bundle.schema2.json");
+        std::fs::write(&path, bytes).expect("write bundle.schema2.json");
+        path
+    }
+
+    #[test]
+    fn query_identity_warnings_filters_by_kind_and_writes_json() {
+        let out_dir = make_temp_dir("fret-diag-query-identity-warnings-kind");
+        let bundle = write_bundle_schema2_with_identity_warnings(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_identity_warnings(
+            &[
+                bundle.display().to_string(),
+                "--kind".to_string(),
+                "unkeyed-list-order-changed".to_string(),
+                "--top".to_string(),
+                "10".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].get("kind").and_then(|v| v.as_str()),
+            Some("unkeyed_list_order_changed")
+        );
+        assert_eq!(
+            results[0]
+                .get("window_snapshot_seq")
+                .and_then(|v| v.as_u64()),
+            Some(31)
+        );
+        assert_eq!(
+            v.get("filters")
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str()),
+            Some("unkeyed_list_order_changed")
+        );
+        assert_eq!(v.get("timeline").and_then(|v| v.as_bool()), Some(false));
+    }
+
+    #[test]
+    fn query_identity_warnings_filters_by_file_and_hex_list_id() {
+        let out_dir = make_temp_dir("fret-diag-query-identity-warnings-file");
+        let bundle = write_bundle_schema2_with_identity_warnings(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_identity_warnings(
+            &[
+                bundle.display().to_string(),
+                "--list-id".to_string(),
+                "0x2a".to_string(),
+                "--file".to_string(),
+                "list.rs".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].get("kind").and_then(|v| v.as_str()),
+            Some("duplicate_keyed_list_item_key_hash")
+        );
+        assert_eq!(
+            results[0].get("key_hash").and_then(|v| v.as_u64()),
+            Some(9001)
+        );
+        assert_eq!(
+            v.get("filters")
+                .and_then(|v| v.get("list_id"))
+                .and_then(|v| v.as_u64()),
+            Some(42)
+        );
+    }
+
+    #[test]
+    fn query_identity_warnings_timeline_keeps_duplicate_snapshot_observations() {
+        let out_dir = make_temp_dir("fret-diag-query-identity-warnings-timeline");
+        let bundle = write_bundle_schema2_with_identity_warnings(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_identity_warnings(
+            &[
+                bundle.display().to_string(),
+                "--kind".to_string(),
+                "unkeyed_list_order_changed".to_string(),
+                "--timeline".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results[0].get("snapshot_frame_id").and_then(|v| v.as_u64()),
+            Some(20)
+        );
+        assert_eq!(
+            results[1].get("snapshot_frame_id").and_then(|v| v.as_u64()),
+            Some(22)
+        );
+        assert_eq!(v.get("timeline").and_then(|v| v.as_bool()), Some(true));
     }
 
     #[test]

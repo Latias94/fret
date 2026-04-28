@@ -28,7 +28,19 @@ Result:
 - `ui.for_each_unkeyed` reorder reaches the runtime structured warning,
 - and the proof explains that dynamic collections should move to `ui.for_each_keyed` / `ui.id`.
 
-## M3 - Follow-on Decision
+## M3 - Diagnostics Query Surface
+
+Result:
+
+- `fretboard diag query identity-warnings` reads existing schema2 bundle snapshots and extracts
+  `debug.element_runtime.identity_warnings`,
+- the query supports bounded filters for kind, window, element, list id, element path, and source
+  file,
+- default output de-duplicates repeated snapshot observations while `--timeline` preserves the full
+  snapshot history,
+- and the surface is covered by handler, clap contract, and cutover conversion tests.
+
+## M4 - Follow-on Decision
 
 Exit criteria:
 
@@ -39,7 +51,6 @@ Exit criteria:
 Current deferred candidates:
 
 - full interactive ID-stack browser,
-- `fretboard diag query` support for identity warnings,
 - IMUI `for_each_keyed` duplicate-key authoring proof,
 - label-to-`test_id` inference,
 - table column identity.

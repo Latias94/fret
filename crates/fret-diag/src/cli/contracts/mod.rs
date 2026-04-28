@@ -2153,6 +2153,60 @@ mod tests {
     }
 
     #[test]
+    fn query_identity_warnings_contract_captures_filters() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "query",
+            "identity-warnings",
+            "target/fret-diag/demo",
+            "--warmup-frames",
+            "5",
+            "--window",
+            "4",
+            "--top",
+            "16",
+            "--kind",
+            "unkeyed-list-order-changed",
+            "--element",
+            "123",
+            "--list-id",
+            "0x2a",
+            "--element-path",
+            "root.panel",
+            "--file",
+            "src/view.rs",
+            "--timeline",
+            "--json",
+            "--out",
+            "target/query.identity.json",
+        ])
+        .expect("query identity-warnings should parse");
+
+        let DiagCommandContract::Query(args) = cli.command else {
+            panic!("expected query command");
+        };
+        let QuerySubcommandArgs::IdentityWarnings(identity) = args.command else {
+            panic!("expected query identity-warnings subcommand");
+        };
+
+        assert_eq!(identity.source.as_deref(), Some("target/fret-diag/demo"));
+        assert_eq!(identity.warmup.warmup_frames, 5);
+        assert_eq!(identity.window, Some(4));
+        assert_eq!(identity.top, 16);
+        assert_eq!(identity.kind.as_deref(), Some("unkeyed_list_order_changed"));
+        assert_eq!(identity.element, Some(123));
+        assert_eq!(identity.list_id, Some(42));
+        assert_eq!(identity.element_path.as_deref(), Some("root.panel"));
+        assert_eq!(identity.file.as_deref(), Some("src/view.rs"));
+        assert!(identity.timeline);
+        assert!(identity.output.json);
+        assert_eq!(
+            identity.output.out,
+            Some(PathBuf::from("target/query.identity.json"))
+        );
+    }
+
+    #[test]
     fn slice_contract_captures_snapshot_selectors_and_limits() {
         let cli = try_parse_contract([
             "fretboard",
