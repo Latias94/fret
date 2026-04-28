@@ -13,7 +13,9 @@ use std::time::Duration;
 
 use fret_core::{KeyCode, NodeId, Px, TextStyle};
 use fret_runtime::{CommandId, Model, TimerToken};
-use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnActivate, UiFocusActionHost};
+use fret_ui::action::{
+    ActionCx, ActivateReason, KeyDownCx, OnActivate, UiActionHost, UiFocusActionHost,
+};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -70,6 +72,87 @@ pub type TextFieldOutcome = EditSessionOutcome;
 pub type OnTextFieldOutcome =
     Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TextFieldOutcome) + 'static>;
 
+#[derive(Clone, Default)]
+pub struct TextFieldDraftController {
+    binding: Arc<Mutex<Option<BufferedTextFieldDraftBinding>>>,
+}
+
+#[derive(Clone)]
+struct BufferedTextFieldDraftBinding {
+    model: Model<String>,
+    draft: Model<String>,
+    buffered_state: Arc<Mutex<BufferedTextFieldState>>,
+    submit_command: Option<CommandId>,
+}
+
+impl TextFieldDraftController {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn is_bound(&self) -> bool {
+        self.binding
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .is_some()
+    }
+
+    pub fn commit(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool {
+        let binding = self
+            .binding
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let Some(binding) = binding else {
+            return false;
+        };
+
+        commit_buffered_text_field_from_controller(
+            host,
+            action_cx,
+            &binding.model,
+            &binding.draft,
+            &binding.buffered_state,
+            binding.submit_command.as_ref(),
+        )
+    }
+
+    pub fn discard(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool {
+        let binding = self
+            .binding
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let Some(binding) = binding else {
+            return false;
+        };
+
+        cancel_buffered_text_field_from_controller(
+            host,
+            action_cx,
+            &binding.model,
+            &binding.draft,
+            &binding.buffered_state,
+        )
+    }
+
+    fn bind(&self, binding: BufferedTextFieldDraftBinding) {
+        *self.binding.lock().unwrap_or_else(|e| e.into_inner()) = Some(binding);
+    }
+
+    fn unbind(&self) {
+        *self.binding.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+}
+
+impl std::fmt::Debug for TextFieldDraftController {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextFieldDraftController")
+            .field("is_bound", &self.is_bound())
+            .finish()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TextFieldOptions {
     pub layout: LayoutStyle,
@@ -109,6 +192,12 @@ pub struct TextFieldOptions {
     pub buffered: bool,
     /// How a buffered field should finish its local draft when focus leaves the editing surface.
     pub blur_behavior: TextFieldBlurBehavior,
+    /// Opaque operation handle for app-authored commit/discard controls.
+    ///
+    /// This intentionally does not expose the internal draft model. Use it only when a buffered
+    /// field with preserved draft behavior needs explicit external actions in the same editor
+    /// surface.
+    pub draft_controller: Option<TextFieldDraftController>,
     /// Optional submit command for Enter on single-line text inputs.
     ///
     /// For buffered fields this runs after the local draft has been committed into the bound
@@ -158,6 +247,7 @@ impl Default for TextFieldOptions {
             mode: TextFieldMode::PlainText,
             buffered: true,
             blur_behavior: TextFieldBlurBehavior::Commit,
+            draft_controller: None,
             submit_command: None,
             assistive_semantics: TextFieldAssistiveSemantics::default(),
             selection_behavior: EditorTextSelectionBehavior::PreserveSelection,
@@ -299,6 +389,7 @@ impl TextField {
         let mode = options.mode;
         let buffered = options.buffered;
         let blur_behavior = options.blur_behavior;
+        let draft_controller = options.draft_controller.clone();
         let submit_command = options.submit_command.clone();
         let assistive_semantics = options.assistive_semantics;
         let selection_behavior = options.selection_behavior;
@@ -329,9 +420,13 @@ impl TextField {
         let draft_for_trailing = draft.clone();
         let buffered_state_for_input = buffered_state.clone();
         let buffered_state_for_trailing = buffered_state.clone();
+        let draft_controller_for_input = draft_controller.clone();
         let current_text_for_input = current_text.clone();
         let on_outcome_for_input = on_outcome.clone();
         let submit_command_for_input = submit_command.clone();
+        if !buffered && let Some(controller) = draft_controller.as_ref() {
+            controller.unbind();
+        }
 
         let field = editor_joined_input_frame(
             cx,
@@ -405,6 +500,14 @@ impl TextField {
                             buffered_state,
                             blur_behavior,
                         );
+                        if let Some(controller) = draft_controller_for_input.as_ref() {
+                            controller.bind(BufferedTextFieldDraftBinding {
+                                model: model_for_input.clone(),
+                                draft: draft.clone(),
+                                buffered_state: buffered_state.clone(),
+                                submit_command: None,
+                            });
+                        }
 
                         let model_for_key = model_for_input.clone();
                         let draft_for_key = draft.clone();
@@ -548,6 +651,14 @@ impl TextField {
                             buffered_state,
                             blur_behavior,
                         );
+                        if let Some(controller) = draft_controller_for_input.as_ref() {
+                            controller.bind(BufferedTextFieldDraftBinding {
+                                model: model_for_input.clone(),
+                                draft: draft.clone(),
+                                buffered_state: buffered_state.clone(),
+                                submit_command: submit_command_for_input.clone(),
+                            });
+                        }
 
                         let model_for_key = model_for_input.clone();
                         let draft_for_key = draft.clone();
@@ -864,6 +975,36 @@ fn commit_buffered_text_field(
     true
 }
 
+fn commit_buffered_text_field_from_controller(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    model: &Model<String>,
+    draft: &Model<String>,
+    buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
+    submit_command: Option<&CommandId>,
+) -> bool {
+    let next = host.models_mut().get_cloned(draft).unwrap_or_default();
+    {
+        let mut state = buffered_state.lock().unwrap_or_else(|e| e.into_inner());
+        clear_buffered_text_field_pending_blur(&mut state);
+        let _ = state.session.commit();
+    }
+
+    {
+        let next_for_update = next.clone();
+        let _ = host.models_mut().update(model, |text| {
+            if text.as_str() != next_for_update.as_str() {
+                *text = next_for_update.clone();
+            }
+        });
+    }
+    if let Some(command) = submit_command {
+        host.dispatch_command(Some(action_cx.window), command.clone());
+    }
+    host.request_redraw(action_cx.window);
+    true
+}
+
 fn cancel_buffered_text_field(
     host: &mut dyn UiFocusActionHost,
     action_cx: ActionCx,
@@ -905,16 +1046,131 @@ fn cancel_buffered_text_field(
     true
 }
 
+fn cancel_buffered_text_field_from_controller(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    model: &Model<String>,
+    draft: &Model<String>,
+    buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
+) -> bool {
+    let current_model = host.models_mut().get_cloned(model).unwrap_or_default();
+    let revert = {
+        let mut state = buffered_state.lock().unwrap_or_else(|e| e.into_inner());
+        clear_buffered_text_field_pending_blur(&mut state);
+        state
+            .session
+            .cancel()
+            .unwrap_or_else(|| current_model.clone())
+    };
+
+    {
+        let revert_for_draft = revert.clone();
+        let _ = host.models_mut().update(draft, |text| {
+            if text.as_str() != revert_for_draft.as_str() {
+                *text = revert_for_draft.clone();
+            }
+        });
+    }
+    let _ = host.models_mut().update(model, |text| {
+        if text.as_str() != revert.as_str() {
+            *text = revert.clone();
+        }
+    });
+    host.request_redraw(action_cx.window);
+    true
+}
+
 fn is_multiline_buffered_commit_shortcut(down: KeyDownCx) -> bool {
     (down.modifiers.ctrl || down.modifiers.meta) && !down.modifiers.alt && !down.modifiers.alt_gr
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::{
-        BufferedTextFieldFocusPlan, BufferedTextFieldPendingBlurPlan, TextFieldBlurBehavior,
-        TextFieldOptions, plan_buffered_text_field_focus_transition,
+        BufferedTextFieldDraftBinding, BufferedTextFieldFocusPlan,
+        BufferedTextFieldPendingBlurPlan, BufferedTextFieldState, TextFieldBlurBehavior,
+        TextFieldDraftController, TextFieldOptions, plan_buffered_text_field_focus_transition,
     };
+    use fret_core::AppWindowId;
+    use fret_runtime::{Effect, ModelStore, TimerToken};
+    use fret_ui::GlobalElementId;
+    use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
+
+    #[derive(Default)]
+    struct FakeHost {
+        models: ModelStore,
+        redraws: Vec<AppWindowId>,
+        effects: Vec<Effect>,
+        next_timer: u64,
+    }
+
+    impl UiActionHost for FakeHost {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraws.push(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            let current = self.next_timer;
+            self.next_timer = self.next_timer.saturating_add(1);
+            TimerToken(current)
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            fret_runtime::ClipboardToken::default()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            fret_runtime::ShareSheetToken::default()
+        }
+    }
+
+    impl UiFocusActionHost for FakeHost {
+        fn request_focus(&mut self, _target: GlobalElementId) {}
+    }
+
+    fn action_cx() -> ActionCx {
+        ActionCx {
+            window: AppWindowId::default(),
+            target: GlobalElementId(1),
+        }
+    }
+
+    fn bind_test_controller(
+        host: &mut FakeHost,
+        controller: &TextFieldDraftController,
+    ) -> (
+        fret_runtime::Model<String>,
+        fret_runtime::Model<String>,
+        Arc<Mutex<BufferedTextFieldState>>,
+    ) {
+        let model = host.models.insert(String::from("before"));
+        let draft = host.models.insert(String::from("after"));
+        let buffered_state = Arc::new(Mutex::new(BufferedTextFieldState::default()));
+        buffered_state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .session
+            .begin(String::from("before"));
+
+        controller.bind(BufferedTextFieldDraftBinding {
+            model: model.clone(),
+            draft: draft.clone(),
+            buffered_state: buffered_state.clone(),
+            submit_command: None,
+        });
+
+        (model, draft, buffered_state)
+    }
 
     #[test]
     fn focus_begin_starts_session_and_clears_pending_blur() {
@@ -1045,5 +1301,56 @@ mod tests {
     #[test]
     fn text_field_defaults_to_stable_line_boxes() {
         assert!(TextFieldOptions::default().stable_line_boxes);
+    }
+
+    #[test]
+    fn draft_controller_commit_uses_bound_buffered_session() {
+        let mut host = FakeHost::default();
+        let controller = TextFieldDraftController::new();
+        let (model, _draft, buffered_state) = bind_test_controller(&mut host, &controller);
+
+        assert!(controller.is_bound());
+        assert!(controller.commit(&mut host, action_cx()));
+
+        assert_eq!(host.models.get_cloned(&model).as_deref(), Some("after"));
+        assert!(
+            !buffered_state
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .session
+                .is_active()
+        );
+        assert_eq!(host.redraws, vec![AppWindowId::default()]);
+    }
+
+    #[test]
+    fn draft_controller_discard_reverts_bound_buffered_session() {
+        let mut host = FakeHost::default();
+        let controller = TextFieldDraftController::new();
+        let (model, draft, buffered_state) = bind_test_controller(&mut host, &controller);
+
+        assert!(controller.discard(&mut host, action_cx()));
+
+        assert_eq!(host.models.get_cloned(&model).as_deref(), Some("before"));
+        assert_eq!(host.models.get_cloned(&draft).as_deref(), Some("before"));
+        assert!(
+            !buffered_state
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .session
+                .is_active()
+        );
+        assert_eq!(host.redraws, vec![AppWindowId::default()]);
+    }
+
+    #[test]
+    fn draft_controller_unbound_actions_are_noops() {
+        let mut host = FakeHost::default();
+        let controller = TextFieldDraftController::new();
+
+        assert!(!controller.is_bound());
+        assert!(!controller.commit(&mut host, action_cx()));
+        assert!(!controller.discard(&mut host, action_cx()));
+        assert!(host.redraws.is_empty());
     }
 }

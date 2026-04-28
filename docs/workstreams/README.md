@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 276
+- Dedicated directories: 277
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -416,6 +416,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/EVIDENCE_AND_GATES.md`
   - Scope: records the closed no-public-API verdict for preserved `TextField` draft-buffer access
     until a future API-proof lane supplies stronger evidence.
+
+- Active narrow P1 TextField draft-controller API proof:
+  - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/TODO.md`
+  - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md`
+  - Scope: proves the smallest opaque `fret-ui-editor::TextField` draft controller needed by
+    `editor_notes_demo.rs` for explicit commit/discard while keeping draft models, runtime
+    contracts, and generic IMUI helper APIs closed.
 
 - Closed narrow P0 menu/tab policy-depth closeout record:
   - `docs/workstreams/imui-menu-tab-policy-depth-v1/WORKSTREAM.json`
@@ -978,6 +988,7 @@ Rule:
 - `docs/workstreams/imui-next-gap-audit-v1/` — first n/a, latest n/a, 6 markdown docs (closed decision record recommending `imui-editor-notes-draft-actions-v1` as the next locally testable IMUI follow-on)
 - `docs/workstreams/imui-editor-notes-draft-actions-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for app-owned editor-notes draft action affordances after the next-gap audit)
 - `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/` — first n/a, latest n/a, 6 markdown docs (closed no-public-API verdict for preserved TextField draft-buffer contracts)
+- `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/` — first n/a, latest n/a, 4 markdown docs (active narrow proof for an opaque TextField draft controller over preserved draft commit/discard)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)

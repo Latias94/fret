@@ -10,8 +10,8 @@ use fret_ui_editor::composites::{
     PropertyRow,
 };
 use fret_ui_editor::controls::{
-    EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldOptions,
-    TextFieldOutcome,
+    EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldDraftController,
+    TextFieldOptions, TextFieldOutcome,
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};
@@ -40,8 +40,8 @@ const TEST_ID_NOTES: &str = "editor-notes-demo.inspector.notes";
 const TEST_ID_NOTES_COMMITTED: &str = "editor-notes-demo.inspector.notes.committed";
 const TEST_ID_NOTES_OUTCOME: &str = "editor-notes-demo.inspector.notes.outcome";
 const TEST_ID_NOTES_DRAFT_STATUS: &str = "editor-notes-demo.inspector.notes.draft-status";
-const TEST_ID_DRAFT_READY_COMMAND: &str = "editor-notes-demo.inspector.notes.mark-draft-ready";
-const TEST_ID_DRAFT_CLEAR_COMMAND: &str = "editor-notes-demo.inspector.notes.clear-draft-marker";
+const TEST_ID_DRAFT_COMMIT_COMMAND: &str = "editor-notes-demo.inspector.notes.commit-draft";
+const TEST_ID_DRAFT_DISCARD_COMMAND: &str = "editor-notes-demo.inspector.notes.discard-draft";
 const TEST_ID_SUMMARY_COMMAND: &str = "editor-notes-demo.inspector.summary-command";
 const TEST_ID_SUMMARY_STATUS: &str = "editor-notes-demo.inspector.summary-status";
 
@@ -263,7 +263,7 @@ fn editor_asset_summary_command_status(asset: &EditorAssetState) -> String {
 }
 
 fn editor_notes_draft_action_status(asset: &EditorAssetState, action: &str) -> String {
-    format!("{action}: {} · local inspector state only", asset.title)
+    format!("{action}: {} · TextField draft controller", asset.title)
 }
 
 fn selection_button<'a, Cx>(
@@ -550,9 +550,17 @@ where
     let notes_outcome_model = asset.notes_outcome_model.clone();
     let summary_status_model = asset.summary_status_model.clone();
     let summary_status_next = editor_asset_summary_command_status(&asset);
-    let draft_ready_status = editor_notes_draft_action_status(&asset, "Draft marked ready");
-    let draft_clear_status = editor_notes_draft_action_status(&asset, "Draft marker cleared");
+    let draft_commit_status = editor_notes_draft_action_status(&asset, "Draft committed");
+    let draft_discard_status = editor_notes_draft_action_status(&asset, "Draft discarded");
     let draft_status_label = editor_notes_draft_status_label(&outcome_label, &committed_label);
+    let draft_controller = cx.elements().keyed_slot_state(
+        (
+            "editor-notes-demo.notes.draft-controller",
+            asset.notes_id_source.clone(),
+        ),
+        TextFieldDraftController::new,
+        |controller| controller.clone(),
+    );
 
     InspectorPanel::new(None)
         .options(InspectorPanelOptions {
@@ -648,6 +656,7 @@ where
                                                 stable_line_boxes: true,
                                                 min_height: Some(Px(120.0)),
                                                 blur_behavior: TextFieldBlurBehavior::PreserveDraft,
+                                                draft_controller: Some(draft_controller.clone()),
                                                 test_id: Some(Arc::from(TEST_ID_NOTES)),
                                                 ..Default::default()
                                             })
@@ -697,7 +706,7 @@ where
                                             ui::h_flex(|cx| {
                                                 ui::children![
                                                     cx;
-                                                    shadcn::Button::new("Mark draft ready")
+                                                    shadcn::Button::new("Commit draft")
                                                         .variant(shadcn::ButtonVariant::Secondary)
                                                         .size(shadcn::ButtonSize::Sm)
                                                         .on_activate(fret_ui_kit::on_activate({
@@ -705,32 +714,41 @@ where
                                                                 notes_outcome_model.clone();
                                                             let summary_status_model =
                                                                 summary_status_model.clone();
-                                                            let draft_ready_status =
-                                                                draft_ready_status.clone();
+                                                            let draft_commit_status =
+                                                                draft_commit_status.clone();
+                                                            let draft_controller =
+                                                                draft_controller.clone();
                                                             move |host, action_cx, _reason| {
-                                                                let _ = host.models_mut().update(
-                                                                    &notes_outcome_model,
-                                                                    |text: &mut String| {
-                                                                        text.clear();
-                                                                        text.push_str(
-                                                                            "Draft marked ready",
-                                                                        );
-                                                                    },
-                                                                );
-                                                                let _ = host.models_mut().update(
-                                                                    &summary_status_model,
-                                                                    |text: &mut String| {
-                                                                        *text =
-                                                                            draft_ready_status.clone();
-                                                                    },
-                                                                );
-                                                                host.request_redraw(action_cx.window);
+                                                                if draft_controller
+                                                                    .commit(host, action_cx)
+                                                                {
+                                                                    let _ = host.models_mut().update(
+                                                                        &notes_outcome_model,
+                                                                        |text: &mut String| {
+                                                                            text.clear();
+                                                                            text.push_str(
+                                                                                "Committed",
+                                                                            );
+                                                                        },
+                                                                    );
+                                                                    let _ = host.models_mut().update(
+                                                                        &summary_status_model,
+                                                                        |text: &mut String| {
+                                                                            *text =
+                                                                                draft_commit_status
+                                                                                    .clone();
+                                                                        },
+                                                                    );
+                                                                    host.request_redraw(
+                                                                        action_cx.window,
+                                                                    );
+                                                                }
                                                             }
                                                         }))
-                                                        .test_id(TEST_ID_DRAFT_READY_COMMAND)
+                                                        .test_id(TEST_ID_DRAFT_COMMIT_COMMAND)
                                                         .ui()
                                                         .into_element_in(cx),
-                                                    shadcn::Button::new("Clear draft marker")
+                                                    shadcn::Button::new("Discard draft")
                                                         .variant(shadcn::ButtonVariant::Ghost)
                                                         .size(shadcn::ButtonSize::Sm)
                                                         .on_activate(fret_ui_kit::on_activate({
@@ -738,29 +756,38 @@ where
                                                                 notes_outcome_model.clone();
                                                             let summary_status_model =
                                                                 summary_status_model.clone();
-                                                            let draft_clear_status =
-                                                                draft_clear_status.clone();
+                                                            let draft_discard_status =
+                                                                draft_discard_status.clone();
+                                                            let draft_controller =
+                                                                draft_controller.clone();
                                                             move |host, action_cx, _reason| {
-                                                                let _ = host.models_mut().update(
-                                                                    &notes_outcome_model,
-                                                                    |text: &mut String| {
-                                                                        text.clear();
-                                                                        text.push_str(
-                                                                            "Draft marker cleared",
-                                                                        );
-                                                                    },
-                                                                );
-                                                                let _ = host.models_mut().update(
-                                                                    &summary_status_model,
-                                                                    |text: &mut String| {
-                                                                        *text =
-                                                                            draft_clear_status.clone();
-                                                                    },
-                                                                );
-                                                                host.request_redraw(action_cx.window);
+                                                                if draft_controller
+                                                                    .discard(host, action_cx)
+                                                                {
+                                                                    let _ = host.models_mut().update(
+                                                                        &notes_outcome_model,
+                                                                        |text: &mut String| {
+                                                                            text.clear();
+                                                                            text.push_str(
+                                                                                "Canceled",
+                                                                            );
+                                                                        },
+                                                                    );
+                                                                    let _ = host.models_mut().update(
+                                                                        &summary_status_model,
+                                                                        |text: &mut String| {
+                                                                            *text =
+                                                                                draft_discard_status
+                                                                                    .clone();
+                                                                        },
+                                                                    );
+                                                                    host.request_redraw(
+                                                                        action_cx.window,
+                                                                    );
+                                                                }
                                                             }
                                                         }))
-                                                        .test_id(TEST_ID_DRAFT_CLEAR_COMMAND)
+                                                        .test_id(TEST_ID_DRAFT_DISCARD_COMMAND)
                                                         .ui()
                                                         .into_element_in(cx),
                                                 ]

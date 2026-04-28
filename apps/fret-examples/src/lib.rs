@@ -622,6 +622,21 @@ mod authoring_surface_policy_tests {
     const IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json"
     );
+    const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_DESIGN: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/DESIGN.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_TODO: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/TODO.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_MILESTONES: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/MILESTONES.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_EVIDENCE: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md"
+    );
+    const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_WORKSTREAM: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json"
+    );
     const IMUI_TEXT_FIELD_RS: &str =
         include_str!("../../../ecosystem/fret-ui-editor/src/controls/text_field.rs");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
@@ -5559,21 +5574,15 @@ mod authoring_surface_policy_tests {
         }
 
         for marker in [
-            "const TEST_ID_DRAFT_READY_COMMAND: &str = \"editor-notes-demo.inspector.notes.mark-draft-ready\";",
-            "const TEST_ID_DRAFT_CLEAR_COMMAND: &str = \"editor-notes-demo.inspector.notes.clear-draft-marker\";",
             "fn editor_notes_draft_action_status(",
             "cx.text(\"Draft actions\")",
-            "shadcn::Button::new(\"Mark draft ready\")",
-            "shadcn::Button::new(\"Clear draft marker\")",
-            ".test_id(TEST_ID_DRAFT_READY_COMMAND)",
-            ".test_id(TEST_ID_DRAFT_CLEAR_COMMAND)",
-            "Draft marked ready",
-            "Draft marker cleared",
-            "local inspector state only",
+            "TextFieldDraftController::new",
+            "shadcn::Button::new(\"Commit draft\")",
+            "shadcn::Button::new(\"Discard draft\")",
         ] {
             assert!(
                 EDITOR_NOTES_DEMO.contains(marker),
-                "editor_notes_demo should keep the inspector-local draft-actions slice explicit: {marker}"
+                "editor_notes_demo should keep the inspector-local draft-actions surface explicit after the controller follow-on: {marker}"
             );
         }
 
@@ -5700,6 +5709,83 @@ mod authoring_surface_policy_tests {
                     || IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_MILESTONES.contains(marker)
                     || IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_EVIDENCE.contains(marker),
                 "the TextField draft-buffer audit execution docs should record closure markers: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn immediate_mode_workstream_starts_the_p1_textfield_draft_controller_api_proof() {
+        for marker in [
+            "Status: active narrow P1 lane",
+            "opaque `TextFieldDraftController`",
+            "No public `Model<String>` handle for the internal draft buffer.",
+            "No `crates/fret-ui`, `fret-ui-kit::imui`, `fret-imui`, or `fret-authoring` API widening.",
+            "commit(host, action_cx)",
+            "discard(host, action_cx)",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_DESIGN.contains(marker),
+                "the TextField draft-controller design should keep the API proof scope explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"slug\": \"imui-textfield-draft-controller-api-proof-v1\"",
+            "\"status\": \"active\"",
+            "\"scope_kind\": \"execution\"",
+            "\"follow_on_of\": \"imui-textfield-draft-buffer-contract-audit-v1\"",
+            "textfield-draft-controller-source-policy",
+            "ecosystem/fret-ui-editor/src/controls/text_field.rs",
+            "apps/fret-examples/src/editor_notes_demo.rs",
+            "\"default_action\": \"continue\"",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_WORKSTREAM.contains(marker),
+                "the TextField draft-controller lane state should keep source-policy markers explicit: {marker}"
+            );
+        }
+
+        for marker in [
+            "pub struct TextFieldDraftController",
+            "pub draft_controller: Option<TextFieldDraftController>",
+            "pub fn commit(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool",
+            "pub fn discard(&self, host: &mut dyn UiActionHost, action_cx: ActionCx) -> bool",
+            "BufferedTextFieldDraftBinding",
+            "commit_buffered_text_field(",
+            "cancel_buffered_text_field(",
+        ] {
+            assert!(
+                IMUI_TEXT_FIELD_RS.contains(marker),
+                "TextField should expose only an opaque draft-controller operation surface: {marker}"
+            );
+        }
+
+        for marker in [
+            "TextFieldDraftController::new",
+            "draft_controller: Some(draft_controller.clone())",
+            "const TEST_ID_DRAFT_COMMIT_COMMAND: &str = \"editor-notes-demo.inspector.notes.commit-draft\";",
+            "const TEST_ID_DRAFT_DISCARD_COMMAND: &str = \"editor-notes-demo.inspector.notes.discard-draft\";",
+            "shadcn::Button::new(\"Commit draft\")",
+            "shadcn::Button::new(\"Discard draft\")",
+            ".commit(host, action_cx)",
+            ".discard(host, action_cx)",
+        ] {
+            assert!(
+                EDITOR_NOTES_DEMO.contains(marker),
+                "editor_notes_demo should prove the draft-controller API on a real editor surface: {marker}"
+            );
+        }
+
+        for marker in [
+            "Add opaque `TextFieldDraftController` support to `fret-ui-editor::TextField`.",
+            "## M1 - Opaque Draft Controller",
+            "textfield-draft-controller-source-policy",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_TODO.contains(marker)
+                    || IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_MILESTONES.contains(marker)
+                    || IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_EVIDENCE.contains(marker),
+                "the TextField draft-controller execution docs should record the active gate surface: {marker}"
             );
         }
     }
