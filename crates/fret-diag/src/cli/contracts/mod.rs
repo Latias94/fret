@@ -2176,6 +2176,7 @@ mod tests {
             "--file",
             "src/view.rs",
             "--timeline",
+            "--browser",
             "--json",
             "--out",
             "target/query.identity.json",
@@ -2199,6 +2200,7 @@ mod tests {
         assert_eq!(identity.element_path.as_deref(), Some("root.panel"));
         assert_eq!(identity.file.as_deref(), Some("src/view.rs"));
         assert!(identity.timeline);
+        assert!(identity.browser);
         assert!(identity.output.json);
         assert_eq!(
             identity.output.out,

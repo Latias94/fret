@@ -25,9 +25,16 @@ M1 result:
 ## M2 - Browser Query Surface
 
 - [x] Add a bounded `fret-diag` identity browser model over schema2 bundle snapshots.
-- [ ] Support grouping by warning kind, source file, list id, element path, and frame/window.
-- [ ] Preserve `--json` / `--out` style evidence for automation.
-- [ ] Add focused contract/cutover tests if the public CLI surface grows.
+- [x] Support grouping by warning kind, source file, list id, element path, and frame/window.
+- [x] Preserve `--json` / `--out` style evidence for automation.
+- [x] Add focused contract/cutover tests if the public CLI surface grows.
+
+M2 result:
+
+- `diag query identity-warnings --browser` exposes opt-in `summary` and `groups`.
+- Default query output remains row-compatible when `--browser` is absent.
+- Grouping is currently over the browser model's stable key: warning kind, window, frame id, source
+  file, list id, key hash, and element path.
 
 ## M3 - Interactive Experience
 

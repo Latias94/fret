@@ -601,6 +601,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-id-stack-browser-v1/MILESTONES.md`
   - `docs/workstreams/imui-id-stack-browser-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`
+  - `docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md`
   - Scope: active browser-style diagnostics lane for navigating captured identity warnings without
     reopening public runtime identity APIs, `test_id` inference, localization, or table column
     identity.
@@ -952,7 +953,7 @@ Rule:
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
 - `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for structured IMUI/runtime identity diagnostics)
-- `docs/workstreams/imui-id-stack-browser-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for browser-style IMUI/runtime identity diagnostics)
+- `docs/workstreams/imui-id-stack-browser-v1/` — first n/a, latest n/a, 7 markdown docs (active narrow follow-on for browser-style IMUI/runtime identity diagnostics)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)

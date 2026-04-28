@@ -363,6 +363,7 @@ fn cmd_query_identity_warnings(
     let mut element_path_filter: Option<String> = None;
     let mut file_filter: Option<String> = None;
     let mut include_timeline = false;
+    let mut include_browser = false;
 
     let mut positionals: Vec<String> = Vec::new();
     let mut i: usize = 0;
@@ -432,6 +433,10 @@ fn cmd_query_identity_warnings(
                 include_timeline = true;
                 i += 1;
             }
+            "--browser" => {
+                include_browser = true;
+                i += 1;
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag for query identity-warnings: {other}"));
             }
@@ -472,11 +477,10 @@ fn cmd_query_identity_warnings(
         top,
     };
     let report = collect_identity_warning_browser_report(&bundle, &browser_filters);
-    let _browser_summary = report.summary_json();
     let results: Vec<serde_json::Value> =
         report.rows.iter().map(|row| row.to_query_json()).collect();
 
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "schema_version": 1,
         "kind": "query.identity_warnings",
         "bundle": bundle_path.display().to_string(),
@@ -493,6 +497,14 @@ fn cmd_query_identity_warnings(
         },
         "results": results,
     });
+    if include_browser && let Some(obj) = payload.as_object_mut() {
+        obj.insert("browser".to_string(), serde_json::Value::Bool(true));
+        obj.insert("summary".to_string(), report.summary_json());
+        obj.insert(
+            "groups".to_string(),
+            serde_json::Value::Array(report.groups_json()),
+        );
+    }
 
     if let Some(out) = query_out.map(|p| crate::resolve_path(workspace_root, p)) {
         if let Some(parent) = out.parent() {
@@ -522,6 +534,22 @@ fn cmd_query_identity_warnings(
     if results.is_empty() {
         println!("(no matching identity warnings)");
         return Ok(());
+    }
+
+    if include_browser {
+        for group in &report.groups {
+            let key = &group.key;
+            println!(
+                "group kind={} window={} frame_id={:?} file={} list_id={:?} key_hash={:?} rows={}",
+                key.kind,
+                key.window,
+                key.frame_id,
+                key.source_file.as_deref().unwrap_or("unknown"),
+                key.list_id,
+                key.key_hash,
+                group.rows
+            );
+        }
     }
 
     for r in results {
@@ -2465,6 +2493,74 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(42)
         );
+    }
+
+    #[test]
+    fn query_identity_warnings_browser_output_includes_summary_and_groups() {
+        let out_dir = make_temp_dir("fret-diag-query-identity-warnings-browser");
+        let bundle = write_bundle_schema2_with_identity_warnings(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_identity_warnings(
+            &[bundle.display().to_string(), "--browser".to_string()],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        assert_eq!(v.get("browser").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            v.get("summary")
+                .and_then(|v| v.get("total_observations"))
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            v.get("summary")
+                .and_then(|v| v.get("matching_observations"))
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            v.get("summary")
+                .and_then(|v| v.get("deduped_observations"))
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            v.get("summary")
+                .and_then(|v| v.get("returned_rows"))
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        let groups = v
+            .get("groups")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(groups.len(), 2);
+        assert!(groups.iter().any(|group| {
+            group
+                .get("key")
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                == Some("duplicate_keyed_list_item_key_hash")
+                && group
+                    .get("key")
+                    .and_then(|v| v.get("source_file"))
+                    .and_then(|v| v.as_str())
+                    == Some("src/list.rs")
+                && group
+                    .get("key")
+                    .and_then(|v| v.get("list_id"))
+                    .and_then(|v| v.as_u64())
+                    == Some(42)
+        }));
     }
 
     #[test]

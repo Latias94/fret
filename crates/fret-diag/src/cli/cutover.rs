@@ -1962,6 +1962,9 @@ fn parse_query_command(
             if identity.timeline {
                 rest.push("--timeline".to_string());
             }
+            if identity.browser {
+                rest.push("--browser".to_string());
+            }
             (
                 rest,
                 identity.output.out,
@@ -5273,6 +5276,7 @@ mod tests {
             "--file".to_string(),
             "src/list.rs".to_string(),
             "--timeline".to_string(),
+            "--browser".to_string(),
             "--json".to_string(),
             "--out".to_string(),
             "target/query.identity.json".to_string(),
@@ -5306,6 +5310,7 @@ mod tests {
                 "--file".to_string(),
                 "src/list.rs".to_string(),
                 "--timeline".to_string(),
+                "--browser".to_string(),
             ]
         );
         assert_eq!(ctx.warmup_frames, 6);

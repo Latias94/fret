@@ -283,6 +283,9 @@ pub(crate) struct QueryIdentityWarningsArgs {
 
     #[arg(long = "timeline")]
     pub timeline: bool,
+
+    #[arg(long = "browser")]
+    pub browser: bool,
 }
 
 #[derive(Debug)]

@@ -125,7 +125,7 @@ pub(crate) struct IdentityWarningBrowserGroup {
 }
 
 impl IdentityWarningBrowserGroup {
-    fn to_json(&self) -> Value {
+    pub(crate) fn to_json(&self) -> Value {
         serde_json::json!({
             "key": self.key.to_json(),
             "rows": self.rows,
@@ -300,8 +300,13 @@ impl IdentityWarningBrowserReport {
             "total_observations": self.total_observations,
             "matching_observations": self.matching_observations,
             "deduped_observations": self.deduped_observations,
-            "groups": self.groups.iter().map(|group| group.to_json()).collect::<Vec<_>>(),
+            "returned_rows": self.rows.len(),
+            "group_count": self.groups.len(),
         })
+    }
+
+    pub(crate) fn groups_json(&self) -> Vec<Value> {
+        self.groups.iter().map(|group| group.to_json()).collect()
     }
 }
 

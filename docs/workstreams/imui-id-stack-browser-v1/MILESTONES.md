@@ -34,6 +34,12 @@ Exit criteria:
 - JSON output is stable enough for automation and future UI reuse,
 - and focused tests cover filters/grouping/timeline behavior.
 
+Result:
+
+- Landed as `diag query identity-warnings --browser`.
+- Default row query output remains compatible; browser summary/groups are opt-in.
+- Contract, cutover, grouping, filter, dedup, and timeline tests cover the public surface.
+
 ## M3 - Interactive Experience
 
 Exit criteria:

@@ -14,8 +14,12 @@ Last updated: 2026-04-28
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`
+- `docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md`
 - `crates/fret-diag/src/identity_browser.rs`
 - `crates/fret-diag/src/commands/query.rs`
+- `crates/fret-diag/src/cli/contracts/commands/query.rs`
+- `crates/fret-diag/src/cli/contracts/mod.rs`
+- `crates/fret-diag/src/cli/cutover.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - `crates/fret-ui/src/elements/cx.rs`
 - `ecosystem/fret-imui/src/frontend.rs`
