@@ -175,10 +175,10 @@ fn render_tab_bar<H: UiHost>(
         })
         .collect::<Vec<_>>();
 
-    if let Some(state) = build_focus.as_ref() {
-        if state.get().is_none() {
-            state.set(selected_trigger_id.or(first_focusable));
-        }
+    if let Some(state) = build_focus.as_ref()
+        && state.get().is_none()
+    {
+        state.set(selected_trigger_id.or(first_focusable));
     }
 
     let list_layout = LayoutStyle {

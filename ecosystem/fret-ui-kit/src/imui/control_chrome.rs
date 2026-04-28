@@ -146,9 +146,7 @@ pub(super) fn field_chrome<H: UiHost>(
         .unwrap_or_else(|| theme.color_token("primary-foreground"));
 
     let palette = ImUiControlPalette {
-        background: if !enabled {
-            muted
-        } else if state.pressed || state.hovered {
+        background: if !enabled || state.pressed || state.hovered {
             muted
         } else {
             background

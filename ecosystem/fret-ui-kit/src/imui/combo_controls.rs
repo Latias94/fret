@@ -36,7 +36,7 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
     let test_id = options.test_id.clone();
     let activate_shortcut = options.activate_shortcut;
     let shortcut_repeat = options.shortcut_repeat;
-    let popup_options = options.popup.clone();
+    let popup_options = options.popup;
 
     let mut trigger = ui.push_id(format!("{id}.trigger"), |ui| {
         let mut response = ResponseExt::default();

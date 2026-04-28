@@ -34,9 +34,19 @@ Last updated: 2026-04-28
 - [x] Add focused `fret-diag` gates for handler behavior, clap contract parsing, and cutover
   command conversion.
 
-## M4 - Closeout Readiness
+## M4 - IMUI Duplicate-Key Authoring Proof
+
+- [x] Refactor `ImUi::for_each_keyed` to delegate to `ElementContext::for_each_keyed` instead of
+  manually looping through `ui.id(...)`.
+- [x] Align `ImUi::for_each_keyed` with the runtime keyed-list shape:
+  `items: &[T]`, `key(&T) -> K`, `f(ui, index, &T)`.
+- [x] Prove duplicate keyed-list hashes emit structured diagnostics from the IMUI authoring callsite.
+- [x] Keep `ui.id(...)` / `ui.push_id(...)` available for explicit subtree identity outside list
+  iteration.
+
+## M5 - Closeout Readiness
 
 - [ ] Record final gates and evidence.
-- [ ] Decide whether a full ID-stack browser, IMUI `for_each_keyed` duplicate-key proof,
-  label-to-`test_id` inference, or table column identity deserves separate follow-ons.
+- [ ] Decide whether a full ID-stack browser, label-to-`test_id` inference, or table column
+  identity deserves separate follow-ons.
 - [ ] Close or downgrade the lane to maintenance once the structured diagnostics slice is stable.

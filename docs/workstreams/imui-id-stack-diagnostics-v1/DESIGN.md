@@ -94,6 +94,8 @@ Out of scope:
   unkeyed reorder.
 - `fret-imui` has a focused proof that `ui.for_each_unkeyed` reorder reaches that structured
   warning path.
+- `fret-imui` has a focused proof that `ui.for_each_keyed` duplicate keys reach the same
+  structured warning path.
 - `fretboard diag query identity-warnings` can inspect captured warning rows without opening raw
   bundle JSON.
 - The lane records current gates and leaves future `test_id` inference / full ID-stack browser

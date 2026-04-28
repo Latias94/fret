@@ -116,19 +116,20 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         self.id(key, f);
     }
 
+    /// Iterates over a dynamic collection using explicit per-item identity.
     #[track_caller]
-    pub fn for_each_keyed<I, K, T>(
+    pub fn for_each_keyed<T, K: Hash>(
         &mut self,
-        items: I,
-        mut f: impl FnMut(&mut ImUi<'_, '_, H>, &K, T),
-    ) where
-        I: IntoIterator<Item = (K, T)>,
-        K: Hash,
-    {
+        items: &[T],
+        key: impl FnMut(&T) -> K,
+        mut f: impl FnMut(&mut ImUi<'_, '_, H>, usize, &T),
+    ) {
         let f = &mut f;
-        for (key, item) in items {
-            self.id(&key, |ui| f(ui, &key, item));
-        }
+        let out = &mut *self.out;
+        self.cx.for_each_keyed(items, key, |cx, index, item| {
+            let mut ui = ImUi { cx, out };
+            f(&mut ui, index, item);
+        });
     }
 
     /// Iterates over a slice using callsite-based (unkeyed) identity.

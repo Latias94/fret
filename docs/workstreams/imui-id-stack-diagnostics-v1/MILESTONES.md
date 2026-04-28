@@ -40,7 +40,18 @@ Result:
   snapshot history,
 - and the surface is covered by handler, clap contract, and cutover conversion tests.
 
-## M4 - Follow-on Decision
+## M4 - IMUI Duplicate-Key Authoring Proof
+
+Result:
+
+- `ImUi::for_each_keyed` delegates to `ElementContext::for_each_keyed` so keyed-list identity uses
+  the same runtime list scope and diagnostics recorder as declarative UI,
+- the IMUI API now mirrors the runtime shape with `items: &[T]`, `key(&T) -> K`, and
+  `f(ui, index, &T)`,
+- duplicate keyed-list hashes are observable from the IMUI authoring callsite,
+- and explicit subtree identity still uses `ui.id(...)` / `ui.push_id(...)`.
+
+## M5 - Follow-on Decision
 
 Exit criteria:
 
@@ -51,6 +62,5 @@ Exit criteria:
 Current deferred candidates:
 
 - full interactive ID-stack browser,
-- IMUI `for_each_keyed` duplicate-key authoring proof,
 - label-to-`test_id` inference,
 - table column identity.

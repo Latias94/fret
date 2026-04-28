@@ -235,18 +235,15 @@ pub enum ButtonArrowDirection {
     Down,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum ButtonVariant {
+    #[default]
     Default,
     Small,
     Arrow(ButtonArrowDirection),
-    Invisible { size: Size },
-}
-
-impl Default for ButtonVariant {
-    fn default() -> Self {
-        Self::Default
-    }
+    Invisible {
+        size: Size,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -279,18 +276,13 @@ impl Default for ButtonOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum InputTextMode {
     /// Render the model value directly.
+    #[default]
     PlainText,
     /// Obscure the painted text while preserving the underlying model value.
     Password,
-}
-
-impl Default for InputTextMode {
-    fn default() -> Self {
-        Self::PlainText
-    }
 }
 
 #[derive(Debug, Clone)]

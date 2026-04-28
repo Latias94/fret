@@ -31,10 +31,14 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-id-stack-diagnostics-v1/M2_IDENTITY_WARNINGS_QUERY_2026-04-28.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/M3_IMUI_KEYED_DUPLICATE_PROOF_2026-04-28.md"
     }
   ],
   "repro": {
-    "summary": "Use the runtime identity tests, IMUI authoring proof, and fret-diag query tests to confirm duplicate keyed lists and unkeyed reorder warnings are captured and queryable as structured diagnostics.",
+    "summary": "Use the runtime identity tests, IMUI authoring proofs, and fret-diag query tests to confirm duplicate keyed lists and unkeyed reorder warnings are captured and queryable as structured diagnostics.",
     "commands": [
       "cargo nextest run -p fret-ui --features diagnostics identity_diagnostics --no-fail-fast",
       "cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast",
@@ -53,6 +57,14 @@
     {
       "name": "imui-default-check",
       "command": "cargo check -p fret-imui --jobs 1"
+    },
+    {
+      "name": "imui-clippy",
+      "command": "cargo clippy -p fret-imui --all-targets --features diagnostics -- -D warnings"
+    },
+    {
+      "name": "imui-format",
+      "command": "cargo fmt --package fret-imui --package fret-ui-kit --check"
     },
     {
       "name": "bootstrap-diagnostics-check",
@@ -104,11 +116,16 @@
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
     "ecosystem/fret-imui/src/frontend.rs",
     "ecosystem/fret-imui/src/tests/identity_diagnostics.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "crates/fret-diag/src/commands/query.rs",
     "crates/fret-diag/src/cli/contracts/commands/query.rs",
     "crates/fret-diag/src/cli/cutover.rs",
     "crates/fret-diag/src/cli/contracts/mod.rs",
-    "crates/fret-diag/src/diag_campaign.rs"
+    "crates/fret-diag/src/diag_campaign.rs",
+    "docs/workstreams/imui-id-stack-diagnostics-v1/M3_IMUI_KEYED_DUPLICATE_PROOF_2026-04-28.md"
   ],
   "adr_refs": [
     "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
@@ -116,6 +133,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for structured IMUI/runtime identity diagnostics. Start narrower follow-ons for `test_id` inference, localization, column-owned sortable/resizable identity, or public runtime identity APIs."
+    "notes": "Continue this lane only for final closeout or maintenance-state decisions. Start narrower follow-ons for `test_id` inference, full ID-stack browsing, column-owned sortable/resizable identity, or public runtime identity APIs."
   }
 }
