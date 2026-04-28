@@ -13,16 +13,21 @@ Last updated: 2026-04-28
 
 ## M1 - Parser Contract
 
-- [ ] Add a small `fret-ui-kit::imui` label identity parser.
-- [ ] Cover no marker, `##`, `##hidden`, `###`, and empty-visible-label cases.
-- [ ] Keep the parser private unless a real cross-crate consumer appears.
+- [x] Add a small `fret-ui-kit::imui` label identity parser.
+- [x] Cover no marker, `##`, `##hidden`, `###`, and empty-visible-label cases.
+- [x] Keep the parser private unless a real cross-crate consumer appears.
 
 ## M2 - Control Adoption
 
-- [ ] Route the first admitted label-bearing controls through the parser.
-- [ ] Hide `##` / `###` suffixes from rendered labels.
-- [ ] Preserve explicit `a11y_label` and `test_id` override behavior.
-- [ ] Add one `fret-imui` authoring proof for stable `###` identity across visible-label changes.
+- [x] Route the button family through the parser.
+- [x] Hide `##` / `###` suffixes from button rendered labels.
+- [x] Preserve explicit button `a11y_label` and `test_id` override behavior.
+- [x] Add one `fret-imui` authoring proof for stable `###` identity across visible-label changes
+      and reorder.
+- [ ] Extend parser adoption to selectable rows.
+- [ ] Extend parser adoption to menu item rows.
+- [ ] Decide whether checkbox/radio/switch/slider should key by label grammar or only render the
+      visible label in this lane.
 
 ## M3 - Closeout
 

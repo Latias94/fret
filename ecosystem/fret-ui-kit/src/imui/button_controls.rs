@@ -8,6 +8,7 @@ use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{AnyElement, ContainerProps, Length, PressableA11y, PressableProps};
 
+use super::label_identity::parse_label_identity;
 use super::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, ResponseExt, UiWriterImUiFacadeExt,
 };
@@ -128,6 +129,20 @@ fn button_label_children<H: UiHost>(
 }
 
 fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    options: ButtonOptions,
+    action: Option<ActionId>,
+) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("button-label", identity), |ui| {
+        button_impl_inner(ui, visible_label, options, action)
+    })
+}
+
+fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     options: ButtonOptions,

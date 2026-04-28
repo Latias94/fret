@@ -12,8 +12,11 @@ Last updated: 2026-04-28
 
 - `docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-04-19.md`
+- `docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `ecosystem/fret-imui/src/frontend.rs`
+- `ecosystem/fret-imui/src/tests/label_identity.rs`
+- `ecosystem/fret-ui-kit/src/imui/label_identity.rs`
 - `ecosystem/fret-ui-kit/src/imui/button_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`

@@ -321,6 +321,7 @@ It complements (but does not replace) ADRs:
 - Active narrow IMUI label identity ergonomics follow-on:
   - `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md`
+  - `docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/TODO.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/MILESTONES.md`
   - `docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md`

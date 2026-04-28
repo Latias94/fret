@@ -19,6 +19,10 @@ Evidence:
 
 ## M1 - Parser Contract
 
+Current progress:
+
+- `M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md` landed the private parser and its unit tests.
+
 Exit criteria:
 
 - parser semantics are explicit,
@@ -26,6 +30,11 @@ Exit criteria:
 - and the parser remains private until adoption proves the right surface.
 
 ## M2 - First Control Adoption
+
+Current progress:
+
+- The button family now hides `##` / `###` suffixes from painted labels and uses parsed identity
+  keys for stable focus across visible-label changes and reorder.
 
 Exit criteria:
 

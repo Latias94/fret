@@ -1203,6 +1203,7 @@ mod interaction_drag;
 mod interaction_menu_tabs;
 mod interaction_press;
 mod interaction_shortcuts;
+mod label_identity;
 mod models_combo;
 mod models_controls;
 mod models_text;
