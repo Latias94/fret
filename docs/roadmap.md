@@ -298,6 +298,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md`,
   `docs/workstreams/imui-label-identity-ergonomics-v1/M2_MODEL_AND_EXPLICIT_ID_LABEL_IDENTITY_SLICE_2026-04-28.md`,
   and `docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
+- ImUi table header label policy closeout record (closed narrow lane for `TableColumn` visible-label
+  grammar after the label identity closeout, without adding sortable/resizable column identity or
+  runtime ID-stack diagnostics):
+  `docs/workstreams/imui-table-header-label-policy-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-table-header-label-policy-v1/M1_TABLE_HEADER_VISIBLE_LABEL_SLICE_2026-04-28.md`,
+  and `docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

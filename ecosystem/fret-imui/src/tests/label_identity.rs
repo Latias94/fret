@@ -3,7 +3,8 @@ use super::*;
 use fret_ui_kit::imui::{
     BeginMenuOptions, ButtonOptions, CheckboxOptions, CollapsingHeaderOptions, ComboOptions,
     MenuBarOptions, MenuItemOptions, RadioOptions, SelectableOptions, SeparatorTextOptions,
-    SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TreeNodeOptions,
+    SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn, TableOptions,
+    TreeNodeOptions,
 };
 
 fn current_focus_test_id(
@@ -567,6 +568,66 @@ fn label_identity_explicit_id_controls_hide_suffixes_from_visible_labels() {
             || text.contains("tree-label")
             || text.contains("section-label")),
         "label identity suffixes should not be painted: {:?}",
+        services.prepared
+    );
+}
+
+#[test]
+fn label_identity_table_headers_hide_suffixes_from_visible_labels() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui_raw(cx, |ui| {
+            let columns = [
+                TableColumn::fill("Name##asset-name-column"),
+                TableColumn::px("Status###status-column", Px(120.0)),
+            ];
+            ui.table_with_options(
+                "identity-table",
+                &columns,
+                TableOptions {
+                    test_id: Some(Arc::from("imui-label-identity.table")),
+                    ..Default::default()
+                },
+                |table| {
+                    table.row("asset-a", |row| {
+                        row.cell_text("Asset A");
+                        row.cell_text("Ready");
+                    });
+                },
+            );
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-label-identity-table-headers",
+        |cx| render(cx),
+    );
+
+    assert!(services.prepared.iter().any(|text| text == "Name"));
+    assert!(services.prepared.iter().any(|text| text == "Status"));
+    assert!(
+        !services.prepared.iter().any(|text| text.contains("##")
+            || text.contains("###")
+            || text.contains("asset-name-column")
+            || text.contains("status-column")),
+        "table header label suffixes should not be painted: {:?}",
         services.prepared
     );
 }

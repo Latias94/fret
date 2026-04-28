@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-header-label-policy-v1",
+  "title": "ImUi Table Header Label Policy v1",
+  "status": "closed",
+  "updated": "2026-04-28",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-label-identity-ergonomics-v1",
+  "problem": "The label identity ergonomics lane intentionally deferred table header / column display-name policy. `TableColumn` headers are label-like display strings and currently render raw `##` / `###` suffixes, but the current table helper has no column-owned state that warrants a runtime or public column identity contract.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/DESIGN.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/M1_TABLE_HEADER_VISIBLE_LABEL_SLICE_2026-04-28.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use the IMUI label identity authoring proof to confirm table headers hide `##` / `###` suffixes without widening table column identity.",
+    "commands": [
+      "cargo nextest run -p fret-imui label_identity --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "imui-authoring-proof",
+      "command": "cargo nextest run -p fret-imui label_identity --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 1"
+    },
+    {
+      "name": "imui-format",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-table-header-label-policy-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/workstreams/imui-table-header-label-policy-v1/DESIGN.md",
+    "docs/workstreams/imui-table-header-label-policy-v1/M1_TABLE_HEADER_VISIBLE_LABEL_SLICE_2026-04-28.md",
+    "docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-imui/src/tests/label_identity.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after routing table header rendering through visible-label parsing. Start a narrower follow-on for sortable/resizable column identity, diagnostics ID-stack tooling, localization, or public `TableColumn` identity fields."
+  }
+}

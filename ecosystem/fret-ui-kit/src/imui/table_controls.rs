@@ -7,6 +7,7 @@ use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, Overflow
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
 use super::containers::build_imui_children_with_focus;
+use super::label_identity::parse_label_identity;
 use super::{
     ImUiFacade, TableColumn, TableColumnWidth, TableOptions, TableRowOptions, UiWriterImUiFacadeExt,
 };
@@ -138,7 +139,10 @@ fn render_table<H: UiHost>(
                 .enumerate()
                 .map(|(index, column)| {
                     let content = match column.header.as_ref() {
-                        Some(label) => cx.text(label.clone()),
+                        Some(label) => {
+                            let parts = parse_label_identity(label.as_ref());
+                            cx.text(Arc::<str>::from(parts.visible))
+                        }
                         None => empty_cell(cx),
                     };
                     let test_id = root_test_id
