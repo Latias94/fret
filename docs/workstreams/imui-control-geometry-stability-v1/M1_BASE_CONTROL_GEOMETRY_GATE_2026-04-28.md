@@ -47,6 +47,20 @@ It then verifies that those outer bounds stay unchanged across:
 - submenu open state
 - tab selected state
 
+`control_disabled_state_changes_keep_outer_bounds_stable` closes the disabled-state half of the
+same invariant. It records enabled-state baseline bounds, toggles the controls to disabled, and
+verifies stable outer bounds for:
+
+- input text / textarea
+- button
+- checkbox / radio / switch
+- slider
+- combo trigger
+- selectable
+- menubar trigger
+- submenu trigger inside an open parent menu
+- tab trigger
+
 ## Result
 
 The admitted base-control set already preserves stable outer geometry. No product code change was
@@ -61,6 +75,7 @@ reach demos or screenshot diagnostics.
 - `cargo test -p fret-imui base_control_state_changes_keep_outer_bounds_stable -- --nocapture`
 - `cargo nextest run -p fret-imui base_control_state_changes_keep_outer_bounds_stable --no-fail-fast`
 - `cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast`
+- `cargo nextest run -p fret-imui control_disabled_state_changes_keep_outer_bounds_stable --no-fail-fast`
 
 ## Deferred
 

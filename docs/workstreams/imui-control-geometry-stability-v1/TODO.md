@@ -33,6 +33,8 @@ Last updated: 2026-04-28
 - [x] Add focused gates for selectable geometry across hover/focus/pressed/selected.
 - [x] Add focused gates for menu/submenu/tab trigger geometry only where current helpers expose a
       stable local proof path without reopening menu/tab policy depth.
+- [x] Add a disabled-state geometry gate across text controls, base controls, menu/submenu
+      triggers, and tab triggers.
 
 ## M2 - Refactor unstable controls
 

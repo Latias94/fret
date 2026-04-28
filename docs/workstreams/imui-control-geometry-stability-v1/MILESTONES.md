@@ -29,6 +29,8 @@ Current progress:
 - `menu_and_tab_trigger_state_changes_keep_outer_bounds_stable` extends that gate package to
   menubar triggers, submenu triggers, and tab triggers across hover, focus, pressed, open, and
   selected states without reopening menu/tab policy depth.
+- `control_disabled_state_changes_keep_outer_bounds_stable` closes the disabled-state gap for the
+  inherited text-control surface, base controls, menu/submenu triggers, and tab triggers.
 
 Exit criteria:
 

@@ -16,6 +16,7 @@ Inherited automated floor:
 - `cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --no-fail-fast`
 - `cargo nextest run -p fret-imui base_control_state_changes_keep_outer_bounds_stable --no-fail-fast`
 - `cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast`
+- `cargo nextest run -p fret-imui control_disabled_state_changes_keep_outer_bounds_stable --no-fail-fast`
 
 Linux/Wayland real-host acceptance is not part of this lane. That proof remains owned by
 `docs/workstreams/docking-multiwindow-imgui-parity/`.
@@ -50,6 +51,7 @@ Initial lane gates:
 - `cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --no-fail-fast`
 - `cargo nextest run -p fret-imui base_control_state_changes_keep_outer_bounds_stable --no-fail-fast`
 - `cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast`
+- `cargo nextest run -p fret-imui control_disabled_state_changes_keep_outer_bounds_stable --no-fail-fast`
 - `cargo check -p fret-ui-kit --features imui --jobs 2`
 - `python tools/check_workstream_catalog.py`
 - `python -m json.tool docs/workstreams/imui-control-geometry-stability-v1/WORKSTREAM.json`

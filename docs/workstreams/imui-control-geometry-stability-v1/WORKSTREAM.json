@@ -41,7 +41,8 @@
       "cargo nextest run -p fret-ui-kit --features imui compact_imui_chrome_without_focus_ring --no-fail-fast",
       "cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --no-fail-fast",
       "cargo nextest run -p fret-imui base_control_state_changes_keep_outer_bounds_stable --no-fail-fast",
-      "cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast"
+      "cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast",
+      "cargo nextest run -p fret-imui control_disabled_state_changes_keep_outer_bounds_stable --no-fail-fast"
     ]
   },
   "gates": [
@@ -60,6 +61,10 @@
     {
       "name": "menu-tab-trigger-geometry-state-floor",
       "command": "cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast"
+    },
+    {
+      "name": "disabled-control-geometry-state-floor",
+      "command": "cargo nextest run -p fret-imui control_disabled_state_changes_keep_outer_bounds_stable --no-fail-fast"
     },
     {
       "name": "ui-kit-imui-check",
