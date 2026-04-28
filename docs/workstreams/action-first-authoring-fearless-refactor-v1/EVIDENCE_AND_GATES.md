@@ -241,6 +241,8 @@ Notes:
 Gate runner:
 
 - `python tools/diag_gate_action_first_authoring_v1.py` (default output: `target/dfa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`; keeps output paths short to avoid Windows path-length issues during schema2 bundle dumps)
+  - Focus a single gate with `--only <gate-name>`; for the IMUI golden-path proof use
+    `--only cookbook-imui-action-basics-cross-frontend`.
   - Note: the gate script builds cookbook examples with `--features cookbook-diag` (and enables per-example feature bundles such as `cookbook-imui` when required) so the launched demos expose the diagnostics transport.
   - Cold builds / cold GPU shader caches can occasionally cause timeouts. The gate script retries timed-out runs once with a larger timeout by default.
     - Defaults: `--timeout-ms 180000 --timeout-ms-retry 600000 --timeout-retry-count 1`

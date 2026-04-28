@@ -115,6 +115,8 @@ impl ActionHandlerTable {
         let on_action = self.on_action;
         let on_payload_action = self.on_payload_action;
         let on_action_availability = self.on_action_availability;
+        let default_available_actions: std::collections::HashSet<ActionId> =
+            on_action.keys().cloned().collect();
 
         let on_command: fret_ui::action::OnCommand =
             std::sync::Arc::new(move |host, acx, command| {
@@ -133,13 +135,95 @@ impl ActionHandlerTable {
 
         let on_command_availability: fret_ui::action::OnCommandAvailability =
             std::sync::Arc::new(move |host, acx, command| {
-                let Some(handler) = on_action_availability.get(&command) else {
-                    return fret_ui::CommandAvailability::NotHandled;
-                };
-                handler(host, acx)
+                if let Some(handler) = on_action_availability.get(&command) {
+                    let availability = handler(host, acx.clone());
+                    if availability != fret_ui::CommandAvailability::NotHandled {
+                        return availability;
+                    }
+                }
+                if default_available_actions.contains(&command) {
+                    fret_ui::CommandAvailability::Available
+                } else {
+                    fret_ui::CommandAvailability::NotHandled
+                }
             });
 
         (on_command, on_command_availability)
+    }
+}
+
+#[cfg(test)]
+mod action_handler_table_tests {
+    use super::*;
+
+    use fret_core::AppWindowId;
+    use fret_runtime::TypedAction;
+
+    struct DefaultAvailableAction;
+
+    impl TypedAction for DefaultAvailableAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.default_available_action")
+        }
+    }
+
+    struct ExplicitBlockedAction;
+
+    impl TypedAction for ExplicitBlockedAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.explicit_blocked_action")
+        }
+    }
+
+    #[derive(Default)]
+    struct FakeAvailabilityHost {
+        models: fret_runtime::ModelStore,
+    }
+
+    impl fret_ui::action::UiCommandAvailabilityActionHost for FakeAvailabilityHost {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            &mut self.models
+        }
+    }
+
+    fn action_cx() -> fret_ui::action::CommandAvailabilityActionCx {
+        fret_ui::action::CommandAvailabilityActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(1),
+            node: fret_core::NodeId::default(),
+            focus: None,
+            focus_in_subtree: false,
+            input_ctx: fret_runtime::InputContext::default(),
+        }
+    }
+
+    #[test]
+    fn unit_action_handler_is_available_by_default() {
+        let (_on_command, on_availability) = ActionHandlerTable::new()
+            .on::<DefaultAvailableAction>(|_host, _acx| true)
+            .build();
+        let mut host = FakeAvailabilityHost::default();
+
+        assert_eq!(
+            on_availability(&mut host, action_cx(), DefaultAvailableAction::action_id()),
+            fret_ui::CommandAvailability::Available
+        );
+    }
+
+    #[test]
+    fn explicit_action_availability_overrides_default_available_handler() {
+        let (_on_command, on_availability) = ActionHandlerTable::new()
+            .on::<ExplicitBlockedAction>(|_host, _acx| true)
+            .availability::<ExplicitBlockedAction>(|_host, _acx| {
+                fret_ui::CommandAvailability::Blocked
+            })
+            .build();
+        let mut host = FakeAvailabilityHost::default();
+
+        assert_eq!(
+            on_availability(&mut host, action_cx(), ExplicitBlockedAction::action_id()),
+            fret_ui::CommandAvailability::Blocked
+        );
     }
 }
 

@@ -74,6 +74,12 @@ Current status:
   the runtime's global shortcut owner model.
 - The tested shortcut repeat rule is now explicit at the immediate layer:
   default key repeat does not retrigger activation, and `shortcut_repeat=true` is the opt-in seam.
+- A launched P0 authoring proof now exists for the generic/default IMUI path:
+  `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+  runs the `imui_action_basics` cookbook example and proves command palette, declarative, GenUI,
+  and IMUI triggers dispatch the same typed action into one view-local state path. The focused gate
+  command is `python tools/diag_gate_action_first_authoring_v1.py --only
+  cookbook-imui-action-basics-cross-frontend`.
 - The remaining credible P0 backlog is now narrower:
   the closed key-owner closeout record at
   `docs/workstreams/imui-key-owner-surface-v1/`,

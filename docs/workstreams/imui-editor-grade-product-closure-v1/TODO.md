@@ -61,6 +61,12 @@ in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution
       shortcuts are no longer treated as the primary P0 blocker.
       Result: `P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md` now records the 2026-04-13 shortcut batch,
       the repeat-semantic test floor, and the narrower remaining P0 backlog.
+- [x] Promote a launched first-open authoring proof for the generic/default IMUI path.
+      Result: `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+      proves command palette, declarative, GenUI, and IMUI triggers all dispatch the same typed
+      action into one view-local state path; `tools/diag_gate_action_first_authoring_v1.py --only
+      cookbook-imui-action-basics-cross-frontend` runs that proof without the broader action-first
+      gate set.
 
 ## P1 - Editor workbench shell closure
 

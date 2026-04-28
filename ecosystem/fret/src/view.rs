@@ -4360,6 +4360,55 @@ mod tests {
     }
 
     #[test]
+    fn app_ui_unit_action_handler_publishes_available_command_snapshot_by_default() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let command = <RuntimeIncrementAction as fret_runtime::TypedAction>::action_id();
+        app.commands_mut().register(
+            command.clone(),
+            fret_runtime::CommandMeta::new("Runtime Increment")
+                .with_scope(fret_runtime::CommandScope::Widget),
+        );
+
+        let mut services = FakeUiServices;
+        let mut st = view_init_window::<RuntimeLocalsWithView>(&mut app, window);
+        app.set_frame_id(FrameId(1));
+        let _root = render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            ui.focus(),
+            None,
+            "this regression covers command-palette/menu discovery before the app has a focused leaf"
+        );
+        ui.publish_window_runtime_snapshots(&mut app);
+
+        let availability = app
+            .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.available(window, &command));
+        assert_eq!(
+            availability,
+            Some(true),
+            "registered unit action handlers should be command-palette/menu available by default"
+        );
+
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &command),
+            "registered unit action handlers should dispatch through the no-focus command route"
+        );
+        assert_eq!(
+            st.view
+                .count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
+    }
+
+    #[test]
     fn view_runtime_cache_enable_transition_keeps_toggle_group_footer_semantics_after_compact_resize()
      {
         let mut app = crate::app::App::new();

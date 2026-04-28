@@ -435,6 +435,12 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
+        if availability == CommandAvailability::NotHandled && barrier_root.is_none() {
+            availability = self
+                .command_availability_in_subtree(app, &input_ctx, base_root, command)
+                .0;
+        }
+
         availability
     }
 
@@ -643,6 +649,36 @@ impl<H: UiHost> UiTree<H> {
         CommandAvailability::NotHandled
     }
 
+    fn command_availability_in_subtree(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        root: NodeId,
+        command: &CommandId,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        let mut stack = vec![root];
+        let mut nodes = Vec::new();
+        while let Some(node) = stack.pop() {
+            nodes.push(node);
+            if let Some(entry) = self.nodes.get(node) {
+                for &child in entry.children.iter().rev() {
+                    stack.push(child);
+                }
+            }
+        }
+
+        for node in nodes {
+            let availability = self.command_availability_from_node(app, input_ctx, node, command);
+            match availability {
+                CommandAvailability::Available => return (availability, Some(node)),
+                CommandAvailability::Blocked => return (availability, None),
+                CommandAvailability::NotHandled => {}
+            }
+        }
+
+        (CommandAvailability::NotHandled, None)
+    }
+
     /// Publish a per-window action availability snapshot for widget-scoped commands.
     ///
     /// This is a data-only integration seam for runner/platform and UI-kit layers (menus, command
@@ -731,6 +767,11 @@ impl<H: UiHost> UiTree<H> {
                 if needs_layout_refine {
                     self.pending_post_layout_window_runtime_snapshot_refine = true;
                 }
+            }
+            if availability == CommandAvailability::NotHandled && barrier_root.is_none() {
+                availability = self
+                    .command_availability_in_subtree(app, input_ctx, base_root, &id)
+                    .0;
             }
             if availability == CommandAvailability::NotHandled && id.as_str() == "focus.menu_bar" {
                 let present = app
@@ -906,6 +947,15 @@ impl<H: UiHost> UiTree<H> {
         let start = source_node.or(focus).unwrap_or(default_root);
         let start_in_default_root =
             start == default_root || self.is_descendant(default_root, start);
+        let descendant_fallback_route = if barrier_root.is_none() {
+            let (availability, route_node) =
+                self.command_availability_in_subtree(app, &input_ctx, base_root, command);
+            (availability == CommandAvailability::Available)
+                .then_some(route_node)
+                .flatten()
+        } else {
+            None
+        };
 
         let mut bubble_from = |start: NodeId| -> (bool, bool, bool, Option<NodeId>) {
             let mut node_id = start;
@@ -1028,6 +1078,17 @@ impl<H: UiHost> UiTree<H> {
             needs_redraw = needs_redraw || needs_redraw2;
             stopped = stopped || stopped2;
             handled_by_node = handled_by_node.or(handled_by_node2);
+        }
+
+        if !handled && !stopped && barrier_root.is_none() {
+            if let Some(route_node) = descendant_fallback_route {
+                used_default_root_fallback = true;
+                let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(route_node);
+                handled = handled || handled2;
+                needs_redraw = needs_redraw || needs_redraw2;
+                stopped = stopped || stopped2;
+                handled_by_node = handled_by_node.or(handled_by_node2);
+            }
         }
 
         if !handled && !stopped && is_focus_traversal_command {

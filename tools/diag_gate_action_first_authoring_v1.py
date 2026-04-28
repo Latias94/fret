@@ -95,6 +95,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--poll-ms", type=int, default=50)
     parser.add_argument("--timeout-retry-count", type=int, default=1)
     parser.add_argument("--release", action="store_true")
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        help="Run only the named gate. Can be repeated or comma-separated.",
+    )
     args = parser.parse_args(argv)
 
     repo_root = _repo_root()
@@ -155,6 +161,23 @@ def main(argv: list[str]) -> int:
             "bin_name": "workspace_shell_demo",
         },
     ]
+    only: set[str] = {
+        name.strip()
+        for raw in args.only
+        for name in raw.split(",")
+        if name.strip()
+    }
+    if only:
+        known = {str(gate["name"]) for gate in gates}
+        unknown = sorted(only - known)
+        if unknown:
+            raise SystemExit(
+                "Unknown --only gate(s): "
+                + ", ".join(unknown)
+                + "\nKnown gates: "
+                + ", ".join(sorted(known))
+            )
+        gates = [gate for gate in gates if str(gate["name"]) in only]
 
     for gate in gates:
         gate_name = str(gate["name"])

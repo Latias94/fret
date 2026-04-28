@@ -13,6 +13,9 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
+- `tools/diag_gate_action_first_authoring_v1.py`
+- `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+- `tools/diag-scripts/suites/cookbook-imui-action-basics/suite.json`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
@@ -150,6 +153,7 @@ without reopening older workstreams first.
 - `cargo nextest run -p fret-imui`
 - `cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface`
 - `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
+- `python tools/diag_gate_action_first_authoring_v1.py --only cookbook-imui-action-basics-cross-frontend`
 
 This package now locks the current immediate-mode product message at the source-policy layer:
 
@@ -161,6 +165,8 @@ This package now locks the current immediate-mode product message at the source-
 - focused item-local shortcuts now span direct pressables, popup/menu triggers, and
   combo/combo-model triggers at the ecosystem layer,
 - and repeat keydown stays ignored by default unless `shortcut_repeat=true` is explicitly requested.
+- the launched `imui_action_basics` cookbook proof now exercises command palette, declarative,
+  GenUI, and IMUI action triggers against one shared typed action handler.
 
 ### Closed narrow closeout: child-region depth
 
@@ -354,18 +360,28 @@ This package currently proves:
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
 - `python3 -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json > /dev/null`
 
-## Missing gates that should become real before claiming closure
+## Remaining gates that should become real before claiming closure
 
-### P0 launched authoring proof (optional follow-on, not a blocker for the current decision)
+### P0 launched authoring proof
 
-The current source-policy/doc gates already prove:
+Status: landed as a focused gate.
+
+The source-policy/doc gates prove that:
 
 - first-party docs/examples teach the frozen golden pair,
 - reference proofs stay explicitly classified as non-default,
-- and helper widening requires the frozen two-surface proof budget.
+- helper widening requires the frozen two-surface proof budget,
+- and the launched `imui_action_basics` smoke exercises command palette, declarative, GenUI, and
+  IMUI triggers through one typed action handler.
 
-If P0 needs more validation later, the next useful gate should be a launched smoke or diag path for
-the first-open immediate authoring loop, not another docs-only classification check.
+Focused command:
+
+```text
+python tools/diag_gate_action_first_authoring_v1.py --only cookbook-imui-action-basics-cross-frontend
+```
+
+Latest local evidence (2026-04-28): `PASS (run_id=1777376310911)`, packed at
+`target/dfa-v1/1777376303772/i/share/1777376310911.zip`.
 
 ### P3 multi-window parity gate
 

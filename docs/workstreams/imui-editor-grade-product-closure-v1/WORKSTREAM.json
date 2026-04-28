@@ -286,6 +286,10 @@
       "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
     },
     {
+      "name": "imui-p0-launched-authoring-proof",
+      "command": "python tools/diag_gate_action_first_authoring_v1.py --only cookbook-imui-action-basics-cross-frontend"
+    },
+    {
       "name": "imui-collection-command-package-closeout",
       "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
     },
@@ -459,6 +463,9 @@
     "docs/diagnostics-first-open.md",
     "docs/ui-diagnostics-and-scripted-tests.md",
     "apps/fret-cookbook/examples/imui_action_basics.rs",
+    "tools/diag_gate_action_first_authoring_v1.py",
+    "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
+    "tools/diag-scripts/suites/cookbook-imui-action-basics/suite.json",
     "apps/fret-cookbook/src/lib.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/options.rs",
