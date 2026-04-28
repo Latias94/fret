@@ -821,7 +821,7 @@ Rule:
 - `docs/workstreams/fretboard-public-diag-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 5 markdown docs
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-12, 7 markdown docs
-- `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-03-13, 3 markdown docs
+- `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-04-26, 5 markdown docs (maintenance lane for launch runner scheduling semantics and first-frame bootstrap evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-06, 3 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs

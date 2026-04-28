@@ -376,15 +376,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
 
             state.surface = Some(surface_state);
-            state.window.request_redraw();
             redraw_bootstrap_windows.push(app_window);
         }
 
         for app_window in redraw_bootstrap_windows {
-            self.record_frame_drive_reason(
+            let _ = self.request_window_redraw_with_reason(
                 app_window,
                 fret_runtime::RunnerFrameDriveReason::SurfaceBootstrap,
             );
+            // Match the normal window creation bootstrap: a raw redraw request may not wake the
+            // event loop on every platform, so deferred surface creation also gets a one-shot RAF.
+            self.raf_windows.request(app_window);
         }
     }
 }
@@ -1031,6 +1033,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             state.pending_surface_resize = None;
         }
         self.raf_windows.clear();
+        self.next_raf_deadline = None;
     }
 
     fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
@@ -2961,19 +2964,32 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;
 
-        let wants_raf = self.raf_windows.has_pending();
-        if wants_raf {
+        let raf_deadline = if self.raf_windows.has_pending() {
+            let deadline = *self
+                .next_raf_deadline
+                .get_or_insert_with(|| now + self.config.frame_interval);
+            Some(deadline)
+        } else {
+            self.next_raf_deadline = None;
+            None
+        };
+        let flushed_raf_this_turn = raf_deadline.is_some_and(|deadline| now >= deadline);
+        if flushed_raf_this_turn {
+            self.next_raf_deadline = None;
             self.flush_raf_redraw_requests();
         }
 
-        let next = match (next_deadline, wants_raf) {
-            (Some(deadline), true) => Some((now + self.config.frame_interval).min(deadline)),
-            (Some(deadline), false) => Some(deadline),
-            (None, true) => Some(now + self.config.frame_interval),
-            (None, false) => None,
+        let next = match (
+            next_deadline,
+            raf_deadline.filter(|deadline| now < *deadline),
+        ) {
+            (Some(deadline), Some(raf_deadline)) => Some(deadline.min(raf_deadline)),
+            (Some(deadline), None) => Some(deadline),
+            (None, Some(raf_deadline)) => Some(raf_deadline),
+            (None, None) => None,
         };
 
-        if wants_poll {
+        if wants_poll || flushed_raf_this_turn {
             event_loop.set_control_flow(ControlFlow::Poll);
         } else if let Some(next) = next {
             event_loop.set_control_flow(ControlFlow::WaitUntil(next));

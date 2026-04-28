@@ -275,6 +275,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     linux_portal_settings_listener_started: bool,
 
     raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests,
+    next_raf_deadline: Option<Instant>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
     diag_clipboard_force_unavailable_windows: HashSet<fret_core::AppWindowId>,

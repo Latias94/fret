@@ -1,8 +1,8 @@
 # Fret Launch Runner Scheduling (Fearless Refactor v1) — Milestones
 
-Status: Draft
+Status: Maintenance
 
-Last updated: 2026-03-13
+Last updated: 2026-04-26
 
 ## Current progress (2026-03-13)
 
@@ -36,6 +36,15 @@ Last updated: 2026-03-13
   - aggregate runtime diagnostics are deterministic under same-millisecond multi-window updates,
   - remaining web redraw sink wiring is now explicitly split between scheduling diagnostics,
     sink-only redraw helpers, and one callback-local DOM wake path.
+- M6: Complete
+  - `first_frame_smoke_demo` now serves as the tiny native repro for blank-start reports,
+  - normal window creation keeps registry-before-redraw and schedules `SurfaceBootstrap` through
+    the shared desktop redraw helper plus one-shot RAF,
+  - deferred surface creation now uses the same helper + RAF fallback instead of a direct raw
+    `request_redraw()` plus separate diagnostics write,
+  - desktop RAF fallback now holds the request until the frame deadline and polls one turn after
+    requesting redraw,
+  - `WORKSTREAM.json` and `EVIDENCE_AND_GATES.md` now make the lane's first-open state explicit.
 
 ## M0 — Workstream agreed
 
@@ -119,13 +128,30 @@ Exit criteria:
 
 - Deferred work is recorded explicitly instead of silently left behind.
 
-## Remaining closeout blockers (from the current checkpoint)
+## M6 — First-frame bootstrap closure
 
-- diagnostics writes still need a turn/frame semantic audit,
-- broader module thinning is still intentionally deferred until semantics and evidence are fully
-  locked.
+Outcome:
+
+- Blank-start reports have a tiny native repro and source-level gate.
+- Runner-owned desktop surface bootstrap paths do not depend on pointer movement or hover to wake
+  the first present.
+
+Exit criteria:
+
+- Normal window creation and deferred surface creation both issue `SurfaceBootstrap` through the
+  desktop redraw helper.
+- Both paths schedule a one-shot RAF fallback.
+- RAF fallback requests redraw at the configured frame deadline and uses `ControlFlow::Poll` for
+  the delivery turn.
+- The source gate names the smoke demo, both bootstrap paths, and the workstream state docs.
+
+## Remaining maintenance items
+
+- Future backend-specific wake changes need focused gates before landing.
+- Broader module thinning remains intentionally deferred unless it protects a locked scheduling
+  invariant.
 
 ## Recommended continuation order
 
-1. Land a dedicated slice for diagnostics meaning and regression evidence.
-2. Only then decide whether structural thinning belongs here or in a separate workstream.
+1. Keep first-frame/bootstrap reports tied to the smoke demo and `SurfaceBootstrap` evidence.
+2. Start separate narrow follow-ons for unrelated layout, paint, or component invalidation issues.

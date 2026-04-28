@@ -17,6 +17,9 @@ fn create_window_state(
     _app: &mut App,
     _window: AppWindowId,
 ) -> FirstFrameSmokeWindowState {
+    if std::env::var_os("FRET_FIRST_FRAME_SMOKE_LOG").is_some() {
+        eprintln!("first_frame_smoke_demo: create_window_state window={_window:?}");
+    }
     FirstFrameSmokeWindowState {
         frames_drawn: 0,
         close_requested: false,
@@ -25,9 +28,15 @@ fn create_window_state(
 
 fn handle_event(
     _driver: &mut FirstFrameSmokeDriver,
-    _context: WinitEventContext<'_, FirstFrameSmokeWindowState>,
-    _event: &fret_core::Event,
+    context: WinitEventContext<'_, FirstFrameSmokeWindowState>,
+    event: &fret_core::Event,
 ) {
+    if std::env::var_os("FRET_FIRST_FRAME_SMOKE_LOG").is_some() {
+        eprintln!(
+            "first_frame_smoke_demo: event window={:?} frames_drawn={} event={event:?}",
+            context.window, context.state.frames_drawn
+        );
+    }
 }
 
 fn render(
@@ -63,6 +72,12 @@ fn render(
     });
 
     state.frames_drawn = state.frames_drawn.saturating_add(1);
+    if std::env::var_os("FRET_FIRST_FRAME_SMOKE_LOG").is_some() {
+        eprintln!(
+            "first_frame_smoke_demo: render window={window:?} frame={}",
+            state.frames_drawn
+        );
+    }
 
     if state.frames_drawn < 3 {
         app.push_effect(Effect::RequestAnimationFrame(window));

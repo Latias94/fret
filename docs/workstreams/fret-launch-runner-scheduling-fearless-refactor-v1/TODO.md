@@ -1,13 +1,15 @@
 # Fret Launch Runner Scheduling (Fearless Refactor v1) — TODO
 
-Status: Draft
+Status: Maintenance
 
-Last updated: 2026-03-13
+Last updated: 2026-04-26
 
 Companion docs:
 
 - Design: `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/README.md`
 - Milestones: `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/MILESTONES.md`
+- Evidence and gates: `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- Lane state: `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/WORKSTREAM.json`
 
 ## Documentation + contract alignment
 
@@ -22,7 +24,7 @@ Companion docs:
 
 ## Shared scheduling seam (`crates/fret-launch/src/runner/common/*`)
 
-- [ ] Add a launch-internal scheduling module for shared semantics:
+- [x] Add a launch-internal scheduling module for shared semantics:
   - [x] turn bookkeeping
   - [x] frame commit bookkeeping
   - [x] RAF coalescing
@@ -34,7 +36,7 @@ Companion docs:
   - [x] `FrameId` incrementing only on committed present
   - [x] RAF request coalescing
   - [x] bounded fixed-point drain policy
-  - [ ] redraw request coalescing ownership remains explicitly documented in `fret-app`
+  - [x] redraw request coalescing ownership remains explicitly documented in `fret-app`
 
 ## Desktop runner adoption
 
@@ -47,6 +49,11 @@ Companion docs:
     creation paths.
   - [x] Confirm redraw-request diagnostics remain intentionally app-owned in `fret-app` and use the
     current committed frame id at request time.
+  - [x] Align deferred surface creation with normal window bootstrap by routing
+    `SurfaceBootstrap` through `request_window_redraw_with_reason(...)` plus a one-shot RAF
+    fallback.
+  - [x] Hold desktop RAF fallback until the configured frame deadline and poll one turn after
+    requesting redraw, so fallback delivery does not depend on pointer input.
 - [ ] Thin `app_handler.rs` only after behavior remains unchanged.
   - [x] Extract desktop runner-owned scheduling/diagnostics helpers into
     `runner/desktop/runner/scheduling_diagnostics.rs`.
@@ -85,6 +92,8 @@ Companion docs:
 - [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` if the final code path materially improves ADR 0034 alignment.
 - [x] Close the desktop/web parity gap for streaming-pending frame-drive diagnostics.
 - [x] Make aggregate runtime diagnostics deterministic when multiple windows update in the same millisecond.
+- [x] Add a first-frame smoke source gate covering normal window creation and deferred surface
+  bootstrap wake paths.
 
 ## Validation gates
 
@@ -92,6 +101,7 @@ Companion docs:
 - [x] `cargo nextest run -p fret-launch`
 - [x] `python tools/check_layering.py`
 - [x] Any new targeted scheduling tests added for this workstream.
+- [x] `python -m json.tool docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/WORKSTREAM.json > /dev/null`
 
 ## Closeout
 
@@ -99,4 +109,6 @@ Companion docs:
 - [x] Audit remaining direct redraw sink paths and document why they stay backend-local or
   callback-local without frame-drive diagnostics.
 - [x] Record any intentionally deferred cleanup in the README and milestones docs.
-- [ ] Prepare a follow-up worktree only after the documentation commit lands on `main`.
+- [x] Add `WORKSTREAM.json` and `EVIDENCE_AND_GATES.md` so first-open state is explicit.
+- [ ] Keep future broad cleanup out of this lane unless a new scheduling invariant needs a narrow
+  follow-on.

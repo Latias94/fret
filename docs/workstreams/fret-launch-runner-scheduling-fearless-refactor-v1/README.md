@@ -1,8 +1,8 @@
 # Fret Launch Runner Scheduling (Fearless Refactor v1)
 
-Status: Draft
+Status: Maintenance
 
-Last updated: 2026-03-13
+Last updated: 2026-04-26
 
 Implementation update (2026-03-13, batch 1):
 
@@ -105,6 +105,20 @@ Implementation update (2026-03-13, batch 8):
   - sink-only redraws stay in `web/redraw_sink.rs`,
   - the only remaining direct web `request_redraw()` call is the devtools inbox DOM callback,
     where the closure has no mutable runner access and only needs a best-effort wake.
+
+Implementation update (2026-04-26, first-frame bootstrap closure):
+
+- Desktop normal window creation and deferred surface creation now share the same bootstrap shape:
+  `request_window_redraw_with_reason(..., SurfaceBootstrap)` followed by a one-shot RAF fallback.
+- Desktop RAF fallback now waits until the configured frame deadline, then requests redraw and
+  polls one turn so fallback delivery is not lost when raw `request_redraw()` does not wake the
+  event loop by itself.
+- The normal creation path keeps the `WindowId -> AppWindowId` registry insertion before the first
+  redraw request, preventing the initial `RedrawRequested` event from being dropped.
+- `first_frame_smoke_demo` is the tiny native repro for blank-start reports: it paints a full-window
+  quad, requests follow-up animation frames, and closes itself after several frames.
+- The lane now has a machine-readable `WORKSTREAM.json` and an explicit
+  `EVIDENCE_AND_GATES.md` gate set.
 
 ## Context
 
@@ -422,13 +436,14 @@ This workstream is considered complete when all of the following are true:
 - Existing crate boundaries remain intact.
 - Regression gates exist for both semantic drift and the web recovery path.
 
-## Current checkpoint (2026-03-13, post-batch-2)
+## Current checkpoint (2026-04-26, maintenance)
 
-This workstream has now cleared the highest-risk scheduling drift:
+This workstream has cleared the highest-risk scheduling drift and is now a maintenance lane:
 
 - desktop and web share the same `TickId` / `FrameId` contract,
 - web frame-state restoration is failure-safe across surface acquire abort paths,
 - timer ownership and wake-path convergence are documented instead of inferred.
+- runner-owned first-frame bootstrap paths no longer rely on later input events to wake rendering.
 
 This means the repo now has a stable checkpoint that is worth preserving before any wider cleanup.
 
@@ -448,12 +463,13 @@ Further deduplication should be justified by either:
 - a regression gate that is currently impossible to write cleanly,
 - or a concrete review/maintenance burden that outweighs the churn cost.
 
-### Remaining closeout blockers
+### Remaining maintenance items
 
-The main blockers before calling v1 "closed" are now:
+No broad scheduling rewrite is open in this lane. Future work should stay narrow and evidence-led:
 
-1. diagnostics-store auditing for turn/frame-drive/present meaning,
-2. an explicit decision on which cleanup belongs in this workstream versus a later one.
+1. keep adding focused gates when a backend-specific wake path can drift,
+2. keep broad structural thinning in separate follow-ons unless it protects a locked scheduling
+   invariant.
 
 ## Recommended next implementation slices
 

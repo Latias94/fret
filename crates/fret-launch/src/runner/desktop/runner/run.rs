@@ -112,6 +112,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             #[cfg(target_os = "linux")]
             linux_portal_settings_listener_started: false,
             raf_windows: crate::runner::common::frame_requests::AnimationFrameRequests::default(),
+            next_raf_deadline: None,
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
             diag_clipboard_force_unavailable_windows: HashSet::new(),

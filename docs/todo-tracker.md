@@ -994,7 +994,12 @@ It complements (but does not replace) ADRs:
   - Symptom: some demo surfaces appear blank on startup and only render after pointer movement/hover.
   - Hypothesis: missing initial invalidation/redraw request, or render_root/layout/paint ordering drift.
   - ADRs: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
-  - TODO: add a tiny regression harness in `fret-demo` and lock this down with a deterministic first-frame draw rule.
+  - Update 2026-04-26: the tiny native repro exists as `first_frame_smoke_demo`, and desktop
+    `SurfaceBootstrap` now covers both normal window creation and deferred surface creation through
+    runner-owned redraw diagnostics plus one-shot RAF fallback. Gate:
+    `cargo nextest run -p fret-examples --lib first_frame_bootstrap_smoke_locks_runner_wake_paths --no-fail-fast`.
+    Treat future blank-start reports as new narrow repros only if they bypass these bootstrap
+    paths.
 
 ## P0 - Performance / Invalidation & Cache Boundaries
 
