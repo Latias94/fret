@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "imui-id-stack-browser-v1",
   "title": "ImUi ID Stack Browser v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-28",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "follow_on_of": "imui-id-stack-diagnostics-v1",
   "problem": "Structured IMUI/runtime identity warnings are now captured and queryable, but authors still need a browser-style debugging surface that lets them move from a warning to its window, frame, element path, list identity, key hash, and source location without opening raw bundle JSON.",
   "authoritative_docs": [
@@ -31,6 +31,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md"
     }
   ],
   "repro": {
@@ -78,6 +82,7 @@
     "docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json",
     "docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md",
     "docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md",
+    "docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md",
     "crates/fret-diag/src/identity_browser.rs",
     "crates/fret-diag/src/commands/query.rs",
     "crates/fret-diag/src/cli/contracts/commands/query.rs",
@@ -92,7 +97,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane for browser-style identity diagnostics over captured bundle data. Start narrower follow-ons for `test_id` inference, localization policy, table column identity, or public runtime identity APIs."
+    "default_action": "start_follow_on",
+    "notes": "Keep this lane closed around the shipped bundle-mode browser query surface. Start narrower follow-ons for dashboard/HTML UI, live devtools identity inspection, `test_id` inference, localization policy, table column identity, or public runtime identity APIs."
   }
 }

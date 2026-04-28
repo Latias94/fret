@@ -1,6 +1,6 @@
 # ImUi ID Stack Browser v1 - TODO
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## M0 - Tracking
@@ -38,16 +38,16 @@ M2 result:
 
 ## M3 - Interactive Experience
 
-- [ ] Decide whether the first interactive surface belongs in `diag dashboard`, a browser-ready JSON
+- [x] Decide whether the first interactive surface belongs in `diag dashboard`, a browser-ready JSON
   sidecar, or a dedicated `diag identity-browser` command.
-- [ ] Provide keyboard/filter semantics or a bounded HTML/dashboard view if the implementation
-  leaves pure query mode.
-- [ ] Keep live connected devtools transport out of scope unless bundle-mode browsing proves
+- [x] Keep the first surface in pure query mode, so keyboard/filter semantics and HTML/dashboard
+  controls are deferred to narrower follow-ons.
+- [x] Keep live connected devtools transport out of scope unless bundle-mode browsing proves
   insufficient.
 
 ## M4 - Closeout Readiness
 
-- [ ] Record final gates and evidence.
-- [ ] Split live devtools, `test_id` inference, localization, and table column identity into
+- [x] Record final gates and evidence.
+- [x] Split live devtools, `test_id` inference, localization, and table column identity into
   separate follow-ons if they remain useful.
-- [ ] Close or downgrade the lane once a browser-ready identity diagnostics surface is stable.
+- [x] Close or downgrade the lane once a browser-ready identity diagnostics surface is stable.

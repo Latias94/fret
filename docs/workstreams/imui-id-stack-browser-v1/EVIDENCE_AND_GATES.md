@@ -1,6 +1,6 @@
 # ImUi ID Stack Browser v1 - Evidence and Gates
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## Smallest Repro
@@ -15,6 +15,7 @@ Last updated: 2026-04-28
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`
 - `docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md`
+- `docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `crates/fret-diag/src/identity_browser.rs`
 - `crates/fret-diag/src/commands/query.rs`
 - `crates/fret-diag/src/cli/contracts/commands/query.rs`
@@ -36,8 +37,8 @@ Last updated: 2026-04-28
 
 ## Future Gates
 
-- Focused `fret-diag` tests for browser model grouping/filtering.
-- CLI contract/cutover tests if a new command or public flags land.
+- Focused `fret-diag` tests for browser model grouping/filtering shipped in this lane.
+- CLI contract/cutover tests for `--browser` shipped in this lane.
 - Dashboard or HTML fixture checks if the first interactive surface is visual rather than query-only.
 
 ## Non-Gates

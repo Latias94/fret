@@ -1,6 +1,6 @@
 # ImUi ID Stack Browser v1 - Milestones
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## M0 - Tracking
@@ -48,6 +48,12 @@ Exit criteria:
 - maintainers can inspect warning groups and selected warning details efficiently,
 - and live devtools work is either explicitly deferred or separately owned.
 
+Result:
+
+- Closed with the browser-ready query sidecar as the first review workflow.
+- `--browser --json --out` is the stable input for future dashboard/HTML work.
+- Live devtools identity inspection is explicitly deferred to a separate follow-on.
+
 ## M4 - Follow-on Decision
 
 Exit criteria:
@@ -55,6 +61,12 @@ Exit criteria:
 - final gates are recorded,
 - `WORKSTREAM.json` reflects the current lane state,
 - and broader ideas are split into narrower lanes instead of widening this one by default.
+
+Result:
+
+- Lane closed on 2026-04-28.
+- Final verdict is recorded in `CLOSEOUT_AUDIT_2026-04-28.md`.
+- Broader UI/live/API ideas remain follow-on candidates.
 
 Current deferred candidates:
 
