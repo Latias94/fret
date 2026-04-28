@@ -20,6 +20,12 @@ Exit criteria:
 - duplicate-key and unkeyed-reorder fixtures prove the model shape,
 - and any capture-side gaps are listed with evidence instead of guessed.
 
+Result:
+
+- Landed in `crates/fret-diag/src/identity_browser.rs`.
+- Existing fields are enough for first-use post-run browsing; no capture-side blocker found.
+- Focused tests cover duplicate keyed-list rows, unkeyed reorder dedup, and timeline behavior.
+
 ## M2 - Browser Query Surface
 
 Exit criteria:

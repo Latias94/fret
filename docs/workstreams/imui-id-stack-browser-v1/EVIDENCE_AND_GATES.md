@@ -5,7 +5,7 @@ Last updated: 2026-04-28
 
 ## Smallest Repro
 
-- `cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast`
+- `cargo nextest run -p fret-diag identity_browser --no-fail-fast`
 
 ## Current Evidence
 
@@ -13,6 +13,8 @@ Last updated: 2026-04-28
 - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`
+- `crates/fret-diag/src/identity_browser.rs`
 - `crates/fret-diag/src/commands/query.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - `crates/fret-ui/src/elements/cx.rs`
@@ -20,7 +22,10 @@ Last updated: 2026-04-28
 
 ## Initial Gate Set
 
+- `cargo nextest run -p fret-diag identity_browser --no-fail-fast`
 - `cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast`
+- `cargo check -p fret-diag --jobs 1`
+- `cargo fmt --package fret-diag --check`
 - `python tools/check_workstream_catalog.py`
 - `python -m json.tool docs/workstreams/imui-id-stack-browser-v1/WORKSTREAM.json`
 - `git diff --check`

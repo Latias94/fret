@@ -11,14 +11,20 @@ Last updated: 2026-04-28
 
 ## M1 - Source Model Audit
 
-- [ ] Map the current `identity_warnings` bundle shape into a browser-ready row model.
-- [ ] Decide whether existing fields are enough for first-use browsing.
-- [ ] Add fixture coverage for duplicate-key and unkeyed-reorder rows.
-- [ ] Keep missing capture-side fields as explicit follow-on candidates unless they block browsing.
+- [x] Map the current `identity_warnings` bundle shape into a browser-ready row model.
+- [x] Decide whether existing fields are enough for first-use browsing.
+- [x] Add fixture coverage for duplicate-key and unkeyed-reorder rows.
+- [x] Keep missing capture-side fields as explicit follow-on candidates unless they block browsing.
+
+M1 result:
+
+- `crates/fret-diag/src/identity_browser.rs` owns the browser-ready source model and collector.
+- Existing capture fields are sufficient for first-use post-run browsing.
+- No capture-side blocker was found; future live/devtools fields remain follow-on candidates.
 
 ## M2 - Browser Query Surface
 
-- [ ] Add a bounded `fret-diag` identity browser model or command over schema2 bundle snapshots.
+- [x] Add a bounded `fret-diag` identity browser model over schema2 bundle snapshots.
 - [ ] Support grouping by warning kind, source file, list id, element path, and frame/window.
 - [ ] Preserve `--json` / `--out` style evidence for automation.
 - [ ] Add focused contract/cutover tests if the public CLI surface grows.

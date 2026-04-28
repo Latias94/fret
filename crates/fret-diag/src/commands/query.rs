@@ -5,6 +5,10 @@ use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
 use super::resolve;
 use super::sidecars;
 
+use crate::identity_browser::{
+    IdentityWarningBrowserFilters, collect_identity_warning_browser_report,
+    parse_identity_warning_kind, parse_u64_maybe_hex,
+};
 use crate::test_id_bloom::TestIdBloomV1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -342,133 +346,6 @@ fn read_bundle_artifact_json(path: &Path) -> Result<serde_json::Value, String> {
     })
 }
 
-fn parse_identity_warning_kind(s: &str) -> Option<&'static str> {
-    match s.trim().to_ascii_lowercase().as_str() {
-        "duplicate_keyed_list_item_key_hash" | "duplicate-keyed-list-item-key-hash" => {
-            Some("duplicate_keyed_list_item_key_hash")
-        }
-        "unkeyed_list_order_changed" | "unkeyed-list-order-changed" => {
-            Some("unkeyed_list_order_changed")
-        }
-        _ => None,
-    }
-}
-
-fn parse_u64_maybe_hex(s: &str, flag: &str) -> Result<u64, String> {
-    let s = s.trim();
-    if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
-        return u64::from_str_radix(hex, 16).map_err(|_| {
-            format!("invalid value for {flag} (expected decimal u64 or 0x-prefixed hex)")
-        });
-    }
-    s.parse::<u64>()
-        .map_err(|_| format!("invalid value for {flag} (expected decimal u64 or 0x-prefixed hex)"))
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-struct IdentityWarningDedupKey {
-    window: u64,
-    kind: String,
-    frame_id: Option<u64>,
-    element: Option<u64>,
-    list_id: Option<u64>,
-    key_hash: Option<u64>,
-    first_index: Option<u64>,
-    second_index: Option<u64>,
-    previous_len: Option<u64>,
-    next_len: Option<u64>,
-}
-
-fn identity_warning_location_file(warning: &serde_json::Value) -> Option<&str> {
-    warning
-        .get("location")
-        .and_then(|v| v.get("file"))
-        .and_then(|v| v.as_str())
-}
-
-fn identity_warning_matches_filter(
-    warning: &serde_json::Value,
-    kind_filter: Option<&str>,
-    element_filter: Option<u64>,
-    list_id_filter: Option<u64>,
-    element_path_filter: Option<&str>,
-    file_filter: Option<&str>,
-) -> bool {
-    if let Some(want) = kind_filter
-        && warning.get("kind").and_then(|v| v.as_str()) != Some(want)
-    {
-        return false;
-    }
-    if let Some(want) = element_filter
-        && warning.get("element").and_then(|v| v.as_u64()) != Some(want)
-    {
-        return false;
-    }
-    if let Some(want) = list_id_filter
-        && warning.get("list_id").and_then(|v| v.as_u64()) != Some(want)
-    {
-        return false;
-    }
-    if let Some(want) = element_path_filter
-        && !warning
-            .get("element_path")
-            .and_then(|v| v.as_str())
-            .is_some_and(|path| path.contains(want))
-    {
-        return false;
-    }
-    if let Some(want) = file_filter
-        && !identity_warning_location_file(warning).is_some_and(|file| file.contains(want))
-    {
-        return false;
-    }
-    true
-}
-
-fn identity_warning_dedup_key(window: u64, warning: &serde_json::Value) -> IdentityWarningDedupKey {
-    IdentityWarningDedupKey {
-        window,
-        kind: warning
-            .get("kind")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown")
-            .to_string(),
-        frame_id: warning.get("frame_id").and_then(|v| v.as_u64()),
-        element: warning.get("element").and_then(|v| v.as_u64()),
-        list_id: warning.get("list_id").and_then(|v| v.as_u64()),
-        key_hash: warning.get("key_hash").and_then(|v| v.as_u64()),
-        first_index: warning.get("first_index").and_then(|v| v.as_u64()),
-        second_index: warning.get("second_index").and_then(|v| v.as_u64()),
-        previous_len: warning.get("previous_len").and_then(|v| v.as_u64()),
-        next_len: warning.get("next_len").and_then(|v| v.as_u64()),
-    }
-}
-
-fn identity_warning_row(
-    window: u64,
-    snapshot: &serde_json::Value,
-    warning: &serde_json::Value,
-) -> serde_json::Value {
-    serde_json::json!({
-        "window": window,
-        "tick_id": snapshot.get("tick_id").and_then(|v| v.as_u64()),
-        "snapshot_frame_id": crate::json_bundle::snapshot_frame_id(snapshot),
-        "window_snapshot_seq": crate::json_bundle::snapshot_window_snapshot_seq(snapshot),
-        "timestamp_unix_ms": snapshot.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
-        "kind": warning.get("kind").and_then(|v| v.as_str()),
-        "frame_id": warning.get("frame_id").and_then(|v| v.as_u64()),
-        "element": warning.get("element").and_then(|v| v.as_u64()),
-        "element_path": warning.get("element_path").and_then(|v| v.as_str()),
-        "list_id": warning.get("list_id").and_then(|v| v.as_u64()),
-        "key_hash": warning.get("key_hash").and_then(|v| v.as_u64()),
-        "first_index": warning.get("first_index").and_then(|v| v.as_u64()),
-        "second_index": warning.get("second_index").and_then(|v| v.as_u64()),
-        "previous_len": warning.get("previous_len").and_then(|v| v.as_u64()),
-        "next_len": warning.get("next_len").and_then(|v| v.as_u64()),
-        "location": warning.get("location").cloned().unwrap_or(serde_json::Value::Null),
-    })
-}
-
 #[allow(clippy::too_many_arguments)]
 fn cmd_query_identity_warnings(
     rest: &[String],
@@ -583,80 +460,21 @@ fn cmd_query_identity_warnings(
     };
 
     let bundle = read_bundle_artifact_json(&bundle_path)?;
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .map(|v| v.as_slice())
-        .unwrap_or(&[]);
-
-    let mut encounter_seq = 0u64;
-    let mut results_timeline: Vec<serde_json::Value> = Vec::new();
-    let mut latest_by_warning: HashMap<IdentityWarningDedupKey, (u64, serde_json::Value)> =
-        HashMap::new();
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        if let Some(filter) = window_filter
-            && filter != window_id
-        {
-            continue;
-        }
-
-        let snaps_empty = Vec::new();
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .unwrap_or(&snaps_empty);
-
-        for s in snaps {
-            let snapshot_frame_id = crate::json_bundle::snapshot_frame_id(s);
-            if snapshot_frame_id < warmup_frames {
-                continue;
-            }
-
-            let warnings = s
-                .get("debug")
-                .and_then(|v| v.get("element_runtime"))
-                .and_then(|v| v.get("identity_warnings"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
-
-            for warning in warnings {
-                if !identity_warning_matches_filter(
-                    warning,
-                    kind_filter.as_deref(),
-                    element_filter,
-                    list_id_filter,
-                    element_path_filter.as_deref(),
-                    file_filter.as_deref(),
-                ) {
-                    continue;
-                }
-
-                let row = identity_warning_row(window_id, s, warning);
-                encounter_seq = encounter_seq.saturating_add(1);
-                if include_timeline {
-                    results_timeline.push(row);
-                } else {
-                    latest_by_warning.insert(
-                        identity_warning_dedup_key(window_id, warning),
-                        (encounter_seq, row),
-                    );
-                }
-            }
-        }
-    }
-
-    let mut results: Vec<serde_json::Value> = if include_timeline {
-        results_timeline
-    } else {
-        let mut rows: Vec<(u64, serde_json::Value)> = latest_by_warning.into_values().collect();
-        rows.sort_by(|a, b| b.0.cmp(&a.0));
-        rows.into_iter().map(|(_, row)| row).collect()
+    let browser_filters = IdentityWarningBrowserFilters {
+        window: window_filter,
+        kind: kind_filter.clone(),
+        element: element_filter,
+        list_id: list_id_filter,
+        element_path_contains: element_path_filter.clone(),
+        file_contains: file_filter.clone(),
+        warmup_frames,
+        timeline: include_timeline,
+        top,
     };
-    if top > 0 && results.len() > top {
-        results.truncate(top);
-    }
+    let report = collect_identity_warning_browser_report(&bundle, &browser_filters);
+    let _browser_summary = report.summary_json();
+    let results: Vec<serde_json::Value> =
+        report.rows.iter().map(|row| row.to_query_json()).collect();
 
     let payload = serde_json::json!({
         "schema_version": 1,

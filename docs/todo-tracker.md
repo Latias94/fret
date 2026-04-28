@@ -352,6 +352,7 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-id-stack-browser-v1/TODO.md`
   - `docs/workstreams/imui-id-stack-browser-v1/MILESTONES.md`
   - `docs/workstreams/imui-id-stack-browser-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`

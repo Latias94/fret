@@ -58,6 +58,7 @@ mod evidence_index;
 mod frames_index;
 mod gates;
 mod hotspots_lite;
+mod identity_browser;
 mod json_bundle;
 mod json_stream;
 mod latest;
