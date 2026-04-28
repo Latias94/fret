@@ -2037,6 +2037,26 @@ mod tests {
         dir
     }
 
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|path| path.parent())
+            .expect("crate lives under <repo>/crates/fret-diag")
+            .to_path_buf()
+    }
+
+    fn identity_warnings_fixture_path() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("fixtures")
+            .join("identity_warnings")
+            .join("bundle.schema2.json")
+    }
+
+    fn identity_warnings_fixture_arg_from_repo_root() -> String {
+        "crates/fret-diag/tests/fixtures/identity_warnings/bundle.schema2.json".to_string()
+    }
+
     fn write_script_result_with_overlay_trace(dir: &Path) -> PathBuf {
         use fret_diag_protocol::{
             UiOverlayPlacementTraceEntryV1, UiOverlaySideV1, UiRectV1, UiScriptEvidenceV1,
@@ -2382,69 +2402,8 @@ mod tests {
     }
 
     fn write_bundle_schema2_with_identity_warnings(dir: &Path) -> PathBuf {
-        let warning_a = serde_json::json!({
-            "kind": "unkeyed_list_order_changed",
-            "frame_id": 20u64,
-            "element": 123u64,
-            "element_path": "root.panel.file.rs:1:1[key=0x1] (0x7b)",
-            "list_id": 7u64,
-            "previous_len": 3u64,
-            "next_len": 3u64,
-            "location": {
-                "file": "src/view.rs",
-                "line": 11u64,
-                "column": 9u64
-            }
-        });
-        let warning_b = serde_json::json!({
-            "kind": "duplicate_keyed_list_item_key_hash",
-            "frame_id": 21u64,
-            "element": 456u64,
-            "element_path": "root.panel.other.rs:2:1[key=0x2] (0x1c8)",
-            "list_id": 42u64,
-            "key_hash": 9001u64,
-            "first_index": 1u64,
-            "second_index": 2u64,
-            "location": {
-                "file": "src/list.rs",
-                "line": 31u64,
-                "column": 13u64
-            }
-        });
-
-        let bundle = serde_json::json!({
-            "schema_version": 2,
-            "windows": [{
-                "window": 1u64,
-                "snapshots": [
-                    {
-                        "tick_id": 10u64,
-                        "frame_id": 20u64,
-                        "window_snapshot_seq": 30u64,
-                        "timestamp_unix_ms": 40u64,
-                        "debug": {
-                            "element_runtime": {
-                                "identity_warnings": [warning_a.clone(), warning_b]
-                            }
-                        }
-                    },
-                    {
-                        "tick_id": 11u64,
-                        "frame_id": 22u64,
-                        "window_snapshot_seq": 31u64,
-                        "timestamp_unix_ms": 41u64,
-                        "debug": {
-                            "element_runtime": {
-                                "identity_warnings": [warning_a]
-                            }
-                        }
-                    }
-                ]
-            }]
-        });
-
         let path = dir.join("bundle.schema2.json");
-        let bytes = serde_json::to_vec(&bundle).expect("serialize bundle.schema2.json");
+        let bytes = std::fs::read(identity_warnings_fixture_path()).expect("read identity fixture");
         std::fs::write(&path, bytes).expect("write bundle.schema2.json");
         path
     }
@@ -2662,6 +2621,87 @@ mod tests {
         assert_eq!(
             check.get("groups_found").and_then(|value| value.as_u64()),
             Some(1)
+        );
+    }
+
+    #[test]
+    fn query_identity_warnings_fixture_bundle_drives_browser_json_and_html_check() {
+        let out_dir = make_temp_dir("fret-diag-query-identity-warnings-fixture");
+        let query_out = out_dir.join("browser.json");
+        let html_out = out_dir.join("identity.html");
+        let html_check_out = out_dir.join("check.identity_browser_html.json");
+
+        cmd_query_identity_warnings(
+            &[
+                identity_warnings_fixture_arg_from_repo_root(),
+                "--browser".to_string(),
+                "--html-out".to_string(),
+                html_out.display().to_string(),
+                "--html-check-out".to_string(),
+                html_check_out.display().to_string(),
+            ],
+            &repo_root(),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read browser.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse browser.json");
+        assert_eq!(
+            v.get("browser").and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            v.get("summary")
+                .and_then(|value| value.get("total_observations"))
+                .and_then(|value| value.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            v.get("summary")
+                .and_then(|value| value.get("deduped_observations"))
+                .and_then(|value| value.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            v.get("results")
+                .and_then(|value| value.as_array())
+                .map(Vec::len),
+            Some(2)
+        );
+        assert_eq!(
+            v.get("groups")
+                .and_then(|value| value.as_array())
+                .map(Vec::len),
+            Some(2)
+        );
+
+        let html = std::fs::read_to_string(&html_out).expect("read identity.html");
+        assert!(html.contains("data-testid=\"identity-browser-shell\""));
+        assert!(html.contains("duplicate_keyed_list_item_key_hash"));
+        assert!(html.contains("unkeyed_list_order_changed"));
+
+        let check_bytes = std::fs::read(&html_check_out).expect("read check json");
+        let check: serde_json::Value =
+            serde_json::from_slice(&check_bytes).expect("parse check json");
+        assert_eq!(
+            check.get("kind").and_then(|value| value.as_str()),
+            Some("check.identity_browser_html")
+        );
+        assert_eq!(
+            check.get("ok").and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            check.get("rows_found").and_then(|value| value.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            check.get("groups_found").and_then(|value| value.as_u64()),
+            Some(2)
         );
     }
 

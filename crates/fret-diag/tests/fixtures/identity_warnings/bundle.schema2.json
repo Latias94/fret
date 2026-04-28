@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "windows": [
+    {
+      "window": 1,
+      "snapshots": [
+        {
+          "tick_id": 10,
+          "frame_id": 20,
+          "window_snapshot_seq": 30,
+          "timestamp_unix_ms": 40,
+          "debug": {
+            "element_runtime": {
+              "identity_warnings": [
+                {
+                  "kind": "unkeyed_list_order_changed",
+                  "frame_id": 20,
+                  "element": 123,
+                  "element_path": "root.panel.file.rs:1:1[key=0x1] (0x7b)",
+                  "list_id": 7,
+                  "previous_len": 3,
+                  "next_len": 3,
+                  "location": {
+                    "file": "src/view.rs",
+                    "line": 11,
+                    "column": 9
+                  }
+                },
+                {
+                  "kind": "duplicate_keyed_list_item_key_hash",
+                  "frame_id": 21,
+                  "element": 456,
+                  "element_path": "root.panel.other.rs:2:1[key=0x2] (0x1c8)",
+                  "list_id": 42,
+                  "key_hash": 9001,
+                  "first_index": 1,
+                  "second_index": 2,
+                  "location": {
+                    "file": "src/list.rs",
+                    "line": 31,
+                    "column": 13
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "tick_id": 11,
+          "frame_id": 22,
+          "window_snapshot_seq": 31,
+          "timestamp_unix_ms": 41,
+          "debug": {
+            "element_runtime": {
+              "identity_warnings": [
+                {
+                  "kind": "unkeyed_list_order_changed",
+                  "frame_id": 20,
+                  "element": 123,
+                  "element_path": "root.panel.file.rs:1:1[key=0x1] (0x7b)",
+                  "list_id": 7,
+                  "previous_len": 3,
+                  "next_len": 3,
+                  "location": {
+                    "file": "src/view.rs",
+                    "line": 11,
+                    "column": 9
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
