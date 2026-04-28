@@ -1,6 +1,6 @@
 # ImUi ID Stack Diagnostics v1
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## Why This Lane Exists

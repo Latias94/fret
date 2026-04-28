@@ -1,6 +1,6 @@
 # ImUi ID Stack Diagnostics v1 - Milestones
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## M0 - Tracking
@@ -53,7 +53,7 @@ Result:
 
 ## M5 - Follow-on Decision
 
-Exit criteria:
+Result:
 
 - final gates are recorded,
 - `WORKSTREAM.json` reflects current lane state,

@@ -304,13 +304,17 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-table-header-label-policy-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-table-header-label-policy-v1/M1_TABLE_HEADER_VISIBLE_LABEL_SLICE_2026-04-28.md`,
   and `docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
-- ImUi ID stack diagnostics follow-on (active narrow lane that makes duplicate keyed-list hashes
-  and unkeyed reorder identity problems visible in structured diagnostics snapshots without
-  exposing render-pass/evaluation tokens or inferring `test_id`s):
+- ImUi ID stack diagnostics follow-on closeout record (closed narrow lane that makes duplicate
+  keyed-list hashes and unkeyed reorder identity problems visible in structured diagnostics
+  snapshots and queryable through `diag query identity-warnings`, without exposing render-pass /
+  evaluation tokens or inferring `test_id`s):
   `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`,
   `docs/workstreams/imui-id-stack-diagnostics-v1/EVIDENCE_AND_GATES.md`,
-  and `docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md`.
+  `docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md`,
+  `docs/workstreams/imui-id-stack-diagnostics-v1/M2_IDENTITY_WARNINGS_QUERY_2026-04-28.md`,
+  `docs/workstreams/imui-id-stack-diagnostics-v1/M3_IMUI_KEYED_DUPLICATE_PROOF_2026-04-28.md`,
+  and `docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

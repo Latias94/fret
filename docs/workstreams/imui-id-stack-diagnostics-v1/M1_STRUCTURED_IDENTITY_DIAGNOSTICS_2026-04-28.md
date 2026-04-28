@@ -12,8 +12,9 @@ records:
 - diagnostics snapshot export through `fret-bootstrap` under `debug.element_runtime.identity_warnings`,
 - IMUI callsite preservation through `#[track_caller]` on identity-bearing facade helpers.
 
-The lane stays active because a future interactive ID-stack browser, explicit diagnostics query
-command, and `ui.for_each_keyed` duplicate-key authoring proof still deserve separate slices.
+Later slices landed the diagnostics query command and the IMUI `for_each_keyed` duplicate-key
+authoring proof. See `CLOSEOUT_AUDIT_2026-04-28.md` for the closed lane state and remaining
+follow-ons.
 
 ## Evidence
 

@@ -49,6 +49,5 @@ values from labels, expose render-pass or evaluation tokens, or change IMUI auth
 ## Follow-Ons Still Deferred
 
 - full interactive ID-stack browser,
-- IMUI `for_each_keyed` duplicate-key authoring proof,
 - label-to-`test_id` inference,
 - table column identity.

@@ -1,6 +1,6 @@
 # ImUi ID Stack Diagnostics v1 - Evidence and Gates
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## Smallest Repro
@@ -15,6 +15,7 @@ Last updated: 2026-04-28
 - `docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
+- `docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md`
 - `crates/fret-ui/src/elements/cx.rs`
 - `crates/fret-ui/src/elements/runtime.rs`

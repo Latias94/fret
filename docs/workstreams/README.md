@@ -580,15 +580,19 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closeout record for `TableColumn` visible-label grammar after the label identity closeout, while
     keeping sortable/resizable column identity and ID-stack diagnostics out of scope.
 
-- Active narrow IMUI ID stack diagnostics follow-on:
+- Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/TODO.md`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/MILESTONES.md`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md`
-  - Scope: active structured diagnostics lane for duplicate keyed-list hashes and unkeyed reorder
-    warnings, without exposing render-pass/evaluation tokens or inferring `test_id`s.
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/M2_IDENTITY_WARNINGS_QUERY_2026-04-28.md`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/M3_IMUI_KEYED_DUPLICATE_PROOF_2026-04-28.md`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+  - Scope: closed structured diagnostics lane for duplicate keyed-list hashes and unkeyed reorder
+    warnings, including bounded `diag query identity-warnings` triage, without exposing
+    render-pass/evaluation tokens or inferring `test_id`s.
 
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
@@ -936,7 +940,7 @@ Rule:
 - `docs/workstreams/imui-control-geometry-stability-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for local base-control geometry stability across IMUI interaction states)
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
-- `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for structured IMUI/runtime identity diagnostics)
+- `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for structured IMUI/runtime identity diagnostics)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)

@@ -1,6 +1,6 @@
 # ImUi ID Stack Diagnostics v1 - TODO
 
-Status: active
+Status: closed
 Last updated: 2026-04-28
 
 ## M0 - Tracking
@@ -46,7 +46,7 @@ Last updated: 2026-04-28
 
 ## M5 - Closeout Readiness
 
-- [ ] Record final gates and evidence.
-- [ ] Decide whether a full ID-stack browser, label-to-`test_id` inference, or table column
+- [x] Record final gates and evidence.
+- [x] Decide whether a full ID-stack browser, label-to-`test_id` inference, or table column
   identity deserves separate follow-ons.
-- [ ] Close or downgrade the lane to maintenance once the structured diagnostics slice is stable.
+- [x] Close or downgrade the lane to maintenance once the structured diagnostics slice is stable.
