@@ -1,6 +1,6 @@
 # ImUi Control Geometry Stability v1
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-04-28
 
 ## Why this lane exists

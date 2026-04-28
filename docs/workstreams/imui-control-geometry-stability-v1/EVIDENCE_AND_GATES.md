@@ -1,6 +1,6 @@
 # ImUi Control Geometry Stability v1 - Evidence and Gates
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-04-28
 
 ## Smallest Repro
@@ -26,6 +26,7 @@ Linux/Wayland real-host acceptance is not part of this lane. That proof remains 
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md`
+- `docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - `docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`
 - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`

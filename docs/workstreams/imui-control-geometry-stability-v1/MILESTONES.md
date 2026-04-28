@@ -1,6 +1,6 @@
 # ImUi Control Geometry Stability v1 - Milestones
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-04-28
 
 ## M0 - Baseline and Tracking
@@ -50,11 +50,11 @@ Expected first gate families:
 
 ## M2 - Fearless Refactor Slice
 
-Exit criteria:
+Verdict:
 
-- unstable controls found by M1 are refactored,
-- no demo-level size workaround is introduced,
-- duplicated chrome/state code is deleted when the shared path is clearer,
+- no unstable admitted control family was found by M1,
+- no demo-level size workaround was introduced,
+- no product code refactor was required,
 - and the final code still respects the `fret-ui` mechanism / `fret-ui-kit::imui` policy split.
 
 ## M3 - Closeout
@@ -66,3 +66,7 @@ Exit criteria:
 - repo-level indexes point to the closeout,
 - and any unresolved future work is split into a narrower follow-on instead of staying as vague
   backlog.
+
+Evidence:
+
+- `docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`

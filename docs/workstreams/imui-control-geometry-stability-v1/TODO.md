@@ -1,6 +1,6 @@
 # ImUi Control Geometry Stability v1 - TODO
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-04-28
 
 ## Lane setup
@@ -38,14 +38,16 @@ Last updated: 2026-04-28
 
 ## M2 - Refactor unstable controls
 
-- [ ] Remove or rewrite any state-specific chrome path that changes outer dimensions.
-- [ ] Keep shadcn recipe focus-ring policy out of IMUI compact controls unless explicitly reserved.
-- [ ] Prefer shared IMUI chrome helpers only when they remove real duplication and preserve owner
+- [x] Confirm M1 found no state-specific chrome path that changes outer dimensions for admitted
+      control families.
+- [x] Keep shadcn recipe focus-ring policy out of IMUI compact controls unless explicitly reserved.
+- [x] Prefer shared IMUI chrome helpers only when they remove real duplication and preserve owner
       boundaries.
-- [ ] Keep public `fret-imui` API unchanged unless the tests prove an authoring-surface gap.
+- [x] Keep public `fret-imui` API unchanged because the tests did not prove an authoring-surface
+      gap.
 
 ## M3 - Closeout
 
-- [ ] Update `EVIDENCE_AND_GATES.md` with the final gate set.
-- [ ] Add `CLOSEOUT_AUDIT_2026-04-28.md` or later when the admitted control families are closed.
-- [ ] Update repo-level workstream indexes with the closeout state.
+- [x] Update `EVIDENCE_AND_GATES.md` with the final gate set.
+- [x] Add `CLOSEOUT_AUDIT_2026-04-28.md` when the admitted control families are closed.
+- [x] Update repo-level workstream indexes with the closeout state.

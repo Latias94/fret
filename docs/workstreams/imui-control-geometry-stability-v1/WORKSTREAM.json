@@ -2,11 +2,11 @@
   "schema_version": 1,
   "slug": "imui-control-geometry-stability-v1",
   "title": "ImUi Control Geometry Stability v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-04-28",
   "scope_kind": "execution",
   "follow_on_of": "imui-text-control-chrome-stability-v1",
-  "problem": "The text-control chrome follow-on fixed the visible input/textarea focus-size jump, but IMUI does not yet have a lane-owned invariant that every base control keeps the same outer geometry across hover, focus, pressed, active/open, changed, and disabled states. This lane owns the local, non-Linux audit and refactor needed to make compact editor layouts stable by construction.",
+  "problem": "The text-control chrome follow-on fixed the visible input/textarea focus-size jump, but IMUI needed a lane-owned invariant that every base control keeps the same outer geometry across hover, focus, pressed, active/open, changed, and disabled states. This closed lane owns the local, non-Linux proof that compact editor control geometry is stable by construction.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -19,6 +19,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md"
     },
     {
       "role": "execution",
@@ -87,6 +91,7 @@
     "docs/workstreams/imui-control-geometry-stability-v1/DESIGN.md",
     "docs/workstreams/imui-control-geometry-stability-v1/M0_BASELINE_AUDIT_2026-04-28.md",
     "docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md",
+    "docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md",
     "docs/workstreams/imui-control-geometry-stability-v1/TODO.md",
     "docs/workstreams/imui-control-geometry-stability-v1/MILESTONES.md",
     "docs/workstreams/imui-control-geometry-stability-v1/EVIDENCE_AND_GATES.md",
@@ -112,7 +117,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane for local, non-Linux IMUI base-control geometry stability. Do not reopen the closed control-chrome or text-control lanes; add focused tests/refactors here, then close this lane when every admitted base-control family has a state-invariant outer-geometry gate."
+    "default_action": "open_follow_on",
+    "notes": "Keep this lane closed after the local base-control geometry floor. Add only narrow maintenance tests for the same invariant here; start a focused follow-on for identity ergonomics, floating-window contract cleanup, Linux/Wayland compositor acceptance, or editor-grade tab policy."
   }
 }
