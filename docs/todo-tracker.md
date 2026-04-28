@@ -301,6 +301,14 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/MILESTONES.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/WORKSTREAM.json`
+- Closed narrow IMUI text-control chrome stability follow-on:
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/TODO.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/M1_TEXT_CHROME_STABILITY_2026-04-28.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -518,6 +526,9 @@ It complements (but does not replace) ADRs:
   for the shared IMUI control affordance / compact-field behavior rewrite; if future pressure
   shifts to field-width policy or family-specific parity, start a narrower follow-on instead of
   widening this folder again.
+- Use `docs/workstreams/imui-text-control-chrome-stability-v1/WORKSTREAM.json` as the closed narrow
+  follow-on for IMUI text input and textarea chrome stability after the shared control-chrome
+  closeout; start another narrow follow-on for future IMUI text-control API or diagnostics scope.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` as the closed
   closeout record for the helper-owned menu/submenu/tab outward-response naming cleanup.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed

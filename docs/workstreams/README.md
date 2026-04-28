@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-26
+Catalog updated: 2026-04-28
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 267
+- Dedicated directories: 268
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -531,6 +531,18 @@ Current source of truth for the in-tree immediate-mode stack:
     showcase stopped depending on the old fixed-width workaround and the shared button/field
     surface became the default proof path.
 
+- Closed narrow IMUI text-control chrome stability follow-on:
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/TODO.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/M1_TEXT_CHROME_STABILITY_2026-04-28.md`
+  - `docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+  - Scope: owns the narrow follow-on where IMUI `input_text` and `textarea` stop borrowing
+    shadcn input recipe focus-ring chrome and instead keep compact field bounds visually stable on
+    focus.
+
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -873,6 +885,7 @@ Rule:
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-facade-internal-modularization-v1/` — first n/a, latest n/a, 10 markdown docs (closed closeout record for the shipped internal `fret-ui-kit::imui` owner decomposition with a frozen public surface)
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the shared IMUI control-chrome rewrite after the compact showcase fixed-width workaround was deleted)
+- `docs/workstreams/imui-text-control-chrome-stability-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for compact IMUI text input and textarea chrome stability after the shared control-chrome closeout)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)

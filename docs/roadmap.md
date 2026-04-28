@@ -278,6 +278,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-control-chrome-fearless-refactor-v1/DESIGN.md`,
   `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`,
   and `docs/workstreams/imui-control-chrome-fearless-refactor-v1/EVIDENCE_AND_GATES.md`.
+- ImUi text-control chrome stability follow-on (closed narrow lane that keeps compact IMUI
+  `input_text` / `textarea` focus visuals out of the shadcn recipe focus-ring policy while
+  preserving stable editor-field visual bounds):
+  `docs/workstreams/imui-text-control-chrome-stability-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-control-chrome-stability-v1/M1_TEXT_CHROME_STABILITY_2026-04-28.md`,
+  and `docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

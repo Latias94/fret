@@ -1,5 +1,6 @@
 //! Immediate-mode text input and textarea helpers.
 
+use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::UiHost;
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 
@@ -13,10 +14,63 @@ fn text_model_changed_for<H: UiHost>(
     super::model_value_changed_for(cx, id, current.to_string())
 }
 
-fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAreaStyle {
-    let input_style = crate::recipes::input::default_text_input_style(theme);
-    let mut preedit_bg_color = input_style.selection_color;
+fn imui_text_input_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextInputStyle {
+    let background = theme
+        .color_by_key("card")
+        .or_else(|| theme.color_by_key("muted"))
+        .or_else(|| theme.color_by_key("background"))
+        .unwrap_or_else(|| theme.color_token("background"));
+    let foreground = theme
+        .color_by_key("foreground")
+        .unwrap_or_else(|| theme.color_token("foreground"));
+    let muted_foreground = theme
+        .color_by_key("muted-foreground")
+        .unwrap_or_else(|| theme.color_token("muted-foreground"));
+    let border_idle = theme
+        .color_by_key("input")
+        .or_else(|| theme.color_by_key("border"))
+        .unwrap_or_else(|| theme.color_token("input"));
+    let ring = theme
+        .color_by_key("ring")
+        .unwrap_or_else(|| theme.color_token("ring"));
+    let primary = theme
+        .color_by_key("primary")
+        .unwrap_or_else(|| theme.color_token("primary"));
+    let selection = theme
+        .color_by_key("component.input.selection")
+        .unwrap_or_else(|| theme.color_token("selection.background"));
+    let selection_color = Color {
+        a: 1.0,
+        ..selection
+    };
+    let mut preedit_bg_color = selection_color;
     preedit_bg_color.a = (preedit_bg_color.a * 0.35).clamp(0.0, 1.0);
+
+    fret_ui::TextInputStyle {
+        padding: Edges {
+            left: Px(8.0),
+            right: Px(8.0),
+            top: Px(3.0),
+            bottom: Px(3.0),
+        },
+        background,
+        border: Edges::all(Px(1.0)),
+        border_color: border_idle,
+        border_color_focused: ring,
+        focus_ring: None,
+        corner_radii: Corners::all(super::control_chrome::CONTROL_RADIUS),
+        text_color: foreground,
+        placeholder_color: muted_foreground,
+        selection_color,
+        caret_color: foreground,
+        preedit_bg_color,
+        preedit_color: primary,
+        preedit_underline_color: primary,
+    }
+}
+
+fn imui_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAreaStyle {
+    let input_style = imui_text_input_style_from_theme(theme);
 
     fret_ui::TextAreaStyle {
         padding_x: input_style.padding.left,
@@ -25,14 +79,14 @@ fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAr
         border: input_style.border,
         border_color: input_style.border_color,
         border_color_focused: input_style.border_color_focused,
-        focus_ring: input_style.focus_ring,
+        focus_ring: None,
         corner_radii: input_style.corner_radii,
         text_color: input_style.text_color,
         placeholder_color: input_style.placeholder_color,
         selection_color: input_style.selection_color,
         caret_color: input_style.caret_color,
-        preedit_bg_color,
-        preedit_underline_color: input_style.preedit_color,
+        preedit_bg_color: input_style.preedit_bg_color,
+        preedit_underline_color: input_style.preedit_underline_color,
     }
 }
 
@@ -102,7 +156,7 @@ pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             let (chrome, text_style) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
                 (
-                    crate::recipes::input::default_text_input_style(theme),
+                    imui_text_input_style_from_theme(theme),
                     default_input_text_style_from_theme(theme),
                 )
             };
@@ -157,7 +211,7 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
             props.min_height = options.min_height;
             let (chrome, text_style) = {
                 let theme = fret_ui::Theme::global(&*cx.app);
-                let chrome = default_text_area_style_from_theme(theme);
+                let chrome = imui_text_area_style_from_theme(theme);
                 let text_style = if options.stable_line_boxes {
                     crate::typography::text_area_control_text_style(theme)
                 } else {
@@ -176,4 +230,139 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
 
     ui.add(element);
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::sync::Arc;
+
+    use fret_app::App;
+    use fret_authoring::UiWriter;
+    use fret_core::{AppWindowId, Rect};
+    use fret_ui::ElementContext;
+    use fret_ui::element::{AnyElement, ElementKind};
+
+    struct TestWriter<'cx, 'a, H: UiHost> {
+        cx: &'cx mut ElementContext<'a, H>,
+        out: &'cx mut Vec<AnyElement>,
+    }
+
+    impl<'cx, 'a, H: UiHost> UiWriter<H> for TestWriter<'cx, 'a, H> {
+        fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
+            f(self.cx)
+        }
+
+        fn add(&mut self, element: AnyElement) {
+            self.out.push(element);
+        }
+    }
+
+    fn first_text_input(root: &AnyElement) -> Option<&fret_ui::element::TextInputProps> {
+        match &root.kind {
+            ElementKind::TextInput(props) => Some(props),
+            _ => root.children.iter().find_map(first_text_input),
+        }
+    }
+
+    fn first_text_area(root: &AnyElement) -> Option<&fret_ui::element::TextAreaProps> {
+        match &root.kind {
+            ElementKind::TextArea(props) => Some(props),
+            _ => root.children.iter().find_map(first_text_area),
+        }
+    }
+
+    #[test]
+    fn input_text_model_uses_compact_imui_chrome_without_focus_ring() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(String::new());
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            AppWindowId::default(),
+            Rect::default(),
+            "imui-input-text-chrome",
+            |cx| {
+                let mut out = Vec::new();
+                let mut ui = TestWriter { cx, out: &mut out };
+
+                let response = input_text_model_with_options(
+                    &mut ui,
+                    &model,
+                    InputTextOptions {
+                        test_id: Some(Arc::from("imui-input-text-chrome")),
+                        ..Default::default()
+                    },
+                );
+
+                assert!(response.id.is_some());
+                assert_eq!(out.len(), 1);
+
+                let props = first_text_input(&out[0]).expect("expected text input element");
+                assert!(props.chrome.focus_ring.is_none());
+                assert_eq!(props.chrome.border, Edges::all(Px(1.0)));
+                assert_eq!(props.chrome.padding.left, Px(8.0));
+                assert_eq!(props.chrome.padding.right, Px(8.0));
+                assert_eq!(props.chrome.padding.top, Px(3.0));
+                assert_eq!(props.chrome.padding.bottom, Px(3.0));
+                assert_eq!(
+                    props.chrome.corner_radii,
+                    Corners::all(super::super::control_chrome::CONTROL_RADIUS)
+                );
+                assert_eq!(
+                    props.layout.size.height,
+                    Length::Px(super::super::control_chrome::FIELD_MIN_HEIGHT)
+                );
+                assert_eq!(
+                    props.layout.size.min_height,
+                    Some(Length::Px(super::super::control_chrome::FIELD_MIN_HEIGHT))
+                );
+                assert_eq!(
+                    props.layout.size.max_height,
+                    Some(Length::Px(super::super::control_chrome::FIELD_MIN_HEIGHT))
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn textarea_model_uses_compact_imui_chrome_without_focus_ring() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(String::new());
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            AppWindowId::default(),
+            Rect::default(),
+            "imui-textarea-chrome",
+            |cx| {
+                let mut out = Vec::new();
+                let mut ui = TestWriter { cx, out: &mut out };
+
+                let response = textarea_model_with_options(
+                    &mut ui,
+                    &model,
+                    TextAreaOptions {
+                        test_id: Some(Arc::from("imui-textarea-chrome")),
+                        ..Default::default()
+                    },
+                );
+
+                assert!(response.id.is_some());
+                assert_eq!(out.len(), 1);
+
+                let props = first_text_area(&out[0]).expect("expected text area element");
+                assert!(props.chrome.focus_ring.is_none());
+                assert_eq!(props.chrome.border, Edges::all(Px(1.0)));
+                assert_eq!(props.chrome.padding_x, Px(8.0));
+                assert_eq!(props.chrome.padding_y, Px(3.0));
+                assert_eq!(
+                    props.chrome.corner_radii,
+                    Corners::all(super::super::control_chrome::CONTROL_RADIUS)
+                );
+                assert_eq!(props.layout.size.width, Length::Fill);
+            },
+        );
+    }
 }

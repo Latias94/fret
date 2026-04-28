@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-text-control-chrome-stability-v1",
+  "title": "ImUi Text Control Chrome Stability v1",
+  "status": "closed",
+  "updated": "2026-04-28",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-control-chrome-fearless-refactor-v1",
+  "problem": "IMUI text controls were still borrowing the shadcn input recipe chrome after the shared control-chrome closeout. That makes focus paint look like a size change in compact editor forms and blurs the policy boundary between shadcn form recipes and Dear ImGui-style immediate controls.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-text-control-chrome-stability-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-control-chrome-stability-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-control-chrome-stability-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-control-chrome-stability-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-text-control-chrome-stability-v1/M1_TEXT_CHROME_STABILITY_2026-04-28.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render IMUI input_text and textarea controls, then verify their chrome is compact and focus does not add an outset shadcn ring.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_response_signals_demo",
+      "cargo nextest run -p fret-ui-kit --features imui compact_imui_chrome_without_focus_ring --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "imui-text-chrome-unit",
+      "command": "cargo nextest run -p fret-ui-kit --features imui compact_imui_chrome_without_focus_ring --no-fail-fast"
+    },
+    {
+      "name": "imui-existing-input-bounds-unit",
+      "command": "cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 2"
+    },
+    {
+      "name": "changed-packages-format-check",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-text-control-chrome-stability-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-edit-lifecycle-hardening-v1/CLOSEOUT_AUDIT_2026-04-25.md",
+    "repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx",
+    "repo-ref/ui/apps/v4/registry/new-york-v4/ui/textarea.tsx",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after the compact IMUI text-control chrome slice. Start a narrower follow-on for future text-control API, diagnostics, or compositor/pixel-snap evidence instead of reopening this folder."
+  }
+}
