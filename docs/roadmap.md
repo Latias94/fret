@@ -284,6 +284,13 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-text-control-chrome-stability-v1/DESIGN.md`,
   `docs/workstreams/imui-text-control-chrome-stability-v1/M1_TEXT_CHROME_STABILITY_2026-04-28.md`,
   and `docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
+- ImUi control geometry stability follow-on (active narrow lane that starts after the text-control
+  chrome fix and locally audits/refactors base IMUI controls so hover/focus/pressed/active/disabled
+  state changes do not alter compact editor control geometry, without Linux compositor acceptance):
+  `docs/workstreams/imui-control-geometry-stability-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-control-geometry-stability-v1/DESIGN.md`,
+  `docs/workstreams/imui-control-geometry-stability-v1/M0_BASELINE_AUDIT_2026-04-28.md`, and
+  `docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

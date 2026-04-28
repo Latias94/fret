@@ -309,6 +309,14 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-text-control-chrome-stability-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-text-control-chrome-stability-v1/M1_TEXT_CHROME_STABILITY_2026-04-28.md`
   - `docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- Active narrow IMUI control geometry stability follow-on:
+  - `docs/workstreams/imui-control-geometry-stability-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-control-geometry-stability-v1/DESIGN.md`
+  - `docs/workstreams/imui-control-geometry-stability-v1/M0_BASELINE_AUDIT_2026-04-28.md`
+  - `docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md`
+  - `docs/workstreams/imui-control-geometry-stability-v1/TODO.md`
+  - `docs/workstreams/imui-control-geometry-stability-v1/MILESTONES.md`
+  - `docs/workstreams/imui-control-geometry-stability-v1/EVIDENCE_AND_GATES.md`
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -529,6 +537,9 @@ It complements (but does not replace) ADRs:
 - Use `docs/workstreams/imui-text-control-chrome-stability-v1/WORKSTREAM.json` as the closed narrow
   follow-on for IMUI text input and textarea chrome stability after the shared control-chrome
   closeout; start another narrow follow-on for future IMUI text-control API or diagnostics scope.
+- Use `docs/workstreams/imui-control-geometry-stability-v1/WORKSTREAM.json` as the active local
+  follow-on for base IMUI control geometry stability across interaction states; keep Linux/Wayland
+  compositor acceptance in `docs/workstreams/docking-multiwindow-imgui-parity/`.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` as the closed
   closeout record for the helper-owned menu/submenu/tab outward-response naming cleanup.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed

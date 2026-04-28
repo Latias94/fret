@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "slug": "imui-control-geometry-stability-v1",
+  "title": "ImUi Control Geometry Stability v1",
+  "status": "active",
+  "updated": "2026-04-28",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-text-control-chrome-stability-v1",
+  "problem": "The text-control chrome follow-on fixed the visible input/textarea focus-size jump, but IMUI does not yet have a lane-owned invariant that every base control keeps the same outer geometry across hover, focus, pressed, active/open, changed, and disabled states. This lane owns the local, non-Linux audit and refactor needed to make compact editor layouts stable by construction.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/M0_BASELINE_AUDIT_2026-04-28.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-control-geometry-stability-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use local Windows/unit-testable IMUI control surfaces to prove state changes do not alter control outer bounds; Linux compositor acceptance is explicitly out of scope for this lane.",
+    "commands": [
+      "cargo run -p fret-demo --bin imui_interaction_showcase_demo",
+      "cargo run -p fret-demo --bin imui_response_signals_demo",
+      "cargo nextest run -p fret-ui-kit --features imui compact_imui_chrome_without_focus_ring --no-fail-fast",
+      "cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --no-fail-fast",
+      "cargo nextest run -p fret-imui base_control_state_changes_keep_outer_bounds_stable --no-fail-fast",
+      "cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "inherited-text-geometry-floor",
+      "command": "cargo nextest run -p fret-ui-kit --features imui compact_imui_chrome_without_focus_ring --no-fail-fast"
+    },
+    {
+      "name": "inherited-input-bounds-floor",
+      "command": "cargo nextest run -p fret-imui input_text_focus_keeps_control_bounds_stable --no-fail-fast"
+    },
+    {
+      "name": "base-control-geometry-state-floor",
+      "command": "cargo nextest run -p fret-imui base_control_state_changes_keep_outer_bounds_stable --no-fail-fast"
+    },
+    {
+      "name": "menu-tab-trigger-geometry-state-floor",
+      "command": "cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 2"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-control-geometry-stability-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-control-geometry-stability-v1/DESIGN.md",
+    "docs/workstreams/imui-control-geometry-stability-v1/M0_BASELINE_AUDIT_2026-04-28.md",
+    "docs/workstreams/imui-control-geometry-stability-v1/M1_BASE_CONTROL_GEOMETRY_GATE_2026-04-28.md",
+    "docs/workstreams/imui-control-geometry-stability-v1/TODO.md",
+    "docs/workstreams/imui-control-geometry-stability-v1/MILESTONES.md",
+    "docs/workstreams/imui-control-geometry-stability-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-text-control-chrome-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md",
+    "docs/workstreams/imui-item-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-active-trigger-behavior-kernel-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
+    "ecosystem/fret-imui/src/tests/composition.rs",
+    "ecosystem/fret-imui/src/tests/interaction.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "repo-ref/imgui/imgui_widgets.cpp"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for local, non-Linux IMUI base-control geometry stability. Do not reopen the closed control-chrome or text-control lanes; add focused tests/refactors here, then close this lane when every admitted base-control family has a state-invariant outer-geometry gate."
+  }
+}
