@@ -291,6 +291,13 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-control-geometry-stability-v1/DESIGN.md`,
   `docs/workstreams/imui-control-geometry-stability-v1/M0_BASELINE_AUDIT_2026-04-28.md`, and
   `docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
+- ImUi label identity ergonomics follow-on (active narrow lane for Dear ImGui-style `##` / `###`
+  label identity grammar in label-bearing IMUI controls, without widening runtime identity,
+  `test_id`, or localization contracts):
+  `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md`,
+  `docs/workstreams/imui-label-identity-ergonomics-v1/TODO.md`, and
+  `docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

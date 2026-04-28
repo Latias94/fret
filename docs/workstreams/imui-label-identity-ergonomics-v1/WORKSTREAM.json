@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "slug": "imui-label-identity-ergonomics-v1",
+  "title": "ImUi Label Identity Ergonomics v1",
+  "status": "active",
+  "updated": "2026-04-28",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-control-geometry-stability-v1",
+  "problem": "Fret IMUI has explicit `ui.id` / `ui.push_id` and keyed iteration, but it does not yet provide Dear ImGui-style label identity ergonomics (`Label##suffix`, `Label###stable_id`, `##hidden_id`) for label-bearing controls. This makes same-visible-label controls and dynamic labels more verbose than Dear ImGui and leaves the historical identity TODO without an active owner.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-label-identity-ergonomics-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-label-identity-ergonomics-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use local IMUI tests to prove rendered labels hide `##` / `###` suffixes and that stable identity survives visible-label changes where controls expose state.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui imui_label_identity --no-fail-fast",
+      "cargo nextest run -p fret-imui label_identity --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "label-parser-unit",
+      "command": "cargo nextest run -p fret-ui-kit --features imui imui_label_identity --no-fail-fast"
+    },
+    {
+      "name": "imui-authoring-proof",
+      "command": "cargo nextest run -p fret-imui label_identity --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 2"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-control-geometry-stability-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-04-19.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "ecosystem/fret-imui/src/frontend.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui.cpp",
+    "repo-ref/imgui/imgui_widgets.cpp"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue only for IMUI label identity ergonomics in the policy/authoring layer. Do not widen this lane into runtime identity contracts, app state lanes, localization, or test-id semantics unless a focused proof shows the current mechanism cannot support the Dear ImGui-style label grammar."
+  }
+}
