@@ -297,7 +297,7 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-label-identity-ergonomics-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md`,
   `docs/workstreams/imui-label-identity-ergonomics-v1/M1_BUTTON_LABEL_IDENTITY_SLICE_2026-04-28.md`, and
-  `docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md`.
+  `docs/workstreams/imui-label-identity-ergonomics-v1/M2_SELECTABLE_MENU_LABEL_IDENTITY_SLICE_2026-04-28.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

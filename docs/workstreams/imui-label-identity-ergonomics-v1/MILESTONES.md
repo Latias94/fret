@@ -35,6 +35,8 @@ Current progress:
 
 - The button family now hides `##` / `###` suffixes from painted labels and uses parsed identity
   keys for stable focus across visible-label changes and reorder.
+- Selectable rows and menu item rows now share the same parser and have authoring proof coverage
+  for suffix hiding and stable `###` identity across reorder.
 
 Exit criteria:
 

@@ -14,6 +14,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 
+use super::label_identity::parse_label_identity;
 use super::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 use crate::command::ElementCommandGatingExt as _;
 use crate::primitives::menubar::trigger_row as menubar_trigger_row;
@@ -132,6 +133,35 @@ fn noop_menu_item_pressable_hook<H: UiHost>(
 }
 
 fn menu_item_impl_with_pressable_hook<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
+    ui: &mut W,
+    label: Arc<str>,
+    options: MenuItemOptions,
+    role: SemanticsRole,
+    checked: Option<bool>,
+    action: Option<ActionId>,
+    pressable_hook: F,
+) -> ResponseExt
+where
+    F: Clone
+        + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
+{
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("menu-item-label", identity), |ui| {
+        menu_item_impl_with_pressable_hook_inner(
+            ui,
+            visible_label,
+            options,
+            role,
+            checked,
+            action,
+            pressable_hook,
+        )
+    })
+}
+
+fn menu_item_impl_with_pressable_hook_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
     ui: &mut W,
     label: Arc<str>,
     options: MenuItemOptions,

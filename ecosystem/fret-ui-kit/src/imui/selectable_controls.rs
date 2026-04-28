@@ -8,6 +8,7 @@ use fret_ui::action::{ActivateReason, UiActionHostExt as _};
 use fret_ui::element::{ContainerProps, Length, PressableA11y, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme};
 
+use super::label_identity::parse_label_identity;
 use super::{ResponseExt, SelectableOptions, UiWriterImUiFacadeExt};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -17,6 +18,19 @@ struct SelectablePalette {
 }
 
 pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    options: SelectableOptions,
+) -> ResponseExt {
+    let parts = parse_label_identity(label.as_ref());
+    let identity = Arc::<str>::from(parts.identity);
+    let visible_label = Arc::<str>::from(parts.visible);
+    ui.push_id(("selectable-label", identity), |ui| {
+        selectable_with_options_inner(ui, visible_label, options)
+    })
+}
+
+fn selectable_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     options: SelectableOptions,

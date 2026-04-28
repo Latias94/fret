@@ -24,8 +24,8 @@ Last updated: 2026-04-28
 - [x] Preserve explicit button `a11y_label` and `test_id` override behavior.
 - [x] Add one `fret-imui` authoring proof for stable `###` identity across visible-label changes
       and reorder.
-- [ ] Extend parser adoption to selectable rows.
-- [ ] Extend parser adoption to menu item rows.
+- [x] Extend parser adoption to selectable rows.
+- [x] Extend parser adoption to menu item rows.
 - [ ] Decide whether checkbox/radio/switch/slider should key by label grammar or only render the
       visible label in this lane.
 
