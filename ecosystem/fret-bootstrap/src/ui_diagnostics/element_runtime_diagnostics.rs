@@ -93,6 +93,8 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub retained_keep_alive_roots_tail: Vec<u64>,
     #[serde(default)]
     pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identity_warnings: Vec<ElementIdentityWarningV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,6 +138,28 @@ pub struct ElementNodeEntryRootOverwriteV1 {
     pub new_root_path: Option<String>,
     pub old_node: u64,
     pub new_node: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<UiSourceLocationV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementIdentityWarningV1 {
+    pub kind: String,
+    pub frame_id: u64,
+    pub element: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
+    pub list_id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_hash: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_index: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub second_index: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_len: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_len: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<UiSourceLocationV1>,
 }

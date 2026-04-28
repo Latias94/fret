@@ -98,6 +98,7 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         self.out.extend(f(self.cx));
     }
 
+    #[track_caller]
     pub fn id<K: Hash>(&mut self, key: K, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
         let out = &mut *self.out;
         self.cx.keyed(key, |cx| {
@@ -106,6 +107,7 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         });
     }
 
+    #[track_caller]
     pub fn push_id<K: Hash>(
         &mut self,
         key: K,
@@ -114,6 +116,7 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         self.id(key, f);
     }
 
+    #[track_caller]
     pub fn for_each_keyed<I, K, T>(
         &mut self,
         items: I,
@@ -136,6 +139,7 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
     ///
     /// In debug builds, the underlying runtime emits a warning if the list order changes between
     /// frames (aligning with the existing `ElementContext::for_each_unkeyed` diagnostics).
+    #[track_caller]
     pub fn for_each_unkeyed<T: Hash>(
         &mut self,
         items: &[T],

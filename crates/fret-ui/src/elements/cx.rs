@@ -44,6 +44,8 @@ use crate::{SvgSource, Theme, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
+#[cfg(feature = "diagnostics")]
+use super::runtime::IdentityDiagnosticsRecord;
 use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
@@ -1170,6 +1172,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         mut f: impl FnMut(&mut Self, usize, &T),
     ) {
         let loc = Location::caller();
+        #[cfg(feature = "diagnostics")]
+        let list_id = callsite_hash(loc);
         self.scope(|cx| {
             let mut first_dup: Option<(u64, usize, usize)> = None;
             let mut seen: HashMap<u64, usize> = HashMap::new();
@@ -1198,6 +1202,25 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                         None
                     }
                 };
+
+                #[cfg(feature = "diagnostics")]
+                {
+                    let element = cx.root_id();
+                    let frame_id = cx.frame_id;
+                    cx.window_state.record_identity_warning(
+                        IdentityDiagnosticsRecord::DuplicateKeyedListItemKeyHash {
+                            frame_id,
+                            element,
+                            list_id,
+                            key_hash,
+                            first_index: a,
+                            second_index: b,
+                            file: loc.file(),
+                            line: loc.line(),
+                            column: loc.column(),
+                        },
+                    );
+                }
 
                 tracing::warn!(
                     file = loc.file(),
@@ -1241,6 +1264,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     None
                 }
             };
+            #[cfg(feature = "diagnostics")]
+            {
+                let element = self.root_id();
+                let frame_id = self.frame_id;
+                self.window_state.record_identity_warning(
+                    IdentityDiagnosticsRecord::UnkeyedListOrderChanged {
+                        frame_id,
+                        element,
+                        list_id,
+                        previous_len: prev.len(),
+                        next_len: fingerprints.len(),
+                        file: loc.file(),
+                        line: loc.line(),
+                        column: loc.column(),
+                    },
+                );
+            }
             tracing::warn!(
                 list_id = format_args!("{list_id:#x}"),
                 file = loc.file(),

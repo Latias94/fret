@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "slug": "imui-id-stack-diagnostics-v1",
+  "title": "ImUi ID Stack Diagnostics v1",
+  "status": "active",
+  "updated": "2026-04-28",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-label-identity-ergonomics-v1",
+  "problem": "Fret IMUI now supports Dear ImGui-style label identity grammar, but the remaining identity footguns are still mostly visible only through transient tracing warnings. This lane makes dynamic-list and duplicate-key identity problems observable through the diagnostics snapshot while keeping render-pass/evaluation tokens internal and avoiding `test_id` inference.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use the runtime identity tests and the IMUI authoring proof to confirm duplicate keyed lists and unkeyed reorder warnings are captured as structured diagnostics.",
+    "commands": [
+      "cargo nextest run -p fret-ui --features diagnostics identity_diagnostics --no-fail-fast",
+      "cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "runtime-identity-diagnostics",
+      "command": "cargo nextest run -p fret-ui --features diagnostics identity_diagnostics --no-fail-fast"
+    },
+    {
+      "name": "imui-identity-diagnostics",
+      "command": "cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast"
+    },
+    {
+      "name": "imui-default-check",
+      "command": "cargo check -p fret-imui --jobs 1"
+    },
+    {
+      "name": "bootstrap-diagnostics-check",
+      "command": "cargo check -p fret-bootstrap --features ui-app-driver --jobs 1"
+    },
+    {
+      "name": "format",
+      "command": "cargo fmt --package fret-ui --package fret-imui --package fret-bootstrap --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md",
+    "docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md",
+    "crates/fret-ui/src/elements/cx.rs",
+    "crates/fret-ui/src/elements/runtime.rs",
+    "crates/fret-ui/src/declarative/tests/identity.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
+    "ecosystem/fret-imui/src/frontend.rs",
+    "ecosystem/fret-imui/src/tests/identity_diagnostics.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane for structured IMUI/runtime identity diagnostics. Start narrower follow-ons for `test_id` inference, localization, column-owned sortable/resizable identity, or public runtime identity APIs."
+  }
+}

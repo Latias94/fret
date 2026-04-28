@@ -100,6 +100,7 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub retained_keep_alive_roots_head: Vec<NodeId>,
     pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+    pub identity_warnings: Vec<IdentityDiagnosticsRecord>,
     pub overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
 }
 
@@ -510,6 +511,8 @@ pub struct WindowElementState {
     #[cfg(feature = "diagnostics")]
     debug_node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
     #[cfg(feature = "diagnostics")]
+    identity_warnings: Vec<IdentityDiagnosticsRecord>,
+    #[cfg(feature = "diagnostics")]
     overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
 }
 
@@ -539,6 +542,42 @@ pub struct NodeEntryRootOverwrite {
     pub file: &'static str,
     pub line: u32,
     pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub enum IdentityDiagnosticsRecord {
+    DuplicateKeyedListItemKeyHash {
+        frame_id: FrameId,
+        element: GlobalElementId,
+        list_id: u64,
+        key_hash: u64,
+        first_index: usize,
+        second_index: usize,
+        file: &'static str,
+        line: u32,
+        column: u32,
+    },
+    UnkeyedListOrderChanged {
+        frame_id: FrameId,
+        element: GlobalElementId,
+        list_id: u64,
+        previous_len: usize,
+        next_len: usize,
+        file: &'static str,
+        line: u32,
+        column: u32,
+    },
+}
+
+#[cfg(feature = "diagnostics")]
+impl IdentityDiagnosticsRecord {
+    fn frame_id(&self) -> FrameId {
+        match self {
+            Self::DuplicateKeyedListItemKeyHash { frame_id, .. }
+            | Self::UnkeyedListOrderChanged { frame_id, .. } => *frame_id,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -744,6 +783,7 @@ impl WindowElementState {
             // placement decisions even when scripts are processed earlier in the frame.
             const KEEP_FRAMES: u64 = 120;
             let cutoff = frame_id.0.saturating_sub(KEEP_FRAMES);
+            self.identity_warnings.retain(|r| r.frame_id().0 >= cutoff);
             self.overlay_placement.retain(|rec| match rec {
                 OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => r.frame_id.0 >= cutoff,
                 OverlayPlacementDiagnosticsRecord::PlacedRect(r) => r.frame_id.0 >= cutoff,
@@ -2446,7 +2486,19 @@ impl WindowElementState {
             retained_keep_alive_roots_head,
             retained_keep_alive_roots_tail,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
+            identity_warnings: self.identity_warnings.clone(),
             overlay_placement: self.overlay_placement.clone(),
+        }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_identity_warning(&mut self, record: IdentityDiagnosticsRecord) {
+        self.identity_warnings.push(record);
+
+        const MAX_RECORDS: usize = 512;
+        if self.identity_warnings.len() > MAX_RECORDS {
+            let extra = self.identity_warnings.len() - MAX_RECORDS;
+            self.identity_warnings.drain(0..extra);
         }
     }
 

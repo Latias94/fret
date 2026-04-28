@@ -307,6 +307,141 @@ fn unkeyed_list_reorder_does_not_preserve_element_identity_for_state() {
 }
 
 #[test]
+#[cfg(feature = "diagnostics")]
+fn identity_diagnostics_record_unkeyed_list_reorder() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let orders: [Vec<u64>; 2] = [vec![1, 2, 3], vec![3, 2, 1]];
+    let mut root: Option<NodeId> = None;
+
+    for (frame, items) in orders.into_iter().enumerate() {
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "unkeyed-reorder-identity-diagnostics",
+            move |cx| {
+                let mut elements = Vec::new();
+                cx.for_each_unkeyed(&items, |cx, _idx, _item| {
+                    elements.push(cx.text("row"));
+                });
+                elements
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+        app.advance_frame();
+    }
+
+    let warnings = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+        runtime
+            .diagnostics_snapshot(window)
+            .expect("diagnostics snapshot")
+            .identity_warnings
+    });
+
+    let Some(record) = warnings.iter().find_map(|record| match record {
+        crate::elements::IdentityDiagnosticsRecord::UnkeyedListOrderChanged {
+            previous_len,
+            next_len,
+            file,
+            ..
+        } => Some((*previous_len, *next_len, *file)),
+        _ => None,
+    }) else {
+        panic!("expected unkeyed reorder identity warning, got {warnings:#?}");
+    };
+
+    assert_eq!(record.0, 3);
+    assert_eq!(record.1, 3);
+    assert!(
+        record.2.ends_with("identity.rs"),
+        "expected source location to point at this test, got {}",
+        record.2
+    );
+}
+
+#[test]
+#[cfg(feature = "diagnostics")]
+fn identity_diagnostics_record_duplicate_keyed_list_item_hash() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let items = vec![10_u64, 20, 30];
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "duplicate-keyed-list-identity-diagnostics",
+        move |cx| {
+            let mut elements = Vec::new();
+            cx.for_each_keyed(
+                &items,
+                |_item| 7_u64,
+                |cx, _idx, _item| {
+                    elements.push(cx.text("row"));
+                },
+            );
+            elements
+        },
+    );
+    ui.set_root(root);
+
+    let warnings = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+        runtime
+            .diagnostics_snapshot(window)
+            .expect("diagnostics snapshot")
+            .identity_warnings
+    });
+
+    let Some(record) = warnings.iter().find_map(|record| match record {
+        crate::elements::IdentityDiagnosticsRecord::DuplicateKeyedListItemKeyHash {
+            key_hash,
+            first_index,
+            second_index,
+            file,
+            ..
+        } => Some((*key_hash, *first_index, *second_index, *file)),
+        _ => None,
+    }) else {
+        panic!("expected duplicate keyed-list identity warning, got {warnings:#?}");
+    };
+
+    assert_ne!(record.0, 0);
+    assert_eq!(record.1, 0);
+    assert_eq!(record.2, 1);
+    assert!(
+        record.3.ends_with("identity.rs"),
+        "expected source location to point at this test, got {}",
+        record.3
+    );
+}
+
+#[test]
 fn root_state_is_root_scoped_shared_slot_per_type() {
     let mut app = TestHost::new();
     let window = AppWindowId::default();

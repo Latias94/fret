@@ -11,6 +11,7 @@ documentation.workspace = true
 
 [features]
 default = []
+diagnostics = ["fret-ui/diagnostics"]
 state-query = ["fret-authoring/query"]
 state-selector = ["fret-authoring/selector"]
 state = ["state-selector", "state-query"]

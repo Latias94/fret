@@ -840,6 +840,70 @@ impl ElementDiagnosticsSnapshotV1 {
             .and_then(|id| runtime.debug_path_for_element(window, id));
         truncate_opt_string_bytes(&mut hovered_hover_region_path, max_debug_string_bytes);
 
+        let identity_warning_to_v1 = |record| match record {
+            fret_ui::elements::IdentityDiagnosticsRecord::DuplicateKeyedListItemKeyHash {
+                frame_id,
+                element,
+                list_id,
+                key_hash,
+                first_index,
+                second_index,
+                file,
+                line,
+                column,
+            } => {
+                let mut element_path = runtime.debug_path_for_element(window, element);
+                truncate_opt_string_bytes(&mut element_path, max_debug_string_bytes);
+
+                let mut file = file.to_string();
+                truncate_string_bytes(&mut file, max_debug_string_bytes);
+
+                ElementIdentityWarningV1 {
+                    kind: "duplicate_keyed_list_item_key_hash".to_string(),
+                    frame_id: frame_id.0,
+                    element: element.0,
+                    element_path,
+                    list_id,
+                    key_hash: Some(key_hash),
+                    first_index: Some(first_index as u64),
+                    second_index: Some(second_index as u64),
+                    previous_len: None,
+                    next_len: None,
+                    location: Some(UiSourceLocationV1 { file, line, column }),
+                }
+            }
+            fret_ui::elements::IdentityDiagnosticsRecord::UnkeyedListOrderChanged {
+                frame_id,
+                element,
+                list_id,
+                previous_len,
+                next_len,
+                file,
+                line,
+                column,
+            } => {
+                let mut element_path = runtime.debug_path_for_element(window, element);
+                truncate_opt_string_bytes(&mut element_path, max_debug_string_bytes);
+
+                let mut file = file.to_string();
+                truncate_string_bytes(&mut file, max_debug_string_bytes);
+
+                ElementIdentityWarningV1 {
+                    kind: "unkeyed_list_order_changed".to_string(),
+                    frame_id: frame_id.0,
+                    element: element.0,
+                    element_path,
+                    list_id,
+                    key_hash: None,
+                    first_index: None,
+                    second_index: None,
+                    previous_len: Some(previous_len as u64),
+                    next_len: Some(next_len as u64),
+                    location: Some(UiSourceLocationV1 { file, line, column }),
+                }
+            }
+        };
+
         let mut out = Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
@@ -1047,6 +1111,11 @@ impl ElementDiagnosticsSnapshotV1 {
                         }),
                     }
                 })
+                .collect(),
+            identity_warnings: snapshot
+                .identity_warnings
+                .into_iter()
+                .map(identity_warning_to_v1)
                 .collect(),
         };
 

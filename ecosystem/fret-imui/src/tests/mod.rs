@@ -1199,6 +1199,8 @@ fn render_floating_layer_with_overlay(
 
 mod composition;
 mod floating;
+#[cfg(feature = "diagnostics")]
+mod identity_diagnostics;
 mod interaction_drag;
 mod interaction_menu_tabs;
 mod interaction_press;

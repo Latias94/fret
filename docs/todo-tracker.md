@@ -336,6 +336,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-table-header-label-policy-v1/TODO.md`
   - `docs/workstreams/imui-table-header-label-policy-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-header-label-policy-v1/EVIDENCE_AND_GATES.md`
+- Active narrow IMUI ID stack diagnostics follow-on:
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/TODO.md`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/MILESTONES.md`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-id-stack-diagnostics-v1/M1_STRUCTURED_IDENTITY_DIAGNOSTICS_2026-04-28.md`
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -568,6 +575,10 @@ It complements (but does not replace) ADRs:
   closeout record for `TableColumn` visible-label grammar; start narrower follow-ons for
   sortable/resizable column identity, runtime ID-stack diagnostics, localization, or `test_id`
   inference.
+- Use `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json` as the active narrow
+  follow-on for structured IMUI/runtime identity diagnostics; keep `test_id` inference,
+  localization, table column identity, and any full interactive ID-stack browser as separate
+  follow-ons.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` as the closed
   closeout record for the helper-owned menu/submenu/tab outward-response naming cleanup.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed
