@@ -324,6 +324,13 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`,
   `docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md`,
   and `docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
+- ImUi identity browser HTML follow-on (closed narrow lane for a self-contained offline HTML
+  artifact over captured identity warnings, built on the closed browser model/query lane without
+  adding live devtools or public runtime identity APIs):
+  `docs/workstreams/imui-identity-browser-html-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-identity-browser-html-v1/DESIGN.md`,
+  `docs/workstreams/imui-identity-browser-html-v1/EVIDENCE_AND_GATES.md`,
+  and `docs/workstreams/imui-identity-browser-html-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
 - ImUi menu/tab trigger response canonicalization follow-on closeout record (closed narrow P0
   cleanup lane that removes the duplicate `*_response*` alias layer and makes the canonical helper
   names carry the richer outward responses directly, without widening `fret-authoring::Response` /

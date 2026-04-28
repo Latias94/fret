@@ -355,6 +355,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-id-stack-browser-v1/M1_SOURCE_MODEL_2026-04-28.md`
   - `docs/workstreams/imui-id-stack-browser-v1/M2_BROWSER_QUERY_2026-04-28.md`
   - `docs/workstreams/imui-id-stack-browser-v1/CLOSEOUT_AUDIT_2026-04-28.md`
+- Closed narrow IMUI identity browser HTML follow-on:
+  - `docs/workstreams/imui-identity-browser-html-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-identity-browser-html-v1/DESIGN.md`
+  - `docs/workstreams/imui-identity-browser-html-v1/TODO.md`
+  - `docs/workstreams/imui-identity-browser-html-v1/MILESTONES.md`
+  - `docs/workstreams/imui-identity-browser-html-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-identity-browser-html-v1/CLOSEOUT_AUDIT_2026-04-28.md`
 - Closed narrow P0 menu/tab trigger response canonicalization closeout record:
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md`
   - `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/TODO.md`
@@ -595,6 +602,10 @@ It complements (but does not replace) ADRs:
   for browser-style triage over captured identity warnings; start narrower follow-ons for
   dashboard/HTML UI, live devtools identity inspection, `test_id` inference, localization, table
   column identity, or public runtime identity APIs.
+- Use `docs/workstreams/imui-identity-browser-html-v1/WORKSTREAM.json` as the closed narrow
+  follow-on for offline HTML identity warning browsing; start narrower follow-ons for live
+  devtools, dashboard integration, richer HTML visual gates, `test_id` inference, localization,
+  table column identity, or public runtime identity APIs.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` as the closed
   closeout record for the helper-owned menu/submenu/tab outward-response naming cleanup.
 - Use `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` for the latest landed

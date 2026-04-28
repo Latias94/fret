@@ -286,6 +286,9 @@ pub(crate) struct QueryIdentityWarningsArgs {
 
     #[arg(long = "browser")]
     pub browser: bool,
+
+    #[arg(long = "html-out", value_name = "PATH")]
+    pub html_out: Option<PathBuf>,
 }
 
 #[derive(Debug)]

@@ -9,6 +9,7 @@ use crate::identity_browser::{
     IdentityWarningBrowserFilters, collect_identity_warning_browser_report,
     parse_identity_warning_kind, parse_u64_maybe_hex,
 };
+use crate::identity_browser_html::write_identity_browser_html;
 use crate::test_id_bloom::TestIdBloomV1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -364,6 +365,7 @@ fn cmd_query_identity_warnings(
     let mut file_filter: Option<String> = None;
     let mut include_timeline = false;
     let mut include_browser = false;
+    let mut html_out: Option<PathBuf> = None;
 
     let mut positionals: Vec<String> = Vec::new();
     let mut i: usize = 0;
@@ -437,6 +439,14 @@ fn cmd_query_identity_warnings(
                 include_browser = true;
                 i += 1;
             }
+            "--html-out" | "--html_out" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --html-out".to_string());
+                };
+                html_out = Some(PathBuf::from(v));
+                i += 1;
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag for query identity-warnings: {other}"));
             }
@@ -504,6 +514,19 @@ fn cmd_query_identity_warnings(
             "groups".to_string(),
             serde_json::Value::Array(report.groups_json()),
         );
+    }
+
+    if let Some(out) = html_out.map(|p| crate::resolve_path(workspace_root, p)) {
+        write_identity_browser_html(
+            &out,
+            &bundle_path.display().to_string(),
+            &report,
+            &browser_filters,
+        )?;
+        if query_out.is_none() && !stats_json {
+            println!("{}", out.display());
+            return Ok(());
+        }
     }
 
     if let Some(out) = query_out.map(|p| crate::resolve_path(workspace_root, p)) {
@@ -2561,6 +2584,36 @@ mod tests {
                     .and_then(|v| v.as_u64())
                     == Some(42)
         }));
+    }
+
+    #[test]
+    fn query_identity_warnings_writes_html_browser_sidecar() {
+        let out_dir = make_temp_dir("fret-diag-query-identity-warnings-html");
+        let bundle = write_bundle_schema2_with_identity_warnings(&out_dir);
+
+        let html_out = out_dir.join("identity.html");
+        cmd_query_identity_warnings(
+            &[
+                bundle.display().to_string(),
+                "--kind".to_string(),
+                "duplicate-keyed-list-item-key-hash".to_string(),
+                "--html-out".to_string(),
+                html_out.display().to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            None,
+            0,
+            false,
+        )
+        .expect("query ok");
+
+        let html = std::fs::read_to_string(&html_out).expect("read identity.html");
+        assert!(html.contains("Fret Identity Warnings"));
+        assert!(html.contains("duplicate_keyed_list_item_key_hash"));
+        assert!(html.contains("src/list.rs"));
+        assert!(html.contains("key 9001"));
+        assert!(!html.contains("unkeyed_list_order_changed"));
     }
 
     #[test]

@@ -59,6 +59,7 @@ mod frames_index;
 mod gates;
 mod hotspots_lite;
 mod identity_browser;
+mod identity_browser_html;
 mod json_bundle;
 mod json_stream;
 mod latest;

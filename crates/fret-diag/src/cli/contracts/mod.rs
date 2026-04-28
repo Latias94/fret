@@ -2177,6 +2177,8 @@ mod tests {
             "src/view.rs",
             "--timeline",
             "--browser",
+            "--html-out",
+            "target/query.identity.html",
             "--json",
             "--out",
             "target/query.identity.json",
@@ -2201,6 +2203,10 @@ mod tests {
         assert_eq!(identity.file.as_deref(), Some("src/view.rs"));
         assert!(identity.timeline);
         assert!(identity.browser);
+        assert_eq!(
+            identity.html_out,
+            Some(PathBuf::from("target/query.identity.html"))
+        );
         assert!(identity.output.json);
         assert_eq!(
             identity.output.out,
