@@ -336,6 +336,22 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-table-header-label-policy-v1/TODO.md`
   - `docs/workstreams/imui-table-header-label-policy-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-header-label-policy-v1/EVIDENCE_AND_GATES.md`
+- Closed narrow IMUI table column identity follow-on:
+  - `docs/workstreams/imui-table-column-identity-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-column-identity-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-column-identity-v1/M1_TABLE_COLUMN_IDENTITY_SLICE_2026-04-29.md`
+  - `docs/workstreams/imui-table-column-identity-v1/CLOSEOUT_AUDIT_2026-04-29.md`
+  - `docs/workstreams/imui-table-column-identity-v1/TODO.md`
+  - `docs/workstreams/imui-table-column-identity-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-column-identity-v1/EVIDENCE_AND_GATES.md`
+- Closed narrow IMUI table sortable header follow-on:
+  - `docs/workstreams/imui-table-sortable-header-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-sortable-header-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-sortable-header-v1/M1_SORTABLE_HEADER_RESPONSE_SLICE_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-header-v1/CLOSEOUT_AUDIT_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-header-v1/TODO.md`
+  - `docs/workstreams/imui-table-sortable-header-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-sortable-header-v1/EVIDENCE_AND_GATES.md`
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -624,6 +640,10 @@ It complements (but does not replace) ADRs:
   follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s;
   start separate follow-ons for sortable/resizable column state, column sizing persistence,
   localization-aware ids, or runtime ID-stack diagnostics.
+- Use `docs/workstreams/imui-table-sortable-header-v1/WORKSTREAM.json` as the closed narrow
+  follow-on for sortable header trigger responses and current-direction indicators; keep row
+  sorting engines, multi-sort policy, resizable columns, sizing persistence, localization, and
+  runtime table semantics in separate follow-ons.
 - Use `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json` as the closed narrow
   closeout record for structured IMUI/runtime identity diagnostics; route browser-style identity
   triage to `docs/workstreams/imui-id-stack-browser-v1/`, and keep `test_id` inference,

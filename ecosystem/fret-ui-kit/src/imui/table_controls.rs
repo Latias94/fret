@@ -3,13 +3,18 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, Overflow, SemanticsProps};
+use fret_ui::action::ActivateReason;
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
+    PressableState, SemanticsProps,
+};
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
 use super::containers::build_imui_children_with_focus;
 use super::label_identity::parse_label_identity;
 use super::{
-    ImUiFacade, TableColumn, TableColumnWidth, TableOptions, TableRowOptions, UiWriterImUiFacadeExt,
+    ImUiFacade, ResponseExt, TableColumn, TableColumnWidth, TableHeaderResponse, TableOptions,
+    TableResponse, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
 };
 
 struct BuiltTableRow {
@@ -44,7 +49,7 @@ pub(super) fn table_element<H: UiHost>(
     build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
     options: TableOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-) -> AnyElement {
+) -> (AnyElement, TableResponse) {
     let columns = columns.to_vec();
     let mut rows = Vec::new();
     {
@@ -128,7 +133,7 @@ fn render_table<H: UiHost>(
     columns: Vec<TableColumn>,
     rows: Vec<BuiltTableRow>,
     options: TableOptions,
-) -> AnyElement {
+) -> (AnyElement, TableResponse) {
     let palette = resolve_table_palette(Theme::global(&*cx.app));
     let root_test_id = options.test_id.clone();
     let show_header = options.show_header && columns.iter().any(|column| column.header.is_some());
@@ -137,27 +142,50 @@ fn render_table<H: UiHost>(
         .enumerate()
         .map(|(index, column)| column_test_id_suffix(column, index))
         .collect::<Vec<_>>();
-    let header = show_header.then(|| {
+    let mut header_responses = Vec::new();
+    let header = if show_header {
         let column_test_id_suffixes = column_test_id_suffixes.clone();
-        cx.keyed(format!("{id}.header"), |cx| {
+        Some(cx.keyed(format!("{id}.header"), |cx| {
             let cells = columns
                 .iter()
                 .enumerate()
                 .map(|(index, column)| {
-                    let content = match column.header.as_ref() {
-                        Some(label) => {
-                            let parts = parse_label_identity(label.as_ref());
-                            cx.text(Arc::<str>::from(parts.visible))
-                        }
-                        None => empty_cell(cx),
-                    };
+                    let visible_label = visible_header_label(column);
                     let test_id = root_test_id.as_ref().map(|base| {
                         Arc::from(format!(
                             "{base}.header.cell.{}",
                             column_test_id_suffixes[index]
                         ))
                     });
-                    wrap_table_cell(cx, column, content, test_id, true, false, &options)
+                    let sortable = column_is_sortable(column);
+                    let built = if sortable {
+                        wrap_sortable_header_cell(
+                            cx,
+                            column,
+                            index,
+                            visible_label.clone(),
+                            test_id,
+                            &options,
+                        )
+                    } else {
+                        let content = visible_label
+                            .map(|label| cx.text(label))
+                            .unwrap_or_else(|| empty_cell(cx));
+                        BuiltHeaderCell {
+                            element: wrap_table_cell(
+                                cx, column, content, test_id, true, false, &options,
+                            ),
+                            trigger: ResponseExt::default(),
+                        }
+                    };
+                    header_responses.push(TableHeaderResponse {
+                        column_index: index,
+                        column_id: column.id.clone(),
+                        sortable,
+                        sort_direction: column.sort_direction,
+                        trigger: built.trigger,
+                    });
+                    built.element
                 })
                 .collect::<Vec<_>>();
             wrap_table_row(
@@ -171,8 +199,10 @@ fn render_table<H: UiHost>(
                 &palette,
                 &options,
             )
-        })
-    });
+        }))
+    } else {
+        None
+    };
 
     let body_rows = rows
         .into_iter()
@@ -242,14 +272,26 @@ fn render_table<H: UiHost>(
         ]
     });
 
-    if let Some(test_id) = options.test_id {
+    let element = if let Some(test_id) = options.test_id {
         let mut semantics = SemanticsProps::default();
         semantics.role = SemanticsRole::Group;
         semantics.test_id = Some(test_id);
         cx.semantics(semantics, move |_cx| vec![table])
     } else {
         table
-    }
+    };
+
+    (
+        element,
+        TableResponse {
+            headers: header_responses,
+        },
+    )
+}
+
+struct BuiltHeaderCell {
+    element: AnyElement,
+    trigger: ResponseExt,
 }
 
 fn wrap_table_row<H: UiHost>(
@@ -325,6 +367,180 @@ fn test_id_slug(s: &str) -> String {
     out
 }
 
+fn visible_header_label(column: &TableColumn) -> Option<Arc<str>> {
+    column.header.as_ref().map(|label| {
+        let parts = parse_label_identity(label.as_ref());
+        Arc::<str>::from(parts.visible)
+    })
+}
+
+fn column_is_sortable(column: &TableColumn) -> bool {
+    column.sortable || column.sort_direction.is_some()
+}
+
+fn sort_direction_indicator(direction: TableSortDirection) -> &'static str {
+    match direction {
+        TableSortDirection::Ascending => "^",
+        TableSortDirection::Descending => "v",
+    }
+}
+
+fn sort_direction_a11y_label(direction: TableSortDirection) -> &'static str {
+    match direction {
+        TableSortDirection::Ascending => "ascending",
+        TableSortDirection::Descending => "descending",
+    }
+}
+
+fn sortable_header_a11y_label(
+    column: &TableColumn,
+    visible_label: Option<&Arc<str>>,
+    column_index: usize,
+) -> Arc<str> {
+    let base = visible_label
+        .cloned()
+        .or_else(|| column.id.clone())
+        .unwrap_or_else(|| Arc::from(format!("Column {}", column_index + 1)));
+    match column.sort_direction {
+        Some(direction) => Arc::from(format!(
+            "{base}, sorted {}",
+            sort_direction_a11y_label(direction)
+        )),
+        None => Arc::from(format!("{base}, sortable")),
+    }
+}
+
+fn wrap_sortable_header_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    column: &TableColumn,
+    column_index: usize,
+    visible_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    options: &TableOptions,
+) -> BuiltHeaderCell {
+    let mut trigger = ResponseExt::default();
+    let column_key = column
+        .id
+        .clone()
+        .unwrap_or_else(|| Arc::from(column_index.to_string()));
+    let sort_direction = column.sort_direction;
+    let a11y_label = sortable_header_a11y_label(column, visible_label.as_ref(), column_index);
+    let width = column.width;
+    let clip_cells = options.clip_cells;
+
+    let element = cx.keyed(("sortable-header-cell", column_key), |cx| {
+        let trigger = &mut trigger;
+        let enabled = !super::imui_is_disabled(cx);
+        let mut props = PressableProps::default();
+        props.enabled = enabled;
+        props.focusable = enabled;
+        props.layout = table_cell_layout(width, clip_cells);
+        props.a11y = PressableA11y {
+            role: Some(SemanticsRole::Button),
+            label: Some(a11y_label.clone()),
+            test_id: test_id.clone(),
+            ..Default::default()
+        };
+
+        cx.pressable_with_id(props, move |cx, state, element_id| {
+            let behavior = super::active_trigger_behavior::install_active_trigger_behavior(
+                cx,
+                element_id,
+                super::active_trigger_behavior::ActiveTriggerBehaviorOptions::default(),
+            );
+            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
+
+            if enabled {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
+                    if reason == ActivateReason::Keyboard {
+                        super::mark_lifecycle_instant_if_inactive(
+                            host,
+                            acx,
+                            &lifecycle_model_for_activate,
+                            false,
+                        );
+                    }
+                    host.record_transient_event(acx, super::KEY_CLICKED);
+                    host.notify(acx);
+                }));
+            }
+
+            let clicked = cx.take_transient_for(element_id, super::KEY_CLICKED);
+            super::active_trigger_behavior::populate_active_trigger_response(
+                cx,
+                element_id,
+                state,
+                &behavior,
+                super::active_trigger_behavior::ActiveTriggerResponseInput {
+                    enabled,
+                    clicked,
+                    changed: false,
+                    lifecycle_edited: false,
+                },
+                trigger,
+            );
+
+            vec![sortable_header_visual(
+                cx,
+                visible_label.clone(),
+                sort_direction,
+                enabled,
+                state,
+            )]
+        })
+    });
+
+    BuiltHeaderCell { element, trigger }
+}
+
+fn sortable_header_visual<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    visible_label: Option<Arc<str>>,
+    sort_direction: Option<TableSortDirection>,
+    enabled: bool,
+    state: PressableState,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let hover_bg = if enabled && (state.hovered || state.focused || state.pressed) {
+        Some(
+            theme
+                .color_by_key("muted")
+                .unwrap_or_else(|| theme.color_token("muted")),
+        )
+    } else {
+        None
+    };
+    let mut cell = ContainerProps::default();
+    cell.layout.size.width = Length::Fill;
+    cell.layout.size.height = Length::Auto;
+    cell.padding = table_cell_padding().into();
+    cell.background = hover_bg;
+
+    cx.container(cell, move |cx| {
+        let mut children = Vec::new();
+        if let Some(label) = visible_label.clone() {
+            children.push(cx.text(label));
+        }
+        if let Some(direction) = sort_direction {
+            children.push(cx.text(Arc::<str>::from(sort_direction_indicator(direction))));
+        }
+        if children.is_empty() {
+            Vec::new()
+        } else if children.len() == 1 {
+            children
+        } else {
+            vec![
+                crate::ui::h_flex(move |_cx| children)
+                    .gap_metric(crate::MetricRef::space(crate::Space::N1))
+                    .justify(crate::Justify::Start)
+                    .items(crate::Items::Center)
+                    .no_wrap()
+                    .into_element(cx),
+            ]
+        }
+    })
+}
+
 fn wrap_table_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     column: &TableColumn,
@@ -336,13 +552,7 @@ fn wrap_table_cell<H: UiHost>(
 ) -> AnyElement {
     let mut cell = ContainerProps::default();
     cell.layout = table_cell_layout(column.width, options.clip_cells);
-    cell.padding = Edges {
-        left: Px(8.0),
-        right: Px(8.0),
-        top: Px(4.0),
-        bottom: Px(4.0),
-    }
-    .into();
+    cell.padding = table_cell_padding().into();
     if header || striped {
         cell.background = None;
     }
@@ -358,6 +568,15 @@ fn wrap_table_cell<H: UiHost>(
         cx.semantics(semantics, move |_cx| vec![cell])
     } else {
         cell
+    }
+}
+
+fn table_cell_padding() -> Edges {
+    Edges {
+        left: Px(8.0),
+        right: Px(8.0),
+        top: Px(4.0),
+        bottom: Px(4.0),
     }
 }
 

@@ -1965,12 +1965,12 @@ fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells() {
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let header_status = bounds_for_test_id(&ui, "imui-table-layout.header.cell.1");
-    let row0_status = bounds_for_test_id(&ui, "imui-table-layout.row.0.cell.1");
-    let row1_status = bounds_for_test_id(&ui, "imui-table-layout.row.1.cell.1");
-    let header_owner = bounds_for_test_id(&ui, "imui-table-layout.header.cell.2");
-    let row0_owner = bounds_for_test_id(&ui, "imui-table-layout.row.0.cell.2");
-    let row1_owner = bounds_for_test_id(&ui, "imui-table-layout.row.1.cell.2");
+    let header_status = bounds_for_test_id(&ui, "imui-table-layout.header.cell.status");
+    let row0_status = bounds_for_test_id(&ui, "imui-table-layout.row.0.cell.status");
+    let row1_status = bounds_for_test_id(&ui, "imui-table-layout.row.1.cell.status");
+    let header_owner = bounds_for_test_id(&ui, "imui-table-layout.header.cell.owner");
+    let row0_owner = bounds_for_test_id(&ui, "imui-table-layout.row.0.cell.owner");
+    let row1_owner = bounds_for_test_id(&ui, "imui-table-layout.row.1.cell.owner");
 
     let assert_close = |label: &str, a: f32, b: f32| {
         assert!((a - b).abs() <= 0.5, "{label} drifted: left={a}, right={b}");

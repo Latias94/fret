@@ -162,8 +162,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         id: &str,
         columns: &[TableColumn],
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-    ) {
-        self.table_with_options(id, columns, TableOptions::default(), f);
+    ) -> TableResponse {
+        self.table_with_options(id, columns, TableOptions::default(), f)
     }
 
     pub fn table_with_options(
@@ -172,12 +172,13 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         columns: &[TableColumn],
         options: TableOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-    ) {
+    ) -> TableResponse {
         let build_focus = self.build_focus.clone();
-        let element = self.with_cx_mut(|cx| {
+        let (element, response) = self.with_cx_mut(|cx| {
             table_controls::table_element(cx, id, columns, build_focus, options, f)
         });
         self.add(element);
+        response
     }
 
     pub fn virtual_list<K, R>(
@@ -1065,8 +1066,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         columns: &[TableColumn],
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-    ) {
-        self.table_with_options(id, columns, TableOptions::default(), f);
+    ) -> TableResponse {
+        self.table_with_options(id, columns, TableOptions::default(), f)
     }
 
     fn table_with_options(
@@ -1075,10 +1076,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         columns: &[TableColumn],
         options: TableOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
-    ) {
-        let element =
+    ) -> TableResponse {
+        let (element, response) =
             self.with_cx_mut(|cx| table_controls::table_element(cx, id, columns, None, options, f));
         self.add(element);
+        response
     }
 
     fn virtual_list<K, R>(&mut self, id: &str, len: usize, key_at: K, row: R) -> VirtualListResponse

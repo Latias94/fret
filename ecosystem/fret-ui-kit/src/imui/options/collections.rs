@@ -10,6 +10,12 @@ pub enum TableColumnWidth {
     Fill(f32),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TableSortDirection {
+    Ascending,
+    Descending,
+}
+
 impl TableColumnWidth {
     pub fn px(width: Px) -> Self {
         Self::Px(width)
@@ -25,6 +31,8 @@ pub struct TableColumn {
     pub header: Option<Arc<str>>,
     pub id: Option<Arc<str>>,
     pub width: TableColumnWidth,
+    pub sortable: bool,
+    pub sort_direction: Option<TableSortDirection>,
 }
 
 impl TableColumn {
@@ -34,6 +42,8 @@ impl TableColumn {
             id: inferred_column_id(header.as_ref()),
             header: Some(header),
             width: TableColumnWidth::Px(width),
+            sortable: false,
+            sort_direction: None,
         }
     }
 
@@ -43,6 +53,8 @@ impl TableColumn {
             id: inferred_column_id(header.as_ref()),
             header: Some(header),
             width: TableColumnWidth::Fill(1.0),
+            sortable: false,
+            sort_direction: None,
         }
     }
 
@@ -52,6 +64,8 @@ impl TableColumn {
             id: inferred_column_id(header.as_ref()),
             header: Some(header),
             width: TableColumnWidth::Fill(weight),
+            sortable: false,
+            sort_direction: None,
         }
     }
 
@@ -60,11 +74,32 @@ impl TableColumn {
             header: None,
             id: None,
             width,
+            sortable: false,
+            sort_direction: None,
         }
     }
 
     pub fn with_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.id = Some(id.into());
+        self
+    }
+
+    pub fn sortable(mut self) -> Self {
+        self.sortable = true;
+        self
+    }
+
+    pub fn sorted(mut self, direction: TableSortDirection) -> Self {
+        self.sortable = true;
+        self.sort_direction = Some(direction);
+        self
+    }
+
+    pub fn with_sort_direction(mut self, direction: Option<TableSortDirection>) -> Self {
+        self.sort_direction = direction;
+        if direction.is_some() {
+            self.sortable = true;
+        }
         self
     }
 }

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-sortable-header-v1",
+  "title": "ImUi Table Sortable Header v1",
+  "status": "closed",
+  "updated": "2026-04-29",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-table-column-identity-v1",
+  "problem": "Add a narrow IMUI table header trigger/response surface for sortable columns so app-owned sorting state can be driven from stable column identities without moving sort math, multi-sort policy, column resizing, or persistence into `fret-ui-kit::imui`.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/M1_SORTABLE_HEADER_RESPONSE_SLICE_2026-04-29.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-column-identity-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render a rooted IMUI table with one sortable identity-bearing header, click it, and confirm the returned `TableResponse` reports the header trigger while the visible label remains suffix-free.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_sortable_header_api_compiles --no-fail-fast",
+      "cargo nextest run -p fret-imui table_sortable_header --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "ui-kit-table-sortable-api",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_sortable_header_api_compiles --no-fail-fast"
+    },
+    {
+      "name": "imui-table-sortable-header",
+      "command": "cargo nextest run -p fret-imui table_sortable_header --no-fail-fast"
+    },
+    {
+      "name": "imui-table-layout-selectors",
+      "command": "cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 1"
+    },
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-table-sortable-header-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-table-sortable-header-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-table-sortable-header-v1/DESIGN.md",
+    "docs/workstreams/imui-table-sortable-header-v1/M1_SORTABLE_HEADER_RESPONSE_SLICE_2026-04-29.md",
+    "docs/workstreams/imui-table-sortable-header-v1/CLOSEOUT_AUDIT_2026-04-29.md",
+    "docs/workstreams/imui-table-sortable-header-v1/TODO.md",
+    "docs/workstreams/imui-table-sortable-header-v1/MILESTONES.md",
+    "docs/workstreams/imui-table-sortable-header-v1/EVIDENCE_AND_GATES.md",
+    "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
+    "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
+    "ecosystem/fret-imui/src/tests/label_identity.rs",
+    "ecosystem/fret-imui/src/tests/composition.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0212-element-identity-debug-paths-and-frame-staged-element-state.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after the bounded sortable header trigger/response slice. Start separate follow-ons for row sorting engines, multi-sort policy, resizable columns, sizing persistence, localization, or runtime table semantics."
+  }
+}

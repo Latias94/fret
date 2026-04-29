@@ -3,7 +3,8 @@
 use fret_core::Px;
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
-    TableColumn, TableColumnWidth, TableOptions, TableRowOptions, UiWriterImUiFacadeExt,
+    TableColumn, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
+    UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -14,7 +15,7 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
         TableColumn::unlabeled(TableColumnWidth::px(Px(72.0))),
     ];
 
-    ui.table("table.basic", &columns, |table| {
+    let response = ui.table("table.basic", &columns, |table| {
         table.row("alpha", |row| {
             row.cell_text("Alpha");
             row.cell_text("Folder");
@@ -23,8 +24,9 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             });
         });
     });
+    let _ = response.headers();
 
-    ui.table_with_options(
+    let response = ui.table_with_options(
         "table.with_options",
         &columns,
         TableOptions {
@@ -46,6 +48,7 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             );
         },
     );
+    let _ = response.header_at(0);
 }
 
 #[test]
@@ -63,16 +66,22 @@ fn table_column_helpers_compile() {
     assert_eq!(fill.header.as_deref(), Some("Name"));
     assert_eq!(fill.id.as_deref(), Some("Name"));
     assert_eq!(fill.width, TableColumnWidth::Fill(1.0));
+    assert!(!fill.sortable);
+    assert_eq!(fill.sort_direction, None);
 
     let weighted = TableColumn::weighted("Kind", 2.5);
     assert_eq!(weighted.header.as_deref(), Some("Kind"));
     assert_eq!(weighted.id.as_deref(), Some("Kind"));
     assert_eq!(weighted.width, TableColumnWidth::Fill(2.5));
+    assert!(!weighted.sortable);
+    assert_eq!(weighted.sort_direction, None);
 
     let px = TableColumn::px("State", Px(96.0));
     assert_eq!(px.header.as_deref(), Some("State"));
     assert_eq!(px.id.as_deref(), Some("State"));
     assert_eq!(px.width, TableColumnWidth::Px(Px(96.0)));
+    assert!(!px.sortable);
+    assert_eq!(px.sort_direction, None);
 
     let double_hash = TableColumn::fill("Name##asset-name-column");
     assert_eq!(
@@ -88,4 +97,28 @@ fn table_column_helpers_compile() {
     let unlabeled = TableColumn::unlabeled(TableColumnWidth::px(Px(72.0))).with_id("actions");
     assert_eq!(unlabeled.header, None);
     assert_eq!(unlabeled.id.as_deref(), Some("actions"));
+}
+
+#[test]
+fn table_sortable_header_api_compiles() {
+    let sorted = TableColumn::fill("Name###asset-name")
+        .sortable()
+        .sorted(TableSortDirection::Ascending);
+    assert_eq!(sorted.id.as_deref(), Some("asset-name"));
+    assert!(sorted.sortable);
+    assert_eq!(sorted.sort_direction, Some(TableSortDirection::Ascending));
+
+    let unsorted = TableColumn::px("Status###asset-status", Px(120.0)).sortable();
+    assert_eq!(unsorted.id.as_deref(), Some("asset-status"));
+    assert!(unsorted.sortable);
+    assert_eq!(unsorted.sort_direction, None);
+
+    let descending = TableColumn::weighted("Kind###asset-kind", 1.5)
+        .with_sort_direction(Some(TableSortDirection::Descending));
+    assert_eq!(descending.id.as_deref(), Some("asset-kind"));
+    assert!(descending.sortable);
+    assert_eq!(
+        descending.sort_direction,
+        Some(TableSortDirection::Descending)
+    );
 }

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_ui::GlobalElementId;
 
+use super::super::options::TableSortDirection;
 use super::hover::ResponseExt;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -31,6 +32,22 @@ pub struct TabBarResponse {
 pub struct TabTriggerResponse {
     pub id: Arc<str>,
     pub selected: bool,
+    pub trigger: ResponseExt,
+}
+
+/// Aggregated response surface for helper-owned table headers.
+#[derive(Debug, Clone, Default)]
+pub struct TableResponse {
+    pub headers: Vec<TableHeaderResponse>,
+}
+
+/// Outward response for a single helper-owned table header cell.
+#[derive(Debug, Clone)]
+pub struct TableHeaderResponse {
+    pub column_index: usize,
+    pub column_id: Option<Arc<str>>,
+    pub sortable: bool,
+    pub sort_direction: Option<TableSortDirection>,
     pub trigger: ResponseExt,
 }
 
@@ -127,6 +144,46 @@ impl TabTriggerResponse {
 
     pub fn selected(&self) -> bool {
         self.selected
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.trigger
+    }
+
+    pub fn clicked(&self) -> bool {
+        self.trigger.clicked()
+    }
+
+    pub fn activated(&self) -> bool {
+        self.trigger.activated()
+    }
+
+    pub fn deactivated(&self) -> bool {
+        self.trigger.deactivated()
+    }
+}
+
+impl TableResponse {
+    pub fn headers(&self) -> &[TableHeaderResponse] {
+        &self.headers
+    }
+
+    pub fn header(&self, column_id: &str) -> Option<&TableHeaderResponse> {
+        self.headers
+            .iter()
+            .find(|header| header.column_id.as_deref() == Some(column_id))
+    }
+
+    pub fn header_at(&self, column_index: usize) -> Option<&TableHeaderResponse> {
+        self.headers
+            .iter()
+            .find(|header| header.column_index == column_index)
+    }
+}
+
+impl TableHeaderResponse {
+    pub fn column_id(&self) -> Option<&str> {
+        self.column_id.as_deref()
     }
 
     pub fn response(&self) -> ResponseExt {
