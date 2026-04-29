@@ -22,6 +22,8 @@ Status: active
   target-specific evidence.
 - [x] Move the IMUI editor proof theme/preset source markers out of the monolithic
   `fret-examples` unit test.
+- [x] Move the IMUI local-state and workspace-shell entry source markers out of the monolithic
+  `fret-examples` unit test.
 
 ## Parked
 

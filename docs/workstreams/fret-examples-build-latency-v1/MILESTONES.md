@@ -72,3 +72,18 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M4_IMUI_EDITOR_THEME_SOURCE_GATE_2026-04-29.md`
 - `tools/gate_imui_facade_teaching_source.py`
+
+## M5 - IMUI State Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI local-state read markers and workspace-shell IMUI entry markers no longer compile the
+  monolithic `fret-examples` unit-test module.
+- The existing IMUI facade/teaching source gate owns the markers.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M5_IMUI_STATE_SOURCE_GATE_2026-04-29.md`
+- `tools/gate_imui_facade_teaching_source.py`

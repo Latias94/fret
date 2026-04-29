@@ -8755,18 +8755,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn workspace_shell_demo_prefers_root_fret_imui_entry_surface() {
-        assert!(
-            WORKSPACE_SHELL_DEMO.contains(
-                "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};"
-            )
-        );
-        assert!(WORKSPACE_SHELL_DEMO.contains("imui_build(cx, out, move |ui| {"));
-        assert!(!WORKSPACE_SHELL_DEMO.contains("fret_imui::imui_build(cx, out, move |ui| {"));
-        assert!(!WORKSPACE_SHELL_DEMO.contains("UiWriterImUiFacadeExt as _"));
-    }
-
-    #[test]
     fn selected_app_ui_roots_prefer_explicit_render_context_accessors_over_deref() {
         let embedded_render = source_slice(
             EMBEDDED_VIEWPORT_DEMO,
@@ -9177,42 +9165,6 @@ mod authoring_surface_policy_tests {
                 "legacy marker still present: {legacy}"
             );
         }
-    }
-
-    #[test]
-    fn imui_immediate_mode_examples_use_local_state_bridge_reads() {
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            IMUI_HELLO_DEMO,
-            &[
-                "let enabled = enabled_state.paint_value_in(ui.cx_mut());",
-                "checkbox_model(\"Enabled\", enabled_state.model())",
-            ],
-            &["enabled_state.value_in(ui.cx_mut().app.models())"],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            IMUI_INTERACTION_SHOWCASE_DEMO,
-            &[
-                "bookmark_slot.layout_value_in(ui.cx_mut())",
-                "tool_mode.layout_value_in(ui.cx_mut())",
-                "autosave_enabled.layout_value_in(ui.cx_mut())",
-                "exposure_value.layout_value_in(ui.cx_mut())",
-                "review_mode.layout_value_in(ui.cx_mut())",
-                "selected_tab.layout_value_in(ui.cx_mut())",
-                "context_toggle.layout_value_in(ui.cx_mut())",
-                "fn push_showcase_event(",
-                "let id = next_id.value_in_or_default(app.models());",
-            ],
-            &[
-                "bookmark_slot.value_in(ui.cx_mut().app.models())",
-                "tool_mode.value_in(ui.cx_mut().app.models())",
-                "autosave_enabled.value_in(ui.cx_mut().app.models())",
-                "exposure_value.value_in(ui.cx_mut().app.models())",
-                "review_mode.value_in(ui.cx_mut().app.models())",
-                "selected_tab.value_in(ui.cx_mut().app.models())",
-                "context_toggle.value_in(ui.cx_mut().app.models())",
-            ],
-        );
     }
 
     #[test]
