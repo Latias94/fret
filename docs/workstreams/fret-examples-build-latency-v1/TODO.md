@@ -20,6 +20,8 @@ Status: active
   `apps/fret-examples-imui` in a separate documentation-aware slice.
 - [x] Revisit the unconditional `profile.dev.package.fret-examples.incremental = false` setting with
   target-specific evidence.
+- [x] Move the IMUI editor proof theme/preset source markers out of the monolithic
+  `fret-examples` unit test.
 
 ## Parked
 

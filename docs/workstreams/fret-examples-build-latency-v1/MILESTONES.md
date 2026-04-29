@@ -57,3 +57,18 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md`
 - `Cargo.toml`
+
+## M4 - IMUI Editor Theme Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Source-only IMUI editor theme/preset markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The existing IMUI facade/teaching source gate owns the markers.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M4_IMUI_EDITOR_THEME_SOURCE_GATE_2026-04-29.md`
+- `tools/gate_imui_facade_teaching_source.py`

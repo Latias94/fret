@@ -265,6 +265,13 @@ def main() -> None:
                 "editor_imui::property_grid(",
                 "editor_imui::numeric_input(",
                 "editor_imui::gradient_editor(",
+                'const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";',
+                "editor_theme_preset_from_env(ENV_EDITOR_PRESET)",
+                "EditorThemePresetV1::ImguiLikeDense",
+                ".defaults(Defaults {",
+                "shadcn: false,",
+                "install_imui_editor_proof_theme(app);",
+                "shadcn::themes::apply_shadcn_new_york(",
             ],
             forbidden=[
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
@@ -279,6 +286,7 @@ def main() -> None:
                 "UiTreeRetainedExt as _",
                 "retained_subtree_with(",
                 "fret_node::imui::",
+                "shadcn::app::install_with_theme(",
             ],
         ),
         SourceCheck(

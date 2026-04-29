@@ -2956,40 +2956,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn imui_editor_proof_demo_defaults_to_imgui_like_dense_preset_for_editor_grade_launches() {
-        for marker in [
-            "const ENV_EDITOR_PRESET: &str = \"FRET_IMUI_EDITOR_PRESET\";",
-            "editor_theme_preset_from_env(ENV_EDITOR_PRESET)",
-            "EditorThemePresetV1::ImguiLikeDense",
-        ] {
-            assert!(
-                IMUI_EDITOR_PROOF_DEMO.contains(marker),
-                "imui_editor_proof_demo should default to the dense editor preset while still honoring env override: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn imui_editor_proof_demo_keeps_a_demo_owned_fixed_editor_theme() {
-        for marker in [
-            ".defaults(Defaults {",
-            "shadcn: false,",
-            "install_imui_editor_proof_theme(app);",
-            "shadcn::themes::apply_shadcn_new_york(",
-        ] {
-            assert!(
-                IMUI_EDITOR_PROOF_DEMO.contains(marker),
-                "imui_editor_proof_demo should keep a demo-owned fixed editor host theme: {marker}"
-            );
-        }
-
-        assert!(
-            !IMUI_EDITOR_PROOF_DEMO.contains("shadcn::app::install_with_theme("),
-            "imui_editor_proof_demo should not re-enter the default shadcn install lifecycle"
-        );
-    }
-
-    #[test]
     fn immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on() {
         for marker in [
             "`fret-authoring::Response` must stay unchanged.",
