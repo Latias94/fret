@@ -18,7 +18,8 @@ python tools/gate_table_source_policy.py
 python tools/gate_examples_source_tree_policy.py
 python tools/gate_fret_examples_imui_split_source.py
 cargo check -p fret-examples-imui --bins --jobs 1
-cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_shadcn_adapter_demo --jobs 1
+cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_response_signals_demo --bin imui_interaction_showcase_demo --bin imui_shadcn_adapter_demo --jobs 1
+cargo nextest run -p fret-examples-imui --no-fail-fast
 cargo check -p fret-examples --lib --jobs 1
 python tools/check_workstream_catalog.py
 git diff --check
@@ -46,7 +47,8 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
 - Passed: `python -m py_compile tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `cargo check -p fret-examples-imui --bins --jobs 1`.
-- Passed: `cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_shadcn_adapter_demo --jobs 1`.
+- Passed: `cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_response_signals_demo --bin imui_interaction_showcase_demo --bin imui_shadcn_adapter_demo --jobs 1`.
+- Passed: `cargo nextest run -p fret-examples-imui --no-fail-fast` (2 tests).
 - Checked: `cargo tree -p fret-examples-imui -e normal` has no `fret-examples v...` dependency
   entry; the direct IMUI proof crate does not depend on the monolithic examples crate.
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
@@ -66,9 +68,13 @@ git diff --check
 - `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`
 - `apps/fret-examples-imui/src/imui_hello_demo.rs`
 - `apps/fret-examples-imui/src/imui_floating_windows_demo.rs`
+- `apps/fret-examples-imui/src/imui_response_signals_demo.rs`
+- `apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs`
 - `apps/fret-examples-imui/src/bin/imui_shadcn_adapter_demo.rs`
 - `apps/fret-examples-imui/src/bin/imui_hello_demo.rs`
 - `apps/fret-examples-imui/src/bin/imui_floating_windows_demo.rs`
+- `apps/fret-examples-imui/src/bin/imui_response_signals_demo.rs`
+- `apps/fret-examples-imui/src/bin/imui_interaction_showcase_demo.rs`
 - `tools/gate_examples_source_tree_policy.py`
 - `tools/gate_fret_examples_imui_split_source.py`
 - `apps/fret-demo/Cargo.toml`

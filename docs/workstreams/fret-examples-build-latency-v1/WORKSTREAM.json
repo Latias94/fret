@@ -68,8 +68,12 @@
       "command": "cargo check -p fret-examples-imui --bins --jobs 1"
     },
     {
-      "name": "fret-demo-imui-shadcn-adapter-check",
-      "command": "cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_shadcn_adapter_demo --jobs 1"
+      "name": "fret-demo-imui-bins-check",
+      "command": "cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_response_signals_demo --bin imui_interaction_showcase_demo --bin imui_shadcn_adapter_demo --jobs 1"
+    },
+    {
+      "name": "fret-examples-imui-nextest",
+      "command": "cargo nextest run -p fret-examples-imui --no-fail-fast"
     },
     {
       "name": "fret-examples-check",
@@ -94,9 +98,13 @@
     "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples-imui/src/imui_hello_demo.rs",
     "apps/fret-examples-imui/src/imui_floating_windows_demo.rs",
+    "apps/fret-examples-imui/src/imui_response_signals_demo.rs",
+    "apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs",
     "apps/fret-examples-imui/src/bin/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples-imui/src/bin/imui_hello_demo.rs",
     "apps/fret-examples-imui/src/bin/imui_floating_windows_demo.rs",
+    "apps/fret-examples-imui/src/bin/imui_response_signals_demo.rs",
+    "apps/fret-examples-imui/src/bin/imui_interaction_showcase_demo.rs",
     "apps/fret-examples-imui/Cargo.toml",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",

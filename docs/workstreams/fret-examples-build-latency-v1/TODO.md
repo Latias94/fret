@@ -16,7 +16,7 @@ Status: active
 - [x] Move the source-tree policy gate package out of the monolithic `fret-examples` unit test.
 - [x] Decide whether `fret-demo` needs a split examples crate, feature families, or direct demo-local
   bins for heavy families.
-- [ ] Move `imui_response_signals_demo` and `imui_interaction_showcase_demo` into
+- [x] Move `imui_response_signals_demo` and `imui_interaction_showcase_demo` into
   `apps/fret-examples-imui` in a separate documentation-aware slice.
 - [ ] Revisit the unconditional `profile.dev.package.fret-examples.incremental = false` setting with
   target-specific evidence.

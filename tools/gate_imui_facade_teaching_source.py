@@ -98,7 +98,7 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            Path("apps/fret-examples/src/imui_response_signals_demo.rs"),
+            Path("apps/fret-examples-imui/src/imui_response_signals_demo.rs"),
             required=[
                 "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
                 "imui_in(cx, |ui| {",
@@ -138,7 +138,7 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            Path("apps/fret-examples/src/imui_interaction_showcase_demo.rs"),
+            Path("apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs"),
             required=[
                 "Showcase surface for immediate-mode interaction affordances.",
                 "Current proof/contract surface stays in `imui_response_signals_demo`.",
@@ -358,8 +358,8 @@ def main() -> None:
     for path in [
         "apps/fret-examples-imui/src/imui_hello_demo.rs",
         "apps/fret-examples-imui/src/imui_floating_windows_demo.rs",
-        "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
-        "apps/fret-examples/src/imui_response_signals_demo.rs",
+        "apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs",
+        "apps/fret-examples-imui/src/imui_response_signals_demo.rs",
         "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
     ]:
         checks.append(SourceCheck(Path(path), required=[], forbidden=retained_bridge_forbidden))

@@ -58,7 +58,7 @@ FIRST_PARTY_CURATED_SHADCN_SURFACES = [
     EXAMPLES_SRC / "hello_counter_demo.rs",
     EXAMPLES_SRC / "ime_smoke_demo.rs",
     EXAMPLES_SRC / "imui_editor_proof_demo.rs",
-    EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
     IMUI_EXAMPLES_SRC / "imui_shadcn_adapter_demo.rs",
     EXAMPLES_SRC / "liquid_glass_demo.rs",
     EXAMPLES_SRC / "markdown_demo.rs",

@@ -10,6 +10,8 @@ GATE_NAME = "fret examples imui split source"
 MOVED_DEMOS = [
     "imui_floating_windows_demo",
     "imui_hello_demo",
+    "imui_interaction_showcase_demo",
+    "imui_response_signals_demo",
     "imui_shadcn_adapter_demo",
 ]
 

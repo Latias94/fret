@@ -196,11 +196,11 @@ pub use fret_examples_imui::imui_floating_windows_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_examples_imui::imui_hello_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod imui_interaction_showcase_demo;
+pub use fret_examples_imui::imui_interaction_showcase_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
 pub mod imui_node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod imui_response_signals_demo;
+pub use fret_examples_imui::imui_response_signals_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_examples_imui::imui_shadcn_adapter_demo;
 pub mod inf_lines_demo;
@@ -310,7 +310,8 @@ mod authoring_surface_policy_tests {
     const IMUI_FLOATING_WINDOWS_DEMO: &str =
         include_str!("../../fret-examples-imui/src/imui_floating_windows_demo.rs");
     const IMUI_HELLO_DEMO: &str = include_str!("../../fret-examples-imui/src/imui_hello_demo.rs");
-    const IMUI_INTERACTION_SHOWCASE_DEMO: &str = include_str!("imui_interaction_showcase_demo.rs");
+    const IMUI_INTERACTION_SHOWCASE_DEMO: &str =
+        include_str!("../../fret-examples-imui/src/imui_interaction_showcase_demo.rs");
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
     const IMUI_PROOF_BUDGET_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
@@ -870,7 +871,8 @@ mod authoring_surface_policy_tests {
         include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
     const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
         include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
-    const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
+    const IMUI_RESPONSE_SIGNALS_DEMO: &str =
+        include_str!("../../fret-examples-imui/src/imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str =
         include_str!("../../fret-examples-imui/src/imui_shadcn_adapter_demo.rs");
     const IMUI_EDITOR_PROOF_APP_OWNER_AUDIT: &str = include_str!(
