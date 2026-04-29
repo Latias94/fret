@@ -32,6 +32,8 @@ git diff --check
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
 - Passed: `python tools/check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+- Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
+  with the remaining source-policy test count and migration candidates.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
   evaluated.
@@ -44,4 +46,5 @@ git diff --check
 - `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json`
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`
+- `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
 - `Cargo.toml`

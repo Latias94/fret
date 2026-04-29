@@ -12,11 +12,17 @@ Exit criteria:
 
 ## M1 - Source-Policy Test Migration Plan
 
+Status: active
+
 Exit criteria:
 
 - Remaining source-marker tests in `apps/fret-examples/src/lib.rs` are grouped by owner surface.
 - Tests that only need text scanning have a Python gate migration plan.
 - Tests that need Rust type checking remain in `fret-examples` with an explicit reason.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
 
 ## M2 - Demo Build Split Decision
 

@@ -22,6 +22,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md"
     }
   ],
   "repro": {
@@ -62,7 +66,8 @@
     "docs/workstreams/fret-examples-build-latency-v1/DESIGN.md",
     "docs/workstreams/fret-examples-build-latency-v1/TODO.md",
     "docs/workstreams/fret-examples-build-latency-v1/MILESTONES.md",
-    "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md"
+    "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md"
   ],
   "adr_refs": [],
   "continue_policy": {
