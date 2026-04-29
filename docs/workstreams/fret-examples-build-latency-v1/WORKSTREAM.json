@@ -30,6 +30,10 @@
     {
       "role": "decision",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md"
     }
   ],
   "repro": {
@@ -68,6 +72,10 @@
       "command": "cargo check -p fret-examples-imui --bins --jobs 1"
     },
     {
+      "name": "fret-examples-imui-dev-fast-check",
+      "command": "cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1"
+    },
+    {
       "name": "fret-demo-imui-bins-check",
       "command": "cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_response_signals_demo --bin imui_interaction_showcase_demo --bin imui_shadcn_adapter_demo --jobs 1"
     },
@@ -78,6 +86,10 @@
     {
       "name": "fret-examples-check",
       "command": "cargo check -p fret-examples --lib --jobs 1"
+    },
+    {
+      "name": "fret-examples-dev-fast-check",
+      "command": "cargo check -p fret-examples --lib --profile dev-fast --jobs 1"
     },
     {
       "name": "workstream-catalog",
@@ -114,7 +126,9 @@
     "docs/workstreams/fret-examples-build-latency-v1/MILESTONES.md",
     "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md",
-    "docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md"
+    "docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md",
+    "Cargo.toml"
   ],
   "adr_refs": [],
   "continue_policy": {

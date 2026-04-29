@@ -18,7 +18,7 @@ Status: active
   bins for heavy families.
 - [x] Move `imui_response_signals_demo` and `imui_interaction_showcase_demo` into
   `apps/fret-examples-imui` in a separate documentation-aware slice.
-- [ ] Revisit the unconditional `profile.dev.package.fret-examples.incremental = false` setting with
+- [x] Revisit the unconditional `profile.dev.package.fret-examples.incremental = false` setting with
   target-specific evidence.
 
 ## Parked

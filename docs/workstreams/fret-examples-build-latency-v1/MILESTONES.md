@@ -45,8 +45,15 @@ Current evidence:
 
 ## M3 - Profile Policy Decision
 
+Status: complete
+
 Exit criteria:
 
 - The macOS incremental-link workaround is either kept global with evidence or narrowed through a
   documented developer profile path.
 - Windows iteration guidance is updated if `dev-fast` becomes the recommended local path.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md`
+- `Cargo.toml`

@@ -161,10 +161,9 @@ codegen-units = 1
 [profile.dev.package.fret-ui-gallery]
 incremental = false
 
-# `fret-examples` builds a large, diagnostics-heavy unified library that is reused by native demo
-# binaries such as `imui_interaction_showcase_demo`. Keep package-level incremental off on macOS so
-# repeated `cargo build/run -p fret-demo --bin ...` iterations do not pick up unstable incremental
-# link artifacts from the shared examples crate.
+# `fret-examples` remains the broad compatibility library for demo and diagnostics runs. Keep the
+# default dev profile conservative for the macOS incremental-link workaround recorded in the
+# examples build-latency workstream; local speed paths use `dev-fast` or direct family crates.
 [profile.dev.package.fret-examples]
 incremental = false
 
@@ -178,6 +177,11 @@ debug = 1
 [profile.dev-fast.package.taffy]
 opt-level = 3
 codegen-units = 1
+
+# `dev-fast` is the explicit local iteration escape hatch for the broad examples compatibility
+# crate. The default `dev` profile above stays conservative for macOS stability.
+[profile.dev-fast.package.fret-examples]
+incremental = true
 
 # Windows/MSVC note: the shadcn test suite can produce very large test binaries.
 # Keeping test debuginfo to line-tables only avoids hitting `link.exe` PDB size limits while

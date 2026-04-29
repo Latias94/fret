@@ -18,9 +18,11 @@ python tools/gate_table_source_policy.py
 python tools/gate_examples_source_tree_policy.py
 python tools/gate_fret_examples_imui_split_source.py
 cargo check -p fret-examples-imui --bins --jobs 1
+cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1
 cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_response_signals_demo --bin imui_interaction_showcase_demo --bin imui_shadcn_adapter_demo --jobs 1
 cargo nextest run -p fret-examples-imui --no-fail-fast
 cargo check -p fret-examples --lib --jobs 1
+cargo check -p fret-examples --lib --profile dev-fast --jobs 1
 python tools/check_workstream_catalog.py
 git diff --check
 ```
@@ -47,13 +49,17 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
 - Passed: `python -m py_compile tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `cargo check -p fret-examples-imui --bins --jobs 1`.
+- Passed: `cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1`.
 - Passed: `cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo --bin imui_response_signals_demo --bin imui_interaction_showcase_demo --bin imui_shadcn_adapter_demo --jobs 1`.
 - Passed: `cargo nextest run -p fret-examples-imui --no-fail-fast` (2 tests).
 - Checked: `cargo tree -p fret-examples-imui -e normal` has no `fret-examples v...` dependency
   entry; the direct IMUI proof crate does not depend on the monolithic examples crate.
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
+- Passed: `cargo check -p fret-examples --lib --profile dev-fast --jobs 1`.
 - Passed: `python tools/check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+- Recorded: `docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md`
+  with the default `dev` stability policy and explicit `dev-fast` local speed override.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
 - Current count after the source-tree policy migration: 281 `include_str!` occurrences and 122
@@ -83,4 +89,5 @@ git diff --check
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`
 - `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md`
 - `Cargo.toml`
