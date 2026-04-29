@@ -1,0 +1,300 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "editor-notes-demo-draft-controller-proof",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "ui_editor",
+      "text_field",
+      "multiline",
+      "draft_controller",
+      "regression",
+      "screenshots"
+    ],
+    "target_hints": [
+      "Uses the app-local editor_notes_demo inspector surface.",
+      "Proves external Commit draft / Discard draft controls can drive a preserved multiline TextField draft through an opaque TextFieldDraftController.",
+      "Keeps the proof at the editor control layer: no public draft model handle, no runtime API widening, and no command-bus or persistence policy."
+    ],
+    "env_defaults": {
+      "FRET_EDITOR_NOTES_DEMO_PRESET": "default"
+    }
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 820.0 },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.selection.material" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.draft-status"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.commit-draft"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.discard-draft"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "editor-notes-demo-draft-controller-initial"
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.selection.material" }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+      "text": "Controller commit A\nController commit B\nController commit C"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Controller commit A\nController commit B\nController commit C"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "editor-notes-demo.inspector.notes.commit-draft"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        },
+        "text": "Committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.draft-status"
+        },
+        "text": "Clean draft"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.summary-status"
+        },
+        "text": "Draft committed: Material"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+      "text": "Controller discard pending"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Controller discard pending"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "editor-notes-demo.inspector.notes.discard-draft"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Controller commit A\nController commit B\nController commit C"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        },
+        "text": "Canceled"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.draft-status"
+        },
+        "text": "Draft canceled"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.summary-status"
+        },
+        "text": "Draft discarded: Material"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "editor-notes-demo-draft-controller-final"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "editor-notes-demo-draft-controller-proof"
+    }
+  ]
+}

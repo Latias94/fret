@@ -637,6 +637,12 @@ mod authoring_surface_policy_tests {
     const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_WORKSTREAM: &str = include_str!(
         "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json"
     );
+    const IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_CLOSEOUT: &str = include_str!(
+        "../../../docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    );
+    const EDITOR_NOTES_DRAFT_CONTROLLER_DIAG_SCRIPT: &str = include_str!(
+        "../../../tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json"
+    );
     const IMUI_TEXT_FIELD_RS: &str =
         include_str!("../../../ecosystem/fret-ui-editor/src/controls/text_field.rs");
     const IMUI_FACADE_INTERNAL_MODULARIZATION_DESIGN: &str =
@@ -5714,14 +5720,15 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn immediate_mode_workstream_starts_the_p1_textfield_draft_controller_api_proof() {
+    fn immediate_mode_workstream_closes_the_p1_textfield_draft_controller_api_proof() {
         for marker in [
-            "Status: active narrow P1 lane",
+            "Status: closed narrow P1 lane",
             "opaque `TextFieldDraftController`",
             "No public `Model<String>` handle for the internal draft buffer.",
             "No `crates/fret-ui`, `fret-ui-kit::imui`, `fret-imui`, or `fret-authoring` API widening.",
             "commit(host, action_cx)",
             "discard(host, action_cx)",
+            "The v1 contract is sufficient after the launched `editor_notes_demo` diagnostics proof:",
         ] {
             assert!(
                 IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_DESIGN.contains(marker),
@@ -5731,13 +5738,16 @@ mod authoring_surface_policy_tests {
 
         for marker in [
             "\"slug\": \"imui-textfield-draft-controller-api-proof-v1\"",
-            "\"status\": \"active\"",
+            "\"status\": \"closed\"",
             "\"scope_kind\": \"execution\"",
             "\"follow_on_of\": \"imui-textfield-draft-buffer-contract-audit-v1\"",
+            "editor-notes-draft-controller-launched-diag",
             "textfield-draft-controller-source-policy",
+            "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json",
+            "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md",
             "ecosystem/fret-ui-editor/src/controls/text_field.rs",
             "apps/fret-examples/src/editor_notes_demo.rs",
-            "\"default_action\": \"continue\"",
+            "\"default_action\": \"new_follow_on\"",
         ] {
             assert!(
                 IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_WORKSTREAM.contains(marker),
@@ -5779,13 +5789,44 @@ mod authoring_surface_policy_tests {
         for marker in [
             "Add opaque `TextFieldDraftController` support to `fret-ui-editor::TextField`.",
             "## M1 - Opaque Draft Controller",
+            "## M2 - Closeout Decision",
+            "Add launched `editor_notes_demo` diagnostics proof for app-owned commit/discard buttons.",
+            "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json",
             "textfield-draft-controller-source-policy",
         ] {
             assert!(
                 IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_TODO.contains(marker)
                     || IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_MILESTONES.contains(marker)
                     || IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_EVIDENCE.contains(marker),
-                "the TextField draft-controller execution docs should record the active gate surface: {marker}"
+                "the TextField draft-controller execution docs should record the closeout gate surface: {marker}"
+            );
+        }
+
+        for marker in [
+            "Status: closed",
+            "Date: 2026-04-29",
+            "PASS (run_id=1777427121868)",
+            "`0` duplicate",
+            "Start a narrower follow-on",
+        ] {
+            assert!(
+                IMUI_TEXTFIELD_DRAFT_CONTROLLER_API_PROOF_CLOSEOUT.contains(marker),
+                "the TextField draft-controller closeout should record the launched proof and follow-on boundary: {marker}"
+            );
+        }
+
+        for marker in [
+            "\"schema_version\": 2",
+            "\"editor-notes-demo-draft-controller-proof\"",
+            "\"editor-notes-demo.inspector.notes.commit-draft\"",
+            "\"editor-notes-demo.inspector.notes.discard-draft\"",
+            "\"Draft committed: Material\"",
+            "\"Draft discarded: Material\"",
+            "\"type\": \"capture_bundle\"",
+        ] {
+            assert!(
+                EDITOR_NOTES_DRAFT_CONTROLLER_DIAG_SCRIPT.contains(marker),
+                "the editor-notes draft-controller diag script should keep commit/discard behavior explicit: {marker}"
             );
         }
     }

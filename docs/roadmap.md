@@ -209,14 +209,15 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`,
   `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json`.
-- ImUi TextField draft-controller API proof (active narrow P1 lane that follows the closed
-  draft-buffer audit with an opaque `fret-ui-editor::TextField` controller, proving external
-  commit/discard in `editor_notes_demo.rs` without exposing the internal draft model or widening
-  runtime/generic IMUI helper APIs):
+- ImUi TextField draft-controller API proof closeout record (closed narrow P1 lane that follows the
+  closed draft-buffer audit with an opaque `fret-ui-editor::TextField` controller, proving external
+  commit/discard in `editor_notes_demo.rs` with a launched diagnostics script without exposing the
+  internal draft model or widening runtime/generic IMUI helper APIs):
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/DESIGN.md`,
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/TODO.md`,
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/MILESTONES.md`,
-  `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md`,
+  `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`, and
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json`.
 - ImUi menu/tab policy-depth closeout record (closed narrow P0 lane that landed the first admitted
   generic menu/submenu floor, then closed on a no-new-generic-surface verdict for this cycle

@@ -1,7 +1,7 @@
 # ImUi TextField Draft Controller API Proof v1 - Milestones
 
-Status: active narrow P1 lane
-Last updated: 2026-04-28
+Status: closed narrow P1 lane
+Last updated: 2026-04-29
 
 ## M0 - Lane Opened
 
@@ -30,7 +30,20 @@ Evidence: `ecosystem/fret-ui-editor/src/controls/text_field.rs`,
 
 ## M2 - Closeout Decision
 
-Status: pending
+Status: complete
 
 Goal: decide whether the opaque controller is enough for v1 or whether another follow-on is needed
 for persistence, dirty-close, command-bus, or document-state integration.
+
+Exit criteria:
+
+- A launched diagnostics script proves `Commit draft` / `Discard draft` through stable editor-notes
+  selectors.
+- The proof records committed line count, last action, draft status, and app-owned status-row
+  outcomes.
+- The lane closes without adding persistence, dirty-close, command-bus, document-state, runtime, or
+  generic IMUI helper surface.
+
+Evidence: `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json`,
+`docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`, and
+the packed local diagnostics artifact recorded in `EVIDENCE_AND_GATES.md`.

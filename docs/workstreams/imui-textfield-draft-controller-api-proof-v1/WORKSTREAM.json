@@ -2,8 +2,8 @@
   "schema_version": 1,
   "slug": "imui-textfield-draft-controller-api-proof-v1",
   "title": "ImUi TextField Draft Controller API Proof v1",
-  "status": "active",
-  "updated": "2026-04-28",
+  "status": "closed",
+  "updated": "2026-04-29",
   "scope_kind": "execution",
   "follow_on_of": "imui-textfield-draft-buffer-contract-audit-v1",
   "problem": "The previous TextField draft-buffer audit kept preserved draft internals private until a real proof surface needed external commit/discard. This lane proves the smallest editor-owned contract: an opaque TextField draft controller for explicit app-authored Commit draft / Discard draft affordances without exposing the internal draft model or widening generic IMUI/runtime APIs.",
@@ -25,19 +25,33 @@
       "path": "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"
     }
   ],
   "repro": {
-    "summary": "Run the TextField API smoke, editor-notes rail proof, and source-policy gate for the draft controller proof.",
+    "summary": "Run the TextField API smoke, editor-notes rail proof, source-policy gate, and launched editor-notes draft-controller diagnostics proof.",
     "commands": [
+      "cargo run -p fretboard-dev -- diag script validate tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json --dir target/fret-diag/editor-notes-draft-controller-proof --session-auto --timeout-ms 600000 --pack --ai-packet --launch -- cargo run -p fret-demo --bin editor_notes_demo",
       "cargo nextest run -p fret-ui-editor --test text_field_api_smoke --no-fail-fast",
       "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_starts_the_p1_textfield_draft_controller_api_proof --no-fail-fast"
+      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_controller_api_proof --no-fail-fast"
     ]
   },
   "gates": [
+    {
+      "name": "editor-notes-draft-controller-script-schema",
+      "command": "cargo run -p fretboard-dev -- diag script validate tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json"
+    },
+    {
+      "name": "editor-notes-draft-controller-launched-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json --dir target/fret-diag/editor-notes-draft-controller-proof --session-auto --timeout-ms 600000 --pack --ai-packet --launch -- cargo run -p fret-demo --bin editor_notes_demo"
+    },
     {
       "name": "textfield-api-smoke",
       "command": "cargo nextest run -p fret-ui-editor --test text_field_api_smoke --no-fail-fast"
@@ -48,7 +62,7 @@
     },
     {
       "name": "textfield-draft-controller-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_starts_the_p1_textfield_draft_controller_api_proof --no-fail-fast"
+      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_controller_api_proof --no-fail-fast"
     },
     {
       "name": "workstream-catalog",
@@ -69,7 +83,9 @@
     "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/MILESTONES.md",
     "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md",
     "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json",
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",
     "ecosystem/fret-ui-editor/tests/text_field_api_smoke.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
@@ -80,7 +96,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue here only for the opaque draft-controller API proof and the editor-notes proof surface. Start a narrower follow-on for persistence, workspace dirty-close, command-bus integration, clipboard, or public generic IMUI helper widening."
+    "default_action": "new_follow_on",
+    "notes": "This lane is closed after the opaque draft-controller API and launched editor-notes diagnostics proof. Start a narrower follow-on for persistence, workspace dirty-close, command-bus integration, clipboard, document-state integration, or public generic IMUI helper widening."
   }
 }

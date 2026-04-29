@@ -583,16 +583,18 @@ It complements (but does not replace) ADRs:
   Execution note:
   this audit keeps preserved draft internals private and requires a future API-proof lane before
   external commit/discard or draft model handles are admitted.
-- Use `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json` as the active
+- Use `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json` as the closed
   narrow API-proof lane for preserved `TextField` draft commit/discard:
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/DESIGN.md`,
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/TODO.md`,
-  `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/MILESTONES.md`, and
+  `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/MILESTONES.md`,
+  `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`, and
   `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md`.
   Execution note:
-  this lane should prove an opaque `fret-ui-editor::TextField` draft controller in
-  `editor_notes_demo.rs` without exposing draft model handles, adding command-bus/persistence
-  policy, or widening `crates/fret-ui`, `fret-ui-kit::imui`, or `fret-imui`.
+  this lane proved an opaque `fret-ui-editor::TextField` draft controller in `editor_notes_demo.rs`
+  with launched diagnostics evidence, without exposing draft model handles, adding
+  command-bus/persistence policy, or widening `crates/fret-ui`, `fret-ui-kit::imui`, or
+  `fret-imui`.
 - Use `docs/workstreams/imui-facade-internal-modularization-v1/` as the closed closeout record for
   internal `fret-ui-kit::imui` cleanup:
   the lane kept public surface frozen while landing the `options.rs` / `response.rs` split, the

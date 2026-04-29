@@ -59,3 +59,31 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         "editor notes demo should use the app-facing theme snapshot helper instead of reading theme through cx.app",
     );
 }
+
+#[test]
+fn editor_notes_demo_draft_controller_diag_script_clicks_app_owned_commit_and_discard() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json"
+    );
+
+    for needle in [
+        "\"schema_version\": 2",
+        "\"editor-notes-demo-draft-controller-proof\"",
+        "\"draft_controller\"",
+        "\"editor-notes-demo.inspector.notes\"",
+        "\"editor-notes-demo.inspector.notes.commit-draft\"",
+        "\"editor-notes-demo.inspector.notes.discard-draft\"",
+        "\"Controller commit A\\nController commit B\\nController commit C\"",
+        "\"Controller discard pending\"",
+        "\"Draft committed: Material\"",
+        "\"Draft discarded: Material\"",
+        "\"type\": \"click_stable\"",
+        "\"type\": \"capture_screenshot\"",
+        "\"type\": \"capture_bundle\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "editor notes draft-controller diag script should keep the app-owned commit/discard proof reviewable; missing `{needle}`"
+        );
+    }
+}
