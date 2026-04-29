@@ -1514,6 +1514,7 @@ cargo run --release
 - Authoring: view runtime + typed actions + grouped view locals (action-first, v2)
 - Hooks: one selector projection + one query-backed focus note
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
+- State adapter policy: selector/query helpers live at the recipe or app-facade seam (`fret/state-selector`, `fret/state-query`, or `fret/state`). Keep primitive/base component APIs value-first, route dynamic row/item mutations through typed payload actions, and follow `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`.
 - Default entrypoints: keep one or two trivial local slots inline; when a view owns several related `LocalState<T>` slots, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`. Inside that bundle, use `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for grouped LocalState transactions, use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes, bind keyed-row payloads via `.action_payload(...)`, use `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path, and use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` and lower-level payload helpers as cookbook/reference-only host-side glue.
 - Read tracked state values near the top of `render()` before building nested card/layout sections.
@@ -1608,6 +1609,7 @@ cargo run --release
 {ui_assets_line}
 - Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + grouped view locals (action-first, v2)
+- State adapters: this rung stays LocalState/payload-action only. Upgrade to `todo` or enable `fret/state-selector`, `fret/state-query`, or `fret/state` when selector/query integration is the point; keep base components value-first and put adapters at the recipe or app-facade seam per `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`.
 - Default entrypoints: keep one or two trivial local slots inline; when a view owns several related `LocalState<T>` slots, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`. Bind per-row payloads via `.action_payload(...)` inside `ui::for_each_keyed(...)`, and handle row writes with `cx.actions().local(&rows_state).payload_update_if::<A>(...)`.
 - Keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only glue instead of reopening raw `on_activate*` on the default path.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
@@ -1665,6 +1667,7 @@ cargo run --release
 {icons_line}{palette_line}
 - Ladder position: first rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
+- State adapters: intentionally out of scope on this first rung. When selector/query integration becomes useful, keep primitive/base component APIs value-first and add optional recipe or app-facade adapters per `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`.
 - Default entrypoints: start with `cx.actions().local(&local).update::<A>(...)`; if a control only exposes activation glue, prefer widget-local `.action(...)` / `.listen(...)` instead of teaching raw `on_activate*` first.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read local state values near the top of `render()` and keep action handlers on `cx.actions()` when possible.
@@ -2026,6 +2029,10 @@ mod tests {
         assert!(hello.contains("Default entrypoints"));
         assert!(hello.contains("cookbook/reference-only host-side glue"));
         assert!(hello.contains("first rung of the default onboarding path"));
+        assert!(hello.contains("State adapters: intentionally out of scope on this first rung"));
+        assert!(hello.contains(
+            "keep primitive/base component APIs value-first and add optional recipe or app-facade adapters"
+        ));
         assert!(hello.contains("`cx.actions().local(&local).update::<A>(...)`"));
         assert!(hello.contains("widget-local `.action(...)` / `.listen(...)`"));
         assert!(!hello.contains("on_action_notify_models"));
@@ -2050,6 +2057,13 @@ mod tests {
         );
         assert!(simple.contains("cookbook/reference-only host-side glue"));
         assert!(simple.contains("second rung of the default onboarding path"));
+        assert!(simple.contains("State adapters: this rung stays LocalState/payload-action only"));
+        assert!(simple.contains(
+            "Upgrade to `todo` or enable `fret/state-selector`, `fret/state-query`, or `fret/state`"
+        ));
+        assert!(simple.contains(
+            "keep base components value-first and put adapters at the recipe or app-facade seam"
+        ));
         assert!(!simple.contains("on_action_notify_locals"));
         assert!(!simple.contains("`cx.actions().payload::<A>()`"));
         assert!(!simple.contains("keep `on_activate*` for local widget glue only"));
@@ -2074,6 +2088,13 @@ mod tests {
         assert!(todo.contains("`cx.actions().models::<A>(...)`"));
         assert!(todo.contains("`cx.effects().take_transient(...)`"));
         assert!(todo.contains("State: LocalState-first"));
+        assert!(todo.contains(
+            "State adapter policy: selector/query helpers live at the recipe or app-facade seam"
+        ));
+        assert!(todo.contains("route dynamic row/item mutations through typed payload actions"));
+        assert!(todo.contains(
+            "docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md"
+        ));
         assert!(todo.contains("third rung of the default onboarding path"));
         assert!(todo.contains("Product posture: a deletable product baseline first"));
         assert!(todo.contains("Delete the query-backed focus note first"));

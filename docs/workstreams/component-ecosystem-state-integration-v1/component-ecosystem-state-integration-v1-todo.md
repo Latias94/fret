@@ -1,7 +1,7 @@
 # Component Ecosystem State Integration v1 - TODO Tracker
 
 Status: Draft
-Last updated: 2026-03-27
+Last updated: 2026-04-29
 
 This tracker covers the work described in:
 
@@ -119,7 +119,10 @@ Exit criteria:
     (`shadcn::query_status_badge(cx.elements(), &state)`).
   - Gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json --dir target/fret-diag/cookbook-query-basics-refresh --session-auto --pack --ai-packet --launch -- cargo run -p fret-cookbook --example query_basics --features cookbook-query,cookbook-diag`.
   - Evidence: `target/fret-diag/cookbook-query-basics-refresh/sessions/1777431158916-11240/share/1777431227099.zip`.
-- [ ] CSTATE-demo-042 Ensure scaffold docs point to state integration guidance and adapter policy.
+- [x] CSTATE-demo-042 Ensure scaffold docs point to state integration guidance and adapter policy.
+  - Evidence: `crates/fretboard/src/scaffold/templates.rs`
+    (`todo_template_readme_md`, `simple_todo_template_readme_md`, `hello_template_readme_md`).
+  - Gate: `cargo nextest run -p fretboard --lib template_readmes_capture_authoring_guidance --no-fail-fast`.
 
 ---
 
