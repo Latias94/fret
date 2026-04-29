@@ -23,6 +23,7 @@ Exit criteria:
 Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
+- `tools/gate_imui_facade_teaching_source.py`
 
 ## M2 - Demo Build Split Decision
 

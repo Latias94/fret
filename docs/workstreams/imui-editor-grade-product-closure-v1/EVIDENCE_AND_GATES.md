@@ -152,7 +152,7 @@ without reopening older workstreams first.
 - `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy`
 - `cargo nextest run -p fret-imui`
 - `cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface`
-- `cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example`
+- `python tools/gate_imui_facade_teaching_source.py`
 - `python tools/diag_gate_action_first_authoring_v1.py --only cookbook-imui-action-basics-cross-frontend`
 
 This package now locks the current immediate-mode product message at the source-policy layer:

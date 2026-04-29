@@ -6,6 +6,8 @@ Status: active
 - [x] Move the sortable table source-marker gate out of the monolithic `fret-examples` unit test.
 - [x] Move the control-discoverability source-marker gate out of the monolithic `fret-examples`
   unit test.
+- [x] Move the IMUI facade / teaching-surface source-marker gate package out of the monolithic
+  `fret-examples` unit test.
 - [x] Validate the new lightweight source gate.
 - [x] Validate `fret-examples` still compiles after deleting the redundant unit test.
 - [x] Audit the remaining source-marker tests and rank migration candidates by compile impact.

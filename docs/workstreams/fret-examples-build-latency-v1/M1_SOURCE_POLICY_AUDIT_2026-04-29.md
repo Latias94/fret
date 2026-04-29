@@ -4,11 +4,11 @@ Status: active
 
 ## Mechanical Count
 
-After the adapter sortable and control-discoverability gates moved to Python, the remaining
-`apps/fret-examples/src/lib.rs` test module still contains:
+After the adapter sortable, control-discoverability, and IMUI facade teaching gates moved to Python,
+the remaining `apps/fret-examples/src/lib.rs` test module still contains:
 
 - 207 `include_str!` constants inside `authoring_surface_policy_tests`.
-- 146 Rust `#[test]` functions.
+- 133 Rust `#[test]` functions.
 
 The important smell is not the literal count by itself. The problem is that many tests only scan
 checked-in source text, but Cargo still has to compile the full examples crate before those tests can
@@ -31,6 +31,11 @@ Migrated after this audit:
 - `imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane` is now covered by
   `tools/gate_imui_shadcn_adapter_sortable_table_source.py` because the sortable demo proof already
   uses the adapter source gate as its current source proof.
+- The remaining IMUI facade / teaching-surface source checks in this group are now covered by
+  `tools/gate_imui_facade_teaching_source.py`.
+- The matching umbrella docs/source classification checks are also covered by
+  `tools/gate_imui_facade_teaching_source.py`: golden-pair roster, mounting rule, stable identity
+  rule, helper-widening proof budget, hello-demo demotion, and node-graph retained compatibility.
 
 - IMUI source/doc freeze checks:
   - `immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw`

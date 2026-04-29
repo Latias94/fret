@@ -255,7 +255,7 @@
       "cargo run -p fret-demo --bin docking_arbitration_demo",
       "cargo nextest run -p fret-imui",
       "cargo nextest run -p fret-cookbook --lib cookbook_imui_example_keeps_current_facade_teaching_surface",
-      "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example",
+      "python tools/gate_imui_facade_teaching_source.py",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke",
       "cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy"
     ]
@@ -283,7 +283,7 @@
     },
     {
       "name": "examples-imui-teaching-classification",
-      "command": "cargo nextest run -p fret-examples --lib first_party_imui_examples_keep_current_facade_teaching_surface immediate_mode_examples_docs_name_the_golden_pair_and_reference_roster immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw immediate_mode_examples_docs_name_the_stable_identity_rule immediate_mode_workstream_freezes_the_two_surface_proof_budget_before_helper_widening imui_hello_demo_is_explicitly_demoted_to_smoke_reference compatibility_only_node_graph_imui_demo_is_the_only_first_party_retained_compatibility_example"
+      "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
       "name": "imui-p0-launched-authoring-proof",
@@ -446,6 +446,7 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md",
+    "tools/gate_imui_facade_teaching_source.py",
     "docs/workstreams/imui-stack-fearless-refactor-v2/CLOSEOUT_AUDIT_2026-03-31.md",
     "docs/workstreams/imui-editor-grade-surface-closure-v1/CLOSEOUT_AUDIT_2026-03-29.md",
     "docs/workstreams/diag-fearless-refactor-v2/README.md",
