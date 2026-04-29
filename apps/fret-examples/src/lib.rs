@@ -3034,9 +3034,14 @@ mod authoring_surface_policy_tests {
                 "kit::ComboModelOptions {",
                 "kit::InputTextOptions {",
                 "ui.combo_model_with_options(",
-                "kit::TableColumn::fill(\"Signal\")",
+                "enum InspectorSort {",
+                "TableSortDirection::Ascending",
+                "kit::TableColumn::fill(\"Signal###inspector-signal\")",
+                ".sorted(inspector_sort.direction())",
                 "kit::TableOptions {",
-                "ui.table_with_options(",
+                "let table_response = ui.table_with_options(",
+                "table_response",
+                ".header(sort_column_id)",
                 "kit::VirtualListOptions {",
                 "kit::VirtualListMeasureMode::Fixed",
                 "ui.virtual_list_with_options(",
@@ -7571,8 +7576,16 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::SliderOptions {"));
         assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::ComboModelOptions {"));
         assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::InputTextOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::TableColumn::fill(\"Signal\")"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("enum InspectorSort {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("TableSortDirection::Ascending"));
+        assert!(
+            IMUI_SHADCN_ADAPTER_DEMO
+                .contains("kit::TableColumn::fill(\"Signal###inspector-signal\")")
+        );
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains(".sorted(inspector_sort.direction())"));
         assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::TableOptions {"));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("let table_response = ui.table_with_options("));
+        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains(".header(sort_column_id)"));
         assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::VirtualListOptions {"));
         assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::VirtualListMeasureMode::Fixed"));
         assert!(!IMUI_SHADCN_ADAPTER_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));

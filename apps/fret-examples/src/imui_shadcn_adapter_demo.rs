@@ -10,6 +10,7 @@ use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
+use fret_ui_kit::imui::TableSortDirection;
 use fret_ui_kit::{ColorRef, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -39,6 +40,43 @@ const RECENT_VIEWPORT_HEIGHT_COMPACT: Px = Px(56.0);
 const RECENT_VIEWPORT_HEIGHT_REGULAR: Px = Px(156.0);
 
 struct ImUiShadcnAdapterView;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InspectorSort {
+    FieldAscending,
+    FieldDescending,
+}
+
+impl InspectorSort {
+    fn direction(self) -> TableSortDirection {
+        match self {
+            Self::FieldAscending => TableSortDirection::Ascending,
+            Self::FieldDescending => TableSortDirection::Descending,
+        }
+    }
+
+    fn toggled(self) -> Self {
+        match self {
+            Self::FieldAscending => Self::FieldDescending,
+            Self::FieldDescending => Self::FieldAscending,
+        }
+    }
+
+    fn sort_rows(self, rows: &mut [InspectorRow]) {
+        rows.sort_by(|a, b| a.field.cmp(b.field).then(a.key.cmp(b.key)));
+        if self == Self::FieldDescending {
+            rows.reverse();
+        }
+    }
+}
+
+#[derive(Clone)]
+struct InspectorRow {
+    key: &'static str,
+    field: &'static str,
+    value: Arc<str>,
+    source: &'static str,
+}
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-shadcn-adapter-demo")
@@ -80,8 +118,10 @@ impl View for ImUiShadcnAdapterView {
         let value_state = cx.state().local_init(|| 32.0f32);
         let mode_state = cx.state().local_init(|| None::<Arc<str>>);
         let draft_state = cx.state().local_init(String::new);
+        let inspector_sort_state = cx.state().local_init(|| InspectorSort::FieldAscending);
 
         let count = count_state.layout_value(cx);
+        let inspector_sort = inspector_sort_state.layout_value(cx);
         let enabled = enabled_state.paint_value(cx);
         let value = value_state.paint_value(cx);
         let mode = mode_state.paint_value(cx);
@@ -355,18 +395,59 @@ impl View for ImUiShadcnAdapterView {
                     let value = value;
                     let mode_label = mode_label.clone();
                     let draft = draft.clone();
+                    let inspector_sort_state = inspector_sort_state.clone();
 
                     let inspector_surface =
                         ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
                             imui(cx, move |ui| {
+                                let mut inspector_rows = vec![
+                                    InspectorRow {
+                                        key: "count",
+                                        field: "Count",
+                                        value: Arc::<str>::from(format!("{count}")),
+                                        source: "Button",
+                                    },
+                                    InspectorRow {
+                                        key: "enabled",
+                                        field: "Enabled",
+                                        value: Arc::<str>::from(format!("{enabled}")),
+                                        source: "Switch",
+                                    },
+                                    InspectorRow {
+                                        key: "value",
+                                        field: "Value",
+                                        value: Arc::<str>::from(format!("{value:.1}")),
+                                        source: "Slider",
+                                    },
+                                    InspectorRow {
+                                        key: "mode",
+                                        field: "Mode",
+                                        value: mode_label.clone(),
+                                        source: "Combo",
+                                    },
+                                    InspectorRow {
+                                        key: "draft",
+                                        field: "Draft",
+                                        value: Arc::<str>::from(draft.clone()),
+                                        source: "Input",
+                                    },
+                                ];
+                                inspector_sort.sort_rows(&mut inspector_rows);
+                                let sort_column_id = if compact_surface {
+                                    "inspector-signal"
+                                } else {
+                                    "inspector-field"
+                                };
                                 let table_columns = if compact_surface {
                                     vec![
-                                        kit::TableColumn::fill("Signal"),
+                                        kit::TableColumn::fill("Signal###inspector-signal")
+                                            .sorted(inspector_sort.direction()),
                                         kit::TableColumn::px("State", Px(144.0)),
                                     ]
                                 } else {
                                     vec![
-                                        kit::TableColumn::fill("Field"),
+                                        kit::TableColumn::fill("Field###inspector-field")
+                                            .sorted(inspector_sort.direction()),
                                         kit::TableColumn::px("Value", Px(160.0)),
                                         kit::TableColumn::px("Source", Px(100.0)),
                                     ]
@@ -375,7 +456,7 @@ impl View for ImUiShadcnAdapterView {
                                 if !compact_surface {
                                     ui.separator_text("Inspector snapshot");
                                 }
-                                ui.table_with_options(
+                                let table_response = ui.table_with_options(
                                     "imui-shadcn-demo.inspector.table",
                                     &table_columns,
                                     kit::TableOptions {
@@ -385,55 +466,35 @@ impl View for ImUiShadcnAdapterView {
                                     },
                                     |table| {
                                         if compact_surface {
-                                            table.row("mode", |row| {
-                                                row.cell_text("Mode");
-                                                row.cell_text(Arc::<str>::from(format!(
-                                                    "{mode_label} via combo"
-                                                )));
-                                            });
-                                            table.row("enabled", |row| {
-                                                row.cell_text("Enabled");
-                                                row.cell_text(Arc::<str>::from(format!(
-                                                    "{enabled} via switch"
-                                                )));
-                                            });
-                                            table.row("count", |row| {
-                                                row.cell_text("Count");
-                                                row.cell_text(Arc::<str>::from(format!(
-                                                    "{count} via button"
-                                                )));
-                                            });
+                                            for row_data in inspector_rows.iter().take(3) {
+                                                table.row(row_data.key, |row| {
+                                                    row.cell_text(row_data.field);
+                                                    row.cell_text(Arc::<str>::from(format!(
+                                                        "{} via {}",
+                                                        row_data.value, row_data.source
+                                                    )));
+                                                });
+                                            }
                                         } else {
-                                            table.row("count", |row| {
-                                                row.cell_text("Count");
-                                                row.cell_text(Arc::<str>::from(format!("{count}")));
-                                                row.cell_text("Button");
-                                            });
-                                            table.row("enabled", |row| {
-                                                row.cell_text("Enabled");
-                                                row.cell_text(Arc::<str>::from(format!("{enabled}")));
-                                                row.cell_text("Switch");
-                                            });
-                                            table.row("value", |row| {
-                                                row.cell_text("Value");
-                                                row.cell_text(Arc::<str>::from(format!(
-                                                    "{value:.1}"
-                                                )));
-                                                row.cell_text("Slider");
-                                            });
-                                            table.row("mode", |row| {
-                                                row.cell_text("Mode");
-                                                row.cell_text(mode_label.clone());
-                                                row.cell_text("Combo");
-                                            });
-                                            table.row("draft", |row| {
-                                                row.cell_text("Draft");
-                                                row.cell_text(Arc::<str>::from(draft.clone()));
-                                                row.cell_text("Input");
-                                            });
+                                            for row_data in &inspector_rows {
+                                                table.row(row_data.key, |row| {
+                                                    row.cell_text(row_data.field);
+                                                    row.cell_text(row_data.value.clone());
+                                                    row.cell_text(row_data.source);
+                                                });
+                                            }
                                         }
                                     },
                                 );
+                                if table_response
+                                    .header(sort_column_id)
+                                    .is_some_and(|header| header.clicked())
+                                {
+                                    let _ = inspector_sort_state
+                                        .update_in(ui.cx_mut().app.models_mut(), |sort| {
+                                            *sort = sort.toggled();
+                                        });
+                                }
 
                                 if !compact_surface {
                                     ui.separator_text("Recent entries");

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 279
+- Dedicated directories: 280
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -613,6 +613,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed narrow follow-on for sortable header trigger responses and current-direction
     indicators without row sorting engines, multi-sort policy, resize, or persistence.
 
+- Closed narrow IMUI table sortable demo proof follow-on:
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/M1_APP_OWNED_SORTABLE_DEMO_SLICE_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/TODO.md`
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-sortable-demo-proof-v1/EVIDENCE_AND_GATES.md`
+  - Scope: closed narrow follow-on for a runnable app-owned sortable table proof in
+    `imui_shadcn_adapter_demo`.
+
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -1024,6 +1035,7 @@ Rule:
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-table-column-identity-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
+- `docs/workstreams/imui-table-sortable-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a runnable IMUI table sortable header demo proof)
 - `docs/workstreams/imui-table-sortable-header-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table sortable header trigger responses)
 - `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for structured IMUI/runtime identity diagnostics)
 - `docs/workstreams/imui-id-stack-browser-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for browser-style IMUI/runtime identity diagnostics)

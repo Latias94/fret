@@ -326,6 +326,11 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-table-sortable-header-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-table-sortable-header-v1/M1_SORTABLE_HEADER_RESPONSE_SLICE_2026-04-29.md`,
   and `docs/workstreams/imui-table-sortable-header-v1/CLOSEOUT_AUDIT_2026-04-29.md`.
+- ImUi table sortable demo proof closeout record (closed narrow follow-on that wires sortable
+  header responses into `imui_shadcn_adapter_demo` with demo-owned row ordering):
+  `docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-table-sortable-demo-proof-v1/M1_APP_OWNED_SORTABLE_DEMO_SLICE_2026-04-29.md`,
+  and `docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`.
 - ImUi ID stack diagnostics follow-on closeout record (closed narrow lane that makes duplicate
   keyed-list hashes and unkeyed reorder identity problems visible in structured diagnostics
   snapshots and queryable through `diag query identity-warnings`, without exposing render-pass /

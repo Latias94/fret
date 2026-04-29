@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-sortable-demo-proof-v1",
+  "title": "ImUi Table Sortable Demo Proof v1",
+  "status": "closed",
+  "updated": "2026-04-29",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-table-sortable-header-v1",
+  "problem": "Make the new IMUI sortable header response surface visible in a runnable example by wiring it to app-owned inspector table sorting, without widening IMUI into a row sorting engine or adding generic table policy.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/M1_APP_OWNED_SORTABLE_DEMO_SLICE_2026-04-29.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    }
+  ],
+  "repro": {
+    "summary": "Open `imui_shadcn_adapter_demo`, click the inspector table's sortable first column, and observe that the demo-local inspector sort state toggles row order on the next frame.",
+    "commands": [
+      "cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fret-examples-check",
+      "command": "cargo check -p fret-examples --jobs 1"
+    },
+    {
+      "name": "imui-shadcn-demo-source-proof",
+      "command": "cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast"
+    },
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-examples --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/DESIGN.md",
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/M1_APP_OWNED_SORTABLE_DEMO_SLICE_2026-04-29.md",
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md",
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/TODO.md",
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/MILESTONES.md",
+    "docs/workstreams/imui-table-sortable-demo-proof-v1/EVIDENCE_AND_GATES.md",
+    "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+    "apps/fret-examples/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after adding the runnable app-owned sortable table proof. Start separate follow-ons for diagnostics scripts, richer recipe docs, multi-sort examples, row sorting engines, or resize/persistence."
+  }
+}
