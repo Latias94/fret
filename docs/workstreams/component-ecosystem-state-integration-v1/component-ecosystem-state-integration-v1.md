@@ -1,7 +1,7 @@
 # Component Ecosystem State Integration v1
 
-Status: Draft (workstream note; not an ADR)
-Last updated: 2026-03-27
+Status: Complete (v1 lane; future expansion should use narrow follow-ons)
+Last updated: 2026-04-29
 
 Related:
 
@@ -193,10 +193,15 @@ Locked in this workstream:
   `fret-ui-kit::state` or `fret-ui-shadcn::state`). Extract a shared helper crate only after at
   least two real reusable consumers converge on the same trait shape.
 
-Remaining open questions:
+Deferred follow-on questions:
 
-- minimum required diagnostics/gates before v1 freeze (lint + nextest + diag scripts),
-- how far to push "query-aware recipes" vs keeping recipe layer fully data-driven.
+- how far to push future query-aware recipes vs keeping recipe layer fully data-driven when a new
+  concrete component family creates pressure.
+
+Closeout note (2026-04-29): all v1 tracker items are complete. The lane now owns the documented
+feature naming policy, value-first primitive guidance, optional recipe/app-facade adapter seam,
+IMUI compatibility note, scaffold/demo guidance, and regression gates. New adapter-trait extraction
+or broader query-aware recipe work should start as a narrow follow-on with fresh consumer evidence.
 
 ## 9) Execution tracker
 
@@ -339,6 +344,12 @@ Status note (2026-04-29): `fret-ui-kit` moved its query watch helper out of
 `declarative/model_watch.rs` and into the opt-in `state.rs` adapter module. The
 `tools/check_component_state_coupling.py` gate now scans production source with corrected regexes
 and catches direct query/selector coupling outside allowlisted state adapter seams.
+
+Status note (2026-04-29): shadcn state adapters remain value-first and command-string-free.
+`state_adapters_preserve_typed_payload_routing_for_dynamic_items` proves a query-adapted `Badge`
+can still bind a typed action plus row/item payload at the call site, while
+`selector_and_query_helpers_stay_isolated_to_opt_in_state_module` keeps `state.rs` free of
+`CommandId` parsing/routing helpers.
 
 Status note (2026-04-29): `tools/diag-scripts/cookbook/async-inbox-basics/` now includes a launched
 diagnostics regression for async state plus command routing. The script clicks the typed `Start`

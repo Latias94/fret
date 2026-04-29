@@ -1,6 +1,6 @@
 # Component Ecosystem State Integration v1 - TODO Tracker
 
-Status: Draft
+Status: Complete (v1 lane; follow-ons only)
 Last updated: 2026-04-29
 
 This tracker covers the work described in:
@@ -94,7 +94,14 @@ Exit criteria:
   - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs` (`use_selector_badge -> Badge`)
 - [x] CSTATE-recipe-022 Add one query-based recipe helper (loading/success/error/invalidate flow).
   - Evidence: `ecosystem/fret-ui-shadcn/src/state.rs` (`query_status_badge -> Badge`, `query_error_alert -> Option<Alert>`)
-- [ ] CSTATE-recipe-023 Ensure typed routing is used for dynamic row/item commands in adapted recipes.
+- [x] CSTATE-recipe-023 Ensure typed routing is used for dynamic row/item commands in adapted recipes.
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/state_adapters.rs`
+    (`state_adapters_preserve_typed_payload_routing_for_dynamic_items`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+    (`selector_and_query_helpers_stay_isolated_to_opt_in_state_module` keeps `state.rs`
+    command-string-free).
+  - Gate: `cargo nextest run -p fret-ui-shadcn --features state --test state_adapters --no-fail-fast`.
+  - Gate: `cargo nextest run -p fret-ui-shadcn --features state --lib selector_and_query_helpers_stay_isolated_to_opt_in_state_module --no-fail-fast`.
 
 ---
 

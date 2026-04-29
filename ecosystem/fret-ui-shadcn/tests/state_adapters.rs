@@ -6,6 +6,7 @@ use std::rc::Rc;
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size};
 use fret_query::{QueryError, QueryState, QueryStatus};
+use fret_runtime::{ActionId, CommandId, TypedAction};
 use fret_ui::ElementContext;
 use fret_ui::declarative::render_root;
 use fret_ui::element::AnyElement;
@@ -15,6 +16,21 @@ use fret_ui_shadcn::facade as shadcn;
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
 use style_aware_services::StyleAwareServices;
+
+#[derive(Clone, Copy)]
+struct OpenResultRow;
+
+impl TypedAction for OpenResultRow {
+    fn action_id() -> ActionId {
+        ActionId::from("test.state_adapters.open_result_row.v1")
+    }
+}
+
+impl From<OpenResultRow> for CommandId {
+    fn from(_: OpenResultRow) -> CommandId {
+        OpenResultRow::action_id()
+    }
+}
 
 fn bounds() -> Rect {
     Rect::new(
@@ -132,5 +148,35 @@ fn query_badge_adapter_maps_status_and_error_alert_without_state_stack_leakage()
         );
 
         vec![failed_badge.into_element(cx), alert.into_element(cx)]
+    });
+}
+
+#[test]
+fn state_adapters_preserve_typed_payload_routing_for_dynamic_items() {
+    let mut app = App::new();
+    let mut ui = UiTree::<App>::new();
+    let mut services = StyleAwareServices::default();
+
+    render_state_root(&mut ui, &mut app, &mut services, 1, |cx| {
+        let ready = QueryState {
+            status: QueryStatus::Success,
+            data: Some(5u32.into()),
+            ..QueryState::default()
+        };
+
+        let row_badge = shadcn::query_status_badge(cx, &ready)
+            .action(OpenResultRow)
+            .action_payload(5u32);
+        let debug = format!("{row_badge:?}");
+        assert!(
+            debug.contains("test.state_adapters.open_result_row.v1"),
+            "adapted recipes should keep dynamic row/item intents on typed action IDs; debug={debug}"
+        );
+        assert!(
+            debug.contains("action_payload: true"),
+            "adapted recipes should preserve typed payload routing for dynamic row/item intents; debug={debug}"
+        );
+
+        vec![row_badge.into_element(cx)]
     });
 }

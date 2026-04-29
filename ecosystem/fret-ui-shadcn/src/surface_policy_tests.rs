@@ -2019,6 +2019,18 @@ fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
         STATE_RS.contains("use fret_selector::ui::SelectorElementContextExt as _;"),
         "state.rs should remain the explicit selector-aware helper seam"
     );
+    for marker in [
+        "CommandId",
+        "CommandId::from",
+        ".on_click(",
+        "dispatch_command",
+        ".parse::<CommandId>",
+    ] {
+        assert!(
+            !STATE_RS.contains(marker),
+            "state.rs should keep dynamic item routing out of selector/query adapters; found `{marker}`"
+        );
+    }
 
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     visit_rust_files(&root, &mut |path, source| {
