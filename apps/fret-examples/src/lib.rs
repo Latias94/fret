@@ -192,9 +192,9 @@ pub mod ime_smoke_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_editor_proof_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod imui_floating_windows_demo;
+pub use fret_examples_imui::imui_floating_windows_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod imui_hello_demo;
+pub use fret_examples_imui::imui_hello_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_interaction_showcase_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
@@ -307,8 +307,9 @@ mod authoring_surface_policy_tests {
     const IMUI_EDITOR_PROOF_DEMO: &str = include_str!("imui_editor_proof_demo.rs");
     const IMUI_EDITOR_PROOF_DEMO_COLLECTION_MODULE: &str =
         include_str!("imui_editor_proof_demo/collection.rs");
-    const IMUI_FLOATING_WINDOWS_DEMO: &str = include_str!("imui_floating_windows_demo.rs");
-    const IMUI_HELLO_DEMO: &str = include_str!("imui_hello_demo.rs");
+    const IMUI_FLOATING_WINDOWS_DEMO: &str =
+        include_str!("../../fret-examples-imui/src/imui_floating_windows_demo.rs");
+    const IMUI_HELLO_DEMO: &str = include_str!("../../fret-examples-imui/src/imui_hello_demo.rs");
     const IMUI_INTERACTION_SHOWCASE_DEMO: &str = include_str!("imui_interaction_showcase_demo.rs");
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
     const IMUI_PROOF_BUDGET_RULE_NOTE: &str = include_str!(

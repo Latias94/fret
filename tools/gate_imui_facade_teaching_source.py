@@ -54,7 +54,7 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
 def main() -> None:
     checks = [
         SourceCheck(
-            Path("apps/fret-examples/src/imui_hello_demo.rs"),
+            Path("apps/fret-examples-imui/src/imui_hello_demo.rs"),
             required=[
                 "Reference/smoke demo: tiny IMUI hello surface.",
                 "no longer the best",
@@ -75,7 +75,7 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            Path("apps/fret-examples/src/imui_floating_windows_demo.rs"),
+            Path("apps/fret-examples-imui/src/imui_floating_windows_demo.rs"),
             required=[
                 "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
                 "imui_in(cx, |ui| {",
@@ -356,8 +356,8 @@ def main() -> None:
         "fret_node::imui::",
     ]
     for path in [
-        "apps/fret-examples/src/imui_hello_demo.rs",
-        "apps/fret-examples/src/imui_floating_windows_demo.rs",
+        "apps/fret-examples-imui/src/imui_hello_demo.rs",
+        "apps/fret-examples-imui/src/imui_floating_windows_demo.rs",
         "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
         "apps/fret-examples/src/imui_response_signals_demo.rs",
         "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
