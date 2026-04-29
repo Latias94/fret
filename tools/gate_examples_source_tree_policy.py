@@ -9,7 +9,12 @@ from _gate_lib import WORKSPACE_ROOT, fail, ok
 GATE_NAME = "examples source tree policy"
 
 EXAMPLES_SRC = Path("apps/fret-examples/src")
-EXCLUDED_SOURCE = "apps/fret-examples/src/lib.rs"
+IMUI_EXAMPLES_SRC = Path("apps/fret-examples-imui/src")
+EXAMPLES_SOURCE_ROOTS = [EXAMPLES_SRC, IMUI_EXAMPLES_SRC]
+EXCLUDED_SOURCES = {
+    "apps/fret-examples/src/lib.rs",
+    "apps/fret-examples-imui/src/lib.rs",
+}
 
 ALLOWED_FRET_UI_SHADCN_IMPORTS = {
     "use fret_ui_shadcn::facade as shadcn;",
@@ -33,34 +38,34 @@ RAW_ACTION_NOTIFY_MARKERS = [
 ]
 
 FIRST_PARTY_CURATED_SHADCN_SURFACES = [
-    "assets_demo.rs",
-    "async_playground_demo.rs",
-    "cjk_conformance_demo.rs",
-    "components_gallery.rs",
-    "custom_effect_v1_demo.rs",
-    "custom_effect_v2_demo.rs",
-    "custom_effect_v2_glass_chrome_web_demo.rs",
-    "custom_effect_v2_identity_web_demo.rs",
-    "custom_effect_v2_lut_web_demo.rs",
-    "custom_effect_v2_web_demo.rs",
-    "custom_effect_v3_demo.rs",
-    "docking_arbitration_demo.rs",
-    "docking_demo.rs",
-    "drop_shadow_demo.rs",
-    "embedded_viewport_demo.rs",
-    "emoji_conformance_demo.rs",
-    "genui_demo.rs",
-    "hello_counter_demo.rs",
-    "ime_smoke_demo.rs",
-    "imui_editor_proof_demo.rs",
-    "imui_interaction_showcase_demo.rs",
-    "imui_shadcn_adapter_demo.rs",
-    "liquid_glass_demo.rs",
-    "markdown_demo.rs",
-    "postprocess_theme_demo.rs",
-    "query_async_tokio_demo.rs",
-    "simple_todo_demo.rs",
-    "sonner_demo.rs",
+    EXAMPLES_SRC / "assets_demo.rs",
+    EXAMPLES_SRC / "async_playground_demo.rs",
+    EXAMPLES_SRC / "cjk_conformance_demo.rs",
+    EXAMPLES_SRC / "components_gallery.rs",
+    EXAMPLES_SRC / "custom_effect_v1_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_glass_chrome_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_identity_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_lut_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v3_demo.rs",
+    EXAMPLES_SRC / "docking_arbitration_demo.rs",
+    EXAMPLES_SRC / "docking_demo.rs",
+    EXAMPLES_SRC / "drop_shadow_demo.rs",
+    EXAMPLES_SRC / "embedded_viewport_demo.rs",
+    EXAMPLES_SRC / "emoji_conformance_demo.rs",
+    EXAMPLES_SRC / "genui_demo.rs",
+    EXAMPLES_SRC / "hello_counter_demo.rs",
+    EXAMPLES_SRC / "ime_smoke_demo.rs",
+    EXAMPLES_SRC / "imui_editor_proof_demo.rs",
+    EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_shadcn_adapter_demo.rs",
+    EXAMPLES_SRC / "liquid_glass_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+    EXAMPLES_SRC / "postprocess_theme_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+    EXAMPLES_SRC / "simple_todo_demo.rs",
+    EXAMPLES_SRC / "sonner_demo.rs",
 ]
 
 CURATED_SHADCN_FORBIDDEN_MARKERS = [
@@ -96,9 +101,10 @@ def read_source(path: Path) -> str:
 
 
 def examples_rust_sources() -> list[Path]:
-    root = WORKSPACE_ROOT / EXAMPLES_SRC
-    paths = sorted(root.rglob("*.rs"))
-    return [path for path in paths if rel_path(path).as_posix() != EXCLUDED_SOURCE]
+    paths: list[Path] = []
+    for root in EXAMPLES_SOURCE_ROOTS:
+        paths.extend((WORKSPACE_ROOT / root).rglob("*.rs"))
+    return sorted(path for path in paths if rel_path(path).as_posix() not in EXCLUDED_SOURCES)
 
 
 def push_line_failure(
@@ -173,8 +179,8 @@ def check_source_tree_policies(path: Path, source: str, failures: list[Failure])
 
 
 def check_first_party_curated_shadcn_surfaces(failures: list[Failure]) -> None:
-    for file_name in FIRST_PARTY_CURATED_SHADCN_SURFACES:
-        path = WORKSPACE_ROOT / EXAMPLES_SRC / file_name
+    for relative_path in FIRST_PARTY_CURATED_SHADCN_SURFACES:
+        path = WORKSPACE_ROOT / relative_path
         source = read_source(path)
         for marker in CURATED_SHADCN_FORBIDDEN_MARKERS:
             if marker in source:

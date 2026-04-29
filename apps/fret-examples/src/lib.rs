@@ -202,7 +202,7 @@ pub mod imui_node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_response_signals_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod imui_shadcn_adapter_demo;
+pub use fret_examples_imui::imui_shadcn_adapter_demo;
 pub mod inf_lines_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod launcher_utility_window_demo;
@@ -870,7 +870,8 @@ mod authoring_surface_policy_tests {
     const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
         include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
     const IMUI_RESPONSE_SIGNALS_DEMO: &str = include_str!("imui_response_signals_demo.rs");
-    const IMUI_SHADCN_ADAPTER_DEMO: &str = include_str!("imui_shadcn_adapter_demo.rs");
+    const IMUI_SHADCN_ADAPTER_DEMO: &str =
+        include_str!("../../fret-examples-imui/src/imui_shadcn_adapter_demo.rs");
     const IMUI_EDITOR_PROOF_APP_OWNER_AUDIT: &str = include_str!(
         "../../../docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md"
     );

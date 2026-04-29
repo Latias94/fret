@@ -23,6 +23,7 @@ devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 
 [dependencies]
 anyhow.workspace = true
+fret-examples-imui = { path = "../fret-examples-imui" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "icons-ui-semantic-lucide", "ui-app-driver", "ui-app-command-palette", "ui-assets", "diagnostics", "diagnostics-canvas"] }

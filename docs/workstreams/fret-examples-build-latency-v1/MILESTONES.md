@@ -29,11 +29,19 @@ Current evidence:
 
 ## M2 - Demo Build Split Decision
 
+Status: complete
+
 Exit criteria:
 
 - Single-demo build coupling is measured on at least one representative IMUI demo.
 - The lane chooses between feature-family split, separate examples crates, or direct demo-local bins.
 - The chosen split has a small compatibility gate before broad migration.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md`
+- `apps/fret-examples-imui/Cargo.toml`
+- `tools/gate_fret_examples_imui_split_source.py`
 
 ## M3 - Profile Policy Decision
 

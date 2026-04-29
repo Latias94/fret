@@ -191,7 +191,7 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            Path("apps/fret-examples/src/imui_shadcn_adapter_demo.rs"),
+            Path("apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs"),
             required=[
                 "Product-validation IMUI surface for the shared control-chrome lane.",
                 "use fret::{FretApp, advanced::prelude::*, imui::prelude::*};",
@@ -360,7 +360,7 @@ def main() -> None:
         "apps/fret-examples/src/imui_floating_windows_demo.rs",
         "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
         "apps/fret-examples/src/imui_response_signals_demo.rs",
-        "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+        "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
     ]:
         checks.append(SourceCheck(Path(path), required=[], forbidden=retained_bridge_forbidden))
 

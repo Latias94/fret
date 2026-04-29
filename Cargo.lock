@@ -2256,6 +2256,7 @@ dependencies = [
  "fret-core",
  "fret-docking",
  "fret-editor",
+ "fret-examples-imui",
  "fret-executor",
  "fret-fonts",
  "fret-genui-core",
@@ -2301,6 +2302,18 @@ dependencies = [
  "wgpu",
  "windows 0.62.2",
  "winit",
+]
+
+[[package]]
+name = "fret-examples-imui"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret",
+ "fret-core",
+ "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
 ]
 
 [[package]]

@@ -7,7 +7,7 @@ from _gate_lib import WORKSPACE_ROOT, fail, ok
 
 GATE_NAME = "imui shadcn adapter sortable table source"
 
-DEMO_PATH = Path("apps/fret-examples/src/imui_shadcn_adapter_demo.rs")
+DEMO_PATH = Path("apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs")
 SCRIPT_PATH = Path("tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json")
 
 DEMO_MARKERS = [

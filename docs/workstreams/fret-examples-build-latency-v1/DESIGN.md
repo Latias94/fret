@@ -68,7 +68,7 @@ families when a cleaner split is available.
 
 Migrate the just-added sortable table source-marker gate to a lightweight Python script:
 
-- read `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`;
+- read `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`;
 - read `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`;
 - normalize whitespace and assert the same markers as the Rust unit test;
 - delete the redundant Rust unit test from the monolithic examples crate.

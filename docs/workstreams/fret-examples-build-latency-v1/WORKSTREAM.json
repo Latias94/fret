@@ -26,6 +26,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md"
+    },
+    {
+      "role": "decision",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md"
     }
   ],
   "repro": {
@@ -56,6 +60,18 @@
       "command": "python tools/gate_examples_source_tree_policy.py"
     },
     {
+      "name": "fret-examples-imui-split-source-gate",
+      "command": "python tools/gate_fret_examples_imui_split_source.py"
+    },
+    {
+      "name": "fret-examples-imui-check",
+      "command": "cargo check -p fret-examples-imui --bin imui_shadcn_adapter_demo --jobs 1"
+    },
+    {
+      "name": "fret-demo-imui-shadcn-adapter-check",
+      "command": "cargo check -p fret-demo --bin imui_shadcn_adapter_demo --jobs 1"
+    },
+    {
       "name": "fret-examples-check",
       "command": "cargo check -p fret-examples --lib --jobs 1"
     },
@@ -74,7 +90,10 @@
     "tools/gate_imui_facade_teaching_source.py",
     "tools/gate_table_source_policy.py",
     "tools/gate_examples_source_tree_policy.py",
-    "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+    "tools/gate_fret_examples_imui_split_source.py",
+    "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
+    "apps/fret-examples-imui/src/bin/imui_shadcn_adapter_demo.rs",
+    "apps/fret-examples-imui/Cargo.toml",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",
     "apps/fret-examples/src/lib.rs",
@@ -82,7 +101,8 @@
     "docs/workstreams/fret-examples-build-latency-v1/TODO.md",
     "docs/workstreams/fret-examples-build-latency-v1/MILESTONES.md",
     "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md",
-    "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md"
+    "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md"
   ],
   "adr_refs": [],
   "continue_policy": {

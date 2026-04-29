@@ -1,0 +1,30 @@
+[package]
+name = "fret-examples-imui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+default-run = "imui_shadcn_adapter_demo"
+
+[dependencies]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+anyhow.workspace = true
+fret = { path = "../../ecosystem/fret", features = ["state", "state-mutation", "imui"] }
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", features = ["app-integration"] }
+
+[lints.rust]
+dead_code = "allow"
+unused = "allow"
+unused_variables = "allow"
+
+[lints.clippy]
+all = "allow"
