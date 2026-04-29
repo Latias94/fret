@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-sortable-diag-gate-v1",
+  "title": "ImUi Table Sortable Diagnostics Gate v1",
+  "status": "active",
+  "updated": "2026-04-29",
+  "scope_kind": "implementation",
+  "follow_on_of": "imui-table-sortable-demo-proof-v1",
+  "problem": "Promote the runnable app-owned sortable inspector table proof from source-marker coverage to a deterministic diagnostics script without reopening the closed sortable header API or demo-proof lanes.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-sortable-diag-gate-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-table-sortable-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-04-29.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-diag-gate-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-diag-gate-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-sortable-diag-gate-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md"
+    }
+  ],
+  "repro": {
+    "summary": "Launch `imui_shadcn_adapter_demo`, run the sortable inspector table script, and verify that the first header exposes ascending state, receives a stable click, then exposes descending state.",
+    "commands": [
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json --dir target/fret-diag/imui-table-sortable-diag-gate-v1 --session-auto --timeout-ms 240000 --exit-after-run --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo"
+    ]
+  },
+  "gates": [
+    {
+      "name": "script-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json"
+    },
+    {
+      "name": "suite-json",
+      "command": "python -m json.tool tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json"
+    },
+    {
+      "name": "source-marker",
+      "command": "cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast"
+    },
+    {
+      "name": "fret-examples-check",
+      "command": "cargo check -p fret-examples --lib --jobs 1"
+    },
+    {
+      "name": "launched-diag",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json --dir target/fret-diag/imui-table-sortable-diag-gate-v1 --session-auto --timeout-ms 240000 --exit-after-run --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",
+    "tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json",
+    "apps/fret-examples/src/lib.rs",
+    "docs/workstreams/imui-table-sortable-diag-gate-v1/DESIGN.md",
+    "docs/workstreams/imui-table-sortable-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-04-29.md",
+    "docs/workstreams/imui-table-sortable-diag-gate-v1/TODO.md",
+    "docs/workstreams/imui-table-sortable-diag-gate-v1/MILESTONES.md",
+    "docs/workstreams/imui-table-sortable-diag-gate-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Keep this lane active until the launched diagnostics command has produced a passing run. Do not widen into a row sorting engine, multi-sort policy, column resize, or persistence."
+  }
+}

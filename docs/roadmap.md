@@ -331,6 +331,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-table-sortable-demo-proof-v1/M1_APP_OWNED_SORTABLE_DEMO_SLICE_2026-04-29.md`,
   and `docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`.
+- ImUi table sortable diagnostics gate follow-on (active narrow lane that promotes the runnable
+  sortable inspector table proof into a `fretboard diag` script without reopening row sorting
+  engines or table policy):
+  `docs/workstreams/imui-table-sortable-diag-gate-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-table-sortable-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-04-29.md`,
+  and `docs/workstreams/imui-table-sortable-diag-gate-v1/EVIDENCE_AND_GATES.md`.
 - ImUi ID stack diagnostics follow-on closeout record (closed narrow lane that makes duplicate
   keyed-list hashes and unkeyed reorder identity problems visible in structured diagnostics
   snapshots and queryable through `diag query identity-warnings`, without exposing render-pass /

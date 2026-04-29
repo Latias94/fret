@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-shadcn-adapter-sortable-table-gate",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "imui",
+      "adapter",
+      "table",
+      "sortable",
+      "response",
+      "gate",
+      "ui_editor"
+    ],
+    "target_hints": [
+      "Promoted runtime gate for the app-owned sortable inspector table proof in imui_shadcn_adapter_demo.",
+      "Clicks the sortable inspector table header and asserts that the header response toggles the app-owned sort direction without adding a generic row sorting engine."
+    ]
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1100.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 16 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-shadcn-demo.inspector.table" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-shadcn-demo.inspector.table.header.cell.inspector-field"
+        },
+        "text": "sorted ascending"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-shadcn-demo.inspector.table.header.cell.inspector-field"
+      },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-shadcn-adapter.sortable-table.before"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-shadcn-adapter.sortable-table.before"
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-shadcn-demo.inspector.table.header.cell.inspector-field"
+      },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-shadcn-demo.inspector.table.header.cell.inspector-field"
+        },
+        "text": "sorted descending"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-shadcn-demo.inspector.table.header.cell.inspector-field"
+      },
+      "stable_frames": 3,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-shadcn-adapter.sortable-table.after"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-shadcn-adapter.sortable-table.after"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-shadcn-adapter.sortable-table.after"
+    }
+  ]
+}

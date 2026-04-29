@@ -876,6 +876,9 @@ mod authoring_surface_policy_tests {
     const IMUI_SHADCN_ADAPTER_DISCOVERABILITY_SCRIPT: &str = include_str!(
         "../../../tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json"
     );
+    const IMUI_SHADCN_ADAPTER_SORTABLE_TABLE_SCRIPT: &str = include_str!(
+        "../../../tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json"
+    );
     const IMUI_EDITOR_PROOF_APP_OWNER_AUDIT: &str = include_str!(
         "../../../docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md"
     );
@@ -3277,6 +3280,45 @@ mod authoring_surface_policy_tests {
             assert!(
                 script.contains(marker),
                 "adapter discoverability script should keep the bounded screenshot/layout proof markers: {marker}"
+            );
+        }
+    }
+
+    #[test]
+    fn imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate() {
+        let demo = IMUI_SHADCN_ADAPTER_DEMO
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "enumInspectorSort{",
+            "fnsort_rows(self,rows:&mut[InspectorRow])",
+            "kit::TableColumn::fill(\"Field###inspector-field\")",
+            ".sorted(inspector_sort.direction())",
+            "lettable_response=ui.table_with_options(",
+            ".header(sort_column_id)",
+        ] {
+            assert!(
+                demo.contains(marker),
+                "imui shadcn adapter demo should keep the app-owned sortable table proof marker: {marker}"
+            );
+        }
+
+        let script = IMUI_SHADCN_ADAPTER_SORTABLE_TABLE_SCRIPT
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "\"name\":\"imui-shadcn-adapter-sortable-table-gate\"",
+            "\"id\":\"imui-shadcn-demo.inspector.table\"",
+            "\"id\":\"imui-shadcn-demo.inspector.table.header.cell.inspector-field\"",
+            "\"text\":\"sortedascending\"",
+            "\"type\":\"click_stable\"",
+            "\"text\":\"sorteddescending\"",
+            "\"type\":\"capture_layout_sidecar\"",
+            "\"type\":\"capture_screenshot\"",
+        ] {
+            assert!(
+                script.contains(marker),
+                "sortable table diag script should keep the bounded runtime proof marker: {marker}"
             );
         }
     }
