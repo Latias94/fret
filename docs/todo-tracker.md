@@ -655,7 +655,9 @@ It complements (but does not replace) ADRs:
   `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md` as the
   current active execution lane for the remaining P3 multi-window hand-feel problem; the
   mixed-DPI real-host proof item is accepted in
-  `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`.
+  `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`,
+  and local non-Linux continuation is bounded by
+  `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`.
 - Use `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json` as the closed
   diagnostics follow-on for the M3 mixed-DPI automation decision:
   the repo now has a runner-owned host monitor-topology environment fingerprint. The first
@@ -1036,6 +1038,7 @@ It complements (but does not replace) ADRs:
     - Mixed-DPI gate: `docs/workstreams/docking-multiwindow-imgui-parity/M6_MIXED_DPI_MONITOR_SCALE_GATE_2026-04-25.md`
     - Mixed-DPI accepted run: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
     - Window-style opacity capability: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
+    - Local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
     - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
     - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

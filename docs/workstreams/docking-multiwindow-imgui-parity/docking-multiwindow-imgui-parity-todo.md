@@ -312,6 +312,10 @@ Each TODO is labeled:
         `ui.window_hover_detection=none`, and `ui.window_z_level=none`.
       - Non-Wayland hosts should policy-skip via `check.environment.json` instead of timing out the
         direct script.
+    - [x] Local non-Linux continuation boundary is now explicit:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
+      - Campaign manifest validation and source-policy tests are the local gates; real Wayland
+        compositor acceptance remains the only closure path for this item.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

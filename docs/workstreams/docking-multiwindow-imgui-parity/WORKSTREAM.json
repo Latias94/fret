@@ -3,7 +3,7 @@
   "slug": "docking-multiwindow-imgui-parity",
   "title": "Docking Multi-Window ImGui Parity",
   "status": "active",
-  "updated": "2026-04-26",
+  "updated": "2026-04-29",
   "scope_kind": "execution",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
   "authoritative_docs": [
@@ -46,6 +46,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md"
     },
     {
       "role": "runbook",
@@ -165,6 +169,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M8_WINDOWS_TEAROFF_PLACEMENT_CAPTURE_GATE_2026-04-26.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",
@@ -219,6 +224,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for the remaining runner/backend-owned multi-window parity closure. `DW-P0-dpi-006` is accepted by `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; `DW-P1-win-002` is accepted by `M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md` with settled `move_grab_error=0.0`; `DW-P2-style-001` is accepted by `M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md` for the v1 DockFloating style subset, including the `ui.window.opacity` capability and effective `opacity_alpha_u8` diagnostics. Keep `imui-p3-mixed-dpi-real-host` and `imui-p3-windows-placement-real-host` as manual host-admitted rerun surfaces, keep the bounded P3 campaign generic, and prefer the Wayland compositor acceptance runbook or a narrower remaining platform follow-on for the next slice."
+    "notes": "Continue this lane for the remaining runner/backend-owned multi-window parity closure. `DW-P0-dpi-006` is accepted by `M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; `DW-P1-win-002` is accepted by `M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md` with settled `move_grab_error=0.0`; `DW-P2-style-001` is accepted by `M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md` for the v1 DockFloating style subset, including the `ui.window.opacity` capability and effective `opacity_alpha_u8` diagnostics. `M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md` freezes the current local continuation boundary: non-Linux work should stay to source-policy gates, campaign manifest validation, diagnostics drift repair, or a separate narrow follow-on backed by fresh evidence. Keep `imui-p3-mixed-dpi-real-host` and `imui-p3-windows-placement-real-host` as manual host-admitted rerun surfaces, keep the bounded P3 campaign generic, and use the Wayland compositor acceptance runbook as the next true closure path for `DW-P1-linux-003`."
   }
 }
