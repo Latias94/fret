@@ -1,6 +1,7 @@
 //! Immediate-mode facade writer glue.
 
 use super::*;
+use std::any::Any;
 
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
 ///
@@ -383,6 +384,35 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) -> ResponseExt {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::action_button_with_options(
             self, label, action, options,
+        );
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
+    pub fn action_payload_button<T>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        payload: T,
+    ) -> ResponseExt
+    where
+        T: Any + Clone + Send + Sync + 'static,
+    {
+        self.action_payload_button_with_options(label, action, payload, ButtonOptions::default())
+    }
+
+    pub fn action_payload_button_with_options<T>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        payload: T,
+        options: ButtonOptions,
+    ) -> ResponseExt
+    where
+        T: Any + Clone + Send + Sync + 'static,
+    {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::action_payload_button_with_options(
+            self, label, action, payload, options,
         );
         self.record_focusable(resp.id, resp.enabled);
         resp
@@ -1629,6 +1659,37 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: ButtonOptions,
     ) -> ResponseExt {
         button_controls::action_button_with_options(self, label.into(), action.into(), options)
+    }
+
+    fn action_payload_button<T>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        payload: T,
+    ) -> ResponseExt
+    where
+        T: Any + Clone + Send + Sync + 'static,
+    {
+        self.action_payload_button_with_options(label, action, payload, ButtonOptions::default())
+    }
+
+    fn action_payload_button_with_options<T>(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        payload: T,
+        options: ButtonOptions,
+    ) -> ResponseExt
+    where
+        T: Any + Clone + Send + Sync + 'static,
+    {
+        button_controls::action_payload_button_with_options(
+            self,
+            label.into(),
+            action.into(),
+            payload,
+            options,
+        )
     }
 
     fn button_command(&mut self, command: impl Into<CommandId>) -> ResponseExt {

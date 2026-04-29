@@ -96,7 +96,12 @@ Exit criteria:
   - Evidence: `docs/workstreams/standalone/imui-state-integration-v1.md`
 - [x] CSTATE-imui-031 Add one sample showing host-side query/selector orchestration feeding immediate draws.
   - Evidence: `docs/workstreams/standalone/imui-state-integration-v1.md` ("Host-side orchestration pattern")
-- [ ] CSTATE-imui-032 Verify typed command routing guidance is mirrored in immediate-mode examples.
+- [x] CSTATE-imui-032 Verify typed command routing guidance is mirrored in immediate-mode examples.
+  - Evidence: `apps/fret-cookbook/examples/imui_action_basics.rs`
+    (`ui.action_payload_button_with_options(...)` + `payload_update_if::<act::SetCount>(...)`).
+  - Evidence: `apps/fret-cookbook/src/lib.rs`
+    (`cookbook_imui_example_keeps_current_facade_teaching_surface`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/{button_controls.rs,facade_writer.rs}`.
 
 ---
 

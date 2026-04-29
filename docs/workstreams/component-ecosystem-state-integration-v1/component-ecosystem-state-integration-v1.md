@@ -160,6 +160,11 @@ Recommended approach:
 
 This keeps `imui` compatible with both "full state stack" apps and lightweight apps.
 
+Status note (2026-04-29): `apps/fret-cookbook/examples/imui_action_basics.rs` now mirrors the
+typed routing guidance for dynamic item intents. The example uses `payload_update_if::<act::SetCount>`
+on view-local state and `ui.action_payload_button_with_options(...)` for immediate-mode preset rows,
+so dynamic IMUI buttons route through typed payload actions instead of stringly `CommandId` parsing.
+
 ## 7) Fearless-refactor scope (pre-open-source friendly)
 
 Allowed breaking cleanup in v1 window:

@@ -15,12 +15,16 @@ use serde_json::{Value, json};
 
 mod act {
     fret::actions!([Inc = "cookbook.imui_action_basics.inc.v1"]);
+    fret::payload_actions!([SetCount(u32) = "cookbook.imui_action_basics.set_count.v1"]);
 }
 
 const TEST_ID_ROOT: &str = "cookbook.imui_action_basics.root";
 const TEST_ID_COUNT: &str = "cookbook.imui_action_basics.count";
 const TEST_ID_BUTTON_DECL: &str = "cookbook.imui_action_basics.button.declarative";
 const TEST_ID_BUTTON_IMUI: &str = "cookbook.imui_action_basics.button.imui";
+const TEST_ID_BUTTON_IMUI_PAYLOAD_1: &str = "cookbook.imui_action_basics.button.imui.payload.1";
+const TEST_ID_BUTTON_IMUI_PAYLOAD_5: &str = "cookbook.imui_action_basics.button.imui.payload.5";
+const TEST_ID_BUTTON_IMUI_PAYLOAD_10: &str = "cookbook.imui_action_basics.button.imui.payload.10";
 
 struct ImUiActionBasicsView {
     genui_state: Model<Value>,
@@ -102,6 +106,12 @@ impl View for ImUiActionBasicsView {
         cx.actions().local(&count_state).update::<act::Inc>(|v| {
             *v = v.saturating_add(1);
         });
+        cx.actions()
+            .local(&count_state)
+            .payload_update_if::<act::SetCount>(|value, preset| {
+                *value = preset;
+                true
+            });
 
         ui::v_flex(|cx| {
             let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
@@ -139,6 +149,23 @@ impl View for ImUiActionBasicsView {
                             ..Default::default()
                         },
                     );
+                    ui.horizontal(|ui| {
+                        for (preset, test_id) in [
+                            (1u32, TEST_ID_BUTTON_IMUI_PAYLOAD_1),
+                            (5u32, TEST_ID_BUTTON_IMUI_PAYLOAD_5),
+                            (10u32, TEST_ID_BUTTON_IMUI_PAYLOAD_10),
+                        ] {
+                            ui.action_payload_button_with_options(
+                                Arc::from(format!("Set {preset}")),
+                                act::SetCount,
+                                preset,
+                                ButtonOptions {
+                                    test_id: Some(Arc::from(test_id)),
+                                    ..Default::default()
+                                },
+                            );
+                        }
+                    });
                 })
             });
 

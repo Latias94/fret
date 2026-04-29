@@ -793,8 +793,12 @@ mod authoring_surface_policy_tests {
             IMUI_ACTION_EXAMPLE,
             &[
                 "use fret::imui::{kit::ButtonOptions, prelude::*};",
+                "fret::payload_actions!([SetCount(u32) = \"cookbook.imui_action_basics.set_count.v1\"]);",
+                ".payload_update_if::<act::SetCount>(|value, preset| {",
                 "imui_raw(cx, |ui| {",
                 "ui.action_button_with_options(",
+                "ui.action_payload_button_with_options(",
+                "cookbook.imui_action_basics.button.imui.payload.5",
             ],
             &[
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",

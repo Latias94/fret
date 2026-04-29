@@ -1,6 +1,6 @@
 //! Immediate-mode button-style pressable helpers.
 
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use fret_core::{Corners, Edges, KeyCode, Px, SemanticsRole, Size};
 use fret_runtime::ActionId;
@@ -58,7 +58,47 @@ pub(super) fn action_button_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
     action: ActionId,
     options: ButtonOptions,
 ) -> ResponseExt {
-    button_impl(ui, label, options, Some(action))
+    button_impl(
+        ui,
+        label,
+        options,
+        Some(ButtonAction {
+            action,
+            payload: None,
+        }),
+    )
+}
+
+pub(super) fn action_payload_button_with_options<
+    H: UiHost,
+    W: UiWriterImUiFacadeExt<H> + ?Sized,
+    T,
+>(
+    ui: &mut W,
+    label: Arc<str>,
+    action: ActionId,
+    payload: T,
+    options: ButtonOptions,
+) -> ResponseExt
+where
+    T: Any + Clone + Send + Sync + 'static,
+{
+    let payload = Arc::new(move || Box::new(payload.clone()) as Box<dyn Any + Send + Sync>);
+    button_impl(
+        ui,
+        label,
+        options,
+        Some(ButtonAction {
+            action,
+            payload: Some(payload),
+        }),
+    )
+}
+
+#[derive(Clone)]
+struct ButtonAction {
+    action: ActionId,
+    payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
 }
 
 fn arrow_symbol(direction: ButtonArrowDirection) -> Arc<str> {
@@ -132,7 +172,7 @@ fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     options: ButtonOptions,
-    action: Option<ActionId>,
+    action: Option<ButtonAction>,
 ) -> ResponseExt {
     let parts = parse_label_identity(label.as_ref());
     let identity = Arc::<str>::from(parts.identity);
@@ -146,7 +186,7 @@ fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     options: ButtonOptions,
-    action: Option<ActionId>,
+    action: Option<ButtonAction>,
 ) -> ResponseExt {
     let mut response = ResponseExt::default();
 
@@ -154,7 +194,7 @@ fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         let response = &mut response;
         let mut enabled = options.enabled && !super::imui_is_disabled(cx);
         if let Some(action) = action.as_ref() {
-            enabled = enabled && cx.action_is_enabled(action);
+            enabled = enabled && cx.action_is_enabled(&action.action);
         }
         let variant = options.variant;
         let mut props = PressableProps::default();
@@ -186,8 +226,11 @@ fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 }
                 host.record_transient_event(acx, super::KEY_CLICKED);
                 if let Some(action) = action_for_activate.clone() {
-                    host.record_pending_command_dispatch_source(acx, &action, reason);
-                    host.dispatch_command(Some(acx.window), action);
+                    host.record_pending_command_dispatch_source(acx, &action.action, reason);
+                    if let Some(payload) = action.payload.as_ref() {
+                        host.record_pending_action_payload(acx, &action.action, payload());
+                    }
+                    host.dispatch_command(Some(acx.window), action.action);
                 }
                 host.notify(acx);
             }));
@@ -215,10 +258,17 @@ fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                                 if let Some(action) = action_for_shortcut.clone() {
                                     host.record_pending_command_dispatch_source(
                                         acx,
-                                        &action,
+                                        &action.action,
                                         ActivateReason::Keyboard,
                                     );
-                                    host.dispatch_command(Some(acx.window), action);
+                                    if let Some(payload) = action.payload.as_ref() {
+                                        host.record_pending_action_payload(
+                                            acx,
+                                            &action.action,
+                                            payload(),
+                                        );
+                                    }
+                                    host.dispatch_command(Some(acx.window), action.action);
                                 }
                                 host.notify(acx);
                                 return true;
