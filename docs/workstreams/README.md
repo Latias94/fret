@@ -624,14 +624,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed narrow follow-on for a runnable app-owned sortable table proof in
     `imui_shadcn_adapter_demo`.
 
-- Active narrow IMUI table sortable diagnostics gate follow-on:
+- Closed narrow IMUI table sortable diagnostics gate follow-on:
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/DESIGN.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-diag-gate-v1/M2_LAUNCHED_DIAG_GATE_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-29.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/TODO.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/EVIDENCE_AND_GATES.md`
-  - Scope: active narrow follow-on for a promoted `fretboard diag` gate around
+  - Scope: closed narrow follow-on for a promoted `fretboard diag` gate around
     `imui_shadcn_adapter_demo`'s app-owned sortable inspector table.
 
 - Closed narrow IMUI ID stack diagnostics follow-on:
@@ -1046,7 +1048,7 @@ Rule:
 - `docs/workstreams/imui-table-column-identity-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
 - `docs/workstreams/imui-table-sortable-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a runnable IMUI table sortable header demo proof)
-- `docs/workstreams/imui-table-sortable-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for the IMUI table sortable diagnostics gate)
+- `docs/workstreams/imui-table-sortable-diag-gate-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on for the IMUI table sortable diagnostics gate)
 - `docs/workstreams/imui-table-sortable-header-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table sortable header trigger responses)
 - `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for structured IMUI/runtime identity diagnostics)
 - `docs/workstreams/imui-id-stack-browser-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for browser-style IMUI/runtime identity diagnostics)

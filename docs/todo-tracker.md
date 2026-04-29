@@ -360,10 +360,12 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-table-sortable-demo-proof-v1/TODO.md`
   - `docs/workstreams/imui-table-sortable-demo-proof-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-sortable-demo-proof-v1/EVIDENCE_AND_GATES.md`
-- Active narrow IMUI table sortable diagnostics gate follow-on:
+- Closed narrow IMUI table sortable diagnostics gate follow-on:
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/DESIGN.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-diag-gate-v1/M2_LAUNCHED_DIAG_GATE_2026-04-29.md`
+  - `docs/workstreams/imui-table-sortable-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-29.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/TODO.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-sortable-diag-gate-v1/EVIDENCE_AND_GATES.md`
@@ -663,10 +665,9 @@ It complements (but does not replace) ADRs:
   follow-on for wiring sortable header responses into a runnable app-owned sort proof; split
   diagnostics scripts, richer cookbook docs, multi-sort examples, engines, resize, and persistence
   into separate follow-ons.
-- Use `docs/workstreams/imui-table-sortable-diag-gate-v1/WORKSTREAM.json` as the active narrow
-  follow-on for the sortable table diagnostics script; keep it active until the launched
-  `fretboard diag run` gate has passed, then close it without widening into engines, resize, or
-  persistence.
+- Use `docs/workstreams/imui-table-sortable-diag-gate-v1/WORKSTREAM.json` as the closed narrow
+  follow-on for the sortable table diagnostics script; start separate follow-ons for engines,
+  resize, persistence, cookbook prose, or additional table policy.
 - Use `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json` as the closed narrow
   closeout record for structured IMUI/runtime identity diagnostics; route browser-style identity
   triage to `docs/workstreams/imui-id-stack-browser-v1/`, and keep `test_id` inference,
