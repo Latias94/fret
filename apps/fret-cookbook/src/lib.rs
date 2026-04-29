@@ -495,6 +495,8 @@ mod authoring_surface_policy_tests {
         assert!(!QUERY_EXAMPLE.contains("use fret_query::{"));
         assert!(QUERY_EXAMPLE.contains("let fail_mode_enabled = fail_mode.layout_value(cx);"));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
+        assert!(QUERY_EXAMPLE.contains("shadcn::query_status_badge(cx.elements(), &state)"));
+        assert!(QUERY_EXAMPLE.contains(".a11y_label(status_label)"));
         assert!(QUERY_EXAMPLE.contains("cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)"));
         assert!(QUERY_EXAMPLE.contains("transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY)"));
         assert!(

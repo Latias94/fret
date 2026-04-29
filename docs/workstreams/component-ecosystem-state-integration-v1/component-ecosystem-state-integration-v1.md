@@ -336,6 +336,13 @@ clicks the typed `ClearLog` action and verifies the log value is cleared. While 
 boundaries so the Windows debug launch path no longer overflows the main stack before diagnostics
 readiness.
 
+Status note (2026-04-29): `apps/fret-cookbook/examples/query_basics.rs` now serves as the
+recipe-heavy optional query-adapter demo. The example uses `shadcn::query_status_badge(...)` through
+the app-facing `fret::shadcn` facade, with `fret/state-query` forwarding into
+`fret-ui-shadcn/state-query`. The existing query-basics launched baseline now passes after the demo
+was split across explicit `AnyElement` boundaries and the status badge root received a stable
+accessibility label for diagnostics assertions.
+
 ## 14) imui compatibility landing (service-first)
 
 The current `imui` ownership baseline and service-first integration guidance are captured in:

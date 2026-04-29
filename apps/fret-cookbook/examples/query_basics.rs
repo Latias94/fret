@@ -4,6 +4,7 @@ use std::time::Duration;
 use fret::app::prelude::*;
 use fret::query::{QueryError, QueryKey, QueryPolicy};
 use fret::style::Space;
+use fret_ui::element::AnyElement;
 
 mod act {
     fret::actions!([
@@ -81,23 +82,22 @@ impl View for QueryBasicsView {
 
         let state = handle.read_layout(cx);
 
-        let mode_badge = shadcn::Badge::new(if fail_mode_enabled {
+        let mode_label = if fail_mode_enabled {
             "Mode: Error"
         } else {
             "Mode: Ok"
-        })
-        .variant(shadcn::BadgeVariant::Secondary)
-        .test_id(TEST_ID_MODE_BADGE);
+        };
+        let mode_badge = shadcn::Badge::new(mode_label)
+            .variant(shadcn::BadgeVariant::Secondary)
+            .test_id(TEST_ID_MODE_BADGE)
+            .into_element(cx.elements())
+            .a11y_label(mode_label);
 
-        let status_badge = shadcn::Badge::new(state.status.as_str())
-            .variant(if state.is_success() {
-                shadcn::BadgeVariant::Default
-            } else if state.is_error() {
-                shadcn::BadgeVariant::Destructive
-            } else {
-                shadcn::BadgeVariant::Secondary
-            })
-            .test_id(TEST_ID_STATUS_BADGE);
+        let status_label = state.status.as_str();
+        let status_badge = shadcn::query_status_badge(cx.elements(), &state)
+            .test_id(TEST_ID_STATUS_BADGE)
+            .into_element(cx.elements())
+            .a11y_label(status_label);
 
         let data_line: Arc<str> = state
             .data
@@ -118,39 +118,56 @@ impl View for QueryBasicsView {
             .action(act::ToggleErrorMode)
             .test_id(TEST_ID_BTN_TOGGLE_MODE);
 
-        let buttons =
-            ui::h_flex(|cx| ui::children![cx; invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
-                .gap(Space::N2)
-                .items_center();
-
-        let lines = ui::v_flex_build(|cx, out| {
-            out.push(cx.text(data_line).test_id(TEST_ID_DATA_LINE));
-            if let Some(err) = state.error {
-                out.push(cx.text(format!("error={err}")).test_id(TEST_ID_ERROR_LINE));
-            }
+        let buttons = ui::h_flex(|cx| {
+            vec![
+                invalidate_btn.into_element(cx),
+                invalidate_ns_btn.into_element(cx),
+                toggle_mode_btn.into_element(cx),
+            ]
         })
-        .gap(Space::N2);
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx.elements());
+
+        let mut line_children: Vec<AnyElement> = vec![
+            ui::text(data_line)
+                .test_id(TEST_ID_DATA_LINE)
+                .into_element(cx.elements()),
+        ];
+        if let Some(err) = state.error.as_ref() {
+            line_children.push(
+                ui::text(format!("error={err}"))
+                    .test_id(TEST_ID_ERROR_LINE)
+                    .into_element(cx.elements()),
+            );
+        }
+        let lines = ui::v_flex(|_cx| line_children)
+            .gap(Space::N2)
+            .into_element(cx.elements());
+
+        let badge_row = ui::h_flex(|_cx| vec![status_badge, mode_badge])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx.elements());
+
+        let body = ui::v_flex(|_cx| vec![buttons, lines])
+            .gap(Space::N4)
+            .w_full();
 
         let card = shadcn::card(|cx| {
-            ui::children![cx;
+            vec![
                 shadcn::card_header(|cx| {
-                    ui::children![cx;
-                        shadcn::card_title("Query basics"),
+                    vec![
+                        shadcn::card_title("Query basics").into_element(cx),
                         shadcn::card_description(
                             "A tiny async resource example using fret-query (invalidate + error mode).",
-                        ),
-                        ui::h_flex(|cx| ui::children![cx; status_badge, mode_badge])
-                            .gap(Space::N2)
-                            .items_center(),
+                        )
+                        .into_element(cx),
+                        badge_row,
                     ]
-                }),
-                shadcn::card_content(|cx| {
-                    ui::children![cx;
-                        ui::v_flex(|cx| ui::children![cx; buttons, lines])
-                            .gap(Space::N4)
-                            .w_full()
-                    ]
-                }),
+                })
+                .into_element(cx),
+                shadcn::card_content(|cx| vec![body.into_element(cx)]).into_element(cx),
             ]
         })
         .ui()

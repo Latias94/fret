@@ -114,7 +114,11 @@ Exit criteria:
 - [x] CSTATE-demo-040 Update `todo_demo` narrative/docs to explicitly call out the three-layer state split.
   - Evidence: `docs/examples/todo-app-golden-path.md` ("Three-layer state split")
   - Evidence: `apps/fret-examples/src/todo_demo.rs`
-- [ ] CSTATE-demo-041 Add/refresh one recipe-heavy example that uses optional selector/query adapters.
+- [x] CSTATE-demo-041 Add/refresh one recipe-heavy example that uses optional selector/query adapters.
+  - Evidence: `apps/fret-cookbook/examples/query_basics.rs`
+    (`shadcn::query_status_badge(cx.elements(), &state)`).
+  - Gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json --dir target/fret-diag/cookbook-query-basics-refresh --session-auto --pack --ai-packet --launch -- cargo run -p fret-cookbook --example query_basics --features cookbook-query,cookbook-diag`.
+  - Evidence: `target/fret-diag/cookbook-query-basics-refresh/sessions/1777431158916-11240/share/1777431227099.zip`.
 - [ ] CSTATE-demo-042 Ensure scaffold docs point to state integration guidance and adapter policy.
 
 ---

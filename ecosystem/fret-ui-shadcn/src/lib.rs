@@ -542,6 +542,10 @@ pub mod facade {
         ToastPromiseAsyncOptions, ToastPromiseHandle, ToastPromiseUnwrapError,
     };
     pub use crate::spinner::Spinner;
+    #[cfg(feature = "state-selector")]
+    pub use crate::state::use_selector_badge;
+    #[cfg(feature = "state-query")]
+    pub use crate::state::{query_error_alert, query_status_badge};
     pub use crate::switch::{Switch, SwitchSize, switch};
     pub use crate::table::{
         Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,

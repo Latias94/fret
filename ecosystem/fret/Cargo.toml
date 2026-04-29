@@ -44,11 +44,17 @@ app = [
 
 # Derived + async state helpers used by `AppUi`.
 state = ["state-selector", "state-query"]
-state-selector = ["dep:fret-selector", "fret-selector/ui", "fret-imui?/state-selector"]
+state-selector = [
+    "dep:fret-selector",
+    "fret-selector/ui",
+    "fret-ui-shadcn?/state-selector",
+    "fret-imui?/state-selector",
+]
 state-query = [
     "dep:fret-query",
     "fret-query/ui",
     "fret-ui-kit/state-query",
+    "fret-ui-shadcn?/state-query",
     "fret-imui?/state-query",
 ]
 state-mutation = ["dep:fret-mutation", "fret-mutation/ui"]
