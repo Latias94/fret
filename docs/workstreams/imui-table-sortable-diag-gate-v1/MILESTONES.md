@@ -8,7 +8,9 @@ Status: landed
 
 - Added `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`.
 - Added `tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json`.
-- Added source-marker coverage in `apps/fret-examples/src/lib.rs`.
+- Added source-marker coverage. Current coverage lives in
+  `tools/gate_imui_shadcn_adapter_sortable_table_source.py` after the build-latency follow-on moved
+  the pure text check out of the monolithic `fret-examples` unit test.
 - JSON validation passed for the script and suite.
 
 ## M2 - Launched Gate Evidence

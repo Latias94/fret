@@ -13,8 +13,8 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn
 ```text
 python -m json.tool tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json
 python -m json.tool tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json
+python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 cargo check -p fret-examples --lib --jobs 1
-cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json --dir target/fret-diag/imui-table-sortable-diag-gate-v1 --session-auto --timeout-ms 300000 --exit-after-run --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo
 python tools/check_workstream_catalog.py
 git diff --check
@@ -24,8 +24,9 @@ git diff --check
 
 - Passed: script JSON shape.
 - Passed: suite JSON shape.
+- Passed: lightweight sortable source-marker gate.
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
-- Passed: `cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast`.
+- Historical closeout evidence: `cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast` passed before the pure source-marker check moved to `tools/gate_imui_shadcn_adapter_sortable_table_source.py` under `docs/workstreams/fret-examples-build-latency-v1/`.
 - Passed: launched diagnostics gate.
 
 ## Runtime Evidence
@@ -42,5 +43,6 @@ git diff --check
 
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`
 - `tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json`
+- `tools/gate_imui_shadcn_adapter_sortable_table_source.py`
 - `apps/fret-examples/src/lib.rs`
 - `docs/workstreams/imui-table-sortable-demo-proof-v1/CLOSEOUT_AUDIT_2026-04-29.md`

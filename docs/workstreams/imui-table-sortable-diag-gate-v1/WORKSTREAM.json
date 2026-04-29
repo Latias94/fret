@@ -58,7 +58,7 @@
     },
     {
       "name": "source-marker",
-      "command": "cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast"
+      "command": "python tools/gate_imui_shadcn_adapter_sortable_table_source.py"
     },
     {
       "name": "fret-examples-check",
@@ -80,6 +80,7 @@
   "evidence": [
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",
     "tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json",
+    "tools/gate_imui_shadcn_adapter_sortable_table_source.py",
     "apps/fret-examples/src/lib.rs",
     "docs/workstreams/imui-table-sortable-diag-gate-v1/DESIGN.md",
     "docs/workstreams/imui-table-sortable-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-04-29.md",

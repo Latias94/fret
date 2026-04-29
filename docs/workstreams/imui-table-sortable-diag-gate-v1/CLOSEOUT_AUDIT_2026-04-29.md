@@ -11,14 +11,19 @@ script, a suite manifest, source-marker coverage, and a passing launched run.
 
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`
 - `tools/diag-scripts/suites/imui-table-sortable-diag-gate/suite.json`
-- Source-marker coverage in `apps/fret-examples/src/lib.rs`.
+- Source-marker coverage in `tools/gate_imui_shadcn_adapter_sortable_table_source.py` after the
+  build-latency follow-on moved the pure text check out of `apps/fret-examples/src/lib.rs`.
 
 ## Gate Evidence
 
 - `cargo check -p fret-examples --lib --jobs 1`
-- `cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast`
+- `python tools/gate_imui_shadcn_adapter_sortable_table_source.py`
 - `cargo build -p fret-demo --bin imui_shadcn_adapter_demo --jobs 1`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json --dir target/fret-diag/imui-table-sortable-diag-gate-v1 --session-auto --timeout-ms 300000 --exit-after-run --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo`
+
+Historical note: the Rust nextest source-marker gate passed during closeout. The current source
+marker lives in the Python gate above so it does not compile the monolithic examples crate for a
+pure source scan.
 
 Runtime evidence:
 

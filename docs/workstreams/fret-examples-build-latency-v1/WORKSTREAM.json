@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "slug": "fret-examples-build-latency-v1",
+  "title": "Fret Examples Build Latency v1",
+  "status": "active",
+  "updated": "2026-04-29",
+  "scope_kind": "execution",
+  "problem": "Reduce cold compile, link, and source-policy gate latency for `fret-examples` and `fret-demo` without weakening IMUI diagnostics or demo coverage.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run a source-policy gate that should not need to compile the large `fret-examples` runtime crate, then keep the runtime compile as a compatibility gate.",
+    "commands": [
+      "python tools/gate_imui_shadcn_adapter_sortable_table_source.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "sortable-source-gate",
+      "command": "python tools/gate_imui_shadcn_adapter_sortable_table_source.py"
+    },
+    {
+      "name": "fret-examples-check",
+      "command": "cargo check -p fret-examples --lib --jobs 1"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "tools/gate_imui_shadcn_adapter_sortable_table_source.py",
+    "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+    "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",
+    "apps/fret-examples/src/lib.rs",
+    "docs/workstreams/fret-examples-build-latency-v1/DESIGN.md",
+    "docs/workstreams/fret-examples-build-latency-v1/TODO.md",
+    "docs/workstreams/fret-examples-build-latency-v1/MILESTONES.md",
+    "docs/workstreams/fret-examples-build-latency-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane while source-policy tests still require compiling the monolithic examples crate or single demo builds still link avoidable demo surfaces."
+  }
+}

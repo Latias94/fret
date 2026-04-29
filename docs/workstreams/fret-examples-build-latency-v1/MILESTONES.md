@@ -1,0 +1,35 @@
+# Fret Examples Build Latency v1 - Milestones
+
+Status: active
+
+## M0 - Baseline And First Source Gate
+
+Exit criteria:
+
+- The lane records current assumptions and gates.
+- One representative pure source-marker check runs without compiling `fret-examples`.
+- The deleted Rust unit test has equivalent source coverage elsewhere.
+
+## M1 - Source-Policy Test Migration Plan
+
+Exit criteria:
+
+- Remaining source-marker tests in `apps/fret-examples/src/lib.rs` are grouped by owner surface.
+- Tests that only need text scanning have a Python gate migration plan.
+- Tests that need Rust type checking remain in `fret-examples` with an explicit reason.
+
+## M2 - Demo Build Split Decision
+
+Exit criteria:
+
+- Single-demo build coupling is measured on at least one representative IMUI demo.
+- The lane chooses between feature-family split, separate examples crates, or direct demo-local bins.
+- The chosen split has a small compatibility gate before broad migration.
+
+## M3 - Profile Policy Decision
+
+Exit criteria:
+
+- The macOS incremental-link workaround is either kept global with evidence or narrowed through a
+  documented developer profile path.
+- Windows iteration guidance is updated if `dev-fast` becomes the recommended local path.

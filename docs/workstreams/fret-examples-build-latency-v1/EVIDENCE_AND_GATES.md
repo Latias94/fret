@@ -1,0 +1,43 @@
+# Fret Examples Build Latency v1 - Evidence And Gates
+
+Status: active
+
+## Smallest Repro
+
+```text
+python tools/gate_imui_shadcn_adapter_sortable_table_source.py
+```
+
+## Gate Set
+
+```text
+python tools/gate_imui_shadcn_adapter_sortable_table_source.py
+cargo check -p fret-examples --lib --jobs 1
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+## Baseline Evidence
+
+- Prior cold `cargo nextest run -p fret-examples imui_shadcn_adapter_demo_keeps_sortable_table_diag_gate --no-fail-fast` took about 5m42s locally because it compiled the monolithic examples crate for a source-marker check.
+- Prior cold `cargo build -p fret-demo --bin imui_shadcn_adapter_demo --jobs 1` took about 13m20s locally because the demo bin links through the full examples library.
+
+## Current Evidence
+
+- Passed: `python tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
+- Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
+- Passed: `cargo check -p fret-examples --lib --jobs 1`.
+- Passed: `python tools/check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
+  existing historical workstream state files fail the global strict validator before this lane is
+  evaluated.
+
+## Evidence Anchors
+
+- `apps/fret-examples/src/lib.rs`
+- `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
+- `apps/fret-demo/Cargo.toml`
+- `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
+- `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`
+- `Cargo.toml`

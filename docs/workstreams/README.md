@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 281
+- Dedicated directories: 282
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -987,6 +987,7 @@ Rule:
 - `docs/workstreams/fretboard-public-app-author-surface-v1/` — first 2026-04-09, latest 2026-04-09, 10 markdown docs
 - `docs/workstreams/fretboard-public-dev-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 6 markdown docs
 - `docs/workstreams/fretboard-public-diag-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 5 markdown docs
+- `docs/workstreams/fret-examples-build-latency-v1/` — first n/a, latest n/a, 5 markdown docs (active lane for moving pure examples source-policy gates out of the monolithic `fret-examples` test binary and deciding follow-on demo build splits)
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-12, 7 markdown docs
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-04-26, 5 markdown docs (maintenance lane for launch runner scheduling semantics and first-frame bootstrap evidence; includes `WORKSTREAM.json`)
