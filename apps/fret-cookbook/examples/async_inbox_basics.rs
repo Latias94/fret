@@ -14,6 +14,7 @@ use fret_executor::{
 };
 use fret_runtime::Model;
 use fret_runtime::{DispatchPriority, DispatcherHandle, InboxDrainRegistry};
+use fret_ui::element::AnyElement;
 
 mod act {
     fret::actions!([
@@ -235,34 +236,40 @@ impl View for AsyncInboxBasicsView {
             .test_id(TEST_ID_CLEAR_LOG);
 
         let status_row = ui::h_flex(|cx| {
-            ui::children![cx;
-                shadcn::Label::new("Status:"),
+            let children: Vec<AnyElement> = vec![
+                shadcn::Label::new("Status:").into_element(cx),
                 shadcn::Badge::new(status.as_ref())
                     .variant(if running {
                         shadcn::BadgeVariant::Default
                     } else {
                         shadcn::BadgeVariant::Secondary
                     })
-                    .test_id(TEST_ID_STATUS),
+                    .test_id(TEST_ID_STATUS)
+                    .into_element(cx),
                 shadcn::Badge::new(format!("Dropped oldest: {}", inbox_stats.dropped_oldest))
-                    .variant(shadcn::BadgeVariant::Secondary),
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
                 shadcn::Badge::new(format!("Dropped newest: {}", inbox_stats.dropped_newest))
-                    .variant(shadcn::BadgeVariant::Secondary),
-            ]
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
+            ];
+            children
         })
         .gap(Space::N2)
-        .items_center();
+        .items_center()
+        .into_element(cx.elements());
 
         let progress_el = shadcn::Progress::new(self.st.progress.clone())
             .a11y_label("Background job progress")
             .range(0.0, 100.0)
-            .into_element(cx)
+            .into_element(cx.elements())
             .test_id(TEST_ID_PROGRESS);
 
-        let progress_label = cx.text(format!("{progress:.0}%"));
-        let progress_row = ui::h_flex(|cx| ui::children![cx; progress_el, progress_label])
+        let progress_label = ui::text(format!("{progress:.0}%"));
+        let progress_row = ui::h_flex(|_cx| vec![progress_el, progress_label.into_element(_cx)])
             .gap(Space::N3)
-            .items_center();
+            .items_center()
+            .into_element(cx.elements());
 
         let log = shadcn::Textarea::new(self.st.log.clone())
             .a11y_label("Inbox log")
@@ -271,24 +278,32 @@ impl View for AsyncInboxBasicsView {
             .min_height(Px(240.0))
             .test_id(TEST_ID_LOG);
 
-        let controls =
-            ui::v_flex(|cx| ui::children![cx; start_button, cancel_button, clear_log_button])
-                .gap(Space::N2);
+        let controls = ui::v_flex(|cx| {
+            vec![
+                start_button.into_element(cx),
+                cancel_button.into_element(cx),
+                clear_log_button.into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx.elements());
 
-        let body = ui::v_flex(|cx| ui::children![cx; status_row, progress_row, controls, log])
-            .gap(Space::N3);
+        let log = log.into_element(cx.elements());
+        let body = ui::v_flex(|_cx| vec![status_row, progress_row, controls, log]).gap(Space::N3);
 
         let card = shadcn::card(|cx| {
-            ui::children![cx;
+            vec![
                 shadcn::card_header(|cx| {
-                    ui::children![cx;
-                        shadcn::card_title("Async inbox basics"),
+                    vec![
+                        shadcn::card_title("Async inbox basics").into_element(cx),
                         shadcn::card_description(
                             "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
-                        ),
+                        )
+                        .into_element(cx),
                     ]
-                }),
-                shadcn::card_content(|cx| ui::children![cx; body]),
+                })
+                .into_element(cx),
+                shadcn::card_content(|cx| vec![body.into_element(cx)]).into_element(cx),
             ]
         })
         .ui()

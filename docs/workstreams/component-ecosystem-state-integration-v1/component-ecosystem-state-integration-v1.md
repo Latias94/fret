@@ -328,6 +328,14 @@ optional adapter seam a nextest-backed runtime proof. The test opens the `state`
 not recompute across retained frames, and verifies `query_status_badge(...)` /
 `query_error_alert(...)` mappings for idle, success, and error query states.
 
+Status note (2026-04-29): `tools/diag-scripts/cookbook/async-inbox-basics/` now includes a launched
+diagnostics regression for async state plus command routing. The script clicks the typed `Start`
+action, waits for background inbox state to reach 100% progress and a completed log entry, then
+clicks the typed `ClearLog` action and verifies the log value is cleared. While landing this gate,
+`apps/fret-cookbook/examples/async_inbox_basics.rs` was split across explicit `AnyElement`
+boundaries so the Windows debug launch path no longer overflows the main stack before diagnostics
+readiness.
+
 ## 14) imui compatibility landing (service-first)
 
 The current `imui` ownership baseline and service-first integration guidance are captured in:

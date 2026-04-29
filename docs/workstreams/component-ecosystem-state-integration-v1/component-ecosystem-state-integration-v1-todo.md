@@ -131,7 +131,10 @@ Exit criteria:
 - [x] CSTATE-gate-051 Add nextest coverage for one selector adapter and one query adapter path.
   - Evidence: `ecosystem/fret-ui-shadcn/tests/state_adapters.rs`.
   - Gate: `cargo nextest run -p fret-ui-shadcn --features state --test state_adapters --no-fail-fast`.
-- [ ] CSTATE-gate-052 Add one `fretboard-dev diag` script for async-state + command routing interaction regression.
+- [x] CSTATE-gate-052 Add one `fretboard-dev diag` script for async-state + command routing interaction regression.
+  - Evidence: `tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-command-routing-regression.json`.
+  - Gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-command-routing-regression.json --dir target/fret-diag/cookbook-async-inbox-command-routing --session-auto --pack --ai-packet --launch -- cargo run -p fret-cookbook --example async_inbox_basics --features cookbook-async,cookbook-diag`.
+  - Evidence: `target/fret-diag/cookbook-async-inbox-command-routing/sessions/1777430017004-45256/share/1777430019144.zip`.
 - [ ] CSTATE-docs-053 Add a migration note for ecosystem maintainers adopting optional state adapters.
 - [x] CSTATE-docs-054 Add ecosystem-by-ecosystem selector/query recommendation matrix.
   - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md` ("Ecosystem-by-ecosystem state recommendation matrix")

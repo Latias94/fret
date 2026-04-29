@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-async-inbox-basics-command-routing-regression",
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "tags": [
+      "cookbook",
+      "async",
+      "inbox",
+      "actions",
+      "command_routing",
+      "regression"
+    ],
+    "target_hints": [
+      "Exercises async inbox state updates through typed action buttons.",
+      "Verifies the Start action dispatch launches background work and reaches Completed.",
+      "Verifies the Clear log action dispatch remains routed after async state has completed."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 860.0, "height_px": 680.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.start" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.async_inbox_basics.start.v1",
+        "source_kind": "pointer",
+        "source_test_id": "cookbook.async_inbox_basics.start",
+        "handled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.log" },
+        "text": "background task started"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.progress" },
+        "field": "value",
+        "value": 100.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.log" },
+        "text": "job completed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.clear_log" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.async_inbox_basics.clear_log.v1",
+        "source_kind": "pointer",
+        "source_test_id": "cookbook.async_inbox_basics.clear_log",
+        "handled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.log" },
+        "text": ""
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-async-inbox-basics-command-routing-regression"
+    }
+  ]
+}
