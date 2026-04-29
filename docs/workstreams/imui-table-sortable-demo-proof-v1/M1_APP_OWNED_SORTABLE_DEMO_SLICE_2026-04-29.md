@@ -25,4 +25,4 @@ if table_response
 ## Gate Evidence
 
 - `cargo check -p fret-examples --jobs 1`
-- `cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast`
+- `python tools/gate_imui_shadcn_adapter_sortable_table_source.py`

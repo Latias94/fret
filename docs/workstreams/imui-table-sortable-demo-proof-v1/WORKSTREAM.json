@@ -40,7 +40,7 @@
   "repro": {
     "summary": "Open `imui_shadcn_adapter_demo`, click the inspector table's sortable first column, and observe that the demo-local inspector sort state toggles row order on the next frame.",
     "commands": [
-      "cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast"
+      "python tools/gate_imui_shadcn_adapter_sortable_table_source.py"
     ]
   },
   "gates": [
@@ -50,7 +50,7 @@
     },
     {
       "name": "imui-shadcn-demo-source-proof",
-      "command": "cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast"
+      "command": "python tools/gate_imui_shadcn_adapter_sortable_table_source.py"
     },
     {
       "name": "fmt",
@@ -78,6 +78,7 @@
     "docs/workstreams/imui-table-sortable-demo-proof-v1/MILESTONES.md",
     "docs/workstreams/imui-table-sortable-demo-proof-v1/EVIDENCE_AND_GATES.md",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+    "tools/gate_imui_shadcn_adapter_sortable_table_source.py",
     "apps/fret-examples/src/lib.rs"
   ],
   "adr_refs": [

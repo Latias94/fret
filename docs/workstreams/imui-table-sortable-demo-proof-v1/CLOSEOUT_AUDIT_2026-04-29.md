@@ -17,7 +17,11 @@ This lane is closed. The first visible app-owned sortable table proof now lives 
 ## Gate Evidence
 
 - `cargo check -p fret-examples --jobs 1`
-- `cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast`
+- `python tools/gate_imui_shadcn_adapter_sortable_table_source.py`
+
+Historical note: the Rust nextest source proof passed during closeout. The current source proof
+moved to the Python gate above so this closed lane no longer asks maintainers to compile the
+monolithic examples crate for a source scan.
 
 ## Future Work
 

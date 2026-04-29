@@ -24,8 +24,13 @@ These are pure source-policy checks and should migrate before broader crate spli
   - `imui_floating_windows_demo_prefers_root_fret_imui_facade_lane`
   - `imui_response_signals_demo_prefers_root_fret_imui_facade_lane`
   - `imui_interaction_showcase_demo_prefers_root_fret_imui_facade_lane`
-  - `imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane`
   - `imui_editor_proof_demo_prefers_root_fret_imui_entry_surface`
+
+Migrated after this audit:
+
+- `imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane` is now covered by
+  `tools/gate_imui_shadcn_adapter_sortable_table_source.py` because the sortable demo proof already
+  uses the adapter source gate as its current source proof.
 
 - IMUI source/doc freeze checks:
   - `immediate_mode_examples_docs_name_the_mounting_rule_for_imui_vs_imui_raw`

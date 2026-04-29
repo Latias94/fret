@@ -11,12 +11,40 @@ DEMO_PATH = Path("apps/fret-examples/src/imui_shadcn_adapter_demo.rs")
 SCRIPT_PATH = Path("tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json")
 
 DEMO_MARKERS = [
+    "usefret::{FretApp,advanced::prelude::*,imui::prelude::*};",
+    "imui_in(cx,|ui|{",
+    "imui(cx,move|ui|{",
+    "kit::ButtonOptions{",
+    "kit::SwitchOptions{",
+    "kit::SliderOptions{",
+    "kit::ComboModelOptions{",
+    "kit::InputTextOptions{",
     "enumInspectorSort{",
+    "TableSortDirection::Ascending",
+    'kit::TableColumn::fill("Signal###inspector-signal")',
     "fnsort_rows(self,rows:&mut[InspectorRow])",
     'kit::TableColumn::fill("Field###inspector-field")',
     ".sorted(inspector_sort.direction())",
+    "kit::TableOptions{",
     "lettable_response=ui.table_with_options(",
     ".header(sort_column_id)",
+    "kit::VirtualListOptions{",
+    "kit::VirtualListMeasureMode::Fixed",
+]
+
+DEMO_FORBIDDEN_MARKERS = [
+    "fret_imui::imui_in(cx,|ui|{",
+    "fret_imui::imui(cx,move|ui|{",
+    "usefret_ui_kit::imui::UiWriterImUiFacadeExtas_;",
+    "usefret_ui_kit::imui::UiWriterUiKitExtas_;",
+    "fret_ui_kit::imui::ButtonOptions",
+    "fret_ui_kit::imui::SwitchOptions",
+    "fret_ui_kit::imui::SliderOptions",
+    "fret_ui_kit::imui::ComboModelOptions",
+    "fret_ui_kit::imui::InputTextOptions",
+    "fret_ui_kit::imui::TableColumn",
+    "fret_ui_kit::imui::TableOptions",
+    "fret_ui_kit::imui::VirtualListOptions",
 ]
 
 SCRIPT_MARKERS = [
@@ -43,6 +71,10 @@ def missing_markers(source: str, markers: list[str]) -> list[str]:
     return [marker for marker in markers if marker not in source]
 
 
+def present_markers(source: str, markers: list[str]) -> list[str]:
+    return [marker for marker in markers if marker in source]
+
+
 def main() -> None:
     demo = normalized_source(DEMO_PATH)
     script = normalized_source(SCRIPT_PATH)
@@ -53,10 +85,19 @@ def main() -> None:
     for marker in missing_markers(script, SCRIPT_MARKERS):
         missing.append(f"{SCRIPT_PATH.as_posix()}: {marker}")
 
-    if missing:
+    forbidden = present_markers(demo, DEMO_FORBIDDEN_MARKERS)
+
+    if missing or forbidden:
+        details = []
+        if missing:
+            details.append("missing sortable table proof marker(s):\n  - " + "\n  - ".join(missing))
+        if forbidden:
+            details.append(
+                "found forbidden adapter facade marker(s):\n  - " + "\n  - ".join(forbidden)
+            )
         fail(
             GATE_NAME,
-            "missing sortable table proof marker(s):\n  - " + "\n  - ".join(missing),
+            "\n".join(details),
         )
 
     ok(GATE_NAME)

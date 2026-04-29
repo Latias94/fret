@@ -12,7 +12,7 @@ demo-local `InspectorSort`; clicking that header toggles the local sort state vi
 
 ```text
 cargo check -p fret-examples --jobs 1
-cargo nextest run -p fret-examples imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane --no-fail-fast
+python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 cargo fmt --package fret-examples --check
 python -m json.tool docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json
 python tools/check_workstream_catalog.py
@@ -22,5 +22,6 @@ git diff --check
 ## Evidence Anchors
 
 - `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
+- `tools/gate_imui_shadcn_adapter_sortable_table_source.py`
 - `apps/fret-examples/src/lib.rs`
 - `docs/workstreams/imui-table-sortable-header-v1/CLOSEOUT_AUDIT_2026-04-29.md`

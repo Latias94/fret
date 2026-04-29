@@ -7507,42 +7507,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane() {
-        assert!(
-            IMUI_SHADCN_ADAPTER_DEMO
-                .contains("use fret::{FretApp, advanced::prelude::*, imui::prelude::*};")
-        );
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("imui_in(cx, |ui| {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("imui(cx, move |ui| {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::ButtonOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::SwitchOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::SliderOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::ComboModelOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::InputTextOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("enum InspectorSort {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("TableSortDirection::Ascending"));
-        assert!(
-            IMUI_SHADCN_ADAPTER_DEMO
-                .contains("kit::TableColumn::fill(\"Signal###inspector-signal\")")
-        );
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains(".sorted(inspector_sort.direction())"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::TableOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("let table_response = ui.table_with_options("));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains(".header(sort_column_id)"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::VirtualListOptions {"));
-        assert!(IMUI_SHADCN_ADAPTER_DEMO.contains("kit::VirtualListMeasureMode::Fixed"));
-        assert!(!IMUI_SHADCN_ADAPTER_DEMO.contains("fret_imui::imui_in(cx, |ui| {"));
-        assert!(!IMUI_SHADCN_ADAPTER_DEMO.contains("fret_imui::imui(cx, move |ui| {"));
-        assert!(
-            !IMUI_SHADCN_ADAPTER_DEMO
-                .contains("use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;")
-        );
-        assert!(
-            !IMUI_SHADCN_ADAPTER_DEMO.contains("use fret_ui_kit::imui::UiWriterUiKitExt as _;")
-        );
-    }
-
-    #[test]
     fn imui_editor_proof_demo_prefers_root_fret_imui_entry_surface() {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("use fret::imui::prelude::*;"));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("use fret_ui_editor::imui as editor_imui;"));

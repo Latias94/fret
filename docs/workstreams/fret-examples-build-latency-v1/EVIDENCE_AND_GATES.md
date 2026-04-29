@@ -25,7 +25,9 @@ git diff --check
 
 ## Current Evidence
 
-- Passed: `python tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
+- Passed: `python tools/gate_imui_shadcn_adapter_sortable_table_source.py` (now covers the adapter
+  facade/entrypoint markers previously guarded by
+  `imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane`).
 - Passed: `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
