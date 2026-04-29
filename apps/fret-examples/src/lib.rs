@@ -264,8 +264,6 @@ pub mod workspace_shell_demo;
 
 #[cfg(test)]
 mod authoring_surface_policy_tests {
-    use std::path::{Path, PathBuf};
-
     const ASSETS_DEMO: &str = include_str!("assets_demo.rs");
     const ASYNC_PLAYGROUND_DEMO: &str = include_str!("async_playground_demo.rs");
     const API_WORKBENCH_LITE_DEMO: &str = include_str!("api_workbench_lite_demo.rs");
@@ -904,30 +902,6 @@ mod authoring_surface_policy_tests {
         "../../../tools/diag-scripts/suites/diag-hardening-smoke-workspace/suite.json"
     );
 
-    fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() {
-                collect_rust_sources(&path, out);
-                continue;
-            }
-
-            if path.extension().is_some_and(|ext| ext == "rs") {
-                out.push(path);
-            }
-        }
-    }
-
-    fn examples_rust_sources() -> Vec<PathBuf> {
-        let mut paths = Vec::new();
-        collect_rust_sources(
-            &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
-            &mut paths,
-        );
-        paths.sort();
-        paths
-    }
-
     fn assert_uses_advanced_surface(src: &str) {
         assert!(src.contains("advanced::prelude::*"));
         assert!(src.contains("KernelApp"));
@@ -1042,12 +1016,6 @@ mod authoring_surface_policy_tests {
         assert!(!normalized.contains(".run_view::<"));
     }
 
-    fn assert_setup_surface_keeps_inline_closures_off_setup(src: &str) {
-        let normalized = src.split_whitespace().collect::<String>();
-        assert!(!normalized.contains(".setup(|"));
-        assert!(!normalized.contains(".setup(move|"));
-    }
-
     fn assert_current_imui_teaching_surface(
         name: &str,
         src: &str,
@@ -1106,13 +1074,6 @@ mod authoring_surface_policy_tests {
     fn assert_prefers_fret_query_facade(src: &str) {
         assert!(src.contains("use fret::query::{"));
         assert!(!src.contains("use fret_query::{"));
-    }
-
-    fn assert_shadcn_surface_is_curated(src: &str) {
-        assert!(!src.contains("use fret_ui_shadcn as shadcn;"));
-        assert!(!src.contains("use fret_ui_shadcn::{self as shadcn"));
-        assert!(!src.contains("shadcn::shadcn_themes::"));
-        assert!(!src.contains("shadcn::typography::"));
     }
 
     fn assert_advanced_entry_prefers_view_elements_alias(src: &str, state: &str) {
@@ -7170,133 +7131,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn examples_source_tree_prefers_curated_shadcn_facade_imports() {
-        for path in examples_rust_sources() {
-            if path.ends_with("src/lib.rs") {
-                continue;
-            }
-
-            let source = std::fs::read_to_string(&path).unwrap();
-            assert!(!source.contains("use fret_ui_shadcn as shadcn;"));
-            assert!(!source.contains("use fret_ui_shadcn::{self as shadcn"));
-
-            for line in source.lines() {
-                if !line.contains("fret_ui_shadcn::") {
-                    continue;
-                }
-
-                let trimmed = line.trim();
-                let allowed = matches!(
-                    trimmed,
-                    "use fret_ui_shadcn::facade as shadcn;"
-                        | "use fret_ui_shadcn::{facade as shadcn, prelude::*};"
-                );
-                assert!(
-                    allowed,
-                    "{} reintroduced a non-curated fret_ui_shadcn import: {}",
-                    path.display(),
-                    trimmed
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn examples_source_tree_limits_raw_shadcn_escape_hatches() {
-        for path in examples_rust_sources() {
-            if path.ends_with("src/lib.rs") {
-                continue;
-            }
-
-            let source = std::fs::read_to_string(&path).unwrap();
-            for (line_idx, line) in source.lines().enumerate() {
-                let trimmed = line.trim();
-                if !(trimmed.contains("shadcn::raw::") || trimmed.contains("fret::shadcn::raw::")) {
-                    continue;
-                }
-
-                let allowed = trimmed.contains("shadcn::raw::typography::")
-                    || trimmed.contains("shadcn::raw::extras::")
-                    || trimmed.contains("fret::shadcn::raw::prelude::")
-                    || trimmed.contains("shadcn::raw::advanced::sync_theme_from_environment(")
-                    || trimmed
-                        .contains("fret::shadcn::raw::advanced::sync_theme_from_environment(")
-                    || trimmed.contains("shadcn::raw::advanced::install_with_ui_services(")
-                    || trimmed.contains("fret::shadcn::raw::advanced::install_with_ui_services(");
-                assert!(
-                    allowed,
-                    "{}:{} used an undocumented shadcn raw escape hatch: {}",
-                    path.display(),
-                    line_idx + 1,
-                    trimmed
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn examples_source_tree_avoids_raw_action_notify_helpers() {
-        let mut raw_action_notify_files = Vec::new();
-
-        for path in examples_rust_sources() {
-            if path.ends_with("src/lib.rs") {
-                continue;
-            }
-
-            let source = std::fs::read_to_string(&path).unwrap();
-            let uses_raw_action_notify_trait =
-                source.contains("use fret::advanced::AppUiRawActionNotifyExt as _;");
-            let uses_raw_action_notify = source.contains("cx.on_action_notify::<");
-            let uses_raw_payload_action_notify = source.contains("cx.on_payload_action_notify::<");
-
-            if uses_raw_action_notify_trait
-                || uses_raw_action_notify
-                || uses_raw_payload_action_notify
-            {
-                raw_action_notify_files
-                    .push(path.file_name().unwrap().to_string_lossy().into_owned());
-            }
-        }
-
-        assert_eq!(raw_action_notify_files, Vec::<String>::new());
-    }
-
-    #[test]
-    fn examples_source_tree_keeps_setup_on_named_installers() {
-        for path in examples_rust_sources() {
-            if path.ends_with("src/lib.rs") {
-                continue;
-            }
-
-            let source = std::fs::read_to_string(&path).unwrap();
-            assert_setup_surface_keeps_inline_closures_off_setup(&source);
-        }
-    }
-
-    #[test]
-    fn examples_source_tree_limits_setup_with_to_explicit_one_off_case() {
-        for path in examples_rust_sources() {
-            if path.ends_with("src/lib.rs") {
-                continue;
-            }
-
-            let source = std::fs::read_to_string(&path).unwrap();
-            let normalized = source.split_whitespace().collect::<String>();
-            if !normalized.contains(".setup_with(") {
-                continue;
-            }
-
-            assert_eq!(
-                path.file_name().and_then(|name| name.to_str()),
-                Some("imui_editor_proof_demo.rs"),
-                "{} unexpectedly used setup_with(...)",
-                path.display()
-            );
-            assert!(normalized.contains(".setup_with(move|"));
-        }
-    }
-
-    #[test]
     fn advanced_entry_examples_prefer_view_elements_aliases() {
         for (src, state) in [
             (CUSTOM_EFFECT_V1_DEMO, "CustomEffectV1State"),
@@ -9595,42 +9429,6 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains(".drive_embedded_viewport()"));
         assert!(!EMBEDDED_VIEWPORT_DEMO.contains("EmbeddedViewportUiAppDriverExt"));
         assert!(!IMUI_EDITOR_PROOF_DEMO.contains("EmbeddedViewportUiAppDriverExt"));
-    }
-
-    #[test]
-    fn first_party_examples_use_curated_shadcn_surface() {
-        for src in [
-            ASSETS_DEMO,
-            ASYNC_PLAYGROUND_DEMO,
-            CJK_CONFORMANCE_DEMO,
-            COMPONENTS_GALLERY_DEMO,
-            CUSTOM_EFFECT_V1_DEMO,
-            CUSTOM_EFFECT_V2_DEMO,
-            CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
-            CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
-            CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
-            CUSTOM_EFFECT_V2_WEB_DEMO,
-            CUSTOM_EFFECT_V3_DEMO,
-            DOCKING_ARBITRATION_DEMO,
-            DOCKING_DEMO,
-            DROP_SHADOW_DEMO,
-            EMBEDDED_VIEWPORT_DEMO,
-            EMOJI_CONFORMANCE_DEMO,
-            GENUI_DEMO,
-            HELLO_COUNTER_DEMO,
-            IME_SMOKE_DEMO,
-            IMUI_EDITOR_PROOF_DEMO,
-            IMUI_INTERACTION_SHOWCASE_DEMO,
-            IMUI_SHADCN_ADAPTER_DEMO,
-            LIQUID_GLASS_DEMO,
-            MARKDOWN_DEMO,
-            POSTPROCESS_THEME_DEMO,
-            QUERY_ASYNC_TOKIO_DEMO,
-            SIMPLE_TODO_DEMO,
-            SONNER_DEMO,
-        ] {
-            assert_shadcn_surface_is_curated(src);
-        }
     }
 
     #[test]

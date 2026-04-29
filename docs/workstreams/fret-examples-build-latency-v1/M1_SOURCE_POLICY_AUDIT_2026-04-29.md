@@ -1,14 +1,15 @@
 # Fret Examples Build Latency v1 - M1 Source Policy Audit - 2026-04-29
 
-Status: active
+Status: complete
 
 ## Mechanical Count
 
-After the adapter sortable, control-discoverability, IMUI facade teaching, and table/datatable gates
-moved to Python, the remaining `apps/fret-examples/src/lib.rs` test module still contains:
+After the adapter sortable, control-discoverability, IMUI facade teaching, table/datatable, and
+source-tree policy gates moved to Python, the remaining `apps/fret-examples/src/lib.rs` test module
+still contains:
 
 - 281 `include_str!` occurrences inside `authoring_surface_policy_tests`.
-- 128 Rust `#[test]` functions.
+- 122 Rust `#[test]` functions.
 
 The important smell is not the literal count by itself. The problem is that many tests only scan
 checked-in source text, but Cargo still has to compile the full examples crate before those tests can
@@ -62,6 +63,8 @@ Migrated after this audit:
 
 - The table/datatable source marker group is now covered by
   `tools/gate_table_source_policy.py`.
+- The source-tree policy checks are now covered by
+  `tools/gate_examples_source_tree_policy.py`.
 
 ## Keep In Rust For Now
 
@@ -76,9 +79,6 @@ These should stay in Rust until a stronger split exists:
 
 ## Next Slice Recommendation
 
-Move the source-tree policy checks as a package. They scan the same curated shadcn surface and
-escape-hatch vocabulary, so they should become one script-level gate instead of several Rust unit
-tests in the monolithic examples crate.
-
-After that source-policy slice, switch to M2 and decide whether `fret-demo` should stop linking
-through the full examples library for heavy demo families.
+M1 is complete for the high-confidence pure source-policy packages identified in this audit. Switch
+to M2 and decide whether `fret-demo` should stop linking through the full examples library for heavy
+demo families.

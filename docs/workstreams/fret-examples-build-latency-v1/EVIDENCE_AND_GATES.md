@@ -15,6 +15,7 @@ python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 python tools/gate_imui_shadcn_adapter_control_discoverability_source.py
 python tools/gate_imui_facade_teaching_source.py
 python tools/gate_table_source_policy.py
+python tools/gate_examples_source_tree_policy.py
 cargo check -p fret-examples --lib --jobs 1
 python tools/check_workstream_catalog.py
 git diff --check
@@ -33,17 +34,19 @@ git diff --check
 - Passed: `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python tools/gate_imui_facade_teaching_source.py`.
 - Passed: `python tools/gate_table_source_policy.py`.
+- Passed: `python tools/gate_examples_source_tree_policy.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_facade_teaching_source.py`.
 - Passed: `python -m py_compile tools/gate_table_source_policy.py`.
+- Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
 - Passed: `python tools/check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the table source-policy migration: 281 `include_str!` occurrences and 128 Rust
-  `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
+- Current count after the source-tree policy migration: 281 `include_str!` occurrences and 122
+  Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
   evaluated.
@@ -51,6 +54,7 @@ git diff --check
 ## Evidence Anchors
 
 - `apps/fret-examples/src/lib.rs`
+- `tools/gate_examples_source_tree_policy.py`
 - `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
 - `apps/fret-demo/Cargo.toml`
 - `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
