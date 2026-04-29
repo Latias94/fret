@@ -592,6 +592,8 @@ fn label_identity_table_headers_hide_suffixes_from_visible_labels() {
             let columns = [
                 TableColumn::fill("Name##asset-name-column"),
                 TableColumn::px("Status###status-column", Px(120.0)),
+                TableColumn::unlabeled(fret_ui_kit::imui::TableColumnWidth::px(Px(64.0)))
+                    .with_id("row-actions"),
             ];
             ui.table_with_options(
                 "identity-table",
@@ -604,6 +606,7 @@ fn label_identity_table_headers_hide_suffixes_from_visible_labels() {
                     table.row("asset-a", |row| {
                         row.cell_text("Asset A");
                         row.cell_text("Ready");
+                        row.cell_text("Open");
                     });
                 },
             );
@@ -622,6 +625,55 @@ fn label_identity_table_headers_hide_suffixes_from_visible_labels() {
 
     assert!(services.prepared.iter().any(|text| text == "Name"));
     assert!(services.prepared.iter().any(|text| text == "Status"));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.header.cell.name-asset-name-column"
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.header.cell.status-column"
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.header.cell.row-actions"
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.row.0.cell.name-asset-name-column"
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.row.0.cell.status-column"
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.row.0.cell.row-actions"
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-label-identity.table.header.cell.0"
+    ));
     assert!(
         !services.prepared.iter().any(|text| text.contains("##")
             || text.contains("###")

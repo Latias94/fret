@@ -132,7 +132,13 @@ fn render_table<H: UiHost>(
     let palette = resolve_table_palette(Theme::global(&*cx.app));
     let root_test_id = options.test_id.clone();
     let show_header = options.show_header && columns.iter().any(|column| column.header.is_some());
+    let column_test_id_suffixes = columns
+        .iter()
+        .enumerate()
+        .map(|(index, column)| column_test_id_suffix(column, index))
+        .collect::<Vec<_>>();
     let header = show_header.then(|| {
+        let column_test_id_suffixes = column_test_id_suffixes.clone();
         cx.keyed(format!("{id}.header"), |cx| {
             let cells = columns
                 .iter()
@@ -145,9 +151,12 @@ fn render_table<H: UiHost>(
                         }
                         None => empty_cell(cx),
                     };
-                    let test_id = root_test_id
-                        .as_ref()
-                        .map(|base| Arc::from(format!("{base}.header.cell.{index}")));
+                    let test_id = root_test_id.as_ref().map(|base| {
+                        Arc::from(format!(
+                            "{base}.header.cell.{}",
+                            column_test_id_suffixes[index]
+                        ))
+                    });
                     wrap_table_cell(cx, column, content, test_id, true, false, &options)
                 })
                 .collect::<Vec<_>>();
@@ -170,19 +179,30 @@ fn render_table<H: UiHost>(
         .enumerate()
         .map(|(row_index, row)| {
             let striped = options.striped && row_index % 2 == 1;
+            let column_test_id_suffixes = column_test_id_suffixes.clone();
             cx.keyed(row.key.clone(), |cx| {
                 let mut iter = row.cells.into_iter();
                 let mut cells = Vec::with_capacity(columns.len());
-                for column in &columns {
+                for (column_index, column) in columns.iter().enumerate() {
                     let built = iter.next().unwrap_or_else(|| BuiltTableCell {
                         test_id: None,
                         content: empty_cell(cx),
                     });
+                    let test_id = row
+                        .test_id
+                        .as_ref()
+                        .map(|base| {
+                            Arc::from(format!(
+                                "{base}.cell.{}",
+                                column_test_id_suffixes[column_index]
+                            ))
+                        })
+                        .or(built.test_id);
                     cells.push(wrap_table_cell(
                         cx,
                         column,
                         built.content,
-                        built.test_id,
+                        test_id,
                         false,
                         striped,
                         &options,
@@ -273,6 +293,36 @@ fn wrap_table_row<H: UiHost>(
     } else {
         row
     }
+}
+
+fn column_test_id_suffix(column: &TableColumn, index: usize) -> String {
+    column
+        .id
+        .as_deref()
+        .map(test_id_slug)
+        .filter(|slug| !slug.is_empty())
+        .unwrap_or_else(|| index.to_string())
+}
+
+fn test_id_slug(s: &str) -> String {
+    let mut out = String::new();
+    let mut last_was_separator = false;
+
+    for ch in s.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+            last_was_separator = false;
+        } else if !out.is_empty() && !last_was_separator {
+            out.push('-');
+            last_was_separator = true;
+        }
+    }
+
+    if out.ends_with('-') {
+        out.pop();
+    }
+
+    out
 }
 
 fn wrap_table_cell<H: UiHost>(

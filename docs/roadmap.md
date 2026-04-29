@@ -314,6 +314,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-table-header-label-policy-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-table-header-label-policy-v1/M1_TABLE_HEADER_VISIBLE_LABEL_SLICE_2026-04-28.md`,
   and `docs/workstreams/imui-table-header-label-policy-v1/CLOSEOUT_AUDIT_2026-04-28.md`.
+- ImUi table column identity closeout record (closed narrow follow-on for stable `TableColumn`
+  identity and identity-derived table diagnostics `test_id`s without adding sortable/resizable
+  column state):
+  `docs/workstreams/imui-table-column-identity-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-table-column-identity-v1/M1_TABLE_COLUMN_IDENTITY_SLICE_2026-04-29.md`,
+  and `docs/workstreams/imui-table-column-identity-v1/CLOSEOUT_AUDIT_2026-04-29.md`.
 - ImUi ID stack diagnostics follow-on closeout record (closed narrow lane that makes duplicate
   keyed-list hashes and unkeyed reorder identity problems visible in structured diagnostics
   snapshots and queryable through `diag query identity-warnings`, without exposing render-pass /

@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use fret_core::Px;
 
+use super::super::label_identity::parse_label_identity;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TableColumnWidth {
     Px(Px),
@@ -21,27 +23,34 @@ impl TableColumnWidth {
 #[derive(Debug, Clone)]
 pub struct TableColumn {
     pub header: Option<Arc<str>>,
+    pub id: Option<Arc<str>>,
     pub width: TableColumnWidth,
 }
 
 impl TableColumn {
     pub fn px(header: impl Into<Arc<str>>, width: Px) -> Self {
+        let header = header.into();
         Self {
-            header: Some(header.into()),
+            id: inferred_column_id(header.as_ref()),
+            header: Some(header),
             width: TableColumnWidth::Px(width),
         }
     }
 
     pub fn fill(header: impl Into<Arc<str>>) -> Self {
+        let header = header.into();
         Self {
-            header: Some(header.into()),
+            id: inferred_column_id(header.as_ref()),
+            header: Some(header),
             width: TableColumnWidth::Fill(1.0),
         }
     }
 
     pub fn weighted(header: impl Into<Arc<str>>, weight: f32) -> Self {
+        let header = header.into();
         Self {
-            header: Some(header.into()),
+            id: inferred_column_id(header.as_ref()),
+            header: Some(header),
             width: TableColumnWidth::Fill(weight),
         }
     }
@@ -49,9 +58,20 @@ impl TableColumn {
     pub fn unlabeled(width: TableColumnWidth) -> Self {
         Self {
             header: None,
+            id: None,
             width,
         }
     }
+
+    pub fn with_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+}
+
+fn inferred_column_id(header: &str) -> Option<Arc<str>> {
+    let identity = parse_label_identity(header).identity;
+    (!identity.is_empty()).then(|| Arc::from(identity))
 }
 
 #[derive(Debug, Clone)]

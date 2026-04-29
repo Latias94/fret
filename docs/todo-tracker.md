@@ -620,6 +620,10 @@ It complements (but does not replace) ADRs:
   closeout record for `TableColumn` visible-label grammar; start narrower follow-ons for
   sortable/resizable column identity, runtime ID-stack diagnostics, localization, or `test_id`
   inference.
+- Use `docs/workstreams/imui-table-column-identity-v1/WORKSTREAM.json` as the closed narrow
+  follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s;
+  start separate follow-ons for sortable/resizable column state, column sizing persistence,
+  localization-aware ids, or runtime ID-stack diagnostics.
 - Use `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json` as the closed narrow
   closeout record for structured IMUI/runtime identity diagnostics; route browser-style identity
   triage to `docs/workstreams/imui-id-stack-browser-v1/`, and keep `test_id` inference,

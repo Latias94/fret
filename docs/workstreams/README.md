@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-28
+Catalog updated: 2026-04-29
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 277
+- Dedicated directories: 278
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -591,6 +591,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closeout record for `TableColumn` visible-label grammar after the label identity closeout, while
     keeping sortable/resizable column identity and ID-stack diagnostics out of scope.
 
+- Closed narrow IMUI table column identity follow-on:
+  - `docs/workstreams/imui-table-column-identity-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-column-identity-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-column-identity-v1/M1_TABLE_COLUMN_IDENTITY_SLICE_2026-04-29.md`
+  - `docs/workstreams/imui-table-column-identity-v1/CLOSEOUT_AUDIT_2026-04-29.md`
+  - `docs/workstreams/imui-table-column-identity-v1/TODO.md`
+  - `docs/workstreams/imui-table-column-identity-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-column-identity-v1/EVIDENCE_AND_GATES.md`
+  - Scope: closed narrow follow-on for stable `TableColumn` identity and identity-derived table
+    header/body-cell diagnostics `test_id`s without sortable/resizable column state.
+
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -1000,6 +1011,7 @@ Rule:
 - `docs/workstreams/imui-text-control-chrome-stability-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for compact IMUI text input and textarea chrome stability after the shared control-chrome closeout)
 - `docs/workstreams/imui-control-geometry-stability-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for local base-control geometry stability across IMUI interaction states)
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
+- `docs/workstreams/imui-table-column-identity-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
 - `docs/workstreams/imui-id-stack-diagnostics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for structured IMUI/runtime identity diagnostics)
 - `docs/workstreams/imui-id-stack-browser-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for browser-style IMUI/runtime identity diagnostics)
