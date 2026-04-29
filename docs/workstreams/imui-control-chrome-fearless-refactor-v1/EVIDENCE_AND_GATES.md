@@ -68,7 +68,7 @@ These three surfaces together answer:
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_adapter_seam_smoke --test imui_combo_smoke`
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_bullet_text_smoke --test imui_separator_text_smoke --test imui_button_smoke`
 - `cargo nextest run -p fret-imui button_family_variants_and_radio_mount_with_expected_bounds`
-- `cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface`
+- `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`
 - `cargo nextest run -p fret-imui bullet_text_helper_renders_indicator_before_wrapped_label separator_text_helper_renders_label_with_trailing_rule button_family_variants_and_radio_mount_with_expected_bounds`
 - `cargo nextest run -p fret-imui button_activate_shortcut_is_scoped_to_focused_button button_lifecycle_edges_follow_press_session long_press_sets_long_pressed_true_once_and_reports_holding checkbox_lifecycle_reports_edit_and_deactivated_after_edit right_click_sets_context_menu_requested_true_once`
 

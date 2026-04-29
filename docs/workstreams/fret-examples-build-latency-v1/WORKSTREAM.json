@@ -36,6 +36,10 @@
       "command": "python tools/gate_imui_shadcn_adapter_sortable_table_source.py"
     },
     {
+      "name": "control-discoverability-source-gate",
+      "command": "python tools/gate_imui_shadcn_adapter_control_discoverability_source.py"
+    },
+    {
       "name": "fret-examples-check",
       "command": "cargo check -p fret-examples --lib --jobs 1"
     },
@@ -50,7 +54,9 @@
   ],
   "evidence": [
     "tools/gate_imui_shadcn_adapter_sortable_table_source.py",
+    "tools/gate_imui_shadcn_adapter_control_discoverability_source.py",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
+    "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",
     "apps/fret-examples/src/lib.rs",
     "docs/workstreams/fret-examples-build-latency-v1/DESIGN.md",

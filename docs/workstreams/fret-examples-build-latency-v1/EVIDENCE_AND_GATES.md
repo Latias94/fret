@@ -12,6 +12,7 @@ python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 
 ```text
 python tools/gate_imui_shadcn_adapter_sortable_table_source.py
+python tools/gate_imui_shadcn_adapter_control_discoverability_source.py
 cargo check -p fret-examples --lib --jobs 1
 python tools/check_workstream_catalog.py
 git diff --check
@@ -25,7 +26,9 @@ git diff --check
 ## Current Evidence
 
 - Passed: `python tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
+- Passed: `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
+- Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
 - Passed: `python tools/check_workstream_catalog.py`.
 - Passed: `git diff --check`.
@@ -39,5 +42,6 @@ git diff --check
 - `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
 - `apps/fret-demo/Cargo.toml`
 - `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
+- `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json`
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json`
 - `Cargo.toml`

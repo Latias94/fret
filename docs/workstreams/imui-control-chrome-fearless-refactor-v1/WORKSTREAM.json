@@ -89,7 +89,7 @@
     },
     {
       "name": "imui-shadcn-adapter-discoverability-source-gate",
-      "command": "cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface"
+      "command": "python tools/gate_imui_shadcn_adapter_control_discoverability_source.py"
     },
     {
       "name": "imui-shadcn-adapter-discoverability-diag",
@@ -133,6 +133,7 @@
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "tools/gate_imui_shadcn_adapter_control_discoverability_source.py",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs",
