@@ -48,6 +48,10 @@
       "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
+      "name": "table-source-policy-gate",
+      "command": "python tools/gate_table_source_policy.py"
+    },
+    {
       "name": "fret-examples-check",
       "command": "cargo check -p fret-examples --lib --jobs 1"
     },
@@ -64,6 +68,7 @@
     "tools/gate_imui_shadcn_adapter_sortable_table_source.py",
     "tools/gate_imui_shadcn_adapter_control_discoverability_source.py",
     "tools/gate_imui_facade_teaching_source.py",
+    "tools/gate_table_source_policy.py",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",

@@ -4,11 +4,11 @@ Status: active
 
 ## Mechanical Count
 
-After the adapter sortable, control-discoverability, and IMUI facade teaching gates moved to Python,
-the remaining `apps/fret-examples/src/lib.rs` test module still contains:
+After the adapter sortable, control-discoverability, IMUI facade teaching, and table/datatable gates
+moved to Python, the remaining `apps/fret-examples/src/lib.rs` test module still contains:
 
-- 207 `include_str!` constants inside `authoring_surface_policy_tests`.
-- 133 Rust `#[test]` functions.
+- 281 `include_str!` occurrences inside `authoring_surface_policy_tests`.
+- 128 Rust `#[test]` functions.
 
 The important smell is not the literal count by itself. The problem is that many tests only scan
 checked-in source text, but Cargo still has to compile the full examples crate before those tests can
@@ -58,6 +58,11 @@ Migrated after this audit:
   - `datatable_demo_uses_structured_table_debug_ids`
   - `table_stress_demo_uses_structured_table_debug_ids`
 
+Migrated after this audit:
+
+- The table/datatable source marker group is now covered by
+  `tools/gate_table_source_policy.py`.
+
 ## Keep In Rust For Now
 
 These should stay in Rust until a stronger split exists:
@@ -71,9 +76,9 @@ These should stay in Rust until a stronger split exists:
 
 ## Next Slice Recommendation
 
-Move the IMUI facade / teaching-surface checks as a package. They share a small file roster, mostly
-assert import/entrypoint vocabulary, and should become one script-level gate instead of several Rust
-unit tests in the monolithic examples crate.
+Move the source-tree policy checks as a package. They scan the same curated shadcn surface and
+escape-hatch vocabulary, so they should become one script-level gate instead of several Rust unit
+tests in the monolithic examples crate.
 
-Keep the table/datatable markers as the slice after that, because they are isolated and have stable
-file-level owners.
+After that source-policy slice, switch to M2 and decide whether `fret-demo` should stop linking
+through the full examples library for heavy demo families.
