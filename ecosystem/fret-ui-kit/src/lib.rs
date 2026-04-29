@@ -224,6 +224,8 @@ pub mod overlay;
 pub mod overlay_controller;
 pub mod primitives;
 pub mod recipes;
+#[cfg(any(feature = "state-selector", feature = "state-query"))]
+pub mod state;
 pub mod theme_tokens;
 pub mod tooltip_provider;
 pub mod tree;
@@ -456,6 +458,7 @@ mod source_policy_tests {
     const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
     const PRIMITIVES_TOOLTIP_RS: &str = include_str!("primitives/tooltip.rs");
     const RECIPES_SORTABLE_DND_RS: &str = include_str!("recipes/sortable_dnd.rs");
+    const STATE_RS: &str = include_str!("state.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
@@ -838,15 +841,25 @@ mod source_policy_tests {
     #[test]
     fn query_watch_helpers_stay_opt_in_and_out_of_default_declarative_prelude() {
         assert!(
-            DECLARATIVE_MODEL_WATCH_RS.contains("#[cfg(feature = \"state-query\")]"),
-            "declarative/model_watch.rs should keep query-watch helpers behind the `state-query` feature"
+            LIB_RS.contains(
+                "#[cfg(any(feature = \"state-selector\", feature = \"state-query\"))]\npub mod state;"
+            ),
+            "lib.rs should keep state adapters behind explicit opt-in features"
         );
         assert!(
-            DECLARATIVE_MODEL_WATCH_RS.contains("pub trait QueryHandleWatchExt<T: 'static>"),
-            "declarative/model_watch.rs should keep the opt-in query-watch helper explicit"
+            STATE_RS.contains("#[cfg(feature = \"state-query\")]"),
+            "state.rs should keep query-watch helpers behind the `state-query` feature"
         );
         assert!(
-            DECLARATIVE_MOD_RS.contains("pub use model_watch::QueryHandleWatchExt;"),
+            STATE_RS.contains("pub trait QueryHandleWatchExt<T: 'static>"),
+            "state.rs should keep the opt-in query-watch helper explicit"
+        );
+        assert!(
+            !DECLARATIVE_MODEL_WATCH_RS.contains("fret_query"),
+            "declarative/model_watch.rs should stay query-crate agnostic"
+        );
+        assert!(
+            DECLARATIVE_MOD_RS.contains("pub use crate::state::QueryHandleWatchExt;"),
             "declarative/mod.rs should keep query-watch helpers on the explicit declarative root"
         );
         assert!(

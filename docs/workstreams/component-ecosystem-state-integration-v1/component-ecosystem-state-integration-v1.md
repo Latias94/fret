@@ -188,10 +188,13 @@ Locked in this workstream:
   - `state-query`: enables query adapters/sugar,
   - `state`: umbrella convenience feature (`state-selector` + `state-query`).
 - primitives remain state-stack agnostic; recipe/app layers consume optional state adapters.
+- v1 does not add a dedicated helper crate or shared third-party adapter traits. Concrete optional
+  helpers live in the owning ecosystem crate's feature-gated `state.rs` module (for example
+  `fret-ui-kit::state` or `fret-ui-shadcn::state`). Extract a shared helper crate only after at
+  least two real reusable consumers converge on the same trait shape.
 
 Remaining open questions:
 
-- whether to publish shared adapter traits for third-party crates in `fret-ui-kit`,
 - minimum required diagnostics/gates before v1 freeze (lint + nextest + diag scripts),
 - how far to push "query-aware recipes" vs keeping recipe layer fully data-driven.
 
@@ -313,6 +316,10 @@ Feature naming adoption (v1 convention):
 
 Recipe-layer adapter sample (optional, feature-gated):
 
+- `ecosystem/fret-ui-kit/src/state.rs`
+  - query helper: `QueryHandleWatchExt`, re-exported from `declarative` only under `state-query`
+  - ownership: the query dependency stays in the opt-in adapter module, not in base
+    `declarative/model_watch.rs`
 - `ecosystem/fret-ui-shadcn/src/state.rs`
   - selector helper: `use_selector_badge(...) -> Badge`
   - query helpers: `query_status_badge(...) -> Badge`, `query_error_alert(...) -> Option<Alert>`
@@ -327,6 +334,11 @@ optional adapter seam a nextest-backed runtime proof. The test opens the `state`
 `use_selector_badge(...)` through a real `ElementContext`, verifies stable selector dependencies do
 not recompute across retained frames, and verifies `query_status_badge(...)` /
 `query_error_alert(...)` mappings for idle, success, and error query states.
+
+Status note (2026-04-29): `fret-ui-kit` moved its query watch helper out of
+`declarative/model_watch.rs` and into the opt-in `state.rs` adapter module. The
+`tools/check_component_state_coupling.py` gate now scans production source with corrected regexes
+and catches direct query/selector coupling outside allowlisted state adapter seams.
 
 Status note (2026-04-29): `tools/diag-scripts/cookbook/async-inbox-basics/` now includes a launched
 diagnostics regression for async state plus command routing. The script clicks the typed `Start`

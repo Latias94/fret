@@ -43,6 +43,12 @@ def _is_allowlisted(rel_path: str, allow_regexes: list[re.Pattern[str]]) -> bool
     return any(p.search(rel_path) is not None for p in allow_regexes)
 
 
+def _production_source(content: str) -> str:
+    """Return the production portion of a Rust source file for simple policy scanning."""
+
+    return content.split("#[cfg(test)]", 1)[0]
+
+
 def _scan_source_files(
     *,
     repo_root: Path,
@@ -64,17 +70,17 @@ def _scan_source_files(
                 continue
 
             try:
-                with path.open("r", encoding="utf-8", errors="replace") as f:
-                    for line_no, line in enumerate(f, start=1):
-                        for rule_name, pattern in code_rules:
-                            if pattern.search(line) is not None:
-                                violations.append(
-                                    Violation(
-                                        rule=rule_name,
-                                        path=rel,
-                                        detail=f"line {line_no}: {line.strip()}",
-                                    )
+                content = path.read_text(encoding="utf-8", errors="replace")
+                for line_no, line in enumerate(_production_source(content).splitlines(), start=1):
+                    for rule_name, pattern in code_rules:
+                        if pattern.search(line) is not None:
+                            violations.append(
+                                Violation(
+                                    rule=rule_name,
+                                    path=rel,
+                                    detail=f"line {line_no}: {line.strip()}",
                                 )
+                            )
             except OSError as exc:
                 violations.append(Violation(rule="io-error", path=rel, detail=str(exc)))
 
@@ -98,14 +104,14 @@ def _scan_manifests(
         content = path.read_text(encoding="utf-8", errors="replace")
 
         for dep_name, feature in dep_policies:
-            dep_re = re.compile(rf"(?m)^\\s*{re.escape(dep_name)}\\s*=\\s*(.+)$")
+            dep_re = re.compile(rf"(?m)^\s*{re.escape(dep_name)}\s*=\s*(.+)$")
             matches = list(dep_re.finditer(content))
             if not matches:
                 continue
 
             for m in matches:
                 line = m.group(0).strip()
-                if re.search(r"optional\\s*=\\s*true", line) is None:
+                if re.search(r"optional\s*=\s*true", line) is None:
                     violations.append(
                         Violation(
                             rule=f"{dep_name}-must-be-optional",
@@ -114,7 +120,7 @@ def _scan_manifests(
                         )
                     )
 
-            if re.search(rf"(?m)^\\s*{re.escape(feature)}\\s*=", content) is None:
+            if re.search(rf"(?m)^\s*{re.escape(feature)}\s*=", content) is None:
                 violations.append(
                     Violation(
                         rule=f"missing-{feature}-feature",
@@ -123,9 +129,9 @@ def _scan_manifests(
                     )
                 )
 
-        has_state_selector = re.search(r"(?m)^\\s*state-selector\\s*=", content) is not None
-        has_state_query = re.search(r"(?m)^\\s*state-query\\s*=", content) is not None
-        if (has_state_selector or has_state_query) and re.search(r"(?m)^\\s*state\\s*=", content) is None:
+        has_state_selector = re.search(r"(?m)^\s*state-selector\s*=", content) is not None
+        has_state_query = re.search(r"(?m)^\s*state-query\s*=", content) is not None
+        if (has_state_selector or has_state_query) and re.search(r"(?m)^\s*state\s*=", content) is None:
             violations.append(
                 Violation(
                     rule="missing-state-umbrella-feature",
@@ -163,17 +169,18 @@ def main(argv: list[str]) -> int:
     ]
 
     allow_regexes = [
-        re.compile(r"^ecosystem/fret-ui-kit/src/state(?:/|\\.rs)"),
-        re.compile(r"^ecosystem/fret-ui-shadcn/src/state(?:/|\\.rs)"),
-        re.compile(r"^ecosystem/fret-ui-material3/src/state(?:/|\\.rs)"),
-        re.compile(r"^ecosystem/fret-imui/src/state(?:/|\\.rs)"),
+        re.compile(r"^ecosystem/fret-ui-kit/src/state(?:/|\.rs)"),
+        re.compile(r"^ecosystem/fret-ui-shadcn/src/state(?:/|\.rs)"),
+        re.compile(r"^ecosystem/fret-ui-material3/src/state(?:/|\.rs)"),
+        re.compile(r"^ecosystem/fret-imui/src/state(?:/|\.rs)"),
+        re.compile(r"^ecosystem/.+/src/.*_tests\.rs$"),
     ]
 
     code_rules = [
-        ("no-fret-query-import-in-primitives", re.compile(r"\\bfret_query::")),
-        ("no-fret-selector-import-in-primitives", re.compile(r"\\bfret_selector::")),
-        ("no-use-query-sugar-in-primitives", re.compile(r"\\.use_query(?:_async|_async_local)?\\s*\\(")),
-        ("no-use-selector-sugar-in-primitives", re.compile(r"\\.use_selector(?:_keyed)?\\s*\\(")),
+        ("no-fret-query-import-in-primitives", re.compile(r"\bfret_query::")),
+        ("no-fret-selector-import-in-primitives", re.compile(r"\bfret_selector::")),
+        ("no-use-query-sugar-in-primitives", re.compile(r"\.use_query(?:_async|_async_local)?\s*\(")),
+        ("no-use-selector-sugar-in-primitives", re.compile(r"\.use_selector(?:_keyed)?\s*\(")),
     ]
 
     dep_policies = [

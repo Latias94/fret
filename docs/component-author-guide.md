@@ -237,6 +237,30 @@ props.corner_radii = Corners::all(radius);
 cx.container(props, |_cx| Vec::new());
 ```
 
+### 2.3) State adapters: keep primitive APIs value-first
+
+Reusable primitives and base recipes should not fetch, subscribe to, or derive async/selector state
+implicitly. Their public API should accept plain values, caller-owned handles, callbacks, or typed
+actions; the component should render the current snapshot and emit intent.
+
+If a component family needs selector/query integration, add it as an optional adapter at the recipe
+or app-facade seam:
+
+- Gate adapter modules behind `state-selector`, `state-query`, or `state`.
+- Keep direct `fret-selector` / `fret-query` imports inside the adapter module.
+- Read or derive state in the adapter, then pass ordinary values into the base component.
+- Route row/item mutations through typed actions or typed callbacks, not parsed command strings.
+
+Avoid adding these to primitive props or base constructors:
+
+- `QueryClient`, `QueryHandle`, query cache handles, or fetch closures,
+- selector closures, `DepsBuilder`, `DepsSignature`, or invalidation policy knobs,
+- hidden async tasks started as a side effect of constructing or rendering the component.
+
+App authors can still use `cx.data().selector_layout(...)`, `cx.data().selector(...)`, and
+`cx.data().query(...)` directly. The boundary is about reusable component contracts: state stack
+integration is opt-in adapter policy, not a primitive dependency.
+
 ## 3) Actions + shortcuts: author action-first, lower through the command pipeline where needed
 
 If an interaction can be triggered by keyboard/menu/palette, the public authoring surface should

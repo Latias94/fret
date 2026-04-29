@@ -1,7 +1,5 @@
 use std::any::Any;
 
-#[cfg(feature = "state-query")]
-use fret_query::{QueryHandle, QueryState};
 use fret_runtime::{Model, ModelUpdateError};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
@@ -92,6 +90,19 @@ pub struct WatchedModel<'cx, 'm, 'a, H: UiHost, T: Any> {
 }
 
 impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedModel<'cx, 'm, 'a, H, T> {
+    #[cfg(feature = "state-query")]
+    pub(crate) fn new(
+        cx: &'cx mut ElementContext<'a, H>,
+        model: &'m Model<T>,
+        invalidation: Invalidation,
+    ) -> Self {
+        Self {
+            cx,
+            model,
+            invalidation,
+        }
+    }
+
     pub fn invalidation(mut self, invalidation: Invalidation) -> Self {
         self.invalidation = invalidation;
         self
@@ -203,48 +214,5 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedModel<'cx, 'm, 'a, H, T> {
 
     pub fn read<R>(self, f: impl FnOnce(&mut H, &T) -> R) -> Result<R, ModelUpdateError> {
         self.cx.read_model(self.model, self.invalidation, f)
-    }
-}
-
-#[cfg(feature = "state-query")]
-pub trait QueryHandleWatchExt<T: 'static> {
-    fn watch_query<'cx, 'a, H: UiHost>(
-        &self,
-        cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>>;
-
-    fn paint_query<'cx, 'a, H: UiHost>(
-        &self,
-        cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
-        self.watch_query(cx).paint()
-    }
-
-    fn layout_query<'cx, 'a, H: UiHost>(
-        &self,
-        cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
-        self.watch_query(cx).layout()
-    }
-
-    fn hit_test_query<'cx, 'a, H: UiHost>(
-        &self,
-        cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
-        self.watch_query(cx).hit_test()
-    }
-}
-
-#[cfg(feature = "state-query")]
-impl<T: 'static> QueryHandleWatchExt<T> for QueryHandle<T> {
-    fn watch_query<'cx, 'a, H: UiHost>(
-        &self,
-        cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedModel<'cx, '_, 'a, H, QueryState<T>> {
-        WatchedModel {
-            cx,
-            model: self.model(),
-            invalidation: Invalidation::Paint,
-        }
     }
 }

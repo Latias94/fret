@@ -50,7 +50,13 @@ Exit criteria:
   - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1-todo.md`
 - [x] CSTATE-contract-002 Confirm feature naming policy for optional state adapters (`state-selector`, `state-query`, plus umbrella `state`).
   - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md` ("Decision log and remaining open questions")
-- [ ] CSTATE-contract-003 Decide whether to host third-party adapter traits in `fret-ui-kit` or a dedicated helper crate.
+- [x] CSTATE-contract-003 Decide whether to host third-party adapter traits in `fret-ui-kit` or a dedicated helper crate.
+  - Decision: do not add shared third-party adapter traits or a dedicated helper crate in v1.
+    Concrete helpers stay in owning crate-local optional `state.rs` modules until multiple real
+    reusable consumers converge on one trait shape.
+  - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`
+    ("Decision log and remaining open questions").
+  - Evidence: `ecosystem/fret-ui-kit/src/state.rs`.
 
 ---
 
@@ -63,8 +69,15 @@ Exit criteria:
 
 - [x] CSTATE-api-010 Audit `ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `ecosystem/fret-ui-material3`, and `ecosystem/fret-imui` for direct selector/query coupling in primitive-level APIs.
   - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md` ("Initial audit and guardrail")
-- [ ] CSTATE-api-011 Refactor any leaked coupling to optional adapters or app-side orchestration.
-- [ ] CSTATE-api-012 Add contributor guidance: primitive APIs should not fetch or derive async state implicitly.
+- [x] CSTATE-api-011 Refactor any leaked coupling to optional adapters or app-side orchestration.
+  - Evidence: `ecosystem/fret-ui-kit/src/state.rs`.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/model_watch.rs`
+    (`WatchedModel` remains query-crate agnostic; query helper moved out).
+  - Gate: `python tools/check_component_state_coupling.py`.
+- [x] CSTATE-api-012 Add contributor guidance: primitive APIs should not fetch or derive async state implicitly.
+  - Evidence: `docs/component-author-guide.md` ("State adapters: keep primitive APIs value-first").
+  - Evidence: `docs/component-authoring-contracts.md` ("What not to do" + checklist state adapter item).
+  - Gate: `python tools/check_component_state_coupling.py`.
 
 ---
 
@@ -135,6 +148,8 @@ Exit criteria:
 
 - [x] CSTATE-gate-050 Add a lightweight check preventing direct selector/query coupling in primitive contracts (allowlist for adapter modules).
   - Evidence: `tools/check_component_state_coupling.py`
+  - Gate repair (2026-04-29): regex patterns compile and scan the intended Rust/source manifest
+    tokens under `python tools/check_component_state_coupling.py`.
 - [x] CSTATE-gate-051 Add nextest coverage for one selector adapter and one query adapter path.
   - Evidence: `ecosystem/fret-ui-shadcn/tests/state_adapters.rs`.
   - Gate: `cargo nextest run -p fret-ui-shadcn --features state --test state_adapters --no-fail-fast`.

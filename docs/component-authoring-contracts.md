@@ -147,6 +147,12 @@ Public constructors/setters that accept children should use:
   keymaps, theme registries). Use explicit `install(...)` entrypoints in app-facing crates instead.
 - Do not leak kernel-level props types in your public API unless you are intentionally exposing a
   mechanism surface.
+- Do not make primitive/base component APIs depend on `fret-query` or `fret-selector` types. Keep
+  `QueryClient`, `QueryHandle`, selector signatures, `DepsBuilder`, fetch closures, and invalidation
+  policy knobs in optional adapter modules or app-side orchestration.
+- Do not start async work, subscribe to query caches, or derive selector values implicitly from
+  primitive construction/rendering. Base components should render plain snapshots and emit typed
+  actions/callbacks; adapters own state-stack reads and invalidation.
 
 ## Identity and element-local state (hard-to-change contract)
 
@@ -377,9 +383,11 @@ Feature flags to be aware of:
 2. **Identity:** use `scope`/`keyed` correctly; avoid unstable identity in lists.
 3. **State:** store UI-local state via `root_state` / `slot_state` / `provide` / app models as
    appropriate; avoid global singletons in runtime.
-4. **Invalidation:** register observation for every model read (layout vs paint vs hit-test).
-5. **Hooks:** implement interaction policy via action hooks + headless helpers.
-6. **Semantics:** pick a role, set label/value/flags, and stamp collection metadata where needed.
-7. **Overlays:** request through `OverlayController` and anchor via visual bounds when transforms
+4. **State adapters:** keep selector/query integration behind optional recipe/app-facade adapters;
+   base component APIs stay value-first and compile without `state-selector` / `state-query`.
+5. **Invalidation:** register observation for every model read (layout vs paint vs hit-test).
+6. **Hooks:** implement interaction policy via action hooks + headless helpers.
+7. **Semantics:** pick a role, set label/value/flags, and stamp collection metadata where needed.
+8. **Overlays:** request through `OverlayController` and anchor via visual bounds when transforms
    matter.
-8. **Tests:** add nextest unit/contract tests in the owning crate for the hard behaviors.
+9. **Tests:** add nextest unit/contract tests in the owning crate for the hard behaviors.
