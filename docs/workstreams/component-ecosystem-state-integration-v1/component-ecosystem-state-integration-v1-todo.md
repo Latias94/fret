@@ -139,7 +139,9 @@ Exit criteria:
   - Evidence: `tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-command-routing-regression.json`.
   - Gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-command-routing-regression.json --dir target/fret-diag/cookbook-async-inbox-command-routing --session-auto --pack --ai-packet --launch -- cargo run -p fret-cookbook --example async_inbox_basics --features cookbook-async,cookbook-diag`.
   - Evidence: `target/fret-diag/cookbook-async-inbox-command-routing/sessions/1777430017004-45256/share/1777430019144.zip`.
-- [ ] CSTATE-docs-053 Add a migration note for ecosystem maintainers adopting optional state adapters.
+- [x] CSTATE-docs-053 Add a migration note for ecosystem maintainers adopting optional state adapters.
+  - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md`
+    ("Maintainer migration note for optional state adapters").
 - [x] CSTATE-docs-054 Add ecosystem-by-ecosystem selector/query recommendation matrix.
   - Evidence: `docs/workstreams/component-ecosystem-state-integration-v1/component-ecosystem-state-integration-v1.md` ("Ecosystem-by-ecosystem state recommendation matrix")
 

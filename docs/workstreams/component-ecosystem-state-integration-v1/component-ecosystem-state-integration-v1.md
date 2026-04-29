@@ -356,3 +356,33 @@ Scope of that landing note:
 - orchestrate selector/query on the host side,
 - pass plain snapshots into immediate draws,
 - include practical integration scenarios (`reqwest`, `sqlx`, stream pipelines).
+
+## 15) Maintainer migration note for optional state adapters
+
+When an ecosystem maintainer adopts selector/query helpers, migrate in this order:
+
+1. Keep the primitive or base recipe API value-first.
+   - Inputs stay as plain values, existing model handles, callbacks, or typed actions.
+   - Do not add `QueryClient`, `QueryHandle`, `DepsBuilder`, selector signatures, or async runtime
+     assumptions to primitive props.
+2. Add adapter helpers at the recipe or app-facade seam.
+   - Prefer a recipe-local `state.rs` module gated by `state-selector`, `state-query`, or `state`.
+   - Re-export helpers from the curated app-facing facade only behind the same feature gates.
+   - Keep direct `fret-query` / `fret-selector` imports isolated to the adapter module.
+3. Route mutations through typed actions, not parsed command strings.
+   - Static menu/keymap commands may stay on stable `CommandId`.
+   - Dynamic row/item intents should use typed payload actions and action handlers.
+4. Prove the migration with one small artifact.
+   - For pure adapter logic, add a focused nextest path.
+   - For app-facing examples, add or refresh one launched `fretboard-dev diag` script using stable
+     `test_id` selectors.
+   - If a demo overflows the Windows debug launch stack, split large nested builder expressions with
+     explicit `AnyElement` boundaries instead of raising stack size as the default fix.
+
+Migration review checklist:
+
+- base API still compiles without `state-selector` / `state-query`,
+- optional feature names match the v1 policy,
+- adapter exports are feature-gated at every public re-export,
+- docs/examples show app-owned query/selector orchestration and typed action routing,
+- gate evidence is linked from this workstream TODO or a narrower follow-on.
