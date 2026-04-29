@@ -322,6 +322,12 @@ Recipe-layer adapter sample (optional, feature-gated):
 This keeps primitive contracts state-stack agnostic while giving official recipes a low-friction,
 opt-in state integration path.
 
+Status note (2026-04-29): `ecosystem/fret-ui-shadcn/tests/state_adapters.rs` now gives the
+optional adapter seam a nextest-backed runtime proof. The test opens the `state` feature, renders
+`use_selector_badge(...)` through a real `ElementContext`, verifies stable selector dependencies do
+not recompute across retained frames, and verifies `query_status_badge(...)` /
+`query_error_alert(...)` mappings for idle, success, and error query states.
+
 ## 14) imui compatibility landing (service-first)
 
 The current `imui` ownership baseline and service-first integration guidance are captured in:

@@ -128,7 +128,9 @@ Exit criteria:
 
 - [x] CSTATE-gate-050 Add a lightweight check preventing direct selector/query coupling in primitive contracts (allowlist for adapter modules).
   - Evidence: `tools/check_component_state_coupling.py`
-- [ ] CSTATE-gate-051 Add nextest coverage for one selector adapter and one query adapter path.
+- [x] CSTATE-gate-051 Add nextest coverage for one selector adapter and one query adapter path.
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/state_adapters.rs`.
+  - Gate: `cargo nextest run -p fret-ui-shadcn --features state --test state_adapters --no-fail-fast`.
 - [ ] CSTATE-gate-052 Add one `fretboard-dev diag` script for async-state + command routing interaction regression.
 - [ ] CSTATE-docs-053 Add a migration note for ecosystem maintainers adopting optional state adapters.
 - [x] CSTATE-docs-054 Add ecosystem-by-ecosystem selector/query recommendation matrix.
