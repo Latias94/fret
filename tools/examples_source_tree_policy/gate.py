@@ -360,6 +360,85 @@ HELLO_COUNTER_APP_LANE_FORBIDDEN = [
     ".max_w(Px(480.0)).into_element(cx)",
 ]
 
+QUERY_CAPABILITY_LANDING_SOURCES = [
+    EXAMPLES_SRC / "query_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+]
+
+QUERY_CAPABILITY_LANDING_REQUIRED = [
+    "use fret_ui_kit::IntoUiElementInExt as _;",
+    "}).gap(Space::N2).items_center().into_element_in(cx);",
+    "}).gap(Space::N2).into_element_in(cx);",
+]
+
+QUERY_CAPABILITY_LANDING_FORBIDDEN = [
+    "}).gap(Space::N2).items_center().into_element(cx);",
+    "}).gap(Space::N2).into_element(cx);",
+]
+
+MARKDOWN_LAYOUT_QUERY_REQUIRED = [
+    "cx.layout_query_bounds(anchor_id, Invalidation::Layout)",
+    "cx.layout_query_bounds(viewport_region, Invalidation::Layout)",
+    "cx.layout_query_region_with_id(props, move |_cx, id| {",
+    "let scroll = cx.layout_query_region_with_id(",
+    "pending_anchor.set_in(cx.app_mut().models_mut(), None);",
+]
+
+MARKDOWN_LAYOUT_QUERY_FORBIDDEN = [
+    "pending_anchor.set_in(cx.app.models_mut(), None);",
+    "cx.elements().layout_query_bounds(",
+    "cx.elements().layout_query_region_with_id(",
+]
+
+MARKDOWN_CAPABILITY_LANDING_REQUIRED = [
+    "use fret_ui_kit::IntoUiElementInExt as _;",
+    "}).gap(Space::N3).wrap().items_center().into_element_in(cx);",
+    "}).w_full().padding_px(padding_md).into_element_in(cx)])",
+    ".refine_layout(LayoutRefinement::default().w_full().flex_1()).into_element_in(cx);",
+    "}).w_full().h_full().gap(Space::N3).padding_px(padding_md).into_element_in(cx);",
+    "ui::container(|_cx| [content]).bg(ColorRef::Color(theme.color_token(\"background\"))).w_full().h_full().into_element_in(cx).into()",
+]
+
+MARKDOWN_CAPABILITY_LANDING_FORBIDDEN = [
+    "}).gap(Space::N3).wrap().items_center().into_element(cx);",
+    "}).w_full().padding_px(padding_md).into_element(cx)])",
+    ".refine_layout(LayoutRefinement::default().w_full().flex_1()).into_element(cx);",
+    "}).w_full().h_full().gap(Space::N3).padding_px(padding_md).into_element(cx);",
+    "}).bg(ColorRef::Color(theme.color_token(\"background\"))).w_full().h_full().into_element(cx).into()",
+]
+
+EDITOR_NOTES_REUSABLE_PANEL_REQUIRED = [
+    "fn selection_button<'a, Cx>(",
+    "pub(crate) fn render_selection_panel<'a, Cx>(",
+    "pub(crate) fn render_center_panel<'a, Cx>(",
+    "pub(crate) fn render_inspector_panel<'a, Cx>(",
+    "Cx: fret::app::ElementContextAccess<'a, App>,",
+]
+
+EDITOR_NOTES_REUSABLE_PANEL_FORBIDDEN = [
+    "fn selection_button(cx: &mut AppUi<'_, '_>,",
+    "fn render_selection_panel(cx: &mut AppUi<'_, '_>,",
+    "fn render_center_panel(cx: &mut AppUi<'_, '_>,",
+    "fn render_inspector_panel(cx: &mut AppUi<'_, '_>,",
+    "fn render_selection_panel(cx: &mut AppComponentCx<'_>,",
+    "fn render_center_panel(cx: &mut AppComponentCx<'_>,",
+    "fn render_inspector_panel(cx: &mut AppComponentCx<'_>,",
+]
+
+EDITOR_NOTES_RENDER_SLICE_REQUIRED = [
+    ".h_full().into_element_in(cx).test_id(TEST_ID_LEFT_RAIL);",
+    ".h_full().into_element_in(cx).test_id(TEST_ID_RIGHT_RAIL);",
+    ".background(Some(theme.color_token(\"background\"))).into_element_in(cx);",
+    "ui::container(|_cx| [frame]).p(Space::N4).size_full().into_element_in(cx).test_id(TEST_ID_ROOT).into()",
+]
+
+EDITOR_NOTES_RENDER_SLICE_FORBIDDEN = [
+    ".h_full().into_element(cx).test_id(TEST_ID_LEFT_RAIL);",
+    ".h_full().into_element(cx).test_id(TEST_ID_RIGHT_RAIL);",
+    ".background(Some(theme.color_token(\"background\"))).into_element(cx);",
+    "ui::container(|_cx| [frame]).p(Space::N4).size_full().into_element(cx).test_id(TEST_ID_ROOT).into()",
+]
+
 INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES = [
     (
         EXAMPLES_SRC / "form_demo.rs",
@@ -1289,6 +1368,49 @@ def check_default_app_surface_sources(failures: list[Failure]) -> None:
     )
 
 
+def check_query_markdown_editor_notes_source_policies(failures: list[Failure]) -> None:
+    for path in QUERY_CAPABILITY_LANDING_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=QUERY_CAPABILITY_LANDING_REQUIRED,
+            forbidden=QUERY_CAPABILITY_LANDING_FORBIDDEN,
+            failures=failures,
+        )
+
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "markdown_demo.rs",
+        read_source(EXAMPLES_SRC / "markdown_demo.rs"),
+        required=MARKDOWN_LAYOUT_QUERY_REQUIRED + MARKDOWN_CAPABILITY_LANDING_REQUIRED,
+        forbidden=MARKDOWN_LAYOUT_QUERY_FORBIDDEN + MARKDOWN_CAPABILITY_LANDING_FORBIDDEN,
+        failures=failures,
+    )
+
+    editor_notes_source = read_source(EXAMPLES_SRC / "editor_notes_demo.rs")
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "editor_notes_demo.rs",
+        editor_notes_source,
+        required=[
+            "use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};",
+            *EDITOR_NOTES_REUSABLE_PANEL_REQUIRED,
+        ],
+        forbidden=EDITOR_NOTES_REUSABLE_PANEL_FORBIDDEN,
+        failures=failures,
+    )
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "editor_notes_demo.rs",
+        source_slice(
+            EXAMPLES_SRC / "editor_notes_demo.rs",
+            editor_notes_source,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "impl EditorNotesDemoView {",
+        ),
+        required=EDITOR_NOTES_RENDER_SLICE_REQUIRED,
+        forbidden=EDITOR_NOTES_RENDER_SLICE_FORBIDDEN,
+        failures=failures,
+    )
+
+
 def check_model_read_and_asset_helper_sources(failures: list[Failure]) -> None:
     for path in DIRECT_LEAF_VISIBILITY_READ_SOURCES:
         check_required_forbidden_markers(
@@ -1384,6 +1506,7 @@ def main() -> None:
     check_theme_snapshot_helpers(failures)
     check_local_state_bridge_sources(failures)
     check_default_app_surface_sources(failures)
+    check_query_markdown_editor_notes_source_policies(failures)
     check_model_read_and_asset_helper_sources(failures)
 
     print_failures(failures)

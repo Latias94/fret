@@ -99,9 +99,14 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M14_SOURCE_GATE_STRUCTURE_SPLIT_2026-04-30.md`
   after keeping `tools/gate_examples_source_tree_policy.py` as the stable command wrapper and moving
   the implementation to `tools/examples_source_tree_policy/gate.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M15_QUERY_MARKDOWN_EDITOR_NOTES_SOURCE_GATE_2026-04-30.md`
+  after moving query/query-async capability-first landing, markdown layout-query/capability-first
+  landing, and editor notes reusable-panel/root markers into
+  `tools/examples_source_tree_policy/gate.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the default app surface source migration: 281 `include_str!` occurrences and 79
+- Current count after the query/markdown/editor notes source migration: 281 `include_str!` occurrences and 74
   Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -142,4 +147,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M12_ADVANCED_ROSTER_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M13_DEFAULT_APP_SURFACE_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M14_SOURCE_GATE_STRUCTURE_SPLIT_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M15_QUERY_MARKDOWN_EDITOR_NOTES_SOURCE_GATE_2026-04-30.md`
 - `Cargo.toml`
