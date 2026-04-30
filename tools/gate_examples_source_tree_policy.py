@@ -120,6 +120,30 @@ RAW_FRET_DOCKING_OWNER_SOURCES = [
     EXAMPLES_SRC / "imui_editor_proof_demo.rs",
 ]
 
+DEFAULT_APP_THEME_SNAPSHOT_SOURCES = [
+    EXAMPLES_SRC / "hello_counter_demo.rs",
+    EXAMPLES_SRC / "query_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+]
+
+ADVANCED_RUNTIME_CONTEXT_THEME_SNAPSHOT_SOURCES = [
+    EXAMPLES_SRC / "embedded_viewport_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v1_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_demo.rs",
+    EXAMPLES_SRC / "genui_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+]
+
+ELEMENT_CONTEXT_THEME_READ_SOURCES = [
+    EXAMPLES_SRC / "canvas_datagrid_stress_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+]
+
+RENDERER_THEME_BRIDGE_HOST_THEME_READ_SOURCES = [
+    EXAMPLES_SRC / "postprocess_theme_demo.rs",
+    EXAMPLES_SRC / "liquid_glass_demo.rs",
+]
+
 WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED = [
     "fn workspace_shell_command_button<'a, Cx>(",
     "Cx: fret::app::ElementContextAccess<'a, App>,",
@@ -434,6 +458,44 @@ def check_workspace_shell_capability_helpers(failures: list[Failure]) -> None:
     )
 
 
+def check_theme_snapshot_helpers(failures: list[Failure]) -> None:
+    for path in DEFAULT_APP_THEME_SNAPSHOT_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["let theme = cx.theme_snapshot();"],
+            forbidden=["Theme::global(&*cx.app).snapshot()"],
+            failures=failures,
+        )
+
+    for path in ADVANCED_RUNTIME_CONTEXT_THEME_SNAPSHOT_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["cx.theme_snapshot()"],
+            forbidden=["Theme::global(&*cx.app).snapshot()"],
+            failures=failures,
+        )
+
+    for path in ELEMENT_CONTEXT_THEME_READ_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["cx.theme().snapshot()"],
+            forbidden=["Theme::global(&*cx.app).snapshot()"],
+            failures=failures,
+        )
+
+    for path in RENDERER_THEME_BRIDGE_HOST_THEME_READ_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["Theme::global(&*cx.app).snapshot()"],
+            forbidden=[],
+            failures=failures,
+        )
+
+
 def print_failures(failures: list[Failure]) -> None:
     if not failures:
         return
@@ -463,6 +525,7 @@ def main() -> None:
     check_advanced_entry_view_elements_alias(failures)
     check_fret_docking_owner_imports(failures)
     check_workspace_shell_capability_helpers(failures)
+    check_theme_snapshot_helpers(failures)
 
     print_failures(failures)
     if failures:

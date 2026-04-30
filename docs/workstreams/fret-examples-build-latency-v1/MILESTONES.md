@@ -132,3 +132,19 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M8_AUTHORING_IMPORT_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M9 - Theme Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Theme snapshot/read source markers no longer compile the monolithic `fret-examples` unit-test
+  module.
+- The examples source-tree policy gate owns the default app, advanced runtime, element-context, and
+  renderer bridge theme-read markers.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M9_THEME_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`

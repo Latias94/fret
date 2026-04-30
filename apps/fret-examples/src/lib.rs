@@ -1872,43 +1872,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn default_app_examples_prefer_app_theme_snapshot_helper() {
-        for src in [HELLO_COUNTER_DEMO, QUERY_DEMO, QUERY_ASYNC_TOKIO_DEMO] {
-            assert!(src.contains("let theme = cx.theme_snapshot();"));
-            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
-        }
-    }
-
-    #[test]
-    fn selected_advanced_runtime_examples_prefer_context_theme_snapshot_helpers() {
-        for src in [
-            EMBEDDED_VIEWPORT_DEMO,
-            CUSTOM_EFFECT_V1_DEMO,
-            CUSTOM_EFFECT_V2_DEMO,
-            GENUI_DEMO,
-            MARKDOWN_DEMO,
-        ] {
-            assert!(src.contains("cx.theme_snapshot()"));
-            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
-        }
-    }
-
-    #[test]
-    fn selected_element_context_examples_prefer_context_theme_reads() {
-        for src in [CANVAS_DATAGRID_STRESS_DEMO, IMUI_INTERACTION_SHOWCASE_DEMO] {
-            assert!(src.contains("cx.theme().snapshot()"));
-            assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
-        }
-    }
-
-    #[test]
-    fn renderer_theme_bridge_proofs_keep_explicit_host_theme_reads() {
-        for src in [POSTPROCESS_THEME_DEMO, LIQUID_GLASS_DEMO] {
-            assert!(src.contains("Theme::global(&*cx.app).snapshot()"));
-        }
-    }
-
-    #[test]
     fn canonical_default_app_examples_stay_local_state_first() {
         for src in [
             HELLO_COUNTER_DEMO,
