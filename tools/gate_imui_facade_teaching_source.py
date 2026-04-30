@@ -27,16 +27,37 @@ class SourceCheck:
     forbidden: list[str]
 
 
+@dataclass(frozen=True)
+class SourceSliceCheck:
+    path: Path
+    start_marker: str
+    end_marker: str
+    required: list[str]
+    forbidden: list[str]
+
+
+@dataclass(frozen=True)
+class ExactCountCheck:
+    path: Path
+    marker: str
+    expected: int
+    reason: str
+
+
 def normalize(text: str) -> str:
     return "".join(text.split())
 
 
-def normalized_source(path: Path) -> str:
+def read_source(path: Path) -> str:
     full_path = WORKSPACE_ROOT / path
     try:
-        return normalize(full_path.read_text(encoding="utf-8"))
+        return full_path.read_text(encoding="utf-8")
     except OSError as exc:
         fail(GATE_NAME, f"failed to read {path.as_posix()}: {exc}")
+
+
+def normalized_source(path: Path) -> str:
+    return normalize(read_source(path))
 
 
 def check_source(check: SourceCheck, failures: list[str]) -> None:
@@ -49,6 +70,39 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
         normalized = normalize(marker)
         if normalized in source:
             failures.append(f"{check.path.as_posix()}: forbidden {marker}")
+
+
+def check_source_slice(check: SourceSliceCheck, failures: list[str]) -> None:
+    source = read_source(check.path)
+    try:
+        start = source.index(check.start_marker)
+    except ValueError:
+        failures.append(f"{check.path.as_posix()}: missing slice start {check.start_marker}")
+        return
+    try:
+        end = source.index(check.end_marker, start)
+    except ValueError:
+        failures.append(f"{check.path.as_posix()}: missing slice end {check.end_marker}")
+        return
+
+    normalized_slice = normalize(source[start:end])
+    for marker in check.required:
+        normalized = normalize(marker)
+        if normalized not in normalized_slice:
+            failures.append(f"{check.path.as_posix()}: missing slice marker {marker}")
+    for marker in check.forbidden:
+        normalized = normalize(marker)
+        if normalized in normalized_slice:
+            failures.append(f"{check.path.as_posix()}: forbidden slice marker {marker}")
+
+
+def check_exact_count(check: ExactCountCheck, failures: list[str]) -> None:
+    count = read_source(check.path).count(check.marker)
+    if count != check.expected:
+        failures.append(
+            f"{check.path.as_posix()}: expected {check.expected} occurrence(s) of "
+            f"{check.marker!r}, found {count}: {check.reason}"
+        )
 
 
 def main() -> None:
@@ -308,6 +362,47 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
+            required=[
+                "fn render_editor_name_assist_surface(",
+                "fn render_authoring_parity_surface(",
+                "fn render_authoring_parity_shared_state(",
+                "fn render_authoring_parity_declarative_group(",
+                "fn render_authoring_parity_imui_group(",
+                "fn render_authoring_parity_imui_host<H, F>(",
+                ") -> impl IntoUiElement<KernelApp> + use<> {",
+                ") -> impl IntoUiElement<H> + use<H, F>",
+                "fn proof_compact_readout<H: UiHost>(",
+                "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
+                "fn proof_outliner_items_snapshot(",
+                "app.models().read(model, |items| items.clone()).unwrap_or_default()",
+                "fn proof_outliner_order_line_for_model(",
+                "proof_outliner_order_line(items)",
+                "let outliner_items = proof_outliner_items_snapshot(ui.cx_mut().app, &outliner_items_model);",
+                "let outliner_order = proof_outliner_order_line_for_model(ui.cx_mut().app, &outliner_items_model);",
+                "fn embedded_target_for_window(app: &KernelApp, window: AppWindowId) -> fret_core::RenderTargetId {",
+                "let target = embedded_target_for_window(app, window);",
+            ],
+            forbidden=[
+                "ui.cx_mut().app.models().read(&outliner_items_model, |items| items.clone())",
+                "ui.cx_mut().app.models().read(&outliner_items_model, |items| { proof_outliner_order_line(items) })",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/"
+                "IMUI_EDITOR_PROOF_APP_OWNER_AUDIT_2026-04-16.md"
+            ),
+            required=[
+                "outliner reorder math and dock bootstrap still belong to explicit app-owned helpers",
+                "`proof_outliner_items_snapshot(...)`",
+                "`proof_outliner_order_line_for_model(...)`",
+                "`embedded_target_for_window(...)`",
+                "do not justify new framework surface",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/workspace_shell_demo.rs"),
             required=[
                 "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
@@ -401,9 +496,56 @@ def main() -> None:
     ]:
         checks.append(SourceCheck(Path(path), required=[], forbidden=retained_bridge_forbidden))
 
+    slice_checks = [
+        SourceSliceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
+            start_marker="fn render_authoring_parity_imui_group(",
+            end_marker="fn build_authoring_parity_gradient_editor(",
+            required=[
+                "render_authoring_parity_imui_host(cx, move |ui| {",
+                "editor_imui::property_group(",
+                "editor_imui::property_grid(",
+                "editor_imui::text_field(",
+                "editor_imui::drag_value(",
+                "editor_imui::numeric_input(",
+                "editor_imui::slider(",
+                "editor_imui::field_status_badge(",
+                "editor_imui::checkbox(",
+                "editor_imui::enum_select(",
+                "let gradient_editor = build_authoring_parity_gradient_editor(",
+                "editor_imui::gradient_editor(ui, gradient_editor);",
+            ],
+            forbidden=[
+                "FieldStatusBadge::new(FieldStatus::Dirty).into_element(cx)",
+                "GradientEditor::new(",
+            ],
+        ),
+        SourceSliceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
+            start_marker="fn ensure_dock_graph_inner(",
+            end_marker="struct WindowBootstrapService {",
+            required=["let target = embedded_target_for_window(app, window);"],
+            forbidden=[
+                "embedded::models(app, window).and_then(|m| app.models().read(&m.target, |v| *v).ok()).unwrap_or_default()"
+            ],
+        ),
+    ]
+    exact_count_checks = [
+        ExactCountCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
+            marker=") -> fret_ui::element::AnyElement {",
+            expected=1,
+            reason="only the proof-local compact readout leaf helper should keep an AnyElement return",
+        )
+    ]
+
     failures: list[str] = []
     for check in checks:
         check_source(check, failures)
+    for check in slice_checks:
+        check_source_slice(check, failures)
+    for check in exact_count_checks:
+        check_exact_count(check, failures)
 
     if failures:
         fail(GATE_NAME, f"{len(failures)} source marker problem(s):\n  - " + "\n  - ".join(failures))

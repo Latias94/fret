@@ -376,3 +376,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M22_SELECTED_RAW_OWNER_SOURCE_GATE_2026-04-30.md`
 - `tools/examples_source_tree_policy/owner_split.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M23 - IMUI Editor Proof Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI editor proof non-raw helper return markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- IMUI editor proof official adapter markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- IMUI editor proof app-owned sortable/dock helper markers and the matching app-owner audit markers
+  are owned by the IMUI facade/teaching source gate.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M23_IMUI_EDITOR_PROOF_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_imui_facade_teaching_source.py`
+- `apps/fret-examples/src/lib.rs`
