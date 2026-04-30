@@ -414,3 +414,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_imui_facade_teaching_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M25 - IMUI Response Signals Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI response signals menu/combo lifecycle markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- IMUI response signals canonical menu/tab trigger markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The response signals grouped local-state markers no longer require
+  `apps/fret-examples/src/lib.rs` to `include_str!` the split-crate IMUI response signals source.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_imui_facade_teaching_source.py`
+- `apps/fret-examples/src/lib.rs`

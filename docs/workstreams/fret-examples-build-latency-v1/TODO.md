@@ -56,6 +56,8 @@ Status: active
   of the monolithic `fret-examples` unit test.
 - [x] Move the IMUI interaction showcase layout and grouped state/action source markers out of the
   monolithic `fret-examples` unit test.
+- [x] Move the IMUI response signals lifecycle, canonical trigger, and grouped state/action source
+  markers out of the monolithic `fret-examples` unit test.
 
 ## Parked
 

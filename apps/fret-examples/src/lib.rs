@@ -869,8 +869,6 @@ mod authoring_surface_policy_tests {
         include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
     const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
         include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
-    const IMUI_RESPONSE_SIGNALS_DEMO: &str =
-        include_str!("../../fret-examples-imui/src/imui_response_signals_demo.rs");
     const IMUI_SHADCN_ADAPTER_DEMO: &str =
         include_str!("../../fret-examples-imui/src/imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -3966,48 +3964,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof() {
-        assert_current_imui_teaching_surface(
-            "imui_response_signals_demo_lifecycle_expansion",
-            IMUI_RESPONSE_SIGNALS_DEMO,
-            &[
-                "let menu_lifecycle = ui.menu_item_with_options(",
-                "menu_lifecycle.activated()",
-                "menu_lifecycle.deactivated()",
-                "let combo_resp = ui.combo_with_options(",
-                "combo_resp.trigger.activated()",
-                "combo_resp.trigger.deactivated()",
-                "let combo_model_resp = ui.combo_model_with_options(",
-                "combo_model_resp.edited()",
-                "combo_model_resp.deactivated_after_edit()",
-            ],
-            &[],
-        );
-    }
-
-    #[test]
-    fn imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof() {
-        assert_current_imui_teaching_surface(
-            "imui_response_signals_demo_canonical_trigger_response_surface",
-            IMUI_RESPONSE_SIGNALS_DEMO,
-            &[
-                "let file_menu = ui.begin_menu_with_options(",
-                "file_menu.opened()",
-                "file_menu.closed()",
-                "let recent_menu = ui.begin_submenu_with_options(",
-                "recent_menu.toggled()",
-                "let tab_response = ui.tab_bar_with_options(",
-                "tab_response.selected_changed()",
-                "if let Some(scene_tab) = tab_response.trigger(\"scene\") {",
-                "scene_tab.clicked()",
-                "scene_tab.activated()",
-                "scene_tab.deactivated()",
-            ],
-            &[],
-        );
-    }
-
-    #[test]
     fn immediate_mode_workstream_freezes_the_p1_workbench_shell_proof_matrix() {
         for marker in [
             "`apps/fret-examples/src/workspace_shell_demo.rs`",
@@ -6006,24 +5962,6 @@ mod authoring_surface_policy_tests {
                 "read_model(",
                 "&self.a_overlap_clicked",
                 "&self.select_mode",
-            ],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            IMUI_RESPONSE_SIGNALS_DEMO,
-            &[
-                "let left_clicks = cx.state().local_init(|| 0u32);",
-                "let drag_offset = cx.state().local_init(Point::default);",
-                "let left_clicks_value = left_clicks.layout_value(cx);",
-                "let drag_offset_value = drag_offset.layout_value(cx);",
-                "let last_anchor_value = last_context_menu_anchor.layout_value(cx);",
-            ],
-            &[
-                "cx.use_local_with(|| 0u32)",
-                "cx.use_local_with(Point::default)",
-                "left_clicks.layout(cx).value_or_default()",
-                "drag_offset.layout(cx).value_or_default()",
-                "last_context_menu_anchor.layout(cx).value_or_default()",
             ],
         );
 
