@@ -106,6 +106,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M22_SELECTED_RAW_OWNER_SOURCE_GATE_2026-04-30.md"
     }
   ],
   "repro": {
@@ -224,6 +228,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M19_LOW_LEVEL_INTEROP_SOURCE_GATE_2026-04-30.md",
     "docs/workstreams/fret-examples-build-latency-v1/M20_MANUAL_UI_TREE_SOURCE_GATE_2026-04-30.md",
     "docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M22_SELECTED_RAW_OWNER_SOURCE_GATE_2026-04-30.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

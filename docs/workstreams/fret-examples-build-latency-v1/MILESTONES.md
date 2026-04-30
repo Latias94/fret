@@ -358,3 +358,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md`
 - `tools/examples_source_tree_policy/owner_split.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M22 - Selected Raw Owner Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Selected raw-owner escape-hatch markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+- Raw-owner source policy entries spell their source root explicitly so split-crate IMUI examples
+  are not resolved through `apps/fret-examples/src` by accident.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M22_SELECTED_RAW_OWNER_SOURCE_GATE_2026-04-30.md`
+- `tools/examples_source_tree_policy/owner_split.py`
+- `tools/examples_source_tree_policy/gate.py`

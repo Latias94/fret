@@ -1411,6 +1411,7 @@ def main() -> None:
     check_owner_split_source_policies(
         failures,
         examples_src=EXAMPLES_SRC,
+        imui_examples_src=IMUI_EXAMPLES_SRC,
         workspace_root=WORKSPACE_ROOT,
         read_source=read_source,
         check_required_forbidden_markers=check_required_forbidden_markers,

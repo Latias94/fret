@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 
 COMPONENTS_GALLERY_OWNER_SPLIT_REQUIRED = [
@@ -32,6 +32,89 @@ COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT_REQUIRED = [
     "`overlays_open(app)`",
 ]
 
+SourceRoot = Literal["examples", "imui_examples"]
+RawOwnerSourcePolicy = tuple[SourceRoot, str, list[str], list[str]]
+
+
+SELECTED_RAW_OWNER_SOURCE_POLICIES: list[RawOwnerSourcePolicy] = [
+    (
+        "examples",
+        "components_gallery.rs",
+        [
+            "let cx = cx.elements();",
+            "let theme = cx.theme_snapshot();",
+            "let last_action_value = last_action.layout(cx).value_or_else(|| Arc::<str>::from(\"<none>\"));\n                let cx = cx.elements();\n                let theme_name = cx.theme().name.clone();",
+        ],
+        [],
+    ),
+    (
+        "examples",
+        "editor_notes_device_shell_demo.rs",
+        [
+            "let (name_value, committed_notes, notes_outcome, summary_status) =",
+            "cx.data().selector_model_paint(",
+            "&asset.summary_status_model",
+        ],
+        [
+            ".watch_model(&asset.name_model)",
+            ".watch_model(&asset.notes_model)",
+            ".watch_model(&asset.notes_outcome_model)",
+            ".watch_model(&asset.summary_status_model)",
+        ],
+    ),
+    ("examples", "emoji_conformance_demo.rs", ["let cx = cx.elements();"], []),
+    ("examples", "form_demo.rs", ["let cx = cx.elements();"], []),
+    ("examples", "date_picker_demo.rs", ["let cx = cx.elements();"], []),
+    (
+        "imui_examples",
+        "imui_interaction_showcase_demo.rs",
+        ["let cx = cx.elements();"],
+        [],
+    ),
+    (
+        "examples",
+        "postprocess_theme_demo.rs",
+        [
+            "let cx = cx.elements();",
+            "shadcn::raw::typography::h3(\"Custom effects unavailable\").into_element_in(cx)",
+        ],
+        [],
+    ),
+    ("examples", "drop_shadow_demo.rs", ["let cx = cx.elements();"], []),
+    ("examples", "ime_smoke_demo.rs", ["let cx = cx.elements();"], []),
+    ("examples", "sonner_demo.rs", ["let cx = cx.elements();"], []),
+    (
+        "examples",
+        "custom_effect_v1_demo.rs",
+        ["view(cx.elements(), &mut st)"],
+        ["view(cx, &mut st)"],
+    ),
+    (
+        "examples",
+        "custom_effect_v2_demo.rs",
+        ["view(cx.elements(), &mut st)"],
+        ["view(cx, &mut st)"],
+    ),
+    (
+        "examples",
+        "custom_effect_v3_demo.rs",
+        ["view(cx.elements(), &mut st)"],
+        ["view(cx, &mut st)"],
+    ),
+    (
+        "examples",
+        "liquid_glass_demo.rs",
+        ["view(cx.elements(), &mut st)"],
+        ["view(cx, &mut st)"],
+    ),
+    (
+        "examples",
+        "genui_demo.rs",
+        ["view(cx.elements(), &mut self.st)"],
+        ["view(cx, &mut self.st)"],
+    ),
+]
+
 CheckMarkers = Callable[..., None]
 ReadSource = Callable[[Path], str]
 
@@ -40,6 +123,7 @@ def check_owner_split_source_policies(
     failures: list[Any],
     *,
     examples_src: Path,
+    imui_examples_src: Path,
     workspace_root: Path,
     read_source: ReadSource,
     check_required_forbidden_markers: CheckMarkers,
@@ -65,3 +149,17 @@ def check_owner_split_source_policies(
         forbidden=[],
         failures=failures,
     )
+
+    source_roots = {
+        "examples": examples_src,
+        "imui_examples": imui_examples_src,
+    }
+    for source_root, name, required, forbidden in SELECTED_RAW_OWNER_SOURCE_POLICIES:
+        path = source_roots[source_root] / name
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=required,
+            forbidden=forbidden,
+            failures=failures,
+        )
