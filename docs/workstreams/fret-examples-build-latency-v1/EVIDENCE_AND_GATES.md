@@ -47,6 +47,7 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_imui_facade_teaching_source.py`.
 - Passed: `python -m py_compile tools/gate_table_source_policy.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
+- Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py`.
 - Passed: `python -m py_compile tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `cargo check -p fret-examples-imui --bins --jobs 1`.
 - Passed: `cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1`.
@@ -112,6 +113,10 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M17_API_WORKBENCH_SOURCE_GATE_2026-04-30.md`
   after moving API workbench lite default-app, AppRenderContext, capability-first, and SQLite
   query/mutation ownership markers into `tools/examples_source_tree_policy/gate.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M18_APP_FACING_SOURCE_GATE_MODULE_SPLIT_2026-04-30.md`
+  after moving app-facing demo source-policy matrices from
+  `tools/examples_source_tree_policy/gate.py` into `tools/examples_source_tree_policy/app_facing.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
 - Current count after the API workbench source migration: 281 `include_str!` occurrences and 70
@@ -135,6 +140,7 @@ git diff --check
 - `apps/fret-examples-imui/src/bin/imui_interaction_showcase_demo.rs`
 - `tools/gate_examples_source_tree_policy.py`
 - `tools/examples_source_tree_policy/__init__.py`
+- `tools/examples_source_tree_policy/app_facing.py`
 - `tools/examples_source_tree_policy/gate.py`
 - `tools/gate_fret_examples_imui_split_source.py`
 - `apps/fret-demo/Cargo.toml`
@@ -158,4 +164,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M15_QUERY_MARKDOWN_EDITOR_NOTES_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M16_TODO_ASYNC_PLAYGROUND_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M17_API_WORKBENCH_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M18_APP_FACING_SOURCE_GATE_MODULE_SPLIT_2026-04-30.md`
 - `Cargo.toml`

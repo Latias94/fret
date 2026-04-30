@@ -285,3 +285,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M17_API_WORKBENCH_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M18 - App Facing Source Gate Module Split
+
+Status: complete
+
+Exit criteria:
+
+- `python tools/gate_examples_source_tree_policy.py` remains the stable command entrypoint.
+- App-facing demo source-policy marker matrices live under
+  `tools/examples_source_tree_policy/app_facing.py`.
+- `tools/examples_source_tree_policy/gate.py` keeps orchestration and shared helpers without
+  duplicating the app-facing marker matrices.
+- No source-policy behavior changes.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M18_APP_FACING_SOURCE_GATE_MODULE_SPLIT_2026-04-30.md`
+- `tools/examples_source_tree_policy/app_facing.py`
+- `tools/examples_source_tree_policy/gate.py`

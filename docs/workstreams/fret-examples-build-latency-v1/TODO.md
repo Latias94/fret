@@ -42,6 +42,8 @@ Status: active
 - [x] Move the todo and async playground source markers out of the monolithic `fret-examples`
   unit test.
 - [x] Move the API workbench lite source markers out of the monolithic `fret-examples` unit test.
+- [x] Split app-facing examples source-policy matrices into an owner module behind the stable gate
+  entrypoint.
 
 ## Parked
 
