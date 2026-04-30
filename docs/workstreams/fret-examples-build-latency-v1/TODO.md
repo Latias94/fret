@@ -39,6 +39,8 @@ Status: active
 - [x] Split the examples source-tree gate implementation behind the existing command entrypoint.
 - [x] Move the query, markdown, and editor notes source markers out of the monolithic
   `fret-examples` unit test.
+- [x] Move the todo and async playground source markers out of the monolithic `fret-examples`
+  unit test.
 
 ## Parked
 

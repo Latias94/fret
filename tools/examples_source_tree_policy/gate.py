@@ -439,6 +439,126 @@ EDITOR_NOTES_RENDER_SLICE_FORBIDDEN = [
     "ui::container(|_cx| [frame]).p(Space::N4).size_full().into_element(cx).test_id(TEST_ID_ROOT).into()",
 ]
 
+TODO_DEFAULT_APP_REQUIRED = [
+    "use fret::app::prelude::*;",
+    "use fret::env::{ ViewportQueryHysteresis, primary_pointer_can_hover, viewport_tailwind, viewport_width_at_least, };",
+    "fn init(_app: &mut App, _window: WindowId) -> Self",
+    "ui::single(cx, todo_page(theme, responsive, card))",
+    "fn todo_page(",
+    "responsive: TodoResponsiveLayout,",
+    "struct TodoLocals {",
+    "fn new(cx: &mut AppUi<'_, '_>) -> Self {",
+    "struct TodoDemoView;",
+    "let locals = TodoLocals::new(cx);",
+    "locals.bind_actions(cx);",
+    "draft: cx.state().local::<String>(),",
+    "filter: cx.state().local_init(|| Some(Arc::<str>::from(TodoFilter::All.value()))),",
+    "next_id: cx.state().local_init(|| 4u64),",
+    "todos: cx.state().local_init(|| {",
+    "fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {",
+    "let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());",
+    ".setup(fret_icons_lucide::app::install)",
+    ".window_min_size(TODO_WINDOW_MIN_SIZE)",
+    ".window_position_logical(TODO_WINDOW_POSITION_LOGICAL)",
+    ".window_resize_increments(TODO_WINDOW_RESIZE_INCREMENTS)",
+    "ui::for_each_keyed_with_cx(",
+    "fn todo_row<'a, Cx>(",
+    "Cx: fret::app::ElementContextAccess<'a, App>,",
+    "shadcn::Progress::from_value(progress_pct).a11y_label(\"Todo completion progress\").ui().rounded(Radius::Full).w_full().build()",
+    ".viewport_test_id(TEST_ID_ROWS).ui().w_full().h_full().flex_1().min_h_0().build()",
+    ".corner_radii_override(Corners::all(Px(14.0))).ui().shadow_sm().build()",
+    ".test_id(TEST_ID_DRAFT).ui().shadow_sm().flex_1().min_w_0().build()",
+    ".a11y_label(format!(\"Show {} tasks\", filter.label().to_lowercase())).test_id(test_id).refine_style(ChromeRefinement::default().rounded(Radius::Full)).refine_layout(fret_ui_kit::LayoutRefinement::default().h_px(Px(28.0)).min_h(Px(28.0)),)",
+    "ui::hover_region(move |cx, hovered| {",
+    "ui::rich_text(rich)",
+    "ui::v_flex(move |cx| ui::single(cx, content))",
+]
+
+TODO_DEFAULT_APP_FORBIDDEN = [
+    *DEFAULT_APP_SURFACE_COMMON_FORBIDDEN,
+    "let card = card.into_element(cx);",
+    "todo_page(theme, card).into_element(cx).into()",
+    "fret_cookbook::scaffold::",
+    "centered_page_muted(",
+    "centered_page_background(",
+    "let cx = cx.elements();",
+    "rows_max_height",
+    ".a11y_label(\"Todo completion progress\").refine_style(",
+    ".viewport_test_id(TEST_ID_ROWS).refine_layout(",
+    "use fret_ui_kit::declarative::{ ElementContextThemeExt as _, ViewportQueryHysteresis, primary_pointer_can_hover, viewport_tailwind, viewport_width_at_least, };",
+    "footer_pill_chrome()",
+    "footer_pill_layout()",
+    "HoverRegionProps",
+    "StyledTextProps",
+    "ui::v_flex(move |cx| ui::children![cx; content])",
+    "cx: &mut fret_ui::ElementContext<'_, App>,",
+    "TodoLocals::new(app)",
+    "LocalState::from_model(app.models_mut().insert(",
+]
+
+TODO_ROOT_SLICE_REQUIRED = [
+    "ui::text(\"Add a task to get started\").text_sm().text_color(ColorRef::Color(muted_foreground)).into_element_in(cx)",
+    ".gap(Space::N1).items_center().into_element_in(cx)",
+    "ui::text(format!(\"{active_count} {task_label} left\")).text_sm().text_color(ColorRef::Color(muted_foreground)).into_element_in(cx)",
+    ".gap(Space::N1p5).w_full().into_element_in(cx)",
+    "shadcn::ScrollArea::new([rows_body.into_element_in(cx)])",
+    ".min_h_0().build().into_element_in(cx);",
+    "let footer = if responsive.stack_footer {",
+    "children }).gap(Space::N2).items_stretch().w_full().into_element_in(cx)",
+    "children }).gap(Space::N3).items_center().justify_between().w_full().into_element_in(cx)",
+]
+
+TODO_ROOT_SLICE_FORBIDDEN = [
+    "ui::text(\"Add a task to get started\").text_sm().text_color(ColorRef::Color(muted_foreground)).into_element(cx)",
+    ".gap(Space::N1).items_center().into_element(cx)",
+    "ui::text(format!(\"{active_count} {task_label} left\")).text_sm().text_color(ColorRef::Color(muted_foreground)).into_element(cx)",
+    ".gap(Space::N1p5).w_full().into_element(cx)",
+    "shadcn::ScrollArea::new([rows_body.into_element(cx)])",
+    ".min_h_0().build().into_element(cx);",
+    "children }).gap(Space::N2).items_stretch().w_full().into_element(cx)",
+    "children }).gap(Space::N3).items_center().justify_between().w_full().into_element(cx)",
+]
+
+ASYNC_PLAYGROUND_APP_RENDER_CONTEXT_REQUIRED = [
+    "AppRenderContext<'a>",
+    "use fret::app::{AppRenderContext, RenderContextAccess as _};",
+    "use fret_ui_kit::IntoUiElementInExt as _;",
+    "fn tracked_query_inputs<'a, Cx>(",
+    "fn header_bar<'a, Cx>(",
+    "fn body<'a, Cx>(",
+    "fn query_panel_for_mode<'a, Cx>(",
+    "fn status_badge<'a, Cx>(",
+    "Cx: AppRenderContext<'a>,",
+    "cx.elements().pressable(",
+    "let state = handle.read_layout(cx);",
+    "locals.tabs.layout_read_ref(cx, |tab| match tab.as_deref() {",
+    "config.fail_mode.layout_value(cx)",
+]
+
+ASYNC_PLAYGROUND_APP_RENDER_CONTEXT_FORBIDDEN = [
+    "fn tracked_query_inputs(cx: &mut AppComponentCx<'_>,",
+    "fn header_bar(cx: &mut AppComponentCx<'_>,",
+    "fn body(cx: &mut AppComponentCx<'_>,",
+    "fn query_panel_for_mode(cx: &mut AppComponentCx<'_>,",
+    "fn status_badge(cx: &mut AppComponentCx<'_>,",
+    "handle.layout_query(cx).value_or_default()",
+    "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
+    "config.fail_mode.layout_value_in(cx)",
+]
+
+ASYNC_PLAYGROUND_RENDER_SLICE_REQUIRED = [
+    "let query_inputs = tracked_query_inputs(cx, &locals);",
+    "let header = header_bar(cx, &locals, theme.clone(), global_slow, dark);",
+    "let body = body(cx, &mut self.st, &locals, theme, global_slow, selected);",
+    "ui::v_flex(|_cx| [header, body]).w_full().h_full().into_element_in(cx).into()",
+]
+
+ASYNC_PLAYGROUND_RENDER_SLICE_FORBIDDEN = [
+    "let header = header_bar(cx, &locals, theme.clone(), global_slow, dark).into_element(cx);",
+    "let body = body(cx, &mut self.st, &locals, theme, global_slow, selected).into_element(cx);",
+    "ui::v_flex(|_cx| [header, body]).w_full().h_full().into_element(cx).into()",
+]
+
 INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES = [
     (
         EXAMPLES_SRC / "form_demo.rs",
@@ -1411,6 +1531,50 @@ def check_query_markdown_editor_notes_source_policies(failures: list[Failure]) -
     )
 
 
+def check_todo_async_playground_source_policies(failures: list[Failure]) -> None:
+    todo_source = read_source(EXAMPLES_SRC / "todo_demo.rs")
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "todo_demo.rs",
+        todo_source,
+        required=TODO_DEFAULT_APP_REQUIRED,
+        forbidden=TODO_DEFAULT_APP_FORBIDDEN,
+        failures=failures,
+    )
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "todo_demo.rs",
+        source_slice(
+            EXAMPLES_SRC / "todo_demo.rs",
+            todo_source,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn todo_page(",
+        ),
+        required=TODO_ROOT_SLICE_REQUIRED,
+        forbidden=TODO_ROOT_SLICE_FORBIDDEN,
+        failures=failures,
+    )
+
+    async_source = read_source(EXAMPLES_SRC / "async_playground_demo.rs")
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "async_playground_demo.rs",
+        async_source,
+        required=ASYNC_PLAYGROUND_APP_RENDER_CONTEXT_REQUIRED,
+        forbidden=ASYNC_PLAYGROUND_APP_RENDER_CONTEXT_FORBIDDEN,
+        failures=failures,
+    )
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "async_playground_demo.rs",
+        source_slice(
+            EXAMPLES_SRC / "async_playground_demo.rs",
+            async_source,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn header_bar<'a, Cx>(",
+        ),
+        required=ASYNC_PLAYGROUND_RENDER_SLICE_REQUIRED,
+        forbidden=ASYNC_PLAYGROUND_RENDER_SLICE_FORBIDDEN,
+        failures=failures,
+    )
+
+
 def check_model_read_and_asset_helper_sources(failures: list[Failure]) -> None:
     for path in DIRECT_LEAF_VISIBILITY_READ_SOURCES:
         check_required_forbidden_markers(
@@ -1507,6 +1671,7 @@ def main() -> None:
     check_local_state_bridge_sources(failures)
     check_default_app_surface_sources(failures)
     check_query_markdown_editor_notes_source_policies(failures)
+    check_todo_async_playground_source_policies(failures)
     check_model_read_and_asset_helper_sources(failures)
 
     print_failures(failures)

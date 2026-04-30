@@ -249,3 +249,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M15_QUERY_MARKDOWN_EDITOR_NOTES_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M16 - Todo Async Playground Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Todo default-app and capability-first root builder markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- Async playground `AppRenderContext` helper and root capability-first landing markers no longer
+  compile the monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M16_TODO_ASYNC_PLAYGROUND_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`
+- `tools/examples_source_tree_policy/gate.py`
