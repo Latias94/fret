@@ -49,6 +49,7 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py`.
+- Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py tools/examples_source_tree_policy/manual.py`.
 - Passed: `python -m py_compile tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `cargo check -p fret-examples-imui --bins --jobs 1`.
 - Passed: `cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1`.
@@ -122,9 +123,13 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M19_LOW_LEVEL_INTEROP_SOURCE_GATE_2026-04-30.md`
   after moving low-level interop direct-leaf root markers into
   `tools/examples_source_tree_policy/interop.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M20_MANUAL_UI_TREE_SOURCE_GATE_2026-04-30.md`
+  after moving manual `UiTree<App>` root-wrapper markers into
+  `tools/examples_source_tree_policy/manual.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the low-level interop source migration: 281 `include_str!` occurrences and 69
+- Current count after the manual UI tree source migration: 281 `include_str!` occurrences and 68
   Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -148,6 +153,7 @@ git diff --check
 - `tools/examples_source_tree_policy/app_facing.py`
 - `tools/examples_source_tree_policy/gate.py`
 - `tools/examples_source_tree_policy/interop.py`
+- `tools/examples_source_tree_policy/manual.py`
 - `tools/gate_fret_examples_imui_split_source.py`
 - `apps/fret-demo/Cargo.toml`
 - `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
@@ -172,4 +178,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M17_API_WORKBENCH_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M18_APP_FACING_SOURCE_GATE_MODULE_SPLIT_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M19_LOW_LEVEL_INTEROP_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M20_MANUAL_UI_TREE_SOURCE_GATE_2026-04-30.md`
 - `Cargo.toml`

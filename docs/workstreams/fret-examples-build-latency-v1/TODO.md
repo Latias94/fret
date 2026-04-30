@@ -46,6 +46,8 @@ Status: active
   entrypoint.
 - [x] Move the low-level interop direct-leaf source markers out of the monolithic `fret-examples`
   unit test.
+- [x] Move the manual UiTree root-wrapper source markers out of the monolithic `fret-examples`
+  unit test.
 
 ## Parked
 
