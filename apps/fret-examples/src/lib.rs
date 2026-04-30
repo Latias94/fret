@@ -310,8 +310,6 @@ mod authoring_surface_policy_tests {
     const IMUI_FLOATING_WINDOWS_DEMO: &str =
         include_str!("../../fret-examples-imui/src/imui_floating_windows_demo.rs");
     const IMUI_HELLO_DEMO: &str = include_str!("../../fret-examples-imui/src/imui_hello_demo.rs");
-    const IMUI_INTERACTION_SHOWCASE_DEMO: &str =
-        include_str!("../../fret-examples-imui/src/imui_interaction_showcase_demo.rs");
     const IMUI_NODE_GRAPH_DEMO: &str = include_str!("imui_node_graph_demo.rs");
     const IMUI_PROOF_BUDGET_RULE_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P0_PROOF_BUDGET_RULE_2026-04-12.md"
@@ -1214,40 +1212,6 @@ mod authoring_surface_policy_tests {
                 FRET_LAUNCH_RUNNER_SCHEDULING_EVIDENCE.contains(marker)
                     || FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE.contains(marker),
                 "first-frame workstream docs should name marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround() {
-        let demo = IMUI_INTERACTION_SHOWCASE_DEMO
-            .split_whitespace()
-            .collect::<String>();
-
-        for marker in [
-            "constSHOWCASE_COMPACT_RAIL_MIN_WIDTH:Px=Px(272.0);",
-            "constSHOWCASE_COMPACT_RAIL_MAX_WIDTH:Px=Px(352.0);",
-            "constSHOWCASE_REGULAR_SIDE_COLUMN_WIDTH:Px=Px(336.0);",
-            ".basis(LengthRefinement::Fraction(0.32))",
-            ".min_w(SHOWCASE_COMPACT_RAIL_MIN_WIDTH)",
-            ".max_w(SHOWCASE_COMPACT_RAIL_MAX_WIDTH)",
-            ".w_px(SHOWCASE_REGULAR_SIDE_COLUMN_WIDTH)",
-        ] {
-            assert!(
-                demo.contains(marker),
-                "interaction showcase should keep the compact rail layout without a fixed-width workaround: {marker}"
-            );
-        }
-
-        for marker in [
-            "constSHOWCASE_SIDE_COLUMN_WIDTH:Px=Px(320.0);",
-            "side_column_width:Px,",
-            ".w_px(responsive.side_column_width)",
-            "assert_eq!(layout.side_column_width,SHOWCASE_SIDE_COLUMN_WIDTH);",
-        ] {
-            assert!(
-                !demo.contains(marker),
-                "interaction showcase should not keep the old fixed compact rail workaround: {marker}"
             );
         }
     }
@@ -6060,27 +6024,6 @@ mod authoring_surface_policy_tests {
                 "left_clicks.layout(cx).value_or_default()",
                 "drag_offset.layout(cx).value_or_default()",
                 "last_context_menu_anchor.layout(cx).value_or_default()",
-            ],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            IMUI_INTERACTION_SHOWCASE_DEMO,
-            &[
-                "let pulse_count = cx.state().local_init(|| 0u32);",
-                "let autosave_enabled = cx.state().local_init(|| true);",
-                "let selected_tab = cx.state().local_init(|| Some(Arc::<str>::from(\"overview\")));",
-                "let pulse_count_value = pulse_count.layout_value(cx);",
-                "let autosave_enabled_value = autosave_enabled.layout_value(cx);",
-                "let selected_tab_value = selected_tab.layout_value(cx);",
-                "let timeline_value = timeline.layout_value(cx);",
-                "ui.switch_model(\"Autosave snapshots\", autosave_enabled.model())",
-            ],
-            &[
-                "cx.use_local_with(|| 0u32)",
-                "cx.use_local_with(|| true)",
-                "pulse_count.layout(cx).value_or_default()",
-                "autosave_enabled.layout(cx).value_or_default()",
-                "selected_tab.layout(cx).value_or_default()",
             ],
         );
 

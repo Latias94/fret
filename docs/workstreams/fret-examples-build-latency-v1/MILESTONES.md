@@ -395,3 +395,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M23_IMUI_EDITOR_PROOF_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_imui_facade_teaching_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M24 - IMUI Interaction Showcase Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI interaction showcase compact rail layout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The interaction showcase grouped state/action markers no longer require
+  `apps/fret-examples/src/lib.rs` to `include_str!` the split-crate IMUI showcase source.
+- The IMUI facade/teaching source gate owns the showcase markers alongside the rest of the IMUI
+  split-crate source policy.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_imui_facade_teaching_source.py`
+- `apps/fret-examples/src/lib.rs`

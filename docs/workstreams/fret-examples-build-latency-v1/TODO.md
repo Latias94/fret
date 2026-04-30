@@ -54,6 +54,8 @@ Status: active
   `fret-examples` unit test.
 - [x] Move the IMUI editor proof non-raw helper, official adapter, and app-owner source markers out
   of the monolithic `fret-examples` unit test.
+- [x] Move the IMUI interaction showcase layout and grouped state/action source markers out of the
+  monolithic `fret-examples` unit test.
 
 ## Parked
 

@@ -140,9 +140,13 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M23_IMUI_EDITOR_PROOF_SOURCE_GATE_2026-04-30.md`
   after moving IMUI editor proof non-raw helper, official adapter, and app-owner source markers into
   `tools/gate_imui_facade_teaching_source.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md`
+  after moving IMUI interaction showcase layout and grouped state/action source markers into
+  `tools/gate_imui_facade_teaching_source.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI editor proof source migration: 280 `include_str!` occurrences and 63
+- Current count after the IMUI interaction showcase source migration: 279 `include_str!` occurrences and 62
   Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -196,4 +200,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M22_SELECTED_RAW_OWNER_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M23_IMUI_EDITOR_PROOF_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md`
 - `Cargo.toml`
