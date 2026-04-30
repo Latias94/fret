@@ -88,6 +88,125 @@ VIEW_ENTRY_BUILDER_THEN_RUN_SOURCES = [
     EXAMPLES_SRC / "todo_demo.rs",
 ]
 
+ADVANCED_SURFACE_SOURCES = [
+    EXAMPLES_SRC / "assets_demo.rs",
+    EXAMPLES_SRC / "async_playground_demo.rs",
+    EXAMPLES_SRC / "chart_declarative_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v1_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v3_demo.rs",
+    EXAMPLES_SRC / "drop_shadow_demo.rs",
+    EXAMPLES_SRC / "echarts_demo.rs",
+    EXAMPLES_SRC / "embedded_viewport_demo.rs",
+    EXAMPLES_SRC / "empty_idle_demo.rs",
+    EXAMPLES_SRC / "extras_marquee_perf_demo.rs",
+    EXAMPLES_SRC / "genui_demo.rs",
+    EXAMPLES_SRC / "hello_world_compare_demo.rs",
+    EXAMPLES_SRC / "image_heavy_memory_demo.rs",
+    EXAMPLES_SRC / "imui_editor_proof_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_floating_windows_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_hello_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+    EXAMPLES_SRC / "imui_node_graph_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_response_signals_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_shadcn_adapter_demo.rs",
+    EXAMPLES_SRC / "launcher_utility_window_demo.rs",
+    EXAMPLES_SRC / "launcher_utility_window_materials_demo.rs",
+    EXAMPLES_SRC / "liquid_glass_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+    EXAMPLES_SRC / "node_graph_demo.rs",
+    EXAMPLES_SRC / "postprocess_theme_demo.rs",
+    EXAMPLES_SRC / "text_heavy_memory_demo.rs",
+    EXAMPLES_SRC / "window_hit_test_probe_demo.rs",
+]
+
+ADVANCED_SURFACE_REQUIRED_ANY = [
+    "AppUi<'_, '_>",
+    "ViewCx<'_, '_, KernelApp>",
+    "ElementContext<'_, KernelApp>",
+    "UiTree<KernelApp>",
+    "KernelApp::new()",
+]
+
+ADVANCED_SURFACE_FORBIDDEN = [
+    "fret_bootstrap::ui_app(",
+    "fret_bootstrap::ui_app_with_hooks(",
+    "use fret::prelude::*;",
+    "use fret::prelude::{",
+    ".init_app(",
+    "ViewCx<'_, '_, App>",
+    "ElementContext<'_, App>",
+    "UiTree<App>",
+    "RetainedSubtreeProps::new::<App>",
+    "UiChildIntoElement<App>",
+]
+
+ADVANCED_REFERENCE_CLASSIFICATIONS = [
+    (
+        EXAMPLES_SRC / "custom_effect_v1_demo.rs",
+        ["effect/runtime ownership", "renderer/effect ABI"],
+    ),
+    (
+        EXAMPLES_SRC / "custom_effect_v2_demo.rs",
+        ["effect/runtime ownership", "renderer/effect ABI"],
+    ),
+    (
+        EXAMPLES_SRC / "custom_effect_v3_demo.rs",
+        [
+            "effect/runtime ownership",
+            "renderer/effect ABI and diagnostics pipeline",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "postprocess_theme_demo.rs",
+        [
+            "renderer/theme bridge ownership",
+            "high-ceiling post-process story",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "liquid_glass_demo.rs",
+        [
+            "renderer capability and effect/control graph ownership",
+            "glass/warp behavior ceilings",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "genui_demo.rs",
+        [
+            "explicit model ownership",
+            "generator/editor integration",
+            "catalog, runtime, and validation flows",
+        ],
+    ),
+    (
+        IMUI_EXAMPLES_SRC / "imui_floating_windows_demo.rs",
+        [
+            "immediate-mode overlap/floating proof",
+            "IMUI interaction contracts and diagnostics affordances",
+        ],
+    ),
+    (
+        IMUI_EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+        [
+            "product shell polish",
+            "immediate-mode interaction affordances",
+            "shadcn shell chrome",
+        ],
+    ),
+]
+
+EXAMPLES_DOCS_ADVANCED_ROSTER_REQUIRED = [
+    "Explicit advanced/reference roster:",
+    "`custom_effect_v1_demo`, `custom_effect_v2_demo`, and `custom_effect_v3_demo`",
+    "renderer/effect reference surfaces",
+    "`postprocess_theme_demo` and `liquid_glass_demo` are renderer/product-validation surfaces",
+    "`genui_demo` is a generator/editor integration reference surface",
+    "`imui_floating_windows_demo` is an IMUI overlap/floating proof surface",
+    "`imui_response_signals_demo` is an IMUI proof/contract surface",
+    "`imui_interaction_showcase_demo` and `imui_shadcn_adapter_demo` are IMUI product-validation surfaces",
+]
+
 GROUPED_DATA_SURFACE_SOURCES = [
     EXAMPLES_SRC / "async_playground_demo.rs",
     EXAMPLES_SRC / "markdown_demo.rs",
@@ -801,6 +920,46 @@ def check_required_forbidden_markers(
             failures.append(Failure(path, None, f"forbidden source marker: {marker}"))
 
 
+def check_advanced_reference_roster(failures: list[Failure]) -> None:
+    for path in ADVANCED_SURFACE_SOURCES:
+        source = read_source(path)
+        check_required_forbidden_markers(
+            path,
+            source,
+            required=[
+                "advanced::prelude::*",
+                "KernelApp",
+            ],
+            forbidden=ADVANCED_SURFACE_FORBIDDEN,
+            failures=failures,
+        )
+        if not any(marker in source for marker in ADVANCED_SURFACE_REQUIRED_ANY):
+            failures.append(Failure(path, None, "missing advanced surface context marker"))
+
+    for path, reasons in ADVANCED_REFERENCE_CLASSIFICATIONS:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=[
+                "Advanced/reference demo:",
+                "Why advanced:",
+                "Not a first-contact teaching surface:",
+                "reference/product-validation",
+                *reasons,
+            ],
+            forbidden=[],
+            failures=failures,
+        )
+
+    check_required_forbidden_markers(
+        Path("docs/examples/README.md"),
+        read_source(Path("docs/examples/README.md")),
+        required=EXAMPLES_DOCS_ADVANCED_ROSTER_REQUIRED,
+        forbidden=[],
+        failures=failures,
+    )
+
+
 def check_view_runtime_app_ui_aliases(failures: list[Failure]) -> None:
     for path in VIEW_RUNTIME_APP_UI_ALIAS_SOURCES:
         source = read_source(path)
@@ -1093,6 +1252,7 @@ def main() -> None:
     for path in examples_rust_sources():
         check_source_tree_policies(path, read_source(path), failures)
     check_first_party_curated_shadcn_surfaces(failures)
+    check_advanced_reference_roster(failures)
     check_view_runtime_app_ui_aliases(failures)
     check_view_entry_builder_then_run(failures)
     check_grouped_data_surface(failures)

@@ -181,3 +181,19 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M11_MODEL_READ_ASSET_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M12 - Advanced Reference Roster Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Advanced/reference surface selection, advanced/reference classification comments, and
+  `docs/examples/README.md` roster markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M12_ADVANCED_ROSTER_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`
