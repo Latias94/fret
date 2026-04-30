@@ -267,3 +267,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M16_TODO_ASYNC_PLAYGROUND_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M17 - API Workbench Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- API workbench lite default-app, AppRenderContext helper, and capability-first landing markers no
+  longer compile the monolithic `fret-examples` unit-test module.
+- API workbench lite SQLite query/mutation ownership markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M17_API_WORKBENCH_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`
+- `tools/examples_source_tree_policy/gate.py`

@@ -41,6 +41,7 @@ Status: active
   `fret-examples` unit test.
 - [x] Move the todo and async playground source markers out of the monolithic `fret-examples`
   unit test.
+- [x] Move the API workbench lite source markers out of the monolithic `fret-examples` unit test.
 
 ## Parked
 

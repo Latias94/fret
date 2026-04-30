@@ -559,6 +559,46 @@ ASYNC_PLAYGROUND_RENDER_SLICE_FORBIDDEN = [
     "ui::v_flex(|_cx| [header, body]).w_full().h_full().into_element(cx).into()",
 ]
 
+API_WORKBENCH_LITE_REQUIRED = [
+    "use fret::app::prelude::*;",
+    "fn init(_app: &mut App, window: WindowId) -> Self",
+    "Cx: AppRenderContext<'a>,",
+    "cx.app().global::<HistoryDbGlobal>()",
+    "shadcn::Dialog::new(&locals.settings_open).into_element_in(",
+    ".with_in(cx, |cx| {",
+    ".into_element_in(cx)",
+    "cx.data().query_async(",
+    "cx.data().mutation_async(",
+    "cx.data().update_after_mutation_completion(",
+    "move |models, state| apply_response_snapshot(models, &locals, state)",
+    "QueryKey::<Vec<PersistedHistoryEntry>>::new(HISTORY_QUERY_NS, &())",
+    "persist_history_snapshot(",
+    "load_saved_history(",
+    "sqlx::query(",
+    "cx.data().invalidate_query_namespace_after_mutation_success(",
+    "MutationConcurrencyPolicy::AllowParallelLatestWins",
+    "response_mutation.retry_last(",
+    "history_save_mutation.retry_last(",
+]
+
+API_WORKBENCH_LITE_FORBIDDEN = [
+    *DEFAULT_APP_SURFACE_COMMON_FORBIDDEN,
+    "fn shell_frame(\n    cx: &mut AppUi<'_, '_>,",
+    "fn request_panel(cx: &mut AppUi<'_, '_>,",
+    "fn response_panel(cx: &mut AppUi<'_, '_>,",
+    "cx.app.global::<HistoryDbGlobal>()",
+    "shadcn::Dialog::new(&locals.settings_open).into_element(",
+    ".with(cx.elements(), |cx| {",
+    ".into_element(cx.elements())",
+    "cx.elements()",
+    "maybe_invalidate_saved_history_query(",
+    "locals.history",
+    "next_history_id",
+    ".take_mutation_completion(",
+    "last_applied_seq",
+    "next_seq",
+]
+
 INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES = [
     (
         EXAMPLES_SRC / "form_demo.rs",
@@ -1575,6 +1615,16 @@ def check_todo_async_playground_source_policies(failures: list[Failure]) -> None
     )
 
 
+def check_api_workbench_lite_source_policy(failures: list[Failure]) -> None:
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "api_workbench_lite_demo.rs",
+        read_source(EXAMPLES_SRC / "api_workbench_lite_demo.rs"),
+        required=API_WORKBENCH_LITE_REQUIRED,
+        forbidden=API_WORKBENCH_LITE_FORBIDDEN,
+        failures=failures,
+    )
+
+
 def check_model_read_and_asset_helper_sources(failures: list[Failure]) -> None:
     for path in DIRECT_LEAF_VISIBILITY_READ_SOURCES:
         check_required_forbidden_markers(
@@ -1672,6 +1722,7 @@ def main() -> None:
     check_default_app_surface_sources(failures)
     check_query_markdown_editor_notes_source_policies(failures)
     check_todo_async_playground_source_policies(failures)
+    check_api_workbench_lite_source_policy(failures)
     check_model_read_and_asset_helper_sources(failures)
 
     print_failures(failures)
