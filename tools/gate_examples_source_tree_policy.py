@@ -271,6 +271,95 @@ DEFAULT_APP_LOCAL_STATE_FIRST_SOURCES = [
     EXAMPLES_SRC / "todo_demo.rs",
 ]
 
+DEFAULT_APP_SURFACE_SOURCES = [
+    (
+        EXAMPLES_SRC / "simple_todo_demo.rs",
+        "todo_page",
+        "ui::single(cx, todo_page(theme, card))",
+        [
+            "struct TodoLocals {",
+            "fn new(cx: &mut AppUi<'_, '_>) -> Self {",
+            "struct SimpleTodoView;",
+            "fn init(_app: &mut App, _window: WindowId) -> Self",
+            "let locals = TodoLocals::new(cx);",
+            "locals.bind_actions(cx);",
+            "draft: cx.state().local::<String>(),",
+            "next_id: cx.state().local_init(|| 3u64),",
+            "todos: cx.state().local_init(|| {",
+            ".local(&self.todos)",
+            ".payload_update_if::<act::Toggle>(|rows, id| {",
+            ".payload_update_if::<act::Remove>(|rows, id| {",
+            "ui_app_driver::UiAppDriver::new(",
+            "fret::advanced::view::view_init_window::<SimpleTodoView>,",
+            "fret::advanced::view::view_view::<SimpleTodoView>,",
+        ],
+        [
+            "fret_cookbook::scaffold::",
+            "centered_page_muted(",
+            "centered_page_background(",
+            "declarative::RenderRootContext",
+            "CommandId",
+            "UiTree<App>",
+            "Model<",
+            "TodoLocals::new(app)",
+            "LocalState::from_model(app.models_mut().insert(",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "query_demo.rs",
+        "query_page",
+        "ui::single(cx, query_page(theme, card))",
+        [],
+        [],
+    ),
+    (
+        EXAMPLES_SRC / "query_async_tokio_demo.rs",
+        "query_page",
+        "ui::single(cx, query_page(theme, card))",
+        [],
+        [],
+    ),
+]
+
+DEFAULT_APP_SURFACE_COMMON_FORBIDDEN = [
+    "advanced::prelude::*",
+    "KernelApp",
+    "AppWindowId",
+    "UiIntoElement",
+    "UiHostBoundIntoElement",
+    "UiChildIntoElement",
+    "UiBuilderHostBoundIntoElementExt",
+]
+
+HELLO_COUNTER_ROOT_REQUIRED = [
+    "ui::single(cx, hello_counter_page(theme, card))",
+    "fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild",
+    "let theme = cx.theme_snapshot();",
+]
+
+HELLO_COUNTER_ROOT_FORBIDDEN = [
+    "fn hello_counter_page(cx: &mut AppComponentCx<'_>,",
+    ".test_id(TEST_ID_ROOT).into_element(cx).into()",
+    "Theme::global(&*cx.app).snapshot()",
+]
+
+HELLO_COUNTER_APP_LANE_REQUIRED = [
+    "use fret_ui_kit::IntoUiElementInExt as _;",
+    "ui::text(count.to_string())",
+    "ui::text(status_text)",
+    "ui::text_block(if step_valid {",
+    ".submit_action(inc_cmd).into_element_in(cx)",
+    ".max_w(Px(480.0)).into_element_in(cx)",
+]
+
+HELLO_COUNTER_APP_LANE_FORBIDDEN = [
+    "let count_text = cx.text_props(",
+    "let status_line = cx.text_props(",
+    "let step_help = cx.text_props(",
+    ".submit_action(inc_cmd).into_element(cx)",
+    ".max_w(Px(480.0)).into_element(cx)",
+]
+
 INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES = [
     (
         EXAMPLES_SRC / "form_demo.rs",
@@ -1168,6 +1257,38 @@ def check_local_state_bridge_sources(failures: list[Failure]) -> None:
         )
 
 
+def check_default_app_surface_sources(failures: list[Failure]) -> None:
+    for path, page_fn, call_site, required, forbidden in DEFAULT_APP_SURFACE_SOURCES:
+        source = read_source(path)
+        check_required_forbidden_markers(
+            path,
+            source,
+            required=[
+                "use fret::app::prelude::*;",
+                "fn init(_app: &mut App, _window: WindowId) -> Self",
+                f"fn {page_fn}(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild",
+                call_site,
+                *required,
+            ],
+            forbidden=[
+                *DEFAULT_APP_SURFACE_COMMON_FORBIDDEN,
+                f"fn {page_fn}(cx: &mut AppComponentCx<'_>,",
+                "let card = card.into_element(cx);",
+                f"{page_fn}(theme, card).into_element(cx).into()",
+                *forbidden,
+            ],
+            failures=failures,
+        )
+
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "hello_counter_demo.rs",
+        read_source(EXAMPLES_SRC / "hello_counter_demo.rs"),
+        required=HELLO_COUNTER_ROOT_REQUIRED + HELLO_COUNTER_APP_LANE_REQUIRED,
+        forbidden=HELLO_COUNTER_ROOT_FORBIDDEN + HELLO_COUNTER_APP_LANE_FORBIDDEN,
+        failures=failures,
+    )
+
+
 def check_model_read_and_asset_helper_sources(failures: list[Failure]) -> None:
     for path in DIRECT_LEAF_VISIBILITY_READ_SOURCES:
         check_required_forbidden_markers(
@@ -1262,6 +1383,7 @@ def main() -> None:
     check_workspace_shell_capability_helpers(failures)
     check_theme_snapshot_helpers(failures)
     check_local_state_bridge_sources(failures)
+    check_default_app_surface_sources(failures)
     check_model_read_and_asset_helper_sources(failures)
 
     print_failures(failures)

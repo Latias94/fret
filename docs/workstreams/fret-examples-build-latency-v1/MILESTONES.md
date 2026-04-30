@@ -197,3 +197,18 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M12_ADVANCED_ROSTER_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M13 - Default App Surface Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Simple todo, query/query-async, and hello-counter default app surface markers no longer compile
+  the monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M13_DEFAULT_APP_SURFACE_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`

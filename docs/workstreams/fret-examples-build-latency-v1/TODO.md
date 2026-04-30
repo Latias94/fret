@@ -35,6 +35,7 @@ Status: active
   `fret-examples` unit test.
 - [x] Move the advanced/reference roster source markers out of the monolithic `fret-examples`
   unit test.
+- [x] Move the default app surface source markers out of the monolithic `fret-examples` unit test.
 
 ## Parked
 

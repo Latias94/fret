@@ -906,33 +906,6 @@ mod authoring_surface_policy_tests {
         "../../../tools/diag-scripts/suites/diag-hardening-smoke-workspace/suite.json"
     );
 
-    fn assert_uses_default_app_surface_with_page(src: &str, page_fn: &str, call_site: &str) {
-        assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(!src.contains("advanced::prelude::*"));
-        assert!(!src.contains("KernelApp"));
-        assert!(!src.contains("AppWindowId"));
-        assert!(
-            src.contains("fn init(_app: &mut App, _window: WindowId) -> Self")
-                || src.contains("fn init(app: &mut App, _window: WindowId) -> Self")
-        );
-        let page_sig =
-            format!("fn {page_fn}(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild");
-        let legacy_page_sig = format!("fn {page_fn}(cx: &mut AppComponentCx<'_>,");
-        assert!(src.contains(call_site));
-        assert!(src.contains(&page_sig));
-        assert!(!src.contains(&legacy_page_sig));
-        assert!(!src.contains("let card = card.into_element(cx);"));
-        assert!(!src.contains(&format!("{page_fn}(theme, card).into_element(cx).into()")));
-    }
-
-    fn assert_uses_default_app_surface(src: &str) {
-        assert_uses_default_app_surface_with_page(
-            src,
-            "todo_page",
-            "ui::single(cx, todo_page(theme, card))",
-        );
-    }
-
     fn assert_avoids_legacy_conversion_names(src: &str) {
         assert!(!src.contains("UiIntoElement"));
         assert!(!src.contains("UiHostBoundIntoElement"));
@@ -1463,56 +1436,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn simple_todo_demo_prefers_default_app_surface() {
-        assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
-        assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
-        assert!(SIMPLE_TODO_DEMO.contains("struct TodoLocals {"));
-        assert!(SIMPLE_TODO_DEMO.contains("fn new(cx: &mut AppUi<'_, '_>) -> Self {"));
-        assert!(SIMPLE_TODO_DEMO.contains("struct SimpleTodoView;"));
-        assert!(SIMPLE_TODO_DEMO.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(SIMPLE_TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
-        assert!(SIMPLE_TODO_DEMO.contains("locals.bind_actions(cx);"));
-        assert!(SIMPLE_TODO_DEMO.contains("ui::single(cx, todo_page(theme, card))"));
-        assert!(
-            SIMPLE_TODO_DEMO.contains(
-                "fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild"
-            )
-        );
-        assert!(!SIMPLE_TODO_DEMO.contains("fret_cookbook::scaffold::"));
-        assert!(!SIMPLE_TODO_DEMO.contains("centered_page_muted("));
-        assert!(!SIMPLE_TODO_DEMO.contains("centered_page_background("));
-        assert!(SIMPLE_TODO_DEMO.contains("draft: cx.state().local::<String>(),"));
-        assert!(SIMPLE_TODO_DEMO.contains("next_id: cx.state().local_init(|| 3u64),"));
-        assert!(SIMPLE_TODO_DEMO.contains("todos: cx.state().local_init(|| {"));
-        assert!(SIMPLE_TODO_DEMO.contains(".local(&self.todos)"));
-        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
-        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
-        assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
-        assert!(
-            SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_init_window::<SimpleTodoView>,")
-        );
-        assert!(SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_view::<SimpleTodoView>,"));
-        assert!(!SIMPLE_TODO_DEMO.contains("declarative::RenderRootContext"));
-        assert!(!SIMPLE_TODO_DEMO.contains("CommandId"));
-        assert!(!SIMPLE_TODO_DEMO.contains("UiTree<App>"));
-        assert!(!SIMPLE_TODO_DEMO.contains("Model<"));
-        assert!(!SIMPLE_TODO_DEMO.contains("TodoLocals::new(app)"));
-        assert!(!SIMPLE_TODO_DEMO.contains("LocalState::from_model(app.models_mut().insert("));
-    }
-
-    #[test]
-    fn query_demos_prefer_default_app_surface() {
-        for src in [QUERY_DEMO, QUERY_ASYNC_TOKIO_DEMO] {
-            assert_uses_default_app_surface_with_page(
-                src,
-                "query_page",
-                "ui::single(cx, query_page(theme, card))",
-            );
-            assert_avoids_legacy_conversion_names(src);
-        }
-    }
-
-    #[test]
     fn query_demos_prefer_capability_first_landing_for_root_detail_builders() {
         let query_demo = QUERY_DEMO.split_whitespace().collect::<String>();
         let query_async = QUERY_ASYNC_TOKIO_DEMO
@@ -1624,51 +1547,6 @@ mod authoring_surface_policy_tests {
         assert!(!API_WORKBENCH_LITE_DEMO.contains(".take_mutation_completion("));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("last_applied_seq"));
         assert!(!API_WORKBENCH_LITE_DEMO.contains("next_seq"));
-    }
-
-    #[test]
-    fn hello_counter_demo_prefers_root_helper_surface() {
-        assert!(HELLO_COUNTER_DEMO.contains("ui::single(cx, hello_counter_page(theme, card))"));
-        assert!(HELLO_COUNTER_DEMO.contains(
-            "fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild"
-        ));
-        assert!(HELLO_COUNTER_DEMO.contains("let theme = cx.theme_snapshot();"));
-        assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut AppComponentCx<'_>,"));
-        assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
-        assert!(!HELLO_COUNTER_DEMO.contains("Theme::global(&*cx.app).snapshot()"));
-    }
-
-    #[test]
-    fn hello_counter_demo_prefers_app_lane_text_builders_and_capability_first_landing() {
-        let hello_counter = HELLO_COUNTER_DEMO.split_whitespace().collect::<String>();
-        for marker in [
-            "use fret_ui_kit::IntoUiElementInExt as _;",
-            "ui::text(count.to_string())",
-            "ui::text(status_text)",
-            "ui::text_block(if step_valid {",
-            ".submit_action(inc_cmd).into_element_in(cx)",
-            ".max_w(Px(480.0)).into_element_in(cx)",
-        ] {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(
-                hello_counter.contains(&marker),
-                "hello counter demo should keep the app-lane marker: {marker}",
-            );
-        }
-
-        for legacy in [
-            "let count_text = cx.text_props(",
-            "let status_line = cx.text_props(",
-            "let step_help = cx.text_props(",
-            ".submit_action(inc_cmd).into_element(cx)",
-            ".max_w(Px(480.0)).into_element(cx)",
-        ] {
-            let legacy = legacy.split_whitespace().collect::<String>();
-            assert!(
-                !hello_counter.contains(&legacy),
-                "hello counter demo should stay off legacy raw marker: {legacy}",
-            );
-        }
     }
 
     #[test]
