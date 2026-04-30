@@ -164,3 +164,20 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M10_LOCAL_STATE_BRIDGE_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M11 - Model-Read And Asset Helper Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Grouped selector-model layout markers, driver-owned raw model-store read markers, state-owned
+  GenUI helper markers, UI asset helper entrypoint markers, and embedded viewport driver extension
+  markers no longer compile the monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+- Parser/function behavior tests remain in Rust.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M11_MODEL_READ_ASSET_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`

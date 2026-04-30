@@ -427,6 +427,171 @@ LOCAL_STATE_COMPONENT_BRIDGE_SOURCES = [
     ),
 ]
 
+DIRECT_LEAF_VISIBILITY_READ_SOURCES = [
+    EXAMPLES_SRC / "custom_effect_v2_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_glass_chrome_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_identity_web_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_lut_web_demo.rs",
+    EXAMPLES_SRC / "external_texture_imports_demo.rs",
+    EXAMPLES_SRC / "external_texture_imports_web_demo.rs",
+    EXAMPLES_SRC / "external_video_imports_avf_demo.rs",
+    EXAMPLES_SRC / "external_video_imports_mf_demo.rs",
+]
+
+DIRECT_LEAF_VISIBILITY_READ_FORBIDDEN = [
+    "cx.observe_model(&show, Invalidation::Layout);",
+    "cx.observe_model(&show_model, Invalidation::Layout);",
+    "cx.observe_model(&st.show, Invalidation::Layout);",
+    "cx.app.models().read(&show, |v| *v).unwrap_or(true)",
+    "cx.app.models().read(&show_model, |v| *v).unwrap_or(true)",
+    "cx.app.models().read(&st.show, |v| *v).unwrap_or(true)",
+]
+
+STRESS_RENDER_ROOT_SOURCES = [
+    EXAMPLES_SRC / "virtual_list_stress_demo.rs",
+    EXAMPLES_SRC / "canvas_datagrid_stress_demo.rs",
+]
+
+STRESS_RENDER_ROOT_FORBIDDEN = [
+    "cx.observe_model(&state.tall_rows_enabled, Invalidation::Layout);",
+    "cx.observe_model(&state.reversed, Invalidation::Layout);",
+    "cx.observe_model(&state.items_revision, Invalidation::Layout);",
+    "app.models().read(&state.tall_rows_enabled, |v| *v).unwrap_or(false);",
+    "app.models().read(&state.reversed, |v| *v).unwrap_or(false);",
+    "app.models().read(&state.items_revision, |v| *v).unwrap_or(0);",
+    "cx.observe_model(&state.variable_sizes, Invalidation::Layout);",
+    "cx.observe_model(&state.clamp_rows, Invalidation::Layout);",
+    "cx.observe_model(&state.revision, Invalidation::Layout);",
+    "cx.observe_model(&state.grid_output, Invalidation::Layout);",
+    "app.models().read(&state.variable_sizes, |v| *v).unwrap_or(false);",
+    "app.models().read(&state.clamp_rows, |v| *v).unwrap_or(false);",
+    "app.models().read(&state.revision, |v| *v).unwrap_or(1);",
+    "cx.app.models().read(&state.grid_output, |v| *v).unwrap_or_default();",
+]
+
+GENUI_MESSAGE_LANE_REQUIRED = [
+    "impl GenUiState {",
+    "fn clear_action_queue(&self, app: &mut KernelApp) {",
+    "fn queued_invocations(",
+    "fn auto_apply_enabled(&self, app: &KernelApp) -> bool {",
+    "fn auto_fix_enabled(&self, app: &KernelApp) -> bool {",
+    "fn editor_text_value(&self, app: &KernelApp) -> String {",
+    "fn stream_text_value(&self, app: &KernelApp) -> String {",
+    "fn stream_patch_only_enabled(&self, app: &KernelApp) -> bool {",
+    "let auto_apply = state.auto_apply_enabled(app);",
+    "let invocations = state.queued_invocations(app);",
+    "state.clear_action_queue(app);",
+    "let text = state.editor_text_value(app);",
+    "let auto_fix = state.auto_fix_enabled(app);",
+    "let text = state.stream_text_value(app);",
+    "let patch_only = state.stream_patch_only_enabled(app);",
+]
+
+GENUI_MESSAGE_LANE_FORBIDDEN = [
+    "state.auto_apply_standard_actions.value_in_or(app.models(), true);",
+    "app.models().read(&state.action_queue, |q| q.invocations.clone())",
+    "state.editor_text.value_in_or_default(app.models());",
+    "state.auto_fix_on_apply.value_in_or(app.models(), true);",
+    "state.stream_text.value_in_or_default(app.models());",
+    "state.stream_patch_only.value_in_or(app.models(), false);",
+    "app.models_mut().update(&state.action_queue, |q| q.invocations.clear());",
+]
+
+DRIVER_OWNED_SOURCE_SLICES = [
+    (
+        EXAMPLES_SRC / "embedded_viewport_demo.rs",
+        "fn record_embedded_viewport(",
+        "pub fn run() -> anyhow::Result<()> {",
+        [
+            "embedded::models(app, window)",
+            "app.models().read(&m.clicks, |v| *v).ok()",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "external_texture_imports_demo.rs",
+        "fn record_engine_frame(",
+        "pub fn run() -> anyhow::Result<()> {",
+        ["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
+    ),
+    (
+        EXAMPLES_SRC / "external_texture_imports_web_demo.rs",
+        "fn record_engine_frame(",
+        "fn handle_event(",
+        ["let show = app.models().read(&state.show, |v| *v).unwrap_or(true);"],
+    ),
+    (
+        EXAMPLES_SRC / "external_video_imports_avf_demo.rs",
+        "fn record_engine_frame(",
+        "pub fn run() -> anyhow::Result<()> {",
+        ["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
+    ),
+    (
+        EXAMPLES_SRC / "external_video_imports_mf_demo.rs",
+        "fn record_engine_frame(",
+        "pub fn run() -> anyhow::Result<()> {",
+        ["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
+    ),
+    (
+        EXAMPLES_SRC / "workspace_shell_demo.rs",
+        "fn handle_command(",
+        "fn handle_event(",
+        ["let prompt = app.models().get_cloned(&state.dirty_close_prompt).flatten();"],
+    ),
+    (
+        EXAMPLES_SRC / "launcher_utility_window_demo.rs",
+        "fn on_command(",
+        "fn on_event(",
+        ["let next = !st.always_on_top.value_in_or(app.models(), false);"],
+    ),
+    (
+        EXAMPLES_SRC / "plot_stress_demo.rs",
+        "fn maybe_animate_bounds(",
+        "fn gpu_ready(",
+        ["let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);"],
+    ),
+    (
+        EXAMPLES_SRC / "plot_stress_demo.rs",
+        "fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStressWindowState>) {",
+        "fn window_create_spec(",
+        ["let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);"],
+    ),
+]
+
+DRIVER_OWNED_SOURCE_SLICE_FORBIDDEN = [
+    "selector_model_layout(",
+    "layout_value_in(",
+]
+
+ASSET_HELPER_ENTRYPOINT_SOURCES = [
+    (
+        EXAMPLES_SRC / "assets_demo.rs",
+        [
+            "use fret_ui_assets::ui::{image_stats_in, svg_stats_in, use_rgba8_image_state_in};",
+            "use_rgba8_image_state_in(cx, 96, 96, checker_rgba.as_slice(), ImageColorSpace::Srgb);",
+            "let image_stats = image_stats_in(cx);",
+            "let svg_stats = svg_stats_in(cx);",
+        ],
+        [
+            "image_asset_state::use_rgba8_image_state(cx.app, cx.window,",
+            "UiAssets::image_stats(cx.app);",
+            "UiAssets::svg_stats(cx.app);",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "markdown_demo.rs",
+        [
+            "use fret_ui_assets::ui::use_rgba8_image_state_in;",
+            "let (_key, image, _status) = use_rgba8_image_state_in(cx,",
+        ],
+        ["image_asset_state::use_rgba8_image_state("],
+    ),
+]
+
+EMBEDDED_VIEWPORT_DRIVER_EXTENSION_SOURCES = [
+    EXAMPLES_SRC / "embedded_viewport_demo.rs",
+    EXAMPLES_SRC / "imui_editor_proof_demo.rs",
+]
+
 WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED = [
     "fn workspace_shell_command_button<'a, Cx>(",
     "Cx: fret::app::ElementContextAccess<'a, App>,",
@@ -505,6 +670,26 @@ def read_source(path: Path) -> str:
         return full_path.read_text(encoding="utf-8")
     except OSError as exc:
         fail(GATE_NAME, f"failed to read {rel_path(full_path).as_posix()}: {exc}")
+
+
+def source_slice(path: Path, source: str, start_marker: str, end_marker: str) -> str:
+    try:
+        start = source.index(start_marker)
+    except ValueError:
+        failures_path = path if path.is_absolute() else WORKSPACE_ROOT / path
+        fail(
+            GATE_NAME,
+            f"missing start marker in {rel_path(failures_path).as_posix()}: {start_marker}",
+        )
+    try:
+        end = source.index(end_marker, start)
+    except ValueError:
+        failures_path = path if path.is_absolute() else WORKSPACE_ROOT / path
+        fail(
+            GATE_NAME,
+            f"missing end marker in {rel_path(failures_path).as_posix()}: {end_marker}",
+        )
+    return source[start:end]
 
 
 def examples_rust_sources() -> list[Path]:
@@ -824,6 +1009,68 @@ def check_local_state_bridge_sources(failures: list[Failure]) -> None:
         )
 
 
+def check_model_read_and_asset_helper_sources(failures: list[Failure]) -> None:
+    for path in DIRECT_LEAF_VISIBILITY_READ_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=[
+                "use fret::advanced::view::AppRenderDataExt as _;",
+                "selector_model_layout(",
+            ],
+            forbidden=DIRECT_LEAF_VISIBILITY_READ_FORBIDDEN,
+            failures=failures,
+        )
+
+    for path in STRESS_RENDER_ROOT_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=[
+                "use fret::advanced::view::AppRenderDataExt as _;",
+                "cx.data().selector_model_layout(",
+            ],
+            forbidden=STRESS_RENDER_ROOT_FORBIDDEN,
+            failures=failures,
+        )
+
+    check_required_forbidden_markers(
+        EXAMPLES_SRC / "genui_demo.rs",
+        read_source(EXAMPLES_SRC / "genui_demo.rs"),
+        required=GENUI_MESSAGE_LANE_REQUIRED,
+        forbidden=GENUI_MESSAGE_LANE_FORBIDDEN,
+        failures=failures,
+    )
+
+    for path, start_marker, end_marker, required in DRIVER_OWNED_SOURCE_SLICES:
+        source = read_source(path)
+        check_required_forbidden_markers(
+            path,
+            source_slice(path, source, start_marker, end_marker),
+            required=required,
+            forbidden=DRIVER_OWNED_SOURCE_SLICE_FORBIDDEN,
+            failures=failures,
+        )
+
+    for path, required, forbidden in ASSET_HELPER_ENTRYPOINT_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=required,
+            forbidden=forbidden,
+            failures=failures,
+        )
+
+    for path in EMBEDDED_VIEWPORT_DRIVER_EXTENSION_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=[".drive_embedded_viewport()"],
+            forbidden=["EmbeddedViewportUiAppDriverExt"],
+            failures=failures,
+        )
+
+
 def print_failures(failures: list[Failure]) -> None:
     if not failures:
         return
@@ -855,6 +1102,7 @@ def main() -> None:
     check_workspace_shell_capability_helpers(failures)
     check_theme_snapshot_helpers(failures)
     check_local_state_bridge_sources(failures)
+    check_model_read_and_asset_helper_sources(failures)
 
     print_failures(failures)
     if failures:

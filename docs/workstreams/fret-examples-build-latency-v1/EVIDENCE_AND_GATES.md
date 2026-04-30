@@ -82,9 +82,14 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M10_LOCAL_STATE_BRIDGE_SOURCE_GATE_2026-04-30.md`
   after moving default app local-state-first, init-time `LocalState::new_in`, AppUi render-root
   bridge, and local-state component bridge markers into `tools/gate_examples_source_tree_policy.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M11_MODEL_READ_ASSET_SOURCE_GATE_2026-04-30.md`
+  after moving grouped selector-model layout, driver-owned raw model-store read, GenUI state helper,
+  UI asset helper, and embedded viewport driver extension markers into
+  `tools/gate_examples_source_tree_policy.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the local-state bridge source migration: 281 `include_str!` occurrences and 92
+- Current count after the model-read/asset source migration: 281 `include_str!` occurrences and 86
   Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -119,4 +124,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M8_AUTHORING_IMPORT_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M9_THEME_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M10_LOCAL_STATE_BRIDGE_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M11_MODEL_READ_ASSET_SOURCE_GATE_2026-04-30.md`
 - `Cargo.toml`
