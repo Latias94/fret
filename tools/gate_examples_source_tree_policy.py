@@ -37,6 +37,23 @@ RAW_ACTION_NOTIFY_MARKERS = [
     "cx.on_payload_action_notify::<",
 ]
 
+WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED = [
+    "fn workspace_shell_command_button<'a, Cx>(",
+    "Cx: fret::app::ElementContextAccess<'a, App>,",
+    "let cx = cx.elements();",
+    "workspace_shell_command_button(",
+    "fn workspace_shell_editor_rail<'a, Cx>(",
+    "workspace_shell_editor_rail(",
+    "InspectorPanel::new(None)",
+    ".into_element_in(cx,",
+    "PropertyGrid::new().into_element_in(cx,",
+]
+
+WORKSPACE_SHELL_CAPABILITY_HELPER_FORBIDDEN = [
+    "let button = |cx: &mut fret_ui::ElementContext<'_, App>,",
+    "fn workspace_shell_editor_rail(cx: &mut fret_ui::ElementContext<'_, App>,",
+]
+
 FIRST_PARTY_CURATED_SHADCN_SURFACES = [
     EXAMPLES_SRC / "assets_demo.rs",
     EXAMPLES_SRC / "async_playground_demo.rs",
@@ -193,6 +210,33 @@ def check_first_party_curated_shadcn_surfaces(failures: list[Failure]) -> None:
                 )
 
 
+def check_required_forbidden_markers(
+    path: Path,
+    source: str,
+    required: list[str],
+    forbidden: list[str],
+    failures: list[Failure],
+) -> None:
+    normalized = normalize(source)
+    for marker in required:
+        if normalize(marker) not in normalized:
+            failures.append(Failure(path, None, f"missing source marker: {marker}"))
+    for marker in forbidden:
+        if normalize(marker) in normalized:
+            failures.append(Failure(path, None, f"forbidden source marker: {marker}"))
+
+
+def check_workspace_shell_capability_helpers(failures: list[Failure]) -> None:
+    path = EXAMPLES_SRC / "workspace_shell_demo.rs"
+    check_required_forbidden_markers(
+        path,
+        read_source(path),
+        WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED,
+        WORKSPACE_SHELL_CAPABILITY_HELPER_FORBIDDEN,
+        failures,
+    )
+
+
 def print_failures(failures: list[Failure]) -> None:
     if not failures:
         return
@@ -215,6 +259,7 @@ def main() -> None:
     for path in examples_rust_sources():
         check_source_tree_policies(path, read_source(path), failures)
     check_first_party_curated_shadcn_surfaces(failures)
+    check_workspace_shell_capability_helpers(failures)
 
     print_failures(failures)
     if failures:

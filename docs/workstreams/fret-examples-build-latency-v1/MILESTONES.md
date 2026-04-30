@@ -87,3 +87,18 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M5_IMUI_STATE_SOURCE_GATE_2026-04-29.md`
 - `tools/gate_imui_facade_teaching_source.py`
+
+## M6 - Workspace Shell Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Workspace shell capability-helper markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The examples source-tree policy gate owns the markers.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M6_WORKSPACE_SHELL_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`
