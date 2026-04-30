@@ -26,6 +26,8 @@ Status: active
   `fret-examples` unit test.
 - [x] Move the workspace shell capability-helper source markers out of the monolithic
   `fret-examples` unit test.
+- [x] Move the broad view-runtime entry source markers out of the monolithic `fret-examples`
+  unit test.
 
 ## Parked
 

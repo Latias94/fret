@@ -102,3 +102,18 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M6_WORKSPACE_SHELL_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M7 - View Entry Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Broad view-runtime AppUi alias and builder/run entry markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The examples source-tree policy gate owns the markers.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M7_VIEW_ENTRY_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`

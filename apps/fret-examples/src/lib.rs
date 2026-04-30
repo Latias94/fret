@@ -996,30 +996,6 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("UiBuilderHostBoundIntoElementExt"));
     }
 
-    fn assert_view_runtime_example_uses_app_ui_aliases(src: &str) {
-        assert!(
-            src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui")
-                || src.contains(
-                    "fn render(&mut self, cx: &mut fret::AppUi<'_, '_, App>) -> fret::Ui",
-                )
-        );
-        assert!(
-            !src.contains("fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements")
-        );
-        assert!(!src.contains(
-            "fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements",
-        ));
-        assert!(!src.contains("ViewCx<'_, '_, KernelApp>"));
-        assert!(!src.contains("ViewCx<'_, '_, App>"));
-    }
-
-    fn assert_prefers_view_builder_then_run(src: &str) {
-        let normalized = src.split_whitespace().collect::<String>();
-        assert!(normalized.contains(".view::<"));
-        assert!(normalized.contains(".run()"));
-        assert!(!normalized.contains(".run_view::<"));
-    }
-
     fn assert_current_imui_teaching_surface(
         name: &str,
         src: &str,
@@ -7010,67 +6986,6 @@ mod authoring_surface_policy_tests {
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES.contains(marker),
                 "the evidence-and-gates note should keep the catalog and availability outcome explicit: {marker}"
             );
-        }
-    }
-
-    #[test]
-    fn view_runtime_examples_prefer_app_ui_and_ui_aliases() {
-        for src in [
-            ASSETS_DEMO,
-            ASYNC_PLAYGROUND_DEMO,
-            CHART_DECLARATIVE_DEMO,
-            CUSTOM_EFFECT_V1_DEMO,
-            CUSTOM_EFFECT_V2_DEMO,
-            CUSTOM_EFFECT_V3_DEMO,
-            DROP_SHADOW_DEMO,
-            EMBEDDED_VIEWPORT_DEMO,
-            EXTERNAL_TEXTURE_IMPORTS_DEMO,
-            EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
-            EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
-            GENUI_DEMO,
-            HELLO_COUNTER_DEMO,
-            HELLO_WORLD_COMPARE_DEMO,
-            IMAGE_HEAVY_MEMORY_DEMO,
-            IMUI_EDITOR_PROOF_DEMO,
-            IMUI_FLOATING_WINDOWS_DEMO,
-            IMUI_HELLO_DEMO,
-            IMUI_INTERACTION_SHOWCASE_DEMO,
-            IMUI_NODE_GRAPH_DEMO,
-            IMUI_RESPONSE_SIGNALS_DEMO,
-            IMUI_SHADCN_ADAPTER_DEMO,
-            LIQUID_GLASS_DEMO,
-            MARKDOWN_DEMO,
-            NODE_GRAPH_DEMO,
-            POSTPROCESS_THEME_DEMO,
-            QUERY_ASYNC_TOKIO_DEMO,
-            QUERY_DEMO,
-            TODO_DEMO,
-        ] {
-            assert_view_runtime_example_uses_app_ui_aliases(src);
-        }
-    }
-
-    #[test]
-    fn view_entry_examples_prefer_builder_then_run() {
-        for src in [
-            ASYNC_PLAYGROUND_DEMO,
-            CHART_DECLARATIVE_DEMO,
-            DROP_SHADOW_DEMO,
-            GENUI_DEMO,
-            HELLO_COUNTER_DEMO,
-            IMUI_FLOATING_WINDOWS_DEMO,
-            IMUI_HELLO_DEMO,
-            IMUI_INTERACTION_SHOWCASE_DEMO,
-            IMUI_NODE_GRAPH_DEMO,
-            IMUI_RESPONSE_SIGNALS_DEMO,
-            IMUI_SHADCN_ADAPTER_DEMO,
-            MARKDOWN_DEMO,
-            NODE_GRAPH_DEMO,
-            QUERY_ASYNC_TOKIO_DEMO,
-            QUERY_DEMO,
-            TODO_DEMO,
-        ] {
-            assert_prefers_view_builder_then_run(src);
         }
     }
 

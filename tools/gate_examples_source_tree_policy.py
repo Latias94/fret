@@ -37,6 +37,57 @@ RAW_ACTION_NOTIFY_MARKERS = [
     "cx.on_payload_action_notify::<",
 ]
 
+VIEW_RUNTIME_APP_UI_ALIAS_SOURCES = [
+    EXAMPLES_SRC / "assets_demo.rs",
+    EXAMPLES_SRC / "async_playground_demo.rs",
+    EXAMPLES_SRC / "chart_declarative_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v1_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v2_demo.rs",
+    EXAMPLES_SRC / "custom_effect_v3_demo.rs",
+    EXAMPLES_SRC / "drop_shadow_demo.rs",
+    EXAMPLES_SRC / "embedded_viewport_demo.rs",
+    EXAMPLES_SRC / "external_texture_imports_demo.rs",
+    EXAMPLES_SRC / "external_video_imports_avf_demo.rs",
+    EXAMPLES_SRC / "external_video_imports_mf_demo.rs",
+    EXAMPLES_SRC / "genui_demo.rs",
+    EXAMPLES_SRC / "hello_counter_demo.rs",
+    EXAMPLES_SRC / "hello_world_compare_demo.rs",
+    EXAMPLES_SRC / "image_heavy_memory_demo.rs",
+    EXAMPLES_SRC / "imui_editor_proof_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_floating_windows_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_hello_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+    EXAMPLES_SRC / "imui_node_graph_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_response_signals_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_shadcn_adapter_demo.rs",
+    EXAMPLES_SRC / "liquid_glass_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+    EXAMPLES_SRC / "node_graph_demo.rs",
+    EXAMPLES_SRC / "postprocess_theme_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+    EXAMPLES_SRC / "query_demo.rs",
+    EXAMPLES_SRC / "todo_demo.rs",
+]
+
+VIEW_ENTRY_BUILDER_THEN_RUN_SOURCES = [
+    EXAMPLES_SRC / "async_playground_demo.rs",
+    EXAMPLES_SRC / "chart_declarative_demo.rs",
+    EXAMPLES_SRC / "drop_shadow_demo.rs",
+    EXAMPLES_SRC / "genui_demo.rs",
+    EXAMPLES_SRC / "hello_counter_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_floating_windows_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_hello_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_interaction_showcase_demo.rs",
+    EXAMPLES_SRC / "imui_node_graph_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_response_signals_demo.rs",
+    IMUI_EXAMPLES_SRC / "imui_shadcn_adapter_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+    EXAMPLES_SRC / "node_graph_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+    EXAMPLES_SRC / "query_demo.rs",
+    EXAMPLES_SRC / "todo_demo.rs",
+]
+
 WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED = [
     "fn workspace_shell_command_button<'a, Cx>(",
     "Cx: fret::app::ElementContextAccess<'a, App>,",
@@ -226,6 +277,46 @@ def check_required_forbidden_markers(
             failures.append(Failure(path, None, f"forbidden source marker: {marker}"))
 
 
+def check_view_runtime_app_ui_aliases(failures: list[Failure]) -> None:
+    for path in VIEW_RUNTIME_APP_UI_ALIAS_SOURCES:
+        source = read_source(path)
+        has_current_signature = (
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui" in source
+            or "fn render(&mut self, cx: &mut fret::AppUi<'_, '_, App>) -> fret::Ui" in source
+        )
+        if not has_current_signature:
+            failures.append(
+                Failure(
+                    path,
+                    None,
+                    "missing AppUi/Ui render signature for view-runtime example",
+                )
+            )
+        check_required_forbidden_markers(
+            path,
+            source,
+            required=[],
+            forbidden=[
+                "fn render(&mut self, cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements",
+                "fn render(&mut self, cx: &mut fret::view::ViewCx<'_, '_, App>) -> Elements",
+                "ViewCx<'_, '_, KernelApp>",
+                "ViewCx<'_, '_, App>",
+            ],
+            failures=failures,
+        )
+
+
+def check_view_entry_builder_then_run(failures: list[Failure]) -> None:
+    for path in VIEW_ENTRY_BUILDER_THEN_RUN_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=[".view::<", ".run()"],
+            forbidden=[".run_view::<"],
+            failures=failures,
+        )
+
+
 def check_workspace_shell_capability_helpers(failures: list[Failure]) -> None:
     path = EXAMPLES_SRC / "workspace_shell_demo.rs"
     check_required_forbidden_markers(
@@ -259,6 +350,8 @@ def main() -> None:
     for path in examples_rust_sources():
         check_source_tree_policies(path, read_source(path), failures)
     check_first_party_curated_shadcn_surfaces(failures)
+    check_view_runtime_app_ui_aliases(failures)
+    check_view_entry_builder_then_run(failures)
     check_workspace_shell_capability_helpers(failures)
 
     print_failures(failures)
