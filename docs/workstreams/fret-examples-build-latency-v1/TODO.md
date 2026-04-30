@@ -30,6 +30,7 @@ Status: active
   unit test.
 - [x] Move the authoring/import source markers out of the monolithic `fret-examples` unit test.
 - [x] Move the theme-read source markers out of the monolithic `fret-examples` unit test.
+- [x] Move the local-state bridge source markers out of the monolithic `fret-examples` unit test.
 
 ## Parked
 

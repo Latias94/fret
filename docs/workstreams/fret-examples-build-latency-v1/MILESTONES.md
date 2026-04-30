@@ -148,3 +148,19 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M9_THEME_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M10 - Local-State Bridge Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Local-state-first default app markers, init-time `LocalState::new_in` markers, AppUi render-root
+  bridge markers, and local-state component bridge markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M10_LOCAL_STATE_BRIDGE_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`

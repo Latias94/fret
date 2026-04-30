@@ -144,6 +144,289 @@ RENDERER_THEME_BRIDGE_HOST_THEME_READ_SOURCES = [
     EXAMPLES_SRC / "liquid_glass_demo.rs",
 ]
 
+DEFAULT_APP_LOCAL_STATE_FIRST_SOURCES = [
+    EXAMPLES_SRC / "hello_counter_demo.rs",
+    EXAMPLES_SRC / "query_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+    EXAMPLES_SRC / "simple_todo_demo.rs",
+    EXAMPLES_SRC / "todo_demo.rs",
+]
+
+INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES = [
+    (
+        EXAMPLES_SRC / "form_demo.rs",
+        [
+            "LocalState::new_in(app.models_mut(), String::new())",
+            "LocalState::new_in(app.models_mut(), None::<Arc<str>>)",
+            "LocalState::new_in(app.models_mut(), form_state)",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "async_playground_demo.rs",
+        [
+            "LocalState::new_in(app.models_mut(), initial.map(Arc::from))",
+            "LocalState::new_in(app.models_mut(), \"2\".to_string())",
+            "LocalState::new_in(app.models_mut(), false)",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "table_demo.rs",
+        [
+            "LocalState::new_in(app.models_mut(), false)",
+            "LocalState::new_in(app.models_mut(), true)",
+            "Some(Arc::<str>::from(\"reorder\"))",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "genui_demo.rs",
+        [
+            "LocalState::new_in(app.models_mut(), true)",
+            "LocalState::new_in(app.models_mut(), SPEC_JSON.to_string())",
+            "LocalState::new_in(app.models_mut(), String::new())",
+        ],
+    ),
+]
+
+APP_UI_RENDER_ROOT_BRIDGE_SOURCES = [
+    (
+        EXAMPLES_SRC / "form_demo.rs",
+        [
+            "app_ui_root: AppUiRenderRootState,",
+            "form_state: LocalState<FormState>,",
+            "LocalState::new_in(app.models_mut(), String::new())",
+            "LocalState::new_in(app.models_mut(), None::<Arc<str>>)",
+            "LocalState::new_in(app.models_mut(), form_state)",
+            "let root = render_root_with_app_ui(",
+            "let (submit_count, valid, dirty) = form_state.layout(cx).read_ref(",
+            "let status_text = status.layout_value(cx);",
+        ],
+        [
+            "form_state: Model<FormState>,",
+            "LocalState::from_model(app.models_mut().insert(",
+            ".render_root(\"form-demo\", move |cx| {",
+            "cx.observe_model(&form_state, Invalidation::Layout);",
+            "cx.app.models().read(&form_state, |st| {",
+            "cx.app.models().read(&status, |v| Arc::clone(v))",
+            "status.layout(cx).value_or_else(|| Arc::from(\"Idle\"));",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "date_picker_demo.rs",
+        [
+            "app_ui_root: AppUiRenderRootState,",
+            "locals: Option<DatePickerDemoLocals>,",
+            "struct DatePickerDemoLocals {",
+            "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+            "open: cx.state().local_init(|| false),",
+            "month: cx",
+            "if locals.is_none() {",
+            "let root = render_root_with_app_ui(",
+            "let open_value = open.layout_value(cx);",
+            "let selected_value = selected.layout_value(cx);",
+            "let month_label: Arc<str> = month.layout(cx).read_ref(",
+            "let cx = cx.elements();",
+        ],
+        [
+            "open: Model<bool>,",
+            "LocalState::from_model(app.models_mut().insert(",
+            ".render_root(\"date-picker-demo\", move |cx| {",
+            "cx.observe_model(&open, Invalidation::Layout);",
+            "cx.app.models().get_copied(&open)",
+            "cx.app.models().read(&month, |m| format!(\"{:?} {}\", m.month, m.year))",
+            "open.layout(cx).copied_or(false)",
+            "selected.layout(cx).value_or_default()",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "sonner_demo.rs",
+        [
+            "app_ui_root: AppUiRenderRootState,",
+            "locals: Option<SonnerDemoLocals>,",
+            "struct SonnerDemoLocals {",
+            "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+            "last_action: cx.state().local_init(|| Arc::<str>::from(\"<none>\")),",
+            "if locals.is_none() {",
+            "let root = render_root_with_app_ui(",
+            "let last_action_value = last_action.layout_value(cx);",
+        ],
+        [
+            "last_action: Model<Arc<str>>,",
+            "LocalState::from_model(app.models_mut().insert(",
+            ".render_root(\"sonner-demo\", |cx| {",
+            "cx.observe_model(&last_action, Invalidation::Layout);",
+            "cx.app.models().get_cloned(&last_action)",
+            "last_action.layout(cx).value_or_else(",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "ime_smoke_demo.rs",
+        [
+            "use fret::app::RenderContextAccess as _;",
+            "app_ui_root: AppUiRenderRootState,",
+            "locals: Option<ImeSmokeLocals>,",
+            "struct ImeSmokeLocals {",
+            "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+            "input_single: cx.state().local::<String>(),",
+            "last_ime: cx.state().local_init(|| Arc::<str>::from(\"IME: <none>\")),",
+            "if locals.is_none() {",
+            "let root = render_root_with_app_ui(",
+            "let theme = cx.theme_snapshot();",
+            "let last = last_ime.paint_value(cx);",
+            "shadcn::Input::new(&input_single)",
+            "shadcn::Textarea::new(&input_multi)",
+        ],
+        [
+            "input_single: Model<String>,",
+            "last_ime: Model<Arc<str>>,",
+            "LocalState::from_model(app.models_mut().insert(",
+            ".render_root(\"ime-smoke\",",
+            "cx.observe_model(&last_ime, Invalidation::Paint);",
+            "cx.app.models().read(&last_ime, |v| v.clone())",
+            "last_ime.paint(cx).value_or_else(",
+            "input_single.clone_model()",
+            "input_multi.clone_model()",
+            "Theme::global(&*cx.app).snapshot()",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "emoji_conformance_demo.rs",
+        [
+            "app_ui_root: AppUiRenderRootState,",
+            "locals: Option<EmojiConformanceLocals>,",
+            "struct EmojiConformanceLocals {",
+            "fn new(cx: &mut fret::AppUi<'_, '_>) -> Self {",
+            "emoji_font_override: cx.state().local_init(|| None::<Arc<str>>),",
+            "if locals.is_none() {",
+            "let root = render_root_with_app_ui(",
+            "let selected_emoji_font = emoji_font_override.layout_value(cx);",
+        ],
+        [
+            "emoji_font_override: Model<Option<Arc<str>>>,",
+            "LocalState::from_model(app.models_mut().insert(",
+            ".render_root(\"emoji-conformance\", |cx| {",
+            "cx.observe_model(&emoji_font_override, Invalidation::Layout);",
+            "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+            "emoji_font_override.layout(cx).value_or_default()",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "components_gallery.rs",
+        [
+            "app_ui_root: AppUiRenderRootState,",
+            "fn components_gallery_table_cell(",
+            "cx: &mut dyn fret_ui::ElementContextAccess<'_, App>,",
+            "let cx = cx.elements();",
+            "let cell_at = Arc::new(components_gallery_table_cell);",
+            "let root = render_root_with_app_ui(",
+            "let theme = cx.theme_snapshot();",
+            "let theme_name = cx.theme().name.clone();",
+            "let theme = cx.theme();",
+            "let state_revision = table_state.layout(cx).revision().unwrap_or(0);",
+            "let selected = tree_state.layout(cx).read_ref(|s| s.selected).ok().flatten();",
+            "let checkbox_value = checkbox.layout(cx).copied_or(false);",
+            "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
+            "let last_action_value = last_action.layout(cx).value_or_else(",
+        ],
+        [
+            "move |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u64>, row: &u64| {",
+            ".render_root(\"components-gallery\", |cx| {",
+            "cx.observe_model(&tree_state, Invalidation::Layout);",
+            "cx.app.models().revision(&table_state).unwrap_or(0);",
+            "cx.app.models().get_copied(&checkbox).unwrap_or(false);",
+            "cx.app.models().get_cloned(&last_action);",
+            "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+            "Theme::global(&*cx.app)",
+        ],
+    ),
+]
+
+LOCAL_STATE_COMPONENT_BRIDGE_SOURCES = [
+    (
+        EXAMPLES_SRC / "async_playground_demo.rs",
+        ["shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)"],
+        ["config.cancel_mode.open.clone_model()"],
+    ),
+    (
+        EXAMPLES_SRC / "form_demo.rs",
+        [
+            "shadcn::Select::new(&role, &role_open)",
+            "shadcn::DatePicker::new(",
+            "&start_date_open,",
+            "&start_date_month,",
+            "&start_date,",
+            "registry.register_field(\"name\", &name, String::new(), |v| {",
+            "registry.register_field(\"email\", &email, String::new(), |v| {",
+            "registry.register_field(\"role\", &role, None, |v| {",
+            "registry.register_field(\"start_date\", &start_date, None, |v| {",
+            "shadcn::FormField::new(",
+            "&form_state,",
+            "shadcn::Input::new(&name)",
+            "shadcn::Input::new(&email)",
+        ],
+        [
+            "shadcn::Select::new(role.clone_model(), role_open.clone_model())",
+            "DatePicker::new_controllable(",
+            "start_date.clone_model()",
+            "form_state.clone_model()",
+            "name.clone_model()",
+            "email.clone_model()",
+            "registry.register_field(\"name\", name.clone_model(),",
+            "registry.register_field(\"email\", email.clone_model(),",
+            "registry.register_field(\"role\", role.clone_model(),",
+            "registry.register_field(\"start_date\", start_date.clone_model(),",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "emoji_conformance_demo.rs",
+        ["shadcn::Select::new(&emoji_font_override, &emoji_font_override_open)"],
+        ["emoji_font_override_open.clone_model()"],
+    ),
+    (
+        EXAMPLES_SRC / "date_picker_demo.rs",
+        [
+            "shadcn::Switch::new(&week_start_monday)",
+            "shadcn::Switch::new(&show_outside_days)",
+            "shadcn::Switch::new(&disable_outside_days)",
+            "shadcn::Switch::new(&disable_weekends)",
+            "shadcn::Switch::new(&disabled)",
+            "shadcn::DatePicker::new(&open, &month, &selected)",
+            "shadcn::Calendar::new(&month, &selected)",
+        ],
+        [
+            "week_start_monday.clone_model()",
+            "show_outside_days.clone_model()",
+            "disable_outside_days.clone_model()",
+            "disable_weekends.clone_model()",
+            "disabled.clone_model()",
+            "open.clone_model()",
+            "month.clone_model()",
+            "selected.clone_model()",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "drop_shadow_demo.rs",
+        [
+            "shadcn::Switch::new(&enabled_state)",
+            "shadcn::Switch::new(&stress_state)",
+        ],
+        [
+            "enabled_state.clone_model()",
+            "stress_state.clone_model()",
+        ],
+    ),
+    (
+        EXAMPLES_SRC / "markdown_demo.rs",
+        [
+            "shadcn::Switch::new(&wrap_code_state)",
+            "shadcn::Switch::new(&cap_code_height_state)",
+        ],
+        [
+            "wrap_code_state.clone_model()",
+            "cap_code_height_state.clone_model()",
+        ],
+    ),
+]
+
 WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED = [
     "fn workspace_shell_command_button<'a, Cx>(",
     "Cx: fret::app::ElementContextAccess<'a, App>,",
@@ -496,6 +779,51 @@ def check_theme_snapshot_helpers(failures: list[Failure]) -> None:
         )
 
 
+def check_local_state_bridge_sources(failures: list[Failure]) -> None:
+    for path in DEFAULT_APP_LOCAL_STATE_FIRST_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["cx.state().local"],
+            forbidden=[
+                "app.models_mut().insert(",
+                "Model<",
+                "cx.use_local_with(",
+                "cx.actions().models::<",
+                "cx.on_action_notify_models::<",
+            ],
+            failures=failures,
+        )
+
+    for path, required in INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=required,
+            forbidden=["LocalState::from_model(app.models_mut().insert("],
+            failures=failures,
+        )
+
+    for path, required, forbidden in APP_UI_RENDER_ROOT_BRIDGE_SOURCES:
+        source = read_source(path)
+        check_required_forbidden_markers(
+            path,
+            source,
+            required=["UiTree<App>", *required],
+            forbidden=["KernelApp", *forbidden],
+            failures=failures,
+        )
+
+    for path, required, forbidden in LOCAL_STATE_COMPONENT_BRIDGE_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=required,
+            forbidden=forbidden,
+            failures=failures,
+        )
+
+
 def print_failures(failures: list[Failure]) -> None:
     if not failures:
         return
@@ -526,6 +854,7 @@ def main() -> None:
     check_fret_docking_owner_imports(failures)
     check_workspace_shell_capability_helpers(failures)
     check_theme_snapshot_helpers(failures)
+    check_local_state_bridge_sources(failures)
 
     print_failures(failures)
     if failures:
