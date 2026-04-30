@@ -1035,38 +1035,6 @@ mod authoring_surface_policy_tests {
         }
     }
 
-    fn assert_prefers_grouped_data_surface(src: &str) {
-        assert!(
-            src.contains("cx.data().selector_layout(")
-                || src.contains("cx.data().selector(")
-                || src.contains("cx.data().query(")
-                || src.contains("cx.data().query_async(")
-                || src.contains("cx.data().query_async_local(")
-        );
-        assert!(!src.contains("fret_query::ui::QueryElementContextExt"));
-        assert!(!src.contains("fret_selector::ui::SelectorElementContextExt"));
-        assert!(!src.contains("cx.use_selector("));
-        assert!(!src.contains("cx.use_query("));
-        assert!(!src.contains("cx.use_query_async("));
-        assert!(!src.contains("cx.use_query_async_local("));
-    }
-
-    fn assert_prefers_fret_query_facade(src: &str) {
-        assert!(src.contains("use fret::query::{"));
-        assert!(!src.contains("use fret_query::{"));
-    }
-
-    fn assert_advanced_entry_prefers_view_elements_alias(src: &str, state: &str) {
-        let expected = format!(
-            "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> ViewElements"
-        );
-        assert!(src.contains(&expected));
-        let legacy = format!(
-            "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> Elements"
-        );
-        assert!(!src.contains(&legacy));
-    }
-
     fn assert_advanced_helpers_prefer_app_component_cx(
         src: &str,
         required_markers: &[&str],
@@ -6986,60 +6954,6 @@ mod authoring_surface_policy_tests {
                 DIAG_ENVIRONMENT_PREDICATE_CONTRACT_EVIDENCE_GATES.contains(marker),
                 "the evidence-and-gates note should keep the catalog and availability outcome explicit: {marker}"
             );
-        }
-    }
-
-    #[test]
-    fn app_facing_state_examples_prefer_grouped_data_surface() {
-        for src in [QUERY_ASYNC_TOKIO_DEMO, QUERY_DEMO] {
-            assert_prefers_grouped_data_surface(src);
-        }
-    }
-
-    #[test]
-    fn helper_heavy_examples_prefer_grouped_data_surface() {
-        for src in [ASYNC_PLAYGROUND_DEMO, MARKDOWN_DEMO] {
-            assert_prefers_grouped_data_surface(src);
-        }
-    }
-
-    #[test]
-    fn app_facing_query_examples_prefer_fret_query_facade() {
-        for src in [
-            ASYNC_PLAYGROUND_DEMO,
-            MARKDOWN_DEMO,
-            QUERY_ASYNC_TOKIO_DEMO,
-            QUERY_DEMO,
-        ] {
-            assert_prefers_fret_query_facade(src);
-        }
-    }
-
-    #[test]
-    fn advanced_entry_examples_prefer_view_elements_aliases() {
-        for (src, state) in [
-            (CUSTOM_EFFECT_V1_DEMO, "CustomEffectV1State"),
-            (CUSTOM_EFFECT_V2_DEMO, "CustomEffectV2State"),
-            (CUSTOM_EFFECT_V3_DEMO, "State"),
-            (GENUI_DEMO, "GenUiState"),
-            (LIQUID_GLASS_DEMO, "LiquidGlassState"),
-        ] {
-            assert_advanced_entry_prefers_view_elements_alias(src, state);
-        }
-    }
-
-    #[test]
-    fn app_facing_docking_examples_use_owning_fret_docking_crate() {
-        for src in [CONTAINER_QUERIES_DOCKING_DEMO, DOCKING_DEMO] {
-            assert!(src.contains("use fret_docking::{"));
-            assert!(!src.contains("use fret::docking::{"));
-        }
-    }
-
-    #[test]
-    fn advanced_docking_harnesses_keep_raw_fret_docking_imports() {
-        for src in [DOCKING_ARBITRATION_DEMO, IMUI_EDITOR_PROOF_DEMO] {
-            assert!(src.contains("use fret_docking::{"));
         }
     }
 

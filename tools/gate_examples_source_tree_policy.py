@@ -88,6 +88,38 @@ VIEW_ENTRY_BUILDER_THEN_RUN_SOURCES = [
     EXAMPLES_SRC / "todo_demo.rs",
 ]
 
+GROUPED_DATA_SURFACE_SOURCES = [
+    EXAMPLES_SRC / "async_playground_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+    EXAMPLES_SRC / "query_demo.rs",
+]
+
+FRET_QUERY_FACADE_SOURCES = [
+    EXAMPLES_SRC / "async_playground_demo.rs",
+    EXAMPLES_SRC / "markdown_demo.rs",
+    EXAMPLES_SRC / "query_async_tokio_demo.rs",
+    EXAMPLES_SRC / "query_demo.rs",
+]
+
+ADVANCED_ENTRY_VIEW_ELEMENTS_ALIAS_SOURCES = [
+    (EXAMPLES_SRC / "custom_effect_v1_demo.rs", "CustomEffectV1State"),
+    (EXAMPLES_SRC / "custom_effect_v2_demo.rs", "CustomEffectV2State"),
+    (EXAMPLES_SRC / "custom_effect_v3_demo.rs", "State"),
+    (EXAMPLES_SRC / "genui_demo.rs", "GenUiState"),
+    (EXAMPLES_SRC / "liquid_glass_demo.rs", "LiquidGlassState"),
+]
+
+DROPPING_FRET_DOCKING_OWNER_SOURCES = [
+    EXAMPLES_SRC / "container_queries_docking_demo.rs",
+    EXAMPLES_SRC / "docking_demo.rs",
+]
+
+RAW_FRET_DOCKING_OWNER_SOURCES = [
+    EXAMPLES_SRC / "docking_arbitration_demo.rs",
+    EXAMPLES_SRC / "imui_editor_proof_demo.rs",
+]
+
 WORKSPACE_SHELL_CAPABILITY_HELPER_REQUIRED = [
     "fn workspace_shell_command_button<'a, Cx>(",
     "Cx: fret::app::ElementContextAccess<'a, App>,",
@@ -317,6 +349,80 @@ def check_view_entry_builder_then_run(failures: list[Failure]) -> None:
         )
 
 
+def check_grouped_data_surface(failures: list[Failure]) -> None:
+    required_any = [
+        "cx.data().selector_layout(",
+        "cx.data().selector(",
+        "cx.data().query(",
+        "cx.data().query_async(",
+        "cx.data().query_async_local(",
+    ]
+    forbidden = [
+        "fret_query::ui::QueryElementContextExt",
+        "fret_selector::ui::SelectorElementContextExt",
+        "cx.use_selector(",
+        "cx.use_query(",
+        "cx.use_query_async(",
+        "cx.use_query_async_local(",
+    ]
+    for path in GROUPED_DATA_SURFACE_SOURCES:
+        source = read_source(path)
+        if not any(marker in source for marker in required_any):
+            failures.append(Failure(path, None, "missing grouped data surface marker"))
+        check_required_forbidden_markers(
+            path,
+            source,
+            required=[],
+            forbidden=forbidden,
+            failures=failures,
+        )
+
+
+def check_fret_query_facade(failures: list[Failure]) -> None:
+    for path in FRET_QUERY_FACADE_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["use fret::query::{"],
+            forbidden=["use fret_query::{"],
+            failures=failures,
+        )
+
+
+def check_advanced_entry_view_elements_alias(failures: list[Failure]) -> None:
+    for path, state in ADVANCED_ENTRY_VIEW_ELEMENTS_ALIAS_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=[
+                f"fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> ViewElements"
+            ],
+            forbidden=[
+                f"fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut {state}) -> Elements"
+            ],
+            failures=failures,
+        )
+
+
+def check_fret_docking_owner_imports(failures: list[Failure]) -> None:
+    for path in DROPPING_FRET_DOCKING_OWNER_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["use fret_docking::{"],
+            forbidden=["use fret::docking::{"],
+            failures=failures,
+        )
+    for path in RAW_FRET_DOCKING_OWNER_SOURCES:
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=["use fret_docking::{"],
+            forbidden=[],
+            failures=failures,
+        )
+
+
 def check_workspace_shell_capability_helpers(failures: list[Failure]) -> None:
     path = EXAMPLES_SRC / "workspace_shell_demo.rs"
     check_required_forbidden_markers(
@@ -352,6 +458,10 @@ def main() -> None:
     check_first_party_curated_shadcn_surfaces(failures)
     check_view_runtime_app_ui_aliases(failures)
     check_view_entry_builder_then_run(failures)
+    check_grouped_data_surface(failures)
+    check_fret_query_facade(failures)
+    check_advanced_entry_view_elements_alias(failures)
+    check_fret_docking_owner_imports(failures)
     check_workspace_shell_capability_helpers(failures)
 
     print_failures(failures)

@@ -117,3 +117,18 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M7_VIEW_ENTRY_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M8 - Authoring Import Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Grouped data, query facade, advanced entry alias, and docking import owner markers no longer
+  compile the monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate owns the markers.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M8_AUTHORING_IMPORT_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`
