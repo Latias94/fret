@@ -339,3 +339,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M20_MANUAL_UI_TREE_SOURCE_GATE_2026-04-30.md`
 - `tools/examples_source_tree_policy/manual.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M21 - Components Gallery Owner Split Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Components gallery retained render/app-theme/driver-event owner split markers no longer compile
+  the monolithic `fret-examples` unit-test module.
+- The components gallery owner split audit markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- Owner-split source/document marker ownership lives under
+  `tools/examples_source_tree_policy/owner_split.py`.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md`
+- `tools/examples_source_tree_policy/owner_split.py`
+- `tools/examples_source_tree_policy/gate.py`

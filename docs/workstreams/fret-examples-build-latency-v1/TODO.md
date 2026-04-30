@@ -48,6 +48,8 @@ Status: active
   unit test.
 - [x] Move the manual UiTree root-wrapper source markers out of the monolithic `fret-examples`
   unit test.
+- [x] Move the components gallery owner-split source/document markers out of the monolithic
+  `fret-examples` unit test.
 
 ## Parked
 

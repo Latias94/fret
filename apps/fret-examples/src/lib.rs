@@ -1222,51 +1222,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn components_gallery_keeps_retained_render_and_driver_owner_split() {
-        let normalized = COMPONENTS_GALLERY_DEMO
-            .split_whitespace()
-            .collect::<String>();
-        for marker in [
-            "impl ComponentsGalleryWindowState {",
-            "fn selected_theme_preset(&self, app: &App) -> Option<Arc<str>> {",
-            "app.models().get_cloned(&self.theme_preset).flatten()",
-            "fn overlays_open(&self, app: &App) -> bool {",
-            "app.models().get_copied(&self.select_open).unwrap_or(false)",
-            "app.models().get_copied(&self.cmdk_open).unwrap_or(false)",
-            "let preset = state.selected_theme_preset(app);",
-            "let state_revision = table_state.layout(cx).revision().unwrap_or(0);",
-            "let items_revision = 1 ^ state_revision.rotate_left(17);",
-            "let items_value = app.models().get_cloned(&items).unwrap_or_default();",
-            "let tree_state_value = app.models().get_cloned(&state).unwrap_or_default();",
-            "let overlays_open = state.overlays_open(app);",
-        ] {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(normalized.contains(&marker), "missing marker: {marker}");
-        }
-        for legacy in ["cx.app.models().revision(&table_state).unwrap_or(0);"] {
-            let legacy = legacy.split_whitespace().collect::<String>();
-            assert!(
-                !normalized.contains(&legacy),
-                "legacy marker still present: {legacy}"
-            );
-        }
-
-        for marker in [
-            "`components_gallery` is not one unresolved raw-model bucket anymore.",
-            "retained render owner",
-            "driver/event owner",
-            "`table_state.layout(cx).revision()`",
-            "`selected_theme_preset(app)`",
-            "`overlays_open(app)`",
-        ] {
-            assert!(
-                COMPONENTS_GALLERY_OWNER_SPLIT_AUDIT.contains(marker),
-                "components gallery owner audit should remain explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
     fn selected_raw_owner_examples_keep_escape_hatches_explicit() {
         let components_gallery = COMPONENTS_GALLERY_DEMO
             .split_whitespace()

@@ -102,6 +102,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M20_MANUAL_UI_TREE_SOURCE_GATE_2026-04-30.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md"
     }
   ],
   "repro": {
@@ -179,6 +183,7 @@
     "tools/examples_source_tree_policy/gate.py",
     "tools/examples_source_tree_policy/interop.py",
     "tools/examples_source_tree_policy/manual.py",
+    "tools/examples_source_tree_policy/owner_split.py",
     "tools/gate_fret_examples_imui_split_source.py",
     "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples-imui/src/imui_hello_demo.rs",
@@ -218,6 +223,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M18_APP_FACING_SOURCE_GATE_MODULE_SPLIT_2026-04-30.md",
     "docs/workstreams/fret-examples-build-latency-v1/M19_LOW_LEVEL_INTEROP_SOURCE_GATE_2026-04-30.md",
     "docs/workstreams/fret-examples-build-latency-v1/M20_MANUAL_UI_TREE_SOURCE_GATE_2026-04-30.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M21_COMPONENTS_GALLERY_OWNER_SPLIT_SOURCE_GATE_2026-04-30.md",
     "Cargo.toml"
   ],
   "adr_refs": [],
