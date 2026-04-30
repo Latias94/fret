@@ -95,6 +95,10 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M13_DEFAULT_APP_SURFACE_SOURCE_GATE_2026-04-30.md`
   after moving simple-todo, query/query-async, and hello-counter default app surface markers into
   `tools/gate_examples_source_tree_policy.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M14_SOURCE_GATE_STRUCTURE_SPLIT_2026-04-30.md`
+  after keeping `tools/gate_examples_source_tree_policy.py` as the stable command wrapper and moving
+  the implementation to `tools/examples_source_tree_policy/gate.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
 - Current count after the default app surface source migration: 281 `include_str!` occurrences and 79
@@ -117,6 +121,8 @@ git diff --check
 - `apps/fret-examples-imui/src/bin/imui_response_signals_demo.rs`
 - `apps/fret-examples-imui/src/bin/imui_interaction_showcase_demo.rs`
 - `tools/gate_examples_source_tree_policy.py`
+- `tools/examples_source_tree_policy/__init__.py`
+- `tools/examples_source_tree_policy/gate.py`
 - `tools/gate_fret_examples_imui_split_source.py`
 - `apps/fret-demo/Cargo.toml`
 - `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
@@ -135,4 +141,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M11_MODEL_READ_ASSET_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M12_ADVANCED_ROSTER_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M13_DEFAULT_APP_SURFACE_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M14_SOURCE_GATE_STRUCTURE_SPLIT_2026-04-30.md`
 - `Cargo.toml`

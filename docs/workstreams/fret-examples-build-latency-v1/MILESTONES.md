@@ -212,3 +212,20 @@ Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M13_DEFAULT_APP_SURFACE_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_examples_source_tree_policy.py`
+
+## M14 - Source Gate Structure Split
+
+Status: complete
+
+Exit criteria:
+
+- `python tools/gate_examples_source_tree_policy.py` remains the stable command entrypoint.
+- The large implementation lives under `tools/examples_source_tree_policy/` so future source-policy
+  slices can split by owner without changing callers.
+- No source-policy behavior changes.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M14_SOURCE_GATE_STRUCTURE_SPLIT_2026-04-30.md`
+- `tools/gate_examples_source_tree_policy.py`
+- `tools/examples_source_tree_policy/gate.py`
