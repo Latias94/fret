@@ -44,6 +44,8 @@ Status: active
 - [x] Move the API workbench lite source markers out of the monolithic `fret-examples` unit test.
 - [x] Split app-facing examples source-policy matrices into an owner module behind the stable gate
   entrypoint.
+- [x] Move the low-level interop direct-leaf source markers out of the monolithic `fret-examples`
+  unit test.
 
 ## Parked
 

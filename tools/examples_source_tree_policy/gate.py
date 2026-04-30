@@ -5,6 +5,7 @@ from pathlib import Path
 
 from _gate_lib import WORKSPACE_ROOT, fail, ok
 from examples_source_tree_policy.app_facing import check_app_facing_demo_source_policies
+from examples_source_tree_policy.interop import check_low_level_interop_source_policies
 
 
 GATE_NAME = "examples source tree policy"
@@ -1391,6 +1392,12 @@ def main() -> None:
         default_app_surface_common_forbidden=DEFAULT_APP_SURFACE_COMMON_FORBIDDEN,
         read_source=read_source,
         source_slice=source_slice,
+        check_required_forbidden_markers=check_required_forbidden_markers,
+    )
+    check_low_level_interop_source_policies(
+        failures,
+        examples_src=EXAMPLES_SRC,
+        read_source=read_source,
         check_required_forbidden_markers=check_required_forbidden_markers,
     )
     check_model_read_and_asset_helper_sources(failures)

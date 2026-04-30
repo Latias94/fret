@@ -304,3 +304,20 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M18_APP_FACING_SOURCE_GATE_MODULE_SPLIT_2026-04-30.md`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `tools/examples_source_tree_policy/gate.py`
+
+## M19 - Low Level Interop Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Low-level interop direct-leaf root markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The examples source-tree policy gate owns those source-only checks.
+- Interop/source marker ownership lives under `tools/examples_source_tree_policy/interop.py`.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M19_LOW_LEVEL_INTEROP_SOURCE_GATE_2026-04-30.md`
+- `tools/examples_source_tree_policy/interop.py`
+- `tools/examples_source_tree_policy/gate.py`
