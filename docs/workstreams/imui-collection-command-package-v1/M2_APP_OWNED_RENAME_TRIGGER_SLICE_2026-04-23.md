@@ -19,7 +19,7 @@ Status: landed slice
 - `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`
 - `apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs`
 - `apps/fret-examples/tests/imui_editor_collection_rename_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Notes
 

@@ -89,6 +89,9 @@ Status: active
 - [x] Move the IMUI collection modularization workstream document/source-boundary markers out of
   the monolithic `fret-examples` unit test while keeping the real collection behavior unit tests in
   Rust.
+- [x] Move the IMUI collection command-package workstream document/index markers out of the
+  monolithic `fret-examples` unit test while keeping the real duplicate/rename behavior unit tests
+  in Rust.
 
 ## Parked
 

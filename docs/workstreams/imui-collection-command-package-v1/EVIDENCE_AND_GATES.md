@@ -22,7 +22,7 @@ helper or runtime growth from a single proof surface.
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`
 - `apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## First-open repro surfaces
 
@@ -31,13 +31,15 @@ helper or runtime growth from a single proof surface.
 2. Current command-package surface floor
    - `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test imui_editor_collection_rename_surface --no-fail-fast`
 3. Current command-package closeout/source-policy floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
+   - `cargo nextest run -p fret-examples --lib proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast`
 
 ## Current focused gates
 
 ### Lane-local closeout source-policy and unit-test floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast`
 
 This floor currently proves:
 

@@ -659,3 +659,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M37_IMUI_COLLECTION_MODULARIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M38 - IMUI Collection Command Package Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection command-package closeout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed command-package workstream points its source-policy gate at the Python gate instead of
+  a deleted Rust source-marker test.
+- Real duplicate-selected and rename-trigger behavior unit tests remain in Rust.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M38_IMUI_COLLECTION_COMMAND_PACKAGE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

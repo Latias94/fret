@@ -3,7 +3,7 @@
   "slug": "imui-collection-command-package-v1",
   "title": "ImUi Collection Command Package v1",
   "status": "closed",
-  "updated": "2026-04-23",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-editor-proof-collection-modularization-v1",
   "problem": "The collection-first proof already owns stable selection, delete, rename, context menu, zoom, and structural modularization locally. This closed follow-on records that a bounded broader app-owned command package landed there with duplicate-selected plus explicit rename-trigger breadth, then moved the default next non-multi-window priority to a second proof surface instead of a third verb or shared helper widening.",
@@ -62,13 +62,18 @@
     "commands": [
       "cargo run -p fret-demo --bin imui_editor_proof_demo",
       "cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test imui_editor_collection_rename_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py",
+      "cargo nextest run -p fret-examples --lib proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "collection-command-package-closeout-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_command_package_follow_on proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "collection-command-package-unit-floor",
+      "command": "cargo nextest run -p fret-examples --lib proof_collection_duplicate_shortcut_matches_primary_d_only proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only --no-fail-fast"
     },
     {
       "name": "collection-command-package-surfaces",
@@ -108,7 +113,7 @@
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
