@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 283
+- Dedicated directories: 284
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -647,6 +647,16 @@ Current source of truth for the in-tree immediate-mode stack:
     reporting while keeping sizing state, persistence, row sorting, and runtime table semantics out
     of `fret-ui-kit::imui`.
 
+- Closed narrow IMUI table column width demo proof follow-on:
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/TODO.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md`
+  - Scope: closed narrow follow-on proving `imui_shadcn_adapter_demo` can own inspector table
+    column widths and consume resize response drag deltas without adding helper-owned sizing state.
+
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -1059,6 +1069,7 @@ Rule:
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-table-column-identity-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s)
 - `docs/workstreams/imui-table-column-resize-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header resize handles and response reporting)
+- `docs/workstreams/imui-table-column-width-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for an app-owned IMUI table column width demo proof)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
 - `docs/workstreams/imui-table-sortable-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a runnable IMUI table sortable header demo proof)
 - `docs/workstreams/imui-table-sortable-diag-gate-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on for the IMUI table sortable diagnostics gate)

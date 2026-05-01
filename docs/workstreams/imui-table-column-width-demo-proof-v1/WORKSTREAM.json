@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-column-width-demo-proof-v1",
+  "title": "ImUi Table Column Width Demo Proof v1",
+  "status": "closed",
+  "updated": "2026-05-01",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-table-column-resize-v1",
+  "problem": "Prove the IMUI table resize response in a visible first-party demo by wiring draggable header boundaries to app-owned column width state, while keeping persistence, declarative/headless table interop, grouped resize policy, and runtime table semantics outside this lane.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-column-width-demo-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-width-demo-proof-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-width-demo-proof-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-width-demo-proof-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-column-resize-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md"
+    }
+  ],
+  "repro": {
+    "summary": "Open or source-check `imui_shadcn_adapter_demo`; its inspector table should use app-owned width state, resizable columns, and resize-response drag deltas to update displayed table widths.",
+    "commands": [
+      "cargo nextest run -p fret-examples-imui imui_shadcn_adapter_demo_owns_resizable_table_width_state --no-fail-fast",
+      "cargo check -p fret-examples-imui --bin imui_shadcn_adapter_demo --jobs 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "demo-source-proof",
+      "command": "cargo nextest run -p fret-examples-imui imui_shadcn_adapter_demo_owns_resizable_table_width_state --no-fail-fast"
+    },
+    {
+      "name": "demo-check",
+      "command": "cargo check -p fret-examples-imui --bin imui_shadcn_adapter_demo --jobs 1"
+    },
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-examples-imui --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-table-column-width-demo-proof-v1/DESIGN.md",
+    "docs/workstreams/imui-table-column-width-demo-proof-v1/TODO.md",
+    "docs/workstreams/imui-table-column-width-demo-proof-v1/MILESTONES.md",
+    "docs/workstreams/imui-table-column-width-demo-proof-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md",
+    "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
+    "apps/fret-examples-imui/tests/imui_shadcn_adapter_demo_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This app-owned demo proof is closed. Start separate follow-ons for width persistence, declarative/headless table interop, grouped resize policy, localization-aware ids, or runtime table semantics."
+  }
+}

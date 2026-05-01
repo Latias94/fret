@@ -30,6 +30,7 @@ const TEST_ID_SUMMARY_VALUE: &str = "imui-shadcn-demo.summary.value";
 const TEST_ID_SUMMARY_MODE: &str = "imui-shadcn-demo.summary.mode";
 const TEST_ID_SUMMARY_DRAFT: &str = "imui-shadcn-demo.summary.draft";
 const TEST_ID_TABLE: &str = "imui-shadcn-demo.inspector.table";
+const TEST_ID_TABLE_WIDTHS: &str = "imui-shadcn-demo.inspector.widths";
 const TEST_ID_RECENT_LIST: &str = "imui-shadcn-demo.inspector.recent";
 
 const STACK_BREAKPOINT_PX: f32 = 840.0;
@@ -45,6 +46,27 @@ struct ImUiShadcnAdapterView;
 enum InspectorSort {
     FieldAscending,
     FieldDescending,
+}
+
+#[derive(Clone, Copy)]
+struct InspectorColumnWidths {
+    signal: Px,
+    state: Px,
+    field: Px,
+    value: Px,
+    source: Px,
+}
+
+impl Default for InspectorColumnWidths {
+    fn default() -> Self {
+        Self {
+            signal: Px(108.0),
+            state: Px(176.0),
+            field: Px(104.0),
+            value: Px(120.0),
+            source: Px(72.0),
+        }
+    }
 }
 
 impl InspectorSort {
@@ -119,9 +141,11 @@ impl View for ImUiShadcnAdapterView {
         let mode_state = cx.state().local_init(|| None::<Arc<str>>);
         let draft_state = cx.state().local_init(String::new);
         let inspector_sort_state = cx.state().local_init(|| InspectorSort::FieldAscending);
+        let inspector_widths_state = cx.state().local_init(InspectorColumnWidths::default);
 
         let count = count_state.layout_value(cx);
         let inspector_sort = inspector_sort_state.layout_value(cx);
+        let inspector_widths = inspector_widths_state.layout_value(cx);
         let enabled = enabled_state.paint_value(cx);
         let value = value_state.paint_value(cx);
         let mode = mode_state.paint_value(cx);
@@ -396,6 +420,8 @@ impl View for ImUiShadcnAdapterView {
                     let mode_label = mode_label.clone();
                     let draft = draft.clone();
                     let inspector_sort_state = inspector_sort_state.clone();
+                    let inspector_widths_state = inspector_widths_state.clone();
+                    let inspector_widths = inspector_widths;
 
                     let inspector_surface =
                         ui::container(move |cx: &mut ElementContext<'_, KernelApp>| {
@@ -440,16 +466,36 @@ impl View for ImUiShadcnAdapterView {
                                 };
                                 let table_columns = if compact_surface {
                                     vec![
-                                        kit::TableColumn::fill("Signal###inspector-signal")
-                                            .sorted(inspector_sort.direction()),
-                                        kit::TableColumn::px("State", Px(144.0)),
+                                        kit::TableColumn::px(
+                                            "Signal###inspector-signal",
+                                            inspector_widths.signal,
+                                        )
+                                        .sorted(inspector_sort.direction())
+                                        .resizable_with_limits(Some(Px(96.0)), Some(Px(180.0))),
+                                        kit::TableColumn::px(
+                                            "State###inspector-state",
+                                            inspector_widths.state,
+                                        )
+                                        .resizable_with_limits(Some(Px(112.0)), Some(Px(240.0))),
                                     ]
                                 } else {
                                     vec![
-                                        kit::TableColumn::fill("Field###inspector-field")
-                                            .sorted(inspector_sort.direction()),
-                                        kit::TableColumn::px("Value", Px(160.0)),
-                                        kit::TableColumn::px("Source", Px(100.0)),
+                                        kit::TableColumn::px(
+                                            "Field###inspector-field",
+                                            inspector_widths.field,
+                                        )
+                                        .sorted(inspector_sort.direction())
+                                        .resizable_with_limits(Some(Px(88.0)), Some(Px(180.0))),
+                                        kit::TableColumn::px(
+                                            "Value###inspector-value",
+                                            inspector_widths.value,
+                                        )
+                                        .resizable_with_limits(Some(Px(96.0)), Some(Px(220.0))),
+                                        kit::TableColumn::px(
+                                            "Source###inspector-source",
+                                            inspector_widths.source,
+                                        )
+                                        .resizable_with_limits(Some(Px(64.0)), Some(Px(140.0))),
                                     ]
                                 };
 
@@ -495,6 +541,77 @@ impl View for ImUiShadcnAdapterView {
                                             *sort = sort.toggled();
                                         });
                                 }
+                                if compact_surface {
+                                    apply_inspector_width_delta(
+                                        ui,
+                                        &table_response,
+                                        &inspector_widths_state,
+                                        "inspector-signal",
+                                        Px(96.0),
+                                        Px(180.0),
+                                        |widths| &mut widths.signal,
+                                    );
+                                    apply_inspector_width_delta(
+                                        ui,
+                                        &table_response,
+                                        &inspector_widths_state,
+                                        "inspector-state",
+                                        Px(112.0),
+                                        Px(240.0),
+                                        |widths| &mut widths.state,
+                                    );
+                                } else {
+                                    apply_inspector_width_delta(
+                                        ui,
+                                        &table_response,
+                                        &inspector_widths_state,
+                                        "inspector-field",
+                                        Px(88.0),
+                                        Px(180.0),
+                                        |widths| &mut widths.field,
+                                    );
+                                    apply_inspector_width_delta(
+                                        ui,
+                                        &table_response,
+                                        &inspector_widths_state,
+                                        "inspector-value",
+                                        Px(96.0),
+                                        Px(220.0),
+                                        |widths| &mut widths.value,
+                                    );
+                                    apply_inspector_width_delta(
+                                        ui,
+                                        &table_response,
+                                        &inspector_widths_state,
+                                        "inspector-source",
+                                        Px(64.0),
+                                        Px(140.0),
+                                        |widths| &mut widths.source,
+                                    );
+                                }
+
+                                let width_summary = {
+                                    let cx = ui.cx_mut();
+                                    let text = if compact_surface {
+                                        format!(
+                                            "Widths: signal {:.0}px, state {:.0}px",
+                                            inspector_widths.signal.0, inspector_widths.state.0
+                                        )
+                                    } else {
+                                        format!(
+                                            "Widths: field {:.0}px, value {:.0}px, source {:.0}px",
+                                            inspector_widths.field.0,
+                                            inspector_widths.value.0,
+                                            inspector_widths.source.0
+                                        )
+                                    };
+                                    ui::text(text)
+                                        .text_xs()
+                                        .font_medium()
+                                        .into_element(cx)
+                                        .test_id(TEST_ID_TABLE_WIDTHS)
+                                };
+                                ui.add_ui(width_summary);
 
                                 if !compact_surface {
                                     ui.separator_text("Recent entries");
@@ -605,6 +722,33 @@ impl View for ImUiShadcnAdapterView {
             ui.add_ui(root);
         })
     }
+}
+
+fn apply_inspector_width_delta(
+    ui: &mut ImUi<'_, '_, KernelApp>,
+    table_response: &kit::TableResponse,
+    widths_state: &LocalState<InspectorColumnWidths>,
+    column_id: &str,
+    min_width: Px,
+    max_width: Px,
+    select_width: fn(&mut InspectorColumnWidths) -> &mut Px,
+) {
+    let Some(header) = table_response.header(column_id) else {
+        return;
+    };
+    let delta_x = header.resize.drag_delta_x();
+    if !header.resize.dragging() || !delta_x.is_finite() || delta_x.abs() < f32::EPSILON {
+        return;
+    }
+
+    let _ = widths_state.update_in(ui.cx_mut().app.models_mut(), |widths| {
+        let width = select_width(widths);
+        *width = clamped_width_delta(*width, delta_x, min_width, max_width);
+    });
+}
+
+fn clamped_width_delta(current: Px, delta_x: f32, min_width: Px, max_width: Px) -> Px {
+    Px((current.0 + delta_x).clamp(min_width.0, max_width.0.max(min_width.0)))
 }
 
 fn summary_badge(

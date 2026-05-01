@@ -376,6 +376,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-table-column-resize-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-column-resize-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md`
+- Closed narrow IMUI table column width demo proof follow-on:
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/TODO.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md`
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -679,6 +686,10 @@ It complements (but does not replace) ADRs:
   follow-on for resizable IMUI table header boundaries and response reporting; keep sizing
   persistence, headless/declarative interop examples, grouped header resize policy, and runtime
   table semantics in separate follow-ons.
+- Use `docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json` as the closed
+  narrow follow-on for the first-party app-owned IMUI table width proof; route persistence,
+  declarative/headless interop, grouped header resize policy, localization, and runtime table
+  semantics to separate follow-ons.
 - Use `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json` as the closed narrow
   closeout record for structured IMUI/runtime identity diagnostics; route browser-style identity
   triage to `docs/workstreams/imui-id-stack-browser-v1/`, and keep `test_id` inference,

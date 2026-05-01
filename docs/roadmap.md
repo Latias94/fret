@@ -344,6 +344,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-table-column-resize-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-table-column-resize-v1/DESIGN.md`, and
   `docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md`.
+- ImUi table column width demo proof closeout record (closed narrow lane proving
+  `imui_shadcn_adapter_demo` can own inspector table column widths and consume resize response drag
+  deltas without adding helper-owned sizing state):
+  `docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-table-column-width-demo-proof-v1/DESIGN.md`, and
+  `docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md`.
 - ImUi ID stack diagnostics follow-on closeout record (closed narrow lane that makes duplicate
   keyed-list hashes and unkeyed reorder identity problems visible in structured diagnostics
   snapshots and queryable through `diag query identity-warnings`, without exposing render-pass /
