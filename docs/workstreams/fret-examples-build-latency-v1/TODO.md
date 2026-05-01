@@ -81,6 +81,8 @@ Status: active
 - [x] Move the IMUI collection select-all workstream document/index markers out of the monolithic
   `fret-examples` unit test while keeping the real `proof_collection_select_all_*` unit tests in
   Rust.
+- [x] Move the IMUI collection rename workstream document/index markers out of the monolithic
+  `fret-examples` unit test while keeping the real `proof_collection_*rename*` unit tests in Rust.
 
 ## Parked
 

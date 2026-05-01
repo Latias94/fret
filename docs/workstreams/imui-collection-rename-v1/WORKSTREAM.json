@@ -3,7 +3,7 @@
   "slug": "imui-collection-rename-v1",
   "title": "ImUi Collection Rename v1",
   "status": "closed",
-  "updated": "2026-04-23",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-collection-select-all-v1",
   "problem": "The closed collection select-all lane already proved that the current asset-browser proof can own deeper collection action breadth locally, but it explicitly deferred rename breadth. This follow-on closes that narrower gap by landing an app-owned collection rename slice in `imui_editor_proof_demo` while keeping the frozen proof-budget rule, the closed generic key-owner/helper verdicts, and runtime widening out of scope.",
@@ -50,13 +50,18 @@
     "commands": [
       "cargo run -p fret-demo --bin imui_editor_proof_demo",
       "cargo nextest run -p fret-examples --test imui_editor_collection_rename_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py",
+      "cargo nextest run -p fret-examples --lib proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "collection-rename-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "collection-rename-unit-floor",
+      "command": "cargo nextest run -p fret-examples --lib proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids --no-fail-fast"
     },
     {
       "name": "collection-rename-surface-floor",
@@ -95,6 +100,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/tests/imui_editor_collection_rename_surface.rs",
     "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui.h"
   ],
   "adr_refs": [

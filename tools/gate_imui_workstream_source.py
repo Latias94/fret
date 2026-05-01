@@ -975,6 +975,108 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-rename-v1/DESIGN.md"),
+            required=[
+                "The closed collection select-all lane already deferred rename breadth.",
+                "The first landable target is therefore narrow:",
+                "route F2 through the existing collection-scope keyboard owner,",
+                "open one app-owned rename modal from the current active asset or context-menu selection,",
+                "Do not start by designing a shared collection rename helper or generic inline-edit surface.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"),
+            required=[
+                "The closed collection select-all lane explicitly deferred rename breadth.",
+                "The current proof surface already has the right ingredients for a narrow app-owned collection rename slice:",
+                "The current proof already has popup and text-input seams, so this lane is not a justification to widen shared helper ownership.",
+                "Dear ImGui keeps rename breadth close to the current proof surface instead of turning it into a generic runtime contract.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md"),
+            required=[
+                "The collection proof now supports one app-owned rename slice.",
+                "F2 and the existing context-menu entry now open one app-owned rename modal for the active collection asset.",
+                "Committing rename updates the visible label while preserving stable asset ids and collection order.",
+                "The popup stays product-owned and uses the existing input/popup seams instead of widening `fret-ui-kit::imui`.",
+                "No new public `fret-ui-kit::imui` collection rename helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-rename-v1` as:",
+                "a closeout record for the landed app-owned collection rename slice",
+                "No reopening of the closed select-all lane or wider generic key-owner/helper questions.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-rename-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-select-all-v1"',
+                '"path": "docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_begin_rename_session_prefers_active_visible_asset",
+                "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
+                "proof_collection_rename_shortcut_matches_plain_f2_only",
+                "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+                "imui_editor_collection_rename_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-rename-v1/` now records the closed",
+                "app-owned collection rename slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-rename-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-rename-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-rename-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/M1_APP_OWNED_RENAME_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-rename-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []
