@@ -258,6 +258,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -282,6 +286,10 @@
     {
       "name": "imui-workstream-source-gate",
       "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "fret-launch-runner-scheduling-source-gate",
+      "command": "python tools/gate_fret_launch_runner_scheduling_source.py"
     },
     {
       "name": "table-source-policy-gate",
@@ -333,6 +341,7 @@
     "tools/gate_imui_shadcn_adapter_control_discoverability_source.py",
     "tools/gate_imui_facade_teaching_source.py",
     "tools/gate_imui_workstream_source.py",
+    "tools/gate_fret_launch_runner_scheduling_source.py",
     "tools/gate_table_source_policy.py",
     "tools/gate_examples_source_tree_policy.py",
     "tools/examples_source_tree_policy/__init__.py",
@@ -419,6 +428,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M57_HELLO_WORLD_COMPARE_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

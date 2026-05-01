@@ -15,6 +15,7 @@ python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 python tools/gate_imui_shadcn_adapter_control_discoverability_source.py
 python tools/gate_imui_facade_teaching_source.py
 python tools/gate_imui_workstream_source.py
+python tools/gate_fret_launch_runner_scheduling_source.py
 python tools/gate_table_source_policy.py
 python tools/gate_examples_source_tree_policy.py
 python tools/gate_fret_examples_imui_split_source.py
@@ -41,6 +42,7 @@ git diff --check
 - Passed: `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python tools/gate_imui_facade_teaching_source.py`.
 - Passed: `python tools/gate_imui_workstream_source.py`.
+- Passed: `python tools/gate_fret_launch_runner_scheduling_source.py`.
 - Passed: `python tools/gate_table_source_policy.py`.
 - Passed: `python tools/gate_examples_source_tree_policy.py`.
 - Passed: `python tools/gate_fret_examples_imui_split_source.py`.
@@ -48,6 +50,7 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_facade_teaching_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_workstream_source.py`.
+- Passed: `python -m py_compile tools/gate_fret_launch_runner_scheduling_source.py`.
 - Passed: `python -m py_compile tools/gate_table_source_policy.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py`.
@@ -302,10 +305,14 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
   after moving view-runtime grouped state/action source-policy checks into
   `tools/examples_source_tree_policy/app_facing.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
+  after moving first-frame bootstrap runner scheduling source-policy checks into
+  `tools/gate_fret_launch_runner_scheduling_source.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the view-runtime grouped state source migration: 74 `include_str!`
-  occurrences and 6 Rust `#[test]` functions remain in
+- Current count after the first-frame bootstrap source migration: 68 `include_str!`
+  occurrences and 5 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -331,6 +338,7 @@ git diff --check
 - `tools/examples_source_tree_policy/interop.py`
 - `tools/examples_source_tree_policy/manual.py`
 - `tools/examples_source_tree_policy/owner_split.py`
+- `tools/gate_fret_launch_runner_scheduling_source.py`
 - `tools/gate_fret_examples_imui_split_source.py`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-demo/Cargo.toml`
@@ -396,4 +404,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M57_HELLO_WORLD_COMPARE_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

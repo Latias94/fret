@@ -33,13 +33,13 @@ policy into `fret-ui`.
 - Redraw helper and diagnostics write: `crates/fret-launch/src/runner/desktop/runner/scheduling_diagnostics.rs`
 - RAF coalescing helper: `crates/fret-launch/src/runner/common/frame_requests.rs`
 - Smoke repro: `apps/fret-examples/src/first_frame_smoke_demo.rs`
-- Source-policy gate: `apps/fret-examples/src/lib.rs`
+- Source-policy gate: `tools/gate_fret_launch_runner_scheduling_source.py`
 
 ## Gates
 
 ```bash
 cargo fmt -p fret-launch -p fret-examples --check
-cargo nextest run -p fret-examples --lib first_frame_bootstrap_smoke_locks_runner_wake_paths --no-fail-fast
+python tools/gate_fret_launch_runner_scheduling_source.py
 cargo nextest run -p fret-launch --lib --no-fail-fast
 python tools/check_workstream_catalog.py
 python -m json.tool docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/WORKSTREAM.json > /dev/null

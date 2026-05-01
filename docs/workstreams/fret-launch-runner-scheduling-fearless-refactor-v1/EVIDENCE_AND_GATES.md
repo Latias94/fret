@@ -2,7 +2,7 @@
 
 Status: Maintenance
 
-Last updated: 2026-04-26
+Last updated: 2026-05-01
 
 ## Smallest current repro
 
@@ -10,7 +10,7 @@ Use the source-policy gate first. It locks the deterministic first-frame bootstr
 depending on a specific desktop compositor:
 
 ```bash
-cargo nextest run -p fret-examples --lib first_frame_bootstrap_smoke_locks_runner_wake_paths --no-fail-fast
+python tools/gate_fret_launch_runner_scheduling_source.py
 ```
 
 Use the native smoke demo for a local visual/manual check:
@@ -36,7 +36,7 @@ What this proves:
 
 ```bash
 cargo fmt -p fret-launch -p fret-examples --check
-cargo nextest run -p fret-examples --lib first_frame_bootstrap_smoke_locks_runner_wake_paths --no-fail-fast
+python tools/gate_fret_launch_runner_scheduling_source.py
 cargo nextest run -p fret-launch --lib --no-fail-fast
 ```
 
@@ -53,7 +53,7 @@ git diff --check
 
 - `apps/fret-examples/src/first_frame_smoke_demo.rs`
 - `apps/fret-demo/src/bin/first_frame_smoke_demo.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_fret_launch_runner_scheduling_source.py`
 - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs`
 - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
 - `crates/fret-launch/src/runner/desktop/runner/mod.rs`

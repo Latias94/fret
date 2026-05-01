@@ -3,7 +3,7 @@
   "slug": "fret-launch-runner-scheduling-fearless-refactor-v1",
   "title": "Fret Launch Runner Scheduling Fearless Refactor v1",
   "status": "maintenance",
-  "updated": "2026-04-26",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "problem": "Keep desktop and web runner scheduling semantics aligned: TickId advances per runner turn, FrameId commits only after a successful present, and runner-owned bootstrap wake paths must not depend on later pointer movement or hover.",
   "authoritative_docs": [
@@ -31,7 +31,7 @@
   "repro": {
     "summary": "Lock the deterministic first-frame bootstrap contract, then optionally run the native smoke demo for a local visual check.",
     "commands": [
-      "cargo nextest run -p fret-examples --lib first_frame_bootstrap_smoke_locks_runner_wake_paths --no-fail-fast",
+      "python tools/gate_fret_launch_runner_scheduling_source.py",
       "cargo run -p fret-demo --bin first_frame_smoke_demo"
     ]
   },
@@ -42,7 +42,7 @@
     },
     {
       "name": "first-frame-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib first_frame_bootstrap_smoke_locks_runner_wake_paths --no-fail-fast"
+      "command": "python tools/gate_fret_launch_runner_scheduling_source.py"
     },
     {
       "name": "launch-unit-gates",
@@ -72,9 +72,9 @@
     "docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/M6_FIRST_FRAME_BOOTSTRAP_CLOSURE_2026-04-26.md",
     "docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/WORKSTREAM.json",
+    "tools/gate_fret_launch_runner_scheduling_source.py",
     "apps/fret-examples/src/first_frame_smoke_demo.rs",
     "apps/fret-demo/src/bin/first_frame_smoke_demo.rs",
-    "apps/fret-examples/src/lib.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs",
     "crates/fret-launch/src/runner/desktop/runner/app_handler.rs",
     "crates/fret-launch/src/runner/desktop/runner/mod.rs",

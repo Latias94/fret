@@ -1044,3 +1044,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M60 - First Frame Bootstrap Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- First-frame bootstrap runner scheduling source-policy markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The runner scheduling maintenance lane owns the source gate through
+  `tools/gate_fret_launch_runner_scheduling_source.py`.
+- Native smoke demo behavior remains unchanged.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_fret_launch_runner_scheduling_source.py`
+- `apps/fret-examples/src/lib.rs`

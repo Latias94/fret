@@ -143,6 +143,8 @@ Status: active
   unit test while keeping demo behavior unchanged.
 - [x] Move the view-runtime grouped state/action source-policy check out of the monolithic
   `fret-examples` unit test while keeping demo behavior unchanged.
+- [x] Move the first-frame bootstrap runner scheduling source-policy check out of the monolithic
+  `fret-examples` unit test while keeping the native smoke demo and runner behavior unchanged.
 
 ## Parked
 
