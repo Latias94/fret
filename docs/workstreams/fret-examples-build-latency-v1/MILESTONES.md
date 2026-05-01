@@ -433,3 +433,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_imui_facade_teaching_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M26 - IMUI P0 Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI response-status lifecycle follow-on document freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- IMUI key-owner surface follow-on and M2 no-new-surface verdict markers no longer compile the
+  monolithic `fret-examples` unit-test module.
+- The closed IMUI workstreams point their source-policy gate at the Python gate instead of deleted
+  Rust source-marker tests.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

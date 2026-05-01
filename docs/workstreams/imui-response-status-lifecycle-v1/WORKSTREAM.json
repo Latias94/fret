@@ -3,7 +3,7 @@
   "slug": "imui-response-status-lifecycle-v1",
   "title": "ImUi Response Status Lifecycle v1",
   "status": "closed",
-  "updated": "2026-04-20",
+  "updated": "2026-04-30",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The active immediate-mode product-closure umbrella already narrowed the remaining P0 backlog, but the missing `ResponseExt` item-status lifecycle vocabulary now needs its own bounded lane so the repo can freeze activation/deactivation/edit semantics without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate key-owner problem.",
@@ -49,20 +49,20 @@
     "summary": "Start from the current response-signals demo and the shared-vs-facade boundary smoke before freezing any new lifecycle bits.",
     "commands": [
       "cargo run -p fret-demo --bin imui_response_signals_demo",
-      "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof",
+      "python tools/gate_imui_facade_teaching_source.py",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke",
       "cargo nextest run -p fret-imui",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
     {
       "name": "p0-response-status-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-response-demo-source-gate",
-      "command": "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof"
+      "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
       "name": "imui-response-boundary-smoke",
@@ -115,7 +115,9 @@
     "ecosystem/fret-imui/src/tests/interaction.rs",
     "ecosystem/fret-imui/src/tests/models.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
-    "apps/fret-examples/src/lib.rs"
+    "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_facade_teaching_source.py",
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",

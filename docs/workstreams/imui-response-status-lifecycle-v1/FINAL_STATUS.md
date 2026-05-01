@@ -43,8 +43,8 @@ The landed surface stays inside `ecosystem/fret-ui-kit::imui` and does not widen
 ## Proof left behind
 
 - Source / demo proof:
-  - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on`
-  - `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof`
+  - `python tools/gate_imui_workstream_source.py`
+  - `python tools/gate_imui_facade_teaching_source.py`
 - Boundary proof:
   - `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke`
 - Focused interaction floor:

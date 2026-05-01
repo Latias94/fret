@@ -58,6 +58,8 @@ Status: active
   monolithic `fret-examples` unit test.
 - [x] Move the IMUI response signals lifecycle, canonical trigger, and grouped state/action source
   markers out of the monolithic `fret-examples` unit test.
+- [x] Move the IMUI P0 response/key-owner workstream document freeze markers out of the monolithic
+  `fret-examples` unit test.
 
 ## Parked
 

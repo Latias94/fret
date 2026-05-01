@@ -3,7 +3,7 @@
   "slug": "imui-control-chrome-fearless-refactor-v1",
   "title": "ImUi Control Chrome Fearless Refactor v1",
   "status": "closed",
-  "updated": "2026-04-20",
+  "updated": "2026-04-30",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The default immediate controls in `ecosystem/fret-ui-kit::imui` still teach text-like interactive surfaces and unstable narrow-width form behavior. This lane owns a shared control-chrome refactor so button/switch/slider/combo/input surfaces become clearly interactive, survive compact editor rails, and stop forcing demos to compensate for broken defaults.",
@@ -85,7 +85,7 @@
     },
     {
       "name": "imui-showcase-compact-rail-source-gate",
-      "command": "cargo nextest run -p fret-examples showcase_responsive_layout imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround"
+      "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
       "name": "imui-shadcn-adapter-discoverability-source-gate",
@@ -133,6 +133,7 @@
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
+    "tools/gate_imui_facade_teaching_source.py",
     "tools/gate_imui_shadcn_adapter_control_discoverability_source.py",
     "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",

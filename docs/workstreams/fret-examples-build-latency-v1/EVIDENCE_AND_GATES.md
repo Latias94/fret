@@ -14,6 +14,7 @@ python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 python tools/gate_imui_shadcn_adapter_sortable_table_source.py
 python tools/gate_imui_shadcn_adapter_control_discoverability_source.py
 python tools/gate_imui_facade_teaching_source.py
+python tools/gate_imui_workstream_source.py
 python tools/gate_table_source_policy.py
 python tools/gate_examples_source_tree_policy.py
 python tools/gate_fret_examples_imui_split_source.py
@@ -39,12 +40,14 @@ git diff --check
   `imui_shadcn_adapter_demo_prefers_root_fret_imui_facade_lane`).
 - Passed: `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python tools/gate_imui_facade_teaching_source.py`.
+- Passed: `python tools/gate_imui_workstream_source.py`.
 - Passed: `python tools/gate_table_source_policy.py`.
 - Passed: `python tools/gate_examples_source_tree_policy.py`.
 - Passed: `python tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_sortable_table_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_shadcn_adapter_control_discoverability_source.py`.
 - Passed: `python -m py_compile tools/gate_imui_facade_teaching_source.py`.
+- Passed: `python -m py_compile tools/gate_imui_workstream_source.py`.
 - Passed: `python -m py_compile tools/gate_table_source_policy.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py`.
@@ -148,9 +151,13 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md`
   after moving IMUI response signals lifecycle, canonical trigger, and grouped state/action source
   markers into `tools/gate_imui_facade_teaching_source.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md`
+  after moving IMUI response/key-owner workstream document freeze markers into
+  `tools/gate_imui_workstream_source.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI response signals source migration: 278 `include_str!` occurrences and 60
+- Current count after the IMUI P0 workstream source migration: 271 `include_str!` occurrences and 57
   Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -177,6 +184,7 @@ git diff --check
 - `tools/examples_source_tree_policy/manual.py`
 - `tools/examples_source_tree_policy/owner_split.py`
 - `tools/gate_fret_examples_imui_split_source.py`
+- `tools/gate_imui_workstream_source.py`
 - `apps/fret-demo/Cargo.toml`
 - `apps/fret-demo/src/bin/imui_shadcn_adapter_demo.rs`
 - `tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json`
@@ -206,4 +214,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M23_IMUI_EDITOR_PROOF_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md`
 - `Cargo.toml`

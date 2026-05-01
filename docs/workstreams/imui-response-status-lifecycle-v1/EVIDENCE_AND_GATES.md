@@ -46,7 +46,7 @@ Use these before reading older historical `imui` facade notes in depth:
 
 ### P0 source-policy gate
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_response_status_lifecycle_follow_on`
+- `python tools/gate_imui_workstream_source.py`
 
 This gate currently proves:
 
@@ -57,7 +57,7 @@ This gate currently proves:
 
 ### Demo/source gate
 
-- `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_and_combo_lifecycle_proof`
+- `python tools/gate_imui_facade_teaching_source.py`
 
 This gate currently proves:
 

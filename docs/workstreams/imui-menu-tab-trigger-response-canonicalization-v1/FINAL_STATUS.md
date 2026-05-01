@@ -43,7 +43,7 @@ The shipped helper surface stays inside `ecosystem/fret-ui-kit::imui` and does n
   - `menu_and_submenu_helpers_report_toggle_and_trigger_edges`
   - `tab_bar_helper_reports_selected_change_and_trigger_edges`
 - Demo/source proof:
-  - `imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof`
+  - `python tools/gate_imui_facade_teaching_source.py`
   - `immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_canonicalization_follow_on`
 
 ## Historical routing

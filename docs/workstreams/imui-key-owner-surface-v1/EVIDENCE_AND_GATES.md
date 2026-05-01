@@ -47,7 +47,7 @@ Reopen this closeout only if stronger first-party proof shows that these surface
 
 ### Lane-local source-policy gate
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_key_owner_surface_follow_on immediate_mode_key_owner_surface_m2_no_new_surface_verdict_is_explicit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 
 This gate currently proves:
 

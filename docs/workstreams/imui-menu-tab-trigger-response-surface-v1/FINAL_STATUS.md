@@ -52,7 +52,7 @@ widen `fret-authoring::Response` or `crates/fret-ui`.
   - `tab_bar_helper_reports_selected_change_and_trigger_edges`
 - Demo/source proof:
   - `apps/fret-examples/src/imui_response_signals_demo.rs`
-  - `imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof`
+  - `python tools/gate_imui_facade_teaching_source.py`
 
 ## Residual gap routing
 

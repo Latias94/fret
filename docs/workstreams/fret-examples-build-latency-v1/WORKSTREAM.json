@@ -122,6 +122,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md"
     }
   ],
   "repro": {
@@ -142,6 +146,10 @@
     {
       "name": "imui-facade-teaching-source-gate",
       "command": "python tools/gate_imui_facade_teaching_source.py"
+    },
+    {
+      "name": "imui-workstream-source-gate",
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "table-source-policy-gate",
@@ -192,6 +200,7 @@
     "tools/gate_imui_shadcn_adapter_sortable_table_source.py",
     "tools/gate_imui_shadcn_adapter_control_discoverability_source.py",
     "tools/gate_imui_facade_teaching_source.py",
+    "tools/gate_imui_workstream_source.py",
     "tools/gate_table_source_policy.py",
     "tools/gate_examples_source_tree_policy.py",
     "tools/examples_source_tree_policy/__init__.py",
@@ -244,6 +253,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M23_IMUI_EDITOR_PROOF_SOURCE_GATE_2026-04-30.md",
     "docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md",
     "docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

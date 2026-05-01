@@ -82,7 +82,7 @@ This package protects:
 ### Showcase layout / screenshot gates
 
 - `cargo nextest run -p fret-examples --lib showcase_responsive_layout`
-- `cargo nextest run -p fret-examples showcase_responsive_layout imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround`
+- `python tools/gate_imui_facade_teaching_source.py`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-interaction-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
@@ -115,7 +115,7 @@ These commands were run after the shared control-chrome landing:
 ## Executed on 2026-04-20
 
 - `cargo nextest run -p fret-examples --lib imui_shadcn_adapter_demo_keeps_control_discoverability_proof_surface`
-- `cargo nextest run -p fret-examples showcase_responsive_layout imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround`
+- `python tools/gate_imui_facade_teaching_source.py`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-control-discoverability.json --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-compact-shell-smoke.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`

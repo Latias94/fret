@@ -3,7 +3,7 @@
   "slug": "imui-menu-tab-trigger-response-canonicalization-v1",
   "title": "ImUi Menu/Tab Trigger Response Canonicalization v1",
   "status": "closed",
-  "updated": "2026-04-13",
+  "updated": "2026-04-30",
   "scope_kind": "execution",
   "follow_on_of": "imui-menu-tab-trigger-response-surface-v1",
   "problem": "The prior lane already landed helper-owned menu/submenu/tab trigger responses, but it left a duplicate alias layer behind (`*_response*` plus the older helper names). This lane canonicalizes the public facade so the primary helper names carry the richer response values directly and the duplicate alias track can be removed without widening runtime/mechanism contracts.",
@@ -39,7 +39,7 @@
       "rg -n \"begin_menu_with_options\\(|begin_menu\\(|begin_submenu_with_options\\(|begin_submenu\\(|tab_bar_with_options\\(|\\.tab_bar\\(\" -g '*.rs'",
       "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger",
       "cargo nextest run -p fret-imui menu_and_submenu_helpers_report_toggle_and_trigger_edges tab_bar_helper_reports_selected_change_and_trigger_edges",
-      "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof"
+      "python tools/gate_imui_facade_teaching_source.py"
     ]
   },
   "gates": [
@@ -53,7 +53,7 @@
     },
     {
       "name": "imui-demo-trigger-response",
-      "command": "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof"
+      "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
       "name": "lane-hygiene",
@@ -79,7 +79,8 @@
     "ecosystem/fret-imui/src/tests/composition.rs",
     "ecosystem/fret-imui/src/tests/interaction.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
-    "apps/fret-examples/src/lib.rs"
+    "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_facade_teaching_source.py"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

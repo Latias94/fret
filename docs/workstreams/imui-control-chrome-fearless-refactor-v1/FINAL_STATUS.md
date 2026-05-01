@@ -48,7 +48,7 @@ The shipped default surface remains inside `ecosystem/fret-ui-kit::imui` and doe
   - `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_adapter_seam_smoke --test imui_combo_smoke`
   - `cargo nextest run -p fret-ui-kit --features imui --test imui_bullet_text_smoke --test imui_separator_text_smoke --test imui_button_smoke`
 - Showcase / source proof:
-  - `cargo nextest run -p fret-examples showcase_responsive_layout imui_interaction_showcase_demo_avoids_fixed_compact_lab_width_workaround`
+  - `python tools/gate_imui_facade_teaching_source.py`
   - `python tools/gate_imui_shadcn_adapter_control_discoverability_source.py`
 - Launched diag proof:
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-layout-compact-screenshot.json --launch -- cargo run -p fret-demo --bin imui_interaction_showcase_demo --release`

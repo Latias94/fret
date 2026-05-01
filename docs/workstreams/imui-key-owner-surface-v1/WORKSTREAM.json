@@ -3,7 +3,7 @@
   "slug": "imui-key-owner-surface-v1",
   "title": "ImUi Key Owner Surface v1",
   "status": "closed",
-  "updated": "2026-04-21",
+  "updated": "2026-04-30",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The maintenance immediate-mode product-closure umbrella already narrowed the remaining P0 backlog, but the key-owner / item-local shortcut ownership question still lacks a dedicated owner: Fret needs a narrow follow-on that can decide whether any immediate equivalent to `SetNextItemShortcut()` / `SetItemKeyOwner()` is justified beyond the current helper-local `activate_shortcut` and command-metadata seams, without reopening lifecycle vocabulary, collection/pane proof breadth, richer menu/tab policy, or runtime widening.",
@@ -61,14 +61,14 @@
     "summary": "Reopen this closeout only if new evidence shows that the current helper-local shortcut seams are insufficient: `imui_response_signals_demo` remains the current proof/contract surface, the bounded 11-test `fret-imui` package remains the executable shortcut floor, and M2 closed on a no-new-surface verdict for broader immediate key-owner APIs.",
     "commands": [
       "cargo run -p fret-demo --bin imui_response_signals_demo",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_key_owner_surface_follow_on immediate_mode_key_owner_surface_m2_no_new_surface_verdict_is_explicit --no-fail-fast",
+      "python tools/gate_imui_workstream_source.py",
       "cargo nextest run -p fret-imui menu_item_command_uses_command_metadata_shortcut_and_gating button_activate_shortcut_is_scoped_to_focused_button selectable_activate_shortcut_is_scoped_to_focused_item menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arrow_nav begin_menu_activate_shortcut_is_scoped_to_focused_trigger begin_submenu_activate_shortcut_is_scoped_to_focused_trigger tab_item_activate_shortcut_is_scoped_to_focused_trigger checkbox_model_activate_shortcut_is_scoped_to_focused_checkbox switch_model_activate_shortcut_is_scoped_to_focused_switch combo_activate_shortcut_is_scoped_to_focused_trigger combo_model_activate_shortcut_is_scoped_to_focused_trigger --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "p0-key-owner-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_key_owner_surface_follow_on immediate_mode_key_owner_surface_m2_no_new_surface_verdict_is_explicit --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "p0-key-owner-shortcut-floor",
@@ -114,7 +114,8 @@
     "ecosystem/fret-imui/src/tests/models.rs",
     "ecosystem/fret-imui/src/tests/popup_hover.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
-    "apps/fret-examples/src/lib.rs"
+    "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0020-focus-and-command-routing.md",
