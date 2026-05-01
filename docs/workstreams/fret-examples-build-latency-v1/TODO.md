@@ -131,6 +131,8 @@ Status: active
   out of the monolithic `fret-examples` unit test while keeping real campaign validate/run gates.
 - [x] Move the docking P3 source-policy subset out of the monolithic `fret-examples` unit test
   while keeping real owner-crate, campaign, and host-admitted behavior gates.
+- [x] Move the docking mixed-DPI support note source-policy checks out of the monolithic
+  `fret-examples` unit test while keeping the real host-admitted mixed-DPI proof surfaces.
 
 ## Parked
 

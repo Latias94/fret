@@ -938,3 +938,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M53_DOCKING_P3_SOURCE_POLICY_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M54 - Docking Mixed-DPI Support Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- The docking mixed-DPI capture-plan, automation-decision, and monitor-scale support note markers no
+  longer compile the monolithic `fret-examples` unit-test module.
+- The Python IMUI workstream source gate covers those support notes and the related workstream/TODO
+  markers.
+- Real host-admitted mixed-DPI proof surfaces remain outside this source freeze.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M54_DOCKING_MIXED_DPI_SUPPORT_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`
