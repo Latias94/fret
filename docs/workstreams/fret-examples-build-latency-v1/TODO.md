@@ -62,6 +62,8 @@ Status: active
   `fret-examples` unit test.
 - [x] Move the IMUI collection/pane proof workstream document and proof-surface markers out of the
   monolithic `fret-examples` unit test.
+- [x] Move the IMUI facade internal modularization workstream document/index markers out of the
+  monolithic `fret-examples` unit test.
 
 ## Parked
 

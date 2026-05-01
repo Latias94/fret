@@ -471,3 +471,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M27_IMUI_COLLECTION_PANE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M28 - IMUI Facade Modularization Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI facade internal modularization workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- Roadmap/workstream-index/todo-tracker markers for the closed modularization lane are covered by
+  `tools/gate_imui_workstream_source.py`.
+- The closed facade modularization workstream points its current source-policy gate at the Python
+  gate instead of a deleted Rust source-marker test.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M28_IMUI_FACADE_MODULARIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

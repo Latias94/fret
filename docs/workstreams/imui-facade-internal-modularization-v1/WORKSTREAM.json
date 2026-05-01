@@ -3,7 +3,7 @@
   "slug": "imui-facade-internal-modularization-v1",
   "title": "ImUi Facade Internal Modularization v1",
   "status": "closed",
-  "updated": "2026-04-21",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The remaining immediate-mode parity pressure is now dominated by narrow policy/proof lanes, but `ecosystem/fret-ui-kit::imui` still concentrates too much internal ownership in a few large files. Fret needs a narrow follow-on that reduces refactor hazard by modularizing the immediate facade internals without widening public surface, reopening runtime contracts, or conflating internal structure cleanup with menu/tab policy depth, collection breadth, or key-owner follow-ons.",
@@ -92,13 +92,13 @@
       "cargo build -p fret-demo --bin imui_editor_proof_demo",
       "cargo nextest run -p fret-imui --no-fail-fast",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
     {
       "name": "imui-facade-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-facade-public-surface-floor",
@@ -144,6 +144,7 @@
     "docs/workstreams/README.md",
     "docs/roadmap.md",
     "docs/todo-tracker.md",
+    "tools/gate_imui_workstream_source.py",
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_support.rs",

@@ -3,7 +3,7 @@
 Goal: keep internal `fret-ui-kit::imui` module motion tied to one current proof build, one focused
 test floor, and one explicit source-policy gate while the public facade stays frozen.
 
-Status note (2026-04-21): this lane is now closed. The gate set below remains the closeout proof
+Status note (2026-05-01): this lane is now closed. The gate set below remains the closeout proof
 surface for the landed owner decomposition; future structural or policy work should start a
 narrower follow-on instead of reopening this folder by default.
 
@@ -22,6 +22,7 @@ narrower follow-on instead of reopening this folder by default.
 - `docs/workstreams/README.md`
 - `docs/roadmap.md`
 - `docs/todo-tracker.md`
+- `tools/gate_imui_workstream_source.py`
 - `ecosystem/fret-ui-kit/src/imui.rs`
 - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
 - `ecosystem/fret-ui-kit/src/imui/facade_support.rs`
@@ -47,13 +48,13 @@ Use these before opening older historical `imui` notes in depth:
 4. Focused public-surface floor
    - `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`
 5. Lane-local source-policy floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
 
 ## Current gates
 
 ### Lane-local source-policy gate
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 
 This gate proves:
 
