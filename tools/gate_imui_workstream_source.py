@@ -370,6 +370,107 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-box-select-v1/DESIGN.md"),
+            required=[
+                "land one app-owned background marquee / box-select slice on the existing proof surface",
+                "The frozen two-surface proof budget blocks a new public `fret-ui-kit::imui` helper here.",
+                "The first correct target is:",
+                "background-only marquee / box-select slice inside",
+                "Do not begin by designing a shared helper surface.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md"),
+            required=[
+                "The closed collection/pane proof lane explicitly deferred marquee / box-select for M2.",
+                "The frozen two-surface proof budget blocks a new public `fret-ui-kit::imui` helper here.",
+                "The current proof surface already has the right ingredients for a narrow app-owned box-select",
+                "Dear ImGui treats box-select as part of collection depth",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md"),
+            required=[
+                "Background drag now draws a marquee overlay and updates collection selection app-locally.",
+                "Selection stays normalized to visible collection order",
+                "Plain background click clears the selection;",
+                "baseline set.",
+                "No new public `fret-ui-kit::imui` box-select helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-box-select-v1` as:",
+                "a closeout record for the landed app-owned background marquee / box-select slice",
+                "Start a different narrower follow-on only if stronger first-party proof shows either:",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-box-select-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-pane-proof-v1"',
+                '"path": "docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md"',
+                '"path": "docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md"',
+                '"path": "docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_drag_rect_normalizes_drag_direction",
+                "proof_collection_box_select_replace_uses_visible_collection_order",
+                "proof_collection_box_select_append_preserves_baseline_and_adds_hits",
+                "imui_editor_collection_box_select_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-box-select-v1/` now records the closed",
+                "background-only box-select slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-box-select-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-box-select-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-box-select-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/M1_BACKGROUND_BOX_SELECT_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

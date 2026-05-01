@@ -29,10 +29,11 @@ without widening `fret-ui-kit::imui` or `crates/fret-ui`.
 ## Gates tied to this slice
 
 - `cargo nextest run -p fret-examples --test imui_editor_collection_box_select_surface --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_box_select_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_box_select_replace_uses_visible_collection_order proof_collection_box_select_append_preserves_baseline_and_adds_hits --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_box_select_replace_uses_visible_collection_order proof_collection_box_select_append_preserves_baseline_and_adds_hits --no-fail-fast`
 
 ## Evidence anchors
 
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`

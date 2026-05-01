@@ -64,6 +64,8 @@ Status: active
   monolithic `fret-examples` unit test.
 - [x] Move the IMUI facade internal modularization workstream document/index markers out of the
   monolithic `fret-examples` unit test.
+- [x] Move the IMUI collection box-select workstream document/index markers out of the monolithic
+  `fret-examples` unit test while keeping the real `proof_collection_*` unit tests in Rust.
 
 ## Parked
 

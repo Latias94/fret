@@ -490,3 +490,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M28_IMUI_FACADE_MODULARIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M29 - IMUI Collection Box Select Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection box-select workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed collection box-select workstream points its source-policy gate at the Python gate
+  instead of a deleted Rust source-marker test.
+- The real `proof_collection_*` unit tests remain in Rust and stay named as the behavior floor.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M29_IMUI_COLLECTION_BOX_SELECT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

@@ -3,7 +3,7 @@
   "slug": "imui-collection-box-select-v1",
   "title": "ImUi Collection Box Select v1",
   "status": "closed",
-  "updated": "2026-04-22",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-collection-pane-proof-v1",
   "problem": "The closed collection/pane proof lane already proved that the current asset-browser surface is a real first-party collection proof, but it explicitly deferred marquee / box-select. This follow-on closes that narrower collection-depth gap by landing an app-owned background marquee / box-select slice in `imui_editor_proof_demo` while freezing that lasso, keyboard-owner depth, and any public `fret-ui-kit::imui` helper widening still lack the required second first-party proof surface.",
@@ -54,13 +54,18 @@
     "commands": [
       "cargo run -p fret-demo --bin imui_editor_proof_demo",
       "cargo nextest run -p fret-examples --test imui_editor_collection_box_select_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_box_select_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_box_select_replace_uses_visible_collection_order proof_collection_box_select_append_preserves_baseline_and_adds_hits --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py",
+      "cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_box_select_replace_uses_visible_collection_order proof_collection_box_select_append_preserves_baseline_and_adds_hits --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "collection-box-select-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_box_select_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_box_select_replace_uses_visible_collection_order proof_collection_box_select_append_preserves_baseline_and_adds_hits --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "collection-box-select-unit-floor",
+      "command": "cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_box_select_replace_uses_visible_collection_order proof_collection_box_select_append_preserves_baseline_and_adds_hits --no-fail-fast"
     },
     {
       "name": "collection-box-select-surface-floor",
@@ -100,6 +105,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs",
     "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui_demo.cpp",
     "repo-ref/imgui/imgui.h"
   ],
