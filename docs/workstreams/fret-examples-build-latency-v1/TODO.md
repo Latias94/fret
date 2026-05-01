@@ -104,6 +104,9 @@ Status: active
   tests in Rust.
 - [x] Move the IMUI next-gap audit workstream decision markers out of the monolithic
   `fret-examples` unit test; this closed audit has no real Rust behavior test.
+- [x] Move the IMUI editor-notes draft actions workstream document/source-shape markers out of the
+  monolithic `fret-examples` unit test while keeping the real editor rail/device shell surface
+  tests in Rust.
 
 ## Parked
 

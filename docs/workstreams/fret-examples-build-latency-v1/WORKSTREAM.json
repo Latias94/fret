@@ -3,7 +3,7 @@
   "slug": "fret-examples-build-latency-v1",
   "title": "Fret Examples Build Latency v1",
   "status": "active",
-  "updated": "2026-04-30",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "problem": "Reduce cold compile, link, and source-policy gate latency for `fret-examples` and `fret-demo` without weakening IMUI diagnostics or demo coverage.",
   "authoritative_docs": [
@@ -194,6 +194,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M43_IMUI_NEXT_GAP_AUDIT_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M44_IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -339,6 +343,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M41_IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M42_IMUI_EDITOR_NOTES_DIRTY_STATUS_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M43_IMUI_NEXT_GAP_AUDIT_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M44_IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

@@ -765,5 +765,21 @@ Exit criteria:
 Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M43_IMUI_NEXT_GAP_AUDIT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+
+## M44 - IMUI Editor Notes Draft Actions Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI editor-notes draft actions closeout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed draft actions workstream points its source-policy gate at the Python gate instead of a
+  deleted Rust source-marker test.
+- The real editor rail/device shell surface integration tests remain in Rust.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M44_IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`

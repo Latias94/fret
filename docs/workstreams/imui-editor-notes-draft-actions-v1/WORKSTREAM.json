@@ -3,7 +3,7 @@
   "slug": "imui-editor-notes-draft-actions-v1",
   "title": "ImUi Editor Notes Draft Actions v1",
   "status": "closed",
-  "updated": "2026-04-24",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-next-gap-audit-v1",
   "problem": "The next-gap audit recommends a locally testable app-owned editor-notes draft action slice. This lane adds explicit inspector-local draft action affordances without persistence, workspace dirty-close, command-bus, clipboard, TextField draft-buffer APIs, or public IMUI helper widening.",
@@ -42,13 +42,13 @@
     "commands": [
       "cargo run -p fret-demo --bin editor_notes_demo",
       "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_draft_actions_follow_on --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
     {
       "name": "editor-notes-draft-actions-closeout-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_draft_actions_follow_on --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "editor-notes-rail-surface",
@@ -78,7 +78,7 @@
     "docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
