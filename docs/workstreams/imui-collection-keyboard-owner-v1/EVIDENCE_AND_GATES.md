@@ -21,6 +21,7 @@ growth.
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs`
 - `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `repo-ref/imgui/imgui_demo.cpp`
 - `repo-ref/imgui/imgui.h`
 
@@ -33,7 +34,8 @@ Use these before reading older historical `imui` notes in depth:
 2. Current lane-local surface floor
    - `cargo nextest run -p fret-examples --test imui_editor_collection_keyboard_owner_surface --no-fail-fast`
 3. Current lane-local source-policy and unit-test floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
+   - `cargo nextest run -p fret-examples --lib proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast`
 
 Current status summary:
 
@@ -46,7 +48,8 @@ Current status summary:
 
 ### Lane-local source-policy and unit-test floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast`
 
 This floor currently proves:
 

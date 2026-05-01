@@ -3,7 +3,7 @@
   "slug": "imui-collection-keyboard-owner-v1",
   "title": "ImUi Collection Keyboard Owner v1",
   "status": "closed",
-  "updated": "2026-04-22",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-collection-box-select-v1",
   "problem": "The closed collection box-select lane already proved that the current asset-browser proof can own deeper collection policy locally, but it explicitly deferred richer keyboard-owner depth. This follow-on closes that narrower gap by landing an app-owned collection-scope keyboard-owner slice in `imui_editor_proof_demo` while keeping the closed generic key-owner verdict intact and leaving shared helper widening out of scope.",
@@ -54,13 +54,18 @@
     "commands": [
       "cargo run -p fret-demo --bin imui_editor_proof_demo",
       "cargo nextest run -p fret-examples --test imui_editor_collection_keyboard_owner_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py",
+      "cargo nextest run -p fret-examples --lib proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "collection-keyboard-owner-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_keyboard_owner_follow_on proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "collection-keyboard-owner-unit-floor",
+      "command": "cargo nextest run -p fret-examples --lib proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile proof_collection_keyboard_shift_navigation_extends_range_from_anchor proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile proof_collection_keyboard_ignores_primary_modifier_shortcuts --no-fail-fast"
     },
     {
       "name": "collection-keyboard-owner-surface-floor",
@@ -100,6 +105,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs",
     "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui_demo.cpp",
     "repo-ref/imgui/imgui.h"
   ],

@@ -471,6 +471,108 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md"),
+            required=[
+                "The generic key-owner lane stays closed; this lane is collection proof depth, not generic helper growth.",
+                "The first landable target is therefore narrow:",
+                "make the collection scope itself a focusable keyboard owner in the proof demo,",
+                "`Arrow` / `Home` / `End` to move the active tile in visible order,",
+                "Do not start by designing a shared helper or a new generic shortcut facade.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md"),
+            required=[
+                "The closed collection box-select lane explicitly deferred collection keyboard-owner depth.",
+                "The generic key-owner lane already closed on a no-new-surface verdict and should stay closed.",
+                "The current proof surface already has the right ingredients for a narrow app-owned keyboard",
+                'The smallest credible slice is still narrower than "full parity"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md"),
+            required=[
+                "The collection scope now owns a focusable keyboard region locally in the proof demo.",
+                "`Arrow` / `Home` / `End` now move the active tile",
+                "`Shift+Arrow` / `Shift+Home` / `Shift+End` now extend the selected range",
+                "`Escape` now clears the selected set while keeping the current keyboard location app-defined.",
+                "No new generic `SetNextItemShortcut()` / `SetItemKeyOwner()`-scale facade is admitted here.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-keyboard-owner-v1` as:",
+                "generic key-owner no-new-surface verdict remains closed",
+                "No reopening of the generic key-owner lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-keyboard-owner-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-box-select-v1"',
+                '"path": "docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md"',
+                '"path": "docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md"',
+                '"path": "docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+                "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+                "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+                "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
+                "imui_editor_collection_keyboard_owner_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/` now records the closed",
+                "app-owned collection keyboard-owner slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/M1_APP_OWNED_KEYBOARD_OWNER_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-keyboard-owner-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []
