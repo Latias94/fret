@@ -19,6 +19,7 @@ and one bounded evidence set before anyone argues for shared helper or runtime g
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs`
 - `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `repo-ref/imgui/imgui_demo.cpp`
 
 ## First-open repro surfaces
@@ -28,13 +29,15 @@ and one bounded evidence set before anyone argues for shared helper or runtime g
 2. Current lane-local surface floor
    - `cargo nextest run -p fret-examples --test imui_editor_collection_zoom_surface --no-fail-fast`
 3. Current lane-local source-policy and unit-test floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_zoom_follow_on proof_collection_layout_metrics_fall_back_before_viewport_binding_exists proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor proof_collection_zoom_request_ignores_non_primary_wheel --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
+   - `cargo nextest run -p fret-examples --lib proof_collection_layout_metrics_fall_back_before_viewport_binding_exists proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor proof_collection_zoom_request_ignores_non_primary_wheel --no-fail-fast`
 
 ## Current focused gates
 
 ### Lane-local source-policy and unit-test floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_zoom_follow_on proof_collection_layout_metrics_fall_back_before_viewport_binding_exists proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor proof_collection_zoom_request_ignores_non_primary_wheel --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_layout_metrics_fall_back_before_viewport_binding_exists proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor proof_collection_zoom_request_ignores_non_primary_wheel --no-fail-fast`
 
 This floor currently proves:
 

@@ -773,6 +773,107 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-zoom-v1/DESIGN.md"),
+            required=[
+                "The closed collection context-menu lane already deferred collection zoom/layout depth.",
+                "The first landable target is therefore narrow:",
+                "derive collection layout metrics from viewport width plus an app-owned zoom model,",
+                "route primary+wheel through one collection-scope zoom policy,",
+                "Do not start by designing a shared collection zoom helper or runtime-owned layout contract.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md"),
+            required=[
+                "The closed collection context-menu lane explicitly deferred collection zoom/layout depth.",
+                "The current proof surface already has the right ingredients for a narrow app-owned collection zoom slice:",
+                "The scroll handle and wheel hooks already exist generically, so this lane is not a justification to widen shared helper ownership.",
+                "Dear ImGui keeps asset-browser zoom and layout recomputation at the proof surface instead of turning them into a generic runtime contract.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md"),
+            required=[
+                "The collection proof now derives layout metrics from viewport width plus app-owned zoom state.",
+                "Primary+Wheel now adjusts tile extent without widening generic IMUI helper ownership.",
+                "Keyboard grid navigation now reads the derived layout columns instead of a frozen constant.",
+                "The zoom slice reuses the existing child-region scroll handle to keep hovered rows anchored while columns change.",
+                "No new public `fret-ui-kit::imui` collection zoom helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-zoom-v1` as:",
+                "a closeout record for the landed app-owned collection zoom/layout slice",
+                "No reopening of the closed context-menu lane or wider generic layout/helper questions.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-zoom-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-context-menu-v1"',
+                '"path": "docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_layout_metrics_fall_back_before_viewport_binding_exists",
+                "proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor",
+                "proof_collection_zoom_request_ignores_non_primary_wheel",
+                "imui_editor_collection_zoom_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-zoom-v1/` now records the closed",
+                "app-owned collection zoom/layout slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-zoom-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-zoom-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-zoom-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/M1_APP_OWNED_ZOOM_LAYOUT_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-zoom-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

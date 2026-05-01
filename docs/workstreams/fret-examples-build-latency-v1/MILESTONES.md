@@ -565,3 +565,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M32_IMUI_COLLECTION_CONTEXT_MENU_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M33 - IMUI Collection Zoom Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection zoom workstream freeze markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The closed collection zoom workstream points its source-policy gate at the Python gate instead of
+  a deleted Rust source-marker test.
+- The real `proof_collection_layout_metrics_*` and `proof_collection_zoom_request_*` unit tests
+  remain in Rust and stay named as the behavior floor.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M33_IMUI_COLLECTION_ZOOM_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`
