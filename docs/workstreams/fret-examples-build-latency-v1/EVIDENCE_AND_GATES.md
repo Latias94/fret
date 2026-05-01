@@ -188,10 +188,15 @@ git diff --check
   after moving IMUI collection zoom workstream document/index markers into
   `tools/gate_imui_workstream_source.py` while keeping the real `proof_collection_layout_metrics_*`
   and `proof_collection_zoom_request_*` unit tests in Rust.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M34_IMUI_COLLECTION_SELECT_ALL_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+  after moving IMUI collection select-all workstream document/index markers into
+  `tools/gate_imui_workstream_source.py` while keeping the real `proof_collection_select_all_*`
+  unit tests in Rust.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI collection zoom workstream source migration: 233
-  `include_str!` occurrences and 48 Rust `#[test]` functions remain in
+- Current count after the IMUI collection select-all workstream source migration: 228
+  `include_str!` occurrences and 47 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -256,4 +261,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M31_IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M32_IMUI_COLLECTION_CONTEXT_MENU_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M33_IMUI_COLLECTION_ZOOM_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M34_IMUI_COLLECTION_SELECT_ALL_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

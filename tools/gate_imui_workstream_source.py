@@ -874,6 +874,107 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-select-all-v1/DESIGN.md"),
+            required=[
+                "The closed collection zoom lane already deferred collection select-all breadth.",
+                "The first landable target is therefore narrow:",
+                "route Primary+A through one collection-scope select-all policy,",
+                "select all visible assets in current visible order,",
+                "Do not start by designing a shared collection select-all helper or broader command surface.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md"),
+            required=[
+                "The closed collection zoom lane explicitly deferred collection select-all breadth.",
+                "The current proof surface already has the right ingredients for a narrow app-owned collection select-all slice:",
+                "The collection-scope key-owner and visible-order helpers already exist locally, so this lane is not a justification to widen shared helper ownership.",
+                "Dear ImGui keeps Ctrl+A selection breadth in the multi-select proof surface instead of turning it into a generic runtime contract.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md"),
+            required=[
+                "The collection proof now supports one app-owned select-all shortcut slice.",
+                "Primary+A now selects all visible assets within the focused collection scope.",
+                "Select-all keeps the current active tile when possible instead of widening generic key-owner ownership.",
+                "The popup/menu surface stays unchanged in this lane.",
+                "No new public `fret-ui-kit::imui` collection select-all helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-select-all-v1` as:",
+                "a closeout record for the landed app-owned collection select-all slice",
+                "No reopening of the closed zoom lane or wider generic key-owner/helper questions.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-select-all-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-zoom-v1"',
+                '"path": "docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+                "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+                "proof_collection_select_all_shortcut_matches_primary_a_only",
+                "imui_editor_collection_select_all_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-select-all-v1/` now records the closed",
+                "app-owned collection select-all slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-select-all-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-select-all-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-select-all-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/M1_APP_OWNED_SELECT_ALL_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-select-all-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

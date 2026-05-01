@@ -584,3 +584,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M33_IMUI_COLLECTION_ZOOM_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M34 - IMUI Collection Select-All Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection select-all workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed collection select-all workstream points its source-policy gate at the Python gate
+  instead of a deleted Rust source-marker test.
+- The real `proof_collection_select_all_*` unit tests remain in Rust and stay named as the behavior
+  floor.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M34_IMUI_COLLECTION_SELECT_ALL_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

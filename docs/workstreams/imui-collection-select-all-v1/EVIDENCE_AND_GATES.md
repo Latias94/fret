@@ -19,6 +19,7 @@ and one bounded evidence set before anyone argues for shared helper or runtime g
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/tests/imui_editor_collection_select_all_surface.rs`
 - `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `repo-ref/imgui/imgui_demo.cpp`
 - `repo-ref/imgui/imgui_widgets.cpp`
 
@@ -29,13 +30,15 @@ and one bounded evidence set before anyone argues for shared helper or runtime g
 2. Current lane-local surface floor
    - `cargo nextest run -p fret-examples --test imui_editor_collection_select_all_surface --no-fail-fast`
 3. Current lane-local source-policy and unit-test floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_select_all_follow_on proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile proof_collection_select_all_selection_falls_back_to_first_visible_asset proof_collection_select_all_shortcut_matches_primary_a_only --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
+   - `cargo nextest run -p fret-examples --lib proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile proof_collection_select_all_selection_falls_back_to_first_visible_asset proof_collection_select_all_shortcut_matches_primary_a_only --no-fail-fast`
 
 ## Current focused gates
 
 ### Lane-local source-policy and unit-test floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_select_all_follow_on proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile proof_collection_select_all_selection_falls_back_to_first_visible_asset proof_collection_select_all_shortcut_matches_primary_a_only --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile proof_collection_select_all_selection_falls_back_to_first_visible_asset proof_collection_select_all_shortcut_matches_primary_a_only --no-fail-fast`
 
 This floor currently proves:
 
