@@ -127,7 +127,7 @@ From this point forward:
   - `cargo nextest run -p fret-docking --lib request_float_degrades_to_in_window_when_window_hover_detection_is_none --no-fail-fast`
 - Source-policy freeze:
   - `apps/fret-examples/src/lib.rs`
-  - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice --no-fail-fast`
+  - `python tools/gate_imui_workstream_source.py`
 
 ## Immediate execution consequence
 

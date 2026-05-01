@@ -56,13 +56,13 @@ cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p
 cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-wayland-real-host.json --json
 cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-windows-placement-real-host.json --json
 cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-mixed-dpi-real-host.json --json
-cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_mixed_dpi_real_host_acceptance immediate_mode_workstream_freezes_the_p3_windows_placement_capture_gate immediate_mode_workstream_freezes_the_p3_window_style_opacity_capability immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice immediate_mode_workstream_freezes_the_p3_wayland_compositor_acceptance_runbook --no-fail-fast
+python tools/gate_imui_workstream_source.py
 ```
 
 Observed result:
 
 - all four campaign manifests validated,
-- the `fret-examples` source-policy subset ran 9 tests and all 9 passed,
+- the Python IMUI workstream source-policy gate passed,
 - no Linux/Wayland real-host run was attempted.
 
 ## Decision

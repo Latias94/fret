@@ -274,10 +274,14 @@ git diff --check
   after moving IMUI P3 runner-gap and bounded multi-window campaign package source-policy markers
   into `tools/gate_imui_workstream_source.py` while keeping real campaign validate/run gates as
   behavior floors.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M53_DOCKING_P3_SOURCE_POLICY_GATE_2026-05-01.md`
+  after moving the docking parity source-policy subset into `tools/gate_imui_workstream_source.py`
+  while keeping owner-crate, campaign, and host-admitted gates as behavior floors.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI P3 multi-window package source migration: 128 `include_str!`
-  occurrences and 23 Rust `#[test]` functions remain in
+- Current count after the docking P3 source-policy migration: 116 `include_str!` occurrences and
+  16 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -361,4 +365,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M50_IMUI_WORKBENCH_SHELL_CLOSURE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M51_IMUI_P2_DIAGNOSTICS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M52_IMUI_P3_MULTIWINDOW_PACKAGE_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M53_DOCKING_P3_SOURCE_POLICY_GATE_2026-05-01.md`
 - `Cargo.toml`

@@ -3,7 +3,7 @@
   "slug": "docking-multiwindow-imgui-parity",
   "title": "Docking Multi-Window ImGui Parity",
   "status": "active",
-  "updated": "2026-04-29",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
   "authoritative_docs": [
@@ -97,7 +97,7 @@
       "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics -E 'test(window_style_effective_matches_opacity_alpha)' --no-fail-fast --jobs 2",
       "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
       "cargo nextest run -p fret-docking --lib request_float_degrades_to_in_window_when_window_hover_detection_is_none --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_windows_placement_capture_gate immediate_mode_workstream_freezes_the_p3_window_style_opacity_capability immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice immediate_mode_workstream_freezes_the_p3_wayland_compositor_acceptance_runbook --no-fail-fast",
+      "python tools/gate_imui_workstream_source.py",
       "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-wayland-real-host.json --json",
       "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag campaign run imui-p3-wayland-real-host --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release",
       "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/docking/arbitration/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json --dir target/fret-diag/docking-multiwindow-imgui-parity/wayland-real-host --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"
@@ -106,7 +106,7 @@
   "gates": [
     {
       "name": "p3-multiwindow-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package immediate_mode_workstream_freezes_the_p3_docking_parity_lane_resume_surface immediate_mode_workstream_freezes_the_p3_mixed_dpi_acceptance_posture immediate_mode_workstream_freezes_the_p3_mixed_dpi_real_host_acceptance immediate_mode_workstream_freezes_the_p3_windows_placement_capture_gate immediate_mode_workstream_freezes_the_p3_window_style_opacity_capability immediate_mode_workstream_freezes_the_p3_wayland_degradation_policy_slice immediate_mode_workstream_freezes_the_p3_wayland_compositor_acceptance_runbook --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "p3-wayland-capability-posture",

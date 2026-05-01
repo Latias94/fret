@@ -129,6 +129,8 @@ Status: active
   and campaign doctor gates.
 - [x] Move the IMUI P3 multi-window runner-gap and bounded campaign package source-policy checks
   out of the monolithic `fret-examples` unit test while keeping real campaign validate/run gates.
+- [x] Move the docking P3 source-policy subset out of the monolithic `fret-examples` unit test
+  while keeping real owner-crate, campaign, and host-admitted behavior gates.
 
 ## Parked
 

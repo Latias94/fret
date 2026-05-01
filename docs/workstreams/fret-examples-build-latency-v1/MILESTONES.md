@@ -919,3 +919,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M52_IMUI_P3_MULTIWINDOW_PACKAGE_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M53 - Docking P3 Source Policy Gate
+
+Status: complete
+
+Exit criteria:
+
+- The docking parity source-policy subset named by `docking-multiwindow-imgui-parity` no longer
+  compiles the monolithic `fret-examples` unit-test module.
+- The active docking parity lane points its source-policy gate at the Python gate instead of
+  deleted Rust source-marker tests.
+- Real owner-crate, campaign validation, and host-admitted behavior gates remain outside the source
+  freeze.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M53_DOCKING_P3_SOURCE_POLICY_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`
