@@ -14,12 +14,12 @@ without widening public APIs or requiring macOS/multi-window acceptance.
 - `docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
 - `docs/workstreams/standalone/imui-imgui-parity-audit-v2.md`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Focused Gates
 
 - `cargo fmt -p fret-examples --check`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_imui_next_gap_audit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `python3 -m json.tool docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json > /dev/null`
 - `python3 tools/check_workstream_catalog.py`
 - `git diff --check`

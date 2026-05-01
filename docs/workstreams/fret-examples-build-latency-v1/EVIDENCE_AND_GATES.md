@@ -229,10 +229,13 @@ git diff --check
   after moving IMUI editor-notes dirty status workstream document/source-shape markers into
   `tools/gate_imui_workstream_source.py` while keeping the real editor rail/device shell surface
   tests in Rust.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M43_IMUI_NEXT_GAP_AUDIT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+  after moving IMUI next-gap audit decision markers into `tools/gate_imui_workstream_source.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI editor-notes dirty status workstream source migration: 184
-  `include_str!` occurrences and 39 Rust `#[test]` functions remain in
+- Current count after the IMUI next-gap audit workstream source migration: 177
+  `include_str!` occurrences and 38 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -306,4 +309,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M40_IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M41_IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M42_IMUI_EDITOR_NOTES_DIRTY_STATUS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M43_IMUI_NEXT_GAP_AUDIT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

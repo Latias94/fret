@@ -29,7 +29,7 @@ Start `imui-editor-notes-draft-actions-v1` with this minimum scope:
 ## Gates
 
 - `cargo fmt -p fret-examples --check`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_imui_next_gap_audit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `python3 -m json.tool docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json > /dev/null`
 - `python3 tools/check_workstream_catalog.py`
 - `git diff --check`

@@ -1987,6 +1987,129 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/DESIGN.md"),
+            required=[
+                "Status: closed narrow P1 audit lane",
+                "The recent IMUI lanes closed collection helper readiness",
+                "Rank the next locally testable, non-macOS-dependent IMUI follow-on candidates.",
+                "No `fret-ui-kit::imui`, `fret-imui`, `fret-authoring`, or `crates/fret-ui` API widening.",
+                "No macOS-only or multi-window runner implementation.",
+                "Close this audit with a ranked next-gap decision",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-next-gap-audit-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-editor-notes-dirty-status-v1"',
+                '"path": "docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md"',
+                '"path": "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"',
+                "imui-next-gap-audit-source-policy",
+                "python tools/gate_imui_workstream_source.py",
+                "imui-editor-notes-draft-actions-v1",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_imui_next_gap_audit",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md"),
+            required=[
+                "Recommended: `imui-editor-notes-draft-actions-v1`.",
+                "add app-owned `Commit draft` / `Discard draft` or equivalent draft action affordances",
+                "Multi-window/tear-off remains important but is not the right next local slice",
+                "Public IMUI helper growth still needs stronger two-surface proof.",
+                "Parked: generic IMUI/public helper widening.",
+                "without persistence, dirty-close,",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md"),
+            required=[
+                "Treat `imui-next-gap-audit-v1` as a closed decision record.",
+                "implementation should start `imui-editor-notes-draft-actions-v1`",
+                "Do not reopen `imui-editor-grade-product-closure-v1` for implementation-heavy work.",
+                "Keep macOS/multi-window/tear-off work parked in runner/backend-owned lanes",
+                "Gate with `editor_notes_editor_rail_surface` plus a source-policy test.",
+                "python tools/gate_imui_workstream_source.py",
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_imui_next_gap_audit",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/TODO.md"),
+            required=[
+                "- [x] Rank locally testable next-gap candidates.",
+                "- [x] Record a recommended next lane and explicit non-goals.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md"),
+            required=[
+                "## M1 - Next-Gap Audit",
+                "Status: complete",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md"),
+            required=[
+                "choose the next locally testable IMUI gap after recent editor-notes and collection closeouts",
+                "python tools/gate_imui_workstream_source.py",
+                "docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md",
+                "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_imui_next_gap_audit",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json`",
+                "`docs/workstreams/imui-next-gap-audit-v1/DESIGN.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/TODO.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-next-gap-audit-v1/DESIGN.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/TODO.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json`",
+                "`docs/workstreams/imui-next-gap-audit-v1/DESIGN.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/TODO.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []
