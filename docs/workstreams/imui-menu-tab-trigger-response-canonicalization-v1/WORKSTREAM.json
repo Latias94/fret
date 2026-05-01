@@ -3,7 +3,7 @@
   "slug": "imui-menu-tab-trigger-response-canonicalization-v1",
   "title": "ImUi Menu/Tab Trigger Response Canonicalization v1",
   "status": "closed",
-  "updated": "2026-04-30",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "follow_on_of": "imui-menu-tab-trigger-response-surface-v1",
   "problem": "The prior lane already landed helper-owned menu/submenu/tab trigger responses, but it left a duplicate alias layer behind (`*_response*` plus the older helper names). This lane canonicalizes the public facade so the primary helper names carry the richer response values directly and the duplicate alias track can be removed without widening runtime/mechanism contracts.",
@@ -56,6 +56,10 @@
       "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
+      "name": "imui-workstream-source-policy",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
       "name": "lane-hygiene",
       "command": "python3 tools/check_workstream_catalog.py"
     },
@@ -79,7 +83,7 @@
     "ecosystem/fret-imui/src/tests/composition.rs",
     "ecosystem/fret-imui/src/tests/interaction.rs",
     "apps/fret-examples/src/imui_response_signals_demo.rs",
-    "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py",
     "tools/gate_imui_facade_teaching_source.py"
   ],
   "adr_refs": [

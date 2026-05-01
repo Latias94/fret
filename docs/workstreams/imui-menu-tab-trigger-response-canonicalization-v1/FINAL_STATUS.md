@@ -16,7 +16,7 @@ Related:
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Decision
 
@@ -44,7 +44,7 @@ The shipped helper surface stays inside `ecosystem/fret-ui-kit::imui` and does n
   - `tab_bar_helper_reports_selected_change_and_trigger_edges`
 - Demo/source proof:
   - `python tools/gate_imui_facade_teaching_source.py`
-  - `immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_canonicalization_follow_on`
+  - `python tools/gate_imui_workstream_source.py`
 
 ## Historical routing
 

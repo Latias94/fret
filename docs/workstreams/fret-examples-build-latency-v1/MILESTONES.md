@@ -829,5 +829,37 @@ Exit criteria:
 Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M47_IMUI_CHILD_REGION_DEPTH_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+
+## M48 - IMUI Menu/Tab Trigger Response Surface Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI menu/tab trigger response-surface closeout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed response-surface workstream points its source-policy gate at the Python gate instead
+  of a deleted Rust source-marker test.
+- The real `fret-imui` helper behavior/outward-response tests and demo source proof remain floors.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M48_IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+
+## M49 - IMUI Menu/Tab Trigger Response Canonicalization Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI menu/tab trigger response canonicalization closeout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed canonicalization workstream points its source-policy gate at the Python gate instead
+  of a deleted Rust source-marker test.
+- The real canonical helper behavior and IMUI facade teaching source gates remain floors.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`

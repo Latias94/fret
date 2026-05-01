@@ -322,21 +322,6 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_IMGUI_PARITY_AUDIT_V2: &str =
         include_str!("../../../docs/workstreams/standalone/imui-imgui-parity-audit-v2.md");
-    const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_FINAL_STATUS: &str = include_str!(
-        "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md"
-    );
-    const IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM: &str = include_str!(
-        "../../../docs/workstreams/imui-menu-tab-trigger-response-surface-v1/WORKSTREAM.json"
-    );
-    const IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_DESIGN: &str = include_str!(
-        "../../../docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/DESIGN.md"
-    );
-    const IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_FINAL_STATUS: &str = include_str!(
-        "../../../docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md"
-    );
-    const IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM: &str = include_str!(
-        "../../../docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json"
-    );
     const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO: &str =
         include_str!("../../../docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md");
     const IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_NEXT_PRIORITY: &str = include_str!(
@@ -866,112 +851,6 @@ mod authoring_surface_policy_tests {
                 FRET_LAUNCH_RUNNER_SCHEDULING_EVIDENCE.contains(marker)
                     || FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE.contains(marker),
                 "first-frame workstream docs should name marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on() {
-        for marker in [
-            "Status: closed closeout note",
-            "`begin_menu_response[_with_options]` now returns `DisclosureResponse`.",
-            "`begin_submenu_response[_with_options]` now returns `DisclosureResponse`.",
-            "`tab_bar_response[_with_options]` now returns `TabBarResponse`.",
-            "widen `fret-authoring::Response` or `crates/fret-ui`",
-            "`ecosystem/fret-ui-kit::imui`",
-            "`docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` now owns the",
-        ] {
-            assert!(
-                IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_FINAL_STATUS.contains(marker),
-                "the menu/tab trigger response-surface closeout should stay explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"slug\": \"imui-menu-tab-trigger-response-surface-v1\"",
-            "\"follow_on_of\": \"imui-editor-grade-product-closure-v1\"",
-            "\"status\": \"closed\"",
-            "immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on",
-        ] {
-            assert!(
-                IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM.contains(marker),
-                "the menu/tab trigger response-surface lane state should keep the follow-on marker: {marker}"
-            );
-        }
-
-        for marker in [
-            "`docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the",
-            "helper-owned menu/submenu/tab trigger response-surface decision",
-        ] {
-            assert!(
-                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
-                "the umbrella lane should keep the helper-owned trigger response follow-on explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "`docs/workstreams/imui-menu-tab-trigger-response-surface-v1/` now owns the",
-            "helper-owned menu/submenu/tab trigger response-surface decision",
-        ] {
-            assert!(
-                IMUI_RESPONSE_STATUS_LIFECYCLE_TODO.contains(marker),
-                "the lifecycle lane should keep the helper-owned trigger response deferral explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_canonicalization_follow_on()
-     {
-        for marker in [
-            "`begin_menu[_with_options] -> DisclosureResponse`",
-            "`begin_submenu[_with_options] -> DisclosureResponse`",
-            "`tab_bar[_with_options] -> TabBarResponse`",
-            "Remove the duplicate `*_response*` compatibility entry points",
-            "helper-owned menu/submenu/tab triggers expose one canonical outward response surface",
-        ] {
-            assert!(
-                IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_DESIGN.contains(marker),
-                "the canonicalization lane design should stay explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "Status: closed closeout note",
-            "`begin_menu[_with_options]` now returns `DisclosureResponse`.",
-            "`begin_submenu[_with_options]` now returns `DisclosureResponse`.",
-            "`tab_bar[_with_options]` now returns `TabBarResponse`.",
-            "The duplicate `begin_menu_response[_with_options]`",
-            "The shipped helper surface stays inside `ecosystem/fret-ui-kit::imui`",
-            "`fret-authoring::Response` or `crates/fret-ui`.",
-        ] {
-            assert!(
-                IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_FINAL_STATUS.contains(marker),
-                "the canonicalization closeout should stay explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"slug\": \"imui-menu-tab-trigger-response-canonicalization-v1\"",
-            "\"follow_on_of\": \"imui-menu-tab-trigger-response-surface-v1\"",
-            "\"status\": \"closed\"",
-            "menu_and_submenu_helpers_report_toggle_and_trigger_edges",
-            "tab_bar_helper_reports_selected_change_and_trigger_edges",
-            "imui_response_signals_demo_keeps_canonical_menu_tab_trigger_response_proof",
-        ] {
-            assert!(
-                IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM.contains(marker),
-                "the canonicalization lane state should stay explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "`docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/` now owns the",
-            "cleanup closeout that removes the duplicate alias layer after the response surface landed",
-        ] {
-            assert!(
-                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
-                "the umbrella lane should keep the canonicalization follow-on explicit: {marker}"
             );
         }
     }

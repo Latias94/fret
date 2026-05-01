@@ -210,6 +210,14 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M47_IMUI_CHILD_REGION_DEPTH_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M48_IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -359,6 +367,8 @@
     "docs/workstreams/fret-examples-build-latency-v1/M45_IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M46_IMUI_TEXTFIELD_DRAFT_CONTROLLER_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M47_IMUI_CHILD_REGION_DEPTH_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M48_IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

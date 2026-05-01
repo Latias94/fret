@@ -3,7 +3,7 @@
   "slug": "imui-menu-tab-trigger-response-surface-v1",
   "title": "ImUi Menu/Tab Trigger Response Surface v1",
   "status": "closed",
-  "updated": "2026-04-13",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The lifecycle lane already proved public response semantics on menu/combo surfaces that return `ResponseExt` or `ComboResponse`, but helper-owned menu/submenu/tab triggers used to collapse their internal trigger state into `bool open` or no outward return. This lane closes with an additive helper-level verdict: `begin_menu_response[_with_options]` and `begin_submenu_response[_with_options]` return `DisclosureResponse`, `tab_bar_response[_with_options]` returns `TabBarResponse`, and legacy wrappers stay intact without reopening richer menu/tab policy or widening `fret-authoring::Response`.",
@@ -54,13 +54,14 @@
     "commands": [
       "cargo nextest run -p fret-imui begin_menu_helper_toggles_popup_and_closes_after_command_activate begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger",
       "cargo nextest run -p fret-imui menu_and_submenu_response_report_toggle_and_trigger_edges tab_bar_response_reports_selected_change_and_trigger_edges",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof"
+      "python tools/gate_imui_workstream_source.py",
+      "python tools/gate_imui_facade_teaching_source.py"
     ]
   },
   "gates": [
     {
       "name": "p0-trigger-response-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "current-menu-tab-helper-floor",
@@ -72,7 +73,7 @@
     },
     {
       "name": "demo-trigger-surface-proof",
-      "command": "cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof"
+      "command": "python tools/gate_imui_facade_teaching_source.py"
     },
     {
       "name": "diff-check",
@@ -103,7 +104,8 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-imui/src/tests/interaction.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py",
+    "tools/gate_imui_facade_teaching_source.py"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",

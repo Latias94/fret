@@ -20,7 +20,8 @@ letting it drift back into the generic `imui` backlog.
 - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
+- `tools/gate_imui_facade_teaching_source.py`
 
 ## First-open repro surfaces
 
@@ -31,14 +32,14 @@ Use these to re-check the landed surface before any follow-on discussion:
 2. Landed outward-surface proof
    - `cargo nextest run -p fret-imui menu_and_submenu_response_report_toggle_and_trigger_edges tab_bar_response_reports_selected_change_and_trigger_edges`
 3. Source-policy split + demo freeze
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on`
-   - `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof`
+   - `python tools/gate_imui_workstream_source.py`
+   - `python tools/gate_imui_facade_teaching_source.py`
 
 ## Current focused gates
 
 ### P0 source-policy gate
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on`
+- `python tools/gate_imui_workstream_source.py`
 
 This gate currently proves:
 
@@ -69,7 +70,7 @@ This gate currently proves:
 
 ### Demo/source proof
 
-- `cargo nextest run -p fret-examples --lib imui_response_signals_demo_keeps_menu_tab_trigger_response_surface_proof`
+- `python tools/gate_imui_facade_teaching_source.py`
 
 This gate currently proves:
 

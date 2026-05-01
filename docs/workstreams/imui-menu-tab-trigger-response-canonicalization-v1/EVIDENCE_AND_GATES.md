@@ -18,7 +18,7 @@ focused behavior gate, one demo/source gate, and one explicit lane boundary.
 - `ecosystem/fret-imui/src/tests/composition.rs`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `apps/fret-examples/src/imui_response_signals_demo.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## First-open repro surfaces
 
@@ -47,7 +47,7 @@ focused behavior gate, one demo/source gate, and one explicit lane boundary.
 
 ### Lane hygiene gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_surface_follow_on immediate_mode_workstream_freezes_the_p0_menu_tab_trigger_response_canonicalization_follow_on`
+- `python tools/gate_imui_workstream_source.py`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 -m json.tool docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/WORKSTREAM.json > /dev/null`

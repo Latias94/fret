@@ -56,10 +56,10 @@ Primary evidence:
 - `EVIDENCE_AND_GATES.md`
 - `WORKSTREAM.json`
 - `FINAL_STATUS.md`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md`
 
 Current status:
 
 - Closed on 2026-04-13 via `FINAL_STATUS.md`, the refreshed source-policy tests, and the updated
-  repo/workstream indexes.
+  repo/workstream indexes and Python source-policy gate.
