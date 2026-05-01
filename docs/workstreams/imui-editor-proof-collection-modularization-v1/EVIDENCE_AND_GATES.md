@@ -21,6 +21,7 @@ growth from a demo-local maintenance problem.
 - `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`
 - `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs`
 - `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## First-open repro surfaces
 
@@ -29,13 +30,15 @@ growth from a demo-local maintenance problem.
 2. Current lane-local surface floor
    - `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`
 3. Current lane-local source-policy and unit-test floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
+   - `cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
 
 ## Current focused gates
 
 ### Lane-local source-policy and unit-test floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
 
 This floor currently proves:
 

@@ -3,7 +3,7 @@
   "slug": "imui-editor-proof-collection-modularization-v1",
   "title": "ImUi Editor Proof Collection Modularization v1",
   "status": "closed",
-  "updated": "2026-04-23",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-collection-inline-rename-v1",
   "problem": "The closed collection inline rename lane already landed the current app-owned collection product depth, but `imui_editor_proof_demo` still carried too much collection implementation inline. This follow-on closes that structural gap by moving the collection-first proof into a demo-local module while keeping the frozen proof-budget rule, the closed generic helper verdicts, and runtime widening out of scope.",
@@ -54,13 +54,18 @@
     "commands": [
       "cargo run -p fret-demo --bin imui_editor_proof_demo",
       "cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py",
+      "cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast"
     ]
   },
   "gates": [
     {
       "name": "collection-modularization-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_modularization_follow_on proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "collection-modularization-unit-floor",
+      "command": "cargo nextest run -p fret-examples --lib proof_collection_drag_rect_normalizes_drag_direction proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast"
     },
     {
       "name": "collection-modularization-surface-floor",
@@ -104,6 +109,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs",
     "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui.h"
   ],
   "adr_refs": [

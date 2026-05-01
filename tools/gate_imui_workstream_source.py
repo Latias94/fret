@@ -1180,6 +1180,131 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md"),
+            required=[
+                "The closed collection inline rename lane already landed the current app-owned collection product depth, but the host proof still kept too much collection implementation in one file.",
+                "The first correct target is therefore structural rather than behavioral:",
+                "move the collection proof into `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`,",
+                "keep the host file on `mod collection;` plus one render call and drag-asset delegation,",
+                "Do not widen `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` for a demo-local maintenance problem.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md"),
+            required=[
+                "The closed collection inline rename lane already landed the current app-owned collection product depth.",
+                "The current collection proof now spans enough owner-local helpers and models that host-file shape is a real maintenance concern.",
+                "A demo-local `collection.rs` module is sufficient to reduce that pressure without widening any public surface.",
+                "The frozen proof-budget rule still blocks shared helper growth from one proof surface.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md"),
+            required=[
+                "The collection proof now lives in one demo-local `collection.rs` module under `imui_editor_proof_demo`.",
+                "The host file now routes collection rendering through `collection::render_collection_first_asset_browser_proof(ui)` and uses `collection::authoring_parity_collection_assets()` for the drag-chip seed set.",
+                "Collection unit tests now live beside the module and the new modularization surface test freezes the host/module boundary explicitly.",
+                "Existing collection surface tests now read `collection.rs` for behavior anchors instead of pretending the host still owns the implementation inline.",
+                "No new public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-editor-proof-collection-modularization-v1` as:",
+                "a closeout record for the landed demo-local collection module slice",
+                "No reopening of the closed inline-rename lane or premature shared-helper growth from one proof surface.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-editor-proof-collection-modularization-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-inline-rename-v1"',
+                '"path": "docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_drag_rect_normalizes_drag_direction",
+                "proof_collection_commit_rename_rejects_empty_trimmed_label",
+                "imui_editor_collection_modularization_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/` now records the closed demo-local collection module slice",
+                "reset the default next non-multi-window priority to broader app-owned command-package breadth",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
+            required=[
+                "mod collection;",
+                "collection::render_collection_first_asset_browser_proof(ui);",
+                "collection::authoring_parity_collection_assets()",
+            ],
+            forbidden=[
+                "fn proof_collection_assets_in_visible_order(",
+                "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
+                "struct ProofCollectionAsset {",
+                "fn proof_collection_drag_rect_normalizes_drag_direction()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs"),
+            required=[
+                "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
+                "pub(super) fn render_collection_first_asset_browser_proof(",
+                "ui: &mut fret_imui::ImUi<'_, '_, KernelApp>,",
+                "#[cfg(test)]",
+                "fn proof_collection_drag_rect_normalizes_drag_direction() {",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []
