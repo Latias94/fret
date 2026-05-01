@@ -72,6 +72,9 @@ Status: active
 - [x] Move the IMUI collection delete-action workstream document/index markers out of the
   monolithic `fret-examples` unit test while keeping the real `proof_collection_delete_*` unit
   tests in Rust.
+- [x] Move the IMUI collection context-menu workstream document/index markers out of the
+  monolithic `fret-examples` unit test while keeping the real `proof_collection_context_menu_*`
+  unit tests in Rust.
 
 ## Parked
 

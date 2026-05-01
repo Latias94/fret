@@ -546,3 +546,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M31_IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M32 - IMUI Collection Context Menu Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection context-menu workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed collection context-menu workstream points its source-policy gate at the Python gate
+  instead of a deleted Rust source-marker test.
+- The real `proof_collection_context_menu_*` unit tests remain in Rust and stay named as the
+  behavior floor.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M32_IMUI_COLLECTION_CONTEXT_MENU_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

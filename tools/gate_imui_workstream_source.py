@@ -673,6 +673,106 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-context-menu-v1/DESIGN.md"),
+            required=[
+                "The closed collection delete-action lane already deferred context-menu action breadth.",
+                "The first landable target is therefore narrow:",
+                "reuse the current app-owned delete helper inside one shared collection popup scope,",
+                "support right-click on both assets and collection background,",
+                "Do not start by designing a shared collection context-menu helper or broader command surface.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md"),
+            required=[
+                "The closed collection delete-action lane explicitly deferred context-menu breadth.",
+                "The current proof surface already has the right ingredients for a narrow app-owned collection context menu:",
+                "The menu/popup helper floor already exists generically, so this lane is not a justification to widen shared helper ownership.",
+                "Dear ImGui keeps the asset-browser context menu at the proof surface and routes delete through the same selection model instead of inventing a separate command contract.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md"),
+            required=[
+                "The collection proof now supports one shared popup scope for app-owned quick actions.",
+                "Right-click on an unselected asset now replaces selection with that asset before opening the popup.",
+                "Right-click on collection background now opens the same popup without widening helper surface.",
+                "The popup reuses the existing delete helper instead of forking collection action policy.",
+                "No new public `fret-ui-kit::imui` collection context-menu helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-context-menu-v1` as:",
+                "a closeout record for the landed app-owned collection context-menu slice",
+                "No reopening of the closed delete-action lane or the generic menu/key-owner lanes.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-context-menu-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-delete-action-v1"',
+                '"path": "docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
+                "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
+                "imui_editor_collection_context_menu_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-context-menu-v1/` now records the closed",
+                "app-owned collection context-menu slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-context-menu-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/M1_APP_OWNED_CONTEXT_MENU_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-context-menu-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []
