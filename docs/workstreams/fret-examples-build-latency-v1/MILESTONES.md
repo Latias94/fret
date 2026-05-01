@@ -1009,3 +1009,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M57_HELLO_WORLD_COMPARE_SOURCE_GATE_2026-05-01.md`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M58 - App UI Render Accessor Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- App-facing render-root accessor markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The examples source-tree policy gate covers explicit `cx.app()`, `cx.app_mut()`, and
+  `cx.window_id()` source-policy markers.
+- Demo behavior and parser tests remain unchanged.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md`
+- `tools/examples_source_tree_policy/app_facing.py`
+- `apps/fret-examples/src/lib.rs`

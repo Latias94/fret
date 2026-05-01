@@ -301,6 +301,117 @@ HELLO_WORLD_COMPARE_APP_RENDER_CX_FORBIDDEN = [
     "hello_world_compare_root(cx.elements(), panel_bg, children)",
 ]
 
+APP_UI_RENDER_ACCESSOR_SLICE_POLICIES = [
+    (
+        "embedded_viewport_demo.rs",
+        "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+        "fn embedded_viewport_page<'a, Cx, C>(",
+        [
+            "let window = cx.window_id();",
+            "embedded::models(cx.app(), window)",
+            "embedded::ensure_models(cx.app_mut(), window)",
+        ],
+        [
+            "let window = cx.window;",
+            "embedded::models(&*cx.app, window)",
+            "embedded::ensure_models(cx.app, window)",
+        ],
+    ),
+    (
+        "async_playground_demo.rs",
+        "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+        "fn header_bar<'a, Cx>(",
+        [
+            "apply_theme(cx.app_mut(), dark);",
+            "cx.data().invalidate_query(key);",
+            "cx.data().cancel_query(key);",
+            "cx.data().invalidate_query_namespace(ns);",
+        ],
+        [
+            "apply_theme(cx.app, dark);",
+            "with_query_client(cx.app_mut(), |client, app|",
+            "with_query_client(cx.app_mut(), |client, _app|",
+            "with_query_client(cx.app, |client, app|",
+            "with_query_client(cx.app, |client, _app|",
+        ],
+    ),
+    (
+        "markdown_demo.rs",
+        "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+        "fn checkerboard_rgba8(",
+        [
+            "cx.data().invalidate_query_namespace(REMOTE_IMAGE_NAMESPACE);",
+        ],
+        [
+            "with_query_client(",
+        ],
+    ),
+    (
+        "api_workbench_lite_demo.rs",
+        "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+        "fn bind_actions(",
+        [
+            "cx.app().global::<HistoryDbGlobal>()",
+            "shadcn::Dialog::new(&locals.settings_open).into_element_in(",
+        ],
+        [
+            "cx.app.global::<HistoryDbGlobal>()",
+            "shadcn::Dialog::new(&locals.settings_open).into_element(",
+        ],
+    ),
+    (
+        "postprocess_theme_demo.rs",
+        "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+        "fn srgb(",
+        [
+            "cx.app().global::<DemoEffect>()",
+        ],
+        [
+            "cx.app.global::<DemoEffect>()",
+        ],
+    ),
+    (
+        "genui_demo.rs",
+        "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+        "fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElements {",
+        [
+            "Self::handle_msg(cx.app_mut(), &mut self.st, Msg::ClearActions);",
+            "Self::handle_msg(cx.app_mut(), &mut self.st, Msg::AutoApplyToggled);",
+        ],
+        [
+            "Self::handle_msg(cx.app, &mut self.st, Msg::ClearActions);",
+            "Self::handle_msg(cx.app, &mut self.st, Msg::AutoApplyToggled);",
+        ],
+    ),
+    (
+        "hello_world_compare_demo.rs",
+        "fn update_runtime_frame_sample_state(cx: &mut AppUi<'_, '_>) {",
+        "fn capture_runtime_frame_sample_json(",
+        [
+            "let window = cx.window_id();",
+            "state.last_frame_id = cx.app().frame_id().0;",
+            "capture_element_runtime_frame_sample(cx.app_mut(),",
+        ],
+        [
+            "let window = cx.window;",
+            "state.last_frame_id = cx.app.frame_id().0;",
+            "capture_element_runtime_frame_sample(cx.app, window);",
+        ],
+    ),
+]
+
+APP_UI_RENDER_ACCESSOR_WHOLE_SOURCE_POLICIES = [
+    (
+        "emoji_conformance_demo.rs",
+        [
+            "cx.app().global::<FontCatalogCache>()",
+        ],
+        [
+            "cx.app.global::<FontCatalogCache>()",
+        ],
+    ),
+]
+
 CheckMarkers = Callable[..., None]
 ReadSource = Callable[[Path], str]
 SourceSlice = Callable[[Path, str, str, str], str]
@@ -442,3 +553,24 @@ def check_app_facing_demo_source_policies(
         forbidden=HELLO_WORLD_COMPARE_APP_RENDER_CX_FORBIDDEN,
         failures=failures,
     )
+
+    for name, start, end, required, forbidden in APP_UI_RENDER_ACCESSOR_SLICE_POLICIES:
+        path = examples_src / name
+        source = read_source(path)
+        check_required_forbidden_markers(
+            path,
+            source_slice(path, source, start, end),
+            required=required,
+            forbidden=forbidden,
+            failures=failures,
+        )
+
+    for name, required, forbidden in APP_UI_RENDER_ACCESSOR_WHOLE_SOURCE_POLICIES:
+        path = examples_src / name
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=required,
+            forbidden=forbidden,
+            failures=failures,
+        )
