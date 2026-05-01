@@ -83,6 +83,9 @@ Status: active
   Rust.
 - [x] Move the IMUI collection rename workstream document/index markers out of the monolithic
   `fret-examples` unit test while keeping the real `proof_collection_*rename*` unit tests in Rust.
+- [x] Move the IMUI collection inline-rename workstream document/index markers out of the
+  monolithic `fret-examples` unit test while keeping the real rename/inline-rename unit tests in
+  Rust.
 
 ## Parked
 

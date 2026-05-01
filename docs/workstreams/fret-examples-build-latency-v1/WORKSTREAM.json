@@ -162,6 +162,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M35_IMUI_COLLECTION_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M36_IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -299,6 +303,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M33_IMUI_COLLECTION_ZOOM_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M34_IMUI_COLLECTION_SELECT_ALL_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M35_IMUI_COLLECTION_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M36_IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

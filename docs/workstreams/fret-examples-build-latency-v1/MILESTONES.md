@@ -622,3 +622,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M35_IMUI_COLLECTION_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M36 - IMUI Collection Inline Rename Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection inline-rename workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed collection inline-rename workstream points its source-policy gate at the Python gate
+  instead of a deleted Rust source-marker test.
+- The real rename/inline-rename unit tests remain in Rust and stay named as the behavior floor.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M36_IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

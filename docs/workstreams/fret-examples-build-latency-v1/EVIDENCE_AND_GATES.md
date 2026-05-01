@@ -198,10 +198,15 @@ git diff --check
   after moving IMUI collection rename workstream document/index markers into
   `tools/gate_imui_workstream_source.py` while keeping the real `proof_collection_*rename*` unit
   tests in Rust.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M36_IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+  after moving IMUI collection inline-rename workstream document/index markers into
+  `tools/gate_imui_workstream_source.py` while keeping the real rename/inline-rename unit tests in
+  Rust.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI collection rename workstream source migration: 223
-  `include_str!` occurrences and 46 Rust `#[test]` functions remain in
+- Current count after the IMUI collection inline-rename workstream source migration: 218
+  `include_str!` occurrences and 45 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -268,4 +273,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M33_IMUI_COLLECTION_ZOOM_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M34_IMUI_COLLECTION_SELECT_ALL_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M35_IMUI_COLLECTION_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M36_IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

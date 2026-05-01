@@ -1077,6 +1077,109 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md"),
+            required=[
+                "The closed collection rename lane already landed modal/dialog breadth and left inline product depth open.",
+                "The first landable target is therefore still narrow:",
+                "route F2 plus the existing context-menu entry through one app-owned inline rename session,",
+                "render the editor inside the existing active asset tile,",
+                "Do not reopen the closed modal lane by widening `fret-ui-kit::imui` with a generic inline-edit helper.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"),
+            required=[
+                "The closed collection rename lane already landed modal/dialog rename breadth.",
+                "The current proof surface already has the right ingredients for a narrow app-owned inline rename slice:",
+                "The repo already has an editor-owned inline text-entry control we can embed locally without widening `fret-ui-kit::imui`.",
+                "Dear ImGui-class collection/product depth now points at inline rename posture more than another popup contract.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md"),
+            required=[
+                "The collection proof now supports one app-owned inline rename slice.",
+                "F2 and the existing context-menu entry now start one app-owned inline rename editor for the active collection asset.",
+                "The inline editor uses `TextField` plus a proof-local focus handoff instead of widening `fret-ui-kit::imui`.",
+                "Committing rename still updates the visible label while preserving stable asset ids and collection order.",
+                "No new public `fret-ui-kit::imui` inline-edit or collection rename helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-inline-rename-v1` as:",
+                "a closeout record for the landed app-owned collection inline rename slice",
+                "No reopening of the closed modal rename lane or wider generic key-owner/helper questions.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-inline-rename-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-rename-v1"',
+                '"path": "docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md"',
+                '"path": "docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_begin_rename_session_prefers_active_visible_asset",
+                "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
+                "proof_collection_rename_shortcut_matches_plain_f2_only",
+                "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+                "proof_collection_commit_rename_rejects_empty_trimmed_label",
+                "imui_editor_collection_rename_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-inline-rename-v1/` now records the closed",
+                "app-owned collection inline rename slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
+                "`docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

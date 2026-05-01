@@ -19,6 +19,7 @@ floor, and one bounded evidence set before anyone argues for shared helper or ru
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/tests/imui_editor_collection_rename_surface.rs`
 - `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `repo-ref/imgui/imgui.h`
 
 ## First-open repro surfaces
@@ -28,13 +29,15 @@ floor, and one bounded evidence set before anyone argues for shared helper or ru
 2. Current lane-local surface floor
    - `cargo nextest run -p fret-examples --test imui_editor_collection_rename_surface --no-fail-fast`
 3. Current lane-local source-policy and unit-test floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
+   - `cargo nextest run -p fret-examples --lib proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
 
 ## Current focused gates
 
 ### Lane-local source-policy and unit-test floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `cargo nextest run -p fret-examples --lib proof_collection_begin_rename_session_prefers_active_visible_asset proof_collection_begin_rename_session_falls_back_to_first_visible_asset proof_collection_rename_shortcut_matches_plain_f2_only proof_collection_commit_rename_updates_label_without_touching_order_or_ids proof_collection_commit_rename_rejects_empty_trimmed_label --no-fail-fast`
 
 This floor currently proves:
 

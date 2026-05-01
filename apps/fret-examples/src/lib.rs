@@ -338,19 +338,6 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_CHILD_REGION_DEPTH_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json");
-    const IMUI_COLLECTION_INLINE_RENAME_DESIGN: &str =
-        include_str!("../../../docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md");
-    const IMUI_COLLECTION_INLINE_RENAME_M0_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md"
-    );
-    const IMUI_COLLECTION_INLINE_RENAME_M1_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md"
-    );
-    const IMUI_COLLECTION_INLINE_RENAME_CLOSEOUT: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md"
-    );
-    const IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM: &str =
-        include_str!("../../../docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json");
     const IMUI_COLLECTION_MODULARIZATION_DESIGN: &str = include_str!(
         "../../../docs/workstreams/imui-editor-proof-collection-modularization-v1/DESIGN.md"
     );
@@ -1067,119 +1054,6 @@ mod authoring_surface_policy_tests {
                 "first-frame workstream docs should name marker: {marker}"
             );
         }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on() {
-        for marker in [
-            "The closed collection rename lane already landed modal/dialog breadth and left inline product depth open.",
-            "The first landable target is therefore still narrow:",
-            "route F2 plus the existing context-menu entry through one app-owned inline rename session,",
-            "render the editor inside the existing active asset tile,",
-            "Do not reopen the closed modal lane by widening `fret-ui-kit::imui` with a generic inline-edit helper.",
-        ] {
-            assert!(
-                IMUI_COLLECTION_INLINE_RENAME_DESIGN.contains(marker),
-                "the collection inline-rename design should keep the target-surface framing explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "The closed collection rename lane already landed modal/dialog rename breadth.",
-            "The current proof surface already has the right ingredients for a narrow app-owned inline rename slice:",
-            "The repo already has an editor-owned inline text-entry control we can embed locally without widening `fret-ui-kit::imui`.",
-            "Dear ImGui-class collection/product depth now points at inline rename posture more than another popup contract.",
-        ] {
-            assert!(
-                IMUI_COLLECTION_INLINE_RENAME_M0_NOTE.contains(marker),
-                "the collection inline-rename baseline audit should keep the new-lane justification explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "The collection proof now supports one app-owned inline rename slice.",
-            "F2 and the existing context-menu entry now start one app-owned inline rename editor for the active collection asset.",
-            "The inline editor uses `TextField` plus a proof-local focus handoff instead of widening `fret-ui-kit::imui`.",
-            "Committing rename still updates the visible label while preserving stable asset ids and collection order.",
-            "No new public `fret-ui-kit::imui` inline-edit or collection rename helper is admitted in this lane.",
-        ] {
-            assert!(
-                IMUI_COLLECTION_INLINE_RENAME_M1_NOTE.contains(marker),
-                "the collection inline-rename M1 note should keep the landed slice explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "Status: closed closeout record",
-            "Treat `imui-collection-inline-rename-v1` as:",
-            "a closeout record for the landed app-owned collection inline rename slice",
-            "No reopening of the closed modal rename lane or wider generic key-owner/helper questions.",
-        ] {
-            assert!(
-                IMUI_COLLECTION_INLINE_RENAME_CLOSEOUT.contains(marker),
-                "the collection inline-rename closeout should keep the shipped verdict explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"slug\": \"imui-collection-inline-rename-v1\"",
-            "\"status\": \"closed\"",
-            "\"scope_kind\": \"closeout\"",
-            "\"follow_on_of\": \"imui-collection-rename-v1\"",
-            "\"path\": \"docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md\"",
-            "\"path\": \"docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md\"",
-            "\"path\": \"docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md\"",
-            "immediate_mode_workstream_freezes_the_p1_collection_inline_rename_follow_on",
-            "proof_collection_commit_rename_rejects_empty_trimmed_label",
-            "imui_editor_collection_rename_surface",
-            "\"default_action\": \"start_follow_on\"",
-        ] {
-            assert!(
-                IMUI_COLLECTION_INLINE_RENAME_WORKSTREAM.contains(marker),
-                "the collection inline-rename lane state should keep the source-policy markers explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "`docs/workstreams/imui-collection-inline-rename-v1/` now records the closed",
-            "app-owned collection inline rename slice in `imui_editor_proof_demo`",
-        ] {
-            assert!(
-                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
-                "the umbrella lane should keep the collection inline-rename follow-on explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "`docs/workstreams/imui-collection-inline-rename-v1/DESIGN.md`",
-            "`docs/workstreams/imui-collection-inline-rename-v1/M0_BASELINE_AUDIT_2026-04-23.md`",
-            "`docs/workstreams/imui-collection-inline-rename-v1/M1_APP_OWNED_INLINE_RENAME_SLICE_2026-04-23.md`",
-            "`docs/workstreams/imui-collection-inline-rename-v1/CLOSEOUT_AUDIT_2026-04-23.md`",
-        ] {
-            assert!(
-                WORKSTREAMS_INDEX_DOC.contains(marker),
-                "the workstream index should list the collection inline-rename lane: {marker}"
-            );
-            assert!(
-                ROADMAP_DOC.contains(marker),
-                "the roadmap should list the collection inline-rename lane: {marker}"
-            );
-            assert!(
-                TODO_TRACKER_DOC.contains(marker),
-                "the todo tracker should list the collection inline-rename lane: {marker}"
-            );
-        }
-
-        assert!(
-            WORKSTREAMS_INDEX_DOC
-                .contains("`docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`"),
-            "the workstream index should list the collection inline-rename lane state file explicitly"
-        );
-        assert!(
-            TODO_TRACKER_DOC
-                .contains("`docs/workstreams/imui-collection-inline-rename-v1/WORKSTREAM.json`"),
-            "the todo tracker should list the collection inline-rename lane state file explicitly"
-        );
     }
 
     #[test]
