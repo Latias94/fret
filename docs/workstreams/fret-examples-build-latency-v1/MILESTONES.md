@@ -1062,3 +1062,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_fret_launch_runner_scheduling_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M61 - Advanced Helper Context Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Advanced helper/context source-policy markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those markers in
+  `tools/examples_source_tree_policy/advanced_helpers.py`.
+- Orphaned `include_str!` constants left by earlier source-policy migrations are deleted.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M61_ADVANCED_HELPER_CONTEXT_SOURCE_GATE_2026-05-01.md`
+- `tools/examples_source_tree_policy/advanced_helpers.py`
+- `tools/examples_source_tree_policy/gate.py`
+- `apps/fret-examples/src/lib.rs`

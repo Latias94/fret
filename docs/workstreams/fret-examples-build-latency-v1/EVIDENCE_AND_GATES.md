@@ -57,6 +57,7 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py tools/examples_source_tree_policy/manual.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py tools/examples_source_tree_policy/manual.py tools/examples_source_tree_policy/owner_split.py`.
+- Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/advanced_helpers.py tools/examples_source_tree_policy/gate.py tools/check_workstream_catalog.py`.
 - Passed: `python -m py_compile tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `cargo check -p fret-examples-imui --bins --jobs 1`.
 - Passed: `cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1`.
@@ -309,10 +310,15 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
   after moving first-frame bootstrap runner scheduling source-policy checks into
   `tools/gate_fret_launch_runner_scheduling_source.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M61_ADVANCED_HELPER_CONTEXT_SOURCE_GATE_2026-05-01.md`
+  after moving advanced helper/context source-policy checks into
+  `tools/examples_source_tree_policy/advanced_helpers.py` and deleting orphaned `include_str!`
+  constants.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the first-frame bootstrap source migration: 68 `include_str!`
-  occurrences and 5 Rust `#[test]` functions remain in
+- Current count after the advanced helper context source migration: 25 `include_str!`
+  occurrences and 4 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -333,6 +339,7 @@ git diff --check
 - `apps/fret-examples-imui/src/bin/imui_interaction_showcase_demo.rs`
 - `tools/gate_examples_source_tree_policy.py`
 - `tools/examples_source_tree_policy/__init__.py`
+- `tools/examples_source_tree_policy/advanced_helpers.py`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `tools/examples_source_tree_policy/gate.py`
 - `tools/examples_source_tree_policy/interop.py`
@@ -405,4 +412,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M61_ADVANCED_HELPER_CONTEXT_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`
