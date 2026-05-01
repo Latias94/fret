@@ -3,7 +3,7 @@
   "slug": "imui-editor-notes-dirty-status-v1",
   "title": "ImUi Editor Notes Dirty Status v1",
   "status": "closed",
-  "updated": "2026-04-24",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-editor-notes-inspector-command-v1",
   "problem": "The editor-notes inspector command lane closed one app-owned command/status loop. This follow-on deepens local editor-grade feedback by adding notes draft/dirty status inside `editor_notes_demo.rs` without widening shell dirty-close, persistence, generic inspector, command, or IMUI helper APIs.",
@@ -42,13 +42,13 @@
     "commands": [
       "cargo run -p fret-demo --bin editor_notes_demo",
       "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_dirty_status_follow_on --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
     {
       "name": "editor-notes-dirty-status-closeout-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_dirty_status_follow_on --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "editor-notes-rail-surface",
@@ -78,7 +78,7 @@
     "docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"

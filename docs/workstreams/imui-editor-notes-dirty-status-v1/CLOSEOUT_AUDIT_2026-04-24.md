@@ -29,7 +29,7 @@ this closed lane.
 
 - `cargo fmt -p fret-examples --check`
 - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_dirty_status_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `python3 -m json.tool docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json > /dev/null`
 - `python3 tools/check_workstream_catalog.py`
 - `git diff --check`

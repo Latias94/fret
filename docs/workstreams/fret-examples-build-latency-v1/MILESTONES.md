@@ -731,3 +731,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M41_IMUI_EDITOR_NOTES_INSPECTOR_COMMAND_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M42 - IMUI Editor Notes Dirty Status Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI editor-notes dirty status closeout markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The closed dirty status workstream points its source-policy gate at the Python gate instead of a
+  deleted Rust source-marker test.
+- The real editor rail/device shell surface integration tests remain in Rust.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M42_IMUI_EDITOR_NOTES_DIRTY_STATUS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

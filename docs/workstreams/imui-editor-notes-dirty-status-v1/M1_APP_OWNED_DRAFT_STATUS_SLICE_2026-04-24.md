@@ -25,4 +25,4 @@ Status: landed
 
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`

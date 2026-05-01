@@ -1847,6 +1847,146 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md"),
+            required=[
+                "Status: closed narrow P1 lane",
+                "local dirty/clean feedback for",
+                "Add app-owned dirty/clean status copy to the existing notes inspector surface.",
+                "No workspace dirty-close prompt.",
+                "No document persistence or save command.",
+                "Add a visible `Draft status` row",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-editor-notes-dirty-status-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-editor-notes-inspector-command-v1"',
+                '"path": "docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md"',
+                '"path": "docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md"',
+                "editor-notes-dirty-status-closeout-source-policy",
+                "python tools/gate_imui_workstream_source.py",
+                "editor_notes_demo",
+                "editor_notes_editor_rail_surface",
+                "editor_notes_device_shell_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_editor_notes_dirty_status_follow_on",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md"),
+            required=[
+                "`editor_notes_demo.rs` now carries one inspector-local draft status row:",
+                "`Draft status` is rendered inside the existing `InspectorPanel` / `PropertyGrid` surface.",
+                "The status is derived from the existing notes outcome plus committed line-count label.",
+                "No workspace dirty-close prompt.",
+                "No save/persistence command.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/editor_notes_demo.rs"),
+            required=[
+                "const TEST_ID_NOTES_DRAFT_STATUS: &str = \"editor-notes-demo.inspector.notes.draft-status\";",
+                "fn editor_notes_draft_status_label(",
+                "cx.text(\"Draft status\")",
+                ".test_id(TEST_ID_NOTES_DRAFT_STATUS)",
+                "Clean draft · {committed_label}",
+                "Draft canceled · preserved editor text · {committed_label}",
+                "Draft preserved until commit · {committed_label}",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md"),
+            required=[
+                "Treat `imui-editor-notes-dirty-status-v1` as a closed app-owned draft-status proof.",
+                "The first `Draft status` row is coherent enough to close the lane",
+                "Do not reopen this folder for workspace dirty-close, persistence,",
+                "the exact app-owned editor behavior still missing",
+                "python tools/gate_imui_workstream_source.py",
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_editor_notes_dirty_status_follow_on",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md"),
+            required=[
+                "- [x] Land one app-owned draft/dirty status row in `editor_notes_demo.rs`.",
+                "- [x] Add source-policy and surface-test markers.",
+                "- [x] Close this lane after the first status row.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md"),
+            required=[
+                "## M1 - Draft Status Slice",
+                "Status: complete",
+                "## M2 - Closeout Verdict",
+                "Status: complete",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md"),
+            required=[
+                "M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md",
+                "CLOSEOUT_AUDIT_2026-04-24.md",
+                "editor-notes-dirty-status-closeout-source-policy",
+                "python tools/gate_imui_workstream_source.py",
+                "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast",
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_editor_notes_dirty_status_follow_on",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/WORKSTREAM.json`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/TODO.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/M1_APP_OWNED_DRAFT_STATUS_SLICE_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-dirty-status-v1/EVIDENCE_AND_GATES.md`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

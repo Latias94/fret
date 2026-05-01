@@ -99,6 +99,9 @@ Status: active
   of the monolithic `fret-examples` unit test while keeping the real proof-surface tests in Rust.
 - [x] Move the IMUI editor-notes inspector command workstream document/source-shape markers out of
   the monolithic `fret-examples` unit test while keeping the real editor rail surface test in Rust.
+- [x] Move the IMUI editor-notes dirty status workstream document/source-shape markers out of the
+  monolithic `fret-examples` unit test while keeping the real editor rail/device shell surface
+  tests in Rust.
 
 ## Parked
 
