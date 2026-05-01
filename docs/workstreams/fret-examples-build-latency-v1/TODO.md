@@ -113,6 +113,9 @@ Status: active
 - [x] Move the IMUI TextField draft-controller API proof document/source-shape markers out of the
   monolithic `fret-examples` unit test while keeping the real API smoke, editor surface, and
   launched diagnostics gates outside that source freeze.
+- [x] Move the IMUI child-region depth workstream document/index markers out of the monolithic
+  `fret-examples` unit test while keeping the real `fret-ui-kit`, `fret-imui`, and pane-proof
+  behavior gates outside that source freeze.
 
 ## Parked
 

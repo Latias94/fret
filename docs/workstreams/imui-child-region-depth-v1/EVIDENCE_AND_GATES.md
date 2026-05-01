@@ -28,7 +28,7 @@ one bounded evidence set before any helper widening is admitted.
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `ecosystem/fret-workspace/src/panes.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
 - `repo-ref/imgui/imgui.h`
@@ -60,7 +60,7 @@ Current status summary:
 
 ### Lane-local source-policy gate
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_child_region_depth_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 
 This gate currently proves:
 

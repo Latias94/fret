@@ -813,5 +813,21 @@ Exit criteria:
 Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M46_IMUI_TEXTFIELD_DRAFT_CONTROLLER_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+
+## M47 - IMUI Child Region Depth Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI child-region depth closeout markers no longer compile the monolithic `fret-examples`
+  unit-test module.
+- The closed child-region depth workstream points its source-policy gate at the Python gate instead
+  of a deleted Rust source-marker test.
+- The real `fret-ui-kit`, `fret-imui`, and pane-proof surface gates remain behavior floors.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M47_IMUI_CHILD_REGION_DEPTH_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`

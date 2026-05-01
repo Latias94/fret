@@ -45,7 +45,7 @@ Implementation / gate anchors:
 
 Validation run used for closeout:
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_child_region_depth_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast`
 - `cargo nextest run -p fret-imui child_region_helper_stacks_content_and_forwards_scroll_options child_region_helper_can_host_menu_bar_and_popup_menu child_region_helper_can_switch_between_framed_and_bare_chrome --no-fail-fast`
 - `cargo nextest run -p fret-examples --test workspace_shell_pane_proof_surface --test editor_notes_editor_rail_surface --no-fail-fast`

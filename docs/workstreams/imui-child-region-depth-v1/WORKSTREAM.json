@@ -3,7 +3,7 @@
   "slug": "imui-child-region-depth-v1",
   "title": "ImUi Child Region Depth v1",
   "status": "closed",
-  "updated": "2026-04-22",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-collection-pane-proof-v1",
   "problem": "The closed collection/pane proof lane already proved the pane-first child-region floor, and this follow-on has now closed the narrower `BeginChild()`-scale depth question by landing the bounded `ChildRegionChrome::{Framed, Bare}` slice while freezing that resize, auto-resize, focus-boundary flattening, and begin-return posture still do not belong in generic `fret-ui-kit::imui` on current first-party evidence.",
@@ -64,13 +64,13 @@
       "cargo run -p fret-demo --bin editor_notes_demo",
       "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast",
       "cargo nextest run -p fret-imui child_region_helper_stacks_content_and_forwards_scroll_options child_region_helper_can_host_menu_bar_and_popup_menu child_region_helper_can_switch_between_framed_and_bare_chrome --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_child_region_depth_follow_on --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
     {
       "name": "child-region-depth-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_child_region_depth_follow_on --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "child-region-adapter-seam-floor",
@@ -126,7 +126,7 @@
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "ecosystem/fret-workspace/src/panes.rs",
-    "apps/fret-examples/src/lib.rs",
+    "tools/gate_imui_workstream_source.py",
     "apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs",
     "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
     "repo-ref/imgui/imgui.h",
