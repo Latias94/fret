@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-column-width-diag-gate-v1",
+  "title": "ImUi Table Column Width Diagnostics Gate v1",
+  "status": "closed",
+  "updated": "2026-05-01",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-table-column-width-demo-proof-v1",
+  "problem": "Promote the app-owned resizable inspector table width proof from source-marker coverage to a deterministic diagnostics script without reopening the closed table resize API or demo-proof lanes.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/M2_LAUNCHED_DIAG_GATE_2026-05-01.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/CLOSEOUT_AUDIT_2026-05-01.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-width-diag-gate-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md"
+    }
+  ],
+  "repro": {
+    "summary": "Launch `imui_shadcn_adapter_demo`, drag the regular inspector table field-column resize handle, and verify the app-owned width summary reaches the clamped field column max width.",
+    "commands": [
+      "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-table-column-width-resize.json --dir target/fret-diag/imui-table-column-width-diag-gate-v1 --session-auto --timeout-ms 300000 --exit-after-run --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo"
+    ]
+  },
+  "gates": [
+    {
+      "name": "script-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-table-column-width-resize.json"
+    },
+    {
+      "name": "suite-json",
+      "command": "python -m json.tool tools/diag-scripts/suites/imui-table-column-width-diag-gate/suite.json"
+    },
+    {
+      "name": "source-marker",
+      "command": "python tools/gate_imui_shadcn_adapter_table_column_width_diag_source.py"
+    },
+    {
+      "name": "launched-diag",
+      "command": "cargo run -p fretboard -- diag run tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-table-column-width-resize.json --dir target/fret-diag/imui-table-column-width-diag-gate-v1 --session-auto --timeout-ms 300000 --exit-after-run --launch -- cargo run -p fret-demo --bin imui_shadcn_adapter_demo"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-table-column-width-resize.json",
+    "tools/diag-scripts/suites/imui-table-column-width-diag-gate/suite.json",
+    "tools/gate_imui_shadcn_adapter_table_column_width_diag_source.py",
+    "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/DESIGN.md",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-05-01.md",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/M2_LAUNCHED_DIAG_GATE_2026-05-01.md",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/CLOSEOUT_AUDIT_2026-05-01.md",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/TODO.md",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/MILESTONES.md",
+    "docs/workstreams/imui-table-column-width-diag-gate-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after source-marker and launched diagnostics gates passed. Start separate follow-ons for width persistence, grouped resize policy, declarative/headless table interop, localization-aware ids, or runtime table semantics."
+  }
+}

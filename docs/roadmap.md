@@ -350,6 +350,12 @@ next default non-multi-window priority to broader app-owned command-package dept
   `docs/workstreams/imui-table-column-width-demo-proof-v1/WORKSTREAM.json`,
   `docs/workstreams/imui-table-column-width-demo-proof-v1/DESIGN.md`, and
   `docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md`.
+- ImUi table column width diagnostics gate closeout record (closed narrow lane promoting the app-owned
+  resizable inspector table width proof into a launched `fretboard diag` gate):
+  `docs/workstreams/imui-table-column-width-diag-gate-v1/WORKSTREAM.json`,
+  `docs/workstreams/imui-table-column-width-diag-gate-v1/DESIGN.md`,
+  `docs/workstreams/imui-table-column-width-diag-gate-v1/M2_LAUNCHED_DIAG_GATE_2026-05-01.md`,
+  and `docs/workstreams/imui-table-column-width-diag-gate-v1/CLOSEOUT_AUDIT_2026-05-01.md`.
 - ImUi ID stack diagnostics follow-on closeout record (closed narrow lane that makes duplicate
   keyed-list hashes and unkeyed reorder identity problems visible in structured diagnostics
   snapshots and queryable through `diag query identity-warnings`, without exposing render-pass /

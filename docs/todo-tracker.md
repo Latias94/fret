@@ -383,6 +383,15 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-table-column-width-demo-proof-v1/MILESTONES.md`
   - `docs/workstreams/imui-table-column-width-demo-proof-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-table-column-width-demo-proof-v1/CLOSEOUT_AUDIT_2026-05-01.md`
+- Closed narrow IMUI table column width diagnostics gate follow-on:
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/M1_SCRIPT_SCAFFOLD_2026-05-01.md`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/M2_LAUNCHED_DIAG_GATE_2026-05-01.md`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/CLOSEOUT_AUDIT_2026-05-01.md`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/TODO.md`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-column-width-diag-gate-v1/EVIDENCE_AND_GATES.md`
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -690,6 +699,10 @@ It complements (but does not replace) ADRs:
   narrow follow-on for the first-party app-owned IMUI table width proof; route persistence,
   declarative/headless interop, grouped header resize policy, localization, and runtime table
   semantics to separate follow-ons.
+- Use `docs/workstreams/imui-table-column-width-diag-gate-v1/WORKSTREAM.json` as the closed
+  narrow follow-on for the launched resize-handle drag diagnostics proof; route persistence,
+  grouped resize policy, declarative/headless interop, localization, and runtime table semantics to
+  separate follow-ons.
 - Use `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json` as the closed narrow
   closeout record for structured IMUI/runtime identity diagnostics; route browser-style identity
   triage to `docs/workstreams/imui-id-stack-browser-v1/`, and keep `test_id` inference,
