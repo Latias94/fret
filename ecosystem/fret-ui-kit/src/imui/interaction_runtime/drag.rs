@@ -248,6 +248,7 @@ pub(in super::super) fn handle_pointer_region_drag_move_with_threshold(
         return false;
     }
 
+    let was_dragging = drag.dragging;
     let outcome = update_thresholded_move(
         drag,
         acx.window,
@@ -255,11 +256,20 @@ pub(in super::super) fn handle_pointer_region_drag_move_with_threshold(
         mv.buttons.left,
         drag_threshold,
     );
-    if outcome == DragMoveOutcome::Canceled {
-        host.cancel_drag(mv.pointer_id);
-        host.release_pointer_capture();
-        host.notify(acx);
-        return false;
+    match outcome {
+        DragMoveOutcome::Canceled => {
+            if was_dragging {
+                host.record_transient_event(acx, super::super::KEY_DRAG_STOPPED);
+            }
+            host.cancel_drag(mv.pointer_id);
+            host.release_pointer_capture();
+            host.notify(acx);
+            return false;
+        }
+        DragMoveOutcome::StartedDragging => {
+            host.record_transient_event(acx, super::super::KEY_DRAG_STARTED);
+        }
+        DragMoveOutcome::Continue => {}
     }
 
     host.notify(acx);
@@ -276,6 +286,9 @@ pub(in super::super) fn finish_pointer_region_drag(
         && drag.kind == drag_kind
         && drag.source_window == acx.window
     {
+        if drag.dragging {
+            host.record_transient_event(acx, super::super::KEY_DRAG_STOPPED);
+        }
         host.cancel_drag(pointer_id);
     }
     host.release_pointer_capture();

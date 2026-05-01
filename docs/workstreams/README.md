@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-04-29
+Catalog updated: 2026-05-01
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 282
+- Dedicated directories: 283
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -636,6 +636,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed narrow follow-on for a promoted `fretboard diag` gate around
     `imui_shadcn_adapter_demo`'s app-owned sortable inspector table.
 
+- Closed narrow IMUI table column resize follow-on:
+  - `docs/workstreams/imui-table-column-resize-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-table-column-resize-v1/DESIGN.md`
+  - `docs/workstreams/imui-table-column-resize-v1/TODO.md`
+  - `docs/workstreams/imui-table-column-resize-v1/MILESTONES.md`
+  - `docs/workstreams/imui-table-column-resize-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md`
+  - Scope: closed narrow follow-on for resizable IMUI table header boundaries and response
+    reporting while keeping sizing state, persistence, row sorting, and runtime table semantics out
+    of `fret-ui-kit::imui`.
+
 - Closed narrow IMUI ID stack diagnostics follow-on:
   - `docs/workstreams/imui-id-stack-diagnostics-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-id-stack-diagnostics-v1/DESIGN.md`
@@ -1047,6 +1058,7 @@ Rule:
 - `docs/workstreams/imui-control-geometry-stability-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for local base-control geometry stability across IMUI interaction states)
 - `docs/workstreams/imui-label-identity-ergonomics-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow follow-on for Dear ImGui-style label identity ergonomics in IMUI controls)
 - `docs/workstreams/imui-table-column-identity-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for stable `TableColumn` identity and identity-derived table diagnostics `test_id`s)
+- `docs/workstreams/imui-table-column-resize-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header resize handles and response reporting)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
 - `docs/workstreams/imui-table-sortable-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a runnable IMUI table sortable header demo proof)
 - `docs/workstreams/imui-table-sortable-diag-gate-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on for the IMUI table sortable diagnostics gate)

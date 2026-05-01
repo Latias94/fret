@@ -10,6 +10,12 @@ pub enum TableColumnWidth {
     Fill(f32),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TableColumnResizeOptions {
+    pub min_width: Option<Px>,
+    pub max_width: Option<Px>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TableSortDirection {
     Ascending,
@@ -33,6 +39,7 @@ pub struct TableColumn {
     pub width: TableColumnWidth,
     pub sortable: bool,
     pub sort_direction: Option<TableSortDirection>,
+    pub resize: Option<TableColumnResizeOptions>,
 }
 
 impl TableColumn {
@@ -44,6 +51,7 @@ impl TableColumn {
             width: TableColumnWidth::Px(width),
             sortable: false,
             sort_direction: None,
+            resize: None,
         }
     }
 
@@ -55,6 +63,7 @@ impl TableColumn {
             width: TableColumnWidth::Fill(1.0),
             sortable: false,
             sort_direction: None,
+            resize: None,
         }
     }
 
@@ -66,6 +75,7 @@ impl TableColumn {
             width: TableColumnWidth::Fill(weight),
             sortable: false,
             sort_direction: None,
+            resize: None,
         }
     }
 
@@ -76,6 +86,7 @@ impl TableColumn {
             width,
             sortable: false,
             sort_direction: None,
+            resize: None,
         }
     }
 
@@ -101,6 +112,28 @@ impl TableColumn {
             self.sortable = true;
         }
         self
+    }
+
+    pub fn resizable(mut self) -> Self {
+        self.resize = Some(TableColumnResizeOptions::default());
+        self
+    }
+
+    pub fn resizable_with_limits(mut self, min_width: Option<Px>, max_width: Option<Px>) -> Self {
+        self.resize = Some(TableColumnResizeOptions {
+            min_width,
+            max_width,
+        });
+        self
+    }
+}
+
+impl Default for TableColumnResizeOptions {
+    fn default() -> Self {
+        Self {
+            min_width: Some(Px(32.0)),
+            max_width: None,
+        }
     }
 }
 

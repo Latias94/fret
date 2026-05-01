@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-column-resize-v1",
+  "title": "ImUi Table Column Resize v1",
+  "status": "closed",
+  "updated": "2026-05-01",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-table-sortable-diag-gate-v1",
+  "problem": "Add a narrow IMUI table column resize response surface so editor-like tables can expose draggable column boundaries from stable column identities, while keeping sizing state, persistence, row sorting, multi-sort policy, and runtime table semantics outside `fret-ui-kit::imui`.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-column-resize-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-resize-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-resize-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-column-resize-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-column-identity-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-sortable-header-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-sortable-demo-proof-v1/WORKSTREAM.json"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/imui-table-sortable-diag-gate-v1/WORKSTREAM.json"
+    }
+  ],
+  "repro": {
+    "summary": "Render a rooted IMUI table with stable column ids, mark one fixed-width column resizable, drag its header boundary, and inspect the returned resize response without mutating helper-owned table state.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_resizable_column_api_compiles --no-fail-fast",
+      "cargo nextest run -p fret-imui table_resizable_header_reports_drag_response --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "ui-kit-table-resize-api",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_resizable_column_api_compiles --no-fail-fast"
+    },
+    {
+      "name": "imui-table-resize-response",
+      "command": "cargo nextest run -p fret-imui table_resizable_header_reports_drag_response --no-fail-fast"
+    },
+    {
+      "name": "imui-table-sort-regression",
+      "command": "cargo nextest run -p fret-imui table_sortable_header_reports_app_owned_trigger_without_sorting_rows --no-fail-fast"
+    },
+    {
+      "name": "ui-kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui --jobs 1"
+    },
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui --check"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json-shape",
+      "command": "python -m json.tool docs/workstreams/imui-table-column-resize-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-table-column-resize-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-table-column-resize-v1/DESIGN.md",
+    "docs/workstreams/imui-table-column-resize-v1/TODO.md",
+    "docs/workstreams/imui-table-column-resize-v1/MILESTONES.md",
+    "docs/workstreams/imui-table-column-resize-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-table-column-resize-v1/CLOSEOUT_AUDIT_2026-05-01.md",
+    "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
+    "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
+    "ecosystem/fret-imui/src/tests/label_identity.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0212-element-identity-debug-paths-and-frame-staged-element-state.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This bounded resize response surface is closed. Start separate follow-ons for app-owned sizing persistence, declarative table/headless interop examples, multi-column group resizing, localization-aware ids, or runtime table semantics."
+  }
+}

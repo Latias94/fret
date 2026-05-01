@@ -111,8 +111,8 @@ pub use options::{
     HorizontalOptions, InputTextMode, InputTextOptions, MenuBarOptions, MenuItemOptions,
     PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions,
     SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn,
-    TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions,
-    TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
+    TextAreaOptions, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,
@@ -120,7 +120,8 @@ use popup_store::{
 pub use response::{
     ComboResponse, DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse,
     FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt, TabBarResponse,
-    TabTriggerResponse, TableHeaderResponse, TableResponse, VirtualListResponse,
+    TabTriggerResponse, TableColumnResizeResponse, TableHeaderResponse, TableResponse,
+    VirtualListResponse,
 };
 pub use tab_family_controls::ImUiTabBar;
 pub use table_controls::{ImUiTable, ImUiTableRow};

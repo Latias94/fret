@@ -68,6 +68,7 @@ fn table_column_helpers_compile() {
     assert_eq!(fill.width, TableColumnWidth::Fill(1.0));
     assert!(!fill.sortable);
     assert_eq!(fill.sort_direction, None);
+    assert!(fill.resize.is_none());
 
     let weighted = TableColumn::weighted("Kind", 2.5);
     assert_eq!(weighted.header.as_deref(), Some("Kind"));
@@ -75,6 +76,7 @@ fn table_column_helpers_compile() {
     assert_eq!(weighted.width, TableColumnWidth::Fill(2.5));
     assert!(!weighted.sortable);
     assert_eq!(weighted.sort_direction, None);
+    assert!(weighted.resize.is_none());
 
     let px = TableColumn::px("State", Px(96.0));
     assert_eq!(px.header.as_deref(), Some("State"));
@@ -82,6 +84,7 @@ fn table_column_helpers_compile() {
     assert_eq!(px.width, TableColumnWidth::Px(Px(96.0)));
     assert!(!px.sortable);
     assert_eq!(px.sort_direction, None);
+    assert!(px.resize.is_none());
 
     let double_hash = TableColumn::fill("Name##asset-name-column");
     assert_eq!(
@@ -97,6 +100,22 @@ fn table_column_helpers_compile() {
     let unlabeled = TableColumn::unlabeled(TableColumnWidth::px(Px(72.0))).with_id("actions");
     assert_eq!(unlabeled.header, None);
     assert_eq!(unlabeled.id.as_deref(), Some("actions"));
+}
+
+#[test]
+fn table_resizable_column_api_compiles() {
+    let default_resize = TableColumn::px("Name###asset-name", Px(180.0)).resizable();
+    let resize = default_resize.resize.expect("default resize options");
+    assert_eq!(default_resize.id.as_deref(), Some("asset-name"));
+    assert_eq!(resize.min_width, Some(Px(32.0)));
+    assert_eq!(resize.max_width, None);
+
+    let limited = TableColumn::weighted("Kind###asset-kind", 1.5)
+        .resizable_with_limits(Some(Px(72.0)), Some(Px(280.0)));
+    let resize = limited.resize.expect("limited resize options");
+    assert_eq!(limited.id.as_deref(), Some("asset-kind"));
+    assert_eq!(resize.min_width, Some(Px(72.0)));
+    assert_eq!(resize.max_width, Some(Px(280.0)));
 }
 
 #[test]

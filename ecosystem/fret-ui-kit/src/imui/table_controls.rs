@@ -2,11 +2,11 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
+use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
-    PressableState, SemanticsProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
+    PressableProps, PressableState, SemanticsProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
@@ -16,6 +16,12 @@ use super::{
     ImUiFacade, ResponseExt, TableColumn, TableColumnWidth, TableHeaderResponse, TableOptions,
     TableResponse, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
 };
+
+use super::TableColumnResizeResponse;
+
+const TABLE_RESIZE_HANDLE_HIT_WIDTH: Px = Px(12.0);
+const TABLE_RESIZE_HANDLE_MIN_HEIGHT: Px = Px(24.0);
+const TABLE_RESIZE_HANDLE_VISUAL_WIDTH: Px = Px(1.0);
 
 struct BuiltTableRow {
     key: Arc<str>,
@@ -158,6 +164,15 @@ fn render_table<H: UiHost>(
                         ))
                     });
                     let sortable = column_is_sortable(column);
+                    let resize_options = column.resize;
+                    let mut resize = TableColumnResizeResponse {
+                        column_index: index,
+                        column_id: column.id.clone(),
+                        enabled: resize_options.is_some(),
+                        min_width: resize_options.and_then(|options| options.min_width),
+                        max_width: resize_options.and_then(|options| options.max_width),
+                        drag: Default::default(),
+                    };
                     let built = if sortable {
                         wrap_sortable_header_cell(
                             cx,
@@ -166,14 +181,18 @@ fn render_table<H: UiHost>(
                             visible_label.clone(),
                             test_id,
                             &options,
+                            &mut resize,
                         )
                     } else {
-                        let content = visible_label
-                            .map(|label| cx.text(label))
-                            .unwrap_or_else(|| empty_cell(cx));
                         BuiltHeaderCell {
-                            element: wrap_table_cell(
-                                cx, column, content, test_id, true, false, &options,
+                            element: wrap_plain_header_cell(
+                                cx,
+                                column,
+                                index,
+                                visible_label,
+                                test_id,
+                                &options,
+                                &mut resize,
                             ),
                             trigger: ResponseExt::default(),
                         }
@@ -184,6 +203,7 @@ fn render_table<H: UiHost>(
                         sortable,
                         sort_direction: column.sort_direction,
                         trigger: built.trigger,
+                        resize,
                     });
                     built.element
                 })
@@ -292,6 +312,11 @@ fn render_table<H: UiHost>(
 struct BuiltHeaderCell {
     element: AnyElement,
     trigger: ResponseExt,
+}
+
+#[derive(Default)]
+struct TableResizeHandleDragState {
+    was_dragging: bool,
 }
 
 fn wrap_table_row<H: UiHost>(
@@ -417,6 +442,7 @@ fn wrap_sortable_header_cell<H: UiHost>(
     visible_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     options: &TableOptions,
+    resize_response: &mut TableColumnResizeResponse,
 ) -> BuiltHeaderCell {
     let mut trigger = ResponseExt::default();
     let column_key = column
@@ -425,20 +451,19 @@ fn wrap_sortable_header_cell<H: UiHost>(
         .unwrap_or_else(|| Arc::from(column_index.to_string()));
     let sort_direction = column.sort_direction;
     let a11y_label = sortable_header_a11y_label(column, visible_label.as_ref(), column_index);
-    let width = column.width;
-    let clip_cells = options.clip_cells;
 
-    let element = cx.keyed(("sortable-header-cell", column_key), |cx| {
+    let trigger_element = cx.keyed(("sortable-header-cell", column_key), |cx| {
         let trigger = &mut trigger;
         let enabled = !super::imui_is_disabled(cx);
         let mut props = PressableProps::default();
         props.enabled = enabled;
         props.focusable = enabled;
-        props.layout = table_cell_layout(width, clip_cells);
+        props.layout.size.width = Length::Fill;
+        props.layout.flex.grow = 1.0;
+        props.layout.flex.shrink = 1.0;
         props.a11y = PressableA11y {
             role: Some(SemanticsRole::Button),
             label: Some(a11y_label.clone()),
-            test_id: test_id.clone(),
             ..Default::default()
         };
 
@@ -490,6 +515,16 @@ fn wrap_sortable_header_cell<H: UiHost>(
         })
     });
 
+    let element = wrap_table_header_cell(
+        cx,
+        column,
+        column_index,
+        trigger_element,
+        test_id,
+        options,
+        resize_response,
+    );
+
     BuiltHeaderCell { element, trigger }
 }
 
@@ -539,6 +574,193 @@ fn sortable_header_visual<H: UiHost>(
             ]
         }
     })
+}
+
+fn wrap_plain_header_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    column: &TableColumn,
+    column_index: usize,
+    visible_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    options: &TableOptions,
+    resize_response: &mut TableColumnResizeResponse,
+) -> AnyElement {
+    let content = visible_label
+        .map(|label| cx.text(label))
+        .unwrap_or_else(|| empty_cell(cx));
+    let content = table_header_content_box(cx, content);
+    wrap_table_header_cell(
+        cx,
+        column,
+        column_index,
+        content,
+        test_id,
+        options,
+        resize_response,
+    )
+}
+
+fn table_header_content_box<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    content: AnyElement,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.layout.size.height = Length::Auto;
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.shrink = 1.0;
+    props.padding = table_cell_padding().into();
+    cx.container(props, move |_cx| vec![content])
+}
+
+fn wrap_table_header_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    column: &TableColumn,
+    column_index: usize,
+    content: AnyElement,
+    test_id: Option<Arc<str>>,
+    options: &TableOptions,
+    resize_response: &mut TableColumnResizeResponse,
+) -> AnyElement {
+    let resize_handle = column.resize.map(|_| {
+        let handle_test_id = test_id
+            .as_ref()
+            .map(|base| Arc::from(format!("{base}.resize")));
+        table_resize_handle(cx, column, column_index, resize_response, handle_test_id)
+    });
+
+    let mut cell = ContainerProps::default();
+    cell.layout = table_cell_layout(column.width, options.clip_cells);
+
+    let cell = cx.container(cell, move |cx| {
+        let mut children = vec![content];
+        if let Some(handle) = resize_handle {
+            children.push(handle);
+        }
+        vec![
+            crate::ui::h_flex(move |_cx| children)
+                .gap_metric(crate::MetricRef::space(crate::Space::N0))
+                .justify(crate::Justify::Start)
+                .items(crate::Items::Stretch)
+                .no_wrap()
+                .into_element(cx),
+        ]
+    });
+
+    if let Some(test_id) = test_id {
+        cell.test_id(test_id)
+    } else {
+        cell
+    }
+}
+
+fn table_resize_handle<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    column: &TableColumn,
+    column_index: usize,
+    response: &mut TableColumnResizeResponse,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let column_key = column
+        .id
+        .clone()
+        .or_else(|| column.header.clone())
+        .unwrap_or_else(|| Arc::from(format!("column-{column_index}")));
+    let enabled = !super::imui_is_disabled(cx);
+    response.enabled = enabled;
+
+    let handle = cx.keyed(("table-column-resize", column_key, column_index), |cx| {
+        let mut props = PointerRegionProps::default();
+        props.enabled = enabled;
+        props.layout.size.width = Length::Px(TABLE_RESIZE_HANDLE_HIT_WIDTH);
+        props.layout.size.height = Length::Auto;
+        props.layout.size.min_height = Some(Length::Px(TABLE_RESIZE_HANDLE_MIN_HEIGHT));
+        props.layout.flex.shrink = 0.0;
+
+        cx.pointer_region(props, move |cx| {
+            let region_id = cx.root_id();
+            let drag_kind = super::drag_kind_for_element(region_id);
+            let drag_threshold = super::drag_threshold_for(cx);
+
+            cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
+                super::prepare_pointer_region_drag_on_left_down(
+                    host,
+                    acx,
+                    down,
+                    enabled.then_some(drag_kind),
+                    Some(CursorIcon::ColResize),
+                )
+            }));
+            cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+                if !enabled {
+                    return false;
+                }
+                host.set_cursor_icon(CursorIcon::ColResize);
+                super::handle_pointer_region_drag_move_with_threshold(
+                    host,
+                    acx,
+                    mv,
+                    drag_kind,
+                    drag_threshold,
+                )
+            }));
+            cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+                if !enabled {
+                    return false;
+                }
+                super::finish_pointer_region_drag(host, acx, up.pointer_id, drag_kind)
+            }));
+
+            let mut drag_response = ResponseExt::default();
+            super::populate_pressable_drag_response(cx, region_id, &mut drag_response);
+            response.drag = drag_response.drag;
+            let dragging = response.drag.dragging;
+            let (started, stopped) =
+                cx.state_for(region_id, TableResizeHandleDragState::default, |state| {
+                    let started = dragging && !state.was_dragging;
+                    let stopped = !dragging && state.was_dragging;
+                    state.was_dragging = dragging;
+                    (started, stopped)
+                });
+            response.drag.started |= started;
+            response.drag.stopped |= stopped;
+
+            vec![table_resize_handle_visual(cx, enabled)]
+        })
+    });
+
+    if let Some(test_id) = test_id {
+        handle.test_id(test_id)
+    } else {
+        handle
+    }
+}
+
+fn table_resize_handle_visual<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    enabled: bool,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let mut color = theme
+        .color_by_key("table.border")
+        .or_else(|| theme.color_by_key("border"))
+        .unwrap_or_else(|| theme.color_token("border"));
+    if !enabled {
+        color.a *= 0.45;
+    }
+
+    let mut grip = ContainerProps::default();
+    grip.background = Some(color);
+    grip.layout.size.width = Length::Px(TABLE_RESIZE_HANDLE_VISUAL_WIDTH);
+    grip.layout.size.height = Length::Px(TABLE_RESIZE_HANDLE_MIN_HEIGHT);
+    grip.layout.flex.shrink = 0.0;
+
+    crate::ui::h_flex(move |cx| vec![cx.container(grip, |_cx| Vec::new())])
+        .gap_metric(crate::MetricRef::space(crate::Space::N0))
+        .justify(crate::Justify::Center)
+        .items(crate::Items::Stretch)
+        .no_wrap()
+        .into_element(cx)
 }
 
 fn wrap_table_cell<H: UiHost>(

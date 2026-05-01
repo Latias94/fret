@@ -62,6 +62,28 @@ impl DragSourceResponse {
     }
 }
 
+impl DragResponse {
+    pub fn started(self) -> bool {
+        self.started
+    }
+
+    pub fn dragging(self) -> bool {
+        self.dragging
+    }
+
+    pub fn stopped(self) -> bool {
+        self.stopped
+    }
+
+    pub fn delta(self) -> Point {
+        self.delta
+    }
+
+    pub fn total(self) -> Point {
+        self.total
+    }
+}
+
 impl<T: 'static> Default for DropTargetResponse<T> {
     fn default() -> Self {
         Self {
