@@ -298,10 +298,14 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md`
   after moving app-facing render-root accessor source-policy checks into
   `tools/examples_source_tree_policy/app_facing.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
+  after moving view-runtime grouped state/action source-policy checks into
+  `tools/examples_source_tree_policy/app_facing.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the app-UI render accessor source migration: 78 `include_str!`
-  occurrences and 7 Rust `#[test]` functions remain in
+- Current count after the view-runtime grouped state source migration: 74 `include_str!`
+  occurrences and 6 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -391,4 +395,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M56_EMBEDDED_VIEWPORT_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M57_HELLO_WORLD_COMPARE_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

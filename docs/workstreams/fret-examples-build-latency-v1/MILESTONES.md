@@ -1027,3 +1027,20 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M58_APP_UI_RENDER_ACCESSOR_SOURCE_GATE_2026-05-01.md`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M59 - View Runtime Grouped State Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- View-runtime grouped state/action/effect markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The examples source-tree policy gate covers the default app/view-runtime examples.
+- Demo behavior and parser tests remain unchanged.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
+- `tools/examples_source_tree_policy/app_facing.py`
+- `apps/fret-examples/src/lib.rs`

@@ -301,7 +301,6 @@ mod authoring_surface_policy_tests {
     const EXTRAS_MARQUEE_PERF_DEMO: &str = include_str!("extras_marquee_perf_demo.rs");
     const FORM_DEMO: &str = include_str!("form_demo.rs");
     const GENUI_DEMO: &str = include_str!("genui_demo.rs");
-    const HELLO_COUNTER_DEMO: &str = include_str!("hello_counter_demo.rs");
     const IMAGE_HEAVY_MEMORY_DEMO: &str = include_str!("image_heavy_memory_demo.rs");
     const IMUI_EDITOR_PROOF_DEMO: &str = include_str!("imui_editor_proof_demo.rs");
     const IMUI_EDITOR_PROOF_DEMO_COLLECTION_MODULE: &str =
@@ -360,14 +359,11 @@ mod authoring_surface_policy_tests {
     const NODE_GRAPH_DEMO: &str = include_str!("node_graph_demo.rs");
     const PLOT_STRESS_DEMO: &str = include_str!("plot_stress_demo.rs");
     const POSTPROCESS_THEME_DEMO: &str = include_str!("postprocess_theme_demo.rs");
-    const QUERY_ASYNC_TOKIO_DEMO: &str = include_str!("query_async_tokio_demo.rs");
-    const QUERY_DEMO: &str = include_str!("query_demo.rs");
     const SIMPLE_TODO_DEMO: &str = include_str!("simple_todo_demo.rs");
     const SONNER_DEMO: &str = include_str!("sonner_demo.rs");
     const TABLE_DEMO: &str = include_str!("table_demo.rs");
     const TABLE_STRESS_DEMO: &str = include_str!("table_stress_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
-    const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const VIRTUAL_LIST_STRESS_DEMO: &str = include_str!("virtual_list_stress_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
     const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
@@ -1082,146 +1078,6 @@ mod authoring_surface_policy_tests {
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
                 "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
                 "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
-            ],
-        );
-    }
-
-    #[test]
-    fn selected_view_runtime_examples_prefer_grouped_state_actions_and_effects() {
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            HELLO_COUNTER_DEMO,
-            &[
-                "let count_state = cx.state().local_init(|| 0i64);",
-                "let step_state = cx.state().local_init(|| \"1\".to_string());",
-                "let count = count_state.layout_value(cx);",
-                "selector_layout(&step_state,",
-                "parse_step(step_text.as_str())",
-                ".locals_with((&count_state, &step_state))",
-                ".on::<act::Inc>(|tx, (count_state, step_state)| {",
-                ".on::<act::Dec>(|tx, (count_state, step_state)| {",
-                "cx.actions().local(&count_state).set::<act::Reset>(0);",
-            ],
-            &[
-                "cx.use_local_with(|| 0i64)",
-                "cx.on_action_notify_models::<act::Inc>",
-                "cx.on_action_notify_local_set::<act::Reset, i64>",
-                "let count = count_state.layout(cx).value_or(0);",
-                "let step_text = step_state.layout(cx).value_or_else(String::new);",
-                "tx.value_or_else(&step_state, || \"1\".to_string())",
-            ],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            QUERY_DEMO,
-            &[
-                "let fail_mode_state = cx.state().local_init(|| false);",
-                "let fail_mode = fail_mode_state.layout_value(cx);",
-                "let query_state = query_handle.read_layout(cx);",
-                "let status_label = query_state.status.as_str();",
-                "let info_line = if query_state.is_refreshing() {",
-                "let error_color = if query_state.has_error() {",
-                "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
-                "cx.data().invalidate_query(demo_key());",
-                "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().local(&fail_mode_state)",
-                ".toggle_bool::<act::ToggleFailMode>();",
-                "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
-            ],
-            &[
-                "with_query_client(",
-                "cx.use_local_with(|| false)",
-                "query_handle.layout(cx).value_or_default()",
-                "let status_label = match query_state.status {",
-                "QueryStatus::Loading if query_state.data.is_some() =>",
-                "fail_mode_state.layout(cx).value_or_default()",
-                "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
-                "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
-            ],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            QUERY_ASYNC_TOKIO_DEMO,
-            &[
-                "let fail_mode_state = cx.state().local_init(|| false);",
-                "let fail_mode = fail_mode_state.layout_value(cx);",
-                "let query_state = query_handle.read_layout(cx);",
-                "let status_label = query_state.status.as_str();",
-                "let info_line = if query_state.is_refreshing() {",
-                "let error_color = if query_state.has_error() {",
-                "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
-                "cx.data().invalidate_query(demo_key());",
-                "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().local(&fail_mode_state)",
-                ".toggle_bool::<act::ToggleFailMode>();",
-                "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
-            ],
-            &[
-                "with_query_client(",
-                "cx.use_local_with(|| false)",
-                "query_handle.layout(cx).value_or_default()",
-                "let status_label = match query_state.status {",
-                "QueryStatus::Loading if query_state.data.is_some() =>",
-                "fail_mode_state.layout(cx).value_or_default()",
-                "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
-                "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
-            ],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            TODO_DEMO,
-            &[
-                "struct TodoLocals {",
-                "fn new(cx: &mut AppUi<'_, '_>) -> Self {",
-                "struct TodoDemoView;",
-                "let locals = TodoLocals::new(cx);",
-                "locals.bind_actions(cx);",
-                "let todos = locals.todos.layout_value(cx);",
-                "let draft_value = locals.draft.layout_value(cx);",
-                "draft: cx.state().local::<String>(),",
-                "filter: cx.state().local_init(|| Some(Arc::<str>::from(TodoFilter::All.value()))),",
-                "next_id: cx.state().local_init(|| 4u64),",
-                "todos: cx.state().local_init(|| {",
-                "let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());",
-                ".locals_with((&self.draft, &self.next_id, &self.todos))",
-                ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
-                "let text = tx.value(&draft).trim().to_string();",
-                "let id = tx.value(&next_id);",
-                ".locals_with(&self.todos)",
-                ".on::<act::ClearDone>(|tx, todos| {",
-                "cx.actions().local(&self.todos)",
-                ".payload_update_if::<act::Toggle>(|rows, id| {",
-                ".payload_update_if::<act::Remove>(|rows, id| {",
-                "fn todo_row<'a, Cx>(",
-                "Cx: fret::app::ElementContextAccess<'a, App>,",
-            ],
-            &[
-                "bind_todo_actions(",
-                "cx.use_local::<String>()",
-                "cx.on_action_notify_models::<act::Add>",
-                "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
-                "cx: &mut fret_ui::ElementContext<'_, App>,",
-                "todos_state.layout(cx).value_or_default()",
-                "draft_state.layout(cx).value_or_default()",
-                "tx.value_or_else(&draft_state, String::new)",
-                "tx.value_or(&next_id_state, 1)",
-                "TodoLocals::new(app)",
-            ],
-        );
-
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            EMBEDDED_VIEWPORT_DEMO,
-            &[
-                "let size_preset_state = cx.state().local_init(|| Some(Arc::<str>::from(SIZE_PRESET_960)));",
-                "let preset = size_preset_state.layout_value(cx);",
-                "shadcn::ToggleGroup::single(&size_preset_state)",
-                ".deselectable(false)",
-            ],
-            &[
-                "cx.use_local_with(|| 1usize)",
-                "cx.on_action_notify_local_set::<act::PickSize640, usize>",
-                "let preset = size_preset_state.layout(cx).value_or_default();",
-                "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
-                ".disabled(preset == 0)",
             ],
         );
     }

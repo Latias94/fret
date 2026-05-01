@@ -412,6 +412,141 @@ APP_UI_RENDER_ACCESSOR_WHOLE_SOURCE_POLICIES = [
     ),
 ]
 
+VIEW_RUNTIME_GROUPED_STATE_POLICIES = [
+    (
+        "hello_counter_demo.rs",
+        [
+            "let count_state = cx.state().local_init(|| 0i64);",
+            "let step_state = cx.state().local_init(|| \"1\".to_string());",
+            "let count = count_state.layout_value(cx);",
+            "selector_layout(&step_state,",
+            "parse_step(step_text.as_str())",
+            ".locals_with((&count_state, &step_state))",
+            ".on::<act::Inc>(|tx, (count_state, step_state)| {",
+            ".on::<act::Dec>(|tx, (count_state, step_state)| {",
+            "cx.actions().local(&count_state).set::<act::Reset>(0);",
+        ],
+        [
+            "cx.use_local_with(|| 0i64)",
+            "cx.on_action_notify_models::<act::Inc>",
+            "cx.on_action_notify_local_set::<act::Reset, i64>",
+            "let count = count_state.layout(cx).value_or(0);",
+            "let step_text = step_state.layout(cx).value_or_else(String::new);",
+            "tx.value_or_else(&step_state, || \"1\".to_string())",
+        ],
+    ),
+    (
+        "query_demo.rs",
+        [
+            "let fail_mode_state = cx.state().local_init(|| false);",
+            "let fail_mode = fail_mode_state.layout_value(cx);",
+            "let query_state = query_handle.read_layout(cx);",
+            "let status_label = query_state.status.as_str();",
+            "let info_line = if query_state.is_refreshing() {",
+            "let error_color = if query_state.has_error() {",
+            "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
+            "cx.data().invalidate_query(demo_key());",
+            "cx.data().invalidate_query_namespace(key.namespace());",
+            "cx.actions().local(&fail_mode_state)",
+            ".toggle_bool::<act::ToggleFailMode>();",
+            "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
+        ],
+        [
+            "with_query_client(",
+            "cx.use_local_with(|| false)",
+            "query_handle.layout(cx).value_or_default()",
+            "let status_label = match query_state.status {",
+            "QueryStatus::Loading if query_state.data.is_some() =>",
+            "fail_mode_state.layout(cx).value_or_default()",
+            "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
+            "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
+        ],
+    ),
+    (
+        "query_async_tokio_demo.rs",
+        [
+            "let fail_mode_state = cx.state().local_init(|| false);",
+            "let fail_mode = fail_mode_state.layout_value(cx);",
+            "let query_state = query_handle.read_layout(cx);",
+            "let status_label = query_state.status.as_str();",
+            "let info_line = if query_state.is_refreshing() {",
+            "let error_color = if query_state.has_error() {",
+            "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
+            "cx.data().invalidate_query(demo_key());",
+            "cx.data().invalidate_query_namespace(key.namespace());",
+            "cx.actions().local(&fail_mode_state)",
+            ".toggle_bool::<act::ToggleFailMode>();",
+            "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
+        ],
+        [
+            "with_query_client(",
+            "cx.use_local_with(|| false)",
+            "query_handle.layout(cx).value_or_default()",
+            "let status_label = match query_state.status {",
+            "QueryStatus::Loading if query_state.data.is_some() =>",
+            "fail_mode_state.layout(cx).value_or_default()",
+            "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
+            "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
+        ],
+    ),
+    (
+        "todo_demo.rs",
+        [
+            "struct TodoLocals {",
+            "fn new(cx: &mut AppUi<'_, '_>) -> Self {",
+            "struct TodoDemoView;",
+            "let locals = TodoLocals::new(cx);",
+            "locals.bind_actions(cx);",
+            "let todos = locals.todos.layout_value(cx);",
+            "let draft_value = locals.draft.layout_value(cx);",
+            "draft: cx.state().local::<String>(),",
+            "filter: cx.state().local_init(|| Some(Arc::<str>::from(TodoFilter::All.value()))),",
+            "next_id: cx.state().local_init(|| 4u64),",
+            "todos: cx.state().local_init(|| {",
+            "let filter_value = TodoFilter::from_value(locals.filter.layout_value(cx).as_deref());",
+            ".locals_with((&self.draft, &self.next_id, &self.todos))",
+            ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
+            "let text = tx.value(&draft).trim().to_string();",
+            "let id = tx.value(&next_id);",
+            ".locals_with(&self.todos)",
+            ".on::<act::ClearDone>(|tx, todos| {",
+            "cx.actions().local(&self.todos)",
+            ".payload_update_if::<act::Toggle>(|rows, id| {",
+            ".payload_update_if::<act::Remove>(|rows, id| {",
+            "fn todo_row<'a, Cx>(",
+            "Cx: fret::app::ElementContextAccess<'a, App>,",
+        ],
+        [
+            "bind_todo_actions(",
+            "cx.use_local::<String>()",
+            "cx.on_action_notify_models::<act::Add>",
+            "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
+            "cx: &mut fret_ui::ElementContext<'_, App>,",
+            "todos_state.layout(cx).value_or_default()",
+            "draft_state.layout(cx).value_or_default()",
+            "tx.value_or_else(&draft_state, String::new)",
+            "tx.value_or(&next_id_state, 1)",
+            "TodoLocals::new(app)",
+        ],
+    ),
+    (
+        "embedded_viewport_demo.rs",
+        [
+            "let size_preset_state = cx.state().local_init(|| Some(Arc::<str>::from(SIZE_PRESET_960)));",
+            "let preset = size_preset_state.layout_value(cx);",
+            "shadcn::ToggleGroup::single(&size_preset_state)",
+            ".deselectable(false)",
+        ],
+        [
+            "cx.use_local_with(|| 1usize)",
+            "cx.on_action_notify_local_set::<act::PickSize640, usize>",
+            "let preset = size_preset_state.layout(cx).value_or_default();",
+            "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
+            ".disabled(preset == 0)",
+        ],
+    ),
+]
+
 CheckMarkers = Callable[..., None]
 ReadSource = Callable[[Path], str]
 SourceSlice = Callable[[Path, str, str, str], str]
@@ -566,6 +701,16 @@ def check_app_facing_demo_source_policies(
         )
 
     for name, required, forbidden in APP_UI_RENDER_ACCESSOR_WHOLE_SOURCE_POLICIES:
+        path = examples_src / name
+        check_required_forbidden_markers(
+            path,
+            read_source(path),
+            required=required,
+            forbidden=forbidden,
+            failures=failures,
+        )
+
+    for name, required, forbidden in VIEW_RUNTIME_GROUPED_STATE_POLICIES:
         path = examples_src / name
         check_required_forbidden_markers(
             path,

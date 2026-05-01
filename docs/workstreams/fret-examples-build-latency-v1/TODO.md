@@ -141,6 +141,8 @@ Status: active
   `fret-examples` unit test while keeping runtime-frame sample behavior checks unchanged.
 - [x] Move the app-UI render accessor source-policy check out of the monolithic `fret-examples`
   unit test while keeping demo behavior unchanged.
+- [x] Move the view-runtime grouped state/action source-policy check out of the monolithic
+  `fret-examples` unit test while keeping demo behavior unchanged.
 
 ## Parked
 
