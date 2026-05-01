@@ -47,8 +47,8 @@ Last updated: 2026-04-13
       - one launched/diag gate,
       - and one evidence note.
       Result: `M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md` plus the source-policy gate
-      `immediate_mode_workstream_freezes_the_p1_default_workbench_assembly_decision` now freeze the
-      no-new-helper-yet verdict against the existing P1 launched shell floor.
+      `python tools/gate_imui_workstream_source.py` now freezes the no-new-helper-yet verdict
+      against the existing P1 launched shell floor.
 
 ## M2 - Follow-on management
 

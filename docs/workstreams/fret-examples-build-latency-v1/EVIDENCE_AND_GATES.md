@@ -259,10 +259,15 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
   after moving IMUI menu/tab trigger response canonicalization workstream document markers into
   `tools/gate_imui_workstream_source.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M50_IMUI_WORKBENCH_SHELL_CLOSURE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+  after moving IMUI workbench shell closure source-policy markers into
+  `tools/gate_imui_workstream_source.py` while keeping the real shell surface tests and launched
+  diagnostics suite as behavior floors.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the paired IMUI menu/tab trigger response workstream source migration: 144
-  `include_str!` occurrences and 32 Rust `#[test]` functions remain in
+- Current count after the IMUI workbench shell closure source migration: 140 `include_str!`
+  occurrences and 29 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -343,4 +348,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M47_IMUI_CHILD_REGION_DEPTH_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M48_IMUI_MENU_TAB_TRIGGER_RESPONSE_SURFACE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M50_IMUI_WORKBENCH_SHELL_CLOSURE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

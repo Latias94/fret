@@ -863,3 +863,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M50 - IMUI Workbench Shell Closure Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI workbench shell closure P1 source-policy markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed workbench shell closure lane points its source-policy gate at the Python gate instead
+  of deleted Rust source-marker tests.
+- The real workspace shell/editor notes surface tests and launched `diag-hardening-smoke-workspace`
+  suite remain behavior floors.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M50_IMUI_WORKBENCH_SHELL_CLOSURE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

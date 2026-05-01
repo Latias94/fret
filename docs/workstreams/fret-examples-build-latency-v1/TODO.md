@@ -121,6 +121,9 @@ Status: active
 - [x] Move the IMUI menu/tab trigger response canonicalization workstream document markers out of
   the monolithic `fret-examples` unit test while keeping the real canonical helper behavior and
   IMUI facade teaching source gates.
+- [x] Move the IMUI workbench shell closure workstream source-policy package out of the monolithic
+  `fret-examples` unit test while keeping the real shell surface tests and launched diagnostics
+  floor.
 
 ## Parked
 

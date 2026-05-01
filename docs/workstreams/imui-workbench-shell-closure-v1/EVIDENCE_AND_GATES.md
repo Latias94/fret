@@ -27,7 +27,7 @@ of turning into a vague product backlog.
 - `apps/fret-ui-gallery/src/driver/chrome.rs`
 - `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `tools/diag-scripts/suites/diag-hardening-smoke-workspace/suite.json`
 
 ## First-open repro surfaces
@@ -45,7 +45,7 @@ Use these before reading older shell-specific workstreams in depth:
 
 ### P1 source-policy gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_workbench_shell_proof_matrix immediate_mode_workstream_freezes_the_p1_shell_diag_smoke_minimum immediate_mode_workstream_freezes_the_p1_default_workbench_assembly_decision`
+- `python tools/gate_imui_workstream_source.py`
 
 This package currently proves:
 

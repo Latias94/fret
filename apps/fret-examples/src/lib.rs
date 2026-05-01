@@ -346,15 +346,6 @@ mod authoring_surface_policy_tests {
     const FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE: &str = include_str!(
         "../../../docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/M6_FIRST_FRAME_BOOTSTRAP_CLOSURE_2026-04-26.md"
     );
-    const IMUI_WORKBENCH_PROOF_MATRIX_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md"
-    );
-    const IMUI_P1_SHELL_DIAG_SMOKE_DECISION_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md"
-    );
-    const IMUI_WORKBENCH_ASSEMBLY_DECISION_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-workbench-shell-closure-v1/M1_DEFAULT_WORKBENCH_ASSEMBLY_DECISION_2026-04-13.md"
-    );
     const IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md"
     );
@@ -536,9 +527,6 @@ mod authoring_surface_policy_tests {
     const VIRTUAL_LIST_STRESS_DEMO: &str = include_str!("virtual_list_stress_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
     const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
-    const WORKSPACE_HARDENING_SHELL_DIAG_SUITE: &str = include_str!(
-        "../../../tools/diag-scripts/suites/diag-hardening-smoke-workspace/suite.json"
-    );
 
     fn assert_avoids_legacy_conversion_names(src: &str) {
         assert!(!src.contains("UiIntoElement"));
@@ -851,78 +839,6 @@ mod authoring_surface_policy_tests {
                 FRET_LAUNCH_RUNNER_SCHEDULING_EVIDENCE.contains(marker)
                     || FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE.contains(marker),
                 "first-frame workstream docs should name marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p1_workbench_shell_proof_matrix() {
-        for marker in [
-            "`apps/fret-examples/src/workspace_shell_demo.rs`",
-            "`apps/fret-examples/src/editor_notes_demo.rs`",
-            "`apps/fret-examples/src/imui_editor_proof_demo.rs`",
-            "`docs/workstreams/workspace-tabstrip-editor-grade-v1/DESIGN.md`",
-            "`docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`",
-            "`workspace_shell_demo` is the primary P1 coherent workbench-shell proof",
-            "`editor_notes_demo` is the minimal secondary proof for shell-mounted rails",
-            "shell-level missing pieces should stay out of the generic `imui` backlog",
-        ] {
-            assert!(
-                IMUI_WORKBENCH_PROOF_MATRIX_NOTE.contains(marker),
-                "the workstream should keep the P1 workbench proof matrix explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p1_shell_diag_smoke_minimum() {
-        for marker in [
-            "`diag-hardening-smoke-workspace` should remain the promoted P1 shell smoke suite.",
-            "Do not create a second parallel P1 shell suite yet.",
-            "tab close / reorder / split preview",
-            "dirty-close prompt",
-            "content-focus restore via Escape",
-            "left-rail / file-tree liveness",
-            "`workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`",
-            "`workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`",
-            "`workspace-shell-demo-file-tree-bounce-keep-alive.json`",
-        ] {
-            assert!(
-                IMUI_P1_SHELL_DIAG_SMOKE_DECISION_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P1 shell diagnostics floor explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
-            "workspace-shell-demo-tab-reorder-first-to-end-smoke.json",
-            "workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke.json",
-            "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
-            "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json",
-            "workspace-shell-demo-file-tree-bounce-keep-alive.json",
-        ] {
-            assert!(
-                WORKSPACE_HARDENING_SHELL_DIAG_SUITE.contains(marker),
-                "the promoted workspace shell smoke suite should keep the frozen minimum roster entry: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p1_default_workbench_assembly_decision() {
-        for marker in [
-            "`apps/fret-examples/src/workspace_shell_demo.rs`",
-            "`apps/fret-examples/src/editor_notes_demo.rs`",
-            "`apps/fret-ui-gallery/src/driver/render_flow.rs`",
-            "`docs/workstreams/editor-ecosystem-fearless-refactor-v1/WORKSPACE_SHELL_STARTER_SET.md`",
-            "Keep the default workbench answer as explicit example-local assembly over the frozen starter set.",
-            "Do not introduce `WorkspaceWorkbenchShell`, `EditorWorkbenchShell`, or a similar promoted helper yet.",
-            "Keep `workspace_shell_demo` as the broader P1 product proof.",
-            "Keep UI Gallery workspace shell as a shell-chrome reference/exemplar, not as a competing P1",
-        ] {
-            assert!(
-                IMUI_WORKBENCH_ASSEMBLY_DECISION_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P1 default workbench assembly decision explicit: {marker}"
             );
         }
     }

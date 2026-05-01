@@ -74,7 +74,7 @@ That is enough closure for the P1 shell question in this cycle.
 
 ## Validation used for closeout
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p1_workbench_shell_proof_matrix immediate_mode_workstream_freezes_the_p1_shell_diag_smoke_minimum immediate_mode_workstream_freezes_the_p1_default_workbench_assembly_decision`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
