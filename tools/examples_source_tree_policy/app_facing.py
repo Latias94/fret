@@ -241,6 +241,37 @@ API_WORKBENCH_LITE_FORBIDDEN = [
     "next_seq",
 ]
 
+EMBEDDED_VIEWPORT_REQUIRED_TOGGLE_GROUP_REQUIRED = [
+    "use fret_ui_kit::IntoUiElementInExt as _;",
+    "shadcn::ToggleGroup::single(&size_preset_state)",
+    ".deselectable(false)",
+    "cx.state().local_init(|| Some(Arc::<str>::from(SIZE_PRESET_960)))",
+]
+
+EMBEDDED_VIEWPORT_REQUIRED_TOGGLE_GROUP_FORBIDDEN = [
+    ".disabled(preset == 0)",
+    "PickSize640",
+]
+
+EMBEDDED_VIEWPORT_CAPABILITY_RENDER_REQUIRED = [
+    ".gap(Space::N1).into_element_in(cx);",
+    "[ui::text(\"640\u00d7360\").into_element_in(cx)]",
+    "[ui::text(\"960\u00d7540\").into_element_in(cx)]",
+    "[ui::text(\"1280\u00d7720\").into_element_in(cx)]",
+    ".refine_layout(LayoutRefinement::default().flex_none()).into_element_in(cx);",
+    ".panel(cx.elements(), embedded::EmbeddedViewportPanelProps {",
+    ".max_w(Px(980.0)).into_element_in(cx);",
+]
+
+EMBEDDED_VIEWPORT_CAPABILITY_RENDER_FORBIDDEN = [
+    ".gap(Space::N1).into_element(cx);",
+    "[cx.text(\"640\u00d7360\")]",
+    "[cx.text(\"960\u00d7540\")]",
+    "[cx.text(\"1280\u00d7720\")]",
+    ".panel(cx, embedded::EmbeddedViewportPanelProps {",
+    ".max_w(Px(980.0)).into_element(cx);",
+]
+
 CheckMarkers = Callable[..., None]
 ReadSource = Callable[[Path], str]
 SourceSlice = Callable[[Path, str, str, str], str]
@@ -349,5 +380,27 @@ def check_app_facing_demo_source_policies(
         read_source(api_workbench_path),
         required=API_WORKBENCH_LITE_REQUIRED,
         forbidden=default_app_surface_common_forbidden + API_WORKBENCH_LITE_FORBIDDEN,
+        failures=failures,
+    )
+
+    embedded_path = examples_src / "embedded_viewport_demo.rs"
+    embedded_source = read_source(embedded_path)
+    check_required_forbidden_markers(
+        embedded_path,
+        embedded_source,
+        required=EMBEDDED_VIEWPORT_REQUIRED_TOGGLE_GROUP_REQUIRED,
+        forbidden=EMBEDDED_VIEWPORT_REQUIRED_TOGGLE_GROUP_FORBIDDEN,
+        failures=failures,
+    )
+    check_required_forbidden_markers(
+        embedded_path,
+        source_slice(
+            embedded_path,
+            embedded_source,
+            "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {",
+            "fn embedded_viewport_page<'a, Cx, C>(",
+        ),
+        required=EMBEDDED_VIEWPORT_CAPABILITY_RENDER_REQUIRED,
+        forbidden=EMBEDDED_VIEWPORT_CAPABILITY_RENDER_FORBIDDEN,
         failures=failures,
     )

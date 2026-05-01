@@ -974,3 +974,20 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M55_DIAGNOSTICS_ENVIRONMENT_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M56 - Embedded Viewport Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Embedded viewport required toggle-group and capability-first render slice markers no longer
+  compile the monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate covers those markers in the app-facing owner module.
+- Runtime behavior remains unchanged.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M56_EMBEDDED_VIEWPORT_SOURCE_GATE_2026-05-01.md`
+- `tools/examples_source_tree_policy/app_facing.py`
+- `apps/fret-examples/src/lib.rs`

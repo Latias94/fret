@@ -135,6 +135,8 @@ Status: active
   `fret-examples` unit test while keeping the real host-admitted mixed-DPI proof surfaces.
 - [x] Move the diagnostics environment source-policy checks out of the monolithic
   `fret-examples` unit test while keeping the real owner-crate behavior gates.
+- [x] Move the embedded viewport source-policy checks out of the monolithic `fret-examples` unit
+  test while keeping runtime behavior unchanged.
 
 ## Parked
 
