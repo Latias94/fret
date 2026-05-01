@@ -95,6 +95,8 @@ Status: active
 - [x] Move the IMUI collection second proof-surface workstream document/source-shape markers out of
   the monolithic `fret-examples` unit test while keeping the real shell-mounted surface tests in
   Rust.
+- [x] Move the IMUI collection helper-readiness workstream document/no-helper-widening markers out
+  of the monolithic `fret-examples` unit test while keeping the real proof-surface tests in Rust.
 
 ## Parked
 

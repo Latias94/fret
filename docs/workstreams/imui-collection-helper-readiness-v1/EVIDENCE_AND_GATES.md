@@ -21,7 +21,7 @@ slipping into generic IMUI.
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## First-Open Repro Surfaces
 
@@ -30,11 +30,11 @@ slipping into generic IMUI.
 2. Shell-mounted `Scene collection` proof
    - `cargo run -p fret-demo --bin editor_notes_demo`
 3. Source-policy gate
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_helper_readiness_follow_on --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
 
 ## Focused Gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_helper_readiness_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`

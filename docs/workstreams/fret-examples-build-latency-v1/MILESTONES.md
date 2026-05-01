@@ -695,3 +695,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M39_IMUI_COLLECTION_SECOND_PROOF_SURFACE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M40 - IMUI Collection Helper Readiness Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection helper-readiness closeout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed helper-readiness workstream points its source-policy gate at the Python gate instead of
+  a deleted Rust source-marker test.
+- Real proof-surface integration tests remain in Rust.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M40_IMUI_COLLECTION_HELPER_READINESS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`
