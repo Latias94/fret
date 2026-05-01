@@ -27,7 +27,7 @@ The closeout is intentionally narrow:
 - `ecosystem/fret-ui-editor/tests/text_field_api_smoke.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json`
 - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json`
 - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/EVIDENCE_AND_GATES.md`
@@ -56,7 +56,7 @@ test ids, and `32` snapshots.
 - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json --dir target/fret-diag/editor-notes-draft-controller-proof --session-auto --timeout-ms 600000 --pack --ai-packet --launch -- cargo run -p fret-demo --bin editor_notes_demo`
 - `cargo nextest run -p fret-ui-editor --test text_field_api_smoke --no-fail-fast`
 - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_controller_api_proof --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `python3 -m json.tool docs/workstreams/imui-textfield-draft-controller-api-proof-v1/WORKSTREAM.json > /dev/null`
 - `python3 tools/check_workstream_catalog.py`
 - `git diff --check`

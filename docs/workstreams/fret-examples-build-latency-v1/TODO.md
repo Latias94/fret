@@ -110,6 +110,9 @@ Status: active
 - [x] Move the IMUI TextField draft-buffer contract audit document/source-shape markers out of the
   monolithic `fret-examples` unit test; this closed no-public-API audit has no real Rust behavior
   test.
+- [x] Move the IMUI TextField draft-controller API proof document/source-shape markers out of the
+  monolithic `fret-examples` unit test while keeping the real API smoke, editor surface, and
+  launched diagnostics gates outside that source freeze.
 
 ## Parked
 

@@ -797,5 +797,21 @@ Exit criteria:
 Current evidence:
 
 - `docs/workstreams/fret-examples-build-latency-v1/M45_IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+
+## M46 - IMUI TextField Draft Controller Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI TextField draft-controller API proof closeout markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed proof workstream points its source-policy gate at the Python gate instead of a deleted
+  Rust source-marker test.
+- The real API smoke, editor surface tests, and launched diagnostics proof remain behavior gates.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M46_IMUI_TEXTFIELD_DRAFT_CONTROLLER_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`

@@ -3,7 +3,7 @@
   "slug": "imui-textfield-draft-controller-api-proof-v1",
   "title": "ImUi TextField Draft Controller API Proof v1",
   "status": "closed",
-  "updated": "2026-04-29",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "follow_on_of": "imui-textfield-draft-buffer-contract-audit-v1",
   "problem": "The previous TextField draft-buffer audit kept preserved draft internals private until a real proof surface needed external commit/discard. This lane proves the smallest editor-owned contract: an opaque TextField draft controller for explicit app-authored Commit draft / Discard draft affordances without exposing the internal draft model or widening generic IMUI/runtime APIs.",
@@ -40,7 +40,7 @@
       "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-draft-controller-proof.json --dir target/fret-diag/editor-notes-draft-controller-proof --session-auto --timeout-ms 600000 --pack --ai-packet --launch -- cargo run -p fret-demo --bin editor_notes_demo",
       "cargo nextest run -p fret-ui-editor --test text_field_api_smoke --no-fail-fast",
       "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_controller_api_proof --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
@@ -62,7 +62,7 @@
     },
     {
       "name": "textfield-draft-controller-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_controller_api_proof --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "workstream-catalog",
@@ -90,7 +90,7 @@
     "ecosystem/fret-ui-editor/tests/text_field_api_smoke.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/tests/editor_notes_editor_rail_surface.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"

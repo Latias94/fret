@@ -241,10 +241,15 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M45_IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
   after moving IMUI TextField draft-buffer contract audit document/source-shape markers into
   `tools/gate_imui_workstream_source.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M46_IMUI_TEXTFIELD_DRAFT_CONTROLLER_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+  after moving IMUI TextField draft-controller API proof document/source-shape markers into
+  `tools/gate_imui_workstream_source.py` while keeping real API smoke, editor surface, and launched
+  diagnostics gates outside the source freeze.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI TextField draft-buffer contract audit workstream source migration: 163
-  `include_str!` occurrences and 36 Rust `#[test]` functions remain in
+- Current count after the IMUI TextField draft-controller API proof workstream source migration: 155
+  `include_str!` occurrences and 35 Rust `#[test]` functions remain in
   `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
@@ -321,4 +326,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M43_IMUI_NEXT_GAP_AUDIT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M44_IMUI_EDITOR_NOTES_DRAFT_ACTIONS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M45_IMUI_TEXTFIELD_DRAFT_BUFFER_CONTRACT_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M46_IMUI_TEXTFIELD_DRAFT_CONTROLLER_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`
