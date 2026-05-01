@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-04-28",
+  "updated": "2026-05-01",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
@@ -311,19 +311,19 @@
     },
     {
       "name": "imui-p2-first-open-diagnostics-path",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_first_open_diagnostics_path"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-p2-diagnostics-owner-split",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_diagnostics_owner_split"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-p2-bounded-devtools-smoke-package",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_bounded_devtools_smoke_package"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-p2-discoverability-entry",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_discoverability_entry"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-p2-identity-warning-query",

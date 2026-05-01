@@ -346,18 +346,6 @@ mod authoring_surface_policy_tests {
     const FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE: &str = include_str!(
         "../../../docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/M6_FIRST_FRAME_BOOTSTRAP_CLOSURE_2026-04-26.md"
     );
-    const IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_FIRST_OPEN_DIAGNOSTICS_PATH_2026-04-12.md"
-    );
-    const IMUI_P2_DIAGNOSTICS_OWNER_SPLIT_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_DIAGNOSTICS_OWNER_SPLIT_2026-04-12.md"
-    );
-    const IMUI_P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_2026-04-12.md"
-    );
-    const IMUI_P2_DISCOVERABILITY_ENTRY_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P2_DISCOVERABILITY_ENTRY_2026-04-12.md"
-    );
     const IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE: &str = include_str!(
         "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md"
     );
@@ -477,13 +465,6 @@ mod authoring_surface_policy_tests {
     );
     const UI_DIAGNOSTICS_BUNDLES_DOC: &str =
         include_str!("../../../docs/ui-diagnostics-and-scripted-tests.md");
-    const DIAGNOSTICS_FIRST_OPEN_DOC: &str =
-        include_str!("../../../docs/diagnostics-first-open.md");
-    const DIAGNOSTICS_START_HERE_DOC: &str =
-        include_str!("../../../docs/workstreams/diag-fearless-refactor-v2/START_HERE.md");
-    const DIAGNOSTICS_GUI_DOGFOOD_DOC: &str = include_str!(
-        "../../../docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
-    );
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC: &str = include_str!(
         "../../../docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md"
     );
@@ -497,10 +478,6 @@ mod authoring_surface_policy_tests {
     const IMUI_P3_WINDOWS_PLACEMENT_SCRIPT: &str = include_str!(
         "../../../tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json"
     );
-    const IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT: &str =
-        include_str!("../../../tools/diag_gate_imui_p2_devtools_first_open.py");
-    const IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN: &str =
-        include_str!("../../../tools/diag-campaigns/devtools-first-open-smoke.json");
     const IMUI_SHADCN_ADAPTER_DEMO: &str =
         include_str!("../../fret-examples-imui/src/imui_shadcn_adapter_demo.rs");
     const IME_SMOKE_DEMO: &str = include_str!("ime_smoke_demo.rs");
@@ -839,160 +816,6 @@ mod authoring_surface_policy_tests {
                 FRET_LAUNCH_RUNNER_SCHEDULING_EVIDENCE.contains(marker)
                     || FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE.contains(marker),
                 "first-frame workstream docs should name marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p2_first_open_diagnostics_path() {
-        for marker in [
-            "The P2 first-open path is CLI-first for evidence production.",
-            "DevTools GUI and MCP are thin consumers of the same selector, script, bundle, and regression",
-            "\"Compare\" belongs to the shared artifacts layer:",
-            "`cargo run -p fretboard-dev -- diag inspect on`",
-            "`cargo run -p fretboard-dev -- diag pick-apply <script> --ptr <json-pointer>`",
-            "`cargo run -p fretboard-dev -- diag run <script> --dir <session-dir> --session-auto --launch -- <target cmd>`",
-            "`cargo run -p fretboard-dev -- diag latest`",
-            "`cargo run -p fretboard-dev -- diag compare <a> <b> --json`",
-            "`cargo run -p fret-devtools`",
-            "`cargo run -p fret-devtools-mcp`",
-            "`fret_diag_regression_summarize`",
-            "`fret_diag_regression_dashboard` read those same artifacts as thin",
-            "Portable artifacts remain the handoff unit;",
-        ] {
-            assert!(
-                IMUI_P2_FIRST_OPEN_DIAGNOSTICS_PATH_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P2 first-open diagnostics path explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p2_diagnostics_owner_split() {
-        for marker in [
-            "`ecosystem/fret-bootstrap` owns the in-app diagnostics runtime/export seam.",
-            "`crates/fret-diag` owns orchestration, artifact tooling, compare/summarize/dashboard projections,",
-            "`apps/fret-devtools` owns editor-grade diagnostics UX over the shared contracts.",
-            "`apps/fret-devtools-mcp` owns the headless MCP adapter and resource/tool projection over the same",
-            "Do not move orchestration policy into `ecosystem/fret-bootstrap`.",
-            "Do not let `apps/fret-devtools` or `apps/fret-devtools-mcp` invent a second run model or",
-            "When GUI or MCP needs a new capability that CLI would also need, land it in `crates/fret-diag`",
-            "When the target app needs new inspect/pick/script/runtime evidence, land it in",
-        ] {
-            assert!(
-                IMUI_P2_DIAGNOSTICS_OWNER_SPLIT_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P2 diagnostics owner split explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p2_bounded_devtools_smoke_package() {
-        for marker in [
-            "`python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`",
-            "`tools/diag-campaigns/devtools-first-open-smoke.json`",
-            "`tools/diag-scripts/tooling/todo/todo-baseline.json`",
-            "verify that `diag resolve latest` and `diag latest` resolve through",
-            "`script.result.json:last_bundle_dir`",
-            "run direct `diag compare` over `todo-after-add` vs `todo-after-toggle-done`",
-            "`campaign.manifest.json`",
-            "`diag summarize <campaign_root> --dir <campaign_root> --json`",
-            "`regression.summary.json`",
-            "`regression.index.json`",
-            "run `diag dashboard <campaign_root> --json`",
-        ] {
-            assert!(
-                IMUI_P2_BOUNDED_DEVTOOLS_SMOKE_PACKAGE_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P2 bounded devtools smoke package explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "CAMPAIGN_ID = \"devtools-first-open-smoke\"",
-            "SCRIPT_PATH = \"tools/diag-scripts/tooling/todo/todo-baseline.json\"",
-            "\"diag\",",
-            "\"run\",",
-            "\"resolve\",",
-            "\"latest\",",
-            "\"compare\",",
-            "\"campaign\",",
-            "\"dashboard\",",
-            "\"regression.summary.json\"",
-            "\"regression.index.json\"",
-        ] {
-            assert!(
-                IMUI_P2_DEVTOOLS_SMOKE_GATE_SCRIPT.contains(marker),
-                "the bounded P2 devtools smoke gate should keep the shared first-open loop step: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"id\": \"devtools-first-open-smoke\"",
-            "\"kind\": \"script\"",
-            "\"value\": \"tools/diag-scripts/tooling/todo/todo-baseline.json\"",
-            "\"lane\": \"smoke\"",
-            "\"profile\": \"bounded\"",
-            "\"devtools\"",
-            "\"first-open\"",
-        ] {
-            assert!(
-                IMUI_P2_DEVTOOLS_SMOKE_CAMPAIGN.contains(marker),
-                "the bounded P2 devtools smoke campaign should keep the frozen manifest marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p2_discoverability_entry() {
-        for marker in [
-            "`docs/diagnostics-first-open.md`",
-            "the canonical first-open diagnostics entry",
-            "inspect -> selector -> script -> launched run -> bounded evidence -> compare/summarize/dashboard",
-            "`docs/debugging-ui-with-inspector-and-scripts.md`",
-            "`docs/ui-diagnostics-and-scripted-tests.md`",
-            "`docs/workstreams/diag-fearless-refactor-v2/START_HERE.md`",
-            "`docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`",
-        ] {
-            assert!(
-                IMUI_P2_DISCOVERABILITY_ENTRY_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P2 discoverability entry explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "This is the **default first-open diagnostics entry** for Fret.",
-            "1. Inspect and pick one stable selector.",
-            "2. Patch or choose one JSON script.",
-            "3. Run the script into one explicit diagnostics artifacts root.",
-            "4. Read bounded evidence first.",
-            "5. Compare either one bundle pair or one aggregate root.",
-            "`docs/workstreams/diag-fearless-refactor-v2/START_HERE.md` only after this page.",
-        ] {
-            assert!(
-                DIAGNOSTICS_FIRST_OPEN_DOC.contains(marker),
-                "the canonical diagnostics first-open doc should keep the frozen entry marker: {marker}"
-            );
-        }
-
-        for marker in [
-            "the canonical first-open diagnostics workflow now lives in",
-            "`docs/diagnostics-first-open.md`",
-            "maintainer/workstream navigation note",
-        ] {
-            assert!(
-                DIAGNOSTICS_START_HERE_DOC.contains(marker),
-                "the diagnostics start-here note should keep its branch/reference role explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "The canonical first-open diagnostics workflow now lives in",
-            "`docs/diagnostics-first-open.md`",
-            "this file is the DevTools GUI branch over the shared diagnostics",
-        ] {
-            assert!(
-                DIAGNOSTICS_GUI_DOGFOOD_DOC.contains(marker),
-                "the DevTools GUI dogfood note should keep its branch role explicit: {marker}"
             );
         }
     }

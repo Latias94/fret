@@ -124,6 +124,9 @@ Status: active
 - [x] Move the IMUI workbench shell closure workstream source-policy package out of the monolithic
   `fret-examples` unit test while keeping the real shell surface tests and launched diagnostics
   floor.
+- [x] Move the IMUI P2 diagnostics/tooling source-policy package out of the monolithic
+  `fret-examples` unit test while keeping the real `fret-diag`, launched diagnostics, DevTools,
+  and campaign doctor gates.
 
 ## Parked
 

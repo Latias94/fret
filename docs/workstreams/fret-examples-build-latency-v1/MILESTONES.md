@@ -882,3 +882,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M50_IMUI_WORKBENCH_SHELL_CLOSURE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M51 - IMUI P2 Diagnostics Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI P2 diagnostics/tooling source-policy markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The product-closure umbrella points the P2 source-policy package at the Python gate instead of
+  deleted Rust source-marker tests.
+- The real `fret-diag`, launched diagnostics smoke, DevTools build, and campaign doctor gates
+  remain behavior floors.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M51_IMUI_P2_DIAGNOSTICS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

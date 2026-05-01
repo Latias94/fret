@@ -304,10 +304,7 @@ The promoted launched suite now freezes this minimum shell coverage:
 
 ### Diagnostics / tooling gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_first_open_diagnostics_path`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_diagnostics_owner_split`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_bounded_devtools_smoke_package`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p2_discoverability_entry`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-diag query_identity_warnings --no-fail-fast`
 - `cargo nextest run -p fret-diag identity_browser_html --no-fail-fast`
 - `python3 tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke`
