@@ -335,11 +335,11 @@
     },
     {
       "name": "imui-p3-multiwindow-runner-gap-checklist",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-p3-bounded-multiwindow-parity-package",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "imui-p3-multiwindow-parity-campaign-validate",

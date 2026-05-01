@@ -346,12 +346,6 @@ mod authoring_surface_policy_tests {
     const FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE: &str = include_str!(
         "../../../docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/M6_FIRST_FRAME_BOOTSTRAP_CLOSURE_2026-04-26.md"
     );
-    const IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_2026-04-12.md"
-    );
-    const IMUI_P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-editor-grade-product-closure-v1/P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_2026-04-12.md"
-    );
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_WORKSTREAM: &str =
         include_str!("../../../docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json");
     const DOCKING_MULTIWINDOW_IMGUI_PARITY_BASELINE_NOTE: &str = include_str!(
@@ -471,8 +465,6 @@ mod authoring_surface_policy_tests {
     const MACOS_DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC: &str = include_str!(
         "../../../docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md"
     );
-    const IMUI_P3_MULTIWINDOW_PARITY_CAMPAIGN: &str =
-        include_str!("../../../tools/diag-campaigns/imui-p3-multiwindow-parity.json");
     const IMUI_P3_WINDOWS_PLACEMENT_CAMPAIGN: &str =
         include_str!("../../../tools/diag-campaigns/imui-p3-windows-placement-real-host.json");
     const IMUI_P3_WINDOWS_PLACEMENT_SCRIPT: &str = include_str!(
@@ -816,113 +808,6 @@ mod authoring_surface_policy_tests {
                 FRET_LAUNCH_RUNNER_SCHEDULING_EVIDENCE.contains(marker)
                     || FRET_LAUNCH_RUNNER_SCHEDULING_FIRST_FRAME_NOTE.contains(marker),
                 "first-frame workstream docs should name marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist() {
-        for marker in [
-            "`crates/fret-launch`",
-            "`ecosystem/fret-docking`",
-            "`crates/fret-ui` remains the mechanism layer",
-            "hovered-window, peek-behind, transparent payload, and mixed-DPI follow-drag",
-            "`cargo run -p fret-demo --bin workspace_shell_demo`",
-            "P3 is a runner/backend closure problem by default, not an `imui` API backlog.",
-            "The next real P3 slice should promote one bounded parity gate or diag suite",
-        ] {
-            assert!(
-                IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P3 runner gap checklist explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "Hovered-window selection stays runner-owned",
-            "Peek-behind while moving a tear-off window stays runner-owned",
-            "Transparent payload overlap behavior stays runner-owned",
-            "Mixed-DPI follow-drag correctness stays runner-owned",
-        ] {
-            assert!(
-                IMUI_P3_MULTIWINDOW_RUNNER_GAP_CHECKLIST_NOTE.contains(marker),
-                "the P3 checklist note should keep the frozen parity budget category: {marker}"
-            );
-        }
-
-        for marker in [
-            "hovered-window",
-            "peek-behind",
-            "transparent payload",
-            "per-monitor DPI transitions while a drag is active",
-        ] {
-            assert!(
-                DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
-                "the docking parity workstream should keep the runner-owned evidence marker: {marker}"
-            );
-        }
-
-        for marker in [
-            "Cross-window drag hover is stable",
-            "No “stuck follow”",
-            "Mouse-up outside any window still commits the drop",
-        ] {
-            assert!(
-                MACOS_DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
-                "the macOS parity note should keep the hand-feel evidence marker: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package() {
-        for marker in [
-            "`tools/diag-campaigns/imui-p3-multiwindow-parity.json`",
-            "`cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`",
-            "`cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`",
-            "`diag-hardening-smoke-docking` should stay small and general-purpose",
-            "do not widen `crates/fret-ui` because one of these four checks is painful",
-            "the fourth script is the current bounded mixed-DPI / large-coordinate stress entry",
-            "Hovered-window selection under overlap",
-            "Peek-behind under the moving tear-off window",
-            "Transparent payload overlap behavior",
-            "Mixed-DPI follow-drag expectation",
-            "docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
-            "docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
-            "docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",
-            "docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
-        ] {
-            assert!(
-                IMUI_P3_BOUNDED_MULTIWINDOW_PARITY_PACKAGE_NOTE.contains(marker),
-                "the immediate-mode workstream should keep the P3 bounded parity package explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"id\": \"imui-p3-multiwindow-parity\"",
-            "\"kind\": \"script\"",
-            "docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
-            "docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
-            "docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json",
-            "docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
-            "\"profile\": \"bounded\"",
-            "\"runner-owned\"",
-        ] {
-            assert!(
-                IMUI_P3_MULTIWINDOW_PARITY_CAMPAIGN.contains(marker),
-                "the P3 campaign manifest should keep the bounded package marker: {marker}"
-            );
-        }
-
-        for marker in [
-            "Cross-window hover is stable",
-            "hover selection can still target the window behind it",
-            "temporary AlwaysOnTop while following",
-            "No “stuck follow”",
-        ] {
-            assert!(
-                DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker)
-                    || MACOS_DOCKING_MULTIWINDOW_IMGUI_PARITY_DOC.contains(marker),
-                "the P3 package should keep the runner-owned evidence marker reachable: {marker}"
             );
         }
     }

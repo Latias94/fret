@@ -901,3 +901,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M51_IMUI_P2_DIAGNOSTICS_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M52 - IMUI P3 Multiwindow Package Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI P3 runner-gap and bounded multi-window campaign package source-policy markers no longer
+  compile the monolithic `fret-examples` unit-test module.
+- The product-closure umbrella points these P3 package source-policy checks at the Python gate
+  instead of deleted Rust source-marker tests.
+- Real campaign validate/run gates remain behavior floors.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M52_IMUI_P3_MULTIWINDOW_PACKAGE_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

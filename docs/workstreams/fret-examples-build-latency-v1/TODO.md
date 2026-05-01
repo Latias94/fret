@@ -127,6 +127,8 @@ Status: active
 - [x] Move the IMUI P2 diagnostics/tooling source-policy package out of the monolithic
   `fret-examples` unit test while keeping the real `fret-diag`, launched diagnostics, DevTools,
   and campaign doctor gates.
+- [x] Move the IMUI P3 multi-window runner-gap and bounded campaign package source-policy checks
+  out of the monolithic `fret-examples` unit test while keeping real campaign validate/run gates.
 
 ## Parked
 

@@ -335,8 +335,7 @@ This package currently proves:
 
 ### Multi-window hand-feel gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_bounded_multiwindow_parity_package`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`
 - `cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
@@ -351,7 +350,7 @@ This package currently proves:
 
 ### Lane hygiene gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_multiwindow_runner_gap_checklist`
+- `python tools/gate_imui_workstream_source.py`
 - `git diff --check`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`

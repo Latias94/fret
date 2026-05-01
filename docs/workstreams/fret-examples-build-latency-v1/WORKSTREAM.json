@@ -226,6 +226,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M51_IMUI_P2_DIAGNOSTICS_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M52_IMUI_P3_MULTIWINDOW_PACKAGE_SOURCE_GATE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -379,6 +383,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M49_IMUI_MENU_TAB_TRIGGER_RESPONSE_CANONICALIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M50_IMUI_WORKBENCH_SHELL_CLOSURE_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M51_IMUI_P2_DIAGNOSTICS_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M52_IMUI_P3_MULTIWINDOW_PACKAGE_SOURCE_GATE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],
