@@ -1,6 +1,6 @@
 # Fret Examples Build Latency v1
 
-Status: active
+Status: maintenance
 
 ## Problem
 

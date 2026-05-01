@@ -1,6 +1,6 @@
 # Fret Examples Build Latency v1 - Evidence And Gates
 
-Status: active
+Status: maintenance
 
 ## Smallest Repro
 

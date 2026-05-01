@@ -987,7 +987,7 @@ Rule:
 - `docs/workstreams/fretboard-public-app-author-surface-v1/` — first 2026-04-09, latest 2026-04-09, 10 markdown docs
 - `docs/workstreams/fretboard-public-dev-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 6 markdown docs
 - `docs/workstreams/fretboard-public-diag-implementation-v1/` — first 2026-04-09, latest 2026-04-09, 5 markdown docs
-- `docs/workstreams/fret-examples-build-latency-v1/` — first n/a, latest n/a, 6 markdown docs (active lane for moving pure examples source-policy gates out of the monolithic `fret-examples` test binary and deciding follow-on demo build splits)
+- `docs/workstreams/fret-examples-build-latency-v1/` — first 2026-04-29, latest 2026-05-01, 67 markdown docs (maintenance lane for keeping examples source-policy gates out of the monolithic `fret-examples` test binary and preserving measured demo fast paths; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-12, 7 markdown docs
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-04-26, 5 markdown docs (maintenance lane for launch runner scheduling semantics and first-frame bootstrap evidence; includes `WORKSTREAM.json`)

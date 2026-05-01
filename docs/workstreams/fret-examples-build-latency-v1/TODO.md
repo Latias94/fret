@@ -1,6 +1,6 @@
 # Fret Examples Build Latency v1 - TODO
 
-Status: active
+Status: maintenance
 
 - [x] Start a dedicated workstream for examples/demo build latency.
 - [x] Move the sortable table source-marker gate out of the monolithic `fret-examples` unit test.

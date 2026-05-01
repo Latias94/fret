@@ -1,6 +1,6 @@
 # Fret Examples Build Latency v1 - Milestones
 
-Status: active
+Status: maintenance
 
 ## M0 - Baseline And First Source Gate
 
