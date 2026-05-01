@@ -133,6 +133,8 @@ Status: active
   while keeping real owner-crate, campaign, and host-admitted behavior gates.
 - [x] Move the docking mixed-DPI support note source-policy checks out of the monolithic
   `fret-examples` unit test while keeping the real host-admitted mixed-DPI proof surfaces.
+- [x] Move the diagnostics environment source-policy checks out of the monolithic
+  `fret-examples` unit test while keeping the real owner-crate behavior gates.
 
 ## Parked
 

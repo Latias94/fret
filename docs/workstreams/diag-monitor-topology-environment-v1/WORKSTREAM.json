@@ -3,7 +3,7 @@
   "slug": "diag-monitor-topology-environment-v1",
   "title": "Diag Monitor Topology Environment v1",
   "status": "closed",
-  "updated": "2026-04-20",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "problem": "The docking mixed-DPI automation decision froze `scale_factors_seen` as run-observed evidence, but diagnostics still lacked a first-class host monitor-topology environment source. This lane closed that gap through a runner-owned runtime snapshot and additive bundle export without inventing environment predicates or mixed-DPI-only gates.",
   "authoritative_docs": [
@@ -41,7 +41,7 @@
     "commands": [
       "rg -n \"RunnerMonitorTopologyDiagnosticsStore|RunnerMonitorTopologySnapshotV1|monitor_topology|scale_factors_seen\" crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs crates/fret-launch/src/runner/desktop/runner/app_handler.rs crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs docs/workstreams/diag-monitor-topology-environment-v1 docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md",
       "cargo nextest run -p fret-bootstrap --lib env_fingerprint_exports_host_monitor_topology_without_reclassifying_scale_factors_seen --no-fail-fast",
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_topology_follow_on --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
@@ -55,7 +55,7 @@
     },
     {
       "name": "source-policy-gate",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_topology_follow_on --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "layering-gate",
@@ -95,7 +95,7 @@
     "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0017-multi-window-display-and-dpi.md",

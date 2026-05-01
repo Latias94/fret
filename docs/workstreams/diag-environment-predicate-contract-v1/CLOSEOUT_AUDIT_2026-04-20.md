@@ -126,7 +126,7 @@ Conclusion:
   - `cargo nextest run -p fret-diag-protocol --lib environment_sources_get --no-fail-fast`
   - `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics-ws" --lib environment_sources_get --no-fail-fast`
   - `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics" --lib refresh_environment_source_files_publishes_launch_time_monitor_topology_sidecars --no-fail-fast`
-  - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast`
+  - `python tools/gate_imui_workstream_source.py`
   - `python3 tools/check_workstream_catalog.py`
   - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
   - `python3 -m json.tool docs/workstreams/diag-environment-predicate-contract-v1/WORKSTREAM.json > /dev/null`

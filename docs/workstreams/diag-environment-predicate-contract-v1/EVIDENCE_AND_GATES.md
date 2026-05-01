@@ -9,14 +9,14 @@ admission seam:
 
 ```bash
 rg -n "ElementEnvironmentSnapshotV1|RendererFontEnvironmentSnapshot|UiDiagnosticsEnvFingerprintV1|requires_capabilities|diag-environment-predicate-contract-v1" ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs crates/fret-runtime/src/font_catalog.rs crates/fret-diag/src/registry/campaigns.rs docs/workstreams/diag-environment-predicate-contract-v1 docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md docs/workstreams/resource-loading-fearless-refactor-v1/README.md
-rg -n "refresh_environment_source_files|environment_source_catalog_provenance|environment_sources_path|HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1|FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1" ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs crates/fret-diag/src/lib.rs crates/fret-diag/src/diag_campaign.rs crates/fret-diag-protocol/src/lib.rs docs/workstreams/diag-environment-predicate-contract-v1/M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md apps/fret-examples/src/lib.rs
-rg -n "environment.sources.get|environment.sources.get_ack|devtools.environment_sources|PreflightTransportSession|read_transport_published_environment_sources|wait_for_environment_sources_get_ack" crates/fret-diag-protocol/src/lib.rs crates/fret-diag/src/devtools.rs crates/fret-diag/src/lib.rs ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs docs/workstreams/diag-environment-predicate-contract-v1/M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md apps/fret-examples/src/lib.rs
-rg -n "requires_environment|HostMonitorTopologyPredicateDefinition|maybe_execute_campaign_environment_admission|check.environment.json|LaunchTimeProbe|distinct_scale_factor_count_ge" crates/fret-diag/src/registry/campaigns.rs crates/fret-diag/src/diag_campaign.rs tools/diag-campaigns/README.md docs/workstreams/diag-environment-predicate-contract-v1/M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md apps/fret-examples/src/lib.rs
+rg -n "refresh_environment_source_files|environment_source_catalog_provenance|environment_sources_path|HOST_MONITOR_TOPOLOGY_ENVIRONMENT_SOURCE_ID_V1|FILESYSTEM_HOST_MONITOR_TOPOLOGY_ENVIRONMENT_PAYLOAD_FILE_NAME_V1" ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs crates/fret-diag/src/lib.rs crates/fret-diag/src/diag_campaign.rs crates/fret-diag-protocol/src/lib.rs docs/workstreams/diag-environment-predicate-contract-v1/M3_HOST_MONITOR_TOPOLOGY_LAUNCH_TIME_PUBLICATION_AND_CAMPAIGN_PROVENANCE_2026-04-20.md tools/gate_imui_workstream_source.py
+rg -n "environment.sources.get|environment.sources.get_ack|devtools.environment_sources|PreflightTransportSession|read_transport_published_environment_sources|wait_for_environment_sources_get_ack" crates/fret-diag-protocol/src/lib.rs crates/fret-diag/src/devtools.rs crates/fret-diag/src/lib.rs ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs docs/workstreams/diag-environment-predicate-contract-v1/M4_TRANSPORT_SESSION_ENVIRONMENT_SOURCE_QUERY_FOUNDATION_2026-04-20.md tools/gate_imui_workstream_source.py
+rg -n "requires_environment|HostMonitorTopologyPredicateDefinition|maybe_execute_campaign_environment_admission|check.environment.json|LaunchTimeProbe|distinct_scale_factor_count_ge" crates/fret-diag/src/registry/campaigns.rs crates/fret-diag/src/diag_campaign.rs tools/diag-campaigns/README.md docs/workstreams/diag-environment-predicate-contract-v1/M5_REQUIRES_ENVIRONMENT_HOST_MONITOR_TOPOLOGY_ADMISSION_2026-04-20.md tools/gate_imui_workstream_source.py
 cargo nextest run -p fret-diag-protocol --lib environment_sources_get --no-fail-fast
 cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics-ws" --lib environment_sources_get --no-fail-fast
 cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics" --lib refresh_environment_source_files_publishes_launch_time_monitor_topology_sidecars --no-fail-fast
 cargo nextest run -p fret-diag --lib environment_admission --no-fail-fast
-cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast
+python tools/gate_imui_workstream_source.py
 ```
 
 What this proves:
@@ -42,7 +42,7 @@ What this proves:
 ### Source-policy gate
 
 ```bash
-cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast
+python tools/gate_imui_workstream_source.py
 ```
 
 ### Environment-foundation gate
@@ -163,4 +163,4 @@ git diff --check
 - `tools/diag-campaigns/README.md`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`

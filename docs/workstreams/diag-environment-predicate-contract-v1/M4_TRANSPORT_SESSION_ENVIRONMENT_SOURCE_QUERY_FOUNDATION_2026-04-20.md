@@ -17,7 +17,7 @@ Related:
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
 - `docs/ui-diagnostics-and-scripted-tests.md`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Purpose
 
@@ -140,12 +140,12 @@ matrix instead of speculation.
   - `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
 - Living docs + source-policy gate:
   - `docs/ui-diagnostics-and-scripted-tests.md`
-  - `apps/fret-examples/src/lib.rs`
+  - `tools/gate_imui_workstream_source.py`
 
 ## Verification
 
 - `cargo nextest run -p fret-diag-protocol --lib environment_sources_get --no-fail-fast`
 - `cargo nextest run -p fret-diag --lib environment_source --no-fail-fast`
 - `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics-ws" --lib environment_sources_get --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `git diff --check`

@@ -956,3 +956,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M54_DOCKING_MIXED_DPI_SUPPORT_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M55 - Diagnostics Environment Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- Diagnostics monitor-topology and environment-predicate source-policy markers no longer compile
+  the monolithic `fret-examples` unit-test module.
+- The Python IMUI workstream source gate covers the closed diagnostics environment lanes and the
+  owner source markers they freeze.
+- Real owner-crate diagnostics behavior gates remain outside this source freeze.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M55_DIAGNOSTICS_ENVIRONMENT_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

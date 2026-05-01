@@ -12,7 +12,7 @@ Related:
 - `EVIDENCE_AND_GATES.md`
 - `crates/fret-diag-protocol/src/lib.rs`
 - `crates/fret-diag/src/lib.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Purpose
 
@@ -53,7 +53,7 @@ note.
 
 ### 3) Source-policy gates now freeze the code shape too
 
-`apps/fret-examples/src/lib.rs` now asserts that:
+`tools/gate_imui_workstream_source.py` now asserts that:
 
 - the workstream keeps the M2 contract note visible,
 - the diagnostics protocol keeps the environment-source catalog types visible,
@@ -88,10 +88,10 @@ Landing the protocol and loader foundation first keeps the next slice additive a
 - Diagnostics loader/provenance:
   - `crates/fret-diag/src/lib.rs`
 - Source-policy gate:
-  - `apps/fret-examples/src/lib.rs`
+  - `tools/gate_imui_workstream_source.py`
 
 ## Verification
 
 - `cargo nextest run -p fret-diag --lib environment_source --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `git diff --check`

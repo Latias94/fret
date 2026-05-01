@@ -9,7 +9,7 @@ Use this sequence to reopen the shipped environment-fingerprint evidence:
 ```bash
 rg -n "RunnerMonitorTopologyDiagnosticsStore|RunnerMonitorTopologySnapshotV1|monitor_topology|scale_factors_seen" crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs crates/fret-launch/src/runner/desktop/runner/app_handler.rs crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs docs/workstreams/diag-monitor-topology-environment-v1 docs/workstreams/docking-multiwindow-imgui-parity/M3_MIXED_DPI_AUTOMATION_DECISION_2026-04-20.md
 cargo nextest run -p fret-bootstrap --lib env_fingerprint_exports_host_monitor_topology_without_reclassifying_scale_factors_seen --no-fail-fast
-cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_topology_follow_on --no-fail-fast
+python tools/gate_imui_workstream_source.py
 ```
 
 What this proves:
@@ -26,7 +26,7 @@ What this proves:
 ```bash
 cargo nextest run -p fret-runtime --lib --no-fail-fast
 cargo nextest run -p fret-bootstrap --lib env_fingerprint_exports_host_monitor_topology_without_reclassifying_scale_factors_seen --no-fail-fast
-cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_topology_follow_on --no-fail-fast
+python tools/gate_imui_workstream_source.py
 python3 tools/check_layering.py
 ```
 
@@ -67,4 +67,4 @@ git diff --check
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`

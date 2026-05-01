@@ -18,7 +18,7 @@ Related:
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
 - `docs/ui-diagnostics-and-scripted-tests.md`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Purpose
 
@@ -139,12 +139,12 @@ The correct first consumer was campaign output plumbing, because that:
   - `crates/fret-diag/src/diag_campaign.rs`
 - Living doc + source-policy gate:
   - `docs/ui-diagnostics-and-scripted-tests.md`
-  - `apps/fret-examples/src/lib.rs`
+  - `tools/gate_imui_workstream_source.py`
 
 ## Verification
 
 - `cargo nextest run -p fret-bootstrap --features "ui-app-driver diagnostics" --lib refresh_environment_source_files_publishes_launch_time_monitor_topology_sidecars --no-fail-fast`
 - `cargo nextest run -p fret-diag --lib environment_source --no-fail-fast`
 - `cargo nextest run -p fret-diag --lib capability_preflight_writes_check_summary_and_result_artifacts --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_diag_environment_predicate_taxonomy --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `git diff --check`

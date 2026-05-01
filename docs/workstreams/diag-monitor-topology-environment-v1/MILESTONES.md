@@ -34,7 +34,7 @@ Primary gates:
 
 - `cargo nextest run -p fret-runtime --lib --no-fail-fast`
 - `cargo nextest run -p fret-bootstrap --lib env_fingerprint_exports_host_monitor_topology_without_reclassifying_scale_factors_seen --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p3_mixed_dpi_monitor_topology_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 
 Status:
 
