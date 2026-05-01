@@ -24,4 +24,4 @@ This is intentionally app-owned proof depth:
 ## Gates
 
 - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_inspector_command_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`

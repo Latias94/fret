@@ -1730,6 +1730,123 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-inspector-command-v1/DESIGN.md"),
+            required=[
+                "Status: active narrow P1 lane",
+                "deepen app-owned editor-grade behavior in an existing",
+                "Add one explicit inspector-local command affordance to `editor_notes_demo.rs`.",
+                "No generic command palette or command bus.",
+                "No platform clipboard integration.",
+                "Add a `Copy asset summary` inspector command",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-editor-notes-inspector-command-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-helper-readiness-v1"',
+                '"path": "docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md"',
+                '"path": "docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md"',
+                "editor-notes-inspector-command-closeout-source-policy",
+                "python tools/gate_imui_workstream_source.py",
+                "editor_notes_demo",
+                "editor_notes_editor_rail_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_editor_notes_inspector_command_follow_on",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md"),
+            required=[
+                "`editor_notes_demo.rs` now carries one inspector-local command/status loop:",
+                "`Copy asset summary` is rendered inside the existing `InspectorPanel` / `PropertyGrid` surface.",
+                "The command updates an app-owned summary status model for the selected asset.",
+                "no generic command palette",
+                "no platform clipboard integration",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/editor_notes_demo.rs"),
+            required=[
+                "const TEST_ID_SUMMARY_COMMAND: &str = \"editor-notes-demo.inspector.summary-command\";",
+                "const TEST_ID_SUMMARY_STATUS: &str = \"editor-notes-demo.inspector.summary-status\";",
+                "fn editor_asset_summary_command_status(",
+                "summary_status_model: Model<String>",
+                "shadcn::Button::new(\"Copy asset summary\")",
+                ".test_id(TEST_ID_SUMMARY_COMMAND)",
+                ".test_id(TEST_ID_SUMMARY_STATUS)",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md"),
+            required=[
+                "Treat `imui-editor-notes-inspector-command-v1` as a closed app-owned inspector command proof.",
+                "The first `Copy asset summary` slice is coherent enough to close the lane",
+                "Do not reopen this folder for generic command, clipboard, inspector, or IMUI helper implementation.",
+                "the exact app-owned editor behavior still missing",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-notes-inspector-command-v1/EVIDENCE_AND_GATES.md"),
+            required=[
+                "deepen an existing editor-grade proof surface while keeping generic IMUI/helper surfaces",
+                "python tools/gate_imui_workstream_source.py",
+                "cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast",
+                "`M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md` proves one inspector-local command/status loop",
+                "`CLOSEOUT_AUDIT_2026-04-24.md` closes the lane after the first app-owned command/status proof.",
+            ],
+            forbidden=[
+                "immediate_mode_workstream_closes_the_p1_editor_notes_inspector_command_follow_on",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/TODO.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/EVIDENCE_AND_GATES.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/TODO.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/EVIDENCE_AND_GATES.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/DESIGN.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/TODO.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/MILESTONES.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/M1_APP_OWNED_SUMMARY_COMMAND_SLICE_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/CLOSEOUT_AUDIT_2026-04-24.md`",
+                "`docs/workstreams/imui-editor-notes-inspector-command-v1/EVIDENCE_AND_GATES.md`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

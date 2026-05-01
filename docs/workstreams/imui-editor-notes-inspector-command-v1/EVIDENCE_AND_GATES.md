@@ -15,12 +15,12 @@ closed.
 - `docs/workstreams/imui-collection-helper-readiness-v1/CLOSEOUT_AUDIT_2026-04-24.md`
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## Focused Gates
 
 - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast`
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_editor_notes_inspector_command_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `python3 tools/check_workstream_catalog.py`
 - `python3 -m json.tool docs/workstreams/imui-editor-notes-inspector-command-v1/WORKSTREAM.json > /dev/null`
 - `git diff --check`
