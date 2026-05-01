@@ -142,6 +142,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M30_IMUI_COLLECTION_KEYBOARD_OWNER_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M31_IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM_SOURCE_GATE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -274,6 +278,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M28_IMUI_FACADE_MODULARIZATION_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M29_IMUI_COLLECTION_BOX_SELECT_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M30_IMUI_COLLECTION_KEYBOARD_OWNER_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M31_IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM_SOURCE_GATE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],

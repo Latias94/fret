@@ -573,6 +573,106 @@ def main() -> None:
             ],
             forbidden=[],
         ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-delete-action-v1/DESIGN.md"),
+            required=[
+                "The closed collection keyboard-owner lane already deferred collection action semantics.",
+                "The first landable target is therefore narrow:",
+                "make `Delete` / `Backspace` remove the current selected set in visible collection order,",
+                "add one explicit button-owned affordance for the same action,",
+                "Do not start by designing a shared collection command facade or helper.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md"),
+            required=[
+                "The closed collection keyboard-owner lane explicitly deferred collection action semantics.",
+                "The proof-budget rule and runtime contract posture remain unchanged for this lane.",
+                "The current proof surface already has the right ingredients for a narrow app-owned delete slice:",
+                "Dear ImGui keeps delete requests at the collection proof surface rather than using them as a reason to widen unrelated runtime or shared-helper contracts.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md"),
+            required=[
+                "The collection proof now supports one app-owned delete-selected action slice.",
+                "`Delete` / `Backspace` now remove the selected set from the stored asset model.",
+                "The explicit action button reuses the same delete helper instead of forking policy.",
+                "Remaining assets, selection, and keyboard active tile now reflow app-locally after deletion.",
+                "No new public `fret-ui-kit::imui` collection action helper is admitted in this lane.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md"),
+            required=[
+                "Status: closed closeout record",
+                "Treat `imui-collection-delete-action-v1` as:",
+                "a closeout record for the landed app-owned collection delete-selected slice",
+                "No reopening of the generic key-owner lane or the closed keyboard-owner folder.",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-collection-delete-action-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-collection-keyboard-owner-v1"',
+                '"path": "docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md"',
+                '"path": "docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md"',
+                '"path": "docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md"',
+                "python tools/gate_imui_workstream_source.py",
+                "proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item",
+                "proof_collection_delete_selection_picks_previous_visible_item_at_end",
+                "imui_editor_collection_delete_action_surface",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"),
+            required=[
+                "`docs/workstreams/imui-collection-delete-action-v1/` now records the closed",
+                "app-owned collection delete-selected slice in `imui_editor_proof_demo`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/README.md"),
+            required=[
+                "`docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/roadmap.md"),
+            required=[
+                "`docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/todo-tracker.md"),
+            required=[
+                "`docs/workstreams/imui-collection-delete-action-v1/DESIGN.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/M0_BASELINE_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/M1_APP_OWNED_DELETE_ACTION_SLICE_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/CLOSEOUT_AUDIT_2026-04-22.md`",
+                "`docs/workstreams/imui-collection-delete-action-v1/WORKSTREAM.json`",
+            ],
+            forbidden=[],
+        ),
     ]
 
     failures: list[str] = []

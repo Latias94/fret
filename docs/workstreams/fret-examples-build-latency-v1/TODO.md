@@ -69,6 +69,9 @@ Status: active
 - [x] Move the IMUI collection keyboard-owner workstream document/index markers out of the
   monolithic `fret-examples` unit test while keeping the real `proof_collection_keyboard_*` unit
   tests in Rust.
+- [x] Move the IMUI collection delete-action workstream document/index markers out of the
+  monolithic `fret-examples` unit test while keeping the real `proof_collection_delete_*` unit
+  tests in Rust.
 
 ## Parked
 

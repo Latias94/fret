@@ -527,3 +527,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M30_IMUI_COLLECTION_KEYBOARD_OWNER_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M31 - IMUI Collection Delete Action Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection delete-action workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- The closed collection delete-action workstream points its source-policy gate at the Python gate
+  instead of a deleted Rust source-marker test.
+- The real `proof_collection_delete_*` unit tests remain in Rust and stay named as the behavior
+  floor.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M31_IMUI_COLLECTION_DELETE_ACTION_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`
