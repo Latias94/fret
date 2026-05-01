@@ -438,26 +438,6 @@ mod authoring_surface_policy_tests {
         }
     }
 
-    fn assert_app_facing_concrete_helpers_prefer_app_render_cx(
-        src: &str,
-        required_markers: &[&str],
-        forbidden_markers: &[&str],
-    ) {
-        let normalized = src.split_whitespace().collect::<String>();
-        assert!(normalized.contains("AppRenderCx<'_>"));
-        for marker in required_markers {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(normalized.contains(&marker), "missing marker: {marker}");
-        }
-        for marker in forbidden_markers {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(
-                !normalized.contains(&marker),
-                "legacy marker still present: {marker}"
-            );
-        }
-    }
-
     fn assert_app_facing_generic_helpers_prefer_app_render_context(
         src: &str,
         required_markers: &[&str],
@@ -1103,40 +1083,6 @@ mod authoring_surface_policy_tests {
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
                 "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
                 "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
-            ],
-        );
-    }
-
-    #[test]
-    fn closure_local_app_facing_helpers_can_use_app_render_cx_alias() {
-        assert_app_facing_concrete_helpers_prefer_app_render_cx(
-            HELLO_WORLD_COMPARE_DEMO,
-            &[
-                "use fret_ui_kit::IntoUiElementInExt as _;",
-                "cx.set_continuous_frames(self.flags.uses_continuous_frames_lease());",
-                "let swatch = |_cx: &mut AppRenderCx<'_>, fill_rgb: u32, border_rgb: u32|",
-                "fn hello_world_compare_root<'a, Cx>(",
-                "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
-                "ui::text(\"Hello, World!\")",
-                ".text_size_px(Px(24.0))",
-                ".font_semibold()",
-                ".text_align(TextAlign::Center)",
-                ".nowrap()",
-                ".into_element_in(cx)",
-                "panel_bg: Color,",
-                "children: Vec<AnyElement>)",
-                "hello_world_compare_root(cx, panel_bg, children)",
-            ],
-            &[
-                "set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());",
-                "let swatch = |_cx: &mut AppComponentCx<'_>, fill_rgb: u32, border_rgb: u32|",
-                "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
-                "let swatch = |cx: &mut AppComponentCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
-                "fn hello_world_compare_root(cx: &mut AppComponentCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
-                "let cx = cx.elements();",
-                "cx.text_props(TextProps {",
-                ".into_element(cx)",
-                "hello_world_compare_root(cx.elements(), panel_bg, children)",
             ],
         );
     }

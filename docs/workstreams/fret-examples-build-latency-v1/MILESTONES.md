@@ -991,3 +991,21 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M56_EMBEDDED_VIEWPORT_SOURCE_GATE_2026-05-01.md`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M57 - Hello World Compare Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- The `hello_world_compare_demo` app-facing helper source-policy markers no longer compile the
+  monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate covers the `AppRenderCx` closure helper and app-lane root
+  helper markers.
+- Runtime-frame sample source checks remain in Rust for now.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M57_HELLO_WORLD_COMPARE_SOURCE_GATE_2026-05-01.md`
+- `tools/examples_source_tree_policy/app_facing.py`
+- `apps/fret-examples/src/lib.rs`

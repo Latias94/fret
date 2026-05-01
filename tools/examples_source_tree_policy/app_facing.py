@@ -272,6 +272,35 @@ EMBEDDED_VIEWPORT_CAPABILITY_RENDER_FORBIDDEN = [
     ".max_w(Px(980.0)).into_element(cx);",
 ]
 
+HELLO_WORLD_COMPARE_APP_RENDER_CX_REQUIRED = [
+    "use fret_ui_kit::IntoUiElementInExt as _;",
+    "cx.set_continuous_frames(self.flags.uses_continuous_frames_lease());",
+    "let swatch = |_cx: &mut AppRenderCx<'_>, fill_rgb: u32, border_rgb: u32|",
+    "fn hello_world_compare_root<'a, Cx>(",
+    "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
+    "ui::text(\"Hello, World!\")",
+    ".text_size_px(Px(24.0))",
+    ".font_semibold()",
+    ".text_align(TextAlign::Center)",
+    ".nowrap()",
+    ".into_element_in(cx)",
+    "panel_bg: Color,",
+    "children: Vec<AnyElement>)",
+    "hello_world_compare_root(cx, panel_bg, children)",
+]
+
+HELLO_WORLD_COMPARE_APP_RENDER_CX_FORBIDDEN = [
+    "set_continuous_frames(cx, self.flags.uses_continuous_frames_lease());",
+    "let swatch = |_cx: &mut AppComponentCx<'_>, fill_rgb: u32, border_rgb: u32|",
+    "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
+    "let swatch = |cx: &mut AppComponentCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",
+    "fn hello_world_compare_root(cx: &mut AppComponentCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui",
+    "let cx = cx.elements();",
+    "cx.text_props(TextProps {",
+    ".into_element(cx)",
+    "hello_world_compare_root(cx.elements(), panel_bg, children)",
+]
+
 CheckMarkers = Callable[..., None]
 ReadSource = Callable[[Path], str]
 SourceSlice = Callable[[Path, str, str, str], str]
@@ -402,5 +431,14 @@ def check_app_facing_demo_source_policies(
         ),
         required=EMBEDDED_VIEWPORT_CAPABILITY_RENDER_REQUIRED,
         forbidden=EMBEDDED_VIEWPORT_CAPABILITY_RENDER_FORBIDDEN,
+        failures=failures,
+    )
+
+    hello_world_compare_path = examples_src / "hello_world_compare_demo.rs"
+    check_required_forbidden_markers(
+        hello_world_compare_path,
+        read_source(hello_world_compare_path),
+        required=HELLO_WORLD_COMPARE_APP_RENDER_CX_REQUIRED,
+        forbidden=HELLO_WORLD_COMPARE_APP_RENDER_CX_FORBIDDEN,
         failures=failures,
     )

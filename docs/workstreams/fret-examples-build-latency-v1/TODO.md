@@ -137,6 +137,8 @@ Status: active
   `fret-examples` unit test while keeping the real owner-crate behavior gates.
 - [x] Move the embedded viewport source-policy checks out of the monolithic `fret-examples` unit
   test while keeping runtime behavior unchanged.
+- [x] Move the hello-world compare app-facing source-policy check out of the monolithic
+  `fret-examples` unit test while keeping runtime-frame sample behavior checks unchanged.
 
 ## Parked
 
