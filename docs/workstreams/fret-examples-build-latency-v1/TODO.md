@@ -107,6 +107,9 @@ Status: active
 - [x] Move the IMUI editor-notes draft actions workstream document/source-shape markers out of the
   monolithic `fret-examples` unit test while keeping the real editor rail/device shell surface
   tests in Rust.
+- [x] Move the IMUI TextField draft-buffer contract audit document/source-shape markers out of the
+  monolithic `fret-examples` unit test; this closed no-public-API audit has no real Rust behavior
+  test.
 
 ## Parked
 

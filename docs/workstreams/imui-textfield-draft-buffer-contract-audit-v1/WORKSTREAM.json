@@ -3,7 +3,7 @@
   "slug": "imui-textfield-draft-buffer-contract-audit-v1",
   "title": "ImUi TextField Draft Buffer Contract Audit v1",
   "status": "closed",
-  "updated": "2026-04-24",
+  "updated": "2026-05-01",
   "scope_kind": "closeout",
   "follow_on_of": "imui-editor-notes-draft-actions-v1",
   "problem": "The editor-notes draft-actions lane closed with app-owned action/status markers instead of external access to the preserved TextField draft buffer. This audit decides whether the internal draft buffer is ready to become a public contract.",
@@ -44,13 +44,13 @@
   "repro": {
     "summary": "Run the source-policy gate that locks the no-public-API draft-buffer verdict.",
     "commands": [
-      "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_buffer_contract_audit --no-fail-fast"
+      "python tools/gate_imui_workstream_source.py"
     ]
   },
   "gates": [
     {
       "name": "textfield-draft-buffer-contract-audit-source-policy",
-      "command": "cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_textfield_draft_buffer_contract_audit --no-fail-fast"
+      "command": "python tools/gate_imui_workstream_source.py"
     },
     {
       "name": "workstream-catalog",
@@ -74,7 +74,7 @@
     "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
     "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json",
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",
-    "apps/fret-examples/src/lib.rs"
+    "tools/gate_imui_workstream_source.py"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
