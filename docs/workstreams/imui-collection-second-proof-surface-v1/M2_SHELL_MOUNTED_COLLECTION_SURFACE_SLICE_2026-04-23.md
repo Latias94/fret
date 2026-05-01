@@ -32,7 +32,7 @@ Owned here:
 
 - `apps/fret-examples/src/editor_notes_demo.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs` source-policy coverage
+- `tools/gate_imui_workstream_source.py` source-policy coverage
 
 Not owned here:
 
@@ -43,7 +43,7 @@ Not owned here:
 
 ## Gate floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test workspace_shell_pane_proof_surface --test workspace_shell_editor_rail_surface --no-fail-fast`
 
 These gates now prove that the second proof-surface lane has a real shell-mounted collection

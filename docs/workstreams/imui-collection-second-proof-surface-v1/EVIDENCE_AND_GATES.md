@@ -24,7 +24,7 @@ or runtime growth.
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
 - `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs`
 - `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 
 ## First-open repro surfaces
 
@@ -33,14 +33,14 @@ or runtime growth.
 2. Supporting shell-mounted proof surface
    - `cargo run -p fret-demo --bin workspace_shell_demo`
 3. Current closeout source-policy and surface floor
-   - `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast`
+   - `python tools/gate_imui_workstream_source.py`
    - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test workspace_shell_pane_proof_surface --test workspace_shell_editor_rail_surface --no-fail-fast`
 
 ## Current focused gates
 
 ### Lane-local closeout source-policy floor
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_closes_the_p1_collection_second_proof_surface_follow_on --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 
 This floor currently proves:
 

@@ -92,6 +92,9 @@ Status: active
 - [x] Move the IMUI collection command-package workstream document/index markers out of the
   monolithic `fret-examples` unit test while keeping the real duplicate/rename behavior unit tests
   in Rust.
+- [x] Move the IMUI collection second proof-surface workstream document/source-shape markers out of
+  the monolithic `fret-examples` unit test while keeping the real shell-mounted surface tests in
+  Rust.
 
 ## Parked
 
