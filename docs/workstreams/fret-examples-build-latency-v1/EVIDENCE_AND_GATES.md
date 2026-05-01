@@ -155,10 +155,14 @@ git diff --check
   `docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md`
   after moving IMUI response/key-owner workstream document freeze markers into
   `tools/gate_imui_workstream_source.py`.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M27_IMUI_COLLECTION_PANE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+  after moving IMUI collection/pane proof workstream document and proof-surface markers into
+  `tools/gate_imui_workstream_source.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the IMUI P0 workstream source migration: 271 `include_str!` occurrences and 57
-  Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
+- Current count after the IMUI collection/pane workstream source migration: 266 `include_str!`
+  occurrences and 54 Rust `#[test]` functions remain in `apps/fret-examples/src/lib.rs`.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
   evaluated.
@@ -215,4 +219,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M24_IMUI_INTERACTION_SHOWCASE_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M25_IMUI_RESPONSE_SIGNALS_SOURCE_GATE_2026-04-30.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M27_IMUI_COLLECTION_PANE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
 - `Cargo.toml`

@@ -60,6 +60,8 @@ Status: active
   markers out of the monolithic `fret-examples` unit test.
 - [x] Move the IMUI P0 response/key-owner workstream document freeze markers out of the monolithic
   `fret-examples` unit test.
+- [x] Move the IMUI collection/pane proof workstream document and proof-surface markers out of the
+  monolithic `fret-examples` unit test.
 
 ## Parked
 

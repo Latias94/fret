@@ -322,20 +322,6 @@ mod authoring_surface_policy_tests {
     );
     const IMUI_IMGUI_PARITY_AUDIT_V2: &str =
         include_str!("../../../docs/workstreams/standalone/imui-imgui-parity-audit-v2.md");
-    const IMUI_COLLECTION_PANE_PROOF_M1_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-pane-proof-v1/M1_PROOF_ROSTER_FREEZE_2026-04-21.md"
-    );
-    const IMUI_COLLECTION_PANE_PROOF_M2_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-pane-proof-v1/M2_COLLECTION_PROOF_CLOSURE_2026-04-21.md"
-    );
-    const IMUI_COLLECTION_PANE_PROOF_M3_NOTE: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-pane-proof-v1/M3_PANE_PROOF_CLOSURE_2026-04-21.md"
-    );
-    const IMUI_COLLECTION_PANE_PROOF_CLOSEOUT: &str = include_str!(
-        "../../../docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md"
-    );
-    const IMUI_COLLECTION_PANE_PROOF_WORKSTREAM: &str =
-        include_str!("../../../docs/workstreams/imui-collection-pane-proof-v1/WORKSTREAM.json");
     const IMUI_CHILD_REGION_DEPTH_DESIGN: &str =
         include_str!("../../../docs/workstreams/imui-child-region-depth-v1/DESIGN.md");
     const IMUI_CHILD_REGION_DEPTH_M0_NOTE: &str = include_str!(
@@ -1198,65 +1184,6 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on() {
-        for marker in [
-            "`apps/fret-examples/src/imui_editor_proof_demo.rs`",
-            "`apps/fret-examples/src/workspace_shell_demo.rs`",
-            "`apps/fret-examples/src/editor_notes_demo.rs`",
-            "Keep `apps/fret-examples/src/imui_editor_proof_demo.rs` as the current collection-first proof",
-            "Keep `apps/fret-examples/src/workspace_shell_demo.rs` as the current pane-first proof",
-            "Keep `apps/fret-examples/src/editor_notes_demo.rs` as the supporting minimal pane rail proof.",
-            "Do not introduce a dedicated asset-grid/file-browser proof demo yet.",
-            "Do not introduce a narrower child-region-only proof demo yet.",
-            "key ownership",
-            "promoted shell helpers",
-            "runner/backend multi-window parity",
-            "broader menu/tab policy",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_M1_NOTE.contains(marker),
-                "the collection/pane proof follow-on should keep the frozen M1 proof roster explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"slug\": \"imui-collection-pane-proof-v1\"",
-            "\"status\": \"closed\"",
-            "\"follow_on_of\": \"imui-editor-grade-product-closure-v1\"",
-            "\"path\": \"docs/workstreams/imui-collection-pane-proof-v1/CLOSEOUT_AUDIT_2026-04-21.md\"",
-            "immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on",
-            "workspace_shell_demo",
-            "editor_notes_demo",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_WORKSTREAM.contains(marker),
-                "the collection/pane proof lane state should keep the M1 source-policy markers explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "`docs/workstreams/imui-collection-pane-proof-v1/` now records the closed collection-first /",
-            "pane-first proof pair with a no-helper-widening verdict",
-        ] {
-            assert!(
-                IMUI_EDITOR_GRADE_PRODUCT_CLOSURE_TODO.contains(marker),
-                "the umbrella lane should keep the collection/pane proof follow-on explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "M4 closes on a no-helper-widening verdict.",
-            "do not add helper widening, a narrower pane-only demo, or a narrower pane-only diagnostics path",
-            "Treat `imui-collection-pane-proof-v1` as:",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_CLOSEOUT.contains(marker),
-                "the collection/pane proof lane should keep its closeout verdict explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
     fn immediate_mode_workstream_freezes_the_p0_imui_facade_internal_modularization_follow_on() {
         for marker in [
             "keep the public `fret-ui-kit::imui` surface stable while restructuring internals",
@@ -1391,50 +1318,6 @@ mod authoring_surface_policy_tests {
             assert!(
                 TODO_TRACKER_DOC.contains(marker),
                 "the todo tracker should list the active internal modularization lane: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit() {
-        for marker in [
-            "Collection-first asset browser proof",
-            "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
-            "imui-editor-proof.authoring.imui.collection.order-toggle",
-            "imui-editor-proof.authoring.imui.collection.browser",
-            "imui-editor-proof.authoring.imui.collection.grid",
-            "imui_editor_proof_demo.model.authoring_parity.collection_selection",
-            "imui_editor_proof_demo.model.authoring_parity.collection_box_select",
-            "imui_editor_proof_demo.model.authoring_parity.collection_reverse_order",
-            "imui_editor_proof_demo.model.authoring_parity.collection_drop_status",
-            "ui.id(asset.id.clone(), |ui| {",
-        ] {
-            assert!(
-                IMUI_EDITOR_PROOF_DEMO.contains(marker),
-                "imui_editor_proof_demo should keep the M2 collection-first asset browser proof explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "Keep `apps/fret-examples/src/imui_editor_proof_demo.rs` as the collection-first M2 proof surface.",
-            "Close M2 with an in-demo asset-browser/file-browser proof instead of a new dedicated demo.",
-            "Marquee / box-select stays deferred for M2.",
-            "`ecosystem/fret-imui/src/tests/interaction.rs` now proves selected collection drag payloads survive visible order flips.",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_M2_NOTE.contains(marker),
-                "the M2 collection proof note should keep the collection-first closure explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"path\": \"docs/workstreams/imui-collection-pane-proof-v1/M2_COLLECTION_PROOF_CLOSURE_2026-04-21.md\"",
-            "\"name\": \"collection-focused-interaction\"",
-            "collection_drag_payload_preserves_selected_keys_across_order_flip",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_WORKSTREAM.contains(marker),
-                "the collection/pane proof lane state should keep the M2 collection-first gates explicit: {marker}"
             );
         }
     }
@@ -3500,52 +3383,6 @@ mod authoring_surface_policy_tests {
             assert!(
                 EDITOR_NOTES_DRAFT_CONTROLLER_DIAG_SCRIPT.contains(marker),
                 "the editor-notes draft-controller diag script should keep commit/discard behavior explicit: {marker}"
-            );
-        }
-    }
-
-    #[test]
-    fn immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit() {
-        for marker in [
-            "struct WorkspaceShellPaneProofState {",
-            "fn workspace_shell_pane_proof<'a, Cx>(",
-            "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
-            "imui_build(cx, out, move |ui| {",
-            "workspace-shell-pane-{}-proof.shell",
-            "workspace-shell-pane-{}-proof.toolbar",
-            "workspace-shell-pane-{}-proof.tabs",
-            "workspace-shell-pane-{}-proof.inspector",
-            "workspace-shell-pane-{}-proof.status",
-            "Decision: keep the current `child_region` seam for M3.",
-            "vec![workspace_shell_pane_proof(",
-        ] {
-            assert!(
-                WORKSPACE_SHELL_DEMO.contains(marker),
-                "workspace_shell_demo should keep the M3 pane-first proof explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "Keep `apps/fret-examples/src/workspace_shell_demo.rs` as the pane-first M3 proof surface.",
-            "Close M3 with a shell-mounted pane proof inside the existing workspace shell demo.",
-            "Keep `ecosystem/fret-ui-kit/src/imui/child_region.rs` unchanged for M3.",
-            "No narrower pane-only diagnostics path is required at M3 because the existing workspace shell diag floor remains sufficient.",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_M3_NOTE.contains(marker),
-                "the M3 pane proof note should keep the pane-first closure explicit: {marker}"
-            );
-        }
-
-        for marker in [
-            "\"path\": \"docs/workstreams/imui-collection-pane-proof-v1/M3_PANE_PROOF_CLOSURE_2026-04-21.md\"",
-            "\"name\": \"pane-proof-source-policy\"",
-            "\"name\": \"pane-proof-surface-floor\"",
-            "workspace_shell_pane_proof_surface",
-        ] {
-            assert!(
-                IMUI_COLLECTION_PANE_PROOF_WORKSTREAM.contains(marker),
-                "the collection/pane proof lane state should keep the M3 pane-first gates explicit: {marker}"
             );
         }
     }

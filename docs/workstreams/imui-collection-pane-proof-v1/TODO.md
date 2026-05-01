@@ -71,10 +71,10 @@ proof/diag growth in this folder by default.
       - and collection selection persistence under explicit keyed identity.
       Result: `ecosystem/fret-imui/src/tests/interaction.rs` now exposes
       `collection_drag_payload_preserves_selected_keys_across_order_flip`, and
-      `apps/fret-examples/src/lib.rs` now locks the new source-policy markers.
+      `tools/gate_imui_workstream_source.py` now locks the new source-policy markers.
 - [x] Add one lane-local source-policy gate once the collection-first proof surface is frozen.
-      Result: `apps/fret-examples/src/lib.rs` now exposes
-      `immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on`.
+      Result: `tools/gate_imui_workstream_source.py` now locks the collection/pane proof roster
+      and closeout markers.
 
 ## M3 - Pane-first proof closure
 
@@ -90,10 +90,9 @@ proof/diag growth in this folder by default.
       `ecosystem/fret-ui-kit/src/imui/child_region.rs` unchanged for M3 because the current seam
       is sufficient for the pane proof.
 - [x] Add one pane-focused gate package and, if needed, one launched diagnostics smoke path.
-      Result: `apps/fret-examples/src/lib.rs` now exposes
-      `immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit`,
-      `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs` now locks the source
-      markers, and the lane reuses the existing workspace shell diag floor instead of adding a
+      Result: `tools/gate_imui_workstream_source.py` now locks the M3 pane source markers,
+      `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs` still locks the pane proof
+      surface, and the lane reuses the existing workspace shell diag floor instead of adding a
       narrower pane-only diagnostics path.
 
 ## M4 - Helper decision or closeout

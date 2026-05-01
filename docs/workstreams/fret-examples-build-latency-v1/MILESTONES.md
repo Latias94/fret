@@ -452,3 +452,22 @@ Current evidence:
 - `docs/workstreams/fret-examples-build-latency-v1/M26_IMUI_P0_WORKSTREAM_SOURCE_GATE_2026-04-30.md`
 - `tools/gate_imui_workstream_source.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M27 - IMUI Collection/Pane Workstream Source Gate
+
+Status: complete
+
+Exit criteria:
+
+- IMUI collection/pane proof M1/M2/M3 workstream freeze markers no longer compile the monolithic
+  `fret-examples` unit-test module.
+- Collection-first asset-browser and pane-first workspace-shell proof-surface markers are covered
+  by `tools/gate_imui_workstream_source.py`.
+- The closed collection/pane proof workstream points its current source-policy gates at Python
+  gates instead of deleted Rust source-marker tests.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M27_IMUI_COLLECTION_PANE_WORKSTREAM_SOURCE_GATE_2026-05-01.md`
+- `tools/gate_imui_workstream_source.py`
+- `apps/fret-examples/src/lib.rs`

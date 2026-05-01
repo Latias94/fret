@@ -39,14 +39,16 @@ Implementation / gate anchors:
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/editor_notes_demo.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
+- `tools/gate_imui_facade_teaching_source.py`
 - `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`
 - `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
 
 Validation run used for closeout:
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures imui_editor_proof_authoring_immediate_column_uses_official_editor_adapters imui_editor_proof_keeps_app_owned_sortable_and_dock_helpers_explicit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
+- `python tools/gate_imui_facade_teaching_source.py`
 - `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test workspace_shell_pane_proof_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `cargo nextest run -p fret-imui collection_drag_payload_preserves_selected_keys_across_order_flip --no-fail-fast`
 - `git diff --check`
@@ -66,8 +68,9 @@ The shipped M2 slice already proves the important collection-first outcome on a 
 - `ecosystem/fret-imui/src/tests/interaction.rs` keeps keyed selection persistence under order
   flips executable through
   `collection_drag_payload_preserves_selected_keys_across_order_flip`,
-- and the lane-local source-policy tests in `apps/fret-examples/src/lib.rs` freeze that this proof
-  lives in the current demo instead of forcing a new dedicated asset-grid/file-browser demo.
+- and the lane-local source-policy gate in `tools/gate_imui_workstream_source.py` freezes that
+  this proof lives in the current demo instead of forcing a new dedicated asset-grid/file-browser
+  demo.
 
 Conclusion:
 

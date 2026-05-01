@@ -17,8 +17,8 @@ Status: closed on 2026-04-21
   - visible-order flipping without losing selection membership,
   - and selected-set drag/drop payloads delivered to an app-owned import target.
 - `ecosystem/fret-imui/src/tests/interaction.rs` now proves selected collection drag payloads survive visible order flips.
-- `apps/fret-examples/src/lib.rs` now locks the M2 collection proof markers with source-policy
-  assertions.
+- `tools/gate_imui_workstream_source.py` now locks the M2 collection proof markers with
+  source-policy assertions.
 
 ## Why this closes M2
 
@@ -31,11 +31,11 @@ Status: closed on 2026-04-21
 ## Evidence
 
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `ecosystem/fret-ui-kit/src/imui/multi_select.rs`
 
 ## Gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-imui collection_drag_payload_preserves_selected_keys_across_order_flip --no-fail-fast`

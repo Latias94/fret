@@ -1,7 +1,7 @@
 # ImUi Collection + Pane Proof v1 - Evidence & Gates
 
 Status: closed closeout record
-Last updated: 2026-04-21
+Last updated: 2026-05-01
 
 Status note (2026-04-21): the shipped M2/M3 proof pair satisfied the lane closeout condition.
 Keep this gate set as the regression floor for the closed proof pair rather than an invitation to
@@ -36,6 +36,8 @@ floor, and one bounded evidence set instead of turning into another vague `imui`
 - `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs`
 - `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs`
 - `apps/fret-examples/tests/editor_notes_editor_rail_surface.rs`
+- `tools/gate_imui_workstream_source.py`
+- `tools/gate_imui_facade_teaching_source.py`
 
 ## First-open closeout / reopen surfaces
 
@@ -61,7 +63,7 @@ Current frozen M1 roster:
 
 ### Lane-local source-policy gate
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_workstream_freezes_the_p0_p1_collection_pane_proof_follow_on immediate_mode_collection_pane_proof_m2_collection_first_asset_browser_slice_is_explicit immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 
 This gate currently proves:
 
@@ -84,7 +86,7 @@ This gate currently proves:
 
 ### Collection baseline floor
 
-- `cargo nextest run -p fret-examples --lib imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures imui_editor_proof_authoring_immediate_column_uses_official_editor_adapters imui_editor_proof_keeps_app_owned_sortable_and_dock_helpers_explicit --no-fail-fast`
+- `python tools/gate_imui_facade_teaching_source.py`
 
 This floor currently proves:
 

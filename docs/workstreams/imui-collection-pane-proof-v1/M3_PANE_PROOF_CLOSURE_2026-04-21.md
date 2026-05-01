@@ -21,7 +21,7 @@ Status: closed on 2026-04-21
   inside a shell-mounted pane host.
 - `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs` now locks the pane proof source
   markers in the example surface.
-- `apps/fret-examples/src/lib.rs` now locks the M3 pane proof markers with lane-local
+- `tools/gate_imui_workstream_source.py` now locks the M3 pane proof markers with lane-local
   source-policy assertions.
 
 ## Why this closes M3
@@ -39,11 +39,11 @@ Status: closed on 2026-04-21
 
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs`
-- `apps/fret-examples/src/lib.rs`
+- `tools/gate_imui_workstream_source.py`
 - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
 
 ## Gates
 
-- `cargo nextest run -p fret-examples --lib immediate_mode_collection_pane_proof_m3_pane_first_workspace_shell_slice_is_explicit --no-fail-fast`
+- `python tools/gate_imui_workstream_source.py`
 - `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test workspace_shell_pane_proof_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 - `cargo run -p fretboard-dev -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`

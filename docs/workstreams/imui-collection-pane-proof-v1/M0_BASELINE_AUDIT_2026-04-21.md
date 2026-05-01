@@ -106,7 +106,7 @@ Use the current baseline proof pair as the first-open repro surface:
 
 Keep the first gate floor narrow and existing:
 
-1. `cargo nextest run -p fret-examples --lib imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures imui_editor_proof_authoring_immediate_column_uses_official_editor_adapters imui_editor_proof_keeps_app_owned_sortable_and_dock_helpers_explicit --no-fail-fast`
+1. `python tools/gate_imui_facade_teaching_source.py`
 2. `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --test editor_notes_editor_rail_surface --no-fail-fast`
 3. `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke`
 4. `cargo nextest run -p fret-imui`
