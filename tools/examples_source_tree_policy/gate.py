@@ -8,6 +8,9 @@ from examples_source_tree_policy.advanced_helpers import (
     check_advanced_helper_context_source_policies,
 )
 from examples_source_tree_policy.app_facing import check_app_facing_demo_source_policies
+from examples_source_tree_policy.grouped_state import (
+    check_selected_grouped_state_source_policies,
+)
 from examples_source_tree_policy.interop import check_low_level_interop_source_policies
 from examples_source_tree_policy.manual import check_manual_ui_tree_source_policies
 from examples_source_tree_policy.owner_split import check_owner_split_source_policies
@@ -1400,6 +1403,12 @@ def main() -> None:
         check_required_forbidden_markers=check_required_forbidden_markers,
     )
     check_advanced_helper_context_source_policies(
+        failures,
+        examples_src=EXAMPLES_SRC,
+        read_source=read_source,
+        check_required_forbidden_markers=check_required_forbidden_markers,
+    )
+    check_selected_grouped_state_source_policies(
         failures,
         examples_src=EXAMPLES_SRC,
         read_source=read_source,

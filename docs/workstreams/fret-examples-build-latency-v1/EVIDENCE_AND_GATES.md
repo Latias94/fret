@@ -25,6 +25,7 @@ cargo check -p fret-demo --bin imui_hello_demo --bin imui_floating_windows_demo 
 cargo nextest run -p fret-examples-imui --no-fail-fast
 cargo check -p fret-examples --lib --jobs 1
 cargo check -p fret-examples --lib --profile dev-fast --jobs 1
+cargo nextest run -p fret-examples --lib parse_editor_theme_preset_key --no-fail-fast
 python tools/check_workstream_catalog.py
 git diff --check
 ```
@@ -58,6 +59,7 @@ git diff --check
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py tools/examples_source_tree_policy/manual.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/__init__.py tools/examples_source_tree_policy/gate.py tools/examples_source_tree_policy/app_facing.py tools/examples_source_tree_policy/interop.py tools/examples_source_tree_policy/manual.py tools/examples_source_tree_policy/owner_split.py`.
 - Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/advanced_helpers.py tools/examples_source_tree_policy/gate.py tools/check_workstream_catalog.py`.
+- Passed: `python -m py_compile tools/gate_examples_source_tree_policy.py tools/examples_source_tree_policy/grouped_state.py tools/examples_source_tree_policy/gate.py tools/check_workstream_catalog.py`.
 - Passed: `python -m py_compile tools/gate_fret_examples_imui_split_source.py`.
 - Passed: `cargo check -p fret-examples-imui --bins --jobs 1`.
 - Passed: `cargo check -p fret-examples-imui --bins --profile dev-fast --jobs 1`.
@@ -67,6 +69,8 @@ git diff --check
   entry; the direct IMUI proof crate does not depend on the monolithic examples crate.
 - Passed: `cargo check -p fret-examples --lib --jobs 1`.
 - Passed: `cargo check -p fret-examples --lib --profile dev-fast --jobs 1`.
+- Passed: `cargo nextest run -p fret-examples --lib parse_editor_theme_preset_key --no-fail-fast`
+  (2 parser behavior tests).
 - Passed: `python tools/check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md`
@@ -315,11 +319,15 @@ git diff --check
   after moving advanced helper/context source-policy checks into
   `tools/examples_source_tree_policy/advanced_helpers.py` and deleting orphaned `include_str!`
   constants.
+- Recorded:
+  `docs/workstreams/fret-examples-build-latency-v1/M62_GROUPED_STATE_SOURCE_GATE_CLOSURE_2026-05-01.md`
+  after moving the remaining grouped state/model-read source-policy checks into
+  `tools/examples_source_tree_policy/grouped_state.py`.
 - Recorded: `docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md`
   with the remaining source-policy test count and migration candidates.
-- Current count after the advanced helper context source migration: 25 `include_str!`
-  occurrences and 4 Rust `#[test]` functions remain in
-  `apps/fret-examples/src/lib.rs`.
+- Current count after the grouped state source migration: 0 `include_str!` occurrences and 2 Rust
+  `#[test]` functions remain in `apps/fret-examples/src/lib.rs`; both remaining tests are parser
+  behavior tests.
 - Noted: `python tools/check_workstream_state.py` is not usable as a lane-local gate yet because
   existing historical workstream state files fail the global strict validator before this lane is
   evaluated.
@@ -342,6 +350,7 @@ git diff --check
 - `tools/examples_source_tree_policy/advanced_helpers.py`
 - `tools/examples_source_tree_policy/app_facing.py`
 - `tools/examples_source_tree_policy/gate.py`
+- `tools/examples_source_tree_policy/grouped_state.py`
 - `tools/examples_source_tree_policy/interop.py`
 - `tools/examples_source_tree_policy/manual.py`
 - `tools/examples_source_tree_policy/owner_split.py`
@@ -413,4 +422,5 @@ git diff --check
 - `docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md`
 - `docs/workstreams/fret-examples-build-latency-v1/M61_ADVANCED_HELPER_CONTEXT_SOURCE_GATE_2026-05-01.md`
+- `docs/workstreams/fret-examples-build-latency-v1/M62_GROUPED_STATE_SOURCE_GATE_CLOSURE_2026-05-01.md`
 - `Cargo.toml`

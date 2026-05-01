@@ -147,6 +147,8 @@ Status: active
   `fret-examples` unit test while keeping the native smoke demo and runner behavior unchanged.
 - [x] Move the advanced helper context source-policy matrix out of the monolithic
   `fret-examples` unit test and delete orphaned source includes.
+- [x] Move the remaining grouped state/model-read source-policy matrices out of the monolithic
+  `fret-examples` unit test, leaving only real parser behavior tests in Rust.
 
 ## Parked
 

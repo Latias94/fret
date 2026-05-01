@@ -1081,3 +1081,22 @@ Current evidence:
 - `tools/examples_source_tree_policy/advanced_helpers.py`
 - `tools/examples_source_tree_policy/gate.py`
 - `apps/fret-examples/src/lib.rs`
+
+## M62 - Grouped State Source Gate Closure
+
+Status: complete
+
+Exit criteria:
+
+- Remaining grouped state/action/effect/model-read source-policy markers no longer compile the
+  monolithic `fret-examples` unit-test module.
+- The examples source-tree policy gate owns those markers in
+  `tools/examples_source_tree_policy/grouped_state.py`.
+- `apps/fret-examples/src/lib.rs` keeps only real parser behavior tests.
+
+Current evidence:
+
+- `docs/workstreams/fret-examples-build-latency-v1/M62_GROUPED_STATE_SOURCE_GATE_CLOSURE_2026-05-01.md`
+- `tools/examples_source_tree_policy/grouped_state.py`
+- `tools/examples_source_tree_policy/gate.py`
+- `apps/fret-examples/src/lib.rs`

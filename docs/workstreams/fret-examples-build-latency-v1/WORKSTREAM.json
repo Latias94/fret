@@ -266,6 +266,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M61_ADVANCED_HELPER_CONTEXT_SOURCE_GATE_2026-05-01.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-examples-build-latency-v1/M62_GROUPED_STATE_SOURCE_GATE_CLOSURE_2026-05-01.md"
     }
   ],
   "repro": {
@@ -332,6 +336,10 @@
       "command": "cargo check -p fret-examples --lib --profile dev-fast --jobs 1"
     },
     {
+      "name": "fret-examples-parser-nextest",
+      "command": "cargo nextest run -p fret-examples --lib parse_editor_theme_preset_key --no-fail-fast"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
@@ -352,6 +360,7 @@
     "tools/examples_source_tree_policy/advanced_helpers.py",
     "tools/examples_source_tree_policy/app_facing.py",
     "tools/examples_source_tree_policy/gate.py",
+    "tools/examples_source_tree_policy/grouped_state.py",
     "tools/examples_source_tree_policy/interop.py",
     "tools/examples_source_tree_policy/manual.py",
     "tools/examples_source_tree_policy/owner_split.py",
@@ -435,6 +444,7 @@
     "docs/workstreams/fret-examples-build-latency-v1/M59_VIEW_RUNTIME_GROUPED_STATE_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M60_FIRST_FRAME_BOOTSTRAP_SOURCE_GATE_2026-05-01.md",
     "docs/workstreams/fret-examples-build-latency-v1/M61_ADVANCED_HELPER_CONTEXT_SOURCE_GATE_2026-05-01.md",
+    "docs/workstreams/fret-examples-build-latency-v1/M62_GROUPED_STATE_SOURCE_GATE_CLOSURE_2026-05-01.md",
     "Cargo.toml"
   ],
   "adr_refs": [],
