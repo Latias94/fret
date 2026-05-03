@@ -27,7 +27,7 @@ impl DiagCliMode {
                 "Examples:\n  fretboard-dev diag poke\n  fretboard-dev diag latest\n  fretboard-dev diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag suite ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag repro ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release\n  fretboard-dev diag campaign list --lane smoke --tag ui-gallery"
             }
             Self::PublicAppAuthor => {
-                "Examples:\n  fretboard diag run ./diag/dialog-escape.json --launch -- cargo run --manifest-path ./Cargo.toml\n  fretboard diag perf ./diag/dialog-escape.json --repeat 5 --launch -- cargo run --manifest-path ./Cargo.toml\n  fretboard diag latest\n  fretboard diag compare ./target/fret-diag/baseline ./target/fret-diag/candidate --json"
+                "Examples:\n  fretboard diag config doctor --mode launch --print-launch-policy\n  fretboard diag run ./diag/dialog-escape.json --launch -- cargo run --manifest-path ./Cargo.toml\n  fretboard diag perf ./diag/dialog-escape.json --repeat 5 --launch -- cargo run --manifest-path ./Cargo.toml\n  fretboard diag latest\n  fretboard diag compare ./target/fret-diag/baseline ./target/fret-diag/candidate --json"
             }
         }
     }

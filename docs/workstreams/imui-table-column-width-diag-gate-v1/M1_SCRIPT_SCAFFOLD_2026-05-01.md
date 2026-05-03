@@ -36,3 +36,6 @@ cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy
 
 The public `fretboard` CLI in this workspace does not expose `diag config doctor`; the launched
 `diag run` command still prints launch policy hygiene details.
+
+Follow-up on 2026-05-03: the public CLI exposure drift was fixed by allowing
+`fretboard diag config doctor` through the public diagnostics command surface.

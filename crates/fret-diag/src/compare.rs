@@ -836,7 +836,7 @@ pub(crate) fn maybe_launch_demo(
         let scrubbed = format_keys(&scrubbed_inherited_nonreserved_keys, 8);
         let overrides = format_keys(&explicit_override_fret_keys, 8);
         eprintln!(
-            "diag --launch env: scrubbed_inherited_nonreserved=[{}] explicit_overrides_fret=[{}] explicit_overrides_other_total={} (see: fretboard-dev diag config doctor --mode launch --report-json)",
+            "diag --launch env: scrubbed_inherited_nonreserved=[{}] explicit_overrides_fret=[{}] explicit_overrides_other_total={} (see: fretboard diag config doctor --mode launch --report-json)",
             scrubbed, overrides, explicit_override_other_keys_total,
         );
     }

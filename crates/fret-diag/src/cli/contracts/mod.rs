@@ -167,6 +167,7 @@ fn prune_to_public_top_level_commands(full: clap::Command, mode: DiagCliMode) ->
     for name in [
         "ai-packet",
         "compare",
+        "config",
         "latest",
         "meta",
         "pack",
@@ -201,7 +202,7 @@ mod tests {
             agent::AgentCommandArgs,
             artifact::ArtifactSubcommandArgs,
             campaign::CampaignSubcommandArgs,
-            config::ConfigSubcommandArgs,
+            config::{ConfigDoctorModeArg, ConfigSubcommandArgs},
             doctor::DoctorSubcommandArgs,
             latest::LatestCommandArgs,
             list::ListSubcommandArgs,
@@ -2757,8 +2758,12 @@ mod tests {
 
         assert!(diag_help.contains("Usage: fretboard diag"));
         assert!(diag_help.contains("run"));
+        assert!(diag_help.contains("config"));
         assert!(diag_help.contains("perf"));
         assert!(diag_help.contains("compare"));
+        assert!(
+            diag_help.contains("fretboard diag config doctor --mode launch --print-launch-policy")
+        );
         assert!(diag_help.contains(
             "fretboard diag run ./diag/dialog-escape.json --launch -- cargo run --manifest-path ./Cargo.toml"
         ));
@@ -2770,6 +2775,40 @@ mod tests {
         assert!(!diag_help.contains("registry"));
         assert!(!diag_help.contains("suite"));
         assert!(!diag_help.contains("script"));
+    }
+
+    #[test]
+    fn public_mode_config_doctor_help_and_contract_are_available() {
+        let config_doctor_help =
+            render_command_help_path_with_mode(DiagCliMode::PublicAppAuthor, &["config", "doctor"])
+                .expect("public config doctor help");
+
+        assert!(config_doctor_help.contains("Usage: fretboard diag config doctor"));
+        assert!(config_doctor_help.contains("--mode"));
+        assert!(config_doctor_help.contains("--print-launch-policy"));
+        assert!(config_doctor_help.contains("--report-json"));
+
+        let cli = try_parse_contract_with_mode(
+            DiagCliMode::PublicAppAuthor,
+            [
+                "fretboard diag",
+                "config",
+                "doctor",
+                "--mode",
+                "launch",
+                "--print-launch-policy",
+                "--report-json",
+            ],
+        )
+        .expect("public config doctor should parse");
+
+        let DiagCommandContract::Config(args) = cli.command else {
+            panic!("expected config command");
+        };
+        let ConfigSubcommandArgs::Doctor(doctor) = args.command;
+        assert_eq!(doctor.mode, Some(ConfigDoctorModeArg::Launch));
+        assert!(doctor.print_launch_policy);
+        assert!(doctor.report_json);
     }
 
     #[test]
