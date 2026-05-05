@@ -90,8 +90,12 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("ColorEditAlphaPreview::Half"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_side_preview<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn restore_reference_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn preview_color_for_alpha_visibility("));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn picker_side_preview_row<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
     assert!(COLOR_EDIT_POPUP_RS.contains("color_picker_options("));

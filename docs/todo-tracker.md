@@ -294,6 +294,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-color-edit-eyedropper-request-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-color-edit-eyedropper-request-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-color-edit-eyedropper-request-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` side-preview column:
+  - `docs/workstreams/imui-color-edit-side-preview-column-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-side-preview-column-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-side-preview-column-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-side-preview-column-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-side-preview-column-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-side-preview-column-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - Closed narrow follow-on for IMUI editor `ColorEdit` palette customization:
   - `docs/workstreams/imui-color-edit-palette-customization-v1/DESIGN.md`
   - `docs/workstreams/imui-color-edit-palette-customization-v1/TODO.md`

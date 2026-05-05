@@ -230,6 +230,8 @@ Current editor `ColorEdit` now has:
   payloads and RGB-only targets,
 - current/original popup reference previews with original restore behavior matching Dear ImGui's
   RGB/RGBA component-count rules,
+- Dear ImGui-shaped side-preview layout: current/original previews sit beside the picker as a
+  vertical column with 3:2 preview swatches,
 - a bounded AlphaBar-style popup control when `show_alpha=true`,
 - bounded HSV picker controls in the popup: RGB/HSV conversion, saturation/value picking, and a
   Dear ImGui-shaped vertical HueBar,
@@ -284,8 +286,8 @@ Conclusion:
 
 - The remaining color gap is deeper picker/editor affordances, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
-- Start separate narrow follow-ons for platform-owned screen sampling or higher-fidelity picker
-  preview polish.
+- Start separate narrow follow-ons for platform-owned screen sampling or screenshot-backed full
+  picker visual polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
 
 Evidence anchors:
@@ -296,6 +298,7 @@ Evidence anchors:
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/eyedropper.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches.rs`

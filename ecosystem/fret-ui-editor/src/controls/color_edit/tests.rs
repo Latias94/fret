@@ -11,8 +11,8 @@ use super::model::{
 use super::popup::copy::{ColorEditCopyFormat, color_copy_entries};
 use super::popup::picker::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
 use super::popup::preview::{
-    checkerboard_cell_color, opaque_preview_color, preview_color_for_alpha_visibility,
-    restore_reference_color,
+    SIDE_PREVIEW_SWATCH_HEIGHT, SIDE_PREVIEW_SWATCH_WIDTH, checkerboard_cell_color,
+    opaque_preview_color, preview_color_for_alpha_visibility, restore_reference_color,
 };
 use super::popup::tooltip::color_tooltip_lines;
 use super::*;
@@ -147,6 +147,13 @@ fn popup_side_preview_defaults_to_imgui_current_and_original() {
     );
     assert!(options.popup.side_preview.has_visible_content());
     assert!(options.popup.side_preview.shows_original());
+}
+
+#[test]
+fn popup_side_preview_uses_imgui_three_by_two_color_button_ratio() {
+    let ratio = SIDE_PREVIEW_SWATCH_WIDTH.0 / SIDE_PREVIEW_SWATCH_HEIGHT.0;
+
+    assert!((ratio - 1.5).abs() < f32::EPSILON);
 }
 
 #[test]

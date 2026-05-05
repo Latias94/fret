@@ -19,6 +19,9 @@ use super::super::{
     CHECKERBOARD_DARK_RGB, CHECKERBOARD_LIGHT_RGB, ColorEditAlphaPreview, ColorEditPopupSidePreview,
 };
 
+pub(in crate::controls::color_edit) const SIDE_PREVIEW_SWATCH_WIDTH: Px = Px(72.0);
+pub(in crate::controls::color_edit) const SIDE_PREVIEW_SWATCH_HEIGHT: Px = Px(48.0);
+
 pub(super) fn color_side_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     current: Color,
@@ -67,8 +70,8 @@ pub(super) fn color_side_preview<H: UiHost>(
                 },
                 ..Default::default()
             },
-            direction: Axis::Horizontal,
-            gap: SpacingLength::Px(Px(8.0)),
+            direction: Axis::Vertical,
+            gap: SpacingLength::Px(Px(6.0)),
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -284,8 +287,8 @@ fn preview_cell_content<H: UiHost>(
                         layout: LayoutStyle {
                             size: SizeStyle {
                                 width: Length::Fill,
-                                height: Length::Px(Px(36.0)),
-                                min_height: Some(Length::Px(Px(36.0))),
+                                height: Length::Px(SIDE_PREVIEW_SWATCH_HEIGHT),
+                                min_height: Some(Length::Px(SIDE_PREVIEW_SWATCH_HEIGHT)),
                                 ..Default::default()
                             },
                             overflow: Overflow::Clip,
@@ -308,8 +311,9 @@ fn preview_cell_content<H: UiHost>(
 fn preview_cell_layout() -> LayoutStyle {
     LayoutStyle {
         size: SizeStyle {
-            width: Length::Fill,
+            width: Length::Px(SIDE_PREVIEW_SWATCH_WIDTH),
             height: Length::Auto,
+            min_width: Some(Length::Px(SIDE_PREVIEW_SWATCH_WIDTH)),
             ..Default::default()
         },
         ..Default::default()

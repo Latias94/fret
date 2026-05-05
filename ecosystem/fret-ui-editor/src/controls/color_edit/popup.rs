@@ -4,8 +4,8 @@ use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::OnCloseAutoFocus;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
-    SizeStyle, SpacingLength,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    PointerRegionProps, SizeStyle, SpacingLength,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -40,6 +40,35 @@ pub(super) use self::preview::color_preview_stack;
 use self::preview::color_side_preview;
 use self::swatches::{history_swatches, preset_swatches};
 pub(super) use self::tooltip::request_color_tooltip_overlay;
+
+const COLOR_POPUP_WIDTH: Px = Px(216.0);
+const COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH: Px = Px(272.0);
+
+fn picker_side_preview_row<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    picker: AnyElement,
+    side_preview: AnyElement,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: Axis::Horizontal,
+            gap: SpacingLength::Px(Px(8.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Start,
+            wrap: false,
+        },
+        move |_cx| vec![picker, side_preview],
+    )
+}
 
 pub(super) fn request_popup_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -270,6 +299,13 @@ pub(super) fn request_popup_overlay<H: UiHost>(
             } else {
                 None
             };
+            let popup_width = if effective_popup_options.picker != ColorEditPopupPicker::Hidden
+                && effective_popup_options.side_preview.has_visible_content()
+            {
+                COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH
+            } else {
+                COLOR_POPUP_WIDTH
+            };
             let content = cx.flex(
                 FlexProps {
                     layout: LayoutStyle {
@@ -287,16 +323,18 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     align: CrossAlign::Stretch,
                     wrap: false,
                 },
-                move |_cx| {
+                move |cx| {
                     let mut out = Vec::new();
-                    if let Some(picker) = picker {
-                        out.push(picker);
+                    match (picker, side_preview) {
+                        (Some(picker), Some(side_preview)) => {
+                            out.push(picker_side_preview_row(cx, picker, side_preview));
+                        }
+                        (Some(picker), None) => out.push(picker),
+                        (None, Some(side_preview)) => out.push(side_preview),
+                        (None, None) => {}
                     }
                     if let Some(picker_options) = picker_options {
                         out.push(picker_options);
-                    }
-                    if let Some(side_preview) = side_preview {
-                        out.push(side_preview);
                     }
                     if let Some(eyedropper) = eyedropper {
                         out.push(eyedropper);
@@ -320,7 +358,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                 ContainerProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
-                            width: Length::Px(Px(216.0)),
+                            width: Length::Px(popup_width),
                             height: Length::Auto,
                             ..Default::default()
                         },

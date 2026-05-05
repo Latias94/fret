@@ -184,6 +184,11 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-eyedropper-request-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-eyedropper-request-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-eyedropper-request-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit side-preview column follow-on (closed narrow P1 polish lane moving current/original
+  previews beside the picker with a Dear ImGui-like 3:2 preview swatch ratio):
+  `docs/workstreams/imui-color-edit-side-preview-column-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-side-preview-column-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-side-preview-column-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit palette customization follow-on (closed narrow P1 lane adding an app-owned
   palette source for editor `ColorEdit`, preserving the built-in palette and alpha-preserving
   palette activation while leaving editable palette slots separate):
