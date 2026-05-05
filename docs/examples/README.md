@@ -135,6 +135,9 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
   - `imui_action_basics` — generic/default immediate authoring on the app lane
   - `imui_editor_controls_basics` — editor-grade first-contact controls through
     `fret::imui::editor`
+- Debug draw proof:
+  - `imui_debug_draw_basics` — canvas-backed draw-list authoring and metadata through
+    `fret::imui::kit`
 - Product proof:
   - `imui_editor_proof_demo` — heavier editor-grade proof on the intended generic/editor owner split
 - Reference/smoke:

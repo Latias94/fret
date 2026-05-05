@@ -155,6 +155,7 @@ pub(crate) fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
         "undo_basics" => "--features cookbook-undo",
         "async_inbox_basics" => "--features cookbook-async",
         "imui_action_basics" => "--features cookbook-imui",
+        "imui_debug_draw_basics" => "--features cookbook-imui",
         "imui_editor_controls_basics" => "--features cookbook-imui",
         "docking_basics" => "--features cookbook-docking",
         "embedded_viewport_basics" => "--features cookbook-interop",
@@ -341,6 +342,10 @@ mod tests {
     fn cookbook_feature_hints_cover_imui_teaching_examples() {
         assert_eq!(
             cookbook_example_feature_hint("imui_action_basics"),
+            Some("--features cookbook-imui")
+        );
+        assert_eq!(
+            cookbook_example_feature_hint("imui_debug_draw_basics"),
             Some("--features cookbook-imui")
         );
         assert_eq!(

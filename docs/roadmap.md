@@ -400,6 +400,12 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-clip-metadata-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-clip-metadata-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw cookbook proof follow-on (closed narrow P1 lane adding a runnable public
+  `fret::imui::kit` cookbook proof for debug-draw channel ordering, clip metadata, triangle
+  meshes, image triangle meshes, and metadata summaries):
+  `docs/workstreams/imui-debug-draw-cookbook-proof-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-cookbook-proof-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

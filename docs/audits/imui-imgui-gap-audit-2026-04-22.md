@@ -295,7 +295,8 @@ multi-color rect and arbitrary image quad semantics are partially superseded by
 `docs/workstreams/imui-debug-draw-vertex-quad-v1/`; channel split/merge ordering semantics are
 partially superseded by `docs/workstreams/imui-debug-draw-channel-split-v1/`; bounded triangle
 mesh authoring is partially superseded by
-`docs/workstreams/imui-debug-draw-triangle-mesh-v1/`.
+`docs/workstreams/imui-debug-draw-triangle-mesh-v1/`. Update (2026-05-05): the public app-facing
+cookbook proof is now covered by `docs/workstreams/imui-debug-draw-cookbook-proof-v1/`.
 
 Current IMUI now exposes:
 
@@ -321,6 +322,7 @@ Current IMUI now exposes:
   SVG mask icon overlay commands,
 - `AddRectFilledMultiColor`-style per-corner color quads backed by renderer vertex colors,
 - indexed vertex-color and textured triangle mesh helpers backed by fixed scene triangle ops,
+- a runnable cookbook proof through `fret::imui::kit`,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
@@ -346,7 +348,7 @@ Conclusion:
 - Start separate narrow follow-ons for platform-owned screen sampling or screenshot-backed full
   picker visual polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists" or
-  "no command metadata exists".
+  "no command metadata exists" or "no public app-facing debug-draw example exists".
 - Do not regress `AddRectFilledMultiColor` into a `LinearGradient`; that is not equivalent to
   Dear ImGui's two-triangle vertex interpolation.
 
@@ -371,8 +373,10 @@ Evidence anchors:
 - `crates/fret-core/src/scene/mod.rs`
 - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/vertex_color.rs`
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs`
+- `apps/fret-cookbook/examples/imui_debug_draw_basics.rs`
 - `docs/workstreams/imui-debug-draw-command-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- `docs/workstreams/imui-debug-draw-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 
 #### 4.2 There is still no immediate style-stack lane, and that is mostly the right decision
 

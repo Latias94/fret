@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 351
+- Dedicated directories: 352
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -817,6 +817,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after adding source-level effective clip rect and clip-depth metadata to IMUI
     debug-draw command summaries.
+
+- Closed narrow P1 debug draw cookbook proof follow-on:
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding a runnable cookbook proof for debug-draw channel ordering, clip
+    metadata, triangle meshes, image triangle meshes, and metadata summaries through
+    `fret::imui::kit`.
 
 - Closed narrow P1 item-behavior kernel follow-on:
   - `docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json`
@@ -1791,6 +1802,7 @@ Rule:
 - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding bounded Dear ImGui-style triangle mesh authoring to the IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-command-metadata-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding bounded Dear ImGui-style command metadata introspection to the IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-clip-metadata-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding source-level effective clip metadata to the IMUI debug-draw helper)
+- `docs/workstreams/imui-debug-draw-cookbook-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding a runnable public cookbook proof for IMUI debug-draw authoring and metadata)
 - `docs/workstreams/imui-color-edit-alpha-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on preserving alpha for editor `ColorEdit` RGB-only hex commits and preset swatch activations after the popup-depth slice)
 - `docs/workstreams/imui-color-edit-alpha-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding checkerboard-backed alpha previews to editor `ColorEdit` main and preset swatches)
 - `docs/workstreams/imui-color-edit-popup-depth-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on replacing the editor `ColorEdit` popup stub with a preset swatch palette for the public IMUI editor-control path)

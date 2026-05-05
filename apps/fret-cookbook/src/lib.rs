@@ -35,6 +35,7 @@ mod authoring_surface_policy_tests {
     const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
     const GIZMO_EXAMPLE: &str = include_str!("../examples/gizmo_basics.rs");
     const IMUI_ACTION_EXAMPLE: &str = include_str!("../examples/imui_action_basics.rs");
+    const IMUI_DEBUG_DRAW_EXAMPLE: &str = include_str!("../examples/imui_debug_draw_basics.rs");
     const IMUI_EDITOR_CONTROLS_EXAMPLE: &str =
         include_str!("../examples/imui_editor_controls_basics.rs");
     const ICONS_AND_ASSETS_EXAMPLE: &str = include_str!("../examples/icons_and_assets_basics.rs");
@@ -367,6 +368,7 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(UNDO_EXAMPLE);
         assert_uses_app_surface(MARKDOWN_AND_CODE_EXAMPLE);
         assert_uses_app_surface(IMUI_ACTION_EXAMPLE);
+        assert_uses_app_surface(IMUI_DEBUG_DRAW_EXAMPLE);
         assert_uses_app_surface(IMUI_EDITOR_CONTROLS_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
@@ -813,6 +815,44 @@ mod authoring_surface_policy_tests {
             &[
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "fret_imui::imui_raw(cx, |ui| {",
+            ],
+        );
+    }
+
+    #[test]
+    fn cookbook_imui_debug_draw_example_keeps_current_facade_teaching_surface() {
+        assert_current_imui_teaching_surface(
+            "imui_debug_draw_basics",
+            IMUI_DEBUG_DRAW_EXAMPLE,
+            &[
+                "use fret::imui::{",
+                "kit::{DebugDrawCommandKind, DebugDrawOptions, DebugDrawStrokeStyle, DebugDrawVertex},",
+                "prelude::*,",
+                "imui_raw(cx, |ui| {",
+                "ui.debug_draw_with_options(",
+                "draw.push_clip_rect(",
+                "draw.channels_split(",
+                "draw.channels_set_current(",
+                "draw.channels_merge()",
+                "draw.add_rect_filled_multi_color(",
+                "draw.add_triangle_mesh(",
+                "draw.add_triangle_list(",
+                "draw.add_image_triangle_mesh(",
+                "draw.command_summaries()",
+                "draw.list_summary()",
+                "DebugDrawCommandKind::ImageTriangleMesh",
+                "DebugDrawStrokeStyle::new(Px(2.0))",
+                "DebugDrawVertex::new(",
+                "ImageId::default()",
+                "cookbook.imui_debug_draw.canvas",
+            ],
+            &[
+                "fret_ui_kit::imui::",
+                "fret_imui::imui_raw(cx, |ui| {",
+                "CmdBuffer",
+                "VtxBuffer",
+                "IdxBuffer",
+                "AddCallback",
             ],
         );
     }
@@ -1342,6 +1382,7 @@ mod authoring_surface_policy_tests {
             ("form_basics", FORM_EXAMPLE),
             ("gizmo_basics", GIZMO_EXAMPLE),
             ("imui_action_basics", IMUI_ACTION_EXAMPLE),
+            ("imui_debug_draw_basics", IMUI_DEBUG_DRAW_EXAMPLE),
             ("imui_editor_controls_basics", IMUI_EDITOR_CONTROLS_EXAMPLE),
             ("icons_and_assets_basics", ICONS_AND_ASSETS_EXAMPLE),
             ("hello", HELLO_EXAMPLE),
@@ -1566,6 +1607,7 @@ mod authoring_surface_policy_tests {
             UNDO_EXAMPLE,
             MARKDOWN_AND_CODE_EXAMPLE,
             IMUI_ACTION_EXAMPLE,
+            IMUI_DEBUG_DRAW_EXAMPLE,
             IMUI_EDITOR_CONTROLS_EXAMPLE,
             DRAG_EXAMPLE,
             EFFECTS_LAYER_EXAMPLE,

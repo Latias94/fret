@@ -567,6 +567,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-debug-draw-clip-metadata-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-debug-draw-clip-metadata-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI debug draw cookbook proof:
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - Closed narrow follow-on for the fearless private full pressable item-behavior kernel in
   `fret-ui-kit::imui` (button, checkbox/radio, selectable, and combo trigger migrated; active-only
   switch/menu/tab cleanup and slider editing should start as narrower lanes):
