@@ -64,8 +64,8 @@ use containers::{
     vertical_container_element,
 };
 pub use debug_draw_controls::{
-    DebugDrawImageOptions, DebugDrawOptions, DebugDrawStrokeStyle, DebugDrawSvgOptions,
-    ImUiDebugDrawList,
+    DebugDrawImageOptions, DebugDrawOptions, DebugDrawRoundCorners, DebugDrawStrokeStyle,
+    DebugDrawSvgOptions, ImUiDebugDrawList,
 };
 pub use facade_support::UiWriterUiKitExt;
 #[allow(unused_imports)]

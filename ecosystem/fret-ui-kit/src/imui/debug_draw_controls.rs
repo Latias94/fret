@@ -141,6 +141,50 @@ impl From<Px> for DebugDrawStrokeStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DebugDrawRoundCorners(u8);
+
+impl DebugDrawRoundCorners {
+    pub const NONE: Self = Self(0);
+    pub const TOP_LEFT: Self = Self(1 << 0);
+    pub const TOP_RIGHT: Self = Self(1 << 1);
+    pub const BOTTOM_RIGHT: Self = Self(1 << 2);
+    pub const BOTTOM_LEFT: Self = Self(1 << 3);
+    pub const TOP: Self = Self(Self::TOP_LEFT.0 | Self::TOP_RIGHT.0);
+    pub const BOTTOM: Self = Self(Self::BOTTOM_LEFT.0 | Self::BOTTOM_RIGHT.0);
+    pub const LEFT: Self = Self(Self::TOP_LEFT.0 | Self::BOTTOM_LEFT.0);
+    pub const RIGHT: Self = Self(Self::TOP_RIGHT.0 | Self::BOTTOM_RIGHT.0);
+    pub const ALL: Self = Self(Self::TOP.0 | Self::BOTTOM.0);
+
+    pub fn contains(self, other: Self) -> bool {
+        (self.0 & other.0) == other.0
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl Default for DebugDrawRoundCorners {
+    fn default() -> Self {
+        Self::ALL
+    }
+}
+
+impl std::ops::BitOr for DebugDrawRoundCorners {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for DebugDrawRoundCorners {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DebugDrawImageOptions {
     pub fit: ViewportFit,
@@ -194,6 +238,23 @@ impl ImUiDebugDrawPath<'_> {
         if self.points.last().copied() != Some(point) {
             self.points.push(point);
         }
+        self
+    }
+
+    pub fn rect(&mut self, rect: Rect) -> &mut Self {
+        self.rect_with_rounding(rect, Px(0.0), DebugDrawRoundCorners::ALL)
+    }
+
+    pub fn rect_with_rounding(
+        &mut self,
+        rect: Rect,
+        rounding: Px,
+        corners: DebugDrawRoundCorners,
+    ) -> &mut Self {
+        if rect_is_empty(rect) || !rect_is_finite(rect) || !rounding.0.is_finite() {
+            return self;
+        }
+        append_path_rect_points(&mut self.points, rect, rounding, corners);
         self
     }
 
@@ -1430,6 +1491,13 @@ fn rect_is_empty(rect: Rect) -> bool {
     rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0
 }
 
+fn rect_is_finite(rect: Rect) -> bool {
+    rect.origin.x.0.is_finite()
+        && rect.origin.y.0.is_finite()
+        && rect.size.width.0.is_finite()
+        && rect.size.height.0.is_finite()
+}
+
 fn normalized_opacity(opacity: f32) -> f32 {
     if opacity.is_finite() {
         opacity.clamp(0.0, 1.0)
@@ -1592,6 +1660,127 @@ fn rect_path(rect: Rect) -> [PathCommand; 5] {
         PathCommand::LineTo(Point::new(x0, y1)),
         PathCommand::Close,
     ]
+}
+
+fn append_path_rect_points(
+    points: &mut Vec<Point>,
+    rect: Rect,
+    rounding: Px,
+    corners: DebugDrawRoundCorners,
+) {
+    let a = rect.origin;
+    let b = rect_max_point(rect);
+    let mut rounding = rounding.0;
+
+    if rounding >= 0.5 && !corners.is_empty() {
+        let width = rect.size.width.0.abs();
+        let height = rect.size.height.0.abs();
+        let x_scale = if corners.contains(DebugDrawRoundCorners::TOP)
+            || corners.contains(DebugDrawRoundCorners::BOTTOM)
+        {
+            0.5
+        } else {
+            1.0
+        };
+        let y_scale = if corners.contains(DebugDrawRoundCorners::LEFT)
+            || corners.contains(DebugDrawRoundCorners::RIGHT)
+        {
+            0.5
+        } else {
+            1.0
+        };
+        rounding = rounding.min(width * x_scale - 1.0);
+        rounding = rounding.min(height * y_scale - 1.0);
+    }
+
+    if rounding < 0.5 || corners.is_empty() {
+        points.push(a);
+        points.push(Point::new(b.x, a.y));
+        points.push(b);
+        points.push(Point::new(a.x, b.y));
+        return;
+    }
+
+    let rounding = Px(rounding);
+    let rounding_tl = if corners.contains(DebugDrawRoundCorners::TOP_LEFT) {
+        rounding
+    } else {
+        Px(0.0)
+    };
+    let rounding_tr = if corners.contains(DebugDrawRoundCorners::TOP_RIGHT) {
+        rounding
+    } else {
+        Px(0.0)
+    };
+    let rounding_br = if corners.contains(DebugDrawRoundCorners::BOTTOM_RIGHT) {
+        rounding
+    } else {
+        Px(0.0)
+    };
+    let rounding_bl = if corners.contains(DebugDrawRoundCorners::BOTTOM_LEFT) {
+        rounding
+    } else {
+        Px(0.0)
+    };
+
+    append_path_rect_corner_arc_points(
+        points,
+        Point::new(Px(a.x.0 + rounding_tl.0), Px(a.y.0 + rounding_tl.0)),
+        rounding_tl,
+        6,
+        9,
+    );
+    append_path_rect_corner_arc_points(
+        points,
+        Point::new(Px(b.x.0 - rounding_tr.0), Px(a.y.0 + rounding_tr.0)),
+        rounding_tr,
+        9,
+        12,
+    );
+    append_path_rect_corner_arc_points(
+        points,
+        Point::new(Px(b.x.0 - rounding_br.0), Px(b.y.0 - rounding_br.0)),
+        rounding_br,
+        0,
+        3,
+    );
+    append_path_rect_corner_arc_points(
+        points,
+        Point::new(Px(a.x.0 + rounding_bl.0), Px(b.y.0 - rounding_bl.0)),
+        rounding_bl,
+        3,
+        6,
+    );
+}
+
+fn append_path_rect_corner_arc_points(
+    points: &mut Vec<Point>,
+    center: Point,
+    radius: Px,
+    a_min_of_12: i32,
+    a_max_of_12: i32,
+) {
+    if radius.0 < 0.5 {
+        points.push(center);
+        return;
+    }
+    let a_min = a_min_of_12 as f32 * std::f32::consts::TAU / 12.0;
+    let a_max = a_max_of_12 as f32 * std::f32::consts::TAU / 12.0;
+    append_arc_points(
+        points,
+        center,
+        radius,
+        a_min,
+        a_max,
+        a_min_of_12.abs_diff(a_max_of_12) as usize,
+    );
+}
+
+fn rect_max_point(rect: Rect) -> Point {
+    Point::new(
+        Px(rect.origin.x.0 + rect.size.width.0),
+        Px(rect.origin.y.0 + rect.size.height.0),
+    )
 }
 
 fn triangle_path(p1: Point, p2: Point, p3: Point) -> [PathCommand; 4] {
@@ -2038,6 +2227,95 @@ mod tests {
             panic!("path fill should record a convex fill command");
         };
         assert_eq!(&**points, &[p0, p1, p2, p3]);
+    }
+
+    #[test]
+    fn debug_draw_path_builder_appends_rect_points() {
+        let mut list = ImUiDebugDrawList::default();
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(20.0), Px(10.0)),
+        );
+
+        list.path(|path| {
+            path.rect(rect);
+            assert_eq!(path.point_count(), 4);
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), true);
+        });
+
+        let DebugDrawCommand::Polyline { points, closed, .. } = &list.commands[0] else {
+            panic!("path rect helper should record a closed polyline command");
+        };
+        assert!(*closed);
+        assert_eq!(points.len(), 4);
+        assert_eq!(
+            &**points,
+            &[
+                Point::new(Px(10.0), Px(20.0)),
+                Point::new(Px(30.0), Px(20.0)),
+                Point::new(Px(30.0), Px(30.0)),
+                Point::new(Px(10.0), Px(30.0)),
+            ]
+        );
+    }
+
+    #[test]
+    fn debug_draw_path_builder_appends_rounded_rect_corner_samples() {
+        let mut list = ImUiDebugDrawList::default();
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(20.0), Px(10.0)),
+        );
+
+        list.path(|path| {
+            path.rect_with_rounding(
+                rect,
+                Px(4.0),
+                DebugDrawRoundCorners::TOP_LEFT | DebugDrawRoundCorners::BOTTOM_RIGHT,
+            );
+            assert_eq!(path.point_count(), 10);
+            path.fill_convex(Color::from_srgb_hex_rgb(0xff_ff_ff));
+        });
+
+        let DebugDrawCommand::ConvexPolyFilled { points, .. } = &list.commands[0] else {
+            panic!("rounded path rect helper should record sampled convex fill points");
+        };
+        assert_eq!(points.len(), 10);
+        assert_point_near(points[0], Point::new(Px(10.0), Px(24.0)));
+        assert_point_near(points[3], Point::new(Px(14.0), Px(20.0)));
+        assert_point_near(points[4], Point::new(Px(30.0), Px(20.0)));
+        assert_point_near(points[5], Point::new(Px(30.0), Px(26.0)));
+        assert_point_near(points[8], Point::new(Px(26.0), Px(30.0)));
+        assert_point_near(points[9], Point::new(Px(10.0), Px(30.0)));
+    }
+
+    #[test]
+    fn debug_draw_path_builder_rect_rounding_clamps_and_handles_invalid_inputs() {
+        let mut list = ImUiDebugDrawList::default();
+        let rect = Rect::new(Point::new(Px(10.0), Px(20.0)), Size::new(Px(12.0), Px(8.0)));
+
+        list.path(|path| {
+            path.rect_with_rounding(rect, Px(50.0), DebugDrawRoundCorners::ALL);
+            assert_eq!(path.point_count(), 16);
+            assert_point_near(path.points[0], Point::new(Px(10.0), Px(23.0)));
+            path.clear();
+
+            path.rect_with_rounding(rect, Px(4.0), DebugDrawRoundCorners::NONE);
+            assert_eq!(path.point_count(), 4);
+            assert_eq!(path.points[0], Point::new(Px(10.0), Px(20.0)));
+            assert_eq!(path.points[2], Point::new(Px(22.0), Px(28.0)));
+            path.clear();
+
+            path.rect_with_rounding(
+                Rect::new(Point::new(Px(10.0), Px(20.0)), Size::new(Px(0.0), Px(8.0))),
+                Px(4.0),
+                DebugDrawRoundCorners::ALL,
+            );
+            path.rect_with_rounding(rect, Px(f32::NAN), DebugDrawRoundCorners::ALL);
+            assert!(path.is_empty());
+        });
+
+        assert_eq!(list.command_count(), 0);
     }
 
     #[test]

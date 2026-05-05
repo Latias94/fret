@@ -21,6 +21,6 @@ canvas-backed IMUI debug-draw helper.
 
 ## Remaining Work
 
-Full Dear ImGui `ImDrawList` parity is still not closed. Start separate follow-ons for rounded
-`PathRect` parity, channel splitting, hit-test-aware debug interaction, reusable draw-list command
-metadata, or image loading recipes.
+Full Dear ImGui `ImDrawList` parity is still not closed. Start separate follow-ons for channel
+splitting, hit-test-aware debug interaction, reusable draw-list command metadata, image loading
+recipes, or concave path fill parity.

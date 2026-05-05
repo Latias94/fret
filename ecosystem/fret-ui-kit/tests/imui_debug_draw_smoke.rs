@@ -6,8 +6,8 @@ use fret_core::{
 };
 use fret_ui::{SvgSource, UiHost};
 use fret_ui_kit::imui::{
-    DebugDrawImageOptions, DebugDrawOptions, DebugDrawStrokeStyle, DebugDrawSvgOptions,
-    UiWriterImUiFacadeExt,
+    DebugDrawImageOptions, DebugDrawOptions, DebugDrawRoundCorners, DebugDrawStrokeStyle,
+    DebugDrawSvgOptions, UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -145,6 +145,14 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 .line_to_merge_duplicate(Point::new(Px(164.0), Px(68.0)))
                 .line_to(Point::new(Px(178.0), Px(58.0)))
                 .line_to(Point::new(Px(192.0), Px(68.0)))
+                .rect_with_rounding(
+                    Rect::new(
+                        Point::new(Px(194.0), Px(54.0)),
+                        Size::new(Px(18.0), Px(14.0)),
+                    ),
+                    Px(4.0),
+                    DebugDrawRoundCorners::TOP | DebugDrawRoundCorners::BOTTOM_RIGHT,
+                )
                 .arc_to(
                     Point::new(Px(202.0), Px(68.0)),
                     Px(8.0),
