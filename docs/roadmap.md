@@ -390,6 +390,11 @@ Tracker highlights:
   primitives): `docs/workstreams/imui-debug-draw-triangle-mesh-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-triangle-mesh-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-triangle-mesh-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw command metadata follow-on (closed narrow P1 lane adding bounded Dear ImGui
+  `ImDrawCmd`-style command kind/summary/list-summary introspection without exposing callbacks or
+  raw draw buffers): `docs/workstreams/imui-debug-draw-command-metadata-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-command-metadata-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-command-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

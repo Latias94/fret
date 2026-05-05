@@ -332,6 +332,10 @@ surface: `SceneOp::VertexColorQuad` and `SceneOp::ImageQuad` now model those ver
 directly. Bounded custom triangle geometry is no longer blocked either:
 `SceneOp::VertexColorTriangle` and `SceneOp::ImageTriangle` provide a copyable scene primitive
 surface for IMUI mesh helpers.
+Basic per-command metadata is also no longer a total gap: `fret-ui-kit::imui` exposes command kind,
+per-command summary, and aggregate list summary introspection for debug draw lists, including active
+channel split ordering and optional image IDs. This is source-level IMUI metadata, not a renderer
+draw-call attribution or callback surface.
 
 Conclusion:
 
@@ -339,7 +343,8 @@ Conclusion:
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
 - Start separate narrow follow-ons for platform-owned screen sampling or screenshot-backed full
   picker visual polish.
-- The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
+- The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists" or
+  "no command metadata exists".
 - Do not regress `AddRectFilledMultiColor` into a `LinearGradient`; that is not equivalent to
   Dear ImGui's two-triangle vertex interpolation.
 
@@ -364,6 +369,7 @@ Evidence anchors:
 - `crates/fret-core/src/scene/mod.rs`
 - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/vertex_color.rs`
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs`
+- `docs/workstreams/imui-debug-draw-command-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 
 #### 4.2 There is still no immediate style-stack lane, and that is mostly the right decision
 

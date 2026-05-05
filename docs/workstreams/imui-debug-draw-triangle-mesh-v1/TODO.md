@@ -16,5 +16,6 @@ Status: Closed.
 ## Future Follow-Ons
 
 - [ ] Batched renderer mesh resources if large editor overlays prove draw-call pressure.
-- [ ] Per-command metadata / draw command introspection.
+- [x] Per-command metadata / draw command introspection:
+      `docs/workstreams/imui-debug-draw-command-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - [ ] Callback/user draw commands only if a contract-safe renderer extension point is designed.

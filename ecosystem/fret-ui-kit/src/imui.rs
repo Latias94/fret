@@ -64,7 +64,8 @@ use containers::{
     vertical_container_element,
 };
 pub use debug_draw_controls::{
-    DebugDrawImageMeshOptions, DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawOptions,
+    DebugDrawCommandKind, DebugDrawCommandSummary, DebugDrawImageMeshOptions,
+    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawListSummary, DebugDrawOptions,
     DebugDrawRoundCorners, DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex,
     ImUiDebugDrawList,
 };

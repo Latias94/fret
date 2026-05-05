@@ -59,6 +59,138 @@ struct DebugDrawChannelSplit {
     current: usize,
 }
 
+/// Public command classes exposed by the IMUI debug draw list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum DebugDrawCommandKind {
+    Line,
+    Polyline,
+    ConvexPolyFilled,
+    ConcavePolyFilled,
+    Rect,
+    RectFilled,
+    RectFilledMultiColor,
+    Quad,
+    QuadFilled,
+    Triangle,
+    TriangleFilled,
+    TriangleMesh,
+    ImageTriangleMesh,
+    Circle,
+    CircleFilled,
+    Ngon,
+    NgonFilled,
+    Ellipse,
+    EllipseFilled,
+    BezierQuadratic,
+    BezierCubic,
+    PushClipRect,
+    PopClipRect,
+    Image,
+    ImageRegion,
+    ImageQuad,
+    ImageRounded,
+    ImageRegionRounded,
+    SvgImage,
+    SvgMaskIcon,
+    Text,
+}
+
+/// Stable metadata for one recorded debug draw command.
+///
+/// Counts describe source-level debug draw payloads, not guaranteed backend draw calls.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
+pub struct DebugDrawCommandSummary {
+    pub kind: DebugDrawCommandKind,
+    pub channel: Option<usize>,
+    pub image: Option<ImageId>,
+    pub point_count: usize,
+    pub vertex_count: usize,
+    pub index_count: usize,
+    pub triangle_count: usize,
+}
+
+impl DebugDrawCommandSummary {
+    fn new(kind: DebugDrawCommandKind) -> Self {
+        Self {
+            kind,
+            channel: None,
+            image: None,
+            point_count: 0,
+            vertex_count: 0,
+            index_count: 0,
+            triangle_count: 0,
+        }
+    }
+
+    fn with_channel(mut self, channel: Option<usize>) -> Self {
+        self.channel = channel;
+        self
+    }
+}
+
+/// Aggregate source-level metadata for an IMUI debug draw list.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct DebugDrawListSummary {
+    pub command_count: usize,
+    pub clip_push_count: usize,
+    pub clip_pop_count: usize,
+    pub image_command_count: usize,
+    pub svg_command_count: usize,
+    pub text_command_count: usize,
+    pub point_count: usize,
+    pub vertex_count: usize,
+    pub index_count: usize,
+    pub triangle_count: usize,
+}
+
+impl DebugDrawListSummary {
+    fn include(&mut self, command: DebugDrawCommandSummary) {
+        self.command_count += 1;
+        self.point_count += command.point_count;
+        self.vertex_count += command.vertex_count;
+        self.index_count += command.index_count;
+        self.triangle_count += command.triangle_count;
+
+        match command.kind {
+            DebugDrawCommandKind::PushClipRect => self.clip_push_count += 1,
+            DebugDrawCommandKind::PopClipRect => self.clip_pop_count += 1,
+            DebugDrawCommandKind::Image
+            | DebugDrawCommandKind::ImageRegion
+            | DebugDrawCommandKind::ImageQuad
+            | DebugDrawCommandKind::ImageRounded
+            | DebugDrawCommandKind::ImageRegionRounded
+            | DebugDrawCommandKind::ImageTriangleMesh => self.image_command_count += 1,
+            DebugDrawCommandKind::SvgImage | DebugDrawCommandKind::SvgMaskIcon => {
+                self.svg_command_count += 1;
+            }
+            DebugDrawCommandKind::Text => self.text_command_count += 1,
+            DebugDrawCommandKind::Line
+            | DebugDrawCommandKind::Polyline
+            | DebugDrawCommandKind::ConvexPolyFilled
+            | DebugDrawCommandKind::ConcavePolyFilled
+            | DebugDrawCommandKind::Rect
+            | DebugDrawCommandKind::RectFilled
+            | DebugDrawCommandKind::RectFilledMultiColor
+            | DebugDrawCommandKind::Quad
+            | DebugDrawCommandKind::QuadFilled
+            | DebugDrawCommandKind::Triangle
+            | DebugDrawCommandKind::TriangleFilled
+            | DebugDrawCommandKind::TriangleMesh
+            | DebugDrawCommandKind::Circle
+            | DebugDrawCommandKind::CircleFilled
+            | DebugDrawCommandKind::Ngon
+            | DebugDrawCommandKind::NgonFilled
+            | DebugDrawCommandKind::Ellipse
+            | DebugDrawCommandKind::EllipseFilled
+            | DebugDrawCommandKind::BezierQuadratic
+            | DebugDrawCommandKind::BezierCubic => {}
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DebugDrawStrokeStyle {
     pub width: Px,
@@ -541,6 +673,47 @@ impl ImUiDebugDrawList {
             merged.append(&mut channel);
         }
         self.commands = merged;
+    }
+
+    fn for_each_command_with_channel<F>(&self, mut visit: F)
+    where
+        F: FnMut(Option<usize>, &DebugDrawCommand),
+    {
+        let Some(split) = self.channel_split.as_ref() else {
+            for command in &self.commands {
+                visit(None, command);
+            }
+            return;
+        };
+
+        for (channel, commands) in split.channels.iter().enumerate() {
+            let commands = if channel == split.current {
+                self.commands.as_slice()
+            } else {
+                commands.as_slice()
+            };
+            for command in commands {
+                visit(Some(channel), command);
+            }
+        }
+    }
+
+    /// Return command summaries in the order the list would paint after channel merge.
+    pub fn command_summaries(&self) -> Vec<DebugDrawCommandSummary> {
+        let mut summaries = Vec::with_capacity(self.command_count());
+        self.for_each_command_with_channel(|channel, command| {
+            summaries.push(command.summary().with_channel(channel));
+        });
+        summaries
+    }
+
+    /// Return aggregate source-level metadata for recorded debug draw commands.
+    pub fn list_summary(&self) -> DebugDrawListSummary {
+        let mut summary = DebugDrawListSummary::default();
+        self.for_each_command_with_channel(|channel, command| {
+            summary.include(command.summary().with_channel(channel));
+        });
+        summary
     }
 
     pub fn add_line(&mut self, from: Point, to: Point, color: Color, thickness: Px) {
@@ -1295,6 +1468,189 @@ enum DebugDrawCommand {
         color: Color,
         size: Px,
     },
+}
+
+impl DebugDrawCommand {
+    fn summary(&self) -> DebugDrawCommandSummary {
+        match self {
+            DebugDrawCommand::Line { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Line);
+                summary.point_count = 2;
+                summary
+            }
+            DebugDrawCommand::Polyline { points, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Polyline);
+                summary.point_count = points.len();
+                summary
+            }
+            DebugDrawCommand::ConvexPolyFilled { points, .. } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::ConvexPolyFilled);
+                summary.point_count = points.len();
+                summary
+            }
+            DebugDrawCommand::ConcavePolyFilled { points, .. } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::ConcavePolyFilled);
+                summary.point_count = points.len();
+                summary
+            }
+            DebugDrawCommand::Rect { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Rect);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::RectFilled { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::RectFilled);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::RectFilledMultiColor { .. } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::RectFilledMultiColor);
+                summary.point_count = 4;
+                summary.vertex_count = 4;
+                summary.index_count = 6;
+                summary.triangle_count = 2;
+                summary
+            }
+            DebugDrawCommand::Quad { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Quad);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::QuadFilled { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::QuadFilled);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::Triangle { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Triangle);
+                summary.point_count = 3;
+                summary
+            }
+            DebugDrawCommand::TriangleFilled { .. } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::TriangleFilled);
+                summary.point_count = 3;
+                summary.triangle_count = 1;
+                summary
+            }
+            DebugDrawCommand::TriangleMesh { vertices, indices } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::TriangleMesh);
+                summary.vertex_count = vertices.len();
+                summary.index_count = indices.len();
+                summary.triangle_count = indices.len() / 3;
+                summary
+            }
+            DebugDrawCommand::ImageTriangleMesh {
+                image,
+                vertices,
+                indices,
+                ..
+            } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageTriangleMesh);
+                summary.image = Some(*image);
+                summary.vertex_count = vertices.len();
+                summary.index_count = indices.len();
+                summary.triangle_count = indices.len() / 3;
+                summary
+            }
+            DebugDrawCommand::Circle { .. } => {
+                DebugDrawCommandSummary::new(DebugDrawCommandKind::Circle)
+            }
+            DebugDrawCommand::CircleFilled { .. } => {
+                DebugDrawCommandSummary::new(DebugDrawCommandKind::CircleFilled)
+            }
+            DebugDrawCommand::Ngon { segments, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Ngon);
+                summary.point_count = *segments;
+                summary
+            }
+            DebugDrawCommand::NgonFilled { segments, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::NgonFilled);
+                summary.point_count = *segments;
+                summary
+            }
+            DebugDrawCommand::Ellipse { segments, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Ellipse);
+                summary.point_count = *segments;
+                summary
+            }
+            DebugDrawCommand::EllipseFilled { segments, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::EllipseFilled);
+                summary.point_count = *segments;
+                summary
+            }
+            DebugDrawCommand::BezierQuadratic { .. } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::BezierQuadratic);
+                summary.point_count = 3;
+                summary
+            }
+            DebugDrawCommand::BezierCubic { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::BezierCubic);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::PushClipRect { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::PushClipRect);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::PopClipRect => {
+                DebugDrawCommandSummary::new(DebugDrawCommandKind::PopClipRect)
+            }
+            DebugDrawCommand::Image { image, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Image);
+                summary.image = Some(*image);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::ImageRegion { image, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageRegion);
+                summary.image = Some(*image);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::ImageQuad { image, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageQuad);
+                summary.image = Some(*image);
+                summary.point_count = 4;
+                summary.vertex_count = 4;
+                summary.index_count = 6;
+                summary.triangle_count = 2;
+                summary
+            }
+            DebugDrawCommand::ImageRounded { image, .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageRounded);
+                summary.image = Some(*image);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::ImageRegionRounded { image, .. } => {
+                let mut summary =
+                    DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageRegionRounded);
+                summary.image = Some(*image);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::SvgImage { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::SvgImage);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::SvgMaskIcon { .. } => {
+                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::SvgMaskIcon);
+                summary.point_count = 4;
+                summary
+            }
+            DebugDrawCommand::Text { .. } => {
+                DebugDrawCommandSummary::new(DebugDrawCommandKind::Text)
+            }
+        }
+    }
 }
 
 pub(super) fn debug_draw_with_options<H, W, K, F>(
@@ -2801,6 +3157,100 @@ mod tests {
         };
         assert_eq!(options.sampling, ImageSamplingHint::Nearest);
         assert_eq!(options.opacity, 0.5);
+    }
+
+    #[test]
+    fn debug_draw_list_reports_command_summaries_in_merge_order() {
+        let mut list = ImUiDebugDrawList::default();
+        let vertices = [
+            DebugDrawVertex::colored(
+                Point::new(Px(0.0), Px(0.0)),
+                Color::from_srgb_hex_rgb(0xff_00_00),
+            ),
+            DebugDrawVertex::colored(
+                Point::new(Px(8.0), Px(0.0)),
+                Color::from_srgb_hex_rgb(0x00_ff_00),
+            ),
+            DebugDrawVertex::colored(
+                Point::new(Px(4.0), Px(8.0)),
+                Color::from_srgb_hex_rgb(0x00_00_ff),
+            ),
+        ];
+
+        list.channels_split(3);
+        list.add_rect_filled(
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(4.0), Px(4.0))),
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+        );
+        list.channels_set_current(2);
+        list.add_line(
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(8.0), Px(8.0)),
+            Color::from_srgb_hex_rgb(0xff_00_00),
+            Px(1.0),
+        );
+        list.channels_set_current(1);
+        list.add_image_triangle_mesh(ImageId::default(), vertices, [0, 1, 2]);
+
+        let summaries = list.command_summaries();
+        assert_eq!(summaries.len(), 3);
+        assert_eq!(
+            summaries
+                .iter()
+                .map(|summary| (summary.channel, summary.kind))
+                .collect::<Vec<_>>(),
+            vec![
+                (Some(0), DebugDrawCommandKind::RectFilled),
+                (Some(1), DebugDrawCommandKind::ImageTriangleMesh),
+                (Some(2), DebugDrawCommandKind::Line),
+            ]
+        );
+        assert_eq!(summaries[1].image, Some(ImageId::default()));
+        assert_eq!(summaries[1].vertex_count, 3);
+        assert_eq!(summaries[1].index_count, 3);
+        assert_eq!(summaries[1].triangle_count, 1);
+    }
+
+    #[test]
+    fn debug_draw_list_summary_counts_visible_command_classes() {
+        let mut list = ImUiDebugDrawList::default();
+        list.push_clip_rect(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(16.0), Px(16.0)),
+        ));
+        list.add_image(
+            Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(8.0), Px(8.0))),
+            ImageId::default(),
+        );
+        list.add_svg_image(
+            Rect::new(Point::new(Px(2.0), Px(2.0)), Size::new(Px(8.0), Px(8.0))),
+            SvgSource::Static(b"<svg/>"),
+        );
+        list.add_rect_filled_multi_color(
+            Rect::new(Point::new(Px(3.0), Px(3.0)), Size::new(Px(10.0), Px(10.0))),
+            Color::from_srgb_hex_rgb(0xff_00_00),
+            Color::from_srgb_hex_rgb(0x00_ff_00),
+            Color::from_srgb_hex_rgb(0x00_00_ff),
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+        );
+        list.add_text(
+            Point::new(Px(4.0), Px(4.0)),
+            "debug",
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(12.0),
+        );
+        list.pop_clip_rect();
+
+        let summary = list.list_summary();
+        assert_eq!(summary.command_count, 6);
+        assert_eq!(summary.clip_push_count, 1);
+        assert_eq!(summary.clip_pop_count, 1);
+        assert_eq!(summary.image_command_count, 1);
+        assert_eq!(summary.svg_command_count, 1);
+        assert_eq!(summary.text_command_count, 1);
+        assert_eq!(summary.vertex_count, 4);
+        assert_eq!(summary.index_count, 6);
+        assert_eq!(summary.triangle_count, 2);
     }
 
     #[test]

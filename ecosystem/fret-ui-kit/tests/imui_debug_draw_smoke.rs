@@ -7,7 +7,8 @@ use fret_core::{
 };
 use fret_ui::{SvgSource, UiHost};
 use fret_ui_kit::imui::{
-    DebugDrawImageMeshOptions, DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawOptions,
+    DebugDrawCommandKind, DebugDrawCommandSummary, DebugDrawImageMeshOptions,
+    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawListSummary, DebugDrawOptions,
     DebugDrawRoundCorners, DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex,
     UiWriterImUiFacadeExt,
 };
@@ -345,6 +346,14 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             "debug",
             Color::from_srgb_hex_rgb(0xff_ff_ff),
             Px(12.0),
+        );
+        let summaries: Vec<DebugDrawCommandSummary> = draw.command_summaries();
+        let list_summary: DebugDrawListSummary = draw.list_summary();
+        assert_eq!(list_summary.command_count, summaries.len());
+        assert!(
+            summaries
+                .iter()
+                .any(|summary| summary.kind == DebugDrawCommandKind::ImageTriangleMesh)
         );
     });
 
