@@ -338,6 +338,43 @@ impl ImUiDebugDrawList {
         });
     }
 
+    pub fn add_ngon(
+        &mut self,
+        center: Point,
+        radius: Px,
+        segments: usize,
+        color: Color,
+        thickness: Px,
+    ) {
+        self.add_ngon_with_style(center, radius, segments, color, thickness);
+    }
+
+    pub fn add_ngon_with_style(
+        &mut self,
+        center: Point,
+        radius: Px,
+        segments: usize,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Ngon {
+            center,
+            radius,
+            segments,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_ngon_filled(&mut self, center: Point, radius: Px, segments: usize, color: Color) {
+        self.commands.push(DebugDrawCommand::NgonFilled {
+            center,
+            radius,
+            segments,
+            color,
+        });
+    }
+
     pub fn add_bezier_quadratic(
         &mut self,
         from: Point,
@@ -560,6 +597,19 @@ enum DebugDrawCommand {
     CircleFilled {
         center: Point,
         radius: Px,
+        color: Color,
+    },
+    Ngon {
+        center: Point,
+        radius: Px,
+        segments: usize,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    NgonFilled {
+        center: Point,
+        radius: Px,
+        segments: usize,
         color: Color,
     },
     BezierQuadratic {
@@ -946,6 +996,51 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     scale,
                 );
             }
+            DebugDrawCommand::Ngon {
+                center,
+                radius,
+                segments,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let Some(commands) = ngon_path(*center, *radius, *segments) else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::NgonFilled {
+                center,
+                radius,
+                segments,
+                color,
+            } => {
+                if color.a <= 0.0 {
+                    continue;
+                }
+                let Some(commands) = ngon_path(*center, *radius, *segments) else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
             DebugDrawCommand::BezierQuadratic {
                 from,
                 ctrl,
@@ -1138,6 +1233,29 @@ fn circle_path(center: Point, radius: Px) -> [PathCommand; 6] {
     ]
 }
 
+fn ngon_path(center: Point, radius: Px, segments: usize) -> Option<Vec<PathCommand>> {
+    if segments < 3 || radius.0 <= 0.0 || !radius.0.is_finite() {
+        return None;
+    }
+
+    let mut commands = Vec::with_capacity(segments.checked_add(1)?);
+    for index in 0..segments {
+        let angle = std::f32::consts::TAU * index as f32 / segments as f32;
+        let (sin, cos) = angle.sin_cos();
+        let point = Point::new(
+            Px(center.x.0 + cos * radius.0),
+            Px(center.y.0 + sin * radius.0),
+        );
+        if index == 0 {
+            commands.push(PathCommand::MoveTo(point));
+        } else {
+            commands.push(PathCommand::LineTo(point));
+        }
+    }
+    commands.push(PathCommand::Close);
+    Some(commands)
+}
+
 fn bezier_quadratic_path(from: Point, ctrl: Point, to: Point) -> [PathCommand; 2] {
     [PathCommand::MoveTo(from), PathCommand::QuadTo { ctrl, to }]
 }
@@ -1233,6 +1351,19 @@ mod tests {
             Px(6.0),
             Color::from_srgb_hex_rgb(0xaa_00_ff),
         );
+        list.add_ngon(
+            Point::new(Px(56.0), Px(20.0)),
+            Px(8.0),
+            5,
+            Color::from_srgb_hex_rgb(0x65_a3_ff),
+            Px(1.0),
+        );
+        list.add_ngon_filled(
+            Point::new(Px(76.0), Px(20.0)),
+            Px(6.0),
+            6,
+            Color::from_srgb_hex_rgb(0xc0_84_fc),
+        );
         list.add_bezier_quadratic(
             Point::new(Px(2.0), Px(60.0)),
             Point::new(Px(20.0), Px(42.0)),
@@ -1255,7 +1386,7 @@ mod tests {
             Px(12.0),
         );
 
-        assert_eq!(list.command_count(), 14);
+        assert_eq!(list.command_count(), 16);
         assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
         assert!(matches!(
             list.commands[1],
@@ -1288,15 +1419,20 @@ mod tests {
             list.commands[10],
             DebugDrawCommand::CircleFilled { .. }
         ));
+        assert!(matches!(list.commands[11], DebugDrawCommand::Ngon { .. }));
         assert!(matches!(
-            list.commands[11],
+            list.commands[12],
+            DebugDrawCommand::NgonFilled { .. }
+        ));
+        assert!(matches!(
+            list.commands[13],
             DebugDrawCommand::BezierQuadratic { .. }
         ));
         assert!(matches!(
-            list.commands[12],
+            list.commands[14],
             DebugDrawCommand::BezierCubic { .. }
         ));
-        assert!(matches!(list.commands[13], DebugDrawCommand::Text { .. }));
+        assert!(matches!(list.commands[15], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
@@ -1542,6 +1678,21 @@ mod tests {
         assert!(matches!(path[3], PathCommand::CubicTo { .. }));
         assert!(matches!(path[4], PathCommand::CubicTo { .. }));
         assert_eq!(path[5], PathCommand::Close);
+    }
+
+    #[test]
+    fn ngon_path_requires_three_segments_and_positive_radius() {
+        assert!(ngon_path(Point::new(Px(0.0), Px(0.0)), Px(8.0), 2).is_none());
+        assert!(ngon_path(Point::new(Px(0.0), Px(0.0)), Px(0.0), 3).is_none());
+
+        let path = ngon_path(Point::new(Px(10.0), Px(20.0)), Px(8.0), 4).unwrap();
+
+        assert_eq!(path.len(), 5);
+        assert_eq!(path[0], PathCommand::MoveTo(Point::new(Px(18.0), Px(20.0))));
+        assert!(matches!(path[1], PathCommand::LineTo(_)));
+        assert!(matches!(path[2], PathCommand::LineTo(_)));
+        assert!(matches!(path[3], PathCommand::LineTo(_)));
+        assert_eq!(path[4], PathCommand::Close);
     }
 
     #[test]

@@ -97,6 +97,19 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Px(8.0),
             Color::from_srgb_hex_rgb(0x06_b6_d4),
         );
+        draw.add_ngon_with_style(
+            Point::new(Px(132.0), Px(72.0)),
+            Px(9.0),
+            5,
+            Color::from_srgb_hex_rgb(0x65_a3_ff),
+            DebugDrawStrokeStyle::new(Px(1.0)).with_join(StrokeJoinV1::Round),
+        );
+        draw.add_ngon_filled(
+            Point::new(Px(156.0), Px(72.0)),
+            Px(8.0),
+            6,
+            Color::from_srgb_hex_rgb(0xc0_84_fc),
+        );
         draw.add_bezier_quadratic_with_style(
             Point::new(Px(88.0), Px(62.0)),
             Point::new(Px(104.0), Px(48.0)),

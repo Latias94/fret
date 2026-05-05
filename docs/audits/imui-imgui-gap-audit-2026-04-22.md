@@ -276,15 +276,16 @@ depth is partially superseded by `docs/workstreams/imui-debug-draw-shape-primiti
 `docs/workstreams/imui-debug-draw-clip-stack-v1/`,
 `docs/workstreams/imui-debug-draw-image-overlay-v1/`,
 `docs/workstreams/imui-debug-draw-bezier-primitives-v1/`,
-`docs/workstreams/imui-debug-draw-convex-poly-fill-v1/`, and
-`docs/workstreams/imui-debug-draw-quad-primitives-v1/`.
+`docs/workstreams/imui-debug-draw-convex-poly-fill-v1/`,
+`docs/workstreams/imui-debug-draw-quad-primitives-v1/`, and
+`docs/workstreams/imui-debug-draw-ngon-primitives-v1/`.
 
 Current IMUI now exposes:
 
 - a thin immediate-mode `debug_draw` facade in `fret-ui-kit::imui`,
 - line, rect, filled rect, and text primitives,
-- polyline, stroked/filled quad, stroked/filled triangle, stroked/filled circle, quadratic Bezier,
-  and cubic Bezier primitives,
+- polyline, stroked/filled quad, stroked/filled triangle, stroked/filled circle, stroked/filled
+  regular polygon, quadratic Bezier, and cubic Bezier primitives,
 - an `AddConvexPolyFilled`-style filled convex polygon command,
 - explicit stroke width/cap/join/miter/dash policy,
 - clip rect stack commands with paint-end auto-balancing,
