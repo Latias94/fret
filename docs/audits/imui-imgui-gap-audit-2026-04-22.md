@@ -279,7 +279,9 @@ depth is partially superseded by `docs/workstreams/imui-debug-draw-shape-primiti
 `docs/workstreams/imui-debug-draw-convex-poly-fill-v1/`,
 `docs/workstreams/imui-debug-draw-quad-primitives-v1/`,
 `docs/workstreams/imui-debug-draw-ngon-primitives-v1/`, and
-`docs/workstreams/imui-debug-draw-ellipse-primitives-v1/`.
+`docs/workstreams/imui-debug-draw-ellipse-primitives-v1/`. Update (2026-05-05): path-builder
+ergonomics are partially superseded by
+`docs/workstreams/imui-debug-draw-path-builder-v1/`.
 
 Current IMUI now exposes:
 
@@ -288,15 +290,17 @@ Current IMUI now exposes:
 - polyline, stroked/filled quad, stroked/filled triangle, stroked/filled circle, stroked/filled
   regular polygon, stroked/filled ellipse, quadratic Bezier, and cubic Bezier primitives,
 - an `AddConvexPolyFilled`-style filled convex polygon command,
+- scoped `PathLineTo` / `PathLineToMergeDuplicate` / `PathStroke` / `PathFillConvex`-style
+  ergonomics through `draw.path(...)`,
 - explicit stroke width/cap/join/miter/dash policy,
 - clip rect stack commands with paint-end auto-balancing,
 - registered image, image-region, SVG image, and SVG mask icon overlay commands,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
-Dear ImGui still goes much deeper through full `DrawList` parity, richer stroke styles, dashed
-paths, path-builder ergonomics, channel splitting, per-command metadata, and hit-test-aware debug
-interaction.
+Dear ImGui still goes much deeper through full `DrawList` parity, path arc helpers, path Bezier
+builder helpers, rounded `PathRect` parity, channel splitting, per-command metadata, and
+hit-test-aware debug interaction.
 
 Conclusion:
 

@@ -336,6 +336,12 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-ellipse-primitives-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-ellipse-primitives-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-ellipse-primitives-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw path builder follow-on (closed narrow P1 lane adding scoped Dear
+  ImGui-style `PathLineTo` / `PathLineToMergeDuplicate` / `PathStroke` /
+  `PathFillConvex` ergonomics to the canvas-backed helper without retained path state):
+  `docs/workstreams/imui-debug-draw-path-builder-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-path-builder-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-path-builder-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

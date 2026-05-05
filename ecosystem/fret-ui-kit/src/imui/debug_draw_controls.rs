@@ -170,7 +170,77 @@ impl Default for DebugDrawSvgOptions {
     }
 }
 
+#[derive(Debug)]
+pub struct ImUiDebugDrawPath<'a> {
+    draw_list: &'a mut ImUiDebugDrawList,
+    points: Vec<Point>,
+}
+
+impl ImUiDebugDrawPath<'_> {
+    pub fn clear(&mut self) -> &mut Self {
+        self.points.clear();
+        self
+    }
+
+    pub fn line_to(&mut self, point: Point) -> &mut Self {
+        self.points.push(point);
+        self
+    }
+
+    pub fn line_to_merge_duplicate(&mut self, point: Point) -> &mut Self {
+        if self.points.last().copied() != Some(point) {
+            self.points.push(point);
+        }
+        self
+    }
+
+    pub fn stroke(&mut self, color: Color, thickness: Px, closed: bool) {
+        self.stroke_with_style(color, thickness, closed);
+    }
+
+    pub fn stroke_with_style(
+        &mut self,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+        closed: bool,
+    ) {
+        let points = std::mem::take(&mut self.points);
+        if points.len() < path_stroke_required_points(closed) {
+            return;
+        }
+        self.draw_list
+            .add_polyline_with_style(points, color, style, closed);
+    }
+
+    pub fn fill_convex(&mut self, color: Color) {
+        let points = std::mem::take(&mut self.points);
+        if points.len() < 3 {
+            return;
+        }
+        self.draw_list.add_convex_poly_filled(points, color);
+    }
+
+    pub fn point_count(&self) -> usize {
+        self.points.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.points.is_empty()
+    }
+}
+
 impl ImUiDebugDrawList {
+    pub fn path<F>(&mut self, build: F)
+    where
+        F: FnOnce(&mut ImUiDebugDrawPath<'_>),
+    {
+        let mut path = ImUiDebugDrawPath {
+            draw_list: self,
+            points: Vec::new(),
+        };
+        build(&mut path);
+    }
+
     pub fn add_line(&mut self, from: Point, to: Point, color: Color, thickness: Px) {
         self.add_line_with_style(from, to, color, thickness);
     }
@@ -1254,9 +1324,12 @@ fn uv_rect_is_valid(uv: UvRect) -> bool {
         && uv.v1 > uv.v0
 }
 
+fn path_stroke_required_points(closed: bool) -> usize {
+    if closed { 3 } else { 2 }
+}
+
 fn polyline_path(points: &[Point], closed: bool) -> Option<Vec<PathCommand>> {
-    let required_points = if closed { 3 } else { 2 };
-    if points.len() < required_points {
+    if points.len() < path_stroke_required_points(closed) {
         return None;
     }
 
@@ -1670,6 +1743,85 @@ mod tests {
             list.commands[3],
             DebugDrawCommand::SvgMaskIcon { .. }
         ));
+    }
+
+    #[test]
+    fn debug_draw_path_builder_records_stroke_and_fill_commands() {
+        let mut list = ImUiDebugDrawList::default();
+        let p0 = Point::new(Px(0.0), Px(0.0));
+        let p1 = Point::new(Px(12.0), Px(0.0));
+        let p2 = Point::new(Px(12.0), Px(10.0));
+        let p3 = Point::new(Px(0.0), Px(10.0));
+
+        list.path(|path| {
+            assert!(path.is_empty());
+            path.line_to(p0)
+                .line_to_merge_duplicate(p0)
+                .line_to_merge_duplicate(p1)
+                .line_to(p2);
+            assert_eq!(path.point_count(), 3);
+
+            path.stroke_with_style(
+                Color::from_srgb_hex_rgb(0xff_aa_00),
+                DebugDrawStrokeStyle::new(Px(2.0)).with_join(StrokeJoinV1::Round),
+                true,
+            );
+            assert!(path.is_empty());
+
+            path.line_to(p0).line_to(p1).line_to(p2).line_to(p3);
+            path.fill_convex(Color::from_srgb_hex_rgb(0x22_c5_5e));
+        });
+
+        assert_eq!(list.command_count(), 2);
+        let DebugDrawCommand::Polyline {
+            points,
+            style,
+            closed,
+            ..
+        } = &list.commands[0]
+        else {
+            panic!("path stroke should record a polyline command");
+        };
+        assert_eq!(&**points, &[p0, p1, p2]);
+        assert_eq!(style.width, Px(2.0));
+        assert_eq!(style.join, StrokeJoinV1::Round);
+        assert!(*closed);
+
+        let DebugDrawCommand::ConvexPolyFilled { points, .. } = &list.commands[1] else {
+            panic!("path fill should record a convex fill command");
+        };
+        assert_eq!(&**points, &[p0, p1, p2, p3]);
+    }
+
+    #[test]
+    fn debug_draw_path_builder_clears_invalid_finished_paths_without_recording() {
+        let mut list = ImUiDebugDrawList::default();
+        let p0 = Point::new(Px(0.0), Px(0.0));
+        let p1 = Point::new(Px(8.0), Px(0.0));
+
+        list.path(|path| {
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), false);
+            assert!(path.is_empty());
+
+            path.line_to(p0);
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), false);
+            assert!(path.is_empty());
+
+            path.line_to(p0).line_to(p1);
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), true);
+            assert!(path.is_empty());
+
+            path.line_to(p0).line_to(p1);
+            path.fill_convex(Color::from_srgb_hex_rgb(0xff_ff_ff));
+            assert!(path.is_empty());
+
+            path.line_to(p0).line_to(p1);
+            assert_eq!(path.point_count(), 2);
+            path.clear();
+            assert!(path.is_empty());
+        });
+
+        assert_eq!(list.command_count(), 0);
     }
 
     #[test]

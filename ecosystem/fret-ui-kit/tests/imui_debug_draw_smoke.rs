@@ -140,6 +140,21 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Color::from_srgb_hex_rgb(0xf9_73_16),
             Px(1.0),
         );
+        draw.path(|path| {
+            path.line_to(Point::new(Px(164.0), Px(68.0)))
+                .line_to_merge_duplicate(Point::new(Px(164.0), Px(68.0)))
+                .line_to(Point::new(Px(178.0), Px(58.0)))
+                .line_to(Point::new(Px(192.0), Px(68.0)));
+            path.stroke_with_style(
+                Color::from_srgb_hex_rgb(0xfa_e8_ff),
+                DebugDrawStrokeStyle::new(Px(1.0)).with_cap(StrokeCapV1::Round),
+                false,
+            );
+            path.line_to(Point::new(Px(166.0), Px(76.0)))
+                .line_to(Point::new(Px(190.0), Px(76.0)))
+                .line_to(Point::new(Px(178.0), Px(92.0)));
+            path.fill_convex(Color::from_srgb_hex_rgb(0xa7_f3_d0));
+        });
         draw.pop_clip_rect();
         draw.add_image_with_options(
             Rect::new(
