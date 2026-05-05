@@ -153,6 +153,8 @@ impl Default for TextAreaStyle {
 pub struct TextArea {
     enabled: bool,
     focusable: bool,
+    read_only: bool,
+    allow_tab_input: bool,
     focus_ring_always_paint: bool,
     text: String,
     base_text_revision: u64,
@@ -216,6 +218,8 @@ impl Default for TextArea {
         Self {
             enabled: true,
             focusable: true,
+            read_only: false,
+            allow_tab_input: true,
             focus_ring_always_paint: false,
             text: String::new(),
             base_text_revision: 0,
@@ -298,6 +302,14 @@ impl TextArea {
 
     pub fn set_focusable(&mut self, focusable: bool) {
         self.focusable = focusable;
+    }
+
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.read_only = read_only;
+    }
+
+    pub fn set_allow_tab_input(&mut self, allow: bool) {
+        self.allow_tab_input = allow;
     }
 
     pub fn text(&self) -> &str {

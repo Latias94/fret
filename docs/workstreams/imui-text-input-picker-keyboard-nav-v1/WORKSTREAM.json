@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-text-input-picker-keyboard-nav-v1",
+  "title": "ImUi Text Input Picker Keyboard Navigation v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-text-input-picker-recipe-v1",
+  "problem": "Close the first keyboard-owned active-candidate gap in the IMUI completion/history picker recipe by adding ArrowUp/ArrowDown active-index movement and Enter/NumpadEnter commit while keeping candidate storage app-owned and runtime text input free of completion policy.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-text-input-picker-keyboard-nav-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-picker-keyboard-nav-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-picker-keyboard-nav-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-picker-keyboard-nav-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-text-input-picker-keyboard-nav-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "A focused IMUI completion/history picker keeps focus in the input, moves an active popup candidate with ArrowDown/ArrowUp, commits it with Enter/NumpadEnter, and does not consume Enter when no candidates exist.",
+    "commands": [
+      "cargo nextest run -p fret-imui input_text_completion_picker_keyboard_navigation input_text_history_picker_keyboard_navigation input_text_picker_keyboard_navigation --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust packages",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui"
+    },
+    {
+      "name": "fret-ui-kit tests compile",
+      "command": "cargo check -p fret-ui-kit --tests"
+    },
+    {
+      "name": "imui picker keyboard navigation tests",
+      "command": "cargo nextest run -p fret-imui input_text_completion_picker_keyboard_navigation input_text_history_picker_keyboard_navigation input_text_picker_keyboard_navigation --no-fail-fast"
+    },
+    {
+      "name": "imui model text tests",
+      "command": "cargo nextest run -p fret-imui models_text --no-fail-fast"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-text-input-picker-keyboard-nav-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This keyboard-navigation slice is closed. Start separate follow-ons for editor-owned ranking/storage, richer active-descendant accessibility wiring, dismissed-query policy, or multiline conflict handling."
+  }
+}

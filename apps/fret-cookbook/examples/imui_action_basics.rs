@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret::imui::{kit::ButtonOptions, prelude::*};
+use fret::imui::{
+    kit::{ButtonOptions, InputTextOptions},
+    prelude::*,
+};
 use fret::semantics::SemanticsRole;
 use fret::style::Space;
 use fret_genui_core::catalog::CatalogActionV1;
@@ -25,16 +28,24 @@ const TEST_ID_BUTTON_IMUI: &str = "cookbook.imui_action_basics.button.imui";
 const TEST_ID_BUTTON_IMUI_PAYLOAD_1: &str = "cookbook.imui_action_basics.button.imui.payload.1";
 const TEST_ID_BUTTON_IMUI_PAYLOAD_5: &str = "cookbook.imui_action_basics.button.imui.payload.5";
 const TEST_ID_BUTTON_IMUI_PAYLOAD_10: &str = "cookbook.imui_action_basics.button.imui.payload.10";
+const TEST_ID_INPUT_FILTER: &str = "cookbook.imui_action_basics.input.filter";
+const TEST_ID_INPUT_SNAPSHOT: &str = "cookbook.imui_action_basics.input.snapshot";
 
 struct ImUiActionBasicsView {
     genui_state: Model<Value>,
     genui_spec: SpecV1,
     genui_catalog: Arc<fret_genui_core::catalog::CatalogV1>,
+    filter_text: Model<String>,
+    snapshot_text: Model<String>,
 }
 
 impl View for ImUiActionBasicsView {
     fn init(app: &mut App, _window: WindowId) -> Self {
         let genui_state = app.models_mut().insert(json!({}));
+        let filter_text = app.models_mut().insert(String::from("Actions"));
+        let snapshot_text = app
+            .models_mut()
+            .insert(String::from("Read-only action snapshot"));
 
         let genui_spec: SpecV1 = serde_json::from_value(json!({
             "schema_version": 1,
@@ -96,6 +107,8 @@ impl View for ImUiActionBasicsView {
             genui_state,
             genui_spec,
             genui_catalog: Arc::new(catalog),
+            filter_text,
+            snapshot_text,
         }
     }
 
@@ -146,6 +159,23 @@ impl View for ImUiActionBasicsView {
                         act::Inc,
                         ButtonOptions {
                             test_id: Some(Arc::from(TEST_ID_BUTTON_IMUI)),
+                            ..Default::default()
+                        },
+                    );
+                    let _ = ui.input_text_model_with_options(
+                        &self.filter_text,
+                        InputTextOptions {
+                            select_all_on_focus: true,
+                            placeholder: Some(Arc::from("Filter")),
+                            test_id: Some(Arc::from(TEST_ID_INPUT_FILTER)),
+                            ..Default::default()
+                        },
+                    );
+                    let _ = ui.input_text_model_with_options(
+                        &self.snapshot_text,
+                        InputTextOptions {
+                            read_only: true,
+                            test_id: Some(Arc::from(TEST_ID_INPUT_SNAPSHOT)),
                             ..Default::default()
                         },
                     );

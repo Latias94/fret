@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "slug": "imui-models-text-final-test-split-v1",
+  "title": "ImUi Models Text Final Test Split v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-models-text-area-test-split-v1",
+  "problem": "Finish the `models_text.rs` decomposition by moving the remaining basic changed-signal, single-line lifecycle/bounds, and push-id identity tests into dedicated modules, then retiring the legacy aggregate file without changing behavior or public APIs.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-models-text-final-test-split-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-models-text-final-test-split-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-models-text-final-test-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-models-text-final-test-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "The legacy `models_text.rs` aggregate file is retired, and the `models_text` nextest filter still runs all text-model modules.",
+    "commands": [
+      "cargo nextest run -p fret-imui models_text --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format fret-imui",
+      "command": "cargo fmt --package fret-imui"
+    },
+    {
+      "name": "broader text model tests",
+      "command": "cargo nextest run -p fret-imui models_text --no-fail-fast"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-models-text-final-test-split-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-imui/src/tests/mod.rs",
+    "ecosystem/fret-imui/src/tests/models_text_basic.rs",
+    "ecosystem/fret-imui/src/tests/models_text_lifecycle.rs",
+    "ecosystem/fret-imui/src/tests/models_text_identity.rs",
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This final mechanical text-model test split is closed. Future text test changes should edit the relevant capability module directly instead of reintroducing a `models_text.rs` aggregate."
+  }
+}

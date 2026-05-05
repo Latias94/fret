@@ -1,0 +1,31 @@
+# ImUi Models Text Final Test Split v1 Evidence And Gates
+
+Status: Closed
+Last updated: 2026-05-04
+
+## Reference Evidence
+
+- `docs/audits/imui-imgui-gap-audit-2026-04-22.md`: identifies `fret-imui` test architecture as a
+  larger refactor hazard than missing top-level helper APIs.
+- `docs/workstreams/imui-models-text-area-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`: previous
+  narrow split proving the same decomposition approach.
+
+## Implementation Anchors
+
+- `ecosystem/fret-imui/src/tests/mod.rs`
+- `ecosystem/fret-imui/src/tests/models_text_basic.rs`
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle.rs`
+- `ecosystem/fret-imui/src/tests/models_text_identity.rs`
+- `docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+
+## Gates
+
+```bash
+cargo fmt --package fret-imui
+cargo nextest run -p fret-imui models_text --no-fail-fast
+python tools/check_layering.py
+python tools/check_workstream_catalog.py
+python -m json.tool docs/workstreams/imui-models-text-final-test-split-v1/WORKSTREAM.json
+python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
+git diff --check
+```

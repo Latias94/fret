@@ -14,4 +14,5 @@ pub(crate) mod props;
 pub(crate) mod surface;
 
 pub use area::TextAreaStyle;
+pub use input::TextInputInsertFilter;
 pub use input_style::TextInputStyle;

@@ -13,11 +13,36 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
 - `tools/diag_gate_action_first_authoring_v1.py`
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/suites/cookbook-imui-action-basics/suite.json`
 - `docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md`
 - `docs/workstreams/imui-control-chrome-fearless-refactor-v1/FINAL_STATUS.md`
+- `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
+- `docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/imui-text-input-picker-a11y-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-models-text-picker-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-models-text-filter-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-models-text-mode-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-models-text-command-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-models-text-area-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-editor-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-alpha-preview-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-numeric-readout-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-numeric-input-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-color-edit-popup-options-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- `docs/workstreams/imui-color-edit-model-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- `docs/workstreams/imui-debug-draw-baseline-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-debug-draw-shape-primitives-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md`
 - `docs/workstreams/imui-child-region-depth-v1/DESIGN.md`
 - `docs/workstreams/imui-child-region-depth-v1/M0_BASELINE_AUDIT_2026-04-22.md`
 - `docs/workstreams/imui-child-region-depth-v1/M2_CHILD_REGION_CHROME_SLICE_2026-04-22.md`
@@ -88,6 +113,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `apps/fret-cookbook/examples/imui_action_basics.rs`
@@ -107,7 +133,14 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs`
 - `ecosystem/fret-imui/src/tests/models_controls.rs`
 - `ecosystem/fret-imui/src/tests/models_combo.rs`
-- `ecosystem/fret-imui/src/tests/models_text.rs`
+- `ecosystem/fret-imui/src/tests/models_text_basic.rs`
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle.rs`
+- `ecosystem/fret-imui/src/tests/models_text_identity.rs`
+- `ecosystem/fret-imui/src/tests/models_text_picker.rs`
+- `ecosystem/fret-imui/src/tests/models_text_filters.rs`
+- `ecosystem/fret-imui/src/tests/models_text_modes.rs`
+- `ecosystem/fret-imui/src/tests/models_text_commands.rs`
+- `ecosystem/fret-imui/src/tests/models_text_area.rs`
 - `ecosystem/fret-imui/src/tests/popup_hover.rs`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - `apps/fret-examples/src/imui_hello_demo.rs`
@@ -338,6 +371,7 @@ This package currently proves:
 - `python tools/gate_imui_workstream_source.py`
 - `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`
 - `cargo run -p fretboard-dev -- diag campaign run imui-p3-multiwindow-parity --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- Local refresh evidence: `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
 
 This package currently proves:
 
@@ -345,8 +379,13 @@ This package currently proves:
   mixed-DPI follow-drag as one lane-owned package,
 - `docking_arbitration_demo` is the launched proof surface for that package,
 - the four expectations map to four repo-owned scripts instead of one vague docking smoke story,
+- local source-policy, campaign validation, Wayland fallback, window-style capability, script
+  roundtrip, and diagnostics predicate gates were refreshed on 2026-05-04,
 - and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
   IMUI lane's new umbrella package.
+
+The 2026-05-04 launched bounded campaign attempt timed out before script-result completion and is
+not counted as passing hand-feel evidence.
 
 ### Lane hygiene gates
 

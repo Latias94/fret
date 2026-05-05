@@ -84,7 +84,7 @@ pub use pending_shortcut::PendingShortcutOverlayState;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
-pub use text::{TextAreaStyle, TextInputStyle};
+pub use text::{TextAreaStyle, TextInputInsertFilter, TextInputStyle};
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use theme_keys::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
 pub use tree::{

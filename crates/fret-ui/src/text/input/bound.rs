@@ -6,7 +6,7 @@ use crate::widget::{
     CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
     PlatformTextInputCx, Widget,
 };
-use crate::{Invalidation, TextInputStyle, UiHost};
+use crate::{Invalidation, TextInputInsertFilter, TextInputStyle, UiHost};
 
 pub struct BoundTextInput {
     model: Model<String>,
@@ -97,12 +97,20 @@ impl BoundTextInput {
         self.input.set_focusable(focusable);
     }
 
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.input.set_read_only(read_only);
+    }
+
     pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
         self.input.set_focus_ring_always_paint(always_paint);
     }
 
     pub fn set_obscure_text(&mut self, obscure: bool) {
         self.input.set_obscure_text(obscure);
+    }
+
+    pub fn set_insert_filter(&mut self, filter: Option<TextInputInsertFilter>) {
+        self.input.set_insert_filter(filter);
     }
 
     pub fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -219,6 +227,9 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         range: fret_runtime::Utf16Range,
         text: &str,
     ) -> bool {
+        if self.input.read_only {
+            return false;
+        }
         let before = self.input.text().to_string();
         let changed = <TextInput as Widget<H>>::platform_text_input_replace_text_in_range_utf16(
             &mut self.input,
@@ -241,6 +252,9 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         marked: Option<fret_runtime::Utf16Range>,
         selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
+        if self.input.read_only {
+            return false;
+        }
         let before = self.input.text().to_string();
         let changed =
             <TextInput as Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(
@@ -298,7 +312,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         }
 
         match cmd {
-            "text.copy" | "text.cut" => {
+            "text.copy" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
@@ -308,13 +322,33 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                     CommandAvailability::Blocked
                 }
             }
+            "text.cut" => {
+                if self.input.read_only || !cx.input_ctx.caps.clipboard.text.write {
+                    return CommandAvailability::Blocked;
+                }
+                if self.input.has_selection() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
             "text.paste" => {
-                if !cx.input_ctx.caps.clipboard.text.read {
+                if self.input.read_only || !cx.input_ctx.caps.clipboard.text.read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" | "text.clear" => {
+            "text.select_all" => {
+                if !self.input.text().is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.clear" => {
+                if self.input.read_only {
+                    return CommandAvailability::Blocked;
+                }
                 if !self.input.text().is_empty() {
                     CommandAvailability::Available
                 } else {

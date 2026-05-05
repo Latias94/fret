@@ -16,7 +16,8 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
-    ColorEdit, ColorEditOptions, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
+    ColorEdit, ColorEditOptions, ColorEditPopupNumericInputs, ColorEditPopupOptions,
+    ColorEditPopupPicker, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
     EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions,
     IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions, NumericInput,
     NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider, SliderOptions,
@@ -63,6 +64,12 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         ui,
         ColorEdit::new(color_model.clone()).options(ColorEditOptions {
             id_source: Some(Arc::from("tests.color_edit")),
+            popup: ColorEditPopupOptions {
+                picker: ColorEditPopupPicker::HsvHueBar,
+                numeric_inputs: ColorEditPopupNumericInputs::RgbAndHsv,
+                presets: true,
+                alpha_bar: true,
+            },
             ..Default::default()
         }),
     );
@@ -395,7 +402,16 @@ fn editor_imui_adapter_option_defaults_compile() {
 
     assert_eq!(items.len(), 2);
     let _ = TextFieldOptions::default();
-    let _ = ColorEditOptions::default();
+    let color_options = ColorEditOptions {
+        popup: ColorEditPopupOptions {
+            picker: ColorEditPopupPicker::Hidden,
+            numeric_inputs: ColorEditPopupNumericInputs::Rgb,
+            presets: false,
+            alpha_bar: false,
+        },
+        ..Default::default()
+    };
+    assert_eq!(color_options.popup.picker, ColorEditPopupPicker::Hidden);
     let _ = DragValueOptions::default();
     let _ = AxisDragValueOptions::default();
     let _ = NumericInputOptions::default();

@@ -98,7 +98,6 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         self.out.extend(f(self.cx));
     }
 
-    #[track_caller]
     pub fn id<K: Hash>(&mut self, key: K, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
         let out = &mut *self.out;
         self.cx.keyed(key, |cx| {
@@ -107,7 +106,6 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         });
     }
 
-    #[track_caller]
     pub fn push_id<K: Hash>(
         &mut self,
         key: K,

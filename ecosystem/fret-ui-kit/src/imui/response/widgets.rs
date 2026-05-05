@@ -21,6 +21,14 @@ pub struct ComboResponse {
     pub toggled: bool,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct InputTextPickerResponse {
+    pub input: ResponseExt,
+    pub open: bool,
+    pub picked_index: Option<usize>,
+    pub picked: Option<Arc<str>>,
+}
+
 /// Aggregated response surface for helper-owned tab bars.
 #[derive(Debug, Clone, Default)]
 pub struct TabBarResponse {
@@ -127,6 +135,24 @@ impl ComboResponse {
 
     pub fn hovered_like_imgui(self) -> bool {
         self.trigger.hovered_like_imgui()
+    }
+}
+
+impl InputTextPickerResponse {
+    pub fn id(&self) -> Option<GlobalElementId> {
+        self.input.id
+    }
+
+    pub fn changed(&self) -> bool {
+        self.input.changed()
+    }
+
+    pub fn picked(&self) -> Option<&str> {
+        self.picked.as_deref()
+    }
+
+    pub fn picked_index(&self) -> Option<usize> {
+        self.picked_index
     }
 }
 

@@ -67,6 +67,171 @@ fn text_area_select_all_is_blocked_when_empty() {
 }
 
 #[test]
+fn text_area_read_only_blocks_mutation_but_allows_selection_copy() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello\nworld".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-read-only",
+        |cx| {
+            let mut props = crate::element::TextAreaProps::new(model.clone());
+            props.read_only = true;
+            vec![cx.text_area(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    ui.set_focus(Some(area_node));
+
+    let copy = CommandId::from("text.copy");
+    let cut = CommandId::from("text.cut");
+    let paste = CommandId::from("text.paste");
+    let clear = CommandId::from("text.clear");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected read-only text area to allow select_all"
+    );
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected copy to remain available for read-only selected text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &cut),
+        "expected cut to be blocked for read-only text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &paste),
+        "expected paste to be blocked for read-only text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected clear to be blocked for read-only text area"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("!".to_string()),
+    );
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("hello\nworld"),
+        "expected text input event to leave read-only area model unchanged"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &paste),
+        "expected read-only paste to be consumed by the focused text area"
+    );
+    assert!(
+        !app.take_effects()
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardReadText { .. })),
+        "expected read-only paste to avoid clipboard read requests"
+    );
+}
+
+#[test]
+fn text_area_tab_key_respects_allow_tab_input_policy() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let blocked_model = app.models_mut().insert(String::from("blocked"));
+    let allowed_model = app.models_mut().insert(String::from("allowed"));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-tab-input-policy",
+        |cx| {
+            let mut blocked = crate::element::TextAreaProps::new(blocked_model.clone());
+            blocked.allow_tab_input = false;
+            blocked.layout.size.height = Length::Px(Px(72.0));
+            let mut allowed = crate::element::TextAreaProps::new(allowed_model.clone());
+            allowed.allow_tab_input = true;
+            allowed.layout.size.height = Length::Px(Px(72.0));
+            vec![cx.column(Default::default(), |cx| {
+                vec![cx.text_area(blocked), cx.text_area(allowed)]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let column = ui.children(root)[0];
+    let blocked_node = ui.children(column)[0];
+    let allowed_node = ui.children(column)[1];
+
+    ui.set_focus(Some(blocked_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Tab,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert_eq!(
+        app.models().get_cloned(&blocked_model).as_deref(),
+        Some("blocked"),
+        "allow_tab_input=false should not mutate the text area model"
+    );
+
+    ui.set_focus(Some(allowed_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Tab,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert_eq!(
+        app.models().get_cloned(&allowed_model).as_deref(),
+        Some("allowed\t"),
+        "allow_tab_input=true should insert a tab character"
+    );
+}
+
+#[test]
 fn text_area_double_click_respects_window_text_boundary_mode_under_render_transform() {
     fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> Option<(u32, u32)> {
         let mut app = TestHost::new();

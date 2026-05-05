@@ -104,6 +104,210 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
+- Closed narrow follow-on for IMUI text input policy depth (read-only, select-all-on-focus, and
+  multiline AllowTabInput policy):
+  - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input history/completion command policy:
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input completion/history picker recipe:
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input picker keyboard navigation:
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input picker accessibility:
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text picker test architecture:
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text filter test architecture:
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text mode test architecture:
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text command test architecture:
+  - `docs/workstreams/imui-models-text-command-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text area test architecture:
+  - `docs/workstreams/imui-models-text-area-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for final IMUI text-model test architecture:
+  - `docs/workstreams/imui-models-text-final-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input named character filters:
+  - `docs/workstreams/imui-text-input-filter-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input custom insertion filters:
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI text input undo/redo command policy:
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for the public IMUI editor cookbook proof:
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/TODO.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` popup depth:
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` alpha-preserving RGB policy:
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` alpha preview:
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` AlphaBar:
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` HSV picker:
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` numeric readout:
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` numeric input:
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` popup options:
+  - `docs/workstreams/imui-color-edit-popup-options-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` model split:
+  - `docs/workstreams/imui-color-edit-model-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-model-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI debug draw baseline:
+  - `docs/workstreams/imui-debug-draw-baseline-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI debug draw shape primitives:
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI debug draw stroke style:
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI debug draw clip stack:
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI debug draw image overlay:
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md`
 - Closed narrow follow-on for the fearless private full pressable item-behavior kernel in
   `fret-ui-kit::imui` (button, checkbox/radio, selectable, and combo trigger migrated; active-only
   switch/menu/tab cleanup and slider editing should start as narrower lanes):
@@ -740,7 +944,10 @@ It complements (but does not replace) ADRs:
   mixed-DPI real-host proof item is accepted in
   `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`,
   and local non-Linux continuation is bounded by
-  `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`.
+  `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`;
+  the 2026-05-04 local non-interactive refresh is recorded in
+  `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
+  without counting as launched campaign acceptance.
 - Use `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json` as the closed
   diagnostics follow-on for the M3 mixed-DPI automation decision:
   the repo now has a runner-owned host monitor-topology environment fingerprint. The first
@@ -1122,6 +1329,7 @@ It complements (but does not replace) ADRs:
     - Mixed-DPI accepted run: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
     - Window-style opacity capability: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
     - Local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
+    - Local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
     - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
     - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

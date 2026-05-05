@@ -276,6 +276,99 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_read_only_blocks_mutation_but_allows_selection_copy() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-read-only",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.read_only = true;
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let copy = CommandId::from("text.copy");
+    let cut = CommandId::from("text.cut");
+    let paste = CommandId::from("text.paste");
+    let clear = CommandId::from("text.clear");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected read-only text input to allow select_all"
+    );
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected copy to remain available for read-only selected text"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &cut),
+        "expected cut to be blocked for read-only text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &paste),
+        "expected paste to be blocked for read-only text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected clear to be blocked for read-only text input"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("!".to_string()),
+    );
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("hello"),
+        "expected text input event to leave read-only model unchanged"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &cut),
+        "expected read-only cut to be consumed by the focused text input"
+    );
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("hello"),
+        "expected cut command to leave read-only model unchanged"
+    );
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &paste),
+        "expected read-only paste to be consumed by the focused text input"
+    );
+    assert!(
+        !app.take_effects()
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardReadText { .. })),
+        "expected read-only paste to avoid clipboard read requests"
+    );
+}
+
+#[test]
 fn text_input_region_clipboard_read_text_hook_handles_matching_token() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

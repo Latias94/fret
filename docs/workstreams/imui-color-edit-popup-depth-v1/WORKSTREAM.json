@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "slug": "imui-color-edit-popup-depth-v1",
+  "title": "ImUi Color Edit Popup Depth v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-editor-cookbook-proof-v1",
+  "problem": "Replace the editor `ColorEdit` popup stub with a small usable preset palette so the app-facing IMUI editor-control example does not teach a placeholder interaction.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-color-edit-popup-depth-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-popup-depth-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-popup-depth-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-popup-depth-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "The editor `ColorEdit` popup renders preset swatches instead of a placeholder label, and the cookbook editor-control example still compiles through `fret::imui::editor`.",
+    "commands": [
+      "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust package",
+      "command": "cargo fmt --package fret-ui-editor"
+    },
+    {
+      "name": "editor imui compile surface",
+      "command": "cargo check --tests -p fret-ui-editor --features imui"
+    },
+    {
+      "name": "color edit popup policy",
+      "command": "cargo nextest run -p fret-ui-editor --features imui color_presets_are_unique_and_hex_formattable color_edit_popup_is_a_real_preset_palette_not_a_stub --no-fail-fast"
+    },
+    {
+      "name": "cookbook editor controls example",
+      "command": "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-color-edit-popup-depth-v1/WORKSTREAM.json"
+    }
+  ],
+  "evidence": [
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/tests/imui_surface_policy.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This narrow popup-depth slice is closed. Start separate follow-ons for a full HSV/RGB editor, alpha checkerboard, eyedropper, or color-history behavior."
+  }
+}

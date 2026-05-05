@@ -10,6 +10,8 @@ use crate::TextInputStyle;
 
 pub use bound::BoundTextInput;
 
+pub type TextInputInsertFilter = std::sync::Arc<dyn Fn(&str) -> String + 'static>;
+
 const OBSCURE_MASK: &str = "•";
 const OBSCURE_MASK_BYTES: usize = OBSCURE_MASK.len();
 
@@ -38,13 +40,14 @@ struct ObscureTextCache {
     base_grapheme_boundaries: Vec<usize>,
 }
 
-#[derive(Debug)]
 pub struct TextInput {
     a11y_role: SemanticsRole,
     enabled: bool,
     focusable: bool,
+    read_only: bool,
     focus_ring_always_paint: bool,
     obscure_text: bool,
+    insert_filter: Option<TextInputInsertFilter>,
     obscure_text_cache: ObscureTextCache,
     text: String,
     base_text_revision: u64,
@@ -88,6 +91,27 @@ pub struct TextInput {
 
     text_style_override: bool,
     last_text_style_theme_revision: Option<u64>,
+}
+
+impl std::fmt::Debug for TextInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextInput")
+            .field("a11y_role", &self.a11y_role)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
+            .field("read_only", &self.read_only)
+            .field("focus_ring_always_paint", &self.focus_ring_always_paint)
+            .field("obscure_text", &self.obscure_text)
+            .field("insert_filter", &self.insert_filter.is_some())
+            .field("text", &self.text)
+            .field("caret", &self.caret)
+            .field("selection_anchor", &self.selection_anchor)
+            .field("preedit", &self.preedit)
+            .field("preedit_cursor", &self.preedit_cursor)
+            .field("ime_replace_range", &self.ime_replace_range)
+            .field("placeholder", &self.placeholder)
+            .finish_non_exhaustive()
+    }
 }
 
 #[cfg(test)]

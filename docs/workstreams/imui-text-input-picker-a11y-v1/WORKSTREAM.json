@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-text-input-picker-a11y-v1",
+  "title": "ImUi Text Input Picker Accessibility v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-text-input-picker-keyboard-nav-v1",
+  "problem": "Expose the generic IMUI completion/history picker as an input-owned combobox-style surface by wiring expanded, controls, and active-descendant semantics to the model-backed input while keeping picker storage and accessibility policy out of `crates/fret-ui`.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-text-input-picker-a11y-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-picker-a11y-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-picker-a11y-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-picker-a11y-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-text-input-picker-a11y-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "A focused IMUI completion picker exposes ComboBox semantics, expanded=true, a controls relation to the popup panel, and active_descendant pointing at the active option after keyboard navigation.",
+    "commands": [
+      "cargo nextest run -p fret-imui input_text_completion_picker_keyboard_navigation --no-fail-fast",
+      "cargo nextest run -p fret-imui models_text --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust packages",
+      "command": "cargo fmt --package fret-ui-kit --package fret-imui"
+    },
+    {
+      "name": "fret-ui-kit tests compile",
+      "command": "cargo check -p fret-ui-kit --tests"
+    },
+    {
+      "name": "focused picker a11y and keyboard tests",
+      "command": "cargo nextest run -p fret-imui input_text_completion_picker_keyboard_navigation input_text_history_picker_keyboard_navigation input_text_picker_keyboard_navigation --no-fail-fast"
+    },
+    {
+      "name": "imui model text tests",
+      "command": "cargo nextest run -p fret-imui models_text --no-fail-fast"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-text-input-picker-a11y-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This generic picker a11y slice is closed. Start separate follow-ons for editor-owned ranking/storage, richer AccessKit announcement checks, popup role refinement, or deeper multiline behavior."
+  }
+}

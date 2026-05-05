@@ -45,6 +45,7 @@ pub(super) const KEY_CONTEXT_MENU_REQUESTED: u64 =
 pub(super) const KEY_POINTER_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.pointer_clicked.v1");
 pub(super) const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 pub(super) const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
+pub(super) const KEY_SELECT_ALL_ON_FOCUS: u64 = fnv1a64(b"fret-ui-kit.imui.select_all_on_focus.v1");
 pub(super) const KEY_ACTIVATED: u64 = fnv1a64(b"fret-ui-kit.imui.activated.v1");
 pub(super) const KEY_DEACTIVATED: u64 = fnv1a64(b"fret-ui-kit.imui.deactivated.v1");
 pub(super) const KEY_DEACTIVATED_AFTER_EDIT: u64 =

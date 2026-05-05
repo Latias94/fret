@@ -90,6 +90,14 @@ impl BoundTextArea {
         self.area.set_focusable(focusable);
     }
 
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.area.set_read_only(read_only);
+    }
+
+    pub fn set_allow_tab_input(&mut self, allow: bool) {
+        self.area.set_allow_tab_input(allow);
+    }
+
     pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
         self.area.set_focus_ring_always_paint(always_paint);
     }
@@ -205,6 +213,9 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         range: fret_runtime::Utf16Range,
         text: &str,
     ) -> bool {
+        if self.area.read_only {
+            return false;
+        }
         let before = self.area.text.clone();
         let changed = <TextArea as Widget<H>>::platform_text_input_replace_text_in_range_utf16(
             &mut self.area,
@@ -227,6 +238,9 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         marked: Option<fret_runtime::Utf16Range>,
         selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
+        if self.area.read_only {
+            return false;
+        }
         let before = self.area.text.clone();
         let changed =
             <TextArea as Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(
@@ -287,7 +301,7 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         let has_selection = start != end;
 
         match cmd {
-            "text.copy" | "text.cut" => {
+            "text.copy" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
@@ -297,13 +311,33 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                     CommandAvailability::Blocked
                 }
             }
+            "text.cut" => {
+                if self.area.read_only || !cx.input_ctx.caps.clipboard.text.write {
+                    return CommandAvailability::Blocked;
+                }
+                if has_selection {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
             "text.paste" => {
-                if !cx.input_ctx.caps.clipboard.text.read {
+                if self.area.read_only || !cx.input_ctx.caps.clipboard.text.read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" | "text.clear" => {
+            "text.select_all" => {
+                if !self.area.text().is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.clear" => {
+                if self.area.read_only {
+                    return CommandAvailability::Blocked;
+                }
                 if !self.area.text().is_empty() {
                     CommandAvailability::Available
                 } else {

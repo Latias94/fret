@@ -25,10 +25,16 @@ pub use axis_drag_value::{
     OnAxisDragValueOutcome,
 };
 pub use checkbox::{Checkbox, CheckboxOptions};
-pub use color_edit::{ColorEdit, ColorEditOptions};
+pub use color_edit::{
+    ColorEdit, ColorEditOptions, ColorEditPopupNumericInputs, ColorEditPopupOptions,
+    ColorEditPopupPicker,
+};
 pub use drag_value::{DragValue, DragValueOptions, DragValueOutcome, OnDragValueOutcome};
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};
 pub use field_status::{FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions};
+pub use fret_ui_kit::headless::text_assist::{
+    InputOwnedTextAssistKeyOptions, TextAssistItem, TextAssistMatch,
+};
 pub use icon_button::{IconButton, IconButtonOptions, OnIconButtonActivate};
 pub use mini_search_box::{MiniSearchBox, MiniSearchBoxOptions};
 pub use numeric_input::{

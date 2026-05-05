@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "imui-debug-draw-clip-stack-v1",
+  "title": "ImUi Debug Draw Clip Stack v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-debug-draw-stroke-style-v1",
+  "problem": "Close the first clipping follow-on above the IMUI debug-draw stroke-style floor by adding push/pop clip-rect commands that lower to existing scene clip operations and auto-balance unclosed debug clips at the end of the paint pass.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-debug-draw-clip-stack-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-clip-stack-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-clip-stack-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-clip-stack-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "The IMUI debug-draw facade now supports `push_clip_rect` and `pop_clip_rect`, backed by existing scene clip operations and a paint-end auto-balance guard.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format fret-ui-kit",
+      "command": "cargo fmt --package fret-ui-kit"
+    },
+    {
+      "name": "debug draw tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast"
+    },
+    {
+      "name": "imui adapter seam",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui response contract",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-debug-draw-clip-stack-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
+    "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0002-display-list.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This clip-stack slice is closed. Image overlays are covered by `imui-debug-draw-image-overlay-v1`; start separate follow-ons for channel splitting, hit-test-aware debug interaction, reusable draw-list command metadata, or image loading recipes."
+  }
+}

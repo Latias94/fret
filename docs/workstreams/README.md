@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-01
+Catalog updated: 2026-05-05
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 285
+- Dedicated directories: 314
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -125,6 +125,321 @@ Current source of truth for the in-tree immediate-mode stack:
     future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before
     review, and implementation-heavy work should stay in narrower follow-ons or the active docking
     parity lane.
+
+- Closed narrow P1 text input policy depth follow-on:
+  - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-policy-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding read-only, select-all-on-focus, multiline AllowTabInput, explicit
+    `PushID` identity, and cookbook proof coverage; later text callback/filter/undo/picker work is
+    owned by narrower follow-ons, and future editor ranking/accessibility/multiline depth should
+    start as new follow-ons.
+
+- Closed narrow P1 text input history/completion command policy follow-on:
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-history-completion-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding command-oriented single-line IMUI `InputTextOptions` for
+    completion/history key policy on unmodified Tab/Up/Down, keeping mutable-buffer callbacks and
+    richer editor-owned behavior outside `crates/fret-ui` by default; the visible picker recipe,
+    named filters, custom insertion filters, and undo/redo command routing are covered by later
+    narrow follow-ons.
+
+- Closed narrow P1 text input picker recipe follow-on:
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-picker-recipe-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding a visible completion/history picker recipe above single-line IMUI
+    input text, with app-owned candidates, non-modal popup rendering, click-to-commit behavior, and
+    no runtime candidate/history storage.
+
+- Closed narrow P1 text input picker keyboard navigation follow-on:
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding input-focused ArrowUp/ArrowDown active-candidate navigation and
+    Enter/NumpadEnter commit to the visible completion/history picker recipe while keeping
+    candidate storage app-owned.
+
+- Closed narrow P1 text input picker accessibility follow-on:
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-picker-a11y-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after wiring generic completion/history picker input semantics to combobox role,
+    expanded state, popup controls relation, and active-descendant option relation without runtime
+    policy widening.
+
+- Closed narrow text picker test-architecture follow-on:
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-picker-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after splitting completion/history picker tests out of the growing
+    `models_text.rs` proof file while keeping behavior, public APIs, and runtime contracts
+    unchanged.
+
+- Closed narrow text filter test-architecture follow-on:
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-filter-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after splitting named/custom filter tests out of `models_text.rs` while keeping
+    filter behavior, public APIs, and runtime contracts unchanged.
+
+- Closed narrow text mode test-architecture follow-on:
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-mode-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after splitting read-only, select-all-on-focus, and password-mode tests out of
+    `models_text.rs` while keeping text behavior, public APIs, and runtime contracts unchanged.
+
+- Closed narrow text command test-architecture follow-on:
+  - `docs/workstreams/imui-models-text-command-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-command-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after splitting completion, history, undo/redo, and repeat opt-in command tests
+    out of `models_text.rs` while keeping command behavior, public APIs, and runtime contracts
+    unchanged.
+
+- Closed narrow text area test-architecture follow-on:
+  - `docs/workstreams/imui-models-text-area-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-area-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after splitting multiline textarea read-only, Tab policy, changed-signal, and
+    lifecycle tests out of `models_text.rs` while keeping behavior, public APIs, and runtime
+    contracts unchanged.
+
+- Closed narrow final text-model test-architecture follow-on:
+  - `docs/workstreams/imui-models-text-final-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after retiring the legacy `models_text.rs` aggregate and moving its remaining
+    basic changed-signal, lifecycle/bounds, and push-id identity coverage into dedicated modules.
+
+- Closed narrow P1 text input named filter policy follow-on:
+  - `docs/workstreams/imui-text-input-filter-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-filter-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding Dear ImGui-style named character filters to single-line IMUI
+    `InputTextOptions`, backed by a generic runtime insertion filter and leaving callback-heavy
+    mutable-buffer behavior as a separate follow-on.
+
+- Closed narrow P1 text input custom filter policy follow-on:
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-custom-filter-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding a Fret-native custom insertion filter equivalent for Dear ImGui
+    `CallbackCharFilter`, composed after named filters without runtime mutable-buffer callbacks.
+
+- Closed narrow P1 text input undo command policy follow-on:
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/TODO.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-text-input-undo-command-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding app-owned undo/redo command routing for single-line IMUI
+    `InputTextOptions`, covering Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z without runtime undo-stack or
+    mutable-buffer callback ownership.
+
+- Closed narrow P1 editor cookbook proof follow-on:
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/TODO.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-editor-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after proving the app-facing `fret::imui::editor` teaching path with a small cookbook example
+    that reaches editor-grade controls and support nouns without direct `fret_ui_editor` imports,
+    keeping `fret-imui` thin.
+
+- Closed narrow P1 color edit popup depth follow-on:
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after replacing the visible `ColorEdit` popup stub with a small usable preset
+    swatch palette in `fret-ui-editor`, keeping exact hex input as the precise edit path and
+    leaving full HSV/RGB picker parity to narrower follow-ons.
+
+- Closed narrow P1 color edit alpha policy follow-on:
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after making `ColorEdit` RGB-only hex commits and preset swatch activations
+    preserve the current alpha channel, matching Dear ImGui's palette behavior without widening
+    `fret-imui` or runtime contracts.
+
+- Closed narrow P1 color edit alpha preview follow-on:
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after making editor `ColorEdit` main and preset swatches render through a
+    checkerboard-backed alpha preview while splitting AlphaBar, HSV/RGB picker depth, and drag/drop
+    color payloads into separate follow-ons.
+
+- Closed narrow P1 color edit AlphaBar follow-on:
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding a bounded editor-owned AlphaBar-style popup affordance for direct
+    alpha editing when `ColorEditOptions::show_alpha=true`, before the later HSV picker follow-on;
+    color drag/drop payloads remain separate.
+
+- Closed narrow P1 color edit HSV picker follow-on:
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding editor-owned RGB/HSV conversion, a saturation/value picker, and a
+    HueBar to the `ColorEdit` popup, while keeping full picker polish, color history, eyedropper
+    behavior, and color drag/drop payloads as separate follow-ons.
+
+- Closed narrow P1 color edit numeric readout follow-on:
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-numeric-readout-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after showing RGB and HSV numeric readouts in the editor `ColorEdit` popup,
+    including alpha percent when alpha is visible, while keeping editable numeric input modes and
+    per-control popup defaults for later follow-ons.
+
+- Closed narrow P1 color edit numeric input follow-on:
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-numeric-input-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after making the editor `ColorEdit` popup RGB/HSV numeric rows editable,
+    preserving existing alpha policy, and leaving per-control popup defaults, history, eyedropper,
+    palette customization, and drag/drop payloads as separate follow-ons.
+
+- Closed narrow P1 color edit popup options follow-on:
+  - `docs/workstreams/imui-color-edit-popup-options-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-options-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding per-control popup defaults to editor `ColorEditOptions`, covering
+    HueBar picker, RGB/HSV numeric row, preset palette, and AlphaBar visibility without adding a
+    global Dear ImGui-style `SetColorEditOptions()` state path.
+
+- Closed narrow P1 color edit model split follow-on:
+  - `docs/workstreams/imui-color-edit-model-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-model-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-model-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after splitting pure color model, parsing, formatting, HSV/RGB conversion,
+    coordinate math, sanitization, and a11y helpers out of the editor `ColorEdit` UI composition
+    file without changing public behavior.
+
+- Closed narrow P1 debug draw baseline follow-on:
+  - `docs/workstreams/imui-debug-draw-baseline-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-baseline-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after exposing a canvas-backed immediate-mode debug-draw helper with lines,
+    rects, filled rects, and text, while keeping richer DrawList parity and interaction metadata as
+    separate follow-ons.
+
+- Closed narrow P1 debug draw shape primitives follow-on:
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-shape-primitives-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding polyline, stroked/filled triangle, and stroked/filled circle
+    commands to the canvas-backed IMUI debug-draw helper without widening `fret-imui`, runtime, or
+    renderer contracts.
+
+- Closed narrow P1 debug draw stroke style follow-on:
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding explicit debug-draw stroke width/cap/join/miter/dash policy while
+    preserving the old thickness-based calls and reusing existing `PathStyle::StrokeV2`.
+
+- Closed narrow P1 debug draw clip stack follow-on:
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding `push_clip_rect` / `pop_clip_rect` commands backed by existing scene
+    clip operations and an auto-balance guard at paint end.
+
+- Closed narrow P1 debug draw image overlay follow-on:
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+  - Scope: closed after adding registered image, image-region, SVG image, and SVG mask icon
+    overlay commands without moving image loading or resource lifetime into the immediate facade.
 
 - Closed narrow P1 item-behavior kernel follow-on:
   - `docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json`
@@ -770,6 +1085,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -777,7 +1093,9 @@ Current source of truth for the in-tree immediate-mode stack:
     keeping the v1 window-style opacity capability explicit, and continuing with the remaining
     platform-specific acceptance slices rather than reopening the umbrella lane. As of 2026-04-29,
     non-Linux local continuation is limited to source-policy gates, campaign validation, diagnostics
-    drift repair, or a new narrow follow-on backed by fresh evidence.
+    drift repair, or a new narrow follow-on backed by fresh evidence. As of 2026-05-04, the local
+    non-interactive gate refresh is green, but the launched bounded campaign is still not counted as
+    passing evidence.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
   - `docs/workstreams/diag-monitor-topology-environment-v1/WORKSTREAM.json`
@@ -996,7 +1314,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-04-29, 14 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-04, 15 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
@@ -1048,9 +1366,24 @@ Rule:
 - `docs/workstreams/imui-authoring-facade-v1/` — first 2026-02-03, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-vocabulary-closure-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic immediate helper vocabulary relative to Dear ImGui/egui after the editor-grade and ghost closeouts)
+- `docs/workstreams/imui-color-edit-alpha-bar-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding a bounded AlphaBar-style popup affordance to editor `ColorEdit` when alpha editing is visible)
+- `docs/workstreams/imui-color-edit-hsv-picker-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding editor-owned RGB/HSV conversion, saturation/value picking, and a HueBar to editor `ColorEdit`)
+- `docs/workstreams/imui-color-edit-model-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting pure color model helpers out of editor `ColorEdit` UI composition)
+- `docs/workstreams/imui-color-edit-numeric-input-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on making editor `ColorEdit` RGB/HSV numeric popup rows editable)
+- `docs/workstreams/imui-color-edit-popup-options-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding per-control popup defaults for editor `ColorEdit`)
+- `docs/workstreams/imui-color-edit-numeric-readout-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on showing RGB/HSV numeric readouts in the editor `ColorEdit` popup)
+- `docs/workstreams/imui-debug-draw-baseline-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on exposing a canvas-backed immediate-mode debug-draw helper in `fret-ui-kit::imui`)
+- `docs/workstreams/imui-debug-draw-shape-primitives-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding polyline, triangle, and circle primitives to the canvas-backed IMUI debug-draw helper)
+- `docs/workstreams/imui-debug-draw-stroke-style-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding explicit width/cap/join/miter/dash stroke policy to the IMUI debug-draw helper)
+- `docs/workstreams/imui-debug-draw-clip-stack-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding push/pop clip-rect commands to the IMUI debug-draw helper)
+- `docs/workstreams/imui-debug-draw-image-overlay-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding registered image, image-region, SVG image, and SVG mask icon overlay commands to the IMUI debug-draw helper)
+- `docs/workstreams/imui-color-edit-alpha-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on preserving alpha for editor `ColorEdit` RGB-only hex commits and preset swatch activations after the popup-depth slice)
+- `docs/workstreams/imui-color-edit-alpha-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding checkerboard-backed alpha previews to editor `ColorEdit` main and preset swatches)
+- `docs/workstreams/imui-color-edit-popup-depth-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on replacing the editor `ColorEdit` popup stub with a preset swatch palette for the public IMUI editor-control path)
 - `docs/workstreams/imui-compat-retained-surface-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for deleting public/proof retained-compatibility `imui` facades while keeping one declarative node-graph proof seam)
 - `docs/workstreams/imui-cross-window-ghost-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic cross-window ghost baseline; M1 contract freeze accepted)
 - `docs/workstreams/imui-drag-preview-ghost-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped same-window source-side drag preview ghost)
+- `docs/workstreams/imui-editor-cookbook-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on proving the app-facing `fret::imui::editor` cookbook path for editor-grade immediate-mode controls without direct `fret_ui_editor` imports)
 - `docs/workstreams/imui-ecosystem-facade-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
@@ -1071,6 +1404,20 @@ Rule:
 - `docs/workstreams/imui-editor-notes-dirty-status-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` `Draft status` row after inspector-command closeout)
 - `docs/workstreams/imui-next-gap-audit-v1/` — first n/a, latest n/a, 6 markdown docs (closed decision record recommending `imui-editor-notes-draft-actions-v1` as the next locally testable IMUI follow-on)
 - `docs/workstreams/imui-editor-notes-draft-actions-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for app-owned editor-notes draft action affordances after the next-gap audit)
+- `docs/workstreams/imui-text-input-policy-depth-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for Dear ImGui-class read-only, select-all-on-focus, multiline AllowTabInput, explicit `PushID`, and cookbook proof coverage above the maintenance IMUI umbrella)
+- `docs/workstreams/imui-text-input-history-completion-policy-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on for command-oriented single-line IMUI completion/history key routing on unmodified Tab/Up/Down without runtime callback widening)
+- `docs/workstreams/imui-text-input-picker-recipe-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a visible completion/history picker recipe that composes model-backed input text with app-owned candidates and a non-modal selectable popup)
+- `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding input-focused ArrowUp/ArrowDown active-candidate navigation and Enter/NumpadEnter commit to the visible completion/history picker recipe)
+- `docs/workstreams/imui-text-input-picker-a11y-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on wiring generic completion/history picker input semantics to combobox role, expanded state, controls relation, and active-descendant option relation)
+- `docs/workstreams/imui-models-text-picker-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting completion/history picker tests out of the growing `models_text.rs` proof file without behavior or API changes)
+- `docs/workstreams/imui-models-text-filter-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting named/custom filter tests out of the remaining `models_text.rs` proof file without behavior or API changes)
+- `docs/workstreams/imui-models-text-mode-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting read-only, select-all-on-focus, and password-mode tests out of the remaining `models_text.rs` proof file without behavior or API changes)
+- `docs/workstreams/imui-models-text-command-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting completion, history, undo/redo, and repeat opt-in command tests out of the remaining `models_text.rs` proof file without behavior or API changes)
+- `docs/workstreams/imui-models-text-area-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting multiline textarea read-only, Tab policy, changed-signal, and lifecycle tests out of the remaining `models_text.rs` proof file without behavior or API changes)
+- `docs/workstreams/imui-models-text-final-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on retiring the legacy `models_text.rs` aggregate after moving basic changed-signal, single-line lifecycle/bounds, and push-id identity tests into dedicated modules)
+- `docs/workstreams/imui-text-input-filter-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for Dear ImGui-style named character filters on single-line IMUI input text backed by a generic runtime insertion filter)
+- `docs/workstreams/imui-text-input-custom-filter-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a Fret-native custom insertion filter equivalent to Dear ImGui CallbackCharFilter without mutable-buffer callback widening)
+- `docs/workstreams/imui-text-input-undo-command-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for app-owned single-line IMUI undo/redo command routing on Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z without runtime undo-stack ownership)
 - `docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/` — first n/a, latest n/a, 6 markdown docs (closed no-public-API verdict for preserved TextField draft-buffer contracts)
 - `docs/workstreams/imui-textfield-draft-controller-api-proof-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow proof for an opaque TextField draft controller over preserved draft commit/discard with launched diagnostics evidence)
 - `docs/workstreams/imui-collection-pane-proof-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the collection-first asset-browser proof and shell-mounted pane proof above the maintenance IMUI umbrella)

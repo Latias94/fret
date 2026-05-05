@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "slug": "imui-text-input-policy-depth-v1",
+  "title": "ImUi Text Input Policy Depth v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "Close the next Dear ImGui-class text input gap without turning `fret-imui` into a monolithic widget library: runtime text controls own mechanism-level read-only and multiline Tab behavior, while `fret-ui-kit::imui` owns immediate-mode authoring options such as focus-time selection and opt-in AllowTabInput policy.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-policy-depth-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-policy-depth-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/imui-text-input-policy-depth-v1/GOAL_BACKWARD_AUDIT_2026-05-04.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-text-input-policy-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "Immediate-mode text controls expose read-only, select-all-on-focus, and opt-in textarea Tab input options through model-backed input text and textarea helpers, including the app-facing `fret::imui` cookbook surface.",
+    "commands": [
+      "cargo nextest run -p fret-ui text_area_tab_key_respects_allow_tab_input_policy --no-fail-fast",
+      "cargo nextest run -p fret-imui textarea_tab_key_does_not_insert_by_default textarea_allow_tab_input_inserts_tab_and_reports_changed --no-fail-fast",
+      "cargo nextest run -p fret-imui models_text --no-fail-fast",
+      "cargo check -p fret-cookbook --features cookbook-imui --example imui_action_basics"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust packages",
+      "command": "cargo fmt --package fret-ui --package fret-ui-kit --package fret-imui --package fret-cookbook"
+    },
+    {
+      "name": "fret-ui textarea tab policy",
+      "command": "cargo nextest run -p fret-ui text_area_tab_key_respects_allow_tab_input_policy --no-fail-fast"
+    },
+    {
+      "name": "imui textarea tab policy",
+      "command": "cargo nextest run -p fret-imui textarea_tab_key_does_not_insert_by_default textarea_allow_tab_input_inserts_tab_and_reports_changed --no-fail-fast"
+    },
+    {
+      "name": "fret-ui text input/area interactions",
+      "command": "cargo nextest run -p fret-ui text_input text_area --no-fail-fast"
+    },
+    {
+      "name": "imui model text tests",
+      "command": "cargo nextest run -p fret-imui models_text --no-fail-fast"
+    },
+    {
+      "name": "cookbook imui teaching surface",
+      "command": "cargo nextest run -p fret-cookbook cookbook_imui_example_keeps_current_facade_teaching_surface --no-fail-fast"
+    },
+    {
+      "name": "cookbook imui action example",
+      "command": "cargo check -p fret-cookbook --features cookbook-imui --example imui_action_basics"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+        {
+            "name": "workstream json",
+            "command": "python -m json.tool docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json"
+        },
+        {
+            "name": "workstream catalog",
+            "command": "python tools/check_workstream_catalog.py"
+        },
+        {
+            "name": "skills anchors and symbols",
+            "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+        },
+        {
+            "name": "diff check",
+            "command": "git diff --check"
+        }
+    ],
+  "evidence": [
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_support.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
+    "ecosystem/fret-imui/src/frontend.rs",
+    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "apps/fret-cookbook/examples/imui_action_basics.rs",
+    "apps/fret-cookbook/src/lib.rs",
+    "docs/workstreams/imui-text-input-policy-depth-v1/GOAL_BACKWARD_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-text-input-policy-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "crates/fret-ui/src/text/input/widget.rs",
+    "crates/fret-ui/src/text/area/widget.rs",
+    "crates/fret-ui/src/declarative/tests/interactions/text_area.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This bounded text-input policy-depth lane is closed. Keep text editing mechanism in `crates/fret-ui`; keep IMUI policy flags and authoring defaults in `ecosystem/fret-ui-kit::imui`; start narrower follow-ons for editor-owned ranking/storage, active-descendant picker accessibility, numeric scalar input editing, or multiline wrapping/no-horizontal-scroll flags."
+  }
+}

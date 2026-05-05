@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "slug": "imui-color-edit-hsv-picker-v1",
+  "title": "ImUi Color Edit HSV Picker v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-color-edit-alpha-bar-v1",
+  "problem": "Close the next Dear ImGui `ColorPicker4` gap by replacing the editor `ColorEdit` popup's preset-only surface with bounded HSV picker controls, while keeping picker policy in `fret-ui-editor` and leaving `fret-imui` / `crates/fret-ui` contracts unchanged.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-color-edit-hsv-picker-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-hsv-picker-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-hsv-picker-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-hsv-picker-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "Editor `ColorEdit` popup now has HSV conversion, a saturation/value picking area, a HueBar, alpha-preserving updates, and source-policy guards that keep the surface editor-owned.",
+    "commands": [
+      "cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast",
+      "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust package",
+      "command": "cargo fmt --package fret-ui-editor"
+    },
+    {
+      "name": "editor color edit tests",
+      "command": "cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-editor tests compile",
+      "command": "cargo check --tests -p fret-ui-editor --features imui"
+    },
+    {
+      "name": "fret-ui-editor full imui test sweep",
+      "command": "cargo nextest run -p fret-ui-editor --features imui --no-fail-fast"
+    },
+    {
+      "name": "cookbook editor controls example",
+      "command": "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-color-edit-hsv-picker-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "repo-ref/imgui/imgui.cpp",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "repo-ref/imgui/imgui_demo.cpp",
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/tests/imui_surface_policy.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This bounded HSV picker slice is closed. RGB/HSV numeric display and edit modes are covered by `imui-color-edit-numeric-readout-v1` and `imui-color-edit-numeric-input-v1`; per-control popup defaults are covered by `imui-color-edit-popup-options-v1`. Start separate follow-ons for vertical HueBar fidelity, color history, eyedropper integration, or color drag/drop payloads."
+  }
+}

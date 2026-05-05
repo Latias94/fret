@@ -30,6 +30,7 @@ mod combo_controls;
 mod combo_model_controls;
 mod containers;
 mod control_chrome;
+mod debug_draw_controls;
 mod disclosure_controls;
 mod drag_drop;
 mod facade_support;
@@ -54,12 +55,17 @@ mod slider_controls;
 mod tab_family_controls;
 mod table_controls;
 mod text_controls;
+mod text_picker_controls;
 mod tooltip_overlay;
 mod virtual_list_controls;
 
 use containers::{
     grid_container_element, horizontal_container_element, scroll_container_element,
     vertical_container_element,
+};
+pub use debug_draw_controls::{
+    DebugDrawImageOptions, DebugDrawOptions, DebugDrawStrokeStyle, DebugDrawSvgOptions,
+    ImUiDebugDrawList,
 };
 pub use facade_support::UiWriterUiKitExt;
 #[allow(unused_imports)]
@@ -69,8 +75,8 @@ use facade_support::{
     KEY_CONTEXT_MENU_REQUESTED, KEY_DEACTIVATED, KEY_DEACTIVATED_AFTER_EDIT, KEY_DOUBLE_CLICKED,
     KEY_DRAG_STARTED, KEY_DRAG_STOPPED, KEY_HOVER_DELAY_NORMAL_MET, KEY_HOVER_DELAY_SHORT_MET,
     KEY_HOVER_STATIONARY_MET, KEY_LONG_PRESSED, KEY_POINTER_CLICKED, KEY_SECONDARY_CLICKED,
-    LONG_PRESS_DELAY, fnv1a64, model_value_changed_for, point_add, point_sub,
-    prepare_imui_runtime_for_frame, slider_clamp_and_snap, slider_normalize_range,
+    KEY_SELECT_ALL_ON_FOCUS, LONG_PRESS_DELAY, fnv1a64, model_value_changed_for, point_add,
+    point_sub, prepare_imui_runtime_for_frame, slider_clamp_and_snap, slider_normalize_range,
     slider_step_or_default, slider_value_from_pointer, snap_point_to_device_pixels,
     snap_size_to_device_pixels,
 };
@@ -108,7 +114,8 @@ pub use options::{
     BeginMenuOptions, BeginSubmenuOptions, BulletTextOptions, ButtonArrowDirection, ButtonOptions,
     ButtonVariant, CheckboxOptions, ChildRegionChrome, ChildRegionOptions, CollapsingHeaderOptions,
     ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
-    HorizontalOptions, InputTextMode, InputTextOptions, MenuBarOptions, MenuItemOptions,
+    HorizontalOptions, InputTextCustomFilter, InputTextFilters, InputTextMode, InputTextOptions,
+    InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions, MenuItemOptions,
     PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions,
     SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn,
     TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
@@ -119,9 +126,9 @@ use popup_store::{
 };
 pub use response::{
     ComboResponse, DisclosureResponse, DragResponse, DragSourceResponse, DropTargetResponse,
-    FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, ResponseExt, TabBarResponse,
-    TabTriggerResponse, TableColumnResizeResponse, TableHeaderResponse, TableResponse,
-    VirtualListResponse,
+    FloatingAreaResponse, FloatingWindowResponse, ImUiHoveredFlags, InputTextPickerResponse,
+    ResponseExt, TabBarResponse, TabTriggerResponse, TableColumnResizeResponse,
+    TableHeaderResponse, TableResponse, VirtualListResponse,
 };
 pub use tab_family_controls::ImUiTabBar;
 pub use table_controls::{ImUiTable, ImUiTableRow};

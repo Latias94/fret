@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-color-edit-alpha-bar-v1",
+  "title": "ImUi Color Edit Alpha Bar v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-color-edit-alpha-preview-v1",
+  "problem": "Move editor ColorEdit beyond passive alpha preview by adding a bounded AlphaBar-style popup control that can edit the alpha channel directly when `show_alpha=true`, without expanding into full HSV/RGB picker parity.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-alpha-bar-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-alpha-bar-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-alpha-bar-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "ColorEdit popup renders an AlphaBar-style control when alpha editing is visible; pointer position maps to clamped alpha and source-policy gates keep the control in the editor-owned implementation.",
+    "commands": [
+      "cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust package",
+      "command": "cargo fmt --package fret-ui-editor"
+    },
+    {
+      "name": "color edit alpha bar",
+      "command": "cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast"
+    },
+    {
+      "name": "full editor imui tests",
+      "command": "cargo nextest run -p fret-ui-editor --features imui --no-fail-fast"
+    },
+    {
+      "name": "editor imui compile surface",
+      "command": "cargo check --tests -p fret-ui-editor --features imui"
+    },
+    {
+      "name": "cookbook editor controls example",
+      "command": "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/tests/imui_surface_policy.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This AlphaBar slice is closed. HSV/RGB picker depth is covered by `imui-color-edit-hsv-picker-v1`, and per-control popup defaults are covered by `imui-color-edit-popup-options-v1`. Start separate follow-ons for color history, eyedropper integration, or color drag/drop payloads."
+  }
+}

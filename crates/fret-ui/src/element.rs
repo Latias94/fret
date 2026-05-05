@@ -1933,9 +1933,15 @@ pub struct TextInputProps {
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    /// Keep the field focusable/selectable while blocking text mutations.
+    pub read_only: bool,
     /// When true, visually obscures the rendered text (e.g. password fields) while keeping the
     /// underlying model value unchanged.
     pub obscure_text: bool,
+    /// Mechanism-level filter for text about to be inserted through text input, paste, or platform
+    /// text replacement paths. Component policy should construct the filter; the runtime only
+    /// applies the returned insertion text.
+    pub insert_filter: Option<crate::TextInputInsertFilter>,
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
@@ -1975,7 +1981,9 @@ impl TextInputProps {
             a11y_role: None,
             test_id: None,
             placeholder: None,
+            read_only: false,
             obscure_text: false,
+            insert_filter: None,
             a11y_required: false,
             a11y_invalid: None,
             active_descendant: None,
@@ -2005,7 +2013,9 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("read_only", &self.read_only)
             .field("obscure_text", &self.obscure_text)
+            .field("insert_filter", &self.insert_filter.is_some())
             .field("active_descendant_element", &self.active_descendant_element)
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
@@ -2025,6 +2035,11 @@ pub struct TextAreaProps {
     pub focusable: bool,
     pub model: Model<String>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    /// Keep the area focusable/selectable while blocking text mutations.
+    pub read_only: bool,
+    /// When true, focused keydown Tab inserts a tab character instead of falling through to focus
+    /// traversal or higher-level shortcut policy.
+    pub allow_tab_input: bool,
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub a11y_label: Option<std::sync::Arc<str>>,
@@ -2048,6 +2063,8 @@ impl TextAreaProps {
             focusable: true,
             model,
             placeholder: None,
+            read_only: false,
+            allow_tab_input: true,
             a11y_required: false,
             a11y_invalid: None,
             a11y_label: None,
@@ -2071,6 +2088,8 @@ impl std::fmt::Debug for TextAreaProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("read_only", &self.read_only)
+            .field("allow_tab_input", &self.allow_tab_input)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)

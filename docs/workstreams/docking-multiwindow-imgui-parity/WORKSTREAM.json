@@ -3,7 +3,7 @@
   "slug": "docking-multiwindow-imgui-parity",
   "title": "Docking Multi-Window ImGui Parity",
   "status": "active",
-  "updated": "2026-05-01",
+  "updated": "2026-05-04",
   "scope_kind": "execution",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
   "authoritative_docs": [
@@ -50,6 +50,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md"
     },
     {
       "role": "runbook",
@@ -170,6 +174,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M9_WINDOWS_TEAROFF_CURSOR_CONTINUITY_FIX_2026-04-26.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md",

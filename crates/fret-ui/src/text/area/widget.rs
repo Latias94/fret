@@ -11,6 +11,12 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 
+fn text_area_command_mutates_text(command: &str) -> bool {
+    matches!(command, "text.cut" | "text.paste" | "text.clear")
+        || command.starts_with("text.delete")
+        || command.starts_with("text.insert")
+}
+
 impl<H: UiHost> Widget<H> for TextArea {
     fn is_focusable(&self) -> bool {
         self.enabled && self.focusable
@@ -384,6 +390,9 @@ impl<H: UiHost> Widget<H> for TextArea {
         range: fret_runtime::Utf16Range,
         text: &str,
     ) -> bool {
+        if self.read_only {
+            return false;
+        }
         let composed = self
             .layout_text()
             .unwrap_or_else(|| self.text().to_string());
@@ -426,6 +435,9 @@ impl<H: UiHost> Widget<H> for TextArea {
         marked: Option<fret_runtime::Utf16Range>,
         selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
+        if self.read_only {
+            return false;
+        }
         let insert = if text.contains('\r') {
             crate::text_edit::normalize::newlines_to_lf(text)
         } else {
@@ -547,7 +559,8 @@ impl<H: UiHost> Widget<H> for TextArea {
         if !self.enabled {
             cx.set_disabled(true);
         }
-        cx.set_value_editable(self.enabled);
+        cx.set_value_editable(self.enabled && !self.read_only);
+        cx.set_read_only(self.read_only);
         cx.set_text_selection_supported(self.enabled);
         cx.set_placeholder(self.placeholder.as_deref());
 
@@ -697,6 +710,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     }
                     MouseButton::Middle => {
                         if *pointer_type != fret_core::PointerType::Mouse {
+                            return;
+                        }
+                        if self.read_only {
                             return;
                         }
                         let settings = cx
@@ -971,6 +987,24 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
 
+                if self.read_only
+                    && matches!(
+                        key,
+                        fret_core::KeyCode::Enter
+                            | fret_core::KeyCode::NumpadEnter
+                            | fret_core::KeyCode::Tab
+                            | fret_core::KeyCode::Backspace
+                            | fret_core::KeyCode::Delete
+                    )
+                {
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if matches!(key, fret_core::KeyCode::Tab) && !self.allow_tab_input {
+                    return;
+                }
+
                 match key {
                     fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
                         self.reset_caret_blink(cx);
@@ -1031,6 +1065,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
+                if self.read_only {
+                    return;
+                }
                 if self.is_ime_composing() {
                     return;
                 }
@@ -1055,6 +1092,12 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
             Event::ClipboardReadText { token, text } => {
                 if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if self.read_only {
+                    if self.pending_clipboard_token == Some(*token) {
+                        self.pending_clipboard_token = None;
+                    }
                     return;
                 }
                 if self.pending_clipboard_token != Some(*token) {
@@ -1091,6 +1134,12 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
             Event::PrimarySelectionText { token, text } => {
                 if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if self.read_only {
+                    if self.pending_primary_selection_token == Some(*token) {
+                        self.pending_primary_selection_token = None;
+                    }
                     return;
                 }
                 if self.is_ime_composing() {
@@ -1132,6 +1181,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
             Event::Ime(ime) => {
                 if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if self.read_only {
                     return;
                 }
                 self.reset_caret_blink(cx);
@@ -1205,6 +1257,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             "edit.select_all" => "text.select_all",
             other => other,
         };
+        if self.read_only && text_area_command_mutates_text(cmd) {
+            return true;
+        }
         let is_vertical = matches!(
             cmd,
             "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down"
@@ -1406,7 +1461,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         let has_selection = start != end;
 
         match cmd {
-            "text.copy" | "text.cut" => {
+            "text.copy" => {
                 if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
@@ -1416,13 +1471,33 @@ impl<H: UiHost> Widget<H> for TextArea {
                     CommandAvailability::Blocked
                 }
             }
+            "text.cut" => {
+                if self.read_only || !clipboard_write {
+                    return CommandAvailability::Blocked;
+                }
+                if has_selection {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
             "text.paste" => {
-                if !clipboard_read {
+                if self.read_only || !clipboard_read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" | "text.clear" => {
+            "text.select_all" => {
+                if !self.text().is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.clear" => {
+                if self.read_only {
+                    return CommandAvailability::Blocked;
+                }
                 if !self.text().is_empty() {
                     CommandAvailability::Available
                 } else {

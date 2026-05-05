@@ -344,6 +344,78 @@ fn text_input_obscure_text_maps_caret_queries_to_paint_indices() {
 }
 
 #[test]
+fn text_input_insert_filter_transforms_text_input_before_insert() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut input = TextInput::new();
+    input.set_insert_filter(Some(Arc::new(|text| {
+        text.chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect::<String>()
+    })));
+
+    input.event(
+        &mut event_cx(
+            &mut app,
+            &mut services,
+            node,
+            window,
+            bounds,
+            &mut prevented_default_actions,
+        ),
+        &Event::TextInput("a1 b2".to_string()),
+    );
+
+    assert_eq!(input.text(), "12");
+}
+
+#[test]
+fn text_input_insert_filter_applies_after_single_line_clipboard_normalization() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let token = fret_runtime::ClipboardToken(7);
+    let mut input = TextInput::new();
+    input.pending_clipboard_token = Some(token);
+    input.set_insert_filter(Some(Arc::new(|text| {
+        text.chars()
+            .filter(|c| *c != ' ')
+            .flat_map(char::to_uppercase)
+            .collect::<String>()
+    })));
+
+    input.event(
+        &mut event_cx(
+            &mut app,
+            &mut services,
+            node,
+            window,
+            bounds,
+            &mut prevented_default_actions,
+        ),
+        &Event::ClipboardReadText {
+            token,
+            text: "ab\ncd".to_string(),
+        },
+    );
+
+    assert_eq!(input.text(), "ABCD");
+}
+
+#[test]
 fn right_click_focuses_and_preserves_selection_for_context_menus() {
     let window = AppWindowId::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));

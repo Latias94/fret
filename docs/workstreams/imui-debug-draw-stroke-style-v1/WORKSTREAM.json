@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "slug": "imui-debug-draw-stroke-style-v1",
+  "title": "ImUi Debug Draw Stroke Style v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-debug-draw-shape-primitives-v1",
+  "problem": "Close the first stroke-style follow-on above the IMUI debug-draw shape floor by adding explicit width/cap/join/miter/dash policy through `DebugDrawStrokeStyle`, while preserving the old thickness-based calls and keeping runtime and renderer contracts unchanged.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-debug-draw-stroke-style-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-stroke-style-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-stroke-style-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-stroke-style-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "The IMUI debug-draw facade now exposes explicit stroke style policy for line, polyline, rect, triangle, and circle commands, including `StrokeStyleV2` cap/join/dash lowering when requested.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format fret-ui-kit",
+      "command": "cargo fmt --package fret-ui-kit"
+    },
+    {
+      "name": "debug draw tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast"
+    },
+    {
+      "name": "imui adapter seam",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui response contract",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-debug-draw-stroke-style-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0080-vector-path-contract.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This stroke-style slice is closed. Clip rect stack support is covered by `imui-debug-draw-clip-stack-v1`, and image overlays are covered by `imui-debug-draw-image-overlay-v1`; start separate follow-ons for channel splitting, hit-test-aware debug interaction, reusable draw-list command metadata, or image loading recipes."
+  }
+}

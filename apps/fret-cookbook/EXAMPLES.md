@@ -144,6 +144,7 @@ Example | Status | Feature | Run | Diag suite
 [`embedded_viewport_basics.rs`](./examples/embedded_viewport_basics.rs) | Lab | `cookbook-interop` | `cargo run -p fretboard-dev -- dev native --example embedded_viewport_basics` | `cookbook-embedded-viewport-basics`
 [`external_texture_import_basics.rs`](./examples/external_texture_import_basics.rs) | Lab | `cookbook-interop` | `cargo run -p fretboard-dev -- dev native --example external_texture_import_basics` | `cookbook-external-texture-import-basics`
 [`imui_action_basics.rs`](./examples/imui_action_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_action_basics` | `cookbook-imui-action-basics`
+[`imui_editor_controls_basics.rs`](./examples/imui_editor_controls_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_editor_controls_basics` | -
 
 ## Advanced — Content (feature-gated, still evolving)
 

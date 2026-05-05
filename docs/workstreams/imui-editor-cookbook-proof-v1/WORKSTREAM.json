@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "slug": "imui-editor-cookbook-proof-v1",
+  "title": "ImUi Editor Cookbook Proof v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "Prove that app authors can reach editor-grade immediate-mode controls through the public `fret::imui::editor` facade without importing `fret_ui_editor` or internal helper crates directly.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-editor-cookbook-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-editor-cookbook-proof-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-editor-cookbook-proof-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-editor-cookbook-proof-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-editor-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "A feature-gated cookbook example imports `fret::imui::{editor, prelude::*}` and builds editor-grade controls via the app-facing facade.",
+    "commands": [
+      "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust packages",
+      "command": "cargo fmt --package fretboard --package fret --package fret-ui-editor --package fret-cookbook"
+    },
+    {
+      "name": "cookbook editor imui example",
+      "command": "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    },
+    {
+      "name": "cookbook editor imui teaching surface",
+      "command": "cargo nextest run -p fret-cookbook cookbook_imui_editor_example_keeps_public_editor_facade_teaching_surface --no-fail-fast"
+    },
+    {
+      "name": "fretboard cookbook imui feature hints",
+      "command": "cargo nextest run -p fretboard-dev cookbook_feature_hints_cover_imui_teaching_examples --no-fail-fast"
+    },
+    {
+      "name": "fretboard cookbook listing shows imui feature hint",
+      "command": "cargo run -p fretboard-dev -- list cookbook-examples --all"
+    },
+    {
+      "name": "fret-ui-editor imui compile surface",
+      "command": "cargo check --tests -p fret-ui-editor --features imui"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-editor-cookbook-proof-v1/WORKSTREAM.json"
+    }
+  ],
+  "evidence": [
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "ecosystem/fret/src/lib.rs",
+    "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-ui-editor/src/controls/mod.rs",
+    "apps/fretboard/src/demos.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "apps/fret-cookbook/src/lib.rs",
+    "docs/examples/README.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This narrow cookbook proof is closed. Keep `fret-imui` thin; start narrower follow-ons for behavior depth beyond this public editor facade proof."
+  }
+}

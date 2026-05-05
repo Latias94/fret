@@ -35,6 +35,8 @@ mod authoring_surface_policy_tests {
     const FORM_EXAMPLE: &str = include_str!("../examples/form_basics.rs");
     const GIZMO_EXAMPLE: &str = include_str!("../examples/gizmo_basics.rs");
     const IMUI_ACTION_EXAMPLE: &str = include_str!("../examples/imui_action_basics.rs");
+    const IMUI_EDITOR_CONTROLS_EXAMPLE: &str =
+        include_str!("../examples/imui_editor_controls_basics.rs");
     const ICONS_AND_ASSETS_EXAMPLE: &str = include_str!("../examples/icons_and_assets_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
     const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
@@ -365,6 +367,7 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(UNDO_EXAMPLE);
         assert_uses_app_surface(MARKDOWN_AND_CODE_EXAMPLE);
         assert_uses_app_surface(IMUI_ACTION_EXAMPLE);
+        assert_uses_app_surface(IMUI_EDITOR_CONTROLS_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains(".locals_with((&count_state, &step_state))"));
@@ -794,16 +797,50 @@ mod authoring_surface_policy_tests {
             "imui_action_basics",
             IMUI_ACTION_EXAMPLE,
             &[
-                "use fret::imui::{kit::ButtonOptions, prelude::*};",
+                "use fret::imui::{ kit::{ButtonOptions, InputTextOptions}, prelude::*, };",
                 "fret::payload_actions!([SetCount(u32) = \"cookbook.imui_action_basics.set_count.v1\"]);",
                 ".payload_update_if::<act::SetCount>(|value, preset| {",
                 "imui_raw(cx, |ui| {",
                 "ui.action_button_with_options(",
                 "ui.action_payload_button_with_options(",
+                "ui.input_text_model_with_options(",
+                "select_all_on_focus: true,",
+                "read_only: true,",
+                "cookbook.imui_action_basics.input.filter",
+                "cookbook.imui_action_basics.input.snapshot",
                 "cookbook.imui_action_basics.button.imui.payload.5",
             ],
             &[
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "fret_imui::imui_raw(cx, |ui| {",
+            ],
+        );
+    }
+
+    #[test]
+    fn cookbook_imui_editor_example_keeps_public_editor_facade_teaching_surface() {
+        assert_current_imui_teaching_surface(
+            "imui_editor_controls_basics",
+            IMUI_EDITOR_CONTROLS_EXAMPLE,
+            &[
+                "use fret::imui::{",
+                "editor::{",
+                "prelude::*,",
+                "TextAssistItem,",
+                "editor::numeric_input(",
+                "editor::drag_value(",
+                "editor::color_edit(",
+                "editor::mini_search_box(",
+                "editor::text_assist_field(",
+                "TextAssistFieldSurface::AnchoredOverlay",
+                "install_editor_theme_preset_v1(app, EditorThemePresetV1::ImguiLikeDense);",
+                "cookbook.imui_editor_controls.assist.list",
+            ],
+            &[
+                "use fret_ui_editor",
+                "fret_ui_editor::",
+                "use fret_ui_kit::headless::text_assist",
+                "fret_ui_kit::headless::text_assist",
                 "fret_imui::imui_raw(cx, |ui| {",
             ],
         );
@@ -1305,6 +1342,7 @@ mod authoring_surface_policy_tests {
             ("form_basics", FORM_EXAMPLE),
             ("gizmo_basics", GIZMO_EXAMPLE),
             ("imui_action_basics", IMUI_ACTION_EXAMPLE),
+            ("imui_editor_controls_basics", IMUI_EDITOR_CONTROLS_EXAMPLE),
             ("icons_and_assets_basics", ICONS_AND_ASSETS_EXAMPLE),
             ("hello", HELLO_EXAMPLE),
             ("hello_counter", HELLO_COUNTER_EXAMPLE),
@@ -1528,6 +1566,7 @@ mod authoring_surface_policy_tests {
             UNDO_EXAMPLE,
             MARKDOWN_AND_CODE_EXAMPLE,
             IMUI_ACTION_EXAMPLE,
+            IMUI_EDITOR_CONTROLS_EXAMPLE,
             DRAG_EXAMPLE,
             EFFECTS_LAYER_EXAMPLE,
             DROP_SHADOW_EXAMPLE,

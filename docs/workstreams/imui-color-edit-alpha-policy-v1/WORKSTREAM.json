@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "slug": "imui-color-edit-alpha-policy-v1",
+  "title": "ImUi Color Edit Alpha Policy v1",
+  "status": "closed",
+  "updated": "2026-05-04",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-color-edit-popup-depth-v1",
+  "problem": "Keep the newly usable editor ColorEdit preset palette and RGB hex input from accidentally resetting alpha, matching the Dear ImGui palette behavior where RGB preset clicks preserve the current alpha channel.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-color-edit-alpha-policy-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-alpha-policy-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-alpha-policy-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-alpha-policy-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md"
+    }
+  ],
+  "repro": {
+    "summary": "ColorEdit RGB-only hex input and preset palette clicks preserve existing alpha unless the visible RGBA hex path explicitly edits it.",
+    "commands": [
+      "cargo nextest run -p fret-ui-editor --features imui rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit rgba_hex_parse_is_only_available_when_alpha_is_visible rgb_presets_preserve_current_alpha --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched Rust package",
+      "command": "cargo fmt --package fret-ui-editor"
+    },
+    {
+      "name": "color edit alpha policy",
+      "command": "cargo nextest run -p fret-ui-editor --features imui color_presets_are_unique_and_hex_formattable rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit rgba_hex_parse_is_only_available_when_alpha_is_visible rgb_presets_preserve_current_alpha color_edit_popup_is_a_real_preset_palette_not_a_stub --no-fail-fast"
+    },
+    {
+      "name": "editor imui compile surface",
+      "command": "cargo check --tests -p fret-ui-editor --features imui"
+    },
+    {
+      "name": "cookbook editor controls example",
+      "command": "cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics"
+    },
+    {
+      "name": "workspace layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-color-edit-alpha-policy-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "repo-ref/imgui/imgui_demo.cpp",
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/tests/imui_surface_policy.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This RGB-only alpha-preservation policy is closed. Start separate follow-ons for alpha checkerboard previews, AlphaBar-style controls, HSV/RGB picker depth, color history, or eyedropper integration."
+  }
+}

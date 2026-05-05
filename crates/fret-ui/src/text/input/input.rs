@@ -3,8 +3,8 @@ use fret_core::{
     TextWrap,
 };
 
-use super::TextInput;
 use super::cx::TextInputUiCx;
+use super::{TextInput, TextInputInsertFilter};
 use crate::widget::{EventCx, PaintCx};
 use crate::{Invalidation, TextInputStyle, UiHost};
 use unicode_segmentation::UnicodeSegmentation as _;
@@ -15,8 +15,10 @@ impl TextInput {
             a11y_role: SemanticsRole::TextField,
             enabled: true,
             focusable: true,
+            read_only: false,
             focus_ring_always_paint: false,
             obscure_text: false,
+            insert_filter: None,
             obscure_text_cache: Default::default(),
             text: String::new(),
             base_text_revision: 0,
@@ -82,6 +84,10 @@ impl TextInput {
         self.focusable = focusable;
     }
 
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.read_only = read_only;
+    }
+
     pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
         self.focus_ring_always_paint = always_paint;
     }
@@ -92,6 +98,21 @@ impl TextInput {
         }
         self.obscure_text = obscure;
         self.mark_text_blobs_dirty();
+    }
+
+    pub fn set_insert_filter(&mut self, filter: Option<TextInputInsertFilter>) {
+        self.insert_filter = filter;
+    }
+
+    pub(super) fn filter_insert_text(&self, text: &str) -> String {
+        self.insert_filter
+            .as_ref()
+            .map_or_else(|| text.to_string(), |filter| filter(text))
+    }
+
+    pub(super) fn non_empty_filtered_insert_text(&self, text: &str) -> Option<String> {
+        let filtered = self.filter_insert_text(text);
+        (!filtered.is_empty()).then_some(filtered)
     }
 
     pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {

@@ -148,6 +148,10 @@ name = "imui_action_basics"
 required-features = ["cookbook-imui"]
 
 [[example]]
+name = "imui_editor_controls_basics"
+required-features = ["cookbook-imui"]
+
+[[example]]
 name = "docking_basics"
 required-features = ["cookbook-docking"]
 

@@ -699,6 +699,68 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
+    pub fn input_text_completion_model(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        candidates: &[Arc<str>],
+    ) -> InputTextPickerResponse {
+        self.input_text_completion_model_with_options(
+            id,
+            model,
+            candidates,
+            InputTextPickerOptions::default(),
+        )
+    }
+
+    pub fn input_text_completion_model_with_options(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        candidates: &[Arc<str>],
+        options: InputTextPickerOptions,
+    ) -> InputTextPickerResponse {
+        let focusable = options.input.enabled
+            && options.input.focusable
+            && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_completion_model_with_options(
+            self, id, model, candidates, options,
+        );
+        self.record_focusable(resp.id(), focusable);
+        resp
+    }
+
+    pub fn input_text_history_model(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        history: &[Arc<str>],
+    ) -> InputTextPickerResponse {
+        self.input_text_history_model_with_options(
+            id,
+            model,
+            history,
+            InputTextPickerOptions::default(),
+        )
+    }
+
+    pub fn input_text_history_model_with_options(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        history: &[Arc<str>],
+        options: InputTextPickerOptions,
+    ) -> InputTextPickerResponse {
+        let focusable = options.input.enabled
+            && options.input.focusable
+            && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_history_model_with_options(
+            self, id, model, history, options,
+        );
+        self.record_focusable(resp.id(), focusable);
+        resp
+    }
+
     pub fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
         self.textarea_model_with_options(model, TextAreaOptions::default())
     }
@@ -962,6 +1024,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn bullet_text_with_options(&mut self, text: impl Into<Arc<str>>, options: BulletTextOptions) {
         bullet_text_controls::bullet_text_with_options(self, text.into(), options);
+    }
+
+    fn debug_draw<K: Hash>(&mut self, id: K, draw: impl FnOnce(&mut ImUiDebugDrawList)) {
+        self.debug_draw_with_options(id, DebugDrawOptions::default(), draw);
+    }
+
+    fn debug_draw_with_options<K: Hash>(
+        &mut self,
+        id: K,
+        options: DebugDrawOptions,
+        draw: impl FnOnce(&mut ImUiDebugDrawList),
+    ) {
+        debug_draw_controls::debug_draw_with_options(self, id, options, draw);
     }
 
     fn separator(&mut self) {
@@ -1815,6 +1890,58 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: InputTextOptions,
     ) -> ResponseExt {
         text_controls::input_text_model_with_options(self, model, options)
+    }
+
+    fn input_text_completion_model(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        candidates: &[Arc<str>],
+    ) -> InputTextPickerResponse {
+        self.input_text_completion_model_with_options(
+            id,
+            model,
+            candidates,
+            InputTextPickerOptions::default(),
+        )
+    }
+
+    fn input_text_completion_model_with_options(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        candidates: &[Arc<str>],
+        options: InputTextPickerOptions,
+    ) -> InputTextPickerResponse {
+        text_picker_controls::input_text_completion_model_with_options(
+            self, id, model, candidates, options,
+        )
+    }
+
+    fn input_text_history_model(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        history: &[Arc<str>],
+    ) -> InputTextPickerResponse {
+        self.input_text_history_model_with_options(
+            id,
+            model,
+            history,
+            InputTextPickerOptions::default(),
+        )
+    }
+
+    fn input_text_history_model_with_options(
+        &mut self,
+        id: &str,
+        model: &fret_runtime::Model<String>,
+        history: &[Arc<str>],
+        options: InputTextPickerOptions,
+    ) -> InputTextPickerResponse {
+        text_picker_controls::input_text_history_model_with_options(
+            self, id, model, history, options,
+        )
     }
 
     fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {

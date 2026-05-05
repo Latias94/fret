@@ -12,6 +12,12 @@ use crate::widget::{
 };
 use crate::{Invalidation, UiHost};
 
+fn text_input_command_mutates_text(command: &str) -> bool {
+    matches!(command, "text.cut" | "text.paste" | "text.clear")
+        || command.starts_with("text.delete")
+        || command.starts_with("text.insert")
+}
+
 impl<H: UiHost> Widget<H> for TextInput {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.queue_release_all_text_blobs();
@@ -362,6 +368,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         range: fret_runtime::Utf16Range,
         text: &str,
     ) -> bool {
+        if self.read_only {
+            return false;
+        }
         let composed = if self.preedit.is_empty() {
             self.text.clone()
         } else {
@@ -386,7 +395,11 @@ impl<H: UiHost> Widget<H> for TextInput {
             )
         };
 
-        let insert = text.replace(['\r', '\n'], " ");
+        let normalized_insert = text.replace(['\r', '\n'], " ");
+        let insert = self.filter_insert_text(normalized_insert.as_str());
+        if !normalized_insert.is_empty() && insert.is_empty() {
+            return false;
+        }
 
         let mut edit = self.edit_state();
         edit.set_selection_grapheme_clamped(start_base, end_base);
@@ -405,7 +418,14 @@ impl<H: UiHost> Widget<H> for TextInput {
         marked: Option<fret_runtime::Utf16Range>,
         selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
-        let insert = text.replace(['\r', '\n'], " ");
+        if self.read_only {
+            return false;
+        }
+        let normalized_insert = text.replace(['\r', '\n'], " ");
+        let insert = self.filter_insert_text(normalized_insert.as_str());
+        if !normalized_insert.is_empty() && insert.is_empty() {
+            return false;
+        }
 
         let commit_composition = |this: &mut Self, insert: &str| -> bool {
             if insert.is_empty() {
@@ -508,7 +528,8 @@ impl<H: UiHost> Widget<H> for TextInput {
         if !self.enabled {
             cx.set_disabled(true);
         }
-        cx.set_value_editable(self.enabled);
+        cx.set_value_editable(self.enabled && !self.read_only);
+        cx.set_read_only(self.read_only);
         cx.set_text_selection_supported(self.enabled);
         cx.set_placeholder(self.placeholder.as_deref());
 
@@ -711,6 +732,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     if *pointer_type != fret_core::PointerType::Mouse {
                         return;
                     }
+                    if self.read_only {
+                        return;
+                    }
                     let settings = cx
                         .app
                         .global::<fret_runtime::TextInteractionSettings>()
@@ -872,6 +896,12 @@ impl<H: UiHost> Widget<H> for TextInput {
 
                 if !self.is_ime_composing() {
                     match key {
+                        fret_core::KeyCode::Backspace | fret_core::KeyCode::Delete
+                            if self.read_only =>
+                        {
+                            cx.stop_propagation();
+                            return;
+                        }
                         fret_core::KeyCode::Backspace => {
                             self.reset_caret_blink(cx);
                             let command = if modifiers.ctrl || modifiers.alt {
@@ -980,6 +1010,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
+                if self.read_only {
+                    return;
+                }
                 let tick = cx.app.tick_id();
                 if self
                     .ime_deduper
@@ -991,7 +1024,10 @@ impl<H: UiHost> Widget<H> for TextInput {
 
                 if !self.is_ime_composing() {
                     self.reset_caret_blink(cx);
-                    let changed = self.replace_selection_changed(text.as_str());
+                    let Some(insert) = self.non_empty_filtered_insert_text(text.as_str()) else {
+                        return;
+                    };
+                    let changed = self.replace_selection_changed(insert.as_str());
                     let outcome = crate::text_edit::commands::Outcome {
                         handled: true,
                         invalidate_paint: false,
@@ -1006,6 +1042,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
+                if self.read_only {
+                    if self.pending_clipboard_token == Some(*token) {
+                        self.pending_clipboard_token = None;
+                    }
+                    return;
+                }
                 if self.is_ime_composing() {
                     return;
                 }
@@ -1016,10 +1058,16 @@ impl<H: UiHost> Widget<H> for TextInput {
 
                 self.reset_caret_blink(cx);
 
-                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                let insert_filter = self.insert_filter.clone();
+                let outcome = crate::text_edit::commands::apply_clipboard_text_with_filter(
                     &mut self.edit_state(),
                     crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
                     text.as_str(),
+                    |text| {
+                        insert_filter
+                            .as_ref()
+                            .map_or_else(|| text.to_string(), |filter| filter(text))
+                    },
                 );
                 if outcome.invalidate_layout {
                     self.mark_text_blobs_dirty();
@@ -1037,6 +1085,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
+                if self.read_only {
+                    if self.pending_primary_selection_token == Some(*token) {
+                        self.pending_primary_selection_token = None;
+                    }
+                    return;
+                }
                 if self.is_ime_composing() {
                     return;
                 }
@@ -1047,10 +1101,16 @@ impl<H: UiHost> Widget<H> for TextInput {
 
                 self.reset_caret_blink(cx);
 
-                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                let insert_filter = self.insert_filter.clone();
+                let outcome = crate::text_edit::commands::apply_clipboard_text_with_filter(
                     &mut self.edit_state(),
                     crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
                     text.as_str(),
+                    |text| {
+                        insert_filter
+                            .as_ref()
+                            .map_or_else(|| text.to_string(), |filter| filter(text))
+                    },
                 );
                 if outcome.invalidate_layout {
                     self.mark_text_blobs_dirty();
@@ -1066,6 +1126,9 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             Event::Ime(ime) => {
                 if !focused {
+                    return;
+                }
+                if self.read_only {
                     return;
                 }
                 self.reset_caret_blink(cx);
@@ -1141,6 +1204,9 @@ impl<H: UiHost> Widget<H> for TextInput {
             "edit.select_all" => "text.select_all",
             other => other,
         };
+        if self.read_only && text_input_command_mutates_text(cmd) {
+            return true;
+        }
 
         // During IME composition the displayed text is base text with a preedit splice at the
         // caret (ADR 0071). To keep command-driven navigation/editing deterministic, cancel the
@@ -1330,7 +1396,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
         let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
         match cmd {
-            "text.copy" | "text.cut" => {
+            "text.copy" => {
                 if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
@@ -1340,13 +1406,33 @@ impl<H: UiHost> Widget<H> for TextInput {
                     CommandAvailability::Blocked
                 }
             }
+            "text.cut" => {
+                if self.read_only || !clipboard_write {
+                    return CommandAvailability::Blocked;
+                }
+                if self.has_selection() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
             "text.paste" => {
-                if !clipboard_read {
+                if self.read_only || !clipboard_read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" | "text.clear" => {
+            "text.select_all" => {
+                if !self.text.is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            "text.clear" => {
+                if self.read_only {
+                    return CommandAvailability::Blocked;
+                }
                 if !self.text.is_empty() {
                     CommandAvailability::Available
                 } else {

@@ -1,0 +1,1171 @@
+//! Immediate-mode debug draw helper backed by declarative `Canvas`.
+
+use std::hash::Hash;
+use std::sync::Arc;
+
+use fret_core::scene::ImageSamplingHint;
+use fret_core::scene::{DashPatternV1, Paint};
+use fret_core::{
+    Color, Corners, DrawOrder, Edges, FillStyle, ImageId, PathCommand, PathStyle, Point, Px, Rect,
+    StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit, TextOverflow, TextStyle,
+    TextWrap, UvRect, ViewportFit,
+};
+use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
+use fret_ui::element::{
+    AnyElement, CanvasCachePolicy, CanvasProps, LayoutStyle, Length, SizeStyle,
+};
+use fret_ui::{ElementContext, SvgSource, UiHost};
+
+use super::UiWriterImUiFacadeExt;
+
+#[derive(Debug, Clone)]
+pub struct DebugDrawOptions {
+    pub layout: LayoutStyle,
+    pub test_id: Option<Arc<str>>,
+    pub clip_to_bounds: bool,
+}
+
+impl Default for DebugDrawOptions {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Px(Px(120.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            test_id: None,
+            clip_to_bounds: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ImUiDebugDrawList {
+    commands: Vec<DebugDrawCommand>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DebugDrawStrokeStyle {
+    pub width: Px,
+    pub join: StrokeJoinV1,
+    pub cap: StrokeCapV1,
+    pub miter_limit: f32,
+    pub dash: Option<DashPatternV1>,
+}
+
+impl DebugDrawStrokeStyle {
+    pub fn new(width: Px) -> Self {
+        Self {
+            width,
+            ..Default::default()
+        }
+    }
+
+    pub fn with_join(mut self, join: StrokeJoinV1) -> Self {
+        self.join = join;
+        self
+    }
+
+    pub fn with_cap(mut self, cap: StrokeCapV1) -> Self {
+        self.cap = cap;
+        self
+    }
+
+    pub fn with_miter_limit(mut self, miter_limit: f32) -> Self {
+        if miter_limit.is_finite() && miter_limit > 0.0 {
+            self.miter_limit = miter_limit;
+        }
+        self
+    }
+
+    pub fn with_dash(mut self, dash: Px, gap: Px, phase: Px) -> Self {
+        if dash.0 > 0.0 && gap.0 > 0.0 && phase.0.is_finite() {
+            self.dash = Some(DashPatternV1::new(dash, gap, phase));
+        }
+        self
+    }
+
+    pub fn with_dash_pattern(mut self, dash: DashPatternV1) -> Self {
+        if dash.dash.0 > 0.0 && dash.gap.0 > 0.0 && dash.phase.0.is_finite() {
+            self.dash = Some(dash);
+        }
+        self
+    }
+
+    fn is_visible(self) -> bool {
+        self.width.0 > 0.0
+    }
+
+    fn path_style(self) -> PathStyle {
+        if self.join == StrokeJoinV1::Miter
+            && self.cap == StrokeCapV1::Butt
+            && self.miter_limit == 4.0
+            && self.dash.is_none()
+        {
+            PathStyle::Stroke(StrokeStyle { width: self.width })
+        } else {
+            PathStyle::StrokeV2(StrokeStyleV2 {
+                width: self.width,
+                join: self.join,
+                cap: self.cap,
+                miter_limit: self.miter_limit,
+                dash: self.dash,
+            })
+        }
+    }
+}
+
+impl Default for DebugDrawStrokeStyle {
+    fn default() -> Self {
+        Self {
+            width: Px(1.0),
+            join: StrokeJoinV1::Miter,
+            cap: StrokeCapV1::Butt,
+            miter_limit: 4.0,
+            dash: None,
+        }
+    }
+}
+
+impl From<Px> for DebugDrawStrokeStyle {
+    fn from(width: Px) -> Self {
+        Self::new(width)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DebugDrawImageOptions {
+    pub fit: ViewportFit,
+    pub sampling: ImageSamplingHint,
+    pub opacity: f32,
+}
+
+impl Default for DebugDrawImageOptions {
+    fn default() -> Self {
+        Self {
+            fit: ViewportFit::Stretch,
+            sampling: ImageSamplingHint::Default,
+            opacity: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DebugDrawSvgOptions {
+    pub fit: SvgFit,
+    pub opacity: f32,
+}
+
+impl Default for DebugDrawSvgOptions {
+    fn default() -> Self {
+        Self {
+            fit: SvgFit::Stretch,
+            opacity: 1.0,
+        }
+    }
+}
+
+impl ImUiDebugDrawList {
+    pub fn add_line(&mut self, from: Point, to: Point, color: Color, thickness: Px) {
+        self.add_line_with_style(from, to, color, thickness);
+    }
+
+    pub fn add_line_with_style(
+        &mut self,
+        from: Point,
+        to: Point,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Line {
+            from,
+            to,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_polyline<I>(&mut self, points: I, color: Color, thickness: Px, closed: bool)
+    where
+        I: IntoIterator<Item = Point>,
+    {
+        self.add_polyline_with_style(points, color, thickness, closed);
+    }
+
+    pub fn add_polyline_with_style<I>(
+        &mut self,
+        points: I,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+        closed: bool,
+    ) where
+        I: IntoIterator<Item = Point>,
+    {
+        let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
+        self.commands.push(DebugDrawCommand::Polyline {
+            points,
+            color,
+            style: style.into(),
+            closed,
+        });
+    }
+
+    pub fn add_rect(&mut self, rect: Rect, color: Color, thickness: Px) {
+        self.add_rect_with_style(rect, color, thickness);
+    }
+
+    pub fn add_rect_with_style(
+        &mut self,
+        rect: Rect,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Rect {
+            rect,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_rect_filled(&mut self, rect: Rect, color: Color) {
+        self.commands
+            .push(DebugDrawCommand::RectFilled { rect, color });
+    }
+
+    pub fn add_triangle(&mut self, p1: Point, p2: Point, p3: Point, color: Color, thickness: Px) {
+        self.add_triangle_with_style(p1, p2, p3, color, thickness);
+    }
+
+    pub fn add_triangle_with_style(
+        &mut self,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Triangle {
+            p1,
+            p2,
+            p3,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_triangle_filled(&mut self, p1: Point, p2: Point, p3: Point, color: Color) {
+        self.commands
+            .push(DebugDrawCommand::TriangleFilled { p1, p2, p3, color });
+    }
+
+    pub fn add_circle(&mut self, center: Point, radius: Px, color: Color, thickness: Px) {
+        self.add_circle_with_style(center, radius, color, thickness);
+    }
+
+    pub fn add_circle_with_style(
+        &mut self,
+        center: Point,
+        radius: Px,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Circle {
+            center,
+            radius,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_circle_filled(&mut self, center: Point, radius: Px, color: Color) {
+        self.commands.push(DebugDrawCommand::CircleFilled {
+            center,
+            radius,
+            color,
+        });
+    }
+
+    pub fn push_clip_rect(&mut self, rect: Rect) {
+        self.commands.push(DebugDrawCommand::PushClipRect { rect });
+    }
+
+    pub fn pop_clip_rect(&mut self) {
+        self.commands.push(DebugDrawCommand::PopClipRect);
+    }
+
+    pub fn add_image(&mut self, rect: Rect, image: ImageId) {
+        self.add_image_with_options(rect, image, DebugDrawImageOptions::default());
+    }
+
+    pub fn add_image_with_options(
+        &mut self,
+        rect: Rect,
+        image: ImageId,
+        options: DebugDrawImageOptions,
+    ) {
+        self.commands.push(DebugDrawCommand::Image {
+            rect,
+            image,
+            options,
+        });
+    }
+
+    pub fn add_image_region(
+        &mut self,
+        rect: Rect,
+        image: ImageId,
+        uv: UvRect,
+        options: DebugDrawImageOptions,
+    ) {
+        self.commands.push(DebugDrawCommand::ImageRegion {
+            rect,
+            image,
+            uv,
+            options,
+        });
+    }
+
+    pub fn add_svg_image(&mut self, rect: Rect, svg: SvgSource) {
+        self.add_svg_image_with_options(rect, svg, DebugDrawSvgOptions::default());
+    }
+
+    pub fn add_svg_image_with_options(
+        &mut self,
+        rect: Rect,
+        svg: SvgSource,
+        options: DebugDrawSvgOptions,
+    ) {
+        self.commands
+            .push(DebugDrawCommand::SvgImage { rect, svg, options });
+    }
+
+    pub fn add_svg_mask_icon(&mut self, rect: Rect, svg: SvgSource, color: Color) {
+        self.add_svg_mask_icon_with_options(rect, svg, color, DebugDrawSvgOptions::default());
+    }
+
+    pub fn add_svg_mask_icon_with_options(
+        &mut self,
+        rect: Rect,
+        svg: SvgSource,
+        color: Color,
+        options: DebugDrawSvgOptions,
+    ) {
+        self.commands.push(DebugDrawCommand::SvgMaskIcon {
+            rect,
+            svg,
+            color,
+            options,
+        });
+    }
+
+    pub fn add_text(&mut self, origin: Point, text: impl Into<Arc<str>>, color: Color, size: Px) {
+        self.commands.push(DebugDrawCommand::Text {
+            origin,
+            text: text.into(),
+            color,
+            size,
+        });
+    }
+
+    pub fn command_count(&self) -> usize {
+        self.commands.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.commands.is_empty()
+    }
+}
+
+impl Default for ImUiDebugDrawList {
+    fn default() -> Self {
+        Self {
+            commands: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum DebugDrawCommand {
+    Line {
+        from: Point,
+        to: Point,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    Polyline {
+        points: Arc<[Point]>,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+        closed: bool,
+    },
+    Rect {
+        rect: Rect,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    RectFilled {
+        rect: Rect,
+        color: Color,
+    },
+    Triangle {
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    TriangleFilled {
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        color: Color,
+    },
+    Circle {
+        center: Point,
+        radius: Px,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    CircleFilled {
+        center: Point,
+        radius: Px,
+        color: Color,
+    },
+    PushClipRect {
+        rect: Rect,
+    },
+    PopClipRect,
+    Image {
+        rect: Rect,
+        image: ImageId,
+        options: DebugDrawImageOptions,
+    },
+    ImageRegion {
+        rect: Rect,
+        image: ImageId,
+        uv: UvRect,
+        options: DebugDrawImageOptions,
+    },
+    SvgImage {
+        rect: Rect,
+        svg: SvgSource,
+        options: DebugDrawSvgOptions,
+    },
+    SvgMaskIcon {
+        rect: Rect,
+        svg: SvgSource,
+        color: Color,
+        options: DebugDrawSvgOptions,
+    },
+    Text {
+        origin: Point,
+        text: Arc<str>,
+        color: Color,
+        size: Px,
+    },
+}
+
+pub(super) fn debug_draw_with_options<H, W, K, F>(
+    ui: &mut W,
+    id: K,
+    options: DebugDrawOptions,
+    draw: F,
+) where
+    H: UiHost,
+    W: UiWriterImUiFacadeExt<H> + ?Sized,
+    K: Hash,
+    F: FnOnce(&mut ImUiDebugDrawList),
+{
+    let mut list = ImUiDebugDrawList::default();
+    draw(&mut list);
+    let commands: Arc<[DebugDrawCommand]> = Arc::from(list.commands.into_boxed_slice());
+    let element = ui.with_cx_mut(|cx| {
+        cx.keyed(("fret-ui-kit.imui.debug_draw", id), |cx| {
+            debug_draw_element(cx, commands, options)
+        })
+    });
+    ui.add(element);
+}
+
+fn debug_draw_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    commands: Arc<[DebugDrawCommand]>,
+    options: DebugDrawOptions,
+) -> AnyElement {
+    let mut props = CanvasProps {
+        layout: options.layout,
+        cache_policy: CanvasCachePolicy::smooth_default(),
+    };
+    props.cache_policy.shared_text.keep_frames = 30;
+    props.cache_policy.path.keep_frames = 30;
+
+    let clip_to_bounds = options.clip_to_bounds;
+    let mut element = cx.canvas(props, move |painter| {
+        if clip_to_bounds {
+            let bounds = painter.bounds();
+            painter.with_clip_rect(bounds, |painter| {
+                paint_debug_draw_commands(painter, &commands)
+            });
+        } else {
+            paint_debug_draw_commands(painter, &commands);
+        }
+    });
+    if let Some(test_id) = options.test_id {
+        element = element.test_id(test_id);
+    }
+    element
+}
+
+fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugDrawCommand]) {
+    let scale = painter.scale_factor().max(1.0);
+    let mut open_clip_depth = 0usize;
+    for (index, command) in commands.iter().enumerate() {
+        let order = DrawOrder(index as u32);
+        let key = painter.key(&("fret-ui-kit.imui.debug_draw.command", index));
+        match command {
+            DebugDrawCommand::PushClipRect { rect } => {
+                if rect_is_empty(*rect) {
+                    continue;
+                }
+                painter
+                    .scene()
+                    .push(fret_core::SceneOp::PushClipRect { rect: *rect });
+                open_clip_depth += 1;
+            }
+            DebugDrawCommand::PopClipRect => {
+                if open_clip_depth == 0 {
+                    continue;
+                }
+                painter.scene().push(fret_core::SceneOp::PopClip);
+                open_clip_depth -= 1;
+            }
+            DebugDrawCommand::Image {
+                rect,
+                image,
+                options,
+            } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0 || rect_is_empty(*rect) {
+                    continue;
+                }
+                painter.scene().push(fret_core::SceneOp::Image {
+                    order,
+                    rect: *rect,
+                    image: *image,
+                    fit: options.fit,
+                    sampling: options.sampling,
+                    opacity,
+                });
+            }
+            DebugDrawCommand::ImageRegion {
+                rect,
+                image,
+                uv,
+                options,
+            } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0 || rect_is_empty(*rect) || !uv_rect_is_valid(*uv) {
+                    continue;
+                }
+                painter.scene().push(fret_core::SceneOp::ImageRegion {
+                    order,
+                    rect: *rect,
+                    image: *image,
+                    uv: *uv,
+                    sampling: options.sampling,
+                    opacity,
+                });
+            }
+            DebugDrawCommand::SvgImage { rect, svg, options } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0 || rect_is_empty(*rect) {
+                    continue;
+                }
+                painter.svg_image(key, order, *rect, svg, options.fit, opacity);
+            }
+            DebugDrawCommand::SvgMaskIcon {
+                rect,
+                svg,
+                color,
+                options,
+            } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0 || color.a <= 0.0 || rect_is_empty(*rect) {
+                    continue;
+                }
+                painter.svg_mask_icon(key, order, *rect, svg, options.fit, *color, opacity);
+            }
+            DebugDrawCommand::Line {
+                from,
+                to,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let commands = [PathCommand::MoveTo(*from), PathCommand::LineTo(*to)];
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::Polyline {
+                points,
+                color,
+                style,
+                closed,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let Some(commands) = polyline_path(points, *closed) else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::Rect { rect, color, style } => {
+                if color.a <= 0.0 || !style.is_visible() || rect_is_empty(*rect) {
+                    continue;
+                }
+                let commands = rect_path(*rect);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::RectFilled { rect, color } => {
+                if color.a <= 0.0 || rect_is_empty(*rect) {
+                    continue;
+                }
+                painter.scene().push(fret_core::SceneOp::Quad {
+                    order,
+                    rect: *rect,
+                    background: Paint::Solid(*color).into(),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+            DebugDrawCommand::Triangle {
+                p1,
+                p2,
+                p3,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() || triangle_is_degenerate(*p1, *p2, *p3) {
+                    continue;
+                }
+                let commands = triangle_path(*p1, *p2, *p3);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::TriangleFilled { p1, p2, p3, color } => {
+                if color.a <= 0.0 || triangle_is_degenerate(*p1, *p2, *p3) {
+                    continue;
+                }
+                let commands = triangle_path(*p1, *p2, *p3);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::Circle {
+                center,
+                radius,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() || radius.0 <= 0.0 {
+                    continue;
+                }
+                let commands = circle_path(*center, *radius);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::CircleFilled {
+                center,
+                radius,
+                color,
+            } => {
+                if color.a <= 0.0 || radius.0 <= 0.0 {
+                    continue;
+                }
+                let commands = circle_path(*center, *radius);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::Text {
+                origin,
+                text,
+                color,
+                size,
+            } => {
+                if color.a <= 0.0 || size.0 <= 0.0 {
+                    continue;
+                }
+                painter.shared_text(
+                    order,
+                    *origin,
+                    text.clone(),
+                    TextStyle {
+                        size: *size,
+                        line_height: Some(Px(size.0 * 1.2)),
+                        ..Default::default()
+                    },
+                    *color,
+                    CanvasTextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    },
+                    scale,
+                );
+            }
+        }
+    }
+
+    for _ in 0..open_clip_depth {
+        painter.scene().push(fret_core::SceneOp::PopClip);
+    }
+}
+
+fn rect_is_empty(rect: Rect) -> bool {
+    rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0
+}
+
+fn normalized_opacity(opacity: f32) -> f32 {
+    if opacity.is_finite() {
+        opacity.clamp(0.0, 1.0)
+    } else {
+        1.0
+    }
+}
+
+fn uv_rect_is_valid(uv: UvRect) -> bool {
+    uv.u0.is_finite()
+        && uv.v0.is_finite()
+        && uv.u1.is_finite()
+        && uv.v1.is_finite()
+        && uv.u1 > uv.u0
+        && uv.v1 > uv.v0
+}
+
+fn polyline_path(points: &[Point], closed: bool) -> Option<Vec<PathCommand>> {
+    let required_points = if closed { 3 } else { 2 };
+    if points.len() < required_points {
+        return None;
+    }
+
+    let mut commands = Vec::with_capacity(points.len() + usize::from(closed));
+    commands.push(PathCommand::MoveTo(points[0]));
+    for point in &points[1..] {
+        commands.push(PathCommand::LineTo(*point));
+    }
+    if closed {
+        commands.push(PathCommand::Close);
+    }
+    Some(commands)
+}
+
+fn rect_path(rect: Rect) -> [PathCommand; 5] {
+    let x0 = rect.origin.x;
+    let y0 = rect.origin.y;
+    let x1 = Px(rect.origin.x.0 + rect.size.width.0);
+    let y1 = Px(rect.origin.y.0 + rect.size.height.0);
+    [
+        PathCommand::MoveTo(Point::new(x0, y0)),
+        PathCommand::LineTo(Point::new(x1, y0)),
+        PathCommand::LineTo(Point::new(x1, y1)),
+        PathCommand::LineTo(Point::new(x0, y1)),
+        PathCommand::Close,
+    ]
+}
+
+fn triangle_path(p1: Point, p2: Point, p3: Point) -> [PathCommand; 4] {
+    [
+        PathCommand::MoveTo(p1),
+        PathCommand::LineTo(p2),
+        PathCommand::LineTo(p3),
+        PathCommand::Close,
+    ]
+}
+
+fn triangle_is_degenerate(p1: Point, p2: Point, p3: Point) -> bool {
+    let ax = p2.x.0 - p1.x.0;
+    let ay = p2.y.0 - p1.y.0;
+    let bx = p3.x.0 - p1.x.0;
+    let by = p3.y.0 - p1.y.0;
+    (ax * by - ay * bx).abs() <= f32::EPSILON
+}
+
+fn circle_path(center: Point, radius: Px) -> [PathCommand; 6] {
+    let r = radius.0;
+    let k = 0.552_284_8_f32 * r;
+    let cx = center.x.0;
+    let cy = center.y.0;
+    [
+        PathCommand::MoveTo(Point::new(Px(cx + r), Px(cy))),
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx + r), Px(cy + k)),
+            ctrl2: Point::new(Px(cx + k), Px(cy + r)),
+            to: Point::new(Px(cx), Px(cy + r)),
+        },
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx - k), Px(cy + r)),
+            ctrl2: Point::new(Px(cx - r), Px(cy + k)),
+            to: Point::new(Px(cx - r), Px(cy)),
+        },
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx - r), Px(cy - k)),
+            ctrl2: Point::new(Px(cx - k), Px(cy - r)),
+            to: Point::new(Px(cx), Px(cy - r)),
+        },
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx + k), Px(cy - r)),
+            ctrl2: Point::new(Px(cx + r), Px(cy - k)),
+            to: Point::new(Px(cx + r), Px(cy)),
+        },
+        PathCommand::Close,
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::Size;
+
+    #[test]
+    fn debug_draw_list_records_commands_in_order() {
+        let mut list = ImUiDebugDrawList::default();
+        assert!(list.is_empty());
+
+        list.add_line(
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(10.0), Px(10.0)),
+            Color::from_srgb_hex_rgb(0xff_00_00),
+            Px(1.0),
+        );
+        list.add_polyline(
+            [
+                Point::new(Px(0.0), Px(0.0)),
+                Point::new(Px(4.0), Px(8.0)),
+                Point::new(Px(8.0), Px(2.0)),
+            ],
+            Color::from_srgb_hex_rgb(0xff_ff_00),
+            Px(1.0),
+            false,
+        );
+        list.add_rect(
+            Rect::new(Point::new(Px(2.0), Px(3.0)), Size::new(Px(4.0), Px(5.0))),
+            Color::from_srgb_hex_rgb(0x00_ff_00),
+            Px(2.0),
+        );
+        list.add_rect_filled(
+            Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(2.0), Px(2.0))),
+            Color::from_srgb_hex_rgb(0x00_00_ff),
+        );
+        list.add_triangle(
+            Point::new(Px(1.0), Px(1.0)),
+            Point::new(Px(5.0), Px(1.0)),
+            Point::new(Px(3.0), Px(4.0)),
+            Color::from_srgb_hex_rgb(0xff_00_ff),
+            Px(1.0),
+        );
+        list.add_triangle_filled(
+            Point::new(Px(2.0), Px(2.0)),
+            Point::new(Px(6.0), Px(2.0)),
+            Point::new(Px(4.0), Px(5.0)),
+            Color::from_srgb_hex_rgb(0x00_ff_ff),
+        );
+        list.add_circle(
+            Point::new(Px(20.0), Px(20.0)),
+            Px(8.0),
+            Color::from_srgb_hex_rgb(0xff_aa_00),
+            Px(2.0),
+        );
+        list.add_circle_filled(
+            Point::new(Px(40.0), Px(20.0)),
+            Px(6.0),
+            Color::from_srgb_hex_rgb(0xaa_00_ff),
+        );
+        list.add_text(
+            Point::new(Px(4.0), Px(5.0)),
+            "debug",
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(12.0),
+        );
+
+        assert_eq!(list.command_count(), 9);
+        assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
+        assert!(matches!(
+            list.commands[1],
+            DebugDrawCommand::Polyline { .. }
+        ));
+        assert!(matches!(list.commands[2], DebugDrawCommand::Rect { .. }));
+        assert!(matches!(
+            list.commands[3],
+            DebugDrawCommand::RectFilled { .. }
+        ));
+        assert!(matches!(
+            list.commands[4],
+            DebugDrawCommand::Triangle { .. }
+        ));
+        assert!(matches!(
+            list.commands[5],
+            DebugDrawCommand::TriangleFilled { .. }
+        ));
+        assert!(matches!(list.commands[6], DebugDrawCommand::Circle { .. }));
+        assert!(matches!(
+            list.commands[7],
+            DebugDrawCommand::CircleFilled { .. }
+        ));
+        assert!(matches!(list.commands[8], DebugDrawCommand::Text { .. }));
+    }
+
+    #[test]
+    fn debug_draw_list_records_clip_stack_commands() {
+        let mut list = ImUiDebugDrawList::default();
+        list.push_clip_rect(Rect::new(
+            Point::new(Px(2.0), Px(3.0)),
+            Size::new(Px(40.0), Px(50.0)),
+        ));
+        list.pop_clip_rect();
+
+        assert_eq!(list.command_count(), 2);
+        assert!(matches!(
+            list.commands[0],
+            DebugDrawCommand::PushClipRect { .. }
+        ));
+        assert!(matches!(list.commands[1], DebugDrawCommand::PopClipRect));
+    }
+
+    #[test]
+    fn debug_draw_list_records_image_overlay_commands() {
+        let mut list = ImUiDebugDrawList::default();
+        let image = ImageId::default();
+        let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(24.0), Px(16.0)));
+        let image_options = DebugDrawImageOptions {
+            fit: ViewportFit::Contain,
+            sampling: ImageSamplingHint::Nearest,
+            opacity: 0.5,
+        };
+        let svg_options = DebugDrawSvgOptions {
+            fit: SvgFit::Contain,
+            opacity: 0.75,
+        };
+
+        list.add_image_with_options(rect, image, image_options);
+        list.add_image_region(rect, image, UvRect::FULL, image_options);
+        list.add_svg_image_with_options(rect, SvgSource::Static(b"<svg/>"), svg_options);
+        list.add_svg_mask_icon_with_options(
+            rect,
+            SvgSource::Static(b"<svg/>"),
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            svg_options,
+        );
+
+        assert_eq!(list.command_count(), 4);
+        assert!(matches!(list.commands[0], DebugDrawCommand::Image { .. }));
+        assert!(matches!(
+            list.commands[1],
+            DebugDrawCommand::ImageRegion { .. }
+        ));
+        assert!(matches!(
+            list.commands[2],
+            DebugDrawCommand::SvgImage { .. }
+        ));
+        assert!(matches!(
+            list.commands[3],
+            DebugDrawCommand::SvgMaskIcon { .. }
+        ));
+    }
+
+    #[test]
+    fn image_overlay_helpers_sanitize_opacity_and_uv_rects() {
+        assert_eq!(normalized_opacity(-1.0), 0.0);
+        assert_eq!(normalized_opacity(2.0), 1.0);
+        assert_eq!(normalized_opacity(f32::NAN), 1.0);
+
+        assert!(uv_rect_is_valid(UvRect::FULL));
+        assert!(!uv_rect_is_valid(UvRect {
+            u0: 0.5,
+            v0: 0.0,
+            u1: 0.25,
+            v1: 1.0,
+        }));
+    }
+
+    #[test]
+    fn rect_path_closes_clockwise_edges() {
+        let path = rect_path(Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(30.0), Px(40.0)),
+        ));
+
+        assert_eq!(
+            path,
+            [
+                PathCommand::MoveTo(Point::new(Px(10.0), Px(20.0))),
+                PathCommand::LineTo(Point::new(Px(40.0), Px(20.0))),
+                PathCommand::LineTo(Point::new(Px(40.0), Px(60.0))),
+                PathCommand::LineTo(Point::new(Px(10.0), Px(60.0))),
+                PathCommand::Close,
+            ]
+        );
+    }
+
+    #[test]
+    fn debug_draw_stroke_style_uses_v1_for_default_and_v2_for_explicit_policy() {
+        let default_style = DebugDrawStrokeStyle::new(Px(2.0));
+        assert_eq!(
+            default_style.path_style(),
+            PathStyle::Stroke(StrokeStyle { width: Px(2.0) })
+        );
+
+        let styled = DebugDrawStrokeStyle::new(Px(3.0))
+            .with_join(StrokeJoinV1::Round)
+            .with_cap(StrokeCapV1::Round)
+            .with_miter_limit(8.0)
+            .with_dash(Px(6.0), Px(4.0), Px(1.0));
+
+        let PathStyle::StrokeV2(stroke) = styled.path_style() else {
+            panic!("explicit debug-draw stroke policy should use StrokeV2");
+        };
+        assert_eq!(stroke.width, Px(3.0));
+        assert_eq!(stroke.join, StrokeJoinV1::Round);
+        assert_eq!(stroke.cap, StrokeCapV1::Round);
+        assert_eq!(stroke.miter_limit, 8.0);
+        assert_eq!(
+            stroke.dash,
+            Some(DashPatternV1::new(Px(6.0), Px(4.0), Px(1.0)))
+        );
+    }
+
+    #[test]
+    fn debug_draw_stroke_style_ignores_invalid_dash_and_miter_inputs() {
+        let style = DebugDrawStrokeStyle::new(Px(2.0))
+            .with_miter_limit(f32::NAN)
+            .with_dash(Px(0.0), Px(4.0), Px(0.0))
+            .with_dash_pattern(DashPatternV1::new(Px(4.0), Px(-1.0), Px(0.0)));
+
+        assert_eq!(style.miter_limit, 4.0);
+        assert_eq!(style.dash, None);
+        assert_eq!(
+            style.path_style(),
+            PathStyle::Stroke(StrokeStyle { width: Px(2.0) })
+        );
+    }
+
+    #[test]
+    fn polyline_path_requires_enough_points_and_closes_when_requested() {
+        assert!(polyline_path(&[Point::new(Px(0.0), Px(0.0))], false).is_none());
+        assert!(
+            polyline_path(
+                &[Point::new(Px(0.0), Px(0.0)), Point::new(Px(1.0), Px(1.0))],
+                true,
+            )
+            .is_none()
+        );
+
+        let path = polyline_path(
+            &[
+                Point::new(Px(0.0), Px(0.0)),
+                Point::new(Px(10.0), Px(0.0)),
+                Point::new(Px(10.0), Px(10.0)),
+            ],
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(
+            path,
+            vec![
+                PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(10.0), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(10.0), Px(10.0))),
+                PathCommand::Close,
+            ]
+        );
+    }
+
+    #[test]
+    fn triangle_path_closes_and_degenerate_triangles_are_detected() {
+        let p1 = Point::new(Px(0.0), Px(0.0));
+        let p2 = Point::new(Px(10.0), Px(0.0));
+        let p3 = Point::new(Px(5.0), Px(8.0));
+
+        assert_eq!(
+            triangle_path(p1, p2, p3),
+            [
+                PathCommand::MoveTo(p1),
+                PathCommand::LineTo(p2),
+                PathCommand::LineTo(p3),
+                PathCommand::Close,
+            ]
+        );
+        assert!(!triangle_is_degenerate(p1, p2, p3));
+        assert!(triangle_is_degenerate(p1, Point::new(Px(5.0), Px(0.0)), p2));
+    }
+
+    #[test]
+    fn circle_path_uses_four_cubic_arcs_and_closes() {
+        let path = circle_path(Point::new(Px(10.0), Px(20.0)), Px(8.0));
+
+        assert_eq!(path.len(), 6);
+        assert_eq!(path[0], PathCommand::MoveTo(Point::new(Px(18.0), Px(20.0))));
+        assert!(matches!(path[1], PathCommand::CubicTo { .. }));
+        assert!(matches!(path[2], PathCommand::CubicTo { .. }));
+        assert!(matches!(path[3], PathCommand::CubicTo { .. }));
+        assert!(matches!(path[4], PathCommand::CubicTo { .. }));
+        assert_eq!(path[5], PathCommand::Close);
+    }
+}

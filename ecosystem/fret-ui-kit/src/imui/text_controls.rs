@@ -1,6 +1,10 @@
 //! Immediate-mode text input and textarea helpers.
 
-use fret_core::{Color, Corners, Edges, Px};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use fret_core::{Color, Corners, Edges, KeyCode, NodeId, Px};
+use fret_runtime::{CommandId, Effect, TimerToken};
 use fret_ui::UiHost;
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 
@@ -12,6 +16,89 @@ fn text_model_changed_for<H: UiHost>(
     current: &str,
 ) -> bool {
     super::model_value_changed_for(cx, id, current.to_string())
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(super) struct InputTextAssistiveSemantics {
+    pub active_descendant: Option<NodeId>,
+    pub active_descendant_element: Option<u64>,
+    pub controls_element: Option<u64>,
+    pub expanded: Option<bool>,
+}
+
+#[derive(Debug, Default)]
+struct ImuiTextFocusSelectionState {
+    was_focused: bool,
+    pending_select_all: bool,
+    timer: Option<TimerToken>,
+}
+
+fn sync_select_all_on_focus<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    id: fret_ui::GlobalElementId,
+    is_focused: bool,
+    has_text: bool,
+    select_all_on_focus: bool,
+) {
+    if !select_all_on_focus {
+        return;
+    }
+
+    let state = cx.state_for(
+        id,
+        || Arc::new(Mutex::new(ImuiTextFocusSelectionState::default())),
+        |state| state.clone(),
+    );
+
+    let (cancel_token, arm_token) = {
+        let mut state = state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut cancel_token = None;
+        let mut arm_token = None;
+
+        if is_focused && !state.was_focused {
+            state.pending_select_all = has_text;
+            if state.pending_select_all {
+                let token = cx.app.next_timer_token();
+                state.timer = Some(token);
+                arm_token = Some(token);
+            }
+        } else if !is_focused {
+            cancel_token = state.timer.take();
+            state.pending_select_all = false;
+        }
+
+        state.was_focused = is_focused;
+        (cancel_token, arm_token)
+    };
+
+    if let Some(token) = cancel_token {
+        cx.cancel_timer(token);
+    }
+    let install_handler = arm_token.is_some();
+    if let Some(token) = arm_token {
+        cx.set_timer_for(id, token, Duration::ZERO);
+    }
+
+    if install_handler {
+        let state_for_timer = state.clone();
+        cx.timer_on_timer_for(
+            id,
+            Arc::new(move |host, action_cx, token| {
+                let mut state = state_for_timer.lock().unwrap_or_else(|e| e.into_inner());
+                if state.timer != Some(token) {
+                    return false;
+                }
+                state.timer = None;
+                if !state.pending_select_all {
+                    return false;
+                }
+                state.pending_select_all = false;
+                host.record_transient_event(action_cx, super::KEY_SELECT_ALL_ON_FOCUS);
+                host.request_redraw(action_cx.window);
+                true
+            }),
+        );
+    }
 }
 
 fn imui_text_input_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextInputStyle {
@@ -113,6 +200,82 @@ fn input_text_layout() -> LayoutStyle {
     }
 }
 
+fn install_input_text_policy_commands<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    id: fret_ui::GlobalElementId,
+    options: &InputTextOptions,
+) {
+    let completion_command = options.completion_command.clone();
+    let history_previous_command = options.history_previous_command.clone();
+    let history_next_command = options.history_next_command.clone();
+    let undo_command = options.undo_command.clone();
+    let redo_command = options.redo_command.clone();
+    let completion_command_repeat = options.completion_command_repeat;
+    let history_command_repeat = options.history_command_repeat;
+    let undo_redo_command_repeat = options.undo_redo_command_repeat;
+
+    if completion_command.is_none()
+        && history_previous_command.is_none()
+        && history_next_command.is_none()
+        && undo_command.is_none()
+        && redo_command.is_none()
+    {
+        return;
+    }
+
+    cx.key_add_on_key_down_for(
+        id,
+        Arc::new(move |host, action_cx, down| {
+            if down.ime_composing || down.modifiers.alt || down.modifiers.meta {
+                return false;
+            }
+
+            let command = if down.modifiers.ctrl {
+                match down.key {
+                    KeyCode::KeyZ
+                        if !down.modifiers.shift && (!down.repeat || undo_redo_command_repeat) =>
+                    {
+                        undo_command.clone()
+                    }
+                    KeyCode::KeyY
+                        if !down.modifiers.shift && (!down.repeat || undo_redo_command_repeat) =>
+                    {
+                        redo_command.clone()
+                    }
+                    KeyCode::KeyZ
+                        if down.modifiers.shift && (!down.repeat || undo_redo_command_repeat) =>
+                    {
+                        redo_command.clone()
+                    }
+                    _ => None,
+                }
+            } else if !down.modifiers.shift {
+                match down.key {
+                    KeyCode::Tab if !down.repeat || completion_command_repeat => {
+                        completion_command.clone()
+                    }
+                    KeyCode::ArrowUp if !down.repeat || history_command_repeat => {
+                        history_previous_command.clone()
+                    }
+                    KeyCode::ArrowDown if !down.repeat || history_command_repeat => {
+                        history_next_command.clone()
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+
+            let Some(command) = command else {
+                return false;
+            };
+
+            host.dispatch_command(Some(action_cx.window), command);
+            true
+        }),
+    );
+}
+
 pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     model: &fret_runtime::Model<String>,
@@ -120,57 +283,111 @@ pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
 ) -> ResponseExt {
     let model = model.clone();
     let mut response = ResponseExt::default();
-
-    let element = ui.with_cx_mut(|cx| {
-        let enabled = options.enabled && !super::imui_is_disabled(cx);
-        cx.scope(|cx| {
-            let id = cx.root_id();
-            let current = cx
-                .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
-                .unwrap_or_default();
-
-            response.id = Some(id);
-            response.enabled = enabled;
-            response.core.focused = enabled && cx.is_focused_element(id);
-            response.core.changed = enabled && text_model_changed_for(cx, id, &current);
-            response.core.rect = cx.last_bounds_for_element(id);
-            super::populate_response_lifecycle_from_active_state(
-                cx,
-                id,
-                response.core.focused,
-                response.core.changed,
-                &mut response,
-            );
-
-            let mut props = fret_ui::element::TextInputProps::new(model.clone());
-            props.enabled = enabled;
-            props.focusable = enabled && options.focusable;
-            props.obscure_text = matches!(options.mode, InputTextMode::Password);
-            props.layout = input_text_layout();
-            props.a11y_label = options.a11y_label.clone();
-            props.a11y_role = options.a11y_role;
-            props.test_id = options.test_id.clone();
-            props.placeholder = options.placeholder.clone();
-            props.submit_command = options.submit_command.clone();
-            props.cancel_command = options.cancel_command.clone();
-            let (chrome, text_style) = {
-                let theme = fret_ui::Theme::global(&*cx.app);
-                (
-                    imui_text_input_style_from_theme(theme),
-                    default_input_text_style_from_theme(theme),
-                )
-            };
-            props.chrome = chrome;
-            props.text_style = text_style;
-
-            let mut element = cx.text_input(props);
-            element.id = id;
-            element
-        })
-    });
+    let element = ui
+        .with_cx_mut(|cx| input_text_model_element_with_options(cx, model, options, &mut response));
 
     ui.add(element);
     response
+}
+
+pub(super) fn input_text_model_element_with_options<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    model: fret_runtime::Model<String>,
+    options: InputTextOptions,
+    response: &mut ResponseExt,
+) -> fret_ui::element::AnyElement {
+    input_text_model_element_with_options_and_semantics(
+        cx,
+        model,
+        options,
+        InputTextAssistiveSemantics::default(),
+        response,
+    )
+}
+
+pub(super) fn input_text_model_element_with_options_and_semantics<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    model: fret_runtime::Model<String>,
+    options: InputTextOptions,
+    assistive_semantics: InputTextAssistiveSemantics,
+    response: &mut ResponseExt,
+) -> fret_ui::element::AnyElement {
+    let enabled = options.enabled && !super::imui_is_disabled(cx);
+    cx.scope(|cx| {
+        let id = cx.root_id();
+        let current = cx
+            .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+            .unwrap_or_default();
+
+        response.id = Some(id);
+        response.enabled = enabled;
+        response.core.focused = enabled && cx.is_focused_element(id);
+        response.core.changed = enabled && text_model_changed_for(cx, id, &current);
+        response.core.rect = cx.last_bounds_for_element(id);
+        super::populate_response_lifecycle_from_active_state(
+            cx,
+            id,
+            response.core.focused,
+            response.core.changed,
+            response,
+        );
+        sync_select_all_on_focus(
+            cx,
+            id,
+            response.core.focused,
+            !current.is_empty(),
+            options.select_all_on_focus,
+        );
+        let select_all_requested = cx.take_transient_for(id, super::KEY_SELECT_ALL_ON_FOCUS);
+        if select_all_requested && options.select_all_on_focus && response.core.focused {
+            cx.app.push_effect(Effect::Command {
+                window: Some(cx.window),
+                command: CommandId::from("edit.select_all"),
+            });
+        }
+
+        let mut props = fret_ui::element::TextInputProps::new(model.clone());
+        props.enabled = enabled;
+        props.focusable = enabled && options.focusable;
+        props.read_only = options.read_only;
+        props.obscure_text = matches!(options.mode, InputTextMode::Password);
+        props.layout = input_text_layout();
+        props.a11y_label = options.a11y_label.clone();
+        props.a11y_role = options.a11y_role;
+        props.active_descendant = assistive_semantics.active_descendant;
+        props.active_descendant_element = assistive_semantics.active_descendant_element;
+        props.controls_element = assistive_semantics.controls_element;
+        props.expanded = assistive_semantics.expanded;
+        props.test_id = options.test_id.clone();
+        props.placeholder = options.placeholder.clone();
+        props.submit_command = options.submit_command.clone();
+        props.cancel_command = options.cancel_command.clone();
+        if !options.filters.is_empty() || options.custom_filter.is_some() {
+            let filters = options.filters;
+            let custom_filter = options.custom_filter.clone();
+            props.insert_filter = Some(Arc::new(move |text| {
+                let filtered = filters.filter_text(text);
+                match custom_filter.as_ref() {
+                    Some(filter) => filter.filter_text(&filtered),
+                    None => filtered,
+                }
+            }));
+        }
+        let (chrome, text_style) = {
+            let theme = fret_ui::Theme::global(&*cx.app);
+            (
+                imui_text_input_style_from_theme(theme),
+                default_input_text_style_from_theme(theme),
+            )
+        };
+        props.chrome = chrome;
+        props.text_style = text_style;
+
+        let mut element = cx.text_input(props);
+        element.id = id;
+        install_input_text_policy_commands(cx, id, &options);
+        element
+    })
 }
 
 pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -201,10 +418,26 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
                 response.core.changed,
                 &mut response,
             );
+            sync_select_all_on_focus(
+                cx,
+                id,
+                response.core.focused,
+                !current.is_empty(),
+                options.select_all_on_focus,
+            );
+            let select_all_requested = cx.take_transient_for(id, super::KEY_SELECT_ALL_ON_FOCUS);
+            if select_all_requested && options.select_all_on_focus && response.core.focused {
+                cx.app.push_effect(Effect::Command {
+                    window: Some(cx.window),
+                    command: CommandId::from("edit.select_all"),
+                });
+            }
 
             let mut props = fret_ui::element::TextAreaProps::new(model.clone());
             props.enabled = enabled;
             props.focusable = enabled && options.focusable;
+            props.read_only = options.read_only;
+            props.allow_tab_input = options.allow_tab_input;
             props.layout.size.width = Length::Fill;
             props.a11y_label = options.a11y_label.clone();
             props.test_id = options.test_id.clone();

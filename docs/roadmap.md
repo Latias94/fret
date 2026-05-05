@@ -31,6 +31,165 @@ Tracker highlights:
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,
   `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`, and
   `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`.
+- ImUi text input policy depth follow-on (closed narrow P1 lane for Dear ImGui-class read-only,
+  select-all-on-focus, and multiline AllowTabInput behavior, with runtime text mechanisms and IMUI
+  flags as kit policy): `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-policy-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input history/completion command policy follow-on (closed narrow P1 lane adding
+  command-oriented single-line `InputTextOptions` for unmodified Tab/Up/Down completion/history
+  routing without moving mutable-buffer callbacks into the runtime):
+  `docs/workstreams/imui-text-input-history-completion-policy-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-history-completion-policy-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-history-completion-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input picker recipe follow-on (closed narrow P1 lane adding a visible completion/history
+  picker recipe that composes input text, non-modal popup, and selectable candidates while keeping
+  candidate storage app-owned): `docs/workstreams/imui-text-input-picker-recipe-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-picker-recipe-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-picker-recipe-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input picker keyboard navigation follow-on (closed narrow P1 lane adding input-focused
+  ArrowUp/ArrowDown active-candidate navigation and Enter/NumpadEnter commit to the visible
+  completion/history picker recipe): `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input picker accessibility follow-on (closed narrow P1 lane wiring generic
+  completion/history picker input semantics to combobox role, expanded state, controls relation,
+  and active-descendant candidate semantics without runtime policy widening):
+  `docs/workstreams/imui-text-input-picker-a11y-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-picker-a11y-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-picker-a11y-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi models text picker test split follow-on (closed narrow test-architecture lane splitting
+  completion/history picker tests out of the growing `models_text.rs` proof file without behavior
+  or API changes): `docs/workstreams/imui-models-text-picker-test-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-models-text-picker-test-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-models-text-picker-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi models text filter test split follow-on (closed narrow test-architecture lane splitting
+  named/custom filter tests out of the remaining `models_text.rs` proof file without behavior or API
+  changes): `docs/workstreams/imui-models-text-filter-test-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-models-text-filter-test-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-models-text-filter-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi models text mode test split follow-on (closed narrow test-architecture lane splitting
+  read-only, select-all-on-focus, and password-mode tests out of the remaining `models_text.rs`
+  proof file without behavior or API changes):
+  `docs/workstreams/imui-models-text-mode-test-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-models-text-mode-test-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-models-text-mode-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi models text command test split follow-on (closed narrow test-architecture lane splitting
+  completion, history, undo/redo, and repeat opt-in command-policy tests out of the remaining
+  `models_text.rs` proof file without behavior or API changes):
+  `docs/workstreams/imui-models-text-command-test-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-models-text-command-test-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-models-text-command-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi models text area test split follow-on (closed narrow test-architecture lane splitting
+  multiline textarea read-only, Tab policy, changed-signal, and lifecycle tests out of the
+  remaining `models_text.rs` proof file without behavior or API changes):
+  `docs/workstreams/imui-models-text-area-test-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-models-text-area-test-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-models-text-area-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi models text final test split follow-on (closed narrow test-architecture lane retiring the
+  legacy `models_text.rs` aggregate after moving basic changed-signal, single-line
+  lifecycle/bounds, and push-id identity tests into dedicated modules):
+  `docs/workstreams/imui-models-text-final-test-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-models-text-final-test-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input filter policy follow-on (closed narrow P1 lane adding Dear ImGui-style named
+  character filters to single-line `InputTextOptions`, backed by a generic runtime insertion
+  filter while keeping callback-heavy mutable-buffer behavior separate):
+  `docs/workstreams/imui-text-input-filter-policy-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-filter-policy-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-filter-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input custom filter policy follow-on (closed narrow P1 lane adding a Fret-native
+  insertion-filter equivalent for Dear ImGui `CallbackCharFilter`, composed after named filters
+  without exposing mutable-buffer callbacks):
+  `docs/workstreams/imui-text-input-custom-filter-policy-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-custom-filter-policy-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-custom-filter-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi text input undo command policy follow-on (closed narrow P1 lane adding app-owned Ctrl+Z /
+  Ctrl+Y / Ctrl+Shift+Z command routing for single-line `InputTextOptions`, treating unset
+  commands as the Fret-native `NoUndoRedo` behavior without runtime undo-stack ownership):
+  `docs/workstreams/imui-text-input-undo-command-policy-v1/DESIGN.md`,
+  `docs/workstreams/imui-text-input-undo-command-policy-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-text-input-undo-command-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi editor cookbook proof follow-on (closed narrow P1 lane proving that app authors can reach
+  editor-grade immediate-mode controls through `fret::imui::editor` without direct
+  `fret_ui_editor` imports): `docs/workstreams/imui-editor-cookbook-proof-v1/DESIGN.md`,
+  `docs/workstreams/imui-editor-cookbook-proof-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-editor-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit popup depth follow-on (closed narrow P1 lane replacing the visible editor
+  `ColorEdit` popup stub with a usable preset swatch palette while keeping full color-picker parity
+  for narrower future work): `docs/workstreams/imui-color-edit-popup-depth-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-popup-depth-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit alpha policy follow-on (closed narrow P1 lane making RGB-only `ColorEdit` hex
+  commits and preset swatch activations preserve the current alpha channel, matching Dear ImGui's
+  palette behavior without widening `fret-imui` or runtime contracts):
+  `docs/workstreams/imui-color-edit-alpha-policy-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-alpha-policy-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit alpha preview follow-on (closed narrow P1 lane adding checkerboard-backed alpha
+  previews to editor `ColorEdit` main and preset swatches while splitting AlphaBar / HSV picker
+  depth into later follow-ons): `docs/workstreams/imui-color-edit-alpha-preview-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-alpha-preview-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-alpha-preview-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit AlphaBar follow-on (closed narrow P1 lane adding a bounded editor-owned
+  AlphaBar-style popup affordance for direct alpha edits when `show_alpha=true`, before the later
+  HSV picker follow-on): `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-alpha-bar-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit HSV picker follow-on (closed narrow P1 lane adding editor-owned RGB/HSV
+  conversion, a saturation/value picker, and a HueBar to `ColorEdit` popup while keeping full
+  picker polish separate): `docs/workstreams/imui-color-edit-hsv-picker-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-hsv-picker-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit numeric readout follow-on (closed narrow P1 lane showing RGB and HSV numeric
+  readouts, plus alpha percent when visible, inside the editor `ColorEdit` popup while keeping
+  editable numeric input modes and popup defaults separate):
+  `docs/workstreams/imui-color-edit-numeric-readout-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-numeric-readout-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-numeric-readout-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit numeric input follow-on (closed narrow P1 lane making the editor `ColorEdit`
+  popup RGB/HSV numeric rows editable while preserving alpha policy and keeping global option
+  defaults separate): `docs/workstreams/imui-color-edit-numeric-input-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-numeric-input-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-numeric-input-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi color edit popup options follow-on (closed narrow P1 lane adding per-control popup defaults
+  for editor `ColorEdit`, covering HueBar picker, RGB/HSV numeric rows, preset palette, and
+  AlphaBar visibility without global `SetColorEditOptions()` state):
+  `docs/workstreams/imui-color-edit-popup-options-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-popup-options-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-popup-options-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit model split follow-on (closed narrow P1 refactor lane splitting pure color model,
+  parser/formatter, HSV/RGB conversion, coordinate math, sanitization, and a11y helpers out of the
+  editor `ColorEdit` UI composition file without behavior changes):
+  `docs/workstreams/imui-color-edit-model-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-model-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-model-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw baseline follow-on (closed narrow P1 lane exposing a canvas-backed immediate-mode
+  debug-draw helper in `fret-ui-kit::imui` for lines, rects, filled rects, and text without turning
+  `fret-imui` into a renderer): `docs/workstreams/imui-debug-draw-baseline-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-baseline-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-baseline-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi debug draw shape primitives follow-on (closed narrow P1 lane adding polyline, stroked/filled
+  triangle, and stroked/filled circle commands to the canvas-backed helper without widening
+  `fret-imui`, runtime, or renderer contracts):
+  `docs/workstreams/imui-debug-draw-shape-primitives-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-shape-primitives-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-shape-primitives-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi debug draw stroke style follow-on (closed narrow P1 lane adding explicit width/cap/join/miter/dash
+  stroke policy to the canvas-backed helper while preserving old thickness-based calls):
+  `docs/workstreams/imui-debug-draw-stroke-style-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-stroke-style-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi debug draw clip stack follow-on (closed narrow P1 lane adding push/pop clip-rect commands
+  backed by existing scene clip operations and an auto-balance guard):
+  `docs/workstreams/imui-debug-draw-clip-stack-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-clip-stack-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi debug draw image overlay follow-on (closed narrow P1 lane adding registered image,
+  image-region, SVG image, and SVG mask icon overlay commands without owning image loading):
+  `docs/workstreams/imui-debug-draw-image-overlay-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-image-overlay-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):
@@ -496,7 +655,7 @@ next default non-multi-window priority to broader app-owned command-package dept
 - Iconify presentation-defaults report closeout record (closed narrow follow-on for optional versioned review-report output from `icons suggest presentation-defaults`, keeping derivation evidence committed without changing import defaults): `docs/workstreams/iconify-presentation-defaults-report-v1/DESIGN.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/TODO.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/MILESTONES.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/EVIDENCE_AND_GATES.md`, `docs/workstreams/iconify-presentation-defaults-report-v1/M2_PROOF_SURFACE_2026-04-09.md`, and `docs/workstreams/iconify-presentation-defaults-report-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 - SVG presentation analysis scaffolding closeout record (closed narrow follow-on for local SVG-directory analysis that scaffolds conservative per-icon `original-colors` overrides and an optional review report without inferring pack-level defaults or changing import behavior): `docs/workstreams/svg-presentation-analysis-scaffolding-v1/DESIGN.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/TODO.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/MILESTONES.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/EVIDENCE_AND_GATES.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/M1_CONTRACT_FREEZE_2026-04-09.md`, `docs/workstreams/svg-presentation-analysis-scaffolding-v1/M2_PROOF_SURFACE_2026-04-09.md`, and `docs/workstreams/svg-presentation-analysis-scaffolding-v1/CLOSEOUT_AUDIT_2026-04-09.md`.
 - Icon system closeout + follow-on map: `docs/workstreams/standalone/icon-system-status.md`.
-- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` (overview: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`; mixed-DPI acceptance: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`; current TODOs: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`).
+- Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json` (overview: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`; mixed-DPI acceptance: `docs/workstreams/docking-multiwindow-imgui-parity/M7_MIXED_DPI_REAL_HOST_ACCEPTANCE_2026-04-26.md`; local non-Linux continuation boundary: `docs/workstreams/docking-multiwindow-imgui-parity/M11_LOCAL_NON_LINUX_CONTINUATION_BOUNDARY_2026-04-29.md`; local non-interactive gate refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md`; current TODOs: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`).
 - Diagnostics monitor-topology environment closeout record (closed narrow follow-on that turns the
   docking mixed-DPI automation gap into a runner-owned host monitor-topology fingerprint without
   pretending that `scale_factors_seen` or drag evidence are host-environment predicates):

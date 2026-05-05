@@ -127,14 +127,16 @@ auto-enable required cookbook features for known Lab examples and print what it 
 Immediate-mode sidecar (when you intentionally want the IMUI lane):
 
 - First-party authoring policy: use the root `fret::imui` lane (`use fret::imui::prelude::*;` or
-  `use fret::imui::{kit::..., prelude::*};`) for immediate-mode teaching surfaces. The only
-  deliberate exception is `imui_node_graph_demo`, which remains a compatibility-only retained-bridge
-  proof.
+  `use fret::imui::{kit::..., editor, prelude::*};`) for immediate-mode teaching surfaces. The
+  only deliberate exception is `imui_node_graph_demo`, which remains a compatibility-only
+  retained-bridge proof.
 
 - Golden pair:
   - `imui_action_basics` — generic/default immediate authoring on the app lane
-  - `imui_editor_proof_demo` — editor-grade immediate proof on the intended generic/editor owner
-    split
+  - `imui_editor_controls_basics` — editor-grade first-contact controls through
+    `fret::imui::editor`
+- Product proof:
+  - `imui_editor_proof_demo` — heavier editor-grade proof on the intended generic/editor owner split
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
 - Reference/contract proof:
@@ -168,7 +170,8 @@ Stable identity rule for the immediate-mode lane:
   `ui.for_each_keyed(...)` or `ui.id(key, ...)`.
 - Rebuild rows each frame; do not treat element values as cloneable reusable UI.
 - `imui_action_basics` is still the right generic/default proof even though it does not need keyed
-  identity yet; `imui_editor_proof_demo` is the heavier proof where explicit stable identity is
+  identity yet; `imui_editor_controls_basics` is the editor-control first-contact proof, while
+  `imui_editor_proof_demo` remains the heavier product proof where explicit stable identity is
   already visible.
 
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
@@ -239,7 +242,8 @@ Explicit advanced/reference roster:
   authoring.
 - `imui_hello_demo` is a tiny IMUI smoke/reference surface. It remains useful for the smallest
   runnable facade check, but the generic/editor immediate teaching path should start from
-  `imui_action_basics` and `imui_editor_proof_demo`.
+  `imui_action_basics` and `imui_editor_controls_basics`; use `imui_editor_proof_demo` when you
+  need the heavier editor product proof.
 - `imui_response_signals_demo` is an IMUI proof/contract surface. It validates response/query
   behavior and canonical helper outward responses rather than the default immediate teaching path.
 - `imui_interaction_showcase_demo` and `imui_shadcn_adapter_demo` are IMUI product-validation

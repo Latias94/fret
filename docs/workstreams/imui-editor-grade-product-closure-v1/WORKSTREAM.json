@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-05-01",
+  "updated": "2026-05-05",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
@@ -43,6 +43,10 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md"
     },
     {
       "role": "status",
@@ -217,6 +221,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md"
     },
     {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -388,6 +396,21 @@
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_ROOT_HOSTING_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-popup-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-alpha-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-alpha-preview-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-numeric-readout-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-numeric-input-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-color-edit-popup-options-v1/CLOSEOUT_AUDIT_2026-05-05.md",
+    "docs/workstreams/imui-color-edit-model-split-v1/CLOSEOUT_AUDIT_2026-05-05.md",
+    "docs/workstreams/imui-debug-draw-baseline-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-debug-draw-shape-primitives-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md",
+    "docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md",
     "docs/workstreams/imui-collection-command-package-v1/DESIGN.md",
     "docs/workstreams/imui-collection-command-package-v1/M0_BASELINE_AUDIT_2026-04-23.md",
@@ -453,6 +476,7 @@
     "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
     "docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
@@ -481,7 +505,14 @@
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs",
     "ecosystem/fret-imui/src/tests/models_controls.rs",
     "ecosystem/fret-imui/src/tests/models_combo.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
+    "ecosystem/fret-imui/src/tests/models_text_basic.rs",
+    "ecosystem/fret-imui/src/tests/models_text_lifecycle.rs",
+    "ecosystem/fret-imui/src/tests/models_text_identity.rs",
+    "ecosystem/fret-imui/src/tests/models_text_picker.rs",
+    "ecosystem/fret-imui/src/tests/models_text_filters.rs",
+    "ecosystem/fret-imui/src/tests/models_text_modes.rs",
+    "ecosystem/fret-imui/src/tests/models_text_commands.rs",
+    "ecosystem/fret-imui/src/tests/models_text_area.rs",
     "ecosystem/fret-imui/src/tests/popup_hover.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_hello_demo.rs",

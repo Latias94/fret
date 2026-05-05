@@ -1464,10 +1464,12 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_read_only(props.read_only);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
                 input.set_obscure_text(props.obscure_text);
+                input.set_insert_filter(props.insert_filter);
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
 
@@ -1498,6 +1500,8 @@ impl ElementHostWidget {
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
+                area.set_read_only(props.read_only);
+                area.set_allow_tab_input(props.allow_tab_input);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_placeholder(props.placeholder);

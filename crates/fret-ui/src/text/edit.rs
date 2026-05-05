@@ -588,6 +588,28 @@ pub(crate) mod commands {
         Outcome::layout(edit.replace_selection(&normalized))
     }
 
+    pub(crate) fn apply_clipboard_text_with_filter(
+        edit: &mut TextEditState<'_>,
+        policy: ClipboardTextPolicy,
+        text: &str,
+        filter: impl FnOnce(&str) -> String,
+    ) -> Outcome {
+        let normalized = match policy {
+            ClipboardTextPolicy::SingleLine => clipboard::normalize_single_line(text),
+            ClipboardTextPolicy::Multiline => clipboard::normalize_multiline(text),
+        };
+
+        let Some(normalized) = normalized else {
+            return Outcome::noop_handled();
+        };
+        let filtered = filter(normalized.as_str());
+        if filtered.is_empty() {
+            return Outcome::noop_handled();
+        }
+
+        Outcome::layout(edit.replace_selection(&filtered))
+    }
+
     #[derive(Debug, Clone)]
     pub(crate) enum ClipboardRequest {
         GetText,

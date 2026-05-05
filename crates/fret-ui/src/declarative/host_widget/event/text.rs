@@ -25,10 +25,12 @@ pub(super) fn handle_text_input<H: UiHost>(
     };
     input.set_enabled(props.enabled);
     input.set_focusable(props.focusable);
+    input.set_read_only(props.read_only);
     input.set_chrome_style(props.chrome);
     input.set_text_style(props.text_style);
     input.set_placeholder(props.placeholder);
     input.set_obscure_text(props.obscure_text);
+    input.set_insert_filter(props.insert_filter);
     input.set_submit_command(props.submit_command);
     input.set_cancel_command(props.cancel_command);
     input.event(cx, event);
@@ -58,6 +60,8 @@ pub(super) fn handle_text_area<H: UiHost>(
     };
     area.set_enabled(props.enabled);
     area.set_focusable(props.focusable);
+    area.set_read_only(props.read_only);
+    area.set_allow_tab_input(props.allow_tab_input);
     area.set_style(props.chrome);
     area.set_text_style(props.text_style);
     area.set_placeholder(props.placeholder);

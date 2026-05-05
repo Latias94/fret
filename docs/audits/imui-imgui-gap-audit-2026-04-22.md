@@ -22,7 +22,7 @@ Local Dear ImGui snapshot used for reference: `repo-ref/imgui` @ `d7b40ab9a`
 - `ecosystem/fret-ui-kit/src/imui/floating_options.rs`
 - `ecosystem/fret-ui-kit/src/imui/response/hover.rs`
 - `ecosystem/fret-ui-kit/src/imui/options/controls.rs`
-- `ecosystem/fret-imui/src/tests/{floating.rs,interaction.rs,popup_hover.rs,models.rs}`
+- `ecosystem/fret-imui/src/tests/{floating.rs,interaction.rs,popup_hover.rs,models.rs,models_text_basic.rs,models_text_lifecycle.rs,models_text_identity.rs,models_text_picker.rs,models_text_filters.rs,models_text_modes.rs,models_text_commands.rs,models_text_area.rs}`
 - `apps/fret-cookbook/examples/imui_action_basics.rs`
 - `apps/fret-examples/src/{imui_hello_demo.rs,imui_response_signals_demo.rs,imui_shadcn_adapter_demo.rs,imui_floating_windows_demo.rs,imui_editor_proof_demo.rs,workspace_shell_demo.rs,imui_node_graph_demo.rs}`
 - `docs/examples/README.md`
@@ -116,23 +116,131 @@ Evidence anchors:
 
 #### 4.1 Input-text parity is still shallow
 
+Update (2026-05-04): partially superseded by
+`docs/workstreams/imui-text-input-policy-depth-v1/`, the command-oriented
+`docs/workstreams/imui-text-input-history-completion-policy-v1/`, and the public cookbook proof in
+`docs/workstreams/imui-editor-cookbook-proof-v1/`, plus the named filter policy slice in
+`docs/workstreams/imui-text-input-filter-policy-v1/` and the custom insertion-filter slice in
+`docs/workstreams/imui-text-input-custom-filter-policy-v1/`, and the undo command policy slice in
+`docs/workstreams/imui-text-input-undo-command-policy-v1/`, plus the visible picker recipe in
+`docs/workstreams/imui-text-input-picker-recipe-v1/`.
+
+Current `InputTextOptions` now includes:
+
+- `read_only`,
+- `select_all_on_focus`,
+- `mode: InputTextMode` with `PlainText` / `Password`,
+- command-oriented completion/history routing for unmodified Tab/Up/Down,
+- `input_text_completion_model(_with_options)` and `input_text_history_model(_with_options)` picker
+  recipes for visible app-owned candidates,
+- `filters: InputTextFilters` for Dear ImGui-style decimal, hexadecimal, scientific, uppercase,
+  and no-blank named filters,
+- `custom_filter: Option<InputTextCustomFilter>` as a Fret-native insertion-filter equivalent of
+  `CallbackCharFilter`,
+- app-owned undo/redo command routing for Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z,
+- `TextAreaOptions::allow_tab_input`,
+- accessibility labels/roles,
+- placeholder,
+- submit/cancel commands.
+
 Dear ImGui exposes a wide `ImGuiInputTextFlags_*` family (`ReadOnly`, `Password`,
 `AutoSelectAll`, `NoUndoRedo`, completion/history callbacks, `AllowTabInput`, multiline-specific
 flags, etc.).
 
-Current `InputTextOptions` is intentionally small: `enabled`, `focusable`, accessibility labels,
-placeholder, `submit_command`, and `cancel_command`.
-
 Conclusion:
 
-- The next serious "imgui-level editor UX" gap is text editing policy, not generic button chrome.
-- This should be solved in `fret-ui-kit::imui` and `fret-ui-editor`, not by bloating `fret-imui`.
+- The remaining serious "imgui-level editor UX" gap is deeper text editing policy, not generic
+  button chrome.
+- Completion/history now has a Fret-native command routing slice; named character filters and
+  custom insertion filters are covered by `InputTextFilters` / `InputTextCustomFilter`; undo/redo
+  shortcut routing is covered by app-owned commands where the unset default is the Fret-native
+  `NoUndoRedo` behavior. A visible completion/history picker recipe now covers the first reusable UI
+  layer, the picker keyboard-navigation follow-on covers ArrowUp/ArrowDown active movement plus
+  Enter/NumpadEnter commit, and the picker accessibility follow-on covers generic combobox-style
+  expanded / controls / active-descendant semantics. The still-open pieces are editor-owned ranking
+  / storage, richer platform accessibility announcement checks, popup role refinement, and deeper
+  multiline-specific behavior beyond the landed Tab-input opt-in.
+- These should stay in `fret-ui-kit::imui` and `fret-ui-editor`, not by bloating `fret-imui`.
 
 Evidence anchors:
 
 - `ecosystem/fret-ui-kit/src/imui/options/controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/text_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs`
+- `crates/fret-ui/src/text/input/widget.rs`
+- `ecosystem/fret-imui/src/tests/models_text_basic.rs`
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle.rs`
+- `ecosystem/fret-imui/src/tests/models_text_identity.rs`
+- `ecosystem/fret-imui/src/tests/models_text_picker.rs`
+- `ecosystem/fret-imui/src/tests/models_text_filters.rs`
+- `ecosystem/fret-imui/src/tests/models_text_modes.rs`
+- `ecosystem/fret-imui/src/tests/models_text_commands.rs`
+- `ecosystem/fret-imui/src/tests/models_text_area.rs`
 - `repo-ref/imgui/imgui.h`
 - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+
+#### 4.1a Color-edit parity is past the stub stage, but full picker depth remains separate
+
+Update (2026-05-04): partially superseded by
+`docs/workstreams/imui-color-edit-popup-depth-v1/`,
+`docs/workstreams/imui-color-edit-alpha-policy-v1/`,
+`docs/workstreams/imui-color-edit-alpha-preview-v1/`,
+`docs/workstreams/imui-color-edit-alpha-bar-v1/`,
+`docs/workstreams/imui-color-edit-hsv-picker-v1/`,
+`docs/workstreams/imui-color-edit-numeric-readout-v1/`, and
+`docs/workstreams/imui-color-edit-numeric-input-v1/`. Update (2026-05-05): popup option/default
+depth is now partially superseded by `docs/workstreams/imui-color-edit-popup-options-v1/`; the
+post-depth file-size hazard is partially superseded by
+`docs/workstreams/imui-color-edit-model-split-v1/`.
+
+Current editor `ColorEdit` now has:
+
+- hex input,
+- a preset swatch popup instead of a visible placeholder,
+- RGB-only hex and preset behavior that preserves the current alpha channel,
+- checkerboard-backed alpha previews for the main and preset swatches,
+- a bounded AlphaBar-style popup control when `show_alpha=true`,
+- bounded HSV picker controls in the popup: RGB/HSV conversion, saturation/value picking, and a
+  HueBar,
+- RGB and HSV numeric readouts, with alpha percent shown when alpha is visible,
+- editable RGB/HSV numeric popup rows with editor-owned validation,
+- per-control popup defaults for HueBar picker, RGB/HSV numeric rows, preset palette, and AlphaBar
+  visibility,
+- an internal model module for color parsing, formatting, HSV/RGB conversion, coordinate math,
+  sanitization, and a11y helper text,
+- and an app-facing cookbook proof through `fret::imui::editor`.
+
+#### 4.1b Debug draw is no longer missing at the first baseline level
+
+Update (2026-05-04): partially superseded by the canvas-backed
+`docs/workstreams/imui-debug-draw-baseline-v1/`.
+
+Current IMUI now exposes:
+
+- a thin immediate-mode `debug_draw` facade in `fret-ui-kit::imui`,
+- line, rect, filled rect, and text primitives,
+- declarative lowering into `Canvas`,
+- and smoke tests that keep the facade boundary clean.
+
+Dear ImGui still goes much deeper through full `DrawList` parity, richer stroke styles, dashed
+paths, image overlays, per-command metadata, and hit-test-aware debug interaction.
+
+Conclusion:
+
+- The remaining color gap is full picker/editor depth, not "visible popup is a stub".
+- Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
+- Start separate narrow follow-ons for vertical HueBar / HueWheel fidelity, color history,
+  eyedropper behavior, color drag/drop payloads, or palette customization.
+- The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
+
+Evidence anchors:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs`
+- `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
+- `repo-ref/imgui/imgui_demo.cpp`
+- `repo-ref/imgui/imgui_widgets.cpp`
 
 #### 4.2 There is still no immediate style-stack lane, and that is mostly the right decision
 
@@ -207,15 +315,53 @@ Evidence anchors:
 This is now one of the main reasons IMUI refactors stay risky: behavior coverage exists, but it is
 expensive to navigate and review.
 
+The same shape appeared in editor `ColorEdit` after the popup, alpha, HSV, numeric, and option
+slices: the public control surface became useful, but the implementation file mixed pure color
+model helpers with UI composition.
+
+Update (2026-05-04): the first mechanical splits have landed in
+`docs/workstreams/imui-models-text-picker-test-split-v1/` and
+`docs/workstreams/imui-models-text-filter-test-split-v1/`, and
+`docs/workstreams/imui-models-text-mode-test-split-v1/`, and
+`docs/workstreams/imui-models-text-command-test-split-v1/`, and
+`docs/workstreams/imui-models-text-area-test-split-v1/`, and
+`docs/workstreams/imui-models-text-final-test-split-v1/`. Completion/history picker tests now live
+in `src/tests/models_text_picker.rs`; named/custom filter tests now live in
+`src/tests/models_text_filters.rs`; single-line read-only, select-all-on-focus, and password-mode
+tests now live in `src/tests/models_text_modes.rs`; completion/history/undo command-policy tests
+now live in `src/tests/models_text_commands.rs`; multiline textarea tests now live in
+`src/tests/models_text_area.rs`; basic changed-signal, single-line lifecycle/bounds, and push-id
+identity tests now live in `src/tests/models_text_basic.rs`, `src/tests/models_text_lifecycle.rs`,
+and `src/tests/models_text_identity.rs`. The legacy `src/tests/models_text.rs` aggregate is
+retired.
+
+Update (2026-05-05): `docs/workstreams/imui-color-edit-model-split-v1/` moves the editor
+`ColorEdit` pure model helpers into `src/controls/color_edit/model.rs` and moves focused tests into
+`src/controls/color_edit/tests.rs`.
+
 Conclusion:
 
-- The next fearless refactor should prioritize test decomposition, not more top-level helper growth.
-- A fixture-driven split by capability family would improve reviewability without widening contracts.
+- Continue prioritizing test decomposition over more top-level helper growth.
+- Continue splitting large editor controls along model/composition boundaries before adding more
+  popup features.
+- Use fixture-driven splits only where the test cases are data-shaped. The current picker tests stay
+  as Rust interaction tests because they exercise multi-frame focus, popup, keyboard, and semantics
+  behavior.
 
 Evidence anchors:
 
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `ecosystem/fret-imui/src/tests/models.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs`
+- `ecosystem/fret-imui/src/tests/models_text_basic.rs`
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle.rs`
+- `ecosystem/fret-imui/src/tests/models_text_identity.rs`
+- `ecosystem/fret-imui/src/tests/models_text_picker.rs`
+- `ecosystem/fret-imui/src/tests/models_text_filters.rs`
+- `ecosystem/fret-imui/src/tests/models_text_modes.rs`
+- `ecosystem/fret-imui/src/tests/models_text_commands.rs`
+- `ecosystem/fret-imui/src/tests/models_text_area.rs`
 - `ecosystem/fret-imui/src/tests/floating.rs`
 - `ecosystem/fret-imui/src/tests/popup_hover.rs`
 - `tools/audit_crate.py --crate fret-imui`
@@ -245,14 +391,36 @@ Evidence anchors:
 
 ## Recommended Next Steps
 
-1. Split the `fret-imui` mega-tests by capability family.
+1. Continue splitting the `fret-imui` mega-tests by capability family.
+   - Status: completion/history picker tests have moved to `models_text_picker.rs` under
+     `docs/workstreams/imui-models-text-picker-test-split-v1/`; named/custom filter tests have moved
+     to `models_text_filters.rs` under `docs/workstreams/imui-models-text-filter-test-split-v1/`;
+     single-line read-only/select-all/password tests have moved to `models_text_modes.rs` under
+     `docs/workstreams/imui-models-text-mode-test-split-v1/`; completion/history/undo
+     command-policy tests have moved to `models_text_commands.rs` under
+     `docs/workstreams/imui-models-text-command-test-split-v1/`; multiline textarea tests have
+     moved to `models_text_area.rs` under
+     `docs/workstreams/imui-models-text-area-test-split-v1/`; the remaining basic/lifecycle/
+     identity tests have moved to `models_text_basic.rs`, `models_text_lifecycle.rs`, and
+     `models_text_identity.rs` under `docs/workstreams/imui-models-text-final-test-split-v1/`.
    - Outcome: safer refactors for hover/floating/menu/tab/text/drag lanes.
-   - Likely tool: fixture-driven harnesses for repetitive response/state matrices.
+   - Likely tool: fixture-driven harnesses for repetitive response/state matrices; keep procedural
+     interaction tests in Rust.
 
-2. Open an input-text parity lane in `fret-ui-kit::imui` plus `fret-ui-editor`.
-   - Outcome: close the biggest remaining "editor-grade imgui feel" gap without bloating the
-     frontend.
-   - Focus: read-only/password/auto-select-all/undo policy/history/completion/multiline behavior.
+2. Continue text-input parity in narrower `fret-ui-kit::imui` / `fret-ui-editor` lanes.
+   - Status: read-only, password mode, auto-select-all, and multiline `AllowTabInput` are covered by
+     `docs/workstreams/imui-text-input-policy-depth-v1/`; command-oriented completion/history key
+     routing is covered by `docs/workstreams/imui-text-input-history-completion-policy-v1/`; named
+     character filters are covered by `docs/workstreams/imui-text-input-filter-policy-v1/`; custom
+     insertion filters are covered by `docs/workstreams/imui-text-input-custom-filter-policy-v1/`;
+     undo/redo command policy is covered by
+     `docs/workstreams/imui-text-input-undo-command-policy-v1/`; visible completion/history picker
+     UI is covered by `docs/workstreams/imui-text-input-picker-recipe-v1/`; picker keyboard
+     navigation is covered by `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/`; and
+     generic picker active-descendant semantics are covered by
+     `docs/workstreams/imui-text-input-picker-a11y-v1/`.
+   - Remaining focus: editor-owned completion/history ranking/storage, richer platform
+     accessibility announcement checks, popup role refinement, and deeper multiline behavior.
 
 3. Treat menu/tab depth as an explicit `fret-ui-kit::imui` policy lane.
    - Outcome: finish the difficult part of IMUI parity in the correct layer.
@@ -279,9 +447,9 @@ the right place already:
 
 If the goal is "reach imgui-level usefulness", the next wins are:
 
-- text/input parity,
+- the remaining text/input parity after read-only/password/auto-select-all/AllowTabInput,
 - menu/tab depth,
-- better test architecture,
+- continued test/control architecture decomposition after the first picker and color-model splits,
 - and a deliberate decision on whether immediate debug-draw belongs in the ecosystem.
 
 Not the right next move:
