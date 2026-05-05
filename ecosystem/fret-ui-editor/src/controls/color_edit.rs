@@ -4,6 +4,7 @@
 //! - hex input for `#RRGGBB` (and optionally `#RRGGBBAA`)
 //! - swatch button that opens HSV picker controls plus a small preset palette
 //! - RGB-only edits preserve alpha; `show_alpha` only controls explicit alpha editing
+//! - per-control alpha preview policy mirroring Dear ImGui's ColorButton preview modes
 
 use std::panic::Location;
 use std::sync::Arc;
@@ -56,6 +57,28 @@ const CHECKERBOARD_DARK_RGB: u32 = 0x8b_95_a5;
 const ALPHA_BAR_STEPS: usize = 8;
 const HUE_BAR_STEPS: usize = 12;
 const SV_PICKER_STEPS: usize = 8;
+
+/// Alpha preview policy for `ColorEdit` swatches.
+///
+/// Dear ImGui exposes this as `AlphaOpaque`, `AlphaNoBg`, and `AlphaPreviewHalf` flags on
+/// `ColorButton` / `ColorEdit`. Fret keeps it as explicit per-control editor policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorEditAlphaPreview {
+    /// Show transparent colors over a checkerboard background.
+    Checkerboard,
+    /// Show the current RGB channels as fully opaque in preview only.
+    Opaque,
+    /// Show the color with its real alpha without a checkerboard background.
+    NoBackground,
+    /// Split the preview between opaque RGB and transparent checkerboard-backed RGB.
+    Half,
+}
+
+impl Default for ColorEditAlphaPreview {
+    fn default() -> Self {
+        Self::Checkerboard
+    }
+}
 
 /// Picker surface shown inside the `ColorEdit` popup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,6 +157,7 @@ pub struct ColorEditOptions {
     pub enabled: bool,
     pub focusable: bool,
     pub show_alpha: bool,
+    pub alpha_preview: ColorEditAlphaPreview,
     pub popup: ColorEditPopupOptions,
     /// Explicit identity source for internal state (draft/error/open models, overlay root ids).
     ///
@@ -161,6 +185,7 @@ impl Default for ColorEditOptions {
             enabled: true,
             focusable: true,
             show_alpha: false,
+            alpha_preview: ColorEditAlphaPreview::default(),
             popup: ColorEditPopupOptions::default(),
             id_source: None,
             test_id: None,
@@ -440,7 +465,14 @@ impl ColorEdit {
                             padding: Edges::all(frame_chrome.border_width).into(),
                             ..Default::default()
                         },
-                        move |cx| vec![color_preview_stack(cx, current, frame_chrome.radius)],
+                        move |cx| {
+                            vec![color_preview_stack(
+                                cx,
+                                current,
+                                frame_chrome.radius,
+                                self.options.alpha_preview,
+                            )]
+                        },
                     )]
                 },
             );
@@ -461,6 +493,7 @@ impl ColorEdit {
             open.clone(),
             self.options.show_alpha,
             self.options.enabled,
+            self.options.alpha_preview,
             popup_options,
             popup_padding,
             popup_test_id,

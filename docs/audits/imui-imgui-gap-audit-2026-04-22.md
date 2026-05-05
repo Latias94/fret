@@ -185,6 +185,7 @@ Update (2026-05-04): partially superseded by
 `docs/workstreams/imui-color-edit-popup-depth-v1/`,
 `docs/workstreams/imui-color-edit-alpha-policy-v1/`,
 `docs/workstreams/imui-color-edit-alpha-preview-v1/`,
+`docs/workstreams/imui-color-edit-alpha-preview-options-v1/`,
 `docs/workstreams/imui-color-edit-alpha-bar-v1/`,
 `docs/workstreams/imui-color-edit-hsv-picker-v1/`,
 `docs/workstreams/imui-color-edit-numeric-readout-v1/`, and
@@ -205,7 +206,8 @@ Current editor `ColorEdit` now has:
 - hex input,
 - a preset swatch popup instead of a visible placeholder,
 - RGB-only hex and preset behavior that preserves the current alpha channel,
-- checkerboard-backed alpha previews for the main and preset swatches,
+- per-control alpha preview modes for the main and preset swatches: checkerboard, opaque,
+  no-background, and half-alpha preview,
 - a bounded AlphaBar-style popup control when `show_alpha=true`,
 - bounded HSV picker controls in the popup: RGB/HSV conversion, saturation/value picking, and a
   HueBar,
@@ -364,6 +366,8 @@ composition, gradient/thumb helpers, and picker-local pointer handlers into
 and color preview stack helpers into `src/controls/color_edit/popup/preview.rs`.
 `docs/workstreams/imui-color-edit-popup-swatches-split-v1/` moves preset row composition and
 alpha-preserving preset activation into `src/controls/color_edit/popup/swatches.rs`.
+`docs/workstreams/imui-color-edit-alpha-preview-options-v1/` adds per-control alpha preview modes
+matching Dear ImGui's ColorButton preview policy axis without global color edit option state.
 
 Conclusion:
 

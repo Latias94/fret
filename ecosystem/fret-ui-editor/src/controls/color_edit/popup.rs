@@ -16,8 +16,8 @@ use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
 use super::{
-    ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker, draft_model,
-    error_model,
+    ColorEditAlphaPreview, ColorEditPopupNumericInputs, ColorEditPopupOptions,
+    ColorEditPopupPicker, draft_model, error_model,
 };
 
 mod numeric;
@@ -39,6 +39,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     open: Model<bool>,
     show_alpha: bool,
     enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
     popup_options: ColorEditPopupOptions,
     popup_padding: Px,
     popup_test_id: Option<Arc<str>>,
@@ -137,6 +138,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     open_for_content.clone(),
                     show_alpha,
                     enabled,
+                    alpha_preview,
                     popup_test_id.clone(),
                 )
             });

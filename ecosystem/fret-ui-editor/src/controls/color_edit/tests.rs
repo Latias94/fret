@@ -7,7 +7,7 @@ use super::model::{
     rgb_to_hsv,
 };
 use super::popup::picker::{alpha_from_local_x, alpha_percent_text};
-use super::popup::preview::checkerboard_cell_color;
+use super::popup::preview::{checkerboard_cell_color, opaque_preview_color};
 use super::*;
 
 #[test]
@@ -36,6 +36,22 @@ fn popup_options_default_to_imgui_like_hue_bar_surface() {
     assert!(options.has_visible_content(true));
     assert!(!options.shows_alpha_bar(false));
     assert!(options.shows_alpha_bar(true));
+}
+
+#[test]
+fn alpha_preview_options_cover_imgui_color_button_preview_modes() {
+    let options = ColorEditOptions::default();
+    assert_eq!(options.alpha_preview, ColorEditAlphaPreview::Checkerboard);
+    assert_eq!(
+        [
+            ColorEditAlphaPreview::Checkerboard,
+            ColorEditAlphaPreview::Opaque,
+            ColorEditAlphaPreview::NoBackground,
+            ColorEditAlphaPreview::Half,
+        ]
+        .len(),
+        4
+    );
 }
 
 #[test]
@@ -287,6 +303,18 @@ fn alpha_checkerboard_colors_are_stable_and_alternating() {
     assert_eq!(checkerboard_cell_color(0, 1), dark);
     assert_eq!(checkerboard_cell_color(1, 0), dark);
     assert_eq!(checkerboard_cell_color(1, 1), light);
+}
+
+#[test]
+fn opaque_alpha_preview_keeps_rgb_and_forces_preview_alpha() {
+    let mut color = Color::from_srgb_hex_rgb(0x40_80_c0);
+    color.a = 0.25;
+    let opaque = opaque_preview_color(color);
+
+    assert_eq!(opaque.r, color.r);
+    assert_eq!(opaque.g, color.g);
+    assert_eq!(opaque.b, color.b);
+    assert_eq!(opaque.a, 1.0);
 }
 
 #[test]

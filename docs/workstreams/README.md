@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 319
+- Dedicated directories: 320
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -322,6 +322,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed after making editor `ColorEdit` main and preset swatches render through a
     checkerboard-backed alpha preview while splitting AlphaBar, HSV/RGB picker depth, and drag/drop
     color payloads into separate follow-ons.
+
+- Closed narrow P1 color edit alpha preview options follow-on:
+  - `docs/workstreams/imui-color-edit-alpha-preview-options-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-alpha-preview-options-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-options-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-options-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-options-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-alpha-preview-options-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding per-control checkerboard, opaque, no-background, and half-alpha
+    preview modes to editor `ColorEdit` without adding global color edit option state.
 
 - Closed narrow P1 color edit AlphaBar follow-on:
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json`
@@ -1418,6 +1428,7 @@ Rule:
 - `docs/workstreams/imui-authoring-facade-v2/` — first 2026-02-03, latest 2026-03-02, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-authoring-vocabulary-closure-v1/` — first n/a, latest n/a, 5 markdown docs (closed closeout record for the shipped generic immediate helper vocabulary relative to Dear ImGui/egui after the editor-grade and ghost closeouts)
 - `docs/workstreams/imui-color-edit-alpha-bar-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding a bounded AlphaBar-style popup affordance to editor `ColorEdit` when alpha editing is visible)
+- `docs/workstreams/imui-color-edit-alpha-preview-options-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding per-control alpha preview modes to editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-hsv-picker-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding editor-owned RGB/HSV conversion, saturation/value picking, and a HueBar to editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-model-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting pure color model helpers out of editor `ColorEdit` UI composition)
 - `docs/workstreams/imui-color-edit-numeric-input-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on making editor `ColorEdit` RGB/HSV numeric popup rows editable)

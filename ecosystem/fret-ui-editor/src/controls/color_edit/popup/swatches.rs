@@ -11,8 +11,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::primitives::input_group::derived_test_id;
 
-use super::super::COLOR_PRESETS;
 use super::super::model::{color_from_rgb_preserving_alpha, format_hex};
+use super::super::{COLOR_PRESETS, ColorEditAlphaPreview};
 use super::preview::color_preview_stack;
 
 pub(super) fn preset_swatches<H: UiHost>(
@@ -24,6 +24,7 @@ pub(super) fn preset_swatches<H: UiHost>(
     open: Model<bool>,
     show_alpha: bool,
     enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let current_rgb = fret_ui_kit::colors::hex_rgb_from_linear(current);
@@ -61,6 +62,7 @@ pub(super) fn preset_swatches<H: UiHost>(
                         open.clone(),
                         show_alpha,
                         enabled,
+                        alpha_preview,
                         derived_test_id(test_id.as_ref(), format!("preset.{idx}").as_str()),
                     )
                 })
@@ -81,6 +83,7 @@ fn preset_swatch<H: UiHost>(
     open: Model<bool>,
     show_alpha: bool,
     enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let color = color_from_rgb_preserving_alpha(rgb, current_alpha);
@@ -159,7 +162,7 @@ fn preset_swatch<H: UiHost>(
                     padding: Edges::all(if selected { Px(2.0) } else { Px(1.0) }).into(),
                     ..Default::default()
                 },
-                move |cx| vec![color_preview_stack(cx, color, Px(5.0))],
+                move |cx| vec![color_preview_stack(cx, color, Px(5.0), alpha_preview)],
             )]
         },
     );

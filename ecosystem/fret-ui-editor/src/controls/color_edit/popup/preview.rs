@@ -5,12 +5,13 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 
-use super::super::{CHECKERBOARD_DARK_RGB, CHECKERBOARD_LIGHT_RGB};
+use super::super::{CHECKERBOARD_DARK_RGB, CHECKERBOARD_LIGHT_RGB, ColorEditAlphaPreview};
 
 pub(in crate::controls::color_edit) fn color_preview_stack<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     color: Color,
     radius: Px,
+    alpha_preview: ColorEditAlphaPreview,
 ) -> AnyElement {
     cx.container(
         ContainerProps {
@@ -18,25 +19,81 @@ pub(in crate::controls::color_edit) fn color_preview_stack<H: UiHost>(
             corner_radii: Corners::all(radius),
             ..Default::default()
         },
+        move |cx| match alpha_preview {
+            ColorEditAlphaPreview::Checkerboard => {
+                vec![checkerboard_preview_fill(cx, color, radius)]
+            }
+            ColorEditAlphaPreview::Opaque => {
+                vec![solid_preview_fill(cx, opaque_preview_color(color), radius)]
+            }
+            ColorEditAlphaPreview::NoBackground => vec![solid_preview_fill(cx, color, radius)],
+            ColorEditAlphaPreview::Half => vec![half_alpha_preview_fill(cx, color, radius)],
+        },
+    )
+}
+
+fn checkerboard_preview_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    color: Color,
+    radius: Px,
+) -> AnyElement {
+    cx.stack_props(
+        StackProps {
+            layout: fill_preview_layout(),
+        },
         move |cx| {
-            vec![cx.stack_props(
-                StackProps {
-                    layout: fill_preview_layout(),
+            let checkerboard = checkerboard_grid(cx);
+            let overlay = cx.container(
+                ContainerProps {
+                    layout: fill_absolute_preview_layout(),
+                    background: Some(color),
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
                 },
-                move |cx| {
-                    let checkerboard = checkerboard_grid(cx);
-                    let overlay = cx.container(
-                        ContainerProps {
-                            layout: fill_absolute_preview_layout(),
-                            background: Some(color),
-                            corner_radii: Corners::all(radius),
-                            ..Default::default()
-                        },
-                        |_cx| vec![],
-                    );
-                    vec![checkerboard, overlay]
-                },
-            )]
+                |_cx| vec![],
+            );
+            vec![checkerboard, overlay]
+        },
+    )
+}
+
+fn solid_preview_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    color: Color,
+    radius: Px,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: fill_preview_layout(),
+            background: Some(color),
+            corner_radii: Corners::all(radius),
+            ..Default::default()
+        },
+        |_cx| vec![],
+    )
+}
+
+fn half_alpha_preview_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    color: Color,
+    radius: Px,
+) -> AnyElement {
+    cx.grid(
+        GridProps {
+            layout: fill_preview_layout(),
+            cols: 2,
+            rows: Some(1),
+            template_columns: Some(vec![GridTrackSizing::Flex(1.0), GridTrackSizing::Flex(1.0)]),
+            template_rows: Some(vec![GridTrackSizing::Flex(1.0)]),
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            ..Default::default()
+        },
+        move |cx| {
+            vec![
+                solid_preview_fill(cx, opaque_preview_color(color), radius),
+                checkerboard_preview_fill(cx, color, radius),
+            ]
         },
     )
 }
@@ -105,4 +162,9 @@ pub(in crate::controls::color_edit) fn checkerboard_cell_color(row: usize, col: 
         CHECKERBOARD_DARK_RGB
     };
     Color::from_srgb_hex_rgb(rgb)
+}
+
+pub(in crate::controls::color_edit) fn opaque_preview_color(mut color: Color) -> Color {
+    color.a = 1.0;
+    color
 }
