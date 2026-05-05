@@ -1,18 +1,17 @@
-# ImUi Debug Draw Path Builder v1 Closeout Audit - 2026-05-05
+# ImUi Debug Draw Path Arc Builder v1 Closeout Audit - 2026-05-05
 
 Status: Closed.
 
-This lane closes the first scoped Dear ImGui `Path*` ergonomics follow-on above the canvas-backed
-IMUI debug-draw helper.
+This lane closes the scoped Dear ImGui `PathArcTo` / `PathArcToFast` circular arc ergonomics
+follow-on above the canvas-backed IMUI debug-draw helper.
 
 ## What Shipped
 
-- Added `ImUiDebugDrawList::path(...)`.
-- Added `ImUiDebugDrawPath` with `line_to`, `line_to_merge_duplicate`, `clear`, `point_count`, and
-  `is_empty`.
-- Added `stroke`, `stroke_with_style`, and `fill_convex` finishers.
-- Lowered valid finished paths to existing `Polyline` and `ConvexPolyFilled` commands.
-- Cleared invalid finished paths without recording commands.
+- Added `ImUiDebugDrawPath::arc_to`.
+- Added `ImUiDebugDrawPath::arc_to_fast`.
+- Appended sampled circular arc points to the temporary path builder.
+- Used a stable default segment count for `segments == 0`.
+- Treated invalid radius/angle inputs as no-op and tiny positive radii as center-point segments.
 - Kept the implementation in `fret-ui-kit::imui` without widening `fret-imui`, runtime, renderer, or
   retained path contracts.
 

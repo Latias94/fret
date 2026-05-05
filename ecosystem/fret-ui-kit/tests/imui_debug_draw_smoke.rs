@@ -145,6 +145,14 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 .line_to_merge_duplicate(Point::new(Px(164.0), Px(68.0)))
                 .line_to(Point::new(Px(178.0), Px(58.0)))
                 .line_to(Point::new(Px(192.0), Px(68.0)))
+                .arc_to(
+                    Point::new(Px(202.0), Px(68.0)),
+                    Px(8.0),
+                    std::f32::consts::PI,
+                    std::f32::consts::TAU,
+                    6,
+                )
+                .arc_to_fast(Point::new(Px(220.0), Px(68.0)), Px(8.0), 0, 3)
                 .bezier_quadratic_curve_to(
                     Point::new(Px(202.0), Px(54.0)),
                     Point::new(Px(212.0), Px(68.0)),

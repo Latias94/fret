@@ -19,6 +19,7 @@ use fret_ui::{ElementContext, SvgSource, UiHost};
 use super::UiWriterImUiFacadeExt;
 
 const DEFAULT_ELLIPSE_SEGMENTS: usize = 32;
+const DEFAULT_PATH_ARC_SEGMENTS: usize = 12;
 const DEFAULT_PATH_BEZIER_SEGMENTS: usize = 12;
 
 #[derive(Debug, Clone)]
@@ -228,6 +229,59 @@ impl ImUiDebugDrawPath<'_> {
             self.points
                 .push(cubic_bezier_point(from, ctrl1, ctrl2, to, t));
         }
+        self
+    }
+
+    pub fn arc_to(
+        &mut self,
+        center: Point,
+        radius: Px,
+        a_min: f32,
+        a_max: f32,
+        segments: usize,
+    ) -> &mut Self {
+        if !radius.0.is_finite() || !a_min.is_finite() || !a_max.is_finite() || radius.0 <= 0.0 {
+            return self;
+        }
+        if radius.0 < 0.5 {
+            self.points.push(center);
+            return self;
+        }
+        append_arc_points(
+            &mut self.points,
+            center,
+            radius,
+            a_min,
+            a_max,
+            path_arc_segments(segments),
+        );
+        self
+    }
+
+    pub fn arc_to_fast(
+        &mut self,
+        center: Point,
+        radius: Px,
+        a_min_of_12: i32,
+        a_max_of_12: i32,
+    ) -> &mut Self {
+        if !radius.0.is_finite() || radius.0 <= 0.0 {
+            return self;
+        }
+        if radius.0 < 0.5 {
+            self.points.push(center);
+            return self;
+        }
+        let a_min = a_min_of_12 as f32 * std::f32::consts::TAU / 12.0;
+        let a_max = a_max_of_12 as f32 * std::f32::consts::TAU / 12.0;
+        append_arc_points(
+            &mut self.points,
+            center,
+            radius,
+            a_min,
+            a_max,
+            a_min_of_12.abs_diff(a_max_of_12) as usize,
+        );
         self
     }
 
@@ -1365,12 +1419,46 @@ fn path_stroke_required_points(closed: bool) -> usize {
     if closed { 3 } else { 2 }
 }
 
+fn path_arc_segments(segments: usize) -> usize {
+    if segments == 0 {
+        DEFAULT_PATH_ARC_SEGMENTS
+    } else {
+        segments
+    }
+}
+
 fn path_bezier_segments(segments: usize) -> usize {
     if segments == 0 {
         DEFAULT_PATH_BEZIER_SEGMENTS
     } else {
         segments
     }
+}
+
+fn append_arc_points(
+    points: &mut Vec<Point>,
+    center: Point,
+    radius: Px,
+    a_min: f32,
+    a_max: f32,
+    segments: usize,
+) {
+    for step in 0..=segments {
+        let t = if segments == 0 {
+            0.0
+        } else {
+            step as f32 / segments as f32
+        };
+        points.push(arc_point(center, radius, a_min + t * (a_max - a_min)));
+    }
+}
+
+fn arc_point(center: Point, radius: Px, angle: f32) -> Point {
+    let (sin, cos) = angle.sin_cos();
+    Point::new(
+        Px(center.x.0 + cos * radius.0),
+        Px(center.y.0 + sin * radius.0),
+    )
 }
 
 fn quadratic_bezier_point(from: Point, ctrl: Point, to: Point, t: f32) -> Point {
@@ -1569,6 +1657,21 @@ fn bezier_cubic_path(from: Point, ctrl1: Point, ctrl2: Point, to: Point) -> [Pat
 mod tests {
     use super::*;
     use fret_core::Size;
+
+    fn assert_point_near(actual: Point, expected: Point) {
+        assert!(
+            (actual.x.0 - expected.x.0).abs() <= 0.000_1,
+            "x mismatch: actual {:?}, expected {:?}",
+            actual,
+            expected
+        );
+        assert!(
+            (actual.y.0 - expected.y.0).abs() <= 0.000_1,
+            "y mismatch: actual {:?}, expected {:?}",
+            actual,
+            expected
+        );
+    }
 
     #[test]
     fn debug_draw_list_records_commands_in_order() {
@@ -1910,6 +2013,56 @@ mod tests {
 
             path.bezier_cubic_curve_to(ctrl, ctrl, end, 2);
             assert!(path.is_empty());
+        });
+
+        assert_eq!(list.command_count(), 0);
+    }
+
+    #[test]
+    fn debug_draw_path_builder_appends_arc_samples() {
+        let mut list = ImUiDebugDrawList::default();
+        let center = Point::new(Px(10.0), Px(20.0));
+
+        list.path(|path| {
+            path.arc_to(center, Px(8.0), 0.0, std::f32::consts::PI, 2);
+            assert_eq!(path.point_count(), 3);
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), false);
+        });
+
+        let DebugDrawCommand::Polyline { points, .. } = &list.commands[0] else {
+            panic!("path arc helper should record a sampled polyline command");
+        };
+        assert_eq!(points.len(), 3);
+        assert_point_near(points[0], Point::new(Px(18.0), Px(20.0)));
+        assert_point_near(points[1], Point::new(Px(10.0), Px(28.0)));
+        assert_point_near(points[2], Point::new(Px(2.0), Px(20.0)));
+    }
+
+    #[test]
+    fn debug_draw_path_builder_arc_helpers_handle_fast_default_and_degenerate_inputs() {
+        let mut list = ImUiDebugDrawList::default();
+        let center = Point::new(Px(10.0), Px(20.0));
+
+        list.path(|path| {
+            path.arc_to(center, Px(0.25), 0.0, std::f32::consts::PI, 4);
+            assert_eq!(path.point_count(), 1);
+            assert_eq!(path.clear().point_count(), 0);
+
+            path.arc_to(center, Px(8.0), f32::NAN, std::f32::consts::PI, 4);
+            path.arc_to(center, Px(0.0), 0.0, std::f32::consts::PI, 4);
+            assert!(path.is_empty());
+
+            path.arc_to(center, Px(8.0), 0.0, std::f32::consts::FRAC_PI_2, 0);
+            assert_eq!(path.point_count(), DEFAULT_PATH_ARC_SEGMENTS + 1);
+            path.clear();
+
+            path.arc_to_fast(center, Px(8.0), 0, 3);
+            assert_eq!(path.point_count(), 4);
+            path.clear();
+
+            path.arc_to_fast(center, Px(8.0), 3, 0);
+            assert_eq!(path.point_count(), 4);
+            path.clear();
         });
 
         assert_eq!(list.command_count(), 0);
