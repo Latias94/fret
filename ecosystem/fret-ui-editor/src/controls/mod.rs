@@ -26,7 +26,8 @@ pub use axis_drag_value::{
 };
 pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{
-    ColorEdit, ColorEditOptions, ColorEditPopupNumericInputs, ColorEditPopupOptions,
+    ColorEdit, ColorEditAlphaPreview, ColorEditDragDropComponents, ColorEditDragDropOptions,
+    ColorEditDragDropPayload, ColorEditOptions, ColorEditPopupNumericInputs, ColorEditPopupOptions,
     ColorEditPopupPicker,
 };
 pub use drag_value::{DragValue, DragValueOptions, DragValueOutcome, OnDragValueOutcome};

@@ -2,6 +2,7 @@
 
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
+const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
@@ -40,8 +41,14 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPopupOptions"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditAlphaPreview"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropOptions"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropPayload"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupPicker"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupNumericInputs"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("ColorEditAlphaPreview::Half"));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));

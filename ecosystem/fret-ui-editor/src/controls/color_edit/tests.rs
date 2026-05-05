@@ -55,6 +55,56 @@ fn alpha_preview_options_cover_imgui_color_button_preview_modes() {
 }
 
 #[test]
+fn drag_drop_options_default_to_imgui_enabled_local_payloads() {
+    let options = ColorEditOptions::default();
+
+    assert!(options.drag_drop.enabled);
+    assert!(!options.drag_drop.cross_window);
+}
+
+#[test]
+fn drag_drop_payload_shape_tracks_alpha_visibility() {
+    let mut color = Color::from_srgb_hex_rgb(0x3b_82_f6);
+    color.a = 0.25;
+
+    let rgb = ColorEditDragDropPayload::from_color(color, false);
+    assert_eq!(rgb.color, color);
+    assert_eq!(rgb.components, ColorEditDragDropComponents::Rgb);
+
+    let rgba = ColorEditDragDropPayload::from_color(color, true);
+    assert_eq!(rgba.color, color);
+    assert_eq!(rgba.components, ColorEditDragDropComponents::Rgba);
+}
+
+#[test]
+fn drag_drop_payload_apply_matches_imgui_col3f_col4f_alpha_rules() {
+    let mut target = Color::from_srgb_hex_rgb(0x11_22_33);
+    target.a = 0.25;
+    let mut source = Color::from_srgb_hex_rgb(0xef_44_44);
+    source.a = 0.75;
+
+    let rgb = ColorEditDragDropPayload::from_color(source, false);
+    let rgb_applied = apply_color_drop_payload(rgb, target, true);
+    assert_eq!(rgb_applied.to_srgb_hex_rgb(), source.to_srgb_hex_rgb());
+    assert!((rgb_applied.a - target.a).abs() < f32::EPSILON);
+
+    let rgba = ColorEditDragDropPayload::from_color(source, true);
+    let rgba_to_rgb_target = apply_color_drop_payload(rgba, target, false);
+    assert_eq!(
+        rgba_to_rgb_target.to_srgb_hex_rgb(),
+        source.to_srgb_hex_rgb()
+    );
+    assert!((rgba_to_rgb_target.a - target.a).abs() < f32::EPSILON);
+
+    let rgba_to_rgba_target = apply_color_drop_payload(rgba, target, true);
+    assert_eq!(
+        rgba_to_rgba_target.to_srgb_hex_rgb(),
+        source.to_srgb_hex_rgb()
+    );
+    assert!((rgba_to_rgba_target.a - source.a).abs() < f32::EPSILON);
+}
+
+#[test]
 fn popup_options_can_hide_every_popup_affordance() {
     let options = ColorEditPopupOptions {
         picker: ColorEditPopupPicker::Hidden,

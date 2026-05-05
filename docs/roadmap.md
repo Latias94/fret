@@ -137,6 +137,12 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-alpha-preview-options-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-alpha-preview-options-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-alpha-preview-options-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit drag/drop payload follow-on (closed narrow P1 lane adding Dear ImGui-style typed
+  RGB/RGBA color payload source and target behavior to editor `ColorEdit` swatches without widening
+  `fret-imui` or runtime drag contracts):
+  `docs/workstreams/imui-color-edit-drag-drop-payload-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-drag-drop-payload-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-drag-drop-payload-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit AlphaBar follow-on (closed narrow P1 lane adding a bounded editor-owned
   AlphaBar-style popup affordance for direct alpha edits when `show_alpha=true`, before the later
   HSV picker follow-on): `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`,

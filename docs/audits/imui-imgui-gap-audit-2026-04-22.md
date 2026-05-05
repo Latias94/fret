@@ -186,6 +186,7 @@ Update (2026-05-04): partially superseded by
 `docs/workstreams/imui-color-edit-alpha-policy-v1/`,
 `docs/workstreams/imui-color-edit-alpha-preview-v1/`,
 `docs/workstreams/imui-color-edit-alpha-preview-options-v1/`,
+`docs/workstreams/imui-color-edit-drag-drop-payload-v1/`,
 `docs/workstreams/imui-color-edit-alpha-bar-v1/`,
 `docs/workstreams/imui-color-edit-hsv-picker-v1/`,
 `docs/workstreams/imui-color-edit-numeric-readout-v1/`, and
@@ -199,7 +200,8 @@ AlphaBar picker ownership is partially superseded by
 `docs/workstreams/imui-color-edit-popup-picker-split-v1/`; shared preview helper ownership is
 partially superseded by `docs/workstreams/imui-color-edit-popup-preview-split-v1/`; preset swatch
 ownership is partially superseded by
-`docs/workstreams/imui-color-edit-popup-swatches-split-v1/`.
+`docs/workstreams/imui-color-edit-popup-swatches-split-v1/`; color payload source/target behavior
+is partially superseded by `docs/workstreams/imui-color-edit-drag-drop-payload-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -208,6 +210,8 @@ Current editor `ColorEdit` now has:
 - RGB-only hex and preset behavior that preserves the current alpha channel,
 - per-control alpha preview modes for the main and preset swatches: checkerboard, opaque,
   no-background, and half-alpha preview,
+- typed RGB/RGBA color drag/drop payloads on the root swatch, preserving target alpha for RGB
+  payloads and RGB-only targets,
 - a bounded AlphaBar-style popup control when `show_alpha=true`,
 - bounded HSV picker controls in the popup: RGB/HSV conversion, saturation/value picking, and a
   HueBar,
@@ -246,12 +250,13 @@ Conclusion:
 - The remaining color gap is full picker/editor depth, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
 - Start separate narrow follow-ons for vertical HueBar / HueWheel fidelity, color history,
-  eyedropper behavior, color drag/drop payloads, or palette customization.
+  eyedropper behavior, or palette customization.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
 
 Evidence anchors:
 
 - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`

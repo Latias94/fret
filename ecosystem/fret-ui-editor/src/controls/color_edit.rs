@@ -28,12 +28,18 @@ use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
+mod drag_drop;
 mod model;
 mod popup;
 
 #[cfg(test)]
 mod tests;
 
+use self::drag_drop::{
+    apply_color_drop_payload, color_drag_drop_store_for, install_color_drag_source,
+    prune_color_drag_drop_store, resolve_color_drag_threshold, take_delivered_color_drop,
+    update_color_drop_target,
+};
 use self::model::{format_hex, parse_hex};
 use self::popup::{color_preview_stack, request_popup_overlay};
 
@@ -77,6 +83,57 @@ pub enum ColorEditAlphaPreview {
 impl Default for ColorEditAlphaPreview {
     fn default() -> Self {
         Self::Checkerboard
+    }
+}
+
+/// Color payload component shape used by `ColorEdit` drag/drop.
+///
+/// This mirrors Dear ImGui's standard `_COL3F` and `_COL4F` payload split while keeping the Fret
+/// payload typed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorEditDragDropComponents {
+    /// RGB payload; dropping preserves the target alpha.
+    Rgb,
+    /// RGBA payload; dropping applies alpha only when the target exposes alpha editing.
+    Rgba,
+}
+
+/// Typed color payload published and accepted by editor `ColorEdit` swatches.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ColorEditDragDropPayload {
+    pub color: Color,
+    pub components: ColorEditDragDropComponents,
+}
+
+impl ColorEditDragDropPayload {
+    pub fn from_color(color: Color, include_alpha: bool) -> Self {
+        Self {
+            color,
+            components: if include_alpha {
+                ColorEditDragDropComponents::Rgba
+            } else {
+                ColorEditDragDropComponents::Rgb
+            },
+        }
+    }
+}
+
+/// Per-control color drag/drop policy for editor `ColorEdit`.
+///
+/// Dear ImGui enables color drag/drop by default and uses `NoDragDrop` as the opt-out flag. Fret
+/// keeps the same default for local editor payloads while making cross-window routing explicit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ColorEditDragDropOptions {
+    pub enabled: bool,
+    pub cross_window: bool,
+}
+
+impl Default for ColorEditDragDropOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            cross_window: false,
+        }
     }
 }
 
@@ -158,6 +215,7 @@ pub struct ColorEditOptions {
     pub focusable: bool,
     pub show_alpha: bool,
     pub alpha_preview: ColorEditAlphaPreview,
+    pub drag_drop: ColorEditDragDropOptions,
     pub popup: ColorEditPopupOptions,
     /// Explicit identity source for internal state (draft/error/open models, overlay root ids).
     ///
@@ -186,6 +244,7 @@ impl Default for ColorEditOptions {
             focusable: true,
             show_alpha: false,
             alpha_preview: ColorEditAlphaPreview::default(),
+            drag_drop: ColorEditDragDropOptions::default(),
             popup: ColorEditPopupOptions::default(),
             id_source: None,
             test_id: None,
@@ -258,6 +317,10 @@ impl ColorEdit {
             .get_model_copied(&self.model, Invalidation::Paint)
             .unwrap_or(Color::TRANSPARENT);
         let current_hex = format_hex(current, self.options.show_alpha);
+        let drag_drop_store = color_drag_drop_store_for(cx);
+        prune_color_drag_drop_store(cx, &drag_drop_store);
+        let drag_drop_options = self.options.drag_drop;
+        let drag_threshold = resolve_color_drag_threshold(cx);
         let input_test_id = self
             .options
             .input_test_id
@@ -274,8 +337,10 @@ impl ColorEdit {
             .clone()
             .or_else(|| derived_test_id(self.options.test_id.as_ref(), "popup"));
         let popup_options = self.options.popup;
+        let popup_has_visible_content = popup_options.has_visible_content(self.options.show_alpha);
+        let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
         let swatch_enabled =
-            self.options.enabled && popup_options.has_visible_content(self.options.show_alpha);
+            self.options.enabled && (popup_has_visible_content || drag_drop_enabled);
 
         let input = {
             let (chrome, text_style) = {
@@ -390,8 +455,12 @@ impl ColorEdit {
             let open_for_activate = open.clone();
             let open_for_paint = open.clone();
             let enabled_for_paint = self.options.enabled;
+            let drag_drop_store_for_swatch = drag_drop_store.clone();
             let on_activate: OnActivate =
                 Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
+                    if !popup_has_visible_content {
+                        return;
+                    }
                     let prev = host
                         .models_mut()
                         .get_copied(&open_for_activate)
@@ -429,6 +498,22 @@ impl ColorEdit {
                 },
                 move |cx, st| {
                     cx.pressable_add_on_activate(on_activate.clone());
+                    let swatch_id = cx.root_id();
+                    install_color_drag_source(
+                        cx,
+                        swatch_id,
+                        drag_drop_store_for_swatch.clone(),
+                        ColorEditDragDropPayload::from_color(current, self.options.show_alpha),
+                        drag_drop_options,
+                        drag_threshold,
+                    );
+                    let drop_over = update_color_drop_target(
+                        cx,
+                        &drag_drop_store_for_swatch,
+                        swatch_id,
+                        st.hovered_raw,
+                        drag_drop_enabled,
+                    );
 
                     let is_open = cx
                         .get_model_copied(&open_for_paint, Invalidation::Paint)
@@ -440,9 +525,9 @@ impl ColorEdit {
                             EditorFrameState {
                                 enabled: enabled_for_paint,
                                 hovered: st.hovered || st.hovered_raw,
-                                pressed: st.pressed,
+                                pressed: st.pressed || drop_over,
                                 focused: st.focused,
-                                open: is_open,
+                                open: is_open && popup_has_visible_content,
                                 semantic: EditorFrameSemanticState::default(),
                             },
                         )
@@ -483,6 +568,25 @@ impl ColorEdit {
             swatch = swatch.a11y_value(current_hex.clone());
             swatch
         };
+
+        if drag_drop_enabled
+            && let Some(payload) = take_delivered_color_drop(cx, &drag_drop_store, swatch.id)
+        {
+            let current_for_drop = cx
+                .get_model_copied(&self.model, Invalidation::Paint)
+                .unwrap_or(current);
+            let next = apply_color_drop_payload(payload, current_for_drop, self.options.show_alpha);
+            let formatted = format_hex(next, self.options.show_alpha);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&self.model, |color| *color = next);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&draft, |s| *s = formatted.as_ref().to_string());
+            let _ = cx.app.models_mut().update(&error, |e| *e = None);
+        }
 
         request_popup_overlay(
             cx,

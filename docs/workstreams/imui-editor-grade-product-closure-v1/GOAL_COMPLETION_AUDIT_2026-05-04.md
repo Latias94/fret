@@ -25,13 +25,13 @@ The active goal asks for:
 | Requirement | Current evidence | Verdict |
 | --- | --- | --- |
 | Work on `main` | `git branch --show-current` returned `main`. | Met |
-| Workstream tracking exists | `docs/workstreams/README.md` validates with 320 dedicated directories after the text-model splits, color edit follow-ons, color-edit model/popup/numeric/picker/preview/swatches splits, alpha preview options, and debug-draw follow-ons. | Met |
+| Workstream tracking exists | `docs/workstreams/README.md` validates with 321 dedicated directories after the text-model splits, color edit follow-ons, color-edit model/popup/numeric/picker/preview/swatches splits, alpha preview options, color drag/drop payloads, and debug-draw follow-ons. | Met |
 | Fearless refactor removes obsolete shape | `ecosystem/fret-imui/src/tests/models_text.rs` was retired after moving coverage into capability modules. | Met for this slice |
 | Dear ImGui reference was used | `repo-ref/imgui/imgui.h` and `repo-ref/imgui/imgui.cpp` exist; `docs/audits/imui-imgui-gap-audit-2026-04-22.md` records the local snapshot and gap analysis. | Met |
 | Keep mechanism/policy boundaries clean | `docs/audits/imui-imgui-gap-audit-2026-04-22.md` keeps `fret-imui` thin and routes policy to `fret-ui-kit::imui` / `fret-ui-editor`; `python tools/check_layering.py` passes. | Met |
 | User-facing IMUI lane exists | `ecosystem/fret/src/lib.rs` exposes `fret::imui::{prelude, kit, editor, docking}`; cookbook/examples include `imui_action_basics` and `imui_editor_controls_basics`. | Partially met |
 | Text input depth is reviewable | `cargo nextest run -p fret-imui models_text --no-fail-fast` runs 26 tests across picker/filter/mode/command/textarea/basic/lifecycle/identity modules and passes. | Met for this subsystem |
-| Editor `ColorEdit` depth is materially usable and reviewable | Popup presets, alpha policy/preview modes, AlphaBar, HSV picker, numeric readout, editable RGB/HSV numeric input, per-control popup defaults, and the internal model/popup/numeric/picker/preview/swatches splits are tracked by closed 2026-05-04/2026-05-05 follow-ons. | Met for this subsystem |
+| Editor `ColorEdit` depth is materially usable and reviewable | Popup presets, alpha policy/preview modes, typed color drag/drop payloads, AlphaBar, HSV picker, numeric readout, editable RGB/HSV numeric input, per-control popup defaults, and the internal model/popup/numeric/picker/preview/swatches splits are tracked by closed 2026-05-04/2026-05-05 follow-ons. | Met for this subsystem |
 | Debug draw baseline, shape floor, stroke policy, clip stack, and image overlays exist | `docs/workstreams/imui-debug-draw-baseline-v1/CLOSEOUT_AUDIT_2026-05-04.md` records the canvas-backed line/rect/filled-rect/text helper; `docs/workstreams/imui-debug-draw-shape-primitives-v1/CLOSEOUT_AUDIT_2026-05-04.md` adds polyline, triangle, and circle primitives; `docs/workstreams/imui-debug-draw-stroke-style-v1/CLOSEOUT_AUDIT_2026-05-04.md` adds cap/join/miter/dash stroke policy; `docs/workstreams/imui-debug-draw-clip-stack-v1/CLOSEOUT_AUDIT_2026-05-04.md` adds push/pop clip rect commands; `docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md` adds registered image, image-region, SVG image, and SVG mask icon overlays. | Met for styled clipped image/shape floor only |
 | Docking P3 local non-interactive gates refreshed | `docs/workstreams/docking-multiwindow-imgui-parity/M12_LOCAL_NONINTERACTIVE_GATE_REFRESH_2026-05-04.md` records green source-policy, manifest, and non-GUI behavior gates; the launched bounded campaign timed out and is not acceptance evidence. | Met for non-interactive gates only |
 | Full Dear ImGui-class maturity | The current audit still names missing draw-list parity, full color-picker depth, and OS-window multi-viewport hand-feel. | Not met |
@@ -54,7 +54,7 @@ The active goal asks for:
   - `models_text_lifecycle.rs`
   - `models_text_identity.rs`
 - Editor `ColorEdit` is no longer a popup stub: the current sequence covers presets,
-  alpha-preserving RGB edits, alpha preview modes, AlphaBar, HSV picker affordances,
+  alpha-preserving RGB edits, alpha preview modes, color drag/drop payloads, AlphaBar, HSV picker affordances,
   numeric readout, editable RGB/HSV numeric entry, and per-control popup defaults without moving
   editor policy into `fret-imui` or the runtime. The follow-on model and popup splits now keep
   parsing, formatting, HSV/RGB conversion, coordinate math, popup UI composition, editable numeric
@@ -76,8 +76,8 @@ The active goal asks for:
   but the launched bounded campaign timed out and is not counted as passing evidence.
 - **Full `ColorPicker4` / `ColorEdit4` parity is not closed.** The editor `ColorEdit` popup has
   moved beyond a stub, including alpha, HSV, numeric-readout, and editable numeric-input slices, but
-  color drag/drop payloads, history/palette customization, HueWheel fidelity, and full picker
-  polish remain narrower follow-ons.
+  history/palette customization, HueWheel fidelity, eyedropper behavior, and full picker polish
+  remain narrower follow-ons.
 - **Other IMUI mega-tests still deserve decomposition.** `models_text.rs` is retired, but
   `interaction.rs`, `models.rs`, `floating.rs`, and `popup_hover.rs` still concentrate broad
   behavior coverage.
@@ -121,7 +121,7 @@ The docking local non-interactive refresh also passed the manifest and non-GUI g
 ## Next Concrete Follow-Ons
 
 1. Pick one product-facing missing capability rather than continuing generic helper growth:
-   color drag/drop/history/HueWheel depth or docking multi-window hand-feel.
+   color history/HueWheel/eyedropper depth or docking multi-window hand-feel.
 2. Keep the implementation in the correct owner layer:
    `fret-ui-editor` for editor controls, `fret-docking`/runner crates for multi-window, and a
    dedicated ecosystem lane for debug draw if it becomes a first-party need.
