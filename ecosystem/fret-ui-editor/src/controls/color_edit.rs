@@ -171,6 +171,37 @@ impl Default for ColorEditPopupNumericInputs {
     }
 }
 
+/// Side preview surface shown inside the `ColorEdit` popup.
+///
+/// Dear ImGui's picker shows a current preview by default and, when a reference color is provided,
+/// an original preview that restores the reference when activated. Fret keeps the same behavior as
+/// explicit per-control popup policy instead of global picker flags.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorEditPopupSidePreview {
+    /// Hide the popup side preview row.
+    Hidden,
+    /// Show only the current color preview.
+    Current,
+    /// Show the current color and the reference captured when the popup opened.
+    CurrentAndOriginal,
+}
+
+impl ColorEditPopupSidePreview {
+    fn has_visible_content(self) -> bool {
+        self != Self::Hidden
+    }
+
+    pub(in crate::controls::color_edit) fn shows_original(self) -> bool {
+        self == Self::CurrentAndOriginal
+    }
+}
+
+impl Default for ColorEditPopupSidePreview {
+    fn default() -> Self {
+        Self::CurrentAndOriginal
+    }
+}
+
 /// Per-control popup defaults for editor `ColorEdit`.
 ///
 /// Dear ImGui stores color edit defaults in the global context via `SetColorEditOptions()`. Fret
@@ -180,6 +211,7 @@ impl Default for ColorEditPopupNumericInputs {
 pub struct ColorEditPopupOptions {
     pub picker: ColorEditPopupPicker,
     pub numeric_inputs: ColorEditPopupNumericInputs,
+    pub side_preview: ColorEditPopupSidePreview,
     pub presets: bool,
     pub alpha_bar: bool,
 }
@@ -188,6 +220,7 @@ impl ColorEditPopupOptions {
     fn has_visible_content(self, show_alpha: bool) -> bool {
         self.picker != ColorEditPopupPicker::Hidden
             || self.numeric_inputs != ColorEditPopupNumericInputs::Hidden
+            || self.side_preview.has_visible_content()
             || self.presets
             || self.shows_alpha_bar(show_alpha)
     }
@@ -202,6 +235,7 @@ impl Default for ColorEditPopupOptions {
         Self {
             picker: ColorEditPopupPicker::default(),
             numeric_inputs: ColorEditPopupNumericInputs::default(),
+            side_preview: ColorEditPopupSidePreview::default(),
             presets: true,
             alpha_bar: true,
         }
@@ -294,6 +328,7 @@ impl ColorEdit {
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = popup_open_model(cx);
+        let reference = reference_model(cx);
         let draft = draft_model(cx);
         let error = error_model(cx);
 
@@ -454,6 +489,8 @@ impl ColorEdit {
         let swatch = {
             let open_for_activate = open.clone();
             let open_for_paint = open.clone();
+            let reference_for_activate = reference.clone();
+            let model_for_activate = self.model.clone();
             let enabled_for_paint = self.options.enabled;
             let drag_drop_store_for_swatch = drag_drop_store.clone();
             let on_activate: OnActivate =
@@ -465,7 +502,21 @@ impl ColorEdit {
                         .models_mut()
                         .get_copied(&open_for_activate)
                         .unwrap_or(false);
-                    let _ = host.models_mut().update(&open_for_activate, |v| *v = !prev);
+                    let opening = !prev;
+                    if opening && popup_options.side_preview.shows_original() {
+                        let current = host
+                            .models_mut()
+                            .get_copied(&model_for_activate)
+                            .unwrap_or(Color::TRANSPARENT);
+                        let _ = host
+                            .models_mut()
+                            .update(&reference_for_activate, |reference| {
+                                *reference = Some(current)
+                            });
+                    }
+                    let _ = host
+                        .models_mut()
+                        .update(&open_for_activate, |v| *v = opening);
                     host.request_redraw(action_cx.window);
                 });
 
@@ -592,6 +643,7 @@ impl ColorEdit {
             cx,
             swatch.id,
             self.model.clone(),
+            reference.clone(),
             draft.clone(),
             error.clone(),
             open.clone(),
@@ -684,6 +736,11 @@ impl ColorEdit {
 #[track_caller]
 fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     cx.local_model(|| false)
+}
+
+#[track_caller]
+fn reference_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Color>> {
+    cx.local_model(|| None::<Color>)
 }
 
 #[track_caller]

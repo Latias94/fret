@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "slug": "imui-color-edit-reference-preview-v1",
+  "title": "ImUi Color Edit Reference Preview v1",
+  "status": "closed",
+  "updated": "2026-05-05",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-color-edit-drag-drop-payload-v1",
+  "problem": "Close a concrete Dear ImGui ColorEdit/ColorPicker parity gap by adding per-control current/original reference preview behavior to editor ColorEdit popups without adding global ColorEdit option state or widening fret-imui.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-color-edit-reference-preview-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-reference-preview-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-reference-preview-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-color-edit-reference-preview-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-color-edit-reference-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused color-edit tests prove default side preview policy, no-alpha preview opacity, and reference restore component-count behavior.",
+    "commands": [
+      "cargo fmt --package fret-ui-editor -- --check",
+      "cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format fret-ui-editor",
+      "command": "cargo fmt --package fret-ui-editor -- --check"
+    },
+    {
+      "name": "focused color edit tests",
+      "command": "cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast"
+    },
+    {
+      "name": "imui editor surface policy",
+      "command": "cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-editor imui suite",
+      "command": "cargo nextest run -p fret-ui-editor --features imui --no-fail-fast"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json shape",
+      "command": "python -m json.tool docs/workstreams/imui-color-edit-reference-preview-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "umbrella json shape",
+      "command": "python -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "imui source gates",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "skill anchors",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/mod.rs",
+    "ecosystem/fret-ui-editor/tests/imui_surface_policy.rs",
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui_widgets.cpp"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This current/original reference preview slice is closed. Continue with separate color feature follow-ons such as HueWheel fidelity, color history, eyedropper behavior, or palette customization."
+  }
+}

@@ -17,13 +17,13 @@ use fret_ui_editor::composites::{
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
     ColorEdit, ColorEditOptions, ColorEditPopupNumericInputs, ColorEditPopupOptions,
-    ColorEditPopupPicker, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
-    EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions,
-    IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions, NumericInput,
-    NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider, SliderOptions,
-    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField, TextFieldOptions,
-    TransformEdit, TransformEditAxisOutcome, TransformEditOptions, TransformEditPresentations,
-    Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
+    ColorEditPopupPicker, ColorEditPopupSidePreview, DragValue, DragValueOptions, DragValueOutcome,
+    EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge,
+    FieldStatusBadgeOptions, IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions,
+    NumericInput, NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider,
+    SliderOptions, TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
+    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, TransformEditOptions,
+    TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
 
@@ -67,6 +67,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
             popup: ColorEditPopupOptions {
                 picker: ColorEditPopupPicker::HsvHueBar,
                 numeric_inputs: ColorEditPopupNumericInputs::RgbAndHsv,
+                side_preview: ColorEditPopupSidePreview::CurrentAndOriginal,
                 presets: true,
                 alpha_bar: true,
             },
@@ -406,6 +407,7 @@ fn editor_imui_adapter_option_defaults_compile() {
         popup: ColorEditPopupOptions {
             picker: ColorEditPopupPicker::Hidden,
             numeric_inputs: ColorEditPopupNumericInputs::Rgb,
+            side_preview: ColorEditPopupSidePreview::Hidden,
             presets: false,
             alpha_bar: false,
         },

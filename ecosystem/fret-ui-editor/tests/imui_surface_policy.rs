@@ -45,12 +45,17 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropPayload"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupPicker"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupNumericInputs"));
+    assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupSidePreview"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("ColorEditAlphaPreview::Half"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_side_preview<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn restore_reference_color("));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn preview_color_for_alpha_visibility("));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_RS.contains("fn has_visible_content(self, show_alpha: bool) -> bool"));

@@ -28,7 +28,7 @@ pub use checkbox::{Checkbox, CheckboxOptions};
 pub use color_edit::{
     ColorEdit, ColorEditAlphaPreview, ColorEditDragDropComponents, ColorEditDragDropOptions,
     ColorEditDragDropPayload, ColorEditOptions, ColorEditPopupNumericInputs, ColorEditPopupOptions,
-    ColorEditPopupPicker,
+    ColorEditPopupPicker, ColorEditPopupSidePreview,
 };
 pub use drag_value::{DragValue, DragValueOptions, DragValueOutcome, OnDragValueOutcome};
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};

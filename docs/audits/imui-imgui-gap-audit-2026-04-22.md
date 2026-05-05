@@ -201,7 +201,9 @@ AlphaBar picker ownership is partially superseded by
 partially superseded by `docs/workstreams/imui-color-edit-popup-preview-split-v1/`; preset swatch
 ownership is partially superseded by
 `docs/workstreams/imui-color-edit-popup-swatches-split-v1/`; color payload source/target behavior
-is partially superseded by `docs/workstreams/imui-color-edit-drag-drop-payload-v1/`.
+is partially superseded by `docs/workstreams/imui-color-edit-drag-drop-payload-v1/`; current and
+original popup reference previews are partially superseded by
+`docs/workstreams/imui-color-edit-reference-preview-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -212,6 +214,8 @@ Current editor `ColorEdit` now has:
   no-background, and half-alpha preview,
 - typed RGB/RGBA color drag/drop payloads on the root swatch, preserving target alpha for RGB
   payloads and RGB-only targets,
+- current/original popup reference previews with original restore behavior matching Dear ImGui's
+  RGB/RGBA component-count rules,
 - a bounded AlphaBar-style popup control when `show_alpha=true`,
 - bounded HSV picker controls in the popup: RGB/HSV conversion, saturation/value picking, and a
   HueBar,
@@ -247,7 +251,7 @@ paths, image overlays, per-command metadata, and hit-test-aware debug interactio
 
 Conclusion:
 
-- The remaining color gap is full picker/editor depth, not "visible popup is a stub".
+- The remaining color gap is deeper picker/editor affordances, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
 - Start separate narrow follow-ons for vertical HueBar / HueWheel fidelity, color history,
   eyedropper behavior, or palette customization.

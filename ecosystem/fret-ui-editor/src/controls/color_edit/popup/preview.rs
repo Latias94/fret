@@ -1,11 +1,93 @@
-use fret_core::{Color, Corners, Edges, Px};
-use fret_ui::element::{
-    AnyElement, ContainerProps, GridProps, GridTrackSizing, InsetStyle, LayoutStyle, Length,
-    Overflow, PositionStyle, SizeStyle, SpacingLength, StackProps,
-};
-use fret_ui::{ElementContext, UiHost};
+use std::sync::Arc;
 
-use super::super::{CHECKERBOARD_DARK_RGB, CHECKERBOARD_LIGHT_RGB, ColorEditAlphaPreview};
+use fret_core::text::{TextOverflow, TextWrap};
+use fret_core::{Axis, Color, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_runtime::Model;
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, GridProps, GridTrackSizing, InsetStyle,
+    LayoutStyle, Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps,
+    SizeStyle, SpacingLength, StackProps, TextProps,
+};
+use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::typography;
+
+use crate::primitives::input_group::derived_test_id;
+
+use super::super::model::format_hex;
+use super::super::{
+    CHECKERBOARD_DARK_RGB, CHECKERBOARD_LIGHT_RGB, ColorEditAlphaPreview, ColorEditPopupSidePreview,
+};
+
+pub(super) fn color_side_preview<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    current: Color,
+    original: Option<Color>,
+    model: Model<Color>,
+    draft: Model<String>,
+    error: Model<Option<Arc<str>>>,
+    mode: ColorEditPopupSidePreview,
+    show_alpha: bool,
+    enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let original_cell = mode
+        .shows_original()
+        .then(|| original)
+        .flatten()
+        .map(|original| {
+            original_reference_preview_cell(
+                cx,
+                original,
+                model,
+                draft,
+                error,
+                show_alpha,
+                enabled,
+                alpha_preview,
+                derived_test_id(test_id.as_ref(), "original"),
+            )
+        });
+    let current_cell = current_preview_cell(
+        cx,
+        current,
+        show_alpha,
+        alpha_preview,
+        derived_test_id(test_id.as_ref(), "current"),
+    );
+
+    let mut preview = cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: Axis::Horizontal,
+            gap: SpacingLength::Px(Px(8.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |_cx| {
+            let mut out = vec![current_cell];
+            if let Some(original_cell) = original_cell {
+                out.push(original_cell);
+            }
+            out
+        },
+    );
+
+    if let Some(test_id) = test_id {
+        preview = preview.test_id(test_id);
+    }
+    preview
+}
 
 pub(in crate::controls::color_edit) fn color_preview_stack<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -30,6 +112,208 @@ pub(in crate::controls::color_edit) fn color_preview_stack<H: UiHost>(
             ColorEditAlphaPreview::Half => vec![half_alpha_preview_fill(cx, color, radius)],
         },
     )
+}
+
+fn current_preview_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    color: Color,
+    show_alpha: bool,
+    alpha_preview: ColorEditAlphaPreview,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    preview_cell_container(
+        cx,
+        "Current",
+        preview_color_for_alpha_visibility(color, show_alpha),
+        show_alpha,
+        alpha_preview,
+        test_id,
+    )
+}
+
+fn original_reference_preview_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    original: Color,
+    model: Model<Color>,
+    draft: Model<String>,
+    error: Model<Option<Arc<str>>>,
+    show_alpha: bool,
+    enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let restore: OnActivate =
+        Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
+            let current = host
+                .models_mut()
+                .get_copied(&model)
+                .unwrap_or(Color::TRANSPARENT);
+            let next = restore_reference_color(original, current, show_alpha);
+            let formatted = format_hex(next, show_alpha);
+
+            let _ = host.models_mut().update(&model, |color| *color = next);
+            let _ = host
+                .models_mut()
+                .update(&draft, |text| *text = formatted.as_ref().to_string());
+            let _ = host.models_mut().update(&error, |value| *value = None);
+            host.request_redraw(action_cx.window);
+        });
+
+    let color = preview_color_for_alpha_visibility(original, show_alpha);
+    let mut cell = cx.pressable(
+        PressableProps {
+            layout: preview_cell_layout(),
+            enabled,
+            focusable: enabled,
+            a11y: PressableA11y {
+                role: Some(fret_core::SemanticsRole::Button),
+                label: Some(Arc::from("Original color")),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _st| {
+            cx.pressable_add_on_activate(restore.clone());
+            vec![preview_cell_content(
+                cx,
+                "Original",
+                color,
+                show_alpha,
+                alpha_preview,
+            )]
+        },
+    );
+
+    if let Some(test_id) = test_id {
+        cell = cell.test_id(test_id);
+    }
+    cell.a11y_value(format_hex(color, show_alpha))
+}
+
+fn preview_cell_container<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: &'static str,
+    color: Color,
+    show_alpha: bool,
+    alpha_preview: ColorEditAlphaPreview,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let mut cell = cx.container(
+        ContainerProps {
+            layout: preview_cell_layout(),
+            ..Default::default()
+        },
+        move |cx| {
+            vec![preview_cell_content(
+                cx,
+                label,
+                color,
+                show_alpha,
+                alpha_preview,
+            )]
+        },
+    );
+
+    if let Some(test_id) = test_id {
+        cell = cell.test_id(test_id);
+    }
+    cell
+}
+
+fn preview_cell_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: &'static str,
+    color: Color,
+    show_alpha: bool,
+    alpha_preview: ColorEditAlphaPreview,
+) -> AnyElement {
+    let (border, text_color) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            theme
+                .color_by_key("border")
+                .unwrap_or_else(|| theme.color_token("border")),
+            theme
+                .color_by_key("muted-foreground")
+                .unwrap_or_else(|| theme.color_token("foreground")),
+        )
+    };
+
+    cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: Axis::Vertical,
+            gap: SpacingLength::Px(Px(4.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |cx| {
+            vec![
+                cx.text_props(TextProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    text: Arc::from(label),
+                    style: Some(typography::as_control_text(TextStyle {
+                        size: Px(10.0),
+                        line_height: Some(Px(12.0)),
+                        ..Default::default()
+                    })),
+                    color: Some(text_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
+                    ink_overflow: Default::default(),
+                }),
+                cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(Px(36.0)),
+                                min_height: Some(Length::Px(Px(36.0))),
+                                ..Default::default()
+                            },
+                            overflow: Overflow::Clip,
+                            ..Default::default()
+                        },
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(border),
+                        corner_radii: Corners::all(Px(5.0)),
+                        padding: Edges::all(Px(1.0)).into(),
+                        ..Default::default()
+                    },
+                    move |cx| vec![color_preview_stack(cx, color, Px(5.0), alpha_preview)],
+                )
+                .a11y_value(format_hex(color, show_alpha)),
+            ]
+        },
+    )
+}
+
+fn preview_cell_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Auto,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
 }
 
 fn checkerboard_preview_fill<H: UiHost>(
@@ -167,4 +451,29 @@ pub(in crate::controls::color_edit) fn checkerboard_cell_color(row: usize, col: 
 pub(in crate::controls::color_edit) fn opaque_preview_color(mut color: Color) -> Color {
     color.a = 1.0;
     color
+}
+
+pub(in crate::controls::color_edit) fn preview_color_for_alpha_visibility(
+    color: Color,
+    show_alpha: bool,
+) -> Color {
+    if show_alpha {
+        color
+    } else {
+        opaque_preview_color(color)
+    }
+}
+
+pub(in crate::controls::color_edit) fn restore_reference_color(
+    reference: Color,
+    current: Color,
+    show_alpha: bool,
+) -> Color {
+    if show_alpha {
+        reference
+    } else {
+        let mut next = reference;
+        next.a = current.a;
+        next
+    }
 }

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 321
+- Dedicated directories: 322
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -343,6 +343,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed after adding Dear ImGui-style typed RGB/RGBA color payload source and target
     behavior to editor `ColorEdit` swatches without widening `fret-imui` or runtime drag
     contracts.
+
+- Closed narrow P1 color edit reference preview follow-on:
+  - `docs/workstreams/imui-color-edit-reference-preview-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-reference-preview-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-reference-preview-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-reference-preview-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-reference-preview-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-reference-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding Dear ImGui-style current/original reference previews to editor
+    `ColorEdit` popups, including original restore rules that copy RGB only for no-alpha targets
+    and RGBA for alpha-visible targets.
 
 - Closed narrow P1 color edit AlphaBar follow-on:
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json`
@@ -1451,6 +1462,7 @@ Rule:
 - `docs/workstreams/imui-color-edit-popup-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting popup composition helpers out of editor `ColorEdit` public control wiring)
 - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting preset swatches into `popup/swatches.rs`)
 - `docs/workstreams/imui-color-edit-numeric-readout-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on showing RGB/HSV numeric readouts in the editor `ColorEdit` popup)
+- `docs/workstreams/imui-color-edit-reference-preview-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding Dear ImGui-style current/original reference previews to editor `ColorEdit` popups)
 - `docs/workstreams/imui-debug-draw-baseline-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on exposing a canvas-backed immediate-mode debug-draw helper in `fret-ui-kit::imui`)
 - `docs/workstreams/imui-debug-draw-shape-primitives-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding polyline, triangle, and circle primitives to the canvas-backed IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-stroke-style-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding explicit width/cap/join/miter/dash stroke policy to the IMUI debug-draw helper)

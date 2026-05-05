@@ -7,7 +7,10 @@ use super::model::{
     rgb_to_hsv,
 };
 use super::popup::picker::{alpha_from_local_x, alpha_percent_text};
-use super::popup::preview::{checkerboard_cell_color, opaque_preview_color};
+use super::popup::preview::{
+    checkerboard_cell_color, opaque_preview_color, preview_color_for_alpha_visibility,
+    restore_reference_color,
+};
 use super::*;
 
 #[test]
@@ -30,12 +33,28 @@ fn popup_options_default_to_imgui_like_hue_bar_surface() {
         options.numeric_inputs,
         ColorEditPopupNumericInputs::RgbAndHsv
     );
+    assert_eq!(
+        options.side_preview,
+        ColorEditPopupSidePreview::CurrentAndOriginal
+    );
     assert!(options.presets);
     assert!(options.alpha_bar);
     assert!(options.has_visible_content(false));
     assert!(options.has_visible_content(true));
     assert!(!options.shows_alpha_bar(false));
     assert!(options.shows_alpha_bar(true));
+}
+
+#[test]
+fn popup_side_preview_defaults_to_imgui_current_and_original() {
+    let options = ColorEditOptions::default();
+
+    assert_eq!(
+        options.popup.side_preview,
+        ColorEditPopupSidePreview::CurrentAndOriginal
+    );
+    assert!(options.popup.side_preview.has_visible_content());
+    assert!(options.popup.side_preview.shows_original());
 }
 
 #[test]
@@ -109,6 +128,7 @@ fn popup_options_can_hide_every_popup_affordance() {
     let options = ColorEditPopupOptions {
         picker: ColorEditPopupPicker::Hidden,
         numeric_inputs: ColorEditPopupNumericInputs::Hidden,
+        side_preview: ColorEditPopupSidePreview::Hidden,
         presets: false,
         alpha_bar: false,
     };
@@ -365,6 +385,35 @@ fn opaque_alpha_preview_keeps_rgb_and_forces_preview_alpha() {
     assert_eq!(opaque.g, color.g);
     assert_eq!(opaque.b, color.b);
     assert_eq!(opaque.a, 1.0);
+}
+
+#[test]
+fn popup_preview_hides_alpha_when_alpha_editing_is_not_visible() {
+    let mut color = Color::from_srgb_hex_rgb(0x40_80_c0);
+    color.a = 0.25;
+
+    assert_eq!(preview_color_for_alpha_visibility(color, true), color);
+
+    let opaque = preview_color_for_alpha_visibility(color, false);
+    assert_eq!(opaque.r, color.r);
+    assert_eq!(opaque.g, color.g);
+    assert_eq!(opaque.b, color.b);
+    assert_eq!(opaque.a, 1.0);
+}
+
+#[test]
+fn popup_original_restore_matches_imgui_component_count_rules() {
+    let mut current = Color::from_srgb_hex_rgb(0x11_22_33);
+    current.a = 0.25;
+    let mut original = Color::from_srgb_hex_rgb(0xef_44_44);
+    original.a = 0.75;
+
+    let restored_rgb = restore_reference_color(original, current, false);
+    assert_eq!(restored_rgb.to_srgb_hex_rgb(), original.to_srgb_hex_rgb());
+    assert!((restored_rgb.a - current.a).abs() < f32::EPSILON);
+
+    let restored_rgba = restore_reference_color(original, current, true);
+    assert_eq!(restored_rgba, original);
 }
 
 #[test]

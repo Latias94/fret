@@ -143,6 +143,12 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-drag-drop-payload-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-drag-drop-payload-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-drag-drop-payload-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit reference preview follow-on (closed narrow P1 lane adding Dear ImGui-style
+  current/original reference previews to editor `ColorEdit` popups, including original restore
+  rules that copy RGB only for no-alpha targets and RGBA for alpha-visible targets):
+  `docs/workstreams/imui-color-edit-reference-preview-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-reference-preview-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-reference-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit AlphaBar follow-on (closed narrow P1 lane adding a bounded editor-owned
   AlphaBar-style popup affordance for direct alpha edits when `show_alpha=true`, before the later
   HSV picker follow-on): `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`,

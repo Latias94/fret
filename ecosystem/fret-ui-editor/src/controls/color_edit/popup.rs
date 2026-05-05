@@ -28,12 +28,14 @@ mod swatches;
 use self::numeric::color_numeric_inputs;
 use self::picker::{alpha_bar, hsv_picker};
 pub(super) use self::preview::color_preview_stack;
+use self::preview::color_side_preview;
 use self::swatches::preset_swatches;
 
 pub(super) fn request_popup_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     swatch_id: fret_ui::elements::GlobalElementId,
     model: Model<Color>,
+    reference: Model<Option<Color>>,
     draft: Model<String>,
     error: Model<Option<Arc<str>>>,
     open: Model<bool>,
@@ -99,6 +101,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
             let current = cx
                 .get_model_copied(&model, Invalidation::Paint)
                 .unwrap_or(Color::TRANSPARENT);
+            let reference_color = cx
+                .get_model_copied(&reference, Invalidation::Paint)
+                .unwrap_or(None);
             let picker = match popup_options.picker {
                 ColorEditPopupPicker::HsvHueBar => Some(hsv_picker(
                     cx,
@@ -112,6 +117,21 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                 )),
                 ColorEditPopupPicker::Hidden => None,
             };
+            let side_preview = popup_options.side_preview.has_visible_content().then(|| {
+                color_side_preview(
+                    cx,
+                    current,
+                    reference_color,
+                    model.clone(),
+                    draft.clone(),
+                    error.clone(),
+                    popup_options.side_preview,
+                    show_alpha,
+                    enabled,
+                    alpha_preview,
+                    derived_test_id(popup_test_id.as_ref(), "preview"),
+                )
+            });
             let numbers = (popup_options.numeric_inputs != ColorEditPopupNumericInputs::Hidden)
                 .then(|| {
                     color_numeric_inputs(
@@ -176,6 +196,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     let mut out = Vec::new();
                     if let Some(picker) = picker {
                         out.push(picker);
+                    }
+                    if let Some(side_preview) = side_preview {
+                        out.push(side_preview);
                     }
                     if let Some(numbers) = numbers {
                         out.push(numbers);
