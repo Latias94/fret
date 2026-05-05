@@ -270,17 +270,28 @@ Current editor `ColorEdit` now has:
 #### 4.1b Debug draw is no longer missing at the first baseline level
 
 Update (2026-05-04): partially superseded by the canvas-backed
-`docs/workstreams/imui-debug-draw-baseline-v1/`.
+`docs/workstreams/imui-debug-draw-baseline-v1/`. Update (2026-05-05): richer debug-draw shape
+depth is partially superseded by `docs/workstreams/imui-debug-draw-shape-primitives-v1/`,
+`docs/workstreams/imui-debug-draw-stroke-style-v1/`,
+`docs/workstreams/imui-debug-draw-clip-stack-v1/`,
+`docs/workstreams/imui-debug-draw-image-overlay-v1/`, and
+`docs/workstreams/imui-debug-draw-bezier-primitives-v1/`.
 
 Current IMUI now exposes:
 
 - a thin immediate-mode `debug_draw` facade in `fret-ui-kit::imui`,
 - line, rect, filled rect, and text primitives,
+- polyline, stroked/filled triangle, stroked/filled circle, quadratic Bezier, and cubic Bezier
+  primitives,
+- explicit stroke width/cap/join/miter/dash policy,
+- clip rect stack commands with paint-end auto-balancing,
+- registered image, image-region, SVG image, and SVG mask icon overlay commands,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
 Dear ImGui still goes much deeper through full `DrawList` parity, richer stroke styles, dashed
-paths, image overlays, per-command metadata, and hit-test-aware debug interaction.
+paths, path-builder ergonomics, channel splitting, per-command metadata, and hit-test-aware debug
+interaction.
 
 Conclusion:
 

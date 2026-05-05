@@ -72,6 +72,21 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Px(8.0),
             Color::from_srgb_hex_rgb(0x06_b6_d4),
         );
+        draw.add_bezier_quadratic_with_style(
+            Point::new(Px(88.0), Px(62.0)),
+            Point::new(Px(104.0), Px(48.0)),
+            Point::new(Px(120.0), Px(62.0)),
+            Color::from_srgb_hex_rgb(0x84_cc_16),
+            DebugDrawStrokeStyle::new(Px(1.0)).with_cap(StrokeCapV1::Round),
+        );
+        draw.add_bezier_cubic(
+            Point::new(Px(124.0), Px(62.0)),
+            Point::new(Px(136.0), Px(48.0)),
+            Point::new(Px(148.0), Px(76.0)),
+            Point::new(Px(160.0), Px(62.0)),
+            Color::from_srgb_hex_rgb(0xf9_73_16),
+            Px(1.0),
+        );
         draw.pop_clip_rect();
         draw.add_image_with_options(
             Rect::new(

@@ -288,6 +288,65 @@ impl ImUiDebugDrawList {
         });
     }
 
+    pub fn add_bezier_quadratic(
+        &mut self,
+        from: Point,
+        ctrl: Point,
+        to: Point,
+        color: Color,
+        thickness: Px,
+    ) {
+        self.add_bezier_quadratic_with_style(from, ctrl, to, color, thickness);
+    }
+
+    pub fn add_bezier_quadratic_with_style(
+        &mut self,
+        from: Point,
+        ctrl: Point,
+        to: Point,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::BezierQuadratic {
+            from,
+            ctrl,
+            to,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_bezier_cubic(
+        &mut self,
+        from: Point,
+        ctrl1: Point,
+        ctrl2: Point,
+        to: Point,
+        color: Color,
+        thickness: Px,
+    ) {
+        self.add_bezier_cubic_with_style(from, ctrl1, ctrl2, to, color, thickness);
+    }
+
+    pub fn add_bezier_cubic_with_style(
+        &mut self,
+        from: Point,
+        ctrl1: Point,
+        ctrl2: Point,
+        to: Point,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::BezierCubic {
+            from,
+            ctrl1,
+            ctrl2,
+            to,
+            color,
+            style: style.into(),
+        });
+    }
+
     pub fn push_clip_rect(&mut self, rect: Rect) {
         self.commands.push(DebugDrawCommand::PushClipRect { rect });
     }
@@ -433,6 +492,21 @@ enum DebugDrawCommand {
         center: Point,
         radius: Px,
         color: Color,
+    },
+    BezierQuadratic {
+        from: Point,
+        ctrl: Point,
+        to: Point,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    BezierCubic {
+        from: Point,
+        ctrl1: Point,
+        ctrl2: Point,
+        to: Point,
+        color: Color,
+        style: DebugDrawStrokeStyle,
     },
     PushClipRect {
         rect: Rect,
@@ -743,6 +817,49 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     scale,
                 );
             }
+            DebugDrawCommand::BezierQuadratic {
+                from,
+                ctrl,
+                to,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let commands = bezier_quadratic_path(*from, *ctrl, *to);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::BezierCubic {
+                from,
+                ctrl1,
+                ctrl2,
+                to,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let commands = bezier_cubic_path(*from, *ctrl1, *ctrl2, *to);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
             DebugDrawCommand::Text {
                 origin,
                 text,
@@ -878,6 +995,17 @@ fn circle_path(center: Point, radius: Px) -> [PathCommand; 6] {
     ]
 }
 
+fn bezier_quadratic_path(from: Point, ctrl: Point, to: Point) -> [PathCommand; 2] {
+    [PathCommand::MoveTo(from), PathCommand::QuadTo { ctrl, to }]
+}
+
+fn bezier_cubic_path(from: Point, ctrl1: Point, ctrl2: Point, to: Point) -> [PathCommand; 2] {
+    [
+        PathCommand::MoveTo(from),
+        PathCommand::CubicTo { ctrl1, ctrl2, to },
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -937,6 +1065,21 @@ mod tests {
             Px(6.0),
             Color::from_srgb_hex_rgb(0xaa_00_ff),
         );
+        list.add_bezier_quadratic(
+            Point::new(Px(2.0), Px(60.0)),
+            Point::new(Px(20.0), Px(42.0)),
+            Point::new(Px(38.0), Px(60.0)),
+            Color::from_srgb_hex_rgb(0x22_d3_ee),
+            Px(1.0),
+        );
+        list.add_bezier_cubic(
+            Point::new(Px(42.0), Px(60.0)),
+            Point::new(Px(54.0), Px(42.0)),
+            Point::new(Px(70.0), Px(78.0)),
+            Point::new(Px(82.0), Px(60.0)),
+            Color::from_srgb_hex_rgb(0xf4_72_b6),
+            Px(1.0),
+        );
         list.add_text(
             Point::new(Px(4.0), Px(5.0)),
             "debug",
@@ -944,7 +1087,7 @@ mod tests {
             Px(12.0),
         );
 
-        assert_eq!(list.command_count(), 9);
+        assert_eq!(list.command_count(), 11);
         assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
         assert!(matches!(
             list.commands[1],
@@ -968,7 +1111,15 @@ mod tests {
             list.commands[7],
             DebugDrawCommand::CircleFilled { .. }
         ));
-        assert!(matches!(list.commands[8], DebugDrawCommand::Text { .. }));
+        assert!(matches!(
+            list.commands[8],
+            DebugDrawCommand::BezierQuadratic { .. }
+        ));
+        assert!(matches!(
+            list.commands[9],
+            DebugDrawCommand::BezierCubic { .. }
+        ));
+        assert!(matches!(list.commands[10], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
@@ -1167,5 +1318,26 @@ mod tests {
         assert!(matches!(path[3], PathCommand::CubicTo { .. }));
         assert!(matches!(path[4], PathCommand::CubicTo { .. }));
         assert_eq!(path[5], PathCommand::Close);
+    }
+
+    #[test]
+    fn bezier_paths_use_native_quad_and_cubic_commands() {
+        let from = Point::new(Px(0.0), Px(0.0));
+        let ctrl = Point::new(Px(10.0), Px(20.0));
+        let ctrl1 = Point::new(Px(8.0), Px(16.0));
+        let ctrl2 = Point::new(Px(18.0), Px(-6.0));
+        let to = Point::new(Px(24.0), Px(0.0));
+
+        assert_eq!(
+            bezier_quadratic_path(from, ctrl, to),
+            [PathCommand::MoveTo(from), PathCommand::QuadTo { ctrl, to }]
+        );
+        assert_eq!(
+            bezier_cubic_path(from, ctrl1, ctrl2, to),
+            [
+                PathCommand::MoveTo(from),
+                PathCommand::CubicTo { ctrl1, ctrl2, to },
+            ]
+        );
     }
 }

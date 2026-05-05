@@ -306,6 +306,12 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-image-overlay-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-image-overlay-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-image-overlay-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi debug draw Bezier primitives follow-on (closed narrow P1 lane adding quadratic and cubic
+  Bezier commands to the canvas-backed helper using native `PathCommand::QuadTo` /
+  `PathCommand::CubicTo` lowering):
+  `docs/workstreams/imui-debug-draw-bezier-primitives-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-bezier-primitives-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-bezier-primitives-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):
