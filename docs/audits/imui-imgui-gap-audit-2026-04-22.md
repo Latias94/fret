@@ -239,6 +239,8 @@ Current editor `ColorEdit` now has:
 - a popup-local picker options surface for switching between `HsvHueBar` and `HsvHueWheel` and
   toggling AlphaBar visibility without global `SetColorEditOptions()` state,
 - Dear ImGui-style picker type thumbnails inside the popup-local picker options surface,
+- an app-owned eyedropper request hook and popup command through
+  `ColorEditOptions::on_eyedropper`, without pretending runtime/platform screen sampling exists,
 - app-owned palette entries through `ColorEditOptions::palette`, preserving the built-in palette
   and alpha-preserving palette activation,
 - editable popup palette slots through `OnColorEditPaletteSlotDrop`, with palette swatches acting
@@ -282,7 +284,8 @@ Conclusion:
 
 - The remaining color gap is deeper picker/editor affordances, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
-- Start separate narrow follow-ons for eyedropper behavior or higher-fidelity picker preview polish.
+- Start separate narrow follow-ons for platform-owned screen sampling or higher-fidelity picker
+  preview polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
 
 Evidence anchors:
@@ -292,6 +295,7 @@ Evidence anchors:
 - `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/eyedropper.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches.rs`

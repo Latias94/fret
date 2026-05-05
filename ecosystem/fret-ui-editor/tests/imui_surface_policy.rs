@@ -3,6 +3,8 @@
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_POPUP_COPY_RS: &str = include_str!("../src/controls/color_edit/popup/copy.rs");
+const COLOR_EDIT_POPUP_EYEDROPPER_RS: &str =
+    include_str!("../src/controls/color_edit/popup/eyedropper.rs");
 const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
@@ -71,9 +73,16 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditCopyOptions"));
     assert!(COLOR_EDIT_RS.contains("pub copy: ColorEditCopyOptions"));
     assert!(COLOR_EDIT_RS.contains("fn copy_menu_open_model<"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditEyedropperRequest"));
+    assert!(COLOR_EDIT_RS.contains("pub type OnColorEditEyedropper"));
+    assert!(COLOR_EDIT_RS.contains("pub on_eyedropper: Option<OnColorEditEyedropper>"));
     assert!(COLOR_EDIT_POPUP_COPY_RS.contains("fn request_color_copy_menu_overlay<"));
     assert!(COLOR_EDIT_POPUP_COPY_RS.contains("fn color_copy_entries("));
     assert!(COLOR_EDIT_POPUP_COPY_RS.contains("Effect::ClipboardWriteText"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("color_eyedropper_action("));
+    assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("fn color_eyedropper_action<"));
+    assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("ColorEditEyedropperRequest::new("));
+    assert!(!COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("Effect::"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));

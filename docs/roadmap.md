@@ -178,6 +178,12 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit eyedropper request follow-on (closed narrow P1 affordance lane adding an
+  app-owned `ColorEdit` eyedropper activation hook and popup command without inventing a
+  runtime/platform screen-sampling contract):
+  `docs/workstreams/imui-color-edit-eyedropper-request-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-eyedropper-request-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-eyedropper-request-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit palette customization follow-on (closed narrow P1 lane adding an app-owned
   palette source for editor `ColorEdit`, preserving the built-in palette and alpha-preserving
   palette activation while leaving editable palette slots separate):

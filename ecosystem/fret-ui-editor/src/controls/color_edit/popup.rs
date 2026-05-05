@@ -23,6 +23,7 @@ use super::{
 };
 
 pub(in crate::controls::color_edit) mod copy;
+mod eyedropper;
 mod numeric;
 mod options;
 pub(super) mod picker;
@@ -31,6 +32,7 @@ mod swatches;
 pub(in crate::controls::color_edit) mod tooltip;
 
 pub(super) use self::copy::request_color_copy_menu_overlay;
+use self::eyedropper::color_eyedropper_action;
 use self::numeric::color_numeric_inputs;
 use self::options::color_picker_options;
 use self::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
@@ -56,16 +58,19 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     drag_drop_options: ColorEditDragDropOptions,
     drag_threshold: Px,
     on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
+    on_eyedropper: Option<super::OnColorEditEyedropper>,
     popup_options: ColorEditPopupOptions,
     popup_runtime_options: Model<ColorEditPopupRuntimeOptions>,
     popup_padding: Px,
     popup_test_id: Option<Arc<str>>,
+    eyedropper_test_id: Option<Arc<str>>,
 ) {
     if !popup_options.has_visible_content_with_swatches(
         show_alpha,
         !palette.is_empty(),
         !history.is_empty(),
-    ) {
+    ) && on_eyedropper.is_none()
+    {
         return;
     }
 
@@ -182,6 +187,19 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                         derived_test_id(popup_test_id.as_ref(), "preview"),
                     )
                 });
+            let eyedropper = on_eyedropper.clone().map(|on_eyedropper| {
+                color_eyedropper_action(
+                    cx,
+                    current,
+                    model.clone(),
+                    draft.clone(),
+                    error.clone(),
+                    show_alpha,
+                    enabled,
+                    on_eyedropper,
+                    eyedropper_test_id.clone(),
+                )
+            });
             let numbers = (effective_popup_options.numeric_inputs
                 != ColorEditPopupNumericInputs::Hidden)
                 .then(|| {
@@ -279,6 +297,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     }
                     if let Some(side_preview) = side_preview {
                         out.push(side_preview);
+                    }
+                    if let Some(eyedropper) = eyedropper {
+                        out.push(eyedropper);
                     }
                     if let Some(numbers) = numbers {
                         out.push(numbers);

@@ -190,6 +190,30 @@ fn copy_options_default_to_imgui_context_copy_enabled() {
 }
 
 #[test]
+fn eyedropper_defaults_to_app_owned_opt_in() {
+    let options = ColorEditOptions::default();
+
+    assert!(options.on_eyedropper.is_none());
+    assert!(options.eyedropper_test_id.is_none());
+}
+
+#[test]
+fn eyedropper_request_applies_sample_alpha_by_visibility() {
+    let mut current = Color::from_srgb_hex_rgb(0x11_22_33);
+    current.a = 0.25;
+    let mut sampled = Color::from_srgb_hex_rgb(0xef_44_44);
+    sampled.a = 0.75;
+
+    let rgb_only = ColorEditEyedropperRequest::new(current, false).apply_sample(sampled);
+    assert_eq!(rgb_only.to_srgb_hex_rgb(), 0xef_44_44);
+    assert!((rgb_only.a - current.a).abs() < f32::EPSILON);
+
+    let rgba = ColorEditEyedropperRequest::new(current, true).apply_sample(sampled);
+    assert_eq!(rgba.to_srgb_hex_rgb(), 0xef_44_44);
+    assert!((rgba.a - sampled.a).abs() < f32::EPSILON);
+}
+
+#[test]
 fn color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text() {
     let mut color = Color::from_srgb_hex_rgb(0x33_66_99);
     color.a = 0.5;

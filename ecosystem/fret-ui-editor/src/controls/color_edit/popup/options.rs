@@ -405,7 +405,7 @@ fn alpha_bar_option<H: UiHost>(
     )
 }
 
-fn option_button<H: UiHost>(
+pub(super) fn option_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
     role: SemanticsRole,
@@ -432,7 +432,8 @@ fn option_button<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(role),
                 label: Some(a11y_label),
-                checked: Some(selected),
+                checked: matches!(role, SemanticsRole::Checkbox | SemanticsRole::RadioButton)
+                    .then_some(selected),
                 ..Default::default()
             },
             ..Default::default()

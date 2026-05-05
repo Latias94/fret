@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 332
+- Dedicated directories: 333
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -406,6 +406,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after adding Dear ImGui-style picker type thumbnails to the existing popup-local
     options surface while reusing editor picker preview renderers.
+
+- Closed narrow P1 color edit eyedropper request follow-on:
+  - `docs/workstreams/imui-color-edit-eyedropper-request-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-eyedropper-request-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-eyedropper-request-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-eyedropper-request-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-eyedropper-request-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-eyedropper-request-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding an app-owned `ColorEdit` eyedropper activation hook and popup
+    command without adding a runtime/platform screen-sampling contract.
 
 - Closed narrow P1 color edit palette customization follow-on:
   - `docs/workstreams/imui-color-edit-palette-customization-v1/WORKSTREAM.json`
@@ -1561,6 +1571,7 @@ Rule:
 - `docs/workstreams/imui-color-edit-popup-options-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding per-control popup defaults for editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-picker-options-popup-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding popup-local picker shape and AlphaBar options to editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style picker option thumbnails to editor `ColorEdit`)
+- `docs/workstreams/imui-color-edit-eyedropper-request-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding an app-owned eyedropper request hook to editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-palette-customization-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding app-owned palette entries to editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on making `ColorEdit` popup palette entries RGB drag sources and app-owned editable drop targets)
 - `docs/workstreams/imui-color-edit-history-swatches-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding app-owned recent color swatches to editor `ColorEdit` popups)

@@ -119,6 +119,44 @@ impl ColorEditPaletteSlotDrop {
 pub type OnColorEditPaletteSlotDrop =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ColorEditPaletteSlotDrop) + 'static>;
 
+/// App-owned eyedropper activation request emitted from an editor `ColorEdit` popup.
+///
+/// Fret does not currently expose a portable platform screen-sampling contract. This request keeps
+/// the editor control useful for apps that already own an eyedropper implementation while avoiding
+/// an implicit runtime or renderer readback dependency.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ColorEditEyedropperRequest {
+    pub current: Color,
+    pub show_alpha: bool,
+}
+
+impl ColorEditEyedropperRequest {
+    pub fn new(current: Color, show_alpha: bool) -> Self {
+        Self {
+            current,
+            show_alpha,
+        }
+    }
+
+    pub fn apply_sample(self, sampled: Color) -> Color {
+        if self.show_alpha {
+            sampled
+        } else {
+            let mut next = sampled;
+            next.a = self.current.a;
+            next
+        }
+    }
+}
+
+/// App-owned eyedropper activation hook for editor `ColorEdit`.
+///
+/// Return `Some(sampled_color)` for synchronous sampling and the control will update its color
+/// model, draft text, and validation state. Return `None` for asynchronous app/platform flows.
+pub type OnColorEditEyedropper = Arc<
+    dyn Fn(&mut dyn UiActionHost, ActionCx, ColorEditEyedropperRequest) -> Option<Color> + 'static,
+>;
+
 const CHECKERBOARD_LIGHT_RGB: u32 = 0xd8_de_e8;
 const CHECKERBOARD_DARK_RGB: u32 = 0x8b_95_a5;
 const ALPHA_BAR_STEPS: usize = 8;
@@ -411,6 +449,12 @@ pub struct ColorEditOptions {
     pub popup: ColorEditPopupOptions,
     pub tooltip: ColorEditTooltipOptions,
     pub copy: ColorEditCopyOptions,
+    /// Optional app-owned eyedropper activation hook shown inside the popup.
+    ///
+    /// Screen sampling is platform/security-sensitive and is not part of the current Fret runtime
+    /// contract. Apps that own a native/web eyedropper can opt into this callback and either return
+    /// a synchronous sampled color or run an asynchronous flow themselves.
+    pub on_eyedropper: Option<OnColorEditEyedropper>,
     /// App-owned palette entries shown by the popup preset row when `popup.presets` is enabled.
     ///
     /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
@@ -438,6 +482,7 @@ pub struct ColorEditOptions {
     pub popup_test_id: Option<Arc<str>>,
     pub tooltip_test_id: Option<Arc<str>>,
     pub copy_menu_test_id: Option<Arc<str>>,
+    pub eyedropper_test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for ColorEditOptions {
@@ -452,6 +497,10 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("popup", &self.popup)
             .field("tooltip", &self.tooltip)
             .field("copy", &self.copy)
+            .field(
+                "on_eyedropper",
+                &self.on_eyedropper.as_ref().map(|_| "<callback>"),
+            )
             .field("palette", &self.palette)
             .field("history", &self.history)
             .field(
@@ -465,6 +514,7 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("popup_test_id", &self.popup_test_id)
             .field("tooltip_test_id", &self.tooltip_test_id)
             .field("copy_menu_test_id", &self.copy_menu_test_id)
+            .field("eyedropper_test_id", &self.eyedropper_test_id)
             .finish()
     }
 }
@@ -488,6 +538,7 @@ impl Default for ColorEditOptions {
             popup: ColorEditPopupOptions::default(),
             tooltip: ColorEditTooltipOptions::default(),
             copy: ColorEditCopyOptions::default(),
+            on_eyedropper: None,
             palette: default_color_edit_palette(),
             history: Vec::new().into(),
             on_palette_slot_drop: None,
@@ -498,6 +549,7 @@ impl Default for ColorEditOptions {
             popup_test_id: None,
             tooltip_test_id: None,
             copy_menu_test_id: None,
+            eyedropper_test_id: None,
         }
     }
 }
@@ -596,9 +648,15 @@ impl ColorEdit {
             .copy_menu_test_id
             .clone()
             .or_else(|| derived_test_id(self.options.test_id.as_ref(), "copy-menu"));
+        let eyedropper_test_id = self
+            .options
+            .eyedropper_test_id
+            .clone()
+            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "eyedropper"));
         let popup_options = self.options.popup;
         let tooltip_options = self.options.tooltip;
         let copy_options = self.options.copy;
+        let on_eyedropper = self.options.on_eyedropper.clone();
         let popup_runtime_options =
             popup_runtime_options_model(cx, popup_options.runtime_defaults());
         sync_popup_runtime_options(cx, &popup_runtime_options, popup_options.runtime_defaults());
@@ -616,10 +674,19 @@ impl ColorEdit {
         let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
         let tooltip_enabled = self.options.enabled && tooltip_options.enabled;
         let copy_enabled = self.options.enabled && copy_options.enabled;
+        let eyedropper_enabled = self.options.enabled && on_eyedropper.is_some();
+        let popup_has_visible_content = popup_has_visible_content || on_eyedropper.is_some();
         let swatch_enabled = self.options.enabled
-            && (popup_has_visible_content || drag_drop_enabled || tooltip_enabled || copy_enabled);
+            && (popup_has_visible_content
+                || drag_drop_enabled
+                || tooltip_enabled
+                || copy_enabled
+                || eyedropper_enabled);
         let swatch_focusable = self.options.focusable
-            && (popup_has_visible_content || drag_drop_enabled || copy_enabled);
+            && (popup_has_visible_content
+                || drag_drop_enabled
+                || copy_enabled
+                || eyedropper_enabled);
 
         let input = {
             let (chrome, text_style) = {
@@ -993,10 +1060,12 @@ impl ColorEdit {
             drag_drop_options,
             drag_threshold,
             self.options.on_palette_slot_drop.clone(),
+            on_eyedropper,
             popup_options,
             popup_runtime_options,
             popup_padding,
             popup_test_id,
+            eyedropper_test_id,
         );
         request_color_tooltip_overlay(
             cx,
