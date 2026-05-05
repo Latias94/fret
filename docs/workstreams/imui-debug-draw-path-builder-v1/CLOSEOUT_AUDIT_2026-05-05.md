@@ -24,5 +24,5 @@ IMUI debug-draw helper.
 ## Remaining Work
 
 Full Dear ImGui `ImDrawList` parity is still not closed. Start separate follow-ons for path arcs,
-path Bezier builder helpers, rounded `PathRect` parity, channel splitting, hit-test-aware debug
-interaction, reusable draw-list command metadata, or image loading recipes.
+rounded `PathRect` parity, channel splitting, hit-test-aware debug interaction, reusable draw-list
+command metadata, or image loading recipes.

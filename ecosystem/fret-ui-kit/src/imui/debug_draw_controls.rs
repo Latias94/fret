@@ -19,6 +19,7 @@ use fret_ui::{ElementContext, SvgSource, UiHost};
 use super::UiWriterImUiFacadeExt;
 
 const DEFAULT_ELLIPSE_SEGMENTS: usize = 32;
+const DEFAULT_PATH_BEZIER_SEGMENTS: usize = 12;
 
 #[derive(Debug, Clone)]
 pub struct DebugDrawOptions {
@@ -190,6 +191,42 @@ impl ImUiDebugDrawPath<'_> {
     pub fn line_to_merge_duplicate(&mut self, point: Point) -> &mut Self {
         if self.points.last().copied() != Some(point) {
             self.points.push(point);
+        }
+        self
+    }
+
+    pub fn bezier_quadratic_curve_to(
+        &mut self,
+        ctrl: Point,
+        to: Point,
+        segments: usize,
+    ) -> &mut Self {
+        let Some(from) = self.points.last().copied() else {
+            return self;
+        };
+        let segments = path_bezier_segments(segments);
+        for step in 1..=segments {
+            let t = step as f32 / segments as f32;
+            self.points.push(quadratic_bezier_point(from, ctrl, to, t));
+        }
+        self
+    }
+
+    pub fn bezier_cubic_curve_to(
+        &mut self,
+        ctrl1: Point,
+        ctrl2: Point,
+        to: Point,
+        segments: usize,
+    ) -> &mut Self {
+        let Some(from) = self.points.last().copied() else {
+            return self;
+        };
+        let segments = path_bezier_segments(segments);
+        for step in 1..=segments {
+            let t = step as f32 / segments as f32;
+            self.points
+                .push(cubic_bezier_point(from, ctrl1, ctrl2, to, t));
         }
         self
     }
@@ -1328,6 +1365,38 @@ fn path_stroke_required_points(closed: bool) -> usize {
     if closed { 3 } else { 2 }
 }
 
+fn path_bezier_segments(segments: usize) -> usize {
+    if segments == 0 {
+        DEFAULT_PATH_BEZIER_SEGMENTS
+    } else {
+        segments
+    }
+}
+
+fn quadratic_bezier_point(from: Point, ctrl: Point, to: Point, t: f32) -> Point {
+    let u = 1.0 - t;
+    Point::new(
+        Px(u * u * from.x.0 + 2.0 * u * t * ctrl.x.0 + t * t * to.x.0),
+        Px(u * u * from.y.0 + 2.0 * u * t * ctrl.y.0 + t * t * to.y.0),
+    )
+}
+
+fn cubic_bezier_point(from: Point, ctrl1: Point, ctrl2: Point, to: Point, t: f32) -> Point {
+    let u = 1.0 - t;
+    let uu = u * u;
+    let tt = t * t;
+    Point::new(
+        Px(uu * u * from.x.0
+            + 3.0 * uu * t * ctrl1.x.0
+            + 3.0 * u * tt * ctrl2.x.0
+            + tt * t * to.x.0),
+        Px(uu * u * from.y.0
+            + 3.0 * uu * t * ctrl1.y.0
+            + 3.0 * u * tt * ctrl2.y.0
+            + tt * t * to.y.0),
+    )
+}
+
 fn polyline_path(points: &[Point], closed: bool) -> Option<Vec<PathCommand>> {
     if points.len() < path_stroke_required_points(closed) {
         return None;
@@ -1791,6 +1860,59 @@ mod tests {
             panic!("path fill should record a convex fill command");
         };
         assert_eq!(&**points, &[p0, p1, p2, p3]);
+    }
+
+    #[test]
+    fn debug_draw_path_builder_appends_bezier_curve_samples() {
+        let mut list = ImUiDebugDrawList::default();
+        let start = Point::new(Px(0.0), Px(0.0));
+        let quad_mid = Point::new(Px(10.0), Px(5.0));
+        let quad_end = Point::new(Px(20.0), Px(0.0));
+        let cubic_mid = Point::new(Px(30.0), Px(5.0));
+        let cubic_end = Point::new(Px(40.0), Px(10.0));
+
+        list.path(|path| {
+            path.line_to(start)
+                .bezier_quadratic_curve_to(Point::new(Px(10.0), Px(10.0)), quad_end, 2)
+                .bezier_cubic_curve_to(
+                    Point::new(Px(30.0), Px(0.0)),
+                    Point::new(Px(30.0), Px(10.0)),
+                    cubic_end,
+                    2,
+                );
+            assert_eq!(path.point_count(), 5);
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), false);
+        });
+
+        let DebugDrawCommand::Polyline { points, .. } = &list.commands[0] else {
+            panic!("path Bezier helpers should record a sampled polyline command");
+        };
+        assert_eq!(
+            &**points,
+            &[start, quad_mid, quad_end, cubic_mid, cubic_end]
+        );
+    }
+
+    #[test]
+    fn debug_draw_path_builder_bezier_helpers_require_a_start_point_and_default_segments() {
+        let mut list = ImUiDebugDrawList::default();
+        let start = Point::new(Px(0.0), Px(0.0));
+        let ctrl = Point::new(Px(10.0), Px(10.0));
+        let end = Point::new(Px(20.0), Px(0.0));
+
+        list.path(|path| {
+            path.bezier_quadratic_curve_to(ctrl, end, 2);
+            assert!(path.is_empty());
+
+            path.line_to(start).bezier_quadratic_curve_to(ctrl, end, 0);
+            assert_eq!(path.point_count(), DEFAULT_PATH_BEZIER_SEGMENTS + 1);
+            path.clear();
+
+            path.bezier_cubic_curve_to(ctrl, ctrl, end, 2);
+            assert!(path.is_empty());
+        });
+
+        assert_eq!(list.command_count(), 0);
     }
 
     #[test]

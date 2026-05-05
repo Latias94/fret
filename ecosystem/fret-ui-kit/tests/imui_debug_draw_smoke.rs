@@ -144,7 +144,18 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             path.line_to(Point::new(Px(164.0), Px(68.0)))
                 .line_to_merge_duplicate(Point::new(Px(164.0), Px(68.0)))
                 .line_to(Point::new(Px(178.0), Px(58.0)))
-                .line_to(Point::new(Px(192.0), Px(68.0)));
+                .line_to(Point::new(Px(192.0), Px(68.0)))
+                .bezier_quadratic_curve_to(
+                    Point::new(Px(202.0), Px(54.0)),
+                    Point::new(Px(212.0), Px(68.0)),
+                    4,
+                )
+                .bezier_cubic_curve_to(
+                    Point::new(Px(220.0), Px(58.0)),
+                    Point::new(Px(228.0), Px(78.0)),
+                    Point::new(Px(236.0), Px(68.0)),
+                    4,
+                );
             path.stroke_with_style(
                 Color::from_srgb_hex_rgb(0xfa_e8_ff),
                 DebugDrawStrokeStyle::new(Px(1.0)).with_cap(StrokeCapV1::Round),
