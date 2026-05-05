@@ -1026,8 +1026,12 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         bullet_text_controls::bullet_text_with_options(self, text.into(), options);
     }
 
-    fn debug_draw<K: Hash>(&mut self, id: K, draw: impl FnOnce(&mut ImUiDebugDrawList)) {
-        self.debug_draw_with_options(id, DebugDrawOptions::default(), draw);
+    fn debug_draw<K: Hash>(
+        &mut self,
+        id: K,
+        draw: impl FnOnce(&mut ImUiDebugDrawList),
+    ) -> DebugDrawResponse {
+        self.debug_draw_with_options(id, DebugDrawOptions::default(), draw)
     }
 
     fn debug_draw_with_options<K: Hash>(
@@ -1035,8 +1039,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: K,
         options: DebugDrawOptions,
         draw: impl FnOnce(&mut ImUiDebugDrawList),
-    ) {
-        debug_draw_controls::debug_draw_with_options(self, id, options, draw);
+    ) -> DebugDrawResponse {
+        debug_draw_controls::debug_draw_with_options(self, id, options, draw)
     }
 
     fn separator(&mut self) {

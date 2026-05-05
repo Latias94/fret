@@ -10,13 +10,15 @@ use fret_core::{
     SceneMeshVertex, Size, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit,
     TextOverflow, TextStyle, TextWrap, UvPoint, UvRect, ViewportFit,
 };
+use fret_ui::action::ActivateReason;
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use fret_ui::element::{
-    AnyElement, CanvasCachePolicy, CanvasProps, LayoutStyle, Length, SizeStyle,
+    AnyElement, CanvasCachePolicy, CanvasProps, LayoutStyle, Length, PressableA11y, PressableProps,
+    SizeStyle,
 };
 use fret_ui::{ElementContext, SvgSource, UiHost};
 
-use super::UiWriterImUiFacadeExt;
+use super::{ResponseExt, UiWriterImUiFacadeExt};
 
 const DEFAULT_ELLIPSE_SEGMENTS: usize = 32;
 const DEFAULT_PATH_ARC_SEGMENTS: usize = 12;
@@ -28,6 +30,7 @@ pub struct DebugDrawOptions {
     pub layout: LayoutStyle,
     pub test_id: Option<Arc<str>>,
     pub clip_to_bounds: bool,
+    pub interaction: DebugDrawInteractionOptions,
 }
 
 impl Default for DebugDrawOptions {
@@ -43,7 +46,63 @@ impl Default for DebugDrawOptions {
             },
             test_id: None,
             clip_to_bounds: true,
+            interaction: DebugDrawInteractionOptions::default(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DebugDrawInteractionOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+}
+
+impl DebugDrawInteractionOptions {
+    pub fn enabled() -> Self {
+        Self {
+            enabled: true,
+            ..Default::default()
+        }
+    }
+
+    pub fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
+        self
+    }
+
+    pub fn with_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DebugDrawResponse {
+    pub response: ResponseExt,
+    pub list_summary: DebugDrawListSummary,
+    pub command_summaries: Arc<[DebugDrawCommandSummary]>,
+}
+
+impl DebugDrawResponse {
+    pub fn command_summaries(&self) -> &[DebugDrawCommandSummary] {
+        &self.command_summaries
+    }
+
+    pub fn list_summary(&self) -> DebugDrawListSummary {
+        self.list_summary
+    }
+
+    pub fn clicked(&self) -> bool {
+        self.response.clicked()
+    }
+
+    pub fn hovered_like_imgui(&self) -> bool {
+        self.response.hovered_like_imgui()
+    }
+
+    pub fn rect(&self) -> Option<Rect> {
+        self.response.core.rect
     }
 }
 
@@ -1691,7 +1750,8 @@ pub(super) fn debug_draw_with_options<H, W, K, F>(
     id: K,
     options: DebugDrawOptions,
     draw: F,
-) where
+) -> DebugDrawResponse
+where
     H: UiHost,
     W: UiWriterImUiFacadeExt<H> + ?Sized,
     K: Hash,
@@ -1700,28 +1760,137 @@ pub(super) fn debug_draw_with_options<H, W, K, F>(
     let mut list = ImUiDebugDrawList::default();
     draw(&mut list);
     list.channels_merge();
+    let list_summary = list.list_summary();
+    let command_summaries = Arc::from(list.command_summaries().into_boxed_slice());
     let commands: Arc<[DebugDrawCommand]> = Arc::from(list.commands.into_boxed_slice());
+    let mut response = ResponseExt::default();
     let element = ui.with_cx_mut(|cx| {
+        let response = &mut response;
         cx.keyed(("fret-ui-kit.imui.debug_draw", id), |cx| {
-            debug_draw_element(cx, commands, options)
+            debug_draw_element(cx, commands, options, response)
         })
     });
     ui.add(element);
+    DebugDrawResponse {
+        response,
+        list_summary,
+        command_summaries,
+    }
 }
 
 fn debug_draw_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     commands: Arc<[DebugDrawCommand]>,
     options: DebugDrawOptions,
+    response: &mut ResponseExt,
+) -> AnyElement {
+    if options.interaction.enabled {
+        return debug_draw_pressable_element(cx, commands, options, response);
+    }
+
+    debug_draw_canvas_element(
+        cx,
+        commands,
+        options.layout,
+        options.clip_to_bounds,
+        options.test_id,
+    )
+}
+
+fn debug_draw_pressable_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    commands: Arc<[DebugDrawCommand]>,
+    options: DebugDrawOptions,
+    response: &mut ResponseExt,
+) -> AnyElement {
+    let interaction = options.interaction.clone();
+    let enabled = interaction.enabled && !super::imui_is_disabled(cx);
+    let mut props = PressableProps {
+        layout: options.layout,
+        enabled,
+        focusable: enabled && interaction.focusable,
+        a11y: PressableA11y {
+            label: interaction.a11y_label,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    props.focus_ring = None;
+
+    let clip_to_bounds = options.clip_to_bounds;
+    cx.pressable_with_id(props, move |cx, state, id| {
+        let behavior = super::item_behavior::install_pressable_item_behavior_with_options(
+            cx,
+            id,
+            super::item_behavior::PressableItemBehaviorOptions {
+                report_pointer_click: true,
+            },
+        );
+        let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
+
+        cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
+            if reason == ActivateReason::Keyboard {
+                super::mark_lifecycle_instant_if_inactive(
+                    host,
+                    acx,
+                    &lifecycle_model_for_activate,
+                    false,
+                );
+            }
+            host.record_transient_event(acx, super::KEY_CLICKED);
+            host.notify(acx);
+        }));
+
+        let clicked = cx.take_transient_for(id, super::KEY_CLICKED);
+        super::item_behavior::populate_pressable_item_response(
+            cx,
+            id,
+            state,
+            &behavior,
+            super::item_behavior::PressableItemResponseInput {
+                enabled,
+                clicked,
+                changed: false,
+                lifecycle_edited: false,
+            },
+            response,
+        );
+
+        vec![debug_draw_canvas_element(
+            cx,
+            commands,
+            debug_draw_fill_layout(),
+            clip_to_bounds,
+            options.test_id,
+        )]
+    })
+}
+
+fn debug_draw_fill_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn debug_draw_canvas_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    commands: Arc<[DebugDrawCommand]>,
+    layout: LayoutStyle,
+    clip_to_bounds: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let mut props = CanvasProps {
-        layout: options.layout,
+        layout,
         cache_policy: CanvasCachePolicy::smooth_default(),
     };
     props.cache_policy.shared_text.keep_frames = 30;
     props.cache_policy.path.keep_frames = 30;
 
-    let clip_to_bounds = options.clip_to_bounds;
     let mut element = cx.canvas(props, move |painter| {
         if clip_to_bounds {
             let bounds = painter.bounds();
@@ -1732,7 +1901,7 @@ fn debug_draw_element<H: UiHost>(
             paint_debug_draw_commands(painter, &commands);
         }
     });
-    if let Some(test_id) = options.test_id {
+    if let Some(test_id) = test_id {
         element = element.test_id(test_id);
     }
     element
@@ -2935,8 +3104,23 @@ fn bezier_cubic_path(from: Point, ctrl1: Point, ctrl2: Point, to: Point) -> [Pat
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
-    use fret_core::Size;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn empty_commands() -> Arc<[DebugDrawCommand]> {
+        Arc::from(Vec::<DebugDrawCommand>::new().into_boxed_slice())
+    }
 
     fn assert_point_near(actual: Point, expected: Point) {
         assert!(
@@ -2950,6 +3134,81 @@ mod tests {
             "y mismatch: actual {:?}, expected {:?}",
             actual,
             expected
+        );
+    }
+
+    #[test]
+    fn debug_draw_default_element_stays_noninteractive_canvas() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "debug-draw.canvas", |cx| {
+            let mut response = ResponseExt::default();
+            let element = debug_draw_element(
+                cx,
+                empty_commands(),
+                DebugDrawOptions {
+                    test_id: Some(Arc::from("imui.debug_draw")),
+                    ..Default::default()
+                },
+                &mut response,
+            );
+
+            assert!(matches!(element.kind, ElementKind::Canvas(_)));
+            assert_eq!(
+                element
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.test_id.as_deref()),
+                Some("imui.debug_draw")
+            );
+            assert!(!response.enabled);
+        });
+    }
+
+    #[test]
+    fn debug_draw_interaction_wraps_canvas_in_pressable_response_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "debug-draw.pressable",
+            |cx| {
+                let mut response = ResponseExt::default();
+                let element = debug_draw_element(
+                    cx,
+                    empty_commands(),
+                    DebugDrawOptions {
+                        test_id: Some(Arc::from("imui.debug_draw.interactive")),
+                        interaction: DebugDrawInteractionOptions::enabled()
+                            .focusable(true)
+                            .with_a11y_label("Debug draw canvas"),
+                        ..Default::default()
+                    },
+                    &mut response,
+                );
+
+                let ElementKind::Pressable(props) = &element.kind else {
+                    panic!("interactive debug draw should wrap the canvas in a pressable");
+                };
+                assert!(props.enabled);
+                assert!(props.focusable);
+                assert_eq!(props.a11y.label.as_deref(), Some("Debug draw canvas"));
+                assert_eq!(props.a11y.test_id.as_deref(), None);
+                assert_eq!(element.children.len(), 1);
+                assert!(matches!(element.children[0].kind, ElementKind::Canvas(_)));
+                assert_eq!(
+                    element.children[0]
+                        .semantics_decoration
+                        .as_ref()
+                        .and_then(|decoration| decoration.test_id.as_deref()),
+                    Some("imui.debug_draw.interactive")
+                );
+                assert!(response.enabled);
+            },
         );
     }
 

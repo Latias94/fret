@@ -298,7 +298,9 @@ mesh authoring is partially superseded by
 `docs/workstreams/imui-debug-draw-triangle-mesh-v1/`. Update (2026-05-05): the public app-facing
 cookbook proof is now covered by `docs/workstreams/imui-debug-draw-cookbook-proof-v1/`, and
 first-open screenshot/bundle evidence is covered by
-`docs/workstreams/imui-debug-draw-diag-smoke-v1/`.
+`docs/workstreams/imui-debug-draw-diag-smoke-v1/`. Update (2026-05-05): canvas-level response and
+post-merge summary returns are now covered by
+`docs/workstreams/imui-debug-draw-response-surface-v1/`.
 
 Current IMUI now exposes:
 
@@ -326,12 +328,14 @@ Current IMUI now exposes:
 - indexed vertex-color and textured triangle mesh helpers backed by fixed scene triangle ops,
 - a runnable cookbook proof through `fret::imui::kit`,
 - promoted screenshot/bundle diagnostics smoke for that cookbook proof,
+- canvas-level opt-in response state plus post-call list/command summary access,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
 Dear ImGui still goes much deeper through full `DrawList` parity, per-command metadata, callback
 draw commands, raw writable vertex/index buffers, mesh batching, and hit-test-aware debug
-interaction. `AddRectFilledMultiColor`
+interaction. The remaining interaction gap is per-geometry/debug-tool hit testing, not a missing
+canvas-level item response. `AddRectFilledMultiColor`
 and `AddImageQuad` are no longer blocked on the axis-aligned `SceneOp::Quad` / `ImageRegion`
 surface: `SceneOp::VertexColorQuad` and `SceneOp::ImageQuad` now model those vertex-level cases
 directly. Bounded custom triangle geometry is no longer blocked either:
@@ -351,7 +355,8 @@ Conclusion:
 - Start separate narrow follow-ons for platform-owned screen sampling or screenshot-backed full
   picker visual polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists" or
-  "no command metadata exists" or "no public app-facing debug-draw example exists".
+  "no command metadata exists" or "no public app-facing debug-draw example exists" or "no
+  canvas-level response exists".
 - Do not regress `AddRectFilledMultiColor` into a `LinearGradient`; that is not equivalent to
   Dear ImGui's two-triangle vertex interpolation.
 
@@ -381,6 +386,7 @@ Evidence anchors:
 - `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - `docs/workstreams/imui-debug-draw-cookbook-proof-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - `docs/workstreams/imui-debug-draw-diag-smoke-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- `docs/workstreams/imui-debug-draw-response-surface-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 
 #### 4.2 There is still no immediate style-stack lane, and that is mostly the right decision
 

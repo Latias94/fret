@@ -65,9 +65,9 @@ use containers::{
 };
 pub use debug_draw_controls::{
     DebugDrawCommandKind, DebugDrawCommandSummary, DebugDrawImageMeshOptions,
-    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawListSummary, DebugDrawOptions,
-    DebugDrawRoundCorners, DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex,
-    ImUiDebugDrawList,
+    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawInteractionOptions,
+    DebugDrawListSummary, DebugDrawOptions, DebugDrawResponse, DebugDrawRoundCorners,
+    DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex, ImUiDebugDrawList,
 };
 pub use facade_support::UiWriterUiKitExt;
 #[allow(unused_imports)]

@@ -12,6 +12,8 @@ Status: Closed.
 
 ## Future Follow-Ons
 
+- [x] Add a canvas-level response metadata check if debug-draw becomes app-queryable.
+      Result: `docs/workstreams/imui-debug-draw-response-surface-v1/`.
 - [ ] Add layout sidecar checks if canvas bounds or clipping ownership regresses.
 - [ ] Add pixel-change checks only after debug-draw rendering has a stable visual contract.
 - [ ] Add renderer attribution checks only if backend draw-call/scissor evidence becomes necessary.

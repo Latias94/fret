@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "slug": "imui-debug-draw-response-surface-v1",
+  "title": "ImUi Debug Draw Response Surface v1",
+  "status": "closed",
+  "updated": "2026-05-05",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-debug-draw-diag-smoke-v1",
+  "problem": "Make the public IMUI debug-draw helper usable as an app-queryable item surface by returning source-level draw-list summaries and an opt-in pressable response without adding Dear ImGui renderer callbacks, raw buffers, or backend-owned hit testing.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-debug-draw-response-surface-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-response-surface-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-response-surface-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-response-surface-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-debug-draw-response-surface-v1/CLOSEOUT_AUDIT_2026-05-05.md"
+    }
+  ],
+  "repro": {
+    "summary": "Build and run the cookbook debug-draw example, then validate the promoted diagnostics smoke that now waits for response metadata.",
+    "commands": [
+      "cargo build -p fret-cookbook --example imui_debug_draw_basics --features cookbook-imui",
+      "cargo nextest run -p fret-ui-kit --features imui --no-fail-fast",
+      "FRET_DIAG=1 cargo run -p fretboard-dev -- diag suite cookbook-imui-debug-draw-basics --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_debug_draw_basics"
+    ]
+  },
+  "gates": [
+    {
+      "name": "ui-kit imui tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --no-fail-fast"
+    },
+    {
+      "name": "cookbook authoring marker",
+      "command": "cargo nextest run -p fret-cookbook --lib cookbook_imui_debug_draw_example_keeps_current_facade_teaching_surface --no-fail-fast"
+    },
+    {
+      "name": "cookbook example build",
+      "command": "cargo build -p fret-cookbook --example imui_debug_draw_basics --features cookbook-imui"
+    },
+    {
+      "name": "diag script validate",
+      "command": "cargo run -p fretboard-dev -- diag script validate tools/diag-scripts/cookbook/imui-debug-draw-basics/cookbook-imui-debug-draw-basics-smoke.json --json"
+    },
+    {
+      "name": "diag suite run",
+      "command": "FRET_DIAG=1 cargo run -p fretboard-dev -- diag suite cookbook-imui-debug-draw-basics --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_debug_draw_basics"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "imui workstream source",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs",
+    "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
+    "tools/diag-scripts/cookbook/imui-debug-draw-basics/cookbook-imui-debug-draw-basics-smoke.json",
+    "docs/workstreams/imui-debug-draw-response-surface-v1/CLOSEOUT_AUDIT_2026-05-05.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This response-surface slice is closed. Future debug-draw work should start as narrower follow-ons for per-geometry hit testing, renderer attribution, or pixel/layout diagnostics."
+  }
+}

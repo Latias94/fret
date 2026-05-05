@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::imui::{
-    kit::{DebugDrawCommandKind, DebugDrawOptions, DebugDrawStrokeStyle, DebugDrawVertex},
+    kit::{
+        DebugDrawCommandKind, DebugDrawInteractionOptions, DebugDrawOptions, DebugDrawStrokeStyle,
+        DebugDrawVertex,
+    },
     prelude::*,
 };
 use fret::style::Space;
@@ -12,6 +15,7 @@ const TEST_ID_ROOT: &str = "cookbook.imui_debug_draw.root";
 const TEST_ID_CANVAS: &str = "cookbook.imui_debug_draw.canvas";
 const TEST_ID_LIST_SUMMARY: &str = "cookbook.imui_debug_draw.summary.list";
 const TEST_ID_COMMAND_SUMMARY: &str = "cookbook.imui_debug_draw.summary.commands";
+const TEST_ID_RESPONSE_SUMMARY: &str = "cookbook.imui_debug_draw.summary.response";
 
 struct ImUiDebugDrawBasicsView;
 
@@ -26,13 +30,12 @@ impl View for ImUiDebugDrawBasicsView {
                 imui_raw(cx, |ui| {
                     ui.text("Debug draw");
 
-                    let mut list_summary_text = String::new();
-                    let mut command_summary_text = String::new();
-
-                    ui.debug_draw_with_options(
+                    let response = ui.debug_draw_with_options(
                         "cookbook.imui_debug_draw.canvas",
                         DebugDrawOptions {
                             test_id: Some(Arc::from(TEST_ID_CANVAS)),
+                            interaction: DebugDrawInteractionOptions::enabled()
+                                .with_a11y_label("IMUI debug draw canvas"),
                             ..Default::default()
                         },
                         |draw| {
@@ -93,39 +96,43 @@ impl View for ImUiDebugDrawBasicsView {
                             ]);
                             draw.channels_merge();
                             draw.pop_clip_rect();
-
-                            let command_summaries = draw.command_summaries();
-                            let list_summary = draw.list_summary();
-                            let image_meshes = command_summaries
-                                .iter()
-                                .filter(|summary| {
-                                    summary.kind == DebugDrawCommandKind::ImageTriangleMesh
-                                })
-                                .count();
-                            let max_channel = command_summaries
-                                .iter()
-                                .filter_map(|summary| summary.channel)
-                                .max()
-                                .unwrap_or(0);
-
-                            list_summary_text = format!(
-                                "List: commands={}, triangles={}, max_clip_depth={}, final_clip_depth={}",
-                                list_summary.command_count,
-                                list_summary.triangle_count,
-                                list_summary.max_clip_depth,
-                                list_summary.final_clip_depth
-                            );
-                            command_summary_text = format!(
-                                "Commands: image_meshes={}, max_channel={}, first={:?}",
-                                image_meshes,
-                                max_channel,
-                                command_summaries.first().map(|summary| summary.kind)
-                            );
                         },
                     );
 
+                    let command_summaries = response.command_summaries();
+                    let list_summary = response.list_summary();
+                    let image_meshes = command_summaries
+                        .iter()
+                        .filter(|summary| summary.kind == DebugDrawCommandKind::ImageTriangleMesh)
+                        .count();
+                    let max_channel = command_summaries
+                        .iter()
+                        .filter_map(|summary| summary.channel)
+                        .max()
+                        .unwrap_or(0);
+                    let list_summary_text = format!(
+                        "List: commands={}, triangles={}, max_clip_depth={}, final_clip_depth={}",
+                        list_summary.command_count,
+                        list_summary.triangle_count,
+                        list_summary.max_clip_depth,
+                        list_summary.final_clip_depth
+                    );
+                    let command_summary_text = format!(
+                        "Commands: image_meshes={}, max_channel={}, first={:?}",
+                        image_meshes,
+                        max_channel,
+                        command_summaries.first().map(|summary| summary.kind)
+                    );
+                    let response_summary_text = format!(
+                        "Response: enabled={}, hovered={}, clicked={}, rect_ready={}",
+                        response.response.enabled,
+                        response.hovered_like_imgui(),
+                        response.clicked(),
+                        response.rect().is_some()
+                    );
                     ui.text(list_summary_text);
                     ui.text(command_summary_text);
+                    ui.text(response_summary_text);
                 })
             });
 
@@ -135,6 +142,7 @@ impl View for ImUiDebugDrawBasicsView {
                 debug_draw,
                 cx.text("List metadata").test_id(TEST_ID_LIST_SUMMARY),
                 cx.text("Command metadata").test_id(TEST_ID_COMMAND_SUMMARY),
+                cx.text("Response metadata").test_id(TEST_ID_RESPONSE_SUMMARY),
             ]
         })
         .size_full()

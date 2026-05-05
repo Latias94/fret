@@ -9,6 +9,8 @@ Status: closed closeout record.
 - Refreshed `tools/diag-scripts/index.json`; the generator also normalized two existing IMUI table
   gate entries that were suite-reachable but missing from the registry.
 - Updated the cookbook index to expose the new suite.
+- Follow-up response metadata coverage is now tracked by
+  `docs/workstreams/imui-debug-draw-response-surface-v1/`.
 
 ## Evidence
 
@@ -34,4 +36,4 @@ git diff --check
 - The smoke is first-open evidence only.
 - It intentionally avoids pixel-perfect assertions until debug-draw visuals have a stable visual
   contract.
-- Layout sidecars and renderer attribution remain separate follow-ons.
+- Layout sidecars, renderer attribution, and per-geometry hit testing remain separate follow-ons.

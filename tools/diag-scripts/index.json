@@ -532,7 +532,7 @@
         "screenshots"
       ],
       "target_hints": [
-        "Waits for the IMUI debug-draw root, canvas, and metadata anchors to exist.",
+        "Waits for the IMUI debug-draw root, canvas, metadata, and response anchors to exist.",
         "Captures a screenshot and bundle for reviewable draw-list evidence."
       ]
     },

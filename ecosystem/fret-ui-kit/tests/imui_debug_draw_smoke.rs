@@ -8,14 +8,14 @@ use fret_core::{
 use fret_ui::{SvgSource, UiHost};
 use fret_ui_kit::imui::{
     DebugDrawCommandKind, DebugDrawCommandSummary, DebugDrawImageMeshOptions,
-    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawListSummary, DebugDrawOptions,
-    DebugDrawRoundCorners, DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex,
-    UiWriterImUiFacadeExt,
+    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawInteractionOptions,
+    DebugDrawListSummary, DebugDrawOptions, DebugDrawRoundCorners, DebugDrawStrokeStyle,
+    DebugDrawSvgOptions, DebugDrawVertex, UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
 fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
-    ui.debug_draw("debug-hud", |draw| {
+    let response = ui.debug_draw("debug-hud", |draw| {
         draw.add_line(
             Point::new(Px(0.0), Px(0.0)),
             Point::new(Px(80.0), Px(24.0)),
@@ -358,11 +358,17 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 .any(|summary| summary.kind == DebugDrawCommandKind::ImageTriangleMesh)
         );
     });
+    let _: DebugDrawListSummary = response.list_summary();
+    let _: &[DebugDrawCommandSummary] = response.command_summaries();
+    let _: bool = response.hovered_like_imgui();
 
-    ui.debug_draw_with_options(
+    let response = ui.debug_draw_with_options(
         "debug-configured",
         DebugDrawOptions {
             test_id: Some("imui.debug_draw".into()),
+            interaction: DebugDrawInteractionOptions::enabled()
+                .focusable(true)
+                .with_a11y_label("Debug draw"),
             ..Default::default()
         },
         |draw| {
@@ -374,6 +380,7 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             );
         },
     );
+    let _: bool = response.clicked();
 }
 
 #[test]
@@ -381,4 +388,5 @@ fn debug_draw_options_default_to_clipped_canvas() {
     let options = DebugDrawOptions::default();
     assert!(options.clip_to_bounds);
     assert!(options.test_id.is_none());
+    assert!(!options.interaction.enabled);
 }
