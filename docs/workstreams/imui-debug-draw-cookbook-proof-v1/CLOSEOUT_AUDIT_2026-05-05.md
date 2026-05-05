@@ -43,6 +43,7 @@ git diff --check
 
 ## Residual Gaps
 
-- No diagnostics screenshot/bundle proof exists yet for the cookbook debug-draw example.
+- Diagnostics screenshot/bundle proof is now covered by
+  `docs/workstreams/imui-debug-draw-diag-smoke-v1/`.
 - Image mesh usage is an API proof with `ImageId::default()`, not an asset pipeline lesson.
 - Backend draw-call/scissor attribution and hit-test-aware debug geometry remain separate concerns.

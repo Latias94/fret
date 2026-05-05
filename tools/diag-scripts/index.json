@@ -515,6 +515,28 @@
       ]
     },
     {
+      "id": "cookbook-imui-debug-draw-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/imui-debug-draw-basics/cookbook-imui-debug-draw-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-debug-draw-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_debug_draw_basics",
+        "debug-draw",
+        "imui",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the IMUI debug-draw root, canvas, and metadata anchors to exist.",
+        "Captures a screenshot and bundle for reviewable draw-list evidence."
+      ]
+    },
+    {
       "id": "cookbook-markdown-and-code-basics-smoke",
       "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
       "required_capabilities": [
@@ -1877,6 +1899,56 @@
       "target_hints": [
         "Uses imui_response_signals_demo as the rendered proof surface for public IMUI single-line input sizing.",
         "Clicks/focuses the lifecycle text input, edits it, and gates that each phase keeps the control at the fixed 24px IMUI field height while layout sidecars capture before/focus/edit evidence."
+      ]
+    },
+    {
+      "id": "imui-shadcn-adapter-sortable-table-gate",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-sortable-table-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-table-sortable-diag-gate"
+      ],
+      "tags": [
+        "adapter",
+        "gate",
+        "imui",
+        "response",
+        "sortable",
+        "table",
+        "ui_editor"
+      ],
+      "target_hints": [
+        "Promoted runtime gate for the app-owned sortable inspector table proof in imui_shadcn_adapter_demo.",
+        "Clicks the sortable inspector table header and asserts that the header response toggles the app-owned sort direction without adding a generic row sorting engine."
+      ]
+    },
+    {
+      "id": "imui-shadcn-adapter-table-column-width-resize",
+      "path": "tools/diag-scripts/ui-editor/imui/imui-shadcn-adapter-table-column-width-resize.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "imui-table-column-width-diag-gate"
+      ],
+      "tags": [
+        "adapter",
+        "column_width",
+        "gate",
+        "imui",
+        "resize",
+        "response",
+        "table",
+        "ui_editor"
+      ],
+      "target_hints": [
+        "Promoted runtime gate for the app-owned resizable inspector table proof in imui_shadcn_adapter_demo.",
+        "Drags a stable table header resize handle until the demo-owned width summary reaches the field column max width.",
+        "Uses drag_pointer_until because the immediate-mode resize response is consumed during render while the pointer is still dragging."
       ]
     },
     {

@@ -13,6 +13,7 @@ Status: Closed.
 
 ## Future Follow-Ons
 
-- [ ] Add a diagnostics smoke script if debug-draw visual output needs screenshot/bundle evidence.
+- [x] Add a diagnostics smoke script if debug-draw visual output needs screenshot/bundle evidence.
+      Result: `docs/workstreams/imui-debug-draw-diag-smoke-v1/`.
 - [ ] Add backend draw-call/scissor attribution only if diagnostics need renderer-level metadata.
 - [ ] Add hit-test-aware debug draw interaction only if editor overlays need selectable geometry.
