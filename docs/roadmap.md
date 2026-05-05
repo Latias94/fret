@@ -312,6 +312,12 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-bezier-primitives-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-bezier-primitives-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-bezier-primitives-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw convex poly fill follow-on (closed narrow P1 lane adding an
+  `AddConvexPolyFilled`-style command to the canvas-backed helper while keeping tessellation and
+  convexity validation caller-owned):
+  `docs/workstreams/imui-debug-draw-convex-poly-fill-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-convex-poly-fill-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-convex-poly-fill-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

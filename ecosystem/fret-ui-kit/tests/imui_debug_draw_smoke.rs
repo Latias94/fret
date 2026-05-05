@@ -32,6 +32,16 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 .with_dash(Px(4.0), Px(2.0), Px(0.0)),
             false,
         );
+        draw.add_convex_poly_filled(
+            [
+                Point::new(Px(52.0), Px(48.0)),
+                Point::new(Px(64.0), Px(40.0)),
+                Point::new(Px(76.0), Px(48.0)),
+                Point::new(Px(70.0), Px(60.0)),
+                Point::new(Px(58.0), Px(60.0)),
+            ],
+            Color::from_srgb_hex_rgb(0x10_b9_81),
+        );
         draw.add_rect(
             Rect::new(Point::new(Px(8.0), Px(8.0)), Size::new(Px(64.0), Px(32.0))),
             Color::from_srgb_hex_rgb(0x22_c5_5e),

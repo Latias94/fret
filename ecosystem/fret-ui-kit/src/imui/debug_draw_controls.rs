@@ -213,6 +213,15 @@ impl ImUiDebugDrawList {
         });
     }
 
+    pub fn add_convex_poly_filled<I>(&mut self, points: I, color: Color)
+    where
+        I: IntoIterator<Item = Point>,
+    {
+        let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
+        self.commands
+            .push(DebugDrawCommand::ConvexPolyFilled { points, color });
+    }
+
     pub fn add_rect(&mut self, rect: Rect, color: Color, thickness: Px) {
         self.add_rect_with_style(rect, color, thickness);
     }
@@ -459,6 +468,10 @@ enum DebugDrawCommand {
         color: Color,
         style: DebugDrawStrokeStyle,
         closed: bool,
+    },
+    ConvexPolyFilled {
+        points: Arc<[Point]>,
+        color: Color,
     },
     Rect {
         rect: Rect,
@@ -714,6 +727,23 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     scale,
                 );
             }
+            DebugDrawCommand::ConvexPolyFilled { points, color } => {
+                if color.a <= 0.0 {
+                    continue;
+                }
+                let Some(commands) = convex_poly_fill_path(points) else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
             DebugDrawCommand::Rect { rect, color, style } => {
                 if color.a <= 0.0 || !style.is_visible() || rect_is_empty(*rect) {
                     continue;
@@ -933,6 +963,10 @@ fn polyline_path(points: &[Point], closed: bool) -> Option<Vec<PathCommand>> {
     Some(commands)
 }
 
+fn convex_poly_fill_path(points: &[Point]) -> Option<Vec<PathCommand>> {
+    polyline_path(points, true)
+}
+
 fn rect_path(rect: Rect) -> [PathCommand; 5] {
     let x0 = rect.origin.x;
     let y0 = rect.origin.y;
@@ -1032,6 +1066,16 @@ mod tests {
             Px(1.0),
             false,
         );
+        list.add_convex_poly_filled(
+            [
+                Point::new(Px(12.0), Px(62.0)),
+                Point::new(Px(24.0), Px(54.0)),
+                Point::new(Px(36.0), Px(62.0)),
+                Point::new(Px(30.0), Px(76.0)),
+                Point::new(Px(18.0), Px(76.0)),
+            ],
+            Color::from_srgb_hex_rgb(0x10_b9_81),
+        );
         list.add_rect(
             Rect::new(Point::new(Px(2.0), Px(3.0)), Size::new(Px(4.0), Px(5.0))),
             Color::from_srgb_hex_rgb(0x00_ff_00),
@@ -1087,39 +1131,43 @@ mod tests {
             Px(12.0),
         );
 
-        assert_eq!(list.command_count(), 11);
+        assert_eq!(list.command_count(), 12);
         assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
         assert!(matches!(
             list.commands[1],
             DebugDrawCommand::Polyline { .. }
         ));
-        assert!(matches!(list.commands[2], DebugDrawCommand::Rect { .. }));
         assert!(matches!(
-            list.commands[3],
+            list.commands[2],
+            DebugDrawCommand::ConvexPolyFilled { .. }
+        ));
+        assert!(matches!(list.commands[3], DebugDrawCommand::Rect { .. }));
+        assert!(matches!(
+            list.commands[4],
             DebugDrawCommand::RectFilled { .. }
         ));
         assert!(matches!(
-            list.commands[4],
+            list.commands[5],
             DebugDrawCommand::Triangle { .. }
         ));
         assert!(matches!(
-            list.commands[5],
+            list.commands[6],
             DebugDrawCommand::TriangleFilled { .. }
         ));
-        assert!(matches!(list.commands[6], DebugDrawCommand::Circle { .. }));
+        assert!(matches!(list.commands[7], DebugDrawCommand::Circle { .. }));
         assert!(matches!(
-            list.commands[7],
+            list.commands[8],
             DebugDrawCommand::CircleFilled { .. }
         ));
         assert!(matches!(
-            list.commands[8],
+            list.commands[9],
             DebugDrawCommand::BezierQuadratic { .. }
         ));
         assert!(matches!(
-            list.commands[9],
+            list.commands[10],
             DebugDrawCommand::BezierCubic { .. }
         ));
-        assert!(matches!(list.commands[10], DebugDrawCommand::Text { .. }));
+        assert!(matches!(list.commands[11], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
@@ -1283,6 +1331,34 @@ mod tests {
                 PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
                 PathCommand::LineTo(Point::new(Px(10.0), Px(0.0))),
                 PathCommand::LineTo(Point::new(Px(10.0), Px(10.0))),
+                PathCommand::Close,
+            ]
+        );
+    }
+
+    #[test]
+    fn convex_poly_fill_path_requires_three_points_and_closes() {
+        assert!(convex_poly_fill_path(&[Point::new(Px(0.0), Px(0.0))]).is_none());
+        assert!(
+            convex_poly_fill_path(&[Point::new(Px(0.0), Px(0.0)), Point::new(Px(10.0), Px(0.0)),])
+                .is_none()
+        );
+
+        let path = convex_poly_fill_path(&[
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(10.0), Px(0.0)),
+            Point::new(Px(12.0), Px(8.0)),
+            Point::new(Px(2.0), Px(10.0)),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            path,
+            vec![
+                PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(10.0), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(12.0), Px(8.0))),
+                PathCommand::LineTo(Point::new(Px(2.0), Px(10.0))),
                 PathCommand::Close,
             ]
         );

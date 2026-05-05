@@ -275,7 +275,8 @@ depth is partially superseded by `docs/workstreams/imui-debug-draw-shape-primiti
 `docs/workstreams/imui-debug-draw-stroke-style-v1/`,
 `docs/workstreams/imui-debug-draw-clip-stack-v1/`,
 `docs/workstreams/imui-debug-draw-image-overlay-v1/`, and
-`docs/workstreams/imui-debug-draw-bezier-primitives-v1/`.
+`docs/workstreams/imui-debug-draw-bezier-primitives-v1/`, and
+`docs/workstreams/imui-debug-draw-convex-poly-fill-v1/`.
 
 Current IMUI now exposes:
 
@@ -283,6 +284,7 @@ Current IMUI now exposes:
 - line, rect, filled rect, and text primitives,
 - polyline, stroked/filled triangle, stroked/filled circle, quadratic Bezier, and cubic Bezier
   primitives,
+- an `AddConvexPolyFilled`-style filled convex polygon command,
 - explicit stroke width/cap/join/miter/dash policy,
 - clip rect stack commands with paint-end auto-balancing,
 - registered image, image-region, SVG image, and SVG mask icon overlay commands,
