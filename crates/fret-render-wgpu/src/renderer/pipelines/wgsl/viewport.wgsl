@@ -70,6 +70,7 @@ struct VsIn {
   @location(1) uv: vec2<f32>,
   @location(2) opacity: f32,
   @location(3) premul: f32,
+  @location(4) color: vec4<f32>,
 };
 
 struct VsOut {
@@ -78,6 +79,7 @@ struct VsOut {
   @location(1) opacity: f32,
   @location(2) pixel_pos: vec2<f32>,
   @location(3) premul: f32,
+  @location(4) color: vec4<f32>,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -311,6 +313,7 @@ fn vs_main(input: VsIn) -> VsOut {
   out.opacity = input.opacity;
   out.pixel_pos = input.pos_px;
   out.premul = input.premul;
+  out.color = input.color;
   return out;
 }
 
@@ -319,10 +322,23 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
-  let factor = input.opacity * clip * mask;
+  let vertex_color = input.color;
+  let factor = input.opacity * vertex_color.a * clip * mask;
   let a = tex.a * factor;
   let premul = input.premul >= 0.5;
-  let rgb = select(tex.rgb * a, tex.rgb * factor, premul);
+  let tinted_rgb = tex.rgb * vertex_color.rgb;
+  let rgb = select(tinted_rgb * a, tinted_rgb * factor, premul);
   let out = vec4<f32>(rgb, a);
   return encode_output_premul(out);
+}
+
+@fragment
+fn fs_vertex_color(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
+  let factor = input.opacity * clip * mask;
+  let color = input.color;
+  let a = color.a * factor;
+  let rgb = color.rgb * a;
+  return encode_output_premul(vec4<f32>(rgb, a));
 }

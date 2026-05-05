@@ -1137,6 +1137,33 @@ pub enum SceneOp {
         opacity: f32,
     },
 
+    /// Draw a quad with one color per corner.
+    ///
+    /// The corner order is top-left, top-right, bottom-right, bottom-left. Renderers split the
+    /// quad into two triangles (`0,1,2` and `0,2,3`) and interpolate colors linearly in linear RGBA
+    /// space. This is intentionally a vertex-level primitive; it is not equivalent to a single
+    /// axis-aligned gradient paint.
+    VertexColorQuad {
+        order: DrawOrder,
+        points: [Point; 4],
+        colors: [Color; 4],
+    },
+
+    /// Draw an arbitrary image quad with per-corner UVs and a uniform tint.
+    ///
+    /// The corner and UV order is top-left, top-right, bottom-right, bottom-left. This is the
+    /// vertex-level image escape hatch for surfaces that cannot be represented by `ImageRegion`'s
+    /// axis-aligned rect + UV rect model.
+    ImageQuad {
+        order: DrawOrder,
+        points: [Point; 4],
+        image: ImageId,
+        uvs: [UvPoint; 4],
+        sampling: ImageSamplingHint,
+        tint: Color,
+        opacity: f32,
+    },
+
     /// Draw an alpha mask image tinted with a solid color.
     ///
     /// The referenced `image` is expected to store coverage in the red channel (e.g. `R8Unorm`).
@@ -1208,6 +1235,20 @@ impl UvRect {
         u1: 1.0,
         v1: 1.0,
     };
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UvPoint {
+    pub u: f32,
+    pub v: f32,
+}
+
+impl UvPoint {
+    pub const ZERO: Self = Self { u: 0.0, v: 0.0 };
+
+    pub const fn new(u: f32, v: f32) -> Self {
+        Self { u, v }
+    }
 }
 
 pub const SHADOW_RRECT_V1_MAX_BLUR_RADIUS_PX: crate::Px = crate::Px(64.0);

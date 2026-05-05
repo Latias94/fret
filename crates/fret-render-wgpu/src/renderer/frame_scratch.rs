@@ -52,7 +52,8 @@ mod tests {
             pos_px: [1.0, 2.0],
             uv: [0.0, 1.0],
             opacity: 0.5,
-            _pad: [0.0; 3],
+            premul: 0.0,
+            color: [1.0; 4],
         });
 
         state.finish_plan_quad_vertices(vertices);

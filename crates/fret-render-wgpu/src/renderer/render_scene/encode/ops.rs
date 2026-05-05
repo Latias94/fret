@@ -399,6 +399,20 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         } => {
             draw::encode_image_region(renderer, state, rect, image, uv, sampling, opacity);
         }
+        SceneOp::VertexColorQuad { points, colors, .. } => {
+            draw::encode_vertex_color_quad(state, points, colors);
+        }
+        SceneOp::ImageQuad {
+            points,
+            image,
+            uvs,
+            sampling,
+            tint,
+            opacity,
+            ..
+        } => {
+            draw::encode_image_quad(renderer, state, points, image, uvs, sampling, tint, opacity);
+        }
         SceneOp::MaskImage {
             rect,
             image,

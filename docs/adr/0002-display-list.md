@@ -62,6 +62,8 @@ Current `SceneOp` primitives include:
 
 - `Quad` (rounded corners; borders optional, ADR 0030)
 - `Image` / `ImageRegion`
+- `VertexColorQuad` (per-corner linear RGBA colors for vertex-level debug draw)
+- `ImageQuad` (arbitrary image quad points and per-corner UVs)
 - `MaskImage` (alpha mask + tint)
 - `SvgMaskIcon` / `SvgImage` (ADR 0065)
 - `Text`

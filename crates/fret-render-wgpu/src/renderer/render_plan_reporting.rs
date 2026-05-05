@@ -105,7 +105,8 @@ impl RenderPlanReportingState {
                 | (u8::from(seg.flags.has_image) << 2)
                 | (u8::from(seg.flags.has_mask) << 3)
                 | (u8::from(seg.flags.has_text) << 4)
-                | (u8::from(seg.flags.has_path) << 5);
+                | (u8::from(seg.flags.has_path) << 5)
+                | (u8::from(seg.flags.has_vertex_color) << 6);
             self.segment_report_scratch.push(RenderPlanSegmentReport {
                 draw_range: (seg.draw_range.start, seg.draw_range.end),
                 start_uniform_fingerprint: seg.start_uniform_fingerprint,

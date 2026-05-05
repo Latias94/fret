@@ -377,6 +377,7 @@ fn compile_for_scene_inner(
 
         let start_uniform_index = draws.get(draw_range.start).map(|d| match d {
             OrderedDraw::Quad(d) => d.uniform_index,
+            OrderedDraw::VertexColor(d) => d.uniform_index,
             OrderedDraw::Viewport(d) => d.uniform_index,
             OrderedDraw::Image(d) => d.uniform_index,
             OrderedDraw::Mask(d) => d.uniform_index,
@@ -434,6 +435,7 @@ fn compile_for_scene_inner(
         for draw in draws.get(draw_range.start..draw_range.end).unwrap_or(&[]) {
             match draw {
                 OrderedDraw::Quad(_) => flags.has_quad = true,
+                OrderedDraw::VertexColor(_) => flags.has_vertex_color = true,
                 OrderedDraw::Viewport(_) => flags.has_viewport = true,
                 OrderedDraw::Image(_) => flags.has_image = true,
                 OrderedDraw::Mask(_) => flags.has_mask = true,

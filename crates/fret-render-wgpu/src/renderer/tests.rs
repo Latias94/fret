@@ -21,8 +21,8 @@ use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::PathService as _;
 use fret_core::geometry::{Corners, Point, Px, Transform2D};
 use fret_core::{
-    DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene, SceneOp, Size,
-    ViewportFit,
+    Color, DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene, SceneOp,
+    Size, UvPoint, ViewportFit,
 };
 
 fn assert_approx_eq(a: f32, b: f32) {
@@ -38,6 +38,17 @@ fn assert_vertex(v: &super::types::ViewportVertex, pos: (f32, f32), uv: (f32, f3
     assert_approx_eq(v.pos_px[1], pos.1);
     assert_approx_eq(v.uv[0], uv.0);
     assert_approx_eq(v.uv[1], uv.1);
+}
+
+fn assert_vertex_color(v: &super::types::ViewportVertex, color: [f32; 4]) {
+    for (actual, expected) in v.color.iter().copied().zip(color) {
+        assert_approx_eq(actual, expected);
+    }
+}
+
+fn assert_vertex_opacity_and_premul(v: &super::types::ViewportVertex, opacity: f32, premul: f32) {
+    assert_approx_eq(v.opacity, opacity);
+    assert_approx_eq(v.premul, premul);
 }
 
 const CUSTOM_EFFECT_IDENTITY_WGSL: &str = r#"
@@ -659,6 +670,219 @@ fn image_fit_contain_encodes_centered_draw_rect() {
     assert_vertex(&verts[3], (0.0, 25.0), (0.0, 0.0));
     assert_vertex(&verts[4], (100.0, 75.0), (1.0, 1.0));
     assert_vertex(&verts[5], (0.0, 75.0), (0.0, 1.0));
+}
+
+#[test]
+fn vertex_color_quad_encodes_two_triangles_with_corner_colors() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("vertex color quad encode test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let points = [
+        Point::new(Px(10.0), Px(20.0)),
+        Point::new(Px(70.0), Px(16.0)),
+        Point::new(Px(80.0), Px(60.0)),
+        Point::new(Px(12.0), Px(72.0)),
+    ];
+    let colors = [
+        Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 0.75,
+        },
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 0.5,
+        },
+        Color {
+            r: 1.0,
+            g: 1.0,
+            b: 0.0,
+            a: 0.25,
+        },
+    ];
+    let mut scene = Scene::default();
+    scene.push(SceneOp::VertexColorQuad {
+        order: DrawOrder(0),
+        points,
+        colors,
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = renderer.scene_encoding_state.cache();
+    let [super::types::OrderedDraw::VertexColor(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one vertex color draw");
+    };
+    assert_eq!(draw.vertex_count, 6);
+
+    let first = draw.first_vertex as usize;
+    let verts = &encoding.viewport_vertices[first..first + 6];
+
+    assert_vertex(&verts[0], (10.0, 20.0), (0.0, 0.0));
+    assert_vertex_color(&verts[0], [1.0, 0.0, 0.0, 1.0]);
+    assert_vertex(&verts[1], (70.0, 16.0), (0.0, 0.0));
+    assert_vertex_color(&verts[1], [0.0, 1.0, 0.0, 0.75]);
+    assert_vertex(&verts[2], (80.0, 60.0), (0.0, 0.0));
+    assert_vertex_color(&verts[2], [0.0, 0.0, 1.0, 0.5]);
+    assert_vertex(&verts[3], (10.0, 20.0), (0.0, 0.0));
+    assert_vertex_color(&verts[3], [1.0, 0.0, 0.0, 1.0]);
+    assert_vertex(&verts[4], (80.0, 60.0), (0.0, 0.0));
+    assert_vertex_color(&verts[4], [0.0, 0.0, 1.0, 0.5]);
+    assert_vertex(&verts[5], (12.0, 72.0), (0.0, 0.0));
+    assert_vertex_color(&verts[5], [1.0, 1.0, 0.0, 0.25]);
+}
+
+#[test]
+fn image_quad_encodes_custom_points_uvs_and_tint() {
+    use crate::images::{AlphaMode, ImageColorSpace, ImageDescriptor};
+
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let source_size = (64u32, 32u32);
+    let source_tex = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image quad encode test source"),
+        size: wgpu::Extent3d {
+            width: source_size.0,
+            height: source_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    let source_view = source_tex.create_view(&wgpu::TextureViewDescriptor::default());
+    let image = renderer.register_image(ImageDescriptor {
+        view: source_view,
+        size: source_size,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        color_space: ImageColorSpace::Srgb,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image quad encode test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let points = [
+        Point::new(Px(8.0), Px(12.0)),
+        Point::new(Px(72.0), Px(10.0)),
+        Point::new(Px(76.0), Px(48.0)),
+        Point::new(Px(6.0), Px(52.0)),
+    ];
+    let uvs = [
+        UvPoint { u: 0.125, v: 0.25 },
+        UvPoint { u: 0.875, v: 0.2 },
+        UvPoint { u: 0.75, v: 0.95 },
+        UvPoint { u: 0.1, v: 0.8 },
+    ];
+    let tint = Color {
+        r: 0.25,
+        g: 0.5,
+        b: 0.75,
+        a: 0.8,
+    };
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::ImageQuad {
+        order: DrawOrder(0),
+        points,
+        image,
+        uvs,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
+        tint,
+        opacity: 0.5,
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = renderer.scene_encoding_state.cache();
+    let [super::types::OrderedDraw::Image(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one image draw");
+    };
+    assert_eq!(draw.vertex_count, 6);
+    assert_eq!(draw.image, image);
+
+    let first = draw.first_vertex as usize;
+    let verts = &encoding.viewport_vertices[first..first + 6];
+    let expected_tint = [0.25, 0.5, 0.75, 0.8];
+
+    assert_vertex(&verts[0], (8.0, 12.0), (0.125, 0.25));
+    assert_vertex(&verts[1], (72.0, 10.0), (0.875, 0.2));
+    assert_vertex(&verts[2], (76.0, 48.0), (0.75, 0.95));
+    assert_vertex(&verts[3], (8.0, 12.0), (0.125, 0.25));
+    assert_vertex(&verts[4], (76.0, 48.0), (0.75, 0.95));
+    assert_vertex(&verts[5], (6.0, 52.0), (0.1, 0.8));
+    for vertex in verts {
+        assert_vertex_color(vertex, expected_tint);
+        assert_vertex_opacity_and_premul(vertex, 0.5, 0.0);
+    }
 }
 
 #[test]

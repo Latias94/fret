@@ -532,6 +532,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-debug-draw-rounded-image-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-debug-draw-rounded-image-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-debug-draw-rounded-image-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI debug draw vertex-level quads:
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - Closed narrow follow-on for the fearless private full pressable item-behavior kernel in
   `fret-ui-kit::imui` (button, checkbox/radio, selectable, and combo trigger migrated; active-only
   switch/menu/tab cleanup and slider editing should start as narrower lanes):

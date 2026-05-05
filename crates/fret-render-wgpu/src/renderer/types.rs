@@ -128,7 +128,8 @@ pub(super) struct ViewportVertex {
     pub(super) pos_px: [f32; 2],
     pub(super) uv: [f32; 2],
     pub(super) opacity: f32,
-    pub(super) _pad: [f32; 3],
+    pub(super) premul: f32,
+    pub(super) color: [f32; 4],
 }
 
 #[repr(C)]
@@ -1046,6 +1047,14 @@ pub(super) struct ImageDraw {
 }
 
 #[derive(Clone, Copy)]
+pub(super) struct VertexColorDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+}
+
+#[derive(Clone, Copy)]
 pub(super) struct MaskDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
@@ -1107,6 +1116,7 @@ pub(super) enum OrderedDraw {
     Quad(QuadDraw),
     Viewport(ViewportDraw),
     Image(ImageDraw),
+    VertexColor(VertexColorDraw),
     Mask(MaskDraw),
     Text(TextDraw),
     Path(PathDraw),

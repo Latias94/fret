@@ -8,7 +8,7 @@ use fret_core::scene::{DashPatternV1, Paint};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, FillStyle, ImageId, PathCommand, PathStyle, Point, Px, Rect,
     Size, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit, TextOverflow, TextStyle,
-    TextWrap, UvRect, ViewportFit,
+    TextWrap, UvPoint, UvRect, ViewportFit,
 };
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use fret_ui::element::{
@@ -197,6 +197,28 @@ impl Default for DebugDrawImageOptions {
         Self {
             fit: ViewportFit::Stretch,
             sampling: ImageSamplingHint::Default,
+            opacity: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DebugDrawImageQuadOptions {
+    pub sampling: ImageSamplingHint,
+    pub tint: Color,
+    pub opacity: f32,
+}
+
+impl Default for DebugDrawImageQuadOptions {
+    fn default() -> Self {
+        Self {
+            sampling: ImageSamplingHint::Default,
+            tint: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
             opacity: 1.0,
         }
     }
@@ -517,6 +539,23 @@ impl ImUiDebugDrawList {
             .push(DebugDrawCommand::RectFilled { rect, color });
     }
 
+    pub fn add_rect_filled_multi_color(
+        &mut self,
+        rect: Rect,
+        upper_left: Color,
+        upper_right: Color,
+        bottom_right: Color,
+        bottom_left: Color,
+    ) {
+        self.commands.push(DebugDrawCommand::RectFilledMultiColor {
+            rect,
+            upper_left,
+            upper_right,
+            bottom_right,
+            bottom_left,
+        });
+    }
+
     pub fn add_quad(
         &mut self,
         p1: Point,
@@ -795,6 +834,25 @@ impl ImUiDebugDrawList {
         });
     }
 
+    pub fn add_image_quad(&mut self, image: ImageId, points: [Point; 4], uvs: [UvPoint; 4]) {
+        self.add_image_quad_with_options(image, points, uvs, DebugDrawImageQuadOptions::default());
+    }
+
+    pub fn add_image_quad_with_options(
+        &mut self,
+        image: ImageId,
+        points: [Point; 4],
+        uvs: [UvPoint; 4],
+        options: DebugDrawImageQuadOptions,
+    ) {
+        self.commands.push(DebugDrawCommand::ImageQuad {
+            image,
+            points,
+            uvs,
+            options,
+        });
+    }
+
     pub fn add_image_rounded(
         &mut self,
         rect: Rect,
@@ -937,6 +995,13 @@ enum DebugDrawCommand {
         rect: Rect,
         color: Color,
     },
+    RectFilledMultiColor {
+        rect: Rect,
+        upper_left: Color,
+        upper_right: Color,
+        bottom_right: Color,
+        bottom_left: Color,
+    },
     Quad {
         p1: Point,
         p2: Point,
@@ -1033,6 +1098,12 @@ enum DebugDrawCommand {
         image: ImageId,
         uv: UvRect,
         options: DebugDrawImageOptions,
+    },
+    ImageQuad {
+        image: ImageId,
+        points: [Point; 4],
+        uvs: [UvPoint; 4],
+        options: DebugDrawImageQuadOptions,
     },
     ImageRounded {
         rect: Rect,
@@ -1164,6 +1235,30 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     continue;
                 }
                 paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
+            }
+            DebugDrawCommand::ImageQuad {
+                image,
+                points,
+                uvs,
+                options,
+            } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0
+                    || options.tint.a <= 0.0
+                    || !points_are_finite(points)
+                    || !uv_points_are_finite(uvs)
+                {
+                    continue;
+                }
+                painter.scene().push(fret_core::SceneOp::ImageQuad {
+                    order,
+                    points: *points,
+                    image: *image,
+                    uvs: *uvs,
+                    sampling: options.sampling,
+                    tint: options.tint,
+                    opacity,
+                });
             }
             DebugDrawCommand::ImageRounded {
                 rect,
@@ -1337,6 +1432,26 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     border: Edges::all(Px(0.0)),
                     border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                     corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+            DebugDrawCommand::RectFilledMultiColor {
+                rect,
+                upper_left,
+                upper_right,
+                bottom_right,
+                bottom_left,
+            } => {
+                let colors = [*upper_left, *upper_right, *bottom_right, *bottom_left];
+                if rect_is_empty(*rect)
+                    || !rect_is_finite(*rect)
+                    || colors.iter().all(|color| color.a <= 0.0)
+                {
+                    continue;
+                }
+                painter.scene().push(fret_core::SceneOp::VertexColorQuad {
+                    order,
+                    points: rect_quad_points(*rect),
+                    colors,
                 });
             }
             DebugDrawCommand::Quad {
@@ -1638,6 +1753,31 @@ fn rect_is_finite(rect: Rect) -> bool {
         && rect.origin.y.0.is_finite()
         && rect.size.width.0.is_finite()
         && rect.size.height.0.is_finite()
+}
+
+fn point_is_finite(point: Point) -> bool {
+    point.x.0.is_finite() && point.y.0.is_finite()
+}
+
+fn points_are_finite(points: &[Point; 4]) -> bool {
+    points.iter().copied().all(point_is_finite)
+}
+
+fn uv_points_are_finite(uvs: &[UvPoint; 4]) -> bool {
+    uvs.iter().all(|uv| uv.u.is_finite() && uv.v.is_finite())
+}
+
+fn rect_quad_points(rect: Rect) -> [Point; 4] {
+    let x0 = rect.origin.x;
+    let y0 = rect.origin.y;
+    let x1 = Px(rect.origin.x.0 + rect.size.width.0);
+    let y1 = Px(rect.origin.y.0 + rect.size.height.0);
+    [
+        Point::new(x0, y0),
+        Point::new(x1, y0),
+        Point::new(x1, y1),
+        Point::new(x0, y1),
+    ]
 }
 
 fn normalized_opacity(opacity: f32) -> f32 {
@@ -2208,6 +2348,13 @@ mod tests {
             Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(2.0), Px(2.0))),
             Color::from_srgb_hex_rgb(0x00_00_ff),
         );
+        list.add_rect_filled_multi_color(
+            Rect::new(Point::new(Px(4.0), Px(1.0)), Size::new(Px(6.0), Px(5.0))),
+            Color::from_srgb_hex_rgb(0xff_00_00),
+            Color::from_srgb_hex_rgb(0x00_ff_00),
+            Color::from_srgb_hex_rgb(0x00_00_ff),
+            Color::from_srgb_hex_rgb(0xff_ff_00),
+        );
         list.add_quad(
             Point::new(Px(8.0), Px(8.0)),
             Point::new(Px(18.0), Px(6.0)),
@@ -2297,7 +2444,7 @@ mod tests {
             Px(12.0),
         );
 
-        assert_eq!(list.command_count(), 18);
+        assert_eq!(list.command_count(), 19);
         assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
         assert!(matches!(
             list.commands[1],
@@ -2312,46 +2459,50 @@ mod tests {
             list.commands[4],
             DebugDrawCommand::RectFilled { .. }
         ));
-        assert!(matches!(list.commands[5], DebugDrawCommand::Quad { .. }));
         assert!(matches!(
-            list.commands[6],
+            list.commands[5],
+            DebugDrawCommand::RectFilledMultiColor { .. }
+        ));
+        assert!(matches!(list.commands[6], DebugDrawCommand::Quad { .. }));
+        assert!(matches!(
+            list.commands[7],
             DebugDrawCommand::QuadFilled { .. }
         ));
         assert!(matches!(
-            list.commands[7],
+            list.commands[8],
             DebugDrawCommand::Triangle { .. }
         ));
         assert!(matches!(
-            list.commands[8],
+            list.commands[9],
             DebugDrawCommand::TriangleFilled { .. }
         ));
-        assert!(matches!(list.commands[9], DebugDrawCommand::Circle { .. }));
+        assert!(matches!(list.commands[10], DebugDrawCommand::Circle { .. }));
         assert!(matches!(
-            list.commands[10],
+            list.commands[11],
             DebugDrawCommand::CircleFilled { .. }
         ));
-        assert!(matches!(list.commands[11], DebugDrawCommand::Ngon { .. }));
+        assert!(matches!(list.commands[12], DebugDrawCommand::Ngon { .. }));
         assert!(matches!(
-            list.commands[12],
+            list.commands[13],
             DebugDrawCommand::NgonFilled { .. }
         ));
         assert!(matches!(
-            list.commands[13],
+            list.commands[14],
             DebugDrawCommand::Ellipse { .. }
         ));
         assert!(matches!(
-            list.commands[14],
+            list.commands[15],
             DebugDrawCommand::EllipseFilled { .. }
         ));
         assert!(matches!(
-            list.commands[15],
+            list.commands[16],
             DebugDrawCommand::BezierQuadratic { .. }
         ));
         assert!(matches!(
-            list.commands[16],
+            list.commands[17],
             DebugDrawCommand::BezierCubic { .. }
         ));
-        assert!(matches!(list.commands[17], DebugDrawCommand::Text { .. }));
+        assert!(matches!(list.commands[18], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
@@ -2388,6 +2539,21 @@ mod tests {
 
         list.add_image_with_options(rect, image, image_options);
         list.add_image_region(rect, image, UvRect::FULL, image_options);
+        list.add_image_quad(
+            image,
+            [
+                Point::new(Px(0.0), Px(0.0)),
+                Point::new(Px(24.0), Px(0.0)),
+                Point::new(Px(24.0), Px(16.0)),
+                Point::new(Px(0.0), Px(16.0)),
+            ],
+            [
+                UvPoint { u: 0.0, v: 0.0 },
+                UvPoint { u: 1.0, v: 0.0 },
+                UvPoint { u: 1.0, v: 1.0 },
+                UvPoint { u: 0.0, v: 1.0 },
+            ],
+        );
         list.add_image_rounded(
             rect,
             image,
@@ -2410,7 +2576,7 @@ mod tests {
             svg_options,
         );
 
-        assert_eq!(list.command_count(), 6);
+        assert_eq!(list.command_count(), 7);
         assert!(matches!(list.commands[0], DebugDrawCommand::Image { .. }));
         assert!(matches!(
             list.commands[1],
@@ -2418,18 +2584,22 @@ mod tests {
         ));
         assert!(matches!(
             list.commands[2],
-            DebugDrawCommand::ImageRounded { .. }
+            DebugDrawCommand::ImageQuad { .. }
         ));
         assert!(matches!(
             list.commands[3],
-            DebugDrawCommand::ImageRegionRounded { .. }
+            DebugDrawCommand::ImageRounded { .. }
         ));
         assert!(matches!(
             list.commands[4],
-            DebugDrawCommand::SvgImage { .. }
+            DebugDrawCommand::ImageRegionRounded { .. }
         ));
         assert!(matches!(
             list.commands[5],
+            DebugDrawCommand::SvgImage { .. }
+        ));
+        assert!(matches!(
+            list.commands[6],
             DebugDrawCommand::SvgMaskIcon { .. }
         ));
     }

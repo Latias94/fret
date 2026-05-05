@@ -15,6 +15,7 @@ use super::render_plan_dump_summary::{
 #[derive(Debug, serde::Serialize)]
 pub(super) struct JsonDumpSegmentFlags {
     has_quad: bool,
+    has_vertex_color: bool,
     has_viewport: bool,
     has_image: bool,
     has_mask: bool,
@@ -214,6 +215,7 @@ fn rebuild_segment_dump_scratch(plan: &RenderPlan, dump_scratch: &mut RenderPlan
             start_uniform_fingerprint: format!("0x{:016x}", segment.start_uniform_fingerprint),
             flags: JsonDumpSegmentFlags {
                 has_quad: segment.flags.has_quad,
+                has_vertex_color: segment.flags.has_vertex_color,
                 has_viewport: segment.flags.has_viewport,
                 has_image: segment.flags.has_image,
                 has_mask: segment.flags.has_mask,

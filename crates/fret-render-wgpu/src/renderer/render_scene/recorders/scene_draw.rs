@@ -94,6 +94,7 @@ impl Renderer {
             enum ActivePipeline {
                 None,
                 Quad,
+                VertexColor,
                 Viewport,
                 TextMask,
                 TextMaskOutline,
@@ -112,6 +113,7 @@ impl Renderer {
             }
 
             let viewport_pipeline = self.viewport_pipeline_ref();
+            let vertex_color_pipeline = self.vertex_color_pipeline_ref();
             let text_pipeline = self.text_pipeline_ref();
             let text_outline_pipeline = self.text_outline_pipeline_ref();
             let text_color_pipeline = self.text_color_pipeline_ref();
@@ -487,6 +489,61 @@ impl Renderer {
                             frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
                             frame_perf.image_draw_calls =
                                 frame_perf.image_draw_calls.saturating_add(1);
+                        }
+                    }
+                    OrderedDraw::VertexColor(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::VertexColor) {
+                            pass.set_pipeline(vertex_color_pipeline);
+                            active_scissor = None;
+                            if perf_enabled {
+                                frame_perf.pipeline_switches =
+                                    frame_perf.pipeline_switches.saturating_add(1);
+                            }
+                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::VertexColor;
+                        }
+
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride()) as u32;
+                        let mask_image = encoding
+                            .uniform_mask_images
+                            .get(draw.uniform_index as usize)
+                            .copied()
+                            .flatten();
+                        let uniform_bind_group =
+                            self.pick_uniform_bind_group_for_mask_image(mask_image);
+
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
                         }
                     }
                     OrderedDraw::Mask(draw) => {

@@ -2,12 +2,13 @@
 
 use fret_core::scene::ImageSamplingHint;
 use fret_core::{
-    Color, ImageId, Point, Px, Rect, Size, StrokeCapV1, StrokeJoinV1, SvgFit, UvRect, ViewportFit,
+    Color, ImageId, Point, Px, Rect, Size, StrokeCapV1, StrokeJoinV1, SvgFit, UvPoint, UvRect,
+    ViewportFit,
 };
 use fret_ui::{SvgSource, UiHost};
 use fret_ui_kit::imui::{
-    DebugDrawImageOptions, DebugDrawOptions, DebugDrawRoundCorners, DebugDrawStrokeStyle,
-    DebugDrawSvgOptions, UiWriterImUiFacadeExt,
+    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawOptions, DebugDrawRoundCorners,
+    DebugDrawStrokeStyle, DebugDrawSvgOptions, UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -62,6 +63,16 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 Point::new(Px(12.0), Px(12.0)),
                 Size::new(Px(16.0), Px(16.0)),
             ),
+            Color::from_srgb_hex_rgb(0x3b_82_f6),
+        );
+        draw.add_rect_filled_multi_color(
+            Rect::new(
+                Point::new(Px(30.0), Px(12.0)),
+                Size::new(Px(18.0), Px(16.0)),
+            ),
+            Color::from_srgb_hex_rgb(0xef_44_44),
+            Color::from_srgb_hex_rgb(0xf5_9e_0b),
+            Color::from_srgb_hex_rgb(0x22_c5_5e),
             Color::from_srgb_hex_rgb(0x3b_82_f6),
         );
         draw.add_quad_with_style(
@@ -227,6 +238,26 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             ImageId::default(),
             UvRect::FULL,
             DebugDrawImageOptions::default(),
+        );
+        draw.add_image_quad_with_options(
+            ImageId::default(),
+            [
+                Point::new(Px(202.0), Px(8.0)),
+                Point::new(Px(228.0), Px(10.0)),
+                Point::new(Px(226.0), Px(34.0)),
+                Point::new(Px(200.0), Px(32.0)),
+            ],
+            [
+                UvPoint { u: 0.0, v: 0.0 },
+                UvPoint { u: 1.0, v: 0.0 },
+                UvPoint { u: 1.0, v: 1.0 },
+                UvPoint { u: 0.0, v: 1.0 },
+            ],
+            DebugDrawImageQuadOptions {
+                sampling: ImageSamplingHint::Linear,
+                tint: Color::from_srgb_hex_rgb(0xff_ff_ff),
+                opacity: 0.6,
+            },
         );
         draw.add_image_rounded(
             Rect::new(

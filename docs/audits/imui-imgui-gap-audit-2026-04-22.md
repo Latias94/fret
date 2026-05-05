@@ -290,7 +290,9 @@ partially superseded by
 partially superseded by `docs/workstreams/imui-debug-draw-path-rect-builder-v1/`; concave polygon
 fill semantics are partially superseded by
 `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/`; rounded image clipping semantics are
-partially superseded by `docs/workstreams/imui-debug-draw-rounded-image-v1/`.
+partially superseded by `docs/workstreams/imui-debug-draw-rounded-image-v1/`; vertex-level
+multi-color rect and arbitrary image quad semantics are partially superseded by
+`docs/workstreams/imui-debug-draw-vertex-quad-v1/`.
 
 Current IMUI now exposes:
 
@@ -311,16 +313,17 @@ Current IMUI now exposes:
   `draw.path(...)`,
 - explicit stroke width/cap/join/miter/dash policy,
 - clip rect stack commands with paint-end auto-balancing,
-- registered image, image-region, rounded image, rounded image-region, SVG image, and SVG mask icon
-  overlay commands,
+- registered image, image-region, image-quad, rounded image, rounded image-region, SVG image, and
+  SVG mask icon overlay commands,
+- `AddRectFilledMultiColor`-style per-corner color quads backed by renderer vertex colors,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
 Dear ImGui still goes much deeper through full `DrawList` parity, channel splitting, per-command
-metadata, arbitrary image quads, image tinting, multi-color rect fill, and hit-test-aware debug
-interaction. In particular, `AddRectFilledMultiColor` writes four vertex colors into two triangles;
-Fret's current `SceneOp::Quad` and paint bindings cannot express that as a semantically equivalent
-single primitive.
+metadata, callback draw commands, and hit-test-aware debug interaction. `AddRectFilledMultiColor`
+and `AddImageQuad` are no longer blocked on the axis-aligned `SceneOp::Quad` / `ImageRegion`
+surface: `SceneOp::VertexColorQuad` and `SceneOp::ImageQuad` now model those vertex-level cases
+directly.
 
 Conclusion:
 
@@ -329,6 +332,8 @@ Conclusion:
 - Start separate narrow follow-ons for platform-owned screen sampling or screenshot-backed full
   picker visual polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
+- Do not regress `AddRectFilledMultiColor` into a `LinearGradient`; that is not equivalent to
+  Dear ImGui's two-triangle vertex interpolation.
 
 Evidence anchors:
 
@@ -347,6 +352,10 @@ Evidence anchors:
 - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
 - `repo-ref/imgui/imgui_demo.cpp`
 - `repo-ref/imgui/imgui_widgets.cpp`
+- `repo-ref/imgui/imgui_draw.cpp`
+- `crates/fret-core/src/scene/mod.rs`
+- `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/vertex_color.rs`
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs`
 
 #### 4.2 There is still no immediate style-stack lane, and that is mostly the right decision
 

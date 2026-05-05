@@ -93,7 +93,7 @@ pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS,
     MaterialParams, Paint, RadialGradient, Scene, SceneOp, SceneRecording, SceneValidationError,
-    SceneValidationErrorKind, SweepGradient, TileMode, UvRect,
+    SceneValidationErrorKind, SweepGradient, TileMode, UvPoint, UvRect,
 };
 pub use semantics::{
     SemanticsActions, SemanticsCheckedState, SemanticsFlags, SemanticsInlineSpan, SemanticsInvalid,

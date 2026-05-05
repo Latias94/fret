@@ -27,6 +27,7 @@ impl Renderer {
                 self.ensure_custom_effect_input_fallback_uploaded(queue);
 
                 self.ensure_viewport_pipeline(device, format);
+                self.ensure_vertex_color_pipeline(device, format);
                 self.ensure_quad_pipelines(format);
                 self.ensure_text_pipeline(device, format);
                 self.ensure_text_color_pipeline(device, format);

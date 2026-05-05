@@ -2,7 +2,7 @@ use crate::svg::SvgRenderer;
 use crate::text::TextSystem;
 pub(super) use fret_core::{
     geometry::{Point, Px, Rect, Size, Transform2D},
-    scene::{Color, Scene, SceneOp, UvRect},
+    scene::{Color, Scene, SceneOp, UvPoint, UvRect},
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;

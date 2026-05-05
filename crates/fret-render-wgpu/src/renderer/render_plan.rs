@@ -10,6 +10,7 @@ pub(super) struct SceneSegmentId(pub(super) usize);
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(super) struct RenderPlanSegmentFlags {
     pub(super) has_quad: bool,
+    pub(super) has_vertex_color: bool,
     pub(super) has_viewport: bool,
     pub(super) has_image: bool,
     pub(super) has_mask: bool,

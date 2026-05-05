@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 346
+- Dedicated directories: 347
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -767,6 +767,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-debug-draw-rounded-image-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after adding Dear ImGui-style rounded image and rounded image-region clipping
     semantics through existing rounded-rect scene clips.
+
+- Closed narrow P1 debug draw vertex quad follow-on:
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-vertex-quad-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding true Dear ImGui-style multi-color rect and arbitrary image quad
+    semantics through `SceneOp::VertexColorQuad`, `SceneOp::ImageQuad`, and WGPU vertex encoding.
 
 - Closed narrow P1 item-behavior kernel follow-on:
   - `docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json`
@@ -1736,6 +1746,7 @@ Rule:
 - `docs/workstreams/imui-debug-draw-path-rect-builder-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding scoped Dear ImGui-style square and rounded rectangle helpers to the IMUI debug-draw path builder)
 - `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style concave polygon fill command and path finisher semantics)
 - `docs/workstreams/imui-debug-draw-rounded-image-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style rounded image and rounded image-region clipping semantics to the IMUI debug-draw helper)
+- `docs/workstreams/imui-debug-draw-vertex-quad-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style multi-color rect and arbitrary image quad semantics to the IMUI debug-draw helper)
 - `docs/workstreams/imui-color-edit-alpha-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on preserving alpha for editor `ColorEdit` RGB-only hex commits and preset swatch activations after the popup-depth slice)
 - `docs/workstreams/imui-color-edit-alpha-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding checkerboard-backed alpha previews to editor `ColorEdit` main and preset swatches)
 - `docs/workstreams/imui-color-edit-popup-depth-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on replacing the editor `ColorEdit` popup stub with a preset swatch palette for the public IMUI editor-control path)

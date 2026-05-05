@@ -139,6 +139,8 @@ impl Renderer {
                 | SceneOp::ShadowRRect { .. }
                 | SceneOp::Image { .. }
                 | SceneOp::ImageRegion { .. }
+                | SceneOp::VertexColorQuad { .. }
+                | SceneOp::ImageQuad { .. }
                 | SceneOp::MaskImage { .. }
                 | SceneOp::PushMask { .. }
                 | SceneOp::PopMask

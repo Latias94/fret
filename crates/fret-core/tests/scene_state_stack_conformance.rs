@@ -104,6 +104,8 @@ impl Interpreter {
             | SceneOp::ShadowRRect { .. }
             | SceneOp::Image { .. }
             | SceneOp::ImageRegion { .. }
+            | SceneOp::VertexColorQuad { .. }
+            | SceneOp::ImageQuad { .. }
             | SceneOp::MaskImage { .. }
             | SceneOp::SvgMaskIcon { .. }
             | SceneOp::SvgImage { .. }

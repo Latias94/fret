@@ -375,6 +375,11 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-rounded-image-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-rounded-image-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-rounded-image-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw vertex quad follow-on (closed narrow P1 lane adding true Dear ImGui-style
+  `AddRectFilledMultiColor` and `AddImageQuad` semantics through portable scene primitives and WGPU
+  vertex encoding): `docs/workstreams/imui-debug-draw-vertex-quad-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-vertex-quad-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-vertex-quad-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

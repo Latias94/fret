@@ -30,6 +30,11 @@ fn mix_rect(mut state: u64, r: Rect) -> u64 {
     state
 }
 
+fn mix_uv_point(mut state: u64, p: UvPoint) -> u64 {
+    state = mix_f32(state, p.u);
+    mix_f32(state, p.v)
+}
+
 fn mix_color(mut state: u64, c: Color) -> u64 {
     state = mix_f32(state, c.r);
     state = mix_f32(state, c.g);
@@ -711,6 +716,50 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                     super::ImageSamplingHint::Nearest => 2,
                 },
             );
+            mix_f32(state, opacity)
+        }
+        SceneOp::VertexColorQuad {
+            order,
+            points,
+            colors,
+        } => {
+            let mut state = mix_u64(state, 16);
+            state = mix_u64(state, u64::from(order.0));
+            for point in points {
+                state = mix_point(state, point);
+            }
+            for color in colors {
+                state = mix_color(state, color);
+            }
+            state
+        }
+        SceneOp::ImageQuad {
+            order,
+            points,
+            image,
+            uvs,
+            sampling,
+            tint,
+            opacity,
+        } => {
+            let mut state = mix_u64(state, 17);
+            state = mix_u64(state, u64::from(order.0));
+            for point in points {
+                state = mix_point(state, point);
+            }
+            state = mix_u64(state, image.data().as_ffi());
+            for uv in uvs {
+                state = mix_uv_point(state, uv);
+            }
+            state = mix_u64(
+                state,
+                match sampling {
+                    super::ImageSamplingHint::Default => 0,
+                    super::ImageSamplingHint::Linear => 1,
+                    super::ImageSamplingHint::Nearest => 2,
+                },
+            );
+            state = mix_color(state, tint);
             mix_f32(state, opacity)
         }
         SceneOp::MaskImage {

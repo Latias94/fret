@@ -182,6 +182,10 @@ impl SceneRecording {
             uv.u0.is_finite() && uv.v0.is_finite() && uv.u1.is_finite() && uv.v1.is_finite()
         }
 
+        fn uv_point_is_finite(uv: UvPoint) -> bool {
+            uv.u.is_finite() && uv.v.is_finite()
+        }
+
         let mut transform_depth: usize = 0;
         let mut opacity_depth: usize = 0;
         let mut layer_depth: usize = 0;
@@ -608,6 +612,36 @@ impl SceneRecording {
                     rect, uv, opacity, ..
                 } => {
                     if !rect_is_finite(rect) || !uv_is_finite(uv) || !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::VertexColorQuad { points, colors, .. } => {
+                    if points.into_iter().any(|point| !point_is_finite(point))
+                        || colors.into_iter().any(|color| !color_is_finite(color))
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::ImageQuad {
+                    points,
+                    uvs,
+                    tint,
+                    opacity,
+                    ..
+                } => {
+                    if points.into_iter().any(|point| !point_is_finite(point))
+                        || uvs.into_iter().any(|uv| !uv_point_is_finite(uv))
+                        || !color_is_finite(tint)
+                        || !opacity.is_finite()
+                    {
                         return Err(SceneValidationError {
                             index,
                             op,
