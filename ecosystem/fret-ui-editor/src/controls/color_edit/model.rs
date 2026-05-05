@@ -309,8 +309,8 @@ pub(super) fn hsv_with_sv_from_local_position(
     }
 }
 
-pub(super) fn hue_from_local_x(x: f32, width: f32) -> f32 {
-    unit_from_local_x(x, width)
+pub(super) fn hue_from_local_y(y: f32, height: f32) -> f32 {
+    unit_from_local_y(y, height)
 }
 
 pub(super) fn unit_from_local_x(x: f32, width: f32) -> f32 {
@@ -320,7 +320,7 @@ pub(super) fn unit_from_local_x(x: f32, width: f32) -> f32 {
     sanitize_unit(x / width)
 }
 
-fn unit_from_local_y(y: f32, height: f32) -> f32 {
+pub(super) fn unit_from_local_y(y: f32, height: f32) -> f32 {
     if !height.is_finite() || height <= f32::EPSILON {
         return 0.0;
     }

@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use super::model::{
     ColorNumericInputMode, HsvColor, color_from_rgb_preserving_alpha, color_numeric_input_modes,
     hsv_from_color, hsv_numeric_text, hsv_to_color_preserving_alpha, hsv_to_rgb,
-    hsv_with_sv_from_local_position, hue_from_local_x, parse_color_numeric_input, rgb_numeric_text,
+    hsv_with_sv_from_local_position, hue_from_local_y, parse_color_numeric_input, rgb_numeric_text,
     rgb_to_hsv,
 };
 use super::popup::picker::{alpha_from_local_x, alpha_percent_text};
@@ -341,11 +341,11 @@ fn sv_picker_position_preserves_hue_and_clamps_sv() {
 }
 
 #[test]
-fn hue_bar_position_maps_local_x_to_clamped_hue() {
-    assert_eq!(hue_from_local_x(-10.0, 100.0), 0.0);
-    assert!((hue_from_local_x(37.5, 100.0) - 0.375).abs() < f32::EPSILON);
-    assert_eq!(hue_from_local_x(120.0, 100.0), 1.0);
-    assert_eq!(hue_from_local_x(10.0, 0.0), 0.0);
+fn vertical_hue_bar_position_maps_local_y_to_clamped_hue() {
+    assert_eq!(hue_from_local_y(-10.0, 100.0), 0.0);
+    assert!((hue_from_local_y(37.5, 100.0) - 0.375).abs() < f32::EPSILON);
+    assert_eq!(hue_from_local_y(120.0, 100.0), 1.0);
+    assert_eq!(hue_from_local_y(10.0, 0.0), 0.0);
 }
 
 #[test]

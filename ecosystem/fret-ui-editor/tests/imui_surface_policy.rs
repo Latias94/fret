@@ -30,6 +30,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn sv_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_bar<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn vertical_hue_gradient_overlay<"));
     assert!(COLOR_EDIT_POPUP_NUMERIC_RS.contains("fn color_numeric_inputs<"));
     assert!(COLOR_EDIT_POPUP_NUMERIC_RS.contains("fn color_numeric_input_field<"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn rgb_numeric_text("));

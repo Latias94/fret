@@ -16,11 +16,13 @@ use crate::primitives::input_group::derived_test_id;
 
 use super::super::model::{
     HsvColor, color_from_rgb_preserving_alpha, format_hex, hsv_from_color,
-    hsv_to_color_preserving_alpha, hsv_with_sv_from_local_position, hue_from_local_x,
+    hsv_to_color_preserving_alpha, hsv_with_sv_from_local_position, hue_from_local_y,
     hue_percent_text, sv_picker_a11y_text, unit_from_step,
 };
 use super::super::{ALPHA_BAR_STEPS, HUE_BAR_STEPS, SV_PICKER_STEPS};
 use super::preview::{checkerboard_grid, fill_preview_layout};
+
+const HSV_PICKER_SIZE: Px = Px(120.0);
 
 pub(super) fn hsv_picker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -65,7 +67,7 @@ pub(super) fn hsv_picker<H: UiHost>(
                 },
                 ..Default::default()
             },
-            direction: Axis::Vertical,
+            direction: Axis::Horizontal,
             gap: SpacingLength::Px(Px(6.0)),
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
@@ -105,9 +107,10 @@ fn sv_picker<H: UiHost>(
         PressableProps {
             layout: LayoutStyle {
                 size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Px(Px(96.0)),
-                    min_height: Some(Length::Px(Px(96.0))),
+                    width: Length::Px(HSV_PICKER_SIZE),
+                    height: Length::Px(HSV_PICKER_SIZE),
+                    min_width: Some(Length::Px(HSV_PICKER_SIZE)),
+                    min_height: Some(Length::Px(HSV_PICKER_SIZE)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -385,9 +388,9 @@ fn hue_bar<H: UiHost>(
         PressableProps {
             layout: LayoutStyle {
                 size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Px(Px(18.0)),
-                    min_height: Some(Length::Px(Px(18.0))),
+                    width: Length::Px(Px(18.0)),
+                    height: Length::Px(HSV_PICKER_SIZE),
+                    min_height: Some(Length::Px(HSV_PICKER_SIZE)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -413,7 +416,7 @@ fn hue_bar<H: UiHost>(
                     &draft_for_down,
                     &error_for_down,
                     show_alpha,
-                    down.position_local.x.0,
+                    down.position_local.y.0,
                 );
                 host.capture_pointer();
                 PressablePointerDownResult::Continue
@@ -431,7 +434,7 @@ fn hue_bar<H: UiHost>(
                     &draft_for_move,
                     &error_for_move,
                     show_alpha,
-                    mv.position_local.x.0,
+                    mv.position_local.y.0,
                 );
                 true
             }));
@@ -487,25 +490,25 @@ fn hue_bar_preview_stack<H: UiHost>(cx: &mut ElementContext<'_, H>, hue: f32) ->
         },
         move |cx| {
             vec![
-                hue_gradient_overlay(cx),
-                horizontal_bar_thumb_overlay(cx, hue),
+                vertical_hue_gradient_overlay(cx),
+                vertical_bar_thumb_overlay(cx, hue),
             ]
         },
     )
 }
 
-fn hue_gradient_overlay<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+fn vertical_hue_gradient_overlay<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.grid(
         GridProps {
             layout: fill_preview_layout(),
-            cols: HUE_BAR_STEPS as u16,
-            rows: Some(1),
-            template_columns: Some(
+            cols: 1,
+            rows: Some(HUE_BAR_STEPS as u16),
+            template_columns: Some(vec![GridTrackSizing::Flex(1.0)]),
+            template_rows: Some(
                 (0..HUE_BAR_STEPS)
                     .map(|_| GridTrackSizing::Flex(1.0))
                     .collect(),
             ),
-            template_rows: Some(vec![GridTrackSizing::Flex(1.0)]),
             gap: SpacingLength::Px(Px(0.0)),
             padding: Edges::all(Px(0.0)).into(),
             ..Default::default()
@@ -532,6 +535,78 @@ fn hue_gradient_overlay<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 })
                 .collect::<Vec<_>>()
         },
+    )
+}
+
+fn vertical_bar_thumb_overlay<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    position: f32,
+) -> AnyElement {
+    let top_grow = position.clamp(0.0, 1.0);
+    let bottom_grow = (1.0 - top_grow).max(0.0);
+    cx.flex(
+        FlexProps {
+            layout: fill_preview_layout(),
+            direction: Axis::Vertical,
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |cx| {
+            vec![
+                vertical_bar_thumb_spacer(cx, top_grow),
+                cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(Px(3.0)),
+                                ..Default::default()
+                            },
+                            flex: FlexItemStyle {
+                                grow: 0.0,
+                                shrink: 0.0,
+                                basis: Length::Px(Px(3.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        background: Some(Color::from_srgb_hex_rgb(0xff_ff_ff)),
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(Color::from_srgb_hex_rgb(0x1f_29_37)),
+                        corner_radii: Corners::all(Px(2.0)),
+                        ..Default::default()
+                    },
+                    |_cx| vec![],
+                ),
+                vertical_bar_thumb_spacer(cx, bottom_grow),
+            ]
+        },
+    )
+}
+
+fn vertical_bar_thumb_spacer<H: UiHost>(cx: &mut ElementContext<'_, H>, grow: f32) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                flex: FlexItemStyle {
+                    grow,
+                    shrink: 1.0,
+                    basis: Length::Px(Px(0.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        |_cx| vec![],
     )
 }
 
@@ -851,15 +926,15 @@ fn apply_hue_bar_position(
     draft: &Model<String>,
     error: &Model<Option<Arc<str>>>,
     show_alpha: bool,
-    x: f32,
+    y: f32,
 ) {
-    let width = host.bounds().size.width.0;
+    let height = host.bounds().size.height.0;
     let current = host
         .models_mut()
         .get_copied(model)
         .unwrap_or(Color::TRANSPARENT);
     let mut next_hsv = hsv_from_color(current);
-    next_hsv.hue = hue_from_local_x(x, width);
+    next_hsv.hue = hue_from_local_y(y, height);
     apply_hsv_color(
         host, action_cx, model, draft, error, show_alpha, current, next_hsv,
     );
