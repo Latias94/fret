@@ -402,3 +402,17 @@ pub(super) fn bounds_of_quad_points(pts: &[(f32, f32); 4]) -> (f32, f32, f32, f3
     }
     (min_x, min_y, max_x, max_y)
 }
+
+pub(super) fn bounds_of_triangle_points(pts: &[(f32, f32); 3]) -> (f32, f32, f32, f32) {
+    let mut min_x = pts[0].0;
+    let mut max_x = pts[0].0;
+    let mut min_y = pts[0].1;
+    let mut max_y = pts[0].1;
+    for (x, y) in pts.iter().copied() {
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+        min_y = min_y.min(y);
+        max_y = max_y.max(y);
+    }
+    (min_x, min_y, max_x, max_y)
+}

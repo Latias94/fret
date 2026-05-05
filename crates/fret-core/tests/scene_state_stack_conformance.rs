@@ -106,6 +106,8 @@ impl Interpreter {
             | SceneOp::ImageRegion { .. }
             | SceneOp::VertexColorQuad { .. }
             | SceneOp::ImageQuad { .. }
+            | SceneOp::VertexColorTriangle { .. }
+            | SceneOp::ImageTriangle { .. }
             | SceneOp::MaskImage { .. }
             | SceneOp::SvgMaskIcon { .. }
             | SceneOp::SvgImage { .. }

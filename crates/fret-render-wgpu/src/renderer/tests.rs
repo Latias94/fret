@@ -21,8 +21,8 @@ use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::PathService as _;
 use fret_core::geometry::{Corners, Point, Px, Transform2D};
 use fret_core::{
-    Color, DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene, SceneOp,
-    Size, UvPoint, ViewportFit,
+    Color, DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene,
+    SceneMeshVertex, SceneOp, Size, UvPoint, ViewportFit,
 };
 
 fn assert_approx_eq(a: f32, b: f32) {
@@ -771,6 +771,95 @@ fn vertex_color_quad_encodes_two_triangles_with_corner_colors() {
 }
 
 #[test]
+fn vertex_color_triangle_encodes_three_custom_vertices() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("vertex color triangle encode test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let vertices = [
+        SceneMeshVertex::colored(
+            Point::new(Px(9.0), Px(11.0)),
+            Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        ),
+        SceneMeshVertex::colored(
+            Point::new(Px(61.0), Px(13.0)),
+            Color {
+                r: 0.0,
+                g: 1.0,
+                b: 0.0,
+                a: 0.75,
+            },
+        ),
+        SceneMeshVertex::colored(
+            Point::new(Px(22.0), Px(70.0)),
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 1.0,
+                a: 0.5,
+            },
+        ),
+    ];
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::VertexColorTriangle {
+        order: DrawOrder(0),
+        vertices,
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = renderer.scene_encoding_state.cache();
+    let [super::types::OrderedDraw::VertexColor(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one vertex color draw");
+    };
+    assert_eq!(draw.vertex_count, 3);
+
+    let first = draw.first_vertex as usize;
+    let verts = &encoding.viewport_vertices[first..first + 3];
+
+    assert_vertex(&verts[0], (9.0, 11.0), (0.0, 0.0));
+    assert_vertex_color(&verts[0], [1.0, 0.0, 0.0, 1.0]);
+    assert_vertex(&verts[1], (61.0, 13.0), (0.0, 0.0));
+    assert_vertex_color(&verts[1], [0.0, 1.0, 0.0, 0.75]);
+    assert_vertex(&verts[2], (22.0, 70.0), (0.0, 0.0));
+    assert_vertex_color(&verts[2], [0.0, 0.0, 1.0, 0.5]);
+}
+
+#[test]
 fn image_quad_encodes_custom_points_uvs_and_tint() {
     use crate::images::{AlphaMode, ImageColorSpace, ImageDescriptor};
 
@@ -883,6 +972,131 @@ fn image_quad_encodes_custom_points_uvs_and_tint() {
         assert_vertex_color(vertex, expected_tint);
         assert_vertex_opacity_and_premul(vertex, 0.5, 0.0);
     }
+}
+
+#[test]
+fn image_triangle_encodes_custom_uvs_and_vertex_colors() {
+    use crate::images::{AlphaMode, ImageColorSpace, ImageDescriptor};
+
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let source_size = (64u32, 32u32);
+    let source_tex = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image triangle encode test source"),
+        size: wgpu::Extent3d {
+            width: source_size.0,
+            height: source_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    let source_view = source_tex.create_view(&wgpu::TextureViewDescriptor::default());
+    let image = renderer.register_image(ImageDescriptor {
+        view: source_view,
+        size: source_size,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        color_space: ImageColorSpace::Srgb,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image triangle encode test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let vertices = [
+        SceneMeshVertex::new(
+            Point::new(Px(10.0), Px(12.0)),
+            UvPoint { u: 0.0, v: 0.0 },
+            Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.25,
+                a: 1.0,
+            },
+        ),
+        SceneMeshVertex::new(
+            Point::new(Px(70.0), Px(16.0)),
+            UvPoint { u: 1.0, v: 0.125 },
+            Color {
+                r: 0.75,
+                g: 1.0,
+                b: 0.5,
+                a: 0.8,
+            },
+        ),
+        SceneMeshVertex::new(
+            Point::new(Px(24.0), Px(68.0)),
+            UvPoint { u: 0.25, v: 0.9 },
+            Color {
+                r: 0.25,
+                g: 0.5,
+                b: 1.0,
+                a: 0.6,
+            },
+        ),
+    ];
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::ImageTriangle {
+        order: DrawOrder(0),
+        image,
+        vertices,
+        sampling: fret_core::scene::ImageSamplingHint::Default,
+        opacity: 0.5,
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = renderer.scene_encoding_state.cache();
+    let [super::types::OrderedDraw::Image(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one image draw");
+    };
+    assert_eq!(draw.vertex_count, 3);
+    assert_eq!(draw.image, image);
+
+    let first = draw.first_vertex as usize;
+    let verts = &encoding.viewport_vertices[first..first + 3];
+
+    assert_vertex(&verts[0], (10.0, 12.0), (0.0, 0.0));
+    assert_vertex_color(&verts[0], [1.0, 0.5, 0.25, 1.0]);
+    assert_vertex_opacity_and_premul(&verts[0], 0.5, 0.0);
+    assert_vertex(&verts[1], (70.0, 16.0), (1.0, 0.125));
+    assert_vertex_color(&verts[1], [0.75, 1.0, 0.5, 0.8]);
+    assert_vertex_opacity_and_premul(&verts[1], 0.5, 0.0);
+    assert_vertex(&verts[2], (24.0, 68.0), (0.25, 0.9));
+    assert_vertex_color(&verts[2], [0.25, 0.5, 1.0, 0.6]);
+    assert_vertex_opacity_and_premul(&verts[2], 0.5, 0.0);
 }
 
 #[test]

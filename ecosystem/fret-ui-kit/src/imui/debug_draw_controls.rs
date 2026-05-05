@@ -7,8 +7,8 @@ use fret_core::scene::ImageSamplingHint;
 use fret_core::scene::{DashPatternV1, Paint};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, FillStyle, ImageId, PathCommand, PathStyle, Point, Px, Rect,
-    Size, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit, TextOverflow, TextStyle,
-    TextWrap, UvPoint, UvRect, ViewportFit,
+    SceneMeshVertex, Size, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit,
+    TextOverflow, TextStyle, TextWrap, UvPoint, UvRect, ViewportFit,
 };
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use fret_ui::element::{
@@ -226,6 +226,50 @@ impl Default for DebugDrawImageQuadOptions {
                 b: 1.0,
                 a: 1.0,
             },
+            opacity: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DebugDrawVertex {
+    pub position: Point,
+    pub uv: UvPoint,
+    pub color: Color,
+}
+
+impl DebugDrawVertex {
+    pub const fn new(position: Point, uv: UvPoint, color: Color) -> Self {
+        Self {
+            position,
+            uv,
+            color,
+        }
+    }
+
+    pub const fn colored(position: Point, color: Color) -> Self {
+        Self {
+            position,
+            uv: UvPoint::ZERO,
+            color,
+        }
+    }
+
+    fn scene_vertex(self) -> SceneMeshVertex {
+        SceneMeshVertex::new(self.position, self.uv, self.color)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DebugDrawImageMeshOptions {
+    pub sampling: ImageSamplingHint,
+    pub opacity: f32,
+}
+
+impl Default for DebugDrawImageMeshOptions {
+    fn default() -> Self {
+        Self {
+            sampling: ImageSamplingHint::Default,
             opacity: 1.0,
         }
     }
@@ -667,6 +711,60 @@ impl ImUiDebugDrawList {
             .push(DebugDrawCommand::TriangleFilled { p1, p2, p3, color });
     }
 
+    pub fn add_triangle_list<V>(&mut self, vertices: V)
+    where
+        V: IntoIterator<Item = DebugDrawVertex>,
+    {
+        let vertices: Vec<_> = vertices.into_iter().collect();
+        let indices = sequential_triangle_indices(vertices.len());
+        self.commands.push(DebugDrawCommand::TriangleMesh {
+            vertices: Arc::from(vertices),
+            indices,
+        });
+    }
+
+    pub fn add_triangle_mesh<V, I>(&mut self, vertices: V, indices: I)
+    where
+        V: IntoIterator<Item = DebugDrawVertex>,
+        I: IntoIterator<Item = u32>,
+    {
+        self.commands.push(DebugDrawCommand::TriangleMesh {
+            vertices: Arc::from(vertices.into_iter().collect::<Vec<_>>()),
+            indices: Arc::from(indices.into_iter().collect::<Vec<_>>()),
+        });
+    }
+
+    pub fn add_image_triangle_mesh<V, I>(&mut self, image: ImageId, vertices: V, indices: I)
+    where
+        V: IntoIterator<Item = DebugDrawVertex>,
+        I: IntoIterator<Item = u32>,
+    {
+        self.add_image_triangle_mesh_with_options(
+            image,
+            vertices,
+            indices,
+            DebugDrawImageMeshOptions::default(),
+        );
+    }
+
+    pub fn add_image_triangle_mesh_with_options<V, I>(
+        &mut self,
+        image: ImageId,
+        vertices: V,
+        indices: I,
+        options: DebugDrawImageMeshOptions,
+    ) where
+        V: IntoIterator<Item = DebugDrawVertex>,
+        I: IntoIterator<Item = u32>,
+    {
+        self.commands.push(DebugDrawCommand::ImageTriangleMesh {
+            image,
+            vertices: Arc::from(vertices.into_iter().collect::<Vec<_>>()),
+            indices: Arc::from(indices.into_iter().collect::<Vec<_>>()),
+            options,
+        });
+    }
+
     pub fn add_circle(&mut self, center: Point, radius: Px, color: Color, thickness: Px) {
         self.add_circle_with_style(center, radius, color, thickness);
     }
@@ -1079,6 +1177,16 @@ enum DebugDrawCommand {
         p2: Point,
         p3: Point,
         color: Color,
+    },
+    TriangleMesh {
+        vertices: Arc<[DebugDrawVertex]>,
+        indices: Arc<[u32]>,
+    },
+    ImageTriangleMesh {
+        image: ImageId,
+        vertices: Arc<[DebugDrawVertex]>,
+        indices: Arc<[u32]>,
+        options: DebugDrawImageMeshOptions,
     },
     Circle {
         center: Point,
@@ -1584,6 +1692,17 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     scale,
                 );
             }
+            DebugDrawCommand::TriangleMesh { vertices, indices } => {
+                paint_triangle_mesh(painter, order, vertices, indices);
+            }
+            DebugDrawCommand::ImageTriangleMesh {
+                image,
+                vertices,
+                indices,
+                options,
+            } => {
+                paint_image_triangle_mesh(painter, order, *image, vertices, indices, *options);
+            }
             DebugDrawCommand::Circle {
                 center,
                 radius,
@@ -1816,6 +1935,92 @@ fn points_are_finite(points: &[Point; 4]) -> bool {
 
 fn uv_points_are_finite(uvs: &[UvPoint; 4]) -> bool {
     uvs.iter().all(|uv| uv.u.is_finite() && uv.v.is_finite())
+}
+
+fn debug_draw_vertex_is_finite(vertex: DebugDrawVertex) -> bool {
+    point_is_finite(vertex.position)
+        && vertex.uv.u.is_finite()
+        && vertex.uv.v.is_finite()
+        && vertex.color.r.is_finite()
+        && vertex.color.g.is_finite()
+        && vertex.color.b.is_finite()
+        && vertex.color.a.is_finite()
+}
+
+fn triangle_vertices_are_drawable(vertices: &[DebugDrawVertex; 3]) -> bool {
+    vertices.iter().copied().all(debug_draw_vertex_is_finite)
+        && vertices.iter().any(|vertex| vertex.color.a > 0.0)
+        && !triangle_is_degenerate(
+            vertices[0].position,
+            vertices[1].position,
+            vertices[2].position,
+        )
+}
+
+fn indexed_triangle(vertices: &[DebugDrawVertex], indices: &[u32]) -> Option<[DebugDrawVertex; 3]> {
+    let i0 = usize::try_from(indices[0]).ok()?;
+    let i1 = usize::try_from(indices[1]).ok()?;
+    let i2 = usize::try_from(indices[2]).ok()?;
+    Some([*vertices.get(i0)?, *vertices.get(i1)?, *vertices.get(i2)?])
+}
+
+fn sequential_triangle_indices(len: usize) -> Arc<[u32]> {
+    let capped_len = len.min(u32::MAX as usize);
+    Arc::from(
+        (0..capped_len)
+            .map(|index| index as u32)
+            .collect::<Vec<_>>(),
+    )
+}
+
+fn paint_triangle_mesh(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    vertices: &[DebugDrawVertex],
+    indices: &[u32],
+) {
+    for triangle_indices in indices.chunks_exact(3) {
+        let Some(triangle) = indexed_triangle(vertices, triangle_indices) else {
+            continue;
+        };
+        if !triangle_vertices_are_drawable(&triangle) {
+            continue;
+        }
+        painter
+            .scene()
+            .push(fret_core::SceneOp::VertexColorTriangle {
+                order,
+                vertices: triangle.map(DebugDrawVertex::scene_vertex),
+            });
+    }
+}
+
+fn paint_image_triangle_mesh(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    image: ImageId,
+    vertices: &[DebugDrawVertex],
+    indices: &[u32],
+    options: DebugDrawImageMeshOptions,
+) {
+    if !options.opacity.is_finite() || options.opacity <= 0.0 {
+        return;
+    }
+    for triangle_indices in indices.chunks_exact(3) {
+        let Some(triangle) = indexed_triangle(vertices, triangle_indices) else {
+            continue;
+        };
+        if !triangle_vertices_are_drawable(&triangle) {
+            continue;
+        }
+        painter.scene().push(fret_core::SceneOp::ImageTriangle {
+            order,
+            image,
+            vertices: triangle.map(DebugDrawVertex::scene_vertex),
+            sampling: options.sampling,
+            opacity: options.opacity,
+        });
+    }
 }
 
 fn rect_quad_points(rect: Rect) -> [Point; 4] {
@@ -2554,6 +2759,48 @@ mod tests {
             DebugDrawCommand::BezierCubic { .. }
         ));
         assert!(matches!(list.commands[18], DebugDrawCommand::Text { .. }));
+    }
+
+    #[test]
+    fn debug_draw_list_records_triangle_mesh_commands() {
+        let mut list = ImUiDebugDrawList::default();
+        let vertices = [
+            DebugDrawVertex::colored(
+                Point::new(Px(0.0), Px(0.0)),
+                Color::from_srgb_hex_rgb(0xff_00_00),
+            ),
+            DebugDrawVertex::colored(
+                Point::new(Px(8.0), Px(0.0)),
+                Color::from_srgb_hex_rgb(0x00_ff_00),
+            ),
+            DebugDrawVertex::colored(
+                Point::new(Px(4.0), Px(8.0)),
+                Color::from_srgb_hex_rgb(0x00_00_ff),
+            ),
+        ];
+        list.add_triangle_mesh(vertices, [0, 1, 2]);
+        list.add_image_triangle_mesh_with_options(
+            ImageId::default(),
+            vertices.map(|vertex| {
+                DebugDrawVertex::new(vertex.position, UvPoint::new(0.5, 0.25), vertex.color)
+            }),
+            [0, 1, 2],
+            DebugDrawImageMeshOptions {
+                sampling: ImageSamplingHint::Nearest,
+                opacity: 0.5,
+            },
+        );
+
+        assert_eq!(list.command_count(), 2);
+        assert!(matches!(
+            list.commands[0],
+            DebugDrawCommand::TriangleMesh { .. }
+        ));
+        let DebugDrawCommand::ImageTriangleMesh { options, .. } = &list.commands[1] else {
+            panic!("expected image triangle mesh command");
+        };
+        assert_eq!(options.sampling, ImageSamplingHint::Nearest);
+        assert_eq!(options.opacity, 0.5);
     }
 
     #[test]

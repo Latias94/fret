@@ -35,6 +35,12 @@ fn mix_uv_point(mut state: u64, p: UvPoint) -> u64 {
     mix_f32(state, p.v)
 }
 
+fn mix_scene_mesh_vertex(mut state: u64, vertex: super::SceneMeshVertex) -> u64 {
+    state = mix_point(state, vertex.position);
+    state = mix_uv_point(state, vertex.uv);
+    mix_color(state, vertex.color)
+}
+
 fn mix_color(mut state: u64, c: Color) -> u64 {
     state = mix_f32(state, c.r);
     state = mix_f32(state, c.g);
@@ -760,6 +766,37 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                 },
             );
             state = mix_color(state, tint);
+            mix_f32(state, opacity)
+        }
+        SceneOp::VertexColorTriangle { order, vertices } => {
+            let mut state = mix_u64(state, 18);
+            state = mix_u64(state, u64::from(order.0));
+            for vertex in vertices {
+                state = mix_scene_mesh_vertex(state, vertex);
+            }
+            state
+        }
+        SceneOp::ImageTriangle {
+            order,
+            image,
+            vertices,
+            sampling,
+            opacity,
+        } => {
+            let mut state = mix_u64(state, 19);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_u64(state, image.data().as_ffi());
+            for vertex in vertices {
+                state = mix_scene_mesh_vertex(state, vertex);
+            }
+            state = mix_u64(
+                state,
+                match sampling {
+                    super::ImageSamplingHint::Default => 0,
+                    super::ImageSamplingHint::Linear => 1,
+                    super::ImageSamplingHint::Nearest => 2,
+                },
+            );
             mix_f32(state, opacity)
         }
         SceneOp::MaskImage {

@@ -385,6 +385,11 @@ Tracker highlights:
   `fret-ui-kit::imui` debug draw list): `docs/workstreams/imui-debug-draw-channel-split-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-channel-split-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-channel-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw triangle mesh follow-on (closed narrow P1 lane adding bounded Dear ImGui
+  `PrimReserve`-style triangle mesh authoring through copyable vertex-color/textured triangle scene
+  primitives): `docs/workstreams/imui-debug-draw-triangle-mesh-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-triangle-mesh-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-triangle-mesh-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

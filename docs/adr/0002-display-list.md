@@ -64,6 +64,8 @@ Current `SceneOp` primitives include:
 - `Image` / `ImageRegion`
 - `VertexColorQuad` (per-corner linear RGBA colors for vertex-level debug draw)
 - `ImageQuad` (arbitrary image quad points and per-corner UVs)
+- `VertexColorTriangle` / `ImageTriangle` (bounded vertex-level triangle primitives for custom
+  debug/editor geometry without non-copyable raw mesh scene ops)
 - `MaskImage` (alpha mask + tint)
 - `SvgMaskIcon` / `SvgImage` (ADR 0065)
 - `Text`
@@ -78,6 +80,8 @@ Current `SceneOp` primitives include:
 ## Future Work
 
 - Define text shaping ownership (what lives in `fret-core` vs `fret-render`).
+- Promote a batched mesh resource contract only if real editor overlays prove that fixed triangle
+  scene ops create unacceptable draw-call pressure.
 - Formalize the vector path contract (fill/stroke semantics, AA expectations, caching keys, and
   transform interaction) now that `PathService` + `SceneOp::Path` exist:
   - `docs/adr/0080-vector-path-contract.md`

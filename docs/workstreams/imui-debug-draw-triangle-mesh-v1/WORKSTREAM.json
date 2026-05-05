@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "slug": "imui-debug-draw-triangle-mesh-v1",
+  "title": "ImUi Debug Draw Triangle Mesh v1",
+  "status": "closed",
+  "updated": "2026-05-05",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-debug-draw-channel-split-v1",
+  "problem": "Close the next Dear ImGui draw-list parity gap by adding a bounded triangle mesh authoring path for IMUI debug draw without introducing renderer callbacks, unbounded raw buffers, or non-copyable scene ops.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-debug-draw-triangle-mesh-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-triangle-mesh-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-triangle-mesh-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-debug-draw-triangle-mesh-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-debug-draw-triangle-mesh-v1/CLOSEOUT_AUDIT_2026-05-05.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused core, renderer, and IMUI tests prove fixed triangle scene ops, WGPU vertex encoding, and public debug draw mesh commands.",
+    "commands": [
+      "cargo nextest run -p fret-render-wgpu --lib vertex_color_triangle_encodes --no-fail-fast",
+      "cargo nextest run -p fret-ui-kit --features imui debug_draw_list_records_triangle_mesh_commands --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format touched crates",
+      "command": "cargo fmt --package fret-core --package fret-render-wgpu --package fret-ui-kit -- --check"
+    },
+    {
+      "name": "fret-core scene contract",
+      "command": "cargo nextest run -p fret-core --no-fail-fast"
+    },
+    {
+      "name": "renderer focused triangle tests",
+      "command": "cargo nextest run -p fret-render-wgpu --lib triangle_encodes --no-fail-fast"
+    },
+    {
+      "name": "renderer lib suite",
+      "command": "cargo nextest run -p fret-render-wgpu --lib --no-fail-fast"
+    },
+    {
+      "name": "imui focused mesh tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui debug_draw_list_records_triangle_mesh_commands --no-fail-fast"
+    },
+    {
+      "name": "imui smoke compile",
+      "command": "cargo nextest run -p fret-ui-kit --features imui debug_draw_options_default_to_clipped_canvas --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit imui suite",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --no-fail-fast"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json shape",
+      "command": "python -m json.tool docs/workstreams/imui-debug-draw-triangle-mesh-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "umbrella json shape",
+      "command": "python -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "imui source gates",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "skill anchors",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-core/src/scene/mod.rs",
+    "crates/fret-core/src/scene/validate.rs",
+    "crates/fret-core/src/scene/fingerprint.rs",
+    "crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/vertex_color.rs",
+    "crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/image.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs",
+    "docs/workstreams/imui-debug-draw-triangle-mesh-v1/CLOSEOUT_AUDIT_2026-05-05.md",
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui_draw.cpp"
+  ],
+  "adr_refs": [
+    "docs/adr/0002-display-list.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This triangle-mesh slice is closed. Callback draw commands, draw command metadata, and batched raw vertex/index buffer resources should start as separate follow-ons with explicit renderer contract review."
+  }
+}

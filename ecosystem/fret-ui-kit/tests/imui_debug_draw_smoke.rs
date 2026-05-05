@@ -7,8 +7,9 @@ use fret_core::{
 };
 use fret_ui::{SvgSource, UiHost};
 use fret_ui_kit::imui::{
-    DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawOptions, DebugDrawRoundCorners,
-    DebugDrawStrokeStyle, DebugDrawSvgOptions, UiWriterImUiFacadeExt,
+    DebugDrawImageMeshOptions, DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawOptions,
+    DebugDrawRoundCorners, DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex,
+    UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -116,6 +117,33 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Point::new(Px(112.0), Px(34.0)),
             Point::new(Px(100.0), Px(54.0)),
             Color::from_srgb_hex_rgb(0xec_48_99),
+        );
+        let mesh_vertices = [
+            DebugDrawVertex::new(
+                Point::new(Px(116.0), Px(8.0)),
+                UvPoint::new(0.0, 0.0),
+                Color::from_srgb_hex_rgb(0xef_44_44),
+            ),
+            DebugDrawVertex::new(
+                Point::new(Px(150.0), Px(12.0)),
+                UvPoint::new(1.0, 0.0),
+                Color::from_srgb_hex_rgb(0x22_c5_5e),
+            ),
+            DebugDrawVertex::new(
+                Point::new(Px(132.0), Px(46.0)),
+                UvPoint::new(0.5, 1.0),
+                Color::from_srgb_hex_rgb(0x3b_82_f6),
+            ),
+        ];
+        draw.add_triangle_mesh(mesh_vertices, [0, 1, 2]);
+        draw.add_image_triangle_mesh_with_options(
+            ImageId::default(),
+            mesh_vertices,
+            [0, 1, 2],
+            DebugDrawImageMeshOptions {
+                sampling: ImageSamplingHint::Nearest,
+                opacity: 0.6,
+            },
         );
         draw.add_circle_with_style(
             Point::new(Px(132.0), Px(20.0)),

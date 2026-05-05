@@ -141,6 +141,8 @@ impl Renderer {
                 | SceneOp::ImageRegion { .. }
                 | SceneOp::VertexColorQuad { .. }
                 | SceneOp::ImageQuad { .. }
+                | SceneOp::VertexColorTriangle { .. }
+                | SceneOp::ImageTriangle { .. }
                 | SceneOp::MaskImage { .. }
                 | SceneOp::PushMask { .. }
                 | SceneOp::PopMask

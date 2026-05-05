@@ -413,6 +413,18 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         } => {
             draw::encode_image_quad(renderer, state, points, image, uvs, sampling, tint, opacity);
         }
+        SceneOp::VertexColorTriangle { vertices, .. } => {
+            draw::encode_vertex_color_triangle(state, vertices);
+        }
+        SceneOp::ImageTriangle {
+            image,
+            vertices,
+            sampling,
+            opacity,
+            ..
+        } => {
+            draw::encode_image_triangle(renderer, state, image, vertices, sampling, opacity);
+        }
         SceneOp::MaskImage {
             rect,
             image,

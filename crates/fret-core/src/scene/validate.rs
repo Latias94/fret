@@ -185,6 +185,11 @@ impl SceneRecording {
         fn uv_point_is_finite(uv: UvPoint) -> bool {
             uv.u.is_finite() && uv.v.is_finite()
         }
+        fn scene_mesh_vertex_is_finite(vertex: super::SceneMeshVertex) -> bool {
+            point_is_finite(vertex.position)
+                && uv_point_is_finite(vertex.uv)
+                && color_is_finite(vertex.color)
+        }
 
         let mut transform_depth: usize = 0;
         let mut opacity_depth: usize = 0;
@@ -640,6 +645,33 @@ impl SceneRecording {
                     if points.into_iter().any(|point| !point_is_finite(point))
                         || uvs.into_iter().any(|uv| !uv_point_is_finite(uv))
                         || !color_is_finite(tint)
+                        || !opacity.is_finite()
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::VertexColorTriangle { vertices, .. } => {
+                    if vertices
+                        .into_iter()
+                        .any(|vertex| !scene_mesh_vertex_is_finite(vertex))
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::ImageTriangle {
+                    vertices, opacity, ..
+                } => {
+                    if vertices
+                        .into_iter()
+                        .any(|vertex| !scene_mesh_vertex_is_finite(vertex))
                         || !opacity.is_finite()
                     {
                         return Err(SceneValidationError {

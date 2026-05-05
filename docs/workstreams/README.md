@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 348
+- Dedicated directories: 349
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -787,6 +787,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-debug-draw-channel-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after adding Dear ImGui-style `ChannelsSplit` / `ChannelsSetCurrent` /
     `ChannelsMerge` ordering semantics entirely in the `fret-ui-kit::imui` debug draw list.
+
+- Closed narrow P1 debug draw triangle mesh follow-on:
+  - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-triangle-mesh-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding bounded Dear ImGui-style raw triangle authoring through copyable
+    vertex-color and textured triangle scene primitives.
 
 - Closed narrow P1 item-behavior kernel follow-on:
   - `docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json`
@@ -1758,6 +1768,7 @@ Rule:
 - `docs/workstreams/imui-debug-draw-rounded-image-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style rounded image and rounded image-region clipping semantics to the IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-vertex-quad-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style multi-color rect and arbitrary image quad semantics to the IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-channel-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style channel split/merge ordering semantics to the IMUI debug-draw helper)
+- `docs/workstreams/imui-debug-draw-triangle-mesh-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding bounded Dear ImGui-style triangle mesh authoring to the IMUI debug-draw helper)
 - `docs/workstreams/imui-color-edit-alpha-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on preserving alpha for editor `ColorEdit` RGB-only hex commits and preset swatch activations after the popup-depth slice)
 - `docs/workstreams/imui-color-edit-alpha-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding checkerboard-backed alpha previews to editor `ColorEdit` main and preset swatches)
 - `docs/workstreams/imui-color-edit-popup-depth-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on replacing the editor `ColorEdit` popup stub with a preset swatch palette for the public IMUI editor-control path)

@@ -293,7 +293,9 @@ fill semantics are partially superseded by
 partially superseded by `docs/workstreams/imui-debug-draw-rounded-image-v1/`; vertex-level
 multi-color rect and arbitrary image quad semantics are partially superseded by
 `docs/workstreams/imui-debug-draw-vertex-quad-v1/`; channel split/merge ordering semantics are
-partially superseded by `docs/workstreams/imui-debug-draw-channel-split-v1/`.
+partially superseded by `docs/workstreams/imui-debug-draw-channel-split-v1/`; bounded triangle
+mesh authoring is partially superseded by
+`docs/workstreams/imui-debug-draw-triangle-mesh-v1/`.
 
 Current IMUI now exposes:
 
@@ -318,14 +320,18 @@ Current IMUI now exposes:
 - registered image, image-region, image-quad, rounded image, rounded image-region, SVG image, and
   SVG mask icon overlay commands,
 - `AddRectFilledMultiColor`-style per-corner color quads backed by renderer vertex colors,
+- indexed vertex-color and textured triangle mesh helpers backed by fixed scene triangle ops,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
 Dear ImGui still goes much deeper through full `DrawList` parity, per-command metadata, callback
-draw commands, raw mesh buffers, and hit-test-aware debug interaction. `AddRectFilledMultiColor`
+draw commands, raw writable vertex/index buffers, mesh batching, and hit-test-aware debug
+interaction. `AddRectFilledMultiColor`
 and `AddImageQuad` are no longer blocked on the axis-aligned `SceneOp::Quad` / `ImageRegion`
 surface: `SceneOp::VertexColorQuad` and `SceneOp::ImageQuad` now model those vertex-level cases
-directly.
+directly. Bounded custom triangle geometry is no longer blocked either:
+`SceneOp::VertexColorTriangle` and `SceneOp::ImageTriangle` provide a copyable scene primitive
+surface for IMUI mesh helpers.
 
 Conclusion:
 

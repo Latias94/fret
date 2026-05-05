@@ -1164,6 +1164,28 @@ pub enum SceneOp {
         opacity: f32,
     },
 
+    /// Draw a single triangle with one linear RGBA color per vertex.
+    ///
+    /// This is the bounded scene-level equivalent of a raw vertex triangle. Higher-level mesh
+    /// helpers may emit multiple triangle ops while keeping `SceneOp` copyable and renderer
+    /// independent.
+    VertexColorTriangle {
+        order: DrawOrder,
+        vertices: [SceneMeshVertex; 3],
+    },
+
+    /// Draw a single textured triangle with per-vertex UVs and color tint.
+    ///
+    /// The image is still a renderer-registered `ImageId`; only vertex position/UV/color data is
+    /// carried here. Higher-level mesh helpers may emit multiple triangle ops.
+    ImageTriangle {
+        order: DrawOrder,
+        image: ImageId,
+        vertices: [SceneMeshVertex; 3],
+        sampling: ImageSamplingHint,
+        opacity: f32,
+    },
+
     /// Draw an alpha mask image tinted with a solid color.
     ///
     /// The referenced `image` is expected to store coverage in the red channel (e.g. `R8Unorm`).
@@ -1248,6 +1270,31 @@ impl UvPoint {
 
     pub const fn new(u: f32, v: f32) -> Self {
         Self { u, v }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SceneMeshVertex {
+    pub position: Point,
+    pub uv: UvPoint,
+    pub color: Color,
+}
+
+impl SceneMeshVertex {
+    pub const fn new(position: Point, uv: UvPoint, color: Color) -> Self {
+        Self {
+            position,
+            uv,
+            color,
+        }
+    }
+
+    pub const fn colored(position: Point, color: Color) -> Self {
+        Self {
+            position,
+            uv: UvPoint::ZERO,
+            color,
+        }
     }
 }
 
@@ -1424,6 +1471,36 @@ mod tests {
             border_paint: Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: Corners::all(Px(0.0)),
         });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::NonFiniteOpData,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_nonfinite_triangle_vertex_data() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::VertexColorTriangle {
+            order: DrawOrder(0),
+            vertices: [
+                SceneMeshVertex::colored(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Color::from_srgb_hex_rgb(0xff_00_00),
+                ),
+                SceneMeshVertex::colored(
+                    Point::new(Px(f32::NAN), Px(10.0)),
+                    Color::from_srgb_hex_rgb(0x00_ff_00),
+                ),
+                SceneMeshVertex::colored(
+                    Point::new(Px(10.0), Px(0.0)),
+                    Color::from_srgb_hex_rgb(0x00_00_ff),
+                ),
+            ],
+        });
+
         assert!(matches!(
             scene.validate(),
             Err(SceneValidationError {
