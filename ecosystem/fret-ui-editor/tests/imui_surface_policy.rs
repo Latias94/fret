@@ -4,6 +4,8 @@ const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
+const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
+    include_str!("../src/controls/color_edit/popup/numeric.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -22,8 +24,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_RS.contains("fn hsv_picker<"));
     assert!(COLOR_EDIT_POPUP_RS.contains("fn sv_picker<"));
     assert!(COLOR_EDIT_POPUP_RS.contains("fn hue_bar<"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("fn color_numeric_inputs<"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("fn color_numeric_input_field<"));
+    assert!(COLOR_EDIT_POPUP_NUMERIC_RS.contains("fn color_numeric_inputs<"));
+    assert!(COLOR_EDIT_POPUP_NUMERIC_RS.contains("fn color_numeric_input_field<"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn rgb_numeric_text("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn hsv_numeric_text("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn parse_color_numeric_input("));

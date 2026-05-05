@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 315
+- Dedicated directories: 316
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -399,6 +399,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed after splitting popup overlay composition, picker UI helpers, numeric rows,
     alpha/preset preview helpers, and popup-local pointer handlers out of the editor `ColorEdit`
     public control file without changing public behavior.
+
+- Closed narrow P1 color edit popup numeric split follow-on:
+  - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after splitting editable RGB/HSV numeric popup row composition, validation error
+    display, placeholders, and Enter/Escape commit handling into `popup/numeric.rs`.
 
 - Closed narrow P1 debug draw baseline follow-on:
   - `docs/workstreams/imui-debug-draw-baseline-v1/WORKSTREAM.json`
@@ -1382,6 +1392,7 @@ Rule:
 - `docs/workstreams/imui-color-edit-model-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting pure color model helpers out of editor `ColorEdit` UI composition)
 - `docs/workstreams/imui-color-edit-numeric-input-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on making editor `ColorEdit` RGB/HSV numeric popup rows editable)
 - `docs/workstreams/imui-color-edit-popup-options-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding per-control popup defaults for editor `ColorEdit`)
+- `docs/workstreams/imui-color-edit-popup-numeric-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting editable popup numeric rows into `popup/numeric.rs`)
 - `docs/workstreams/imui-color-edit-popup-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting popup composition helpers out of editor `ColorEdit` public control wiring)
 - `docs/workstreams/imui-color-edit-numeric-readout-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on showing RGB/HSV numeric readouts in the editor `ColorEdit` popup)
 - `docs/workstreams/imui-debug-draw-baseline-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on exposing a canvas-backed immediate-mode debug-draw helper in `fret-ui-kit::imui`)
