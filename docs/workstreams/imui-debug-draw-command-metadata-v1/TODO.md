@@ -15,6 +15,8 @@ Status: Closed.
 
 ## Future Follow-Ons
 
+- [x] Source-level effective clip rect/depth metadata:
+      `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - [ ] Renderer batch/draw-call metadata if diagnostics need backend-level attribution.
 - [ ] Hit-test-aware debug draw interaction if editor overlays need selectable debug geometry.
 - [ ] Callback/user draw commands only if a contract-safe renderer extension point is designed.

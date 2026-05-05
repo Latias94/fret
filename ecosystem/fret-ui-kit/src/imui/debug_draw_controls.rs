@@ -104,6 +104,8 @@ pub enum DebugDrawCommandKind {
 pub struct DebugDrawCommandSummary {
     pub kind: DebugDrawCommandKind,
     pub channel: Option<usize>,
+    pub clip_rect: Option<Rect>,
+    pub clip_depth: usize,
     pub image: Option<ImageId>,
     pub point_count: usize,
     pub vertex_count: usize,
@@ -116,6 +118,8 @@ impl DebugDrawCommandSummary {
         Self {
             kind,
             channel: None,
+            clip_rect: None,
+            clip_depth: 0,
             image: None,
             point_count: 0,
             vertex_count: 0,
@@ -137,6 +141,8 @@ pub struct DebugDrawListSummary {
     pub command_count: usize,
     pub clip_push_count: usize,
     pub clip_pop_count: usize,
+    pub max_clip_depth: usize,
+    pub final_clip_depth: usize,
     pub image_command_count: usize,
     pub svg_command_count: usize,
     pub text_command_count: usize,
@@ -153,6 +159,7 @@ impl DebugDrawListSummary {
         self.vertex_count += command.vertex_count;
         self.index_count += command.index_count;
         self.triangle_count += command.triangle_count;
+        self.max_clip_depth = self.max_clip_depth.max(command.clip_depth);
 
         match command.kind {
             DebugDrawCommandKind::PushClipRect => self.clip_push_count += 1,
@@ -701,8 +708,9 @@ impl ImUiDebugDrawList {
     /// Return command summaries in the order the list would paint after channel merge.
     pub fn command_summaries(&self) -> Vec<DebugDrawCommandSummary> {
         let mut summaries = Vec::with_capacity(self.command_count());
+        let mut clip_stack = Vec::new();
         self.for_each_command_with_channel(|channel, command| {
-            summaries.push(command.summary().with_channel(channel));
+            summaries.push(command.summary_with_clip_state(channel, &mut clip_stack));
         });
         summaries
     }
@@ -710,9 +718,11 @@ impl ImUiDebugDrawList {
     /// Return aggregate source-level metadata for recorded debug draw commands.
     pub fn list_summary(&self) -> DebugDrawListSummary {
         let mut summary = DebugDrawListSummary::default();
+        let mut clip_stack = Vec::new();
         self.for_each_command_with_channel(|channel, command| {
-            summary.include(command.summary().with_channel(channel));
+            summary.include(command.summary_with_clip_state(channel, &mut clip_stack));
         });
+        summary.final_clip_depth = clip_stack.len();
         summary
     }
 
@@ -1471,6 +1481,29 @@ enum DebugDrawCommand {
 }
 
 impl DebugDrawCommand {
+    fn summary_with_clip_state(
+        &self,
+        channel: Option<usize>,
+        clip_stack: &mut Vec<Rect>,
+    ) -> DebugDrawCommandSummary {
+        let mut summary = self.summary().with_channel(channel);
+        match self {
+            DebugDrawCommand::PushClipRect { rect } => {
+                clip_stack.push(*rect);
+                summary.clip_rect = Some(*rect);
+            }
+            DebugDrawCommand::PopClipRect => {
+                clip_stack.pop();
+                summary.clip_rect = clip_stack.last().copied();
+            }
+            _ => {
+                summary.clip_rect = clip_stack.last().copied();
+            }
+        }
+        summary.clip_depth = clip_stack.len();
+        summary
+    }
+
     fn summary(&self) -> DebugDrawCommandSummary {
         match self {
             DebugDrawCommand::Line { .. } => {
@@ -3251,6 +3284,60 @@ mod tests {
         assert_eq!(summary.vertex_count, 4);
         assert_eq!(summary.index_count, 6);
         assert_eq!(summary.triangle_count, 2);
+    }
+
+    #[test]
+    fn debug_draw_command_summaries_track_effective_clip_stack() {
+        let outer = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(32.0)));
+        let inner = Rect::new(Point::new(Px(4.0), Px(4.0)), Size::new(Px(12.0), Px(12.0)));
+
+        let mut list = ImUiDebugDrawList::default();
+        list.add_line(
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(8.0), Px(8.0)),
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(1.0),
+        );
+        list.push_clip_rect(outer);
+        list.add_rect_filled(
+            Rect::new(Point::new(Px(2.0), Px(2.0)), Size::new(Px(6.0), Px(6.0))),
+            Color::from_srgb_hex_rgb(0xff_00_00),
+        );
+        list.push_clip_rect(inner);
+        list.add_text(
+            Point::new(Px(6.0), Px(6.0)),
+            "clipped",
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(12.0),
+        );
+        list.pop_clip_rect();
+        list.add_image(
+            Rect::new(Point::new(Px(8.0), Px(8.0)), Size::new(Px(6.0), Px(6.0))),
+            ImageId::default(),
+        );
+        list.pop_clip_rect();
+
+        let summaries = list.command_summaries();
+        assert_eq!(summaries[0].clip_rect, None);
+        assert_eq!(summaries[0].clip_depth, 0);
+        assert_eq!(summaries[1].clip_rect, Some(outer));
+        assert_eq!(summaries[1].clip_depth, 1);
+        assert_eq!(summaries[2].clip_rect, Some(outer));
+        assert_eq!(summaries[2].clip_depth, 1);
+        assert_eq!(summaries[3].clip_rect, Some(inner));
+        assert_eq!(summaries[3].clip_depth, 2);
+        assert_eq!(summaries[4].clip_rect, Some(inner));
+        assert_eq!(summaries[4].clip_depth, 2);
+        assert_eq!(summaries[5].clip_rect, Some(outer));
+        assert_eq!(summaries[5].clip_depth, 1);
+        assert_eq!(summaries[6].clip_rect, Some(outer));
+        assert_eq!(summaries[6].clip_depth, 1);
+        assert_eq!(summaries[7].clip_rect, None);
+        assert_eq!(summaries[7].clip_depth, 0);
+
+        let summary = list.list_summary();
+        assert_eq!(summary.max_clip_depth, 2);
+        assert_eq!(summary.final_clip_depth, 0);
     }
 
     #[test]

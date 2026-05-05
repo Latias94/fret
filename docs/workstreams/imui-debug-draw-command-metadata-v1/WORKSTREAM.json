@@ -102,6 +102,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "start_follow_on",
-    "notes": "This command metadata slice is closed. Backend draw-call attribution, callback draw commands, raw vertex/index buffers, and hit-test-aware debug interaction should start as separate follow-ons with explicit contract review."
+    "notes": "This command metadata slice is closed. Source-level clip metadata continued in imui-debug-draw-clip-metadata-v1. Backend draw-call attribution, callback draw commands, raw vertex/index buffers, and hit-test-aware debug interaction should start as separate follow-ons with explicit contract review."
   }
 }

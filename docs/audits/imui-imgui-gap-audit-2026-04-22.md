@@ -336,6 +336,8 @@ Basic per-command metadata is also no longer a total gap: `fret-ui-kit::imui` ex
 per-command summary, and aggregate list summary introspection for debug draw lists, including active
 channel split ordering and optional image IDs. This is source-level IMUI metadata, not a renderer
 draw-call attribution or callback surface.
+`ImDrawCmd::ClipRect`-style source-level clip observability is also covered: command summaries now
+track effective clip rect/depth, and list summaries track maximum/final clip depth.
 
 Conclusion:
 
@@ -370,6 +372,7 @@ Evidence anchors:
 - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/vertex_color.rs`
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs`
 - `docs/workstreams/imui-debug-draw-command-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- `docs/workstreams/imui-debug-draw-clip-metadata-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 
 #### 4.2 There is still no immediate style-stack lane, and that is mostly the right decision
 
