@@ -6,7 +6,7 @@ use super::model::{
     hsv_with_sv_from_local_position, hue_from_local_y, parse_color_numeric_input, rgb_numeric_text,
     rgb_to_hsv,
 };
-use super::popup::picker::{alpha_from_local_x, alpha_percent_text};
+use super::popup::picker::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
 use super::popup::preview::{
     checkerboard_cell_color, opaque_preview_color, preview_color_for_alpha_visibility,
     restore_reference_color,
@@ -423,6 +423,15 @@ fn alpha_bar_position_maps_local_x_to_clamped_alpha() {
     assert!((alpha_from_local_x(37.5, 100.0) - 0.375).abs() < f32::EPSILON);
     assert_eq!(alpha_from_local_x(120.0, 100.0), 1.0);
     assert_eq!(alpha_from_local_x(10.0, 0.0), 0.0);
+}
+
+#[test]
+fn vertical_alpha_bar_position_maps_local_y_to_inverted_alpha() {
+    assert_eq!(alpha_from_local_y(-10.0, 100.0), 1.0);
+    assert_eq!(alpha_from_local_y(0.0, 100.0), 1.0);
+    assert!((alpha_from_local_y(37.5, 100.0) - 0.625).abs() < f32::EPSILON);
+    assert_eq!(alpha_from_local_y(120.0, 100.0), 0.0);
+    assert_eq!(alpha_from_local_y(10.0, 0.0), 1.0);
 }
 
 #[test]

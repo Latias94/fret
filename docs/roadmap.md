@@ -154,6 +154,12 @@ Tracker highlights:
   interaction mapped from local Y): `docs/workstreams/imui-color-edit-vertical-hue-bar-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-vertical-hue-bar-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-vertical-hue-bar-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit vertical AlphaBar follow-on (closed narrow P1 lane inlining a Dear ImGui-style
+  vertical AlphaBar into editor `ColorEdit`'s `HsvHueBar` picker while preserving the picker-hidden
+  standalone alpha path):
+  `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit AlphaBar follow-on (closed narrow P1 lane adding a bounded editor-owned
   AlphaBar-style popup affordance for direct alpha edits when `show_alpha=true`, before the later
   HSV picker follow-on): `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`,

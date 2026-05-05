@@ -112,6 +112,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     draft.clone(),
                     error.clone(),
                     show_alpha,
+                    popup_options.shows_alpha_bar(show_alpha),
                     enabled,
                     derived_test_id(popup_test_id.as_ref(), "hsv"),
                 )),
@@ -162,7 +163,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     popup_test_id.clone(),
                 )
             });
-            let alpha_bar = if popup_options.shows_alpha_bar(show_alpha) {
+            let standalone_alpha_bar = if popup_options.picker == ColorEditPopupPicker::Hidden
+                && popup_options.shows_alpha_bar(show_alpha)
+            {
                 Some(alpha_bar(
                     cx,
                     current,
@@ -206,8 +209,8 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     if let Some(swatches) = swatches {
                         out.push(swatches);
                     }
-                    if let Some(alpha_bar) = alpha_bar {
-                        out.push(alpha_bar);
+                    if let Some(standalone_alpha_bar) = standalone_alpha_bar {
+                        out.push(standalone_alpha_bar);
                     }
                     out
                 },

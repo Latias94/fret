@@ -36,6 +36,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-color-edit-drag-drop-payload-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - `docs/workstreams/imui-color-edit-reference-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - `docs/workstreams/imui-color-edit-vertical-hue-bar-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - `docs/workstreams/imui-color-edit-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-04.md`
 - `docs/workstreams/imui-color-edit-hsv-picker-v1/CLOSEOUT_AUDIT_2026-05-04.md`
 - `docs/workstreams/imui-color-edit-numeric-readout-v1/CLOSEOUT_AUDIT_2026-05-04.md`
