@@ -39,6 +39,80 @@ pub(super) fn preset_swatches<H: UiHost>(
     on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    swatch_row(
+        cx,
+        current,
+        model,
+        draft,
+        error,
+        open,
+        show_alpha,
+        enabled,
+        alpha_preview,
+        palette,
+        drag_drop_store,
+        drag_drop_options,
+        drag_threshold,
+        on_palette_slot_drop,
+        "preset",
+        test_id,
+    )
+}
+
+pub(super) fn history_swatches<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    current: Color,
+    model: Model<Color>,
+    draft: Model<String>,
+    error: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    show_alpha: bool,
+    enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
+    history: Arc<[ColorEditPaletteEntry]>,
+    drag_drop_store: Model<ColorDragDropStore>,
+    drag_drop_options: ColorEditDragDropOptions,
+    drag_threshold: Px,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    swatch_row(
+        cx,
+        current,
+        model,
+        draft,
+        error,
+        open,
+        show_alpha,
+        enabled,
+        alpha_preview,
+        history,
+        drag_drop_store,
+        drag_drop_options,
+        drag_threshold,
+        None,
+        "history",
+        test_id,
+    )
+}
+
+fn swatch_row<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    current: Color,
+    model: Model<Color>,
+    draft: Model<String>,
+    error: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    show_alpha: bool,
+    enabled: bool,
+    alpha_preview: ColorEditAlphaPreview,
+    entries: Arc<[ColorEditPaletteEntry]>,
+    drag_drop_store: Model<ColorDragDropStore>,
+    drag_drop_options: ColorEditDragDropOptions,
+    drag_threshold: Px,
+    on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
+    test_segment: &'static str,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
     let current_rgb = fret_ui_kit::colors::hex_rgb_from_linear(current);
     cx.flex(
         FlexProps {
@@ -58,7 +132,7 @@ pub(super) fn preset_swatches<H: UiHost>(
             wrap: true,
         },
         move |cx| {
-            palette
+            entries
                 .iter()
                 .enumerate()
                 .map(|(idx, entry)| {
@@ -79,7 +153,7 @@ pub(super) fn preset_swatches<H: UiHost>(
                         drag_drop_options,
                         drag_threshold,
                         on_palette_slot_drop.clone(),
-                        derived_test_id(test_id.as_ref(), format!("preset.{idx}").as_str()),
+                        derived_test_id(test_id.as_ref(), format!("{test_segment}.{idx}").as_str()),
                     )
                 })
                 .collect::<Vec<_>>()

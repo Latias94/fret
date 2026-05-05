@@ -2,7 +2,7 @@
 //!
 //! v1 scope:
 //! - hex input for `#RRGGBB` (and optionally `#RRGGBBAA`)
-//! - swatch button that opens HSV picker controls plus an app-owned, optionally editable palette
+//! - swatch button that opens HSV picker controls plus app-owned palette/history swatches
 //! - RGB-only edits preserve alpha; `show_alpha` only controls explicit alpha editing
 //! - per-control alpha preview policy mirroring Dear ImGui's ColorButton preview modes
 
@@ -283,11 +283,17 @@ pub struct ColorEditPopupOptions {
 }
 
 impl ColorEditPopupOptions {
-    fn has_visible_content_with_palette(self, show_alpha: bool, has_palette: bool) -> bool {
+    fn has_visible_content_with_swatches(
+        self,
+        show_alpha: bool,
+        has_palette: bool,
+        has_history: bool,
+    ) -> bool {
         self.picker != ColorEditPopupPicker::Hidden
             || self.numeric_inputs != ColorEditPopupNumericInputs::Hidden
             || self.side_preview.has_visible_content()
             || (self.presets && has_palette)
+            || has_history
             || self.shows_alpha_bar(show_alpha)
             || self.shows_picker_options(show_alpha)
     }
@@ -373,6 +379,11 @@ pub struct ColorEditOptions {
     /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
     /// ownership by making the palette data explicit on the editor control options.
     pub palette: Arc<[ColorEditPaletteEntry]>,
+    /// App-owned recent color entries shown inside the popup before the palette row.
+    ///
+    /// Fret does not record a global color history. Apps that want recent colors should keep that
+    /// list in their own model and pass it here each frame.
+    pub history: Arc<[ColorEditPaletteEntry]>,
     /// Called when a compatible editor color payload is dropped onto a popup palette slot.
     ///
     /// The callback owns the final app-state mutation. When it is absent, palette swatches still
@@ -401,6 +412,7 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("drag_drop", &self.drag_drop)
             .field("popup", &self.popup)
             .field("palette", &self.palette)
+            .field("history", &self.history)
             .field(
                 "on_palette_slot_drop",
                 &self.on_palette_slot_drop.as_ref().map(|_| "<callback>"),
@@ -432,6 +444,7 @@ impl Default for ColorEditOptions {
             drag_drop: ColorEditDragDropOptions::default(),
             popup: ColorEditPopupOptions::default(),
             palette: default_color_edit_palette(),
+            history: Vec::new().into(),
             on_palette_slot_drop: None,
             id_source: None,
             test_id: None,
@@ -533,8 +546,12 @@ impl ColorEdit {
                 .unwrap_or_else(|| popup_options.runtime_defaults()),
         );
         let palette = self.options.palette.clone();
-        let popup_has_visible_content = popup_options_for_frame
-            .has_visible_content_with_palette(self.options.show_alpha, !palette.is_empty());
+        let history = self.options.history.clone();
+        let popup_has_visible_content = popup_options_for_frame.has_visible_content_with_swatches(
+            self.options.show_alpha,
+            !palette.is_empty(),
+            !history.is_empty(),
+        );
         let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
         let swatch_enabled =
             self.options.enabled && (popup_has_visible_content || drag_drop_enabled);
@@ -813,6 +830,7 @@ impl ColorEdit {
             self.options.enabled,
             self.options.alpha_preview,
             palette,
+            history,
             drag_drop_store.clone(),
             drag_drop_options,
             drag_threshold,

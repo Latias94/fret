@@ -79,6 +79,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
                 picker_options: true,
             },
             palette: vec![ColorEditPaletteEntry::new("Brand", 0x22_44_66)].into(),
+            history: vec![ColorEditPaletteEntry::new("Recent", 0xef_44_44)].into(),
             on_palette_slot_drop: Some(on_palette_slot_drop),
             ..Default::default()
         }),

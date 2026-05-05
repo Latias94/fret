@@ -52,6 +52,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPaletteSlotDrop"));
     assert!(COLOR_EDIT_RS.contains("pub type OnColorEditPaletteSlotDrop"));
     assert!(COLOR_EDIT_RS.contains("pub fn default_color_edit_palette()"));
+    assert!(COLOR_EDIT_RS.contains("pub history: Arc<[ColorEditPaletteEntry]>"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditAlphaPreview"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropPayload"));
@@ -74,6 +75,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
     assert!(COLOR_EDIT_POPUP_RS.contains("color_picker_options("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn history_swatches<"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("install_color_drag_source("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("take_delivered_color_drop("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteSlotDrop::new("));
@@ -82,7 +84,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));
-    assert!(COLOR_EDIT_RS.contains("fn has_visible_content_with_palette("));
+    assert!(COLOR_EDIT_RS.contains("fn has_visible_content_with_swatches("));
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));
     assert!(!COLOR_EDIT_POPUP_RS.contains("Color picker (stub)"));

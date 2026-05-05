@@ -38,6 +38,7 @@ fn color_edit_options_default_to_the_builtin_palette_source() {
 
     assert_eq!(options.palette, default_color_edit_palette());
     assert_eq!(options.palette.len(), 12);
+    assert!(options.history.is_empty());
 }
 
 #[test]
@@ -56,6 +57,23 @@ fn color_edit_palette_entries_are_app_owned_rgb_slots() {
     assert_eq!(options.palette, custom);
     assert_eq!(options.palette[0].name.as_ref(), "Brand Primary");
     assert_eq!(options.palette[1].rgb, 0xab_cd_ef);
+}
+
+#[test]
+fn color_edit_history_entries_are_app_owned_recent_rgb_slots() {
+    let history: Arc<[ColorEditPaletteEntry]> = vec![
+        ColorEditPaletteEntry::new("Recent 1", 0xef_44_44),
+        ColorEditPaletteEntry::new("Recent 2", 0x3b_82_f6),
+    ]
+    .into();
+
+    let options = ColorEditOptions {
+        history: history.clone(),
+        ..Default::default()
+    };
+
+    assert_eq!(options.history, history);
+    assert_eq!(options.history[0].name.as_ref(), "Recent 1");
 }
 
 #[test]
@@ -109,8 +127,8 @@ fn popup_options_default_to_imgui_like_hue_bar_surface() {
     assert!(options.presets);
     assert!(options.alpha_bar);
     assert!(options.picker_options);
-    assert!(options.has_visible_content_with_palette(false, true));
-    assert!(options.has_visible_content_with_palette(true, true));
+    assert!(options.has_visible_content_with_swatches(false, true, false));
+    assert!(options.has_visible_content_with_swatches(true, true, false));
     assert!(!options.shows_alpha_bar(false));
     assert!(options.shows_alpha_bar(true));
     assert!(options.shows_picker_options(false));
@@ -206,8 +224,8 @@ fn popup_options_can_hide_every_popup_affordance() {
         picker_options: false,
     };
 
-    assert!(!options.has_visible_content_with_palette(false, false));
-    assert!(!options.has_visible_content_with_palette(true, false));
+    assert!(!options.has_visible_content_with_swatches(false, false, false));
+    assert!(!options.has_visible_content_with_swatches(true, false, false));
 }
 
 #[test]
@@ -221,8 +239,22 @@ fn empty_palette_does_not_count_as_visible_popup_content() {
         picker_options: false,
     };
 
-    assert!(!options.has_visible_content_with_palette(false, false));
-    assert!(options.has_visible_content_with_palette(false, true));
+    assert!(!options.has_visible_content_with_swatches(false, false, false));
+    assert!(options.has_visible_content_with_swatches(false, true, false));
+}
+
+#[test]
+fn non_empty_history_counts_as_visible_popup_content_without_palette() {
+    let options = ColorEditPopupOptions {
+        picker: ColorEditPopupPicker::Hidden,
+        numeric_inputs: ColorEditPopupNumericInputs::Hidden,
+        side_preview: ColorEditPopupSidePreview::Hidden,
+        presets: false,
+        alpha_bar: false,
+        picker_options: false,
+    };
+
+    assert!(options.has_visible_content_with_swatches(false, false, true));
 }
 
 #[test]

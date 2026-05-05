@@ -211,7 +211,9 @@ options popup behavior is partially superseded by
 `docs/workstreams/imui-color-edit-picker-options-popup-v1/`; app-owned palette source
 customization is partially superseded by
 `docs/workstreams/imui-color-edit-palette-customization-v1/`; editable palette slot drag/drop is
-partially superseded by `docs/workstreams/imui-color-edit-editable-palette-slots-v1/`.
+partially superseded by `docs/workstreams/imui-color-edit-editable-palette-slots-v1/`; app-owned
+recent color history swatches are partially superseded by
+`docs/workstreams/imui-color-edit-history-swatches-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -236,6 +238,7 @@ Current editor `ColorEdit` now has:
   and alpha-preserving palette activation,
 - editable popup palette slots through `OnColorEditPaletteSlotDrop`, with palette swatches acting
   as RGB drag sources and optional app-owned drop targets,
+- app-owned recent color history swatches through `ColorEditOptions::history`,
 - RGB and HSV numeric readouts, with alpha percent shown when alpha is visible,
 - editable RGB/HSV numeric popup rows with editor-owned validation,
 - per-control popup defaults for HueBar picker, RGB/HSV numeric rows, preset palette, and AlphaBar
@@ -270,8 +273,7 @@ Conclusion:
 
 - The remaining color gap is deeper picker/editor affordances, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
-- Start separate narrow follow-ons for color history, eyedropper behavior, or higher-fidelity
-  picker preview polish.
+- Start separate narrow follow-ons for eyedropper behavior or higher-fidelity picker preview polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
 
 Evidence anchors:

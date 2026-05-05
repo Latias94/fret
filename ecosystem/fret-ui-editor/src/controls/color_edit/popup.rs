@@ -33,7 +33,7 @@ use self::options::color_picker_options;
 use self::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
 pub(super) use self::preview::color_preview_stack;
 use self::preview::color_side_preview;
-use self::swatches::preset_swatches;
+use self::swatches::{history_swatches, preset_swatches};
 
 pub(super) fn request_popup_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -47,6 +47,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
     palette: Arc<[ColorEditPaletteEntry]>,
+    history: Arc<[ColorEditPaletteEntry]>,
     drag_drop_store: Model<ColorDragDropStore>,
     drag_drop_options: ColorEditDragDropOptions,
     drag_threshold: Px,
@@ -56,7 +57,11 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     popup_padding: Px,
     popup_test_id: Option<Arc<str>>,
 ) {
-    if !popup_options.has_visible_content_with_palette(show_alpha, !palette.is_empty()) {
+    if !popup_options.has_visible_content_with_swatches(
+        show_alpha,
+        !palette.is_empty(),
+        !history.is_empty(),
+    ) {
         return;
     }
 
@@ -189,6 +194,24 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                         derived_test_id(popup_test_id.as_ref(), "numbers"),
                     )
                 });
+            let history_swatches = (!history.is_empty()).then(|| {
+                history_swatches(
+                    cx,
+                    current,
+                    model.clone(),
+                    draft.clone(),
+                    error.clone(),
+                    open_for_content.clone(),
+                    show_alpha,
+                    enabled,
+                    alpha_preview,
+                    history.clone(),
+                    drag_drop_store.clone(),
+                    drag_drop_options,
+                    drag_threshold,
+                    popup_test_id.clone(),
+                )
+            });
             let swatches = (effective_popup_options.presets && !palette.is_empty()).then(|| {
                 preset_swatches(
                     cx,
@@ -254,6 +277,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     }
                     if let Some(numbers) = numbers {
                         out.push(numbers);
+                    }
+                    if let Some(history_swatches) = history_swatches {
+                        out.push(history_swatches);
                     }
                     if let Some(swatches) = swatches {
                         out.push(swatches);
