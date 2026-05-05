@@ -70,6 +70,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
                 side_preview: ColorEditPopupSidePreview::CurrentAndOriginal,
                 presets: true,
                 alpha_bar: true,
+                picker_options: true,
             },
             ..Default::default()
         }),
@@ -410,6 +411,7 @@ fn editor_imui_adapter_option_defaults_compile() {
             side_preview: ColorEditPopupSidePreview::Hidden,
             presets: false,
             alpha_bar: false,
+            picker_options: false,
         },
         ..Default::default()
     };

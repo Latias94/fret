@@ -166,6 +166,12 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit picker options popup follow-on (closed narrow P1 lane adding a popup-local
+  options surface for switching `HsvHueBar` / `HsvHueWheel` and toggling AlphaBar visibility
+  without global `SetColorEditOptions()` state):
+  `docs/workstreams/imui-color-edit-picker-options-popup-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-picker-options-popup-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-picker-options-popup-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit AlphaBar follow-on (closed narrow P1 lane adding a bounded editor-owned
   AlphaBar-style popup affordance for direct alpha edits when `show_alpha=true`, before the later
   HSV picker follow-on): `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`,

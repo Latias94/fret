@@ -17,15 +17,17 @@ use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
 use super::{
     ColorEditAlphaPreview, ColorEditPopupNumericInputs, ColorEditPopupOptions,
-    ColorEditPopupPicker, draft_model, error_model,
+    ColorEditPopupPicker, ColorEditPopupRuntimeOptions, draft_model, error_model,
 };
 
 mod numeric;
+mod options;
 pub(super) mod picker;
 pub(super) mod preview;
 mod swatches;
 
 use self::numeric::color_numeric_inputs;
+use self::options::color_picker_options;
 use self::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
 pub(super) use self::preview::color_preview_stack;
 use self::preview::color_side_preview;
@@ -43,6 +45,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
     popup_options: ColorEditPopupOptions,
+    popup_runtime_options: Model<ColorEditPopupRuntimeOptions>,
     popup_padding: Px,
     popup_test_id: Option<Arc<str>>,
 ) {
@@ -104,7 +107,11 @@ pub(super) fn request_popup_overlay<H: UiHost>(
             let reference_color = cx
                 .get_model_copied(&reference, Invalidation::Paint)
                 .unwrap_or(None);
-            let picker = match popup_options.picker {
+            let runtime_options = cx
+                .get_model_copied(&popup_runtime_options, Invalidation::Paint)
+                .unwrap_or_else(|| popup_options.runtime_defaults());
+            let effective_popup_options = popup_options.with_runtime_options(runtime_options);
+            let picker = match effective_popup_options.picker {
                 ColorEditPopupPicker::HsvHueBar => Some(hsv_picker(
                     cx,
                     current,
@@ -112,7 +119,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     draft.clone(),
                     error.clone(),
                     show_alpha,
-                    popup_options.shows_alpha_bar(show_alpha),
+                    effective_popup_options.shows_alpha_bar(show_alpha),
                     enabled,
                     derived_test_id(popup_test_id.as_ref(), "hsv"),
                 )),
@@ -123,28 +130,43 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     draft.clone(),
                     error.clone(),
                     show_alpha,
-                    popup_options.shows_alpha_bar(show_alpha),
+                    effective_popup_options.shows_alpha_bar(show_alpha),
                     enabled,
                     derived_test_id(popup_test_id.as_ref(), "hsv-wheel"),
                 )),
                 ColorEditPopupPicker::Hidden => None,
             };
-            let side_preview = popup_options.side_preview.has_visible_content().then(|| {
-                color_side_preview(
+            let picker_options = popup_options.shows_picker_options(show_alpha).then(|| {
+                color_picker_options(
                     cx,
-                    current,
-                    reference_color,
-                    model.clone(),
-                    draft.clone(),
-                    error.clone(),
-                    popup_options.side_preview,
+                    popup_options,
+                    runtime_options,
+                    popup_runtime_options.clone(),
                     show_alpha,
                     enabled,
-                    alpha_preview,
-                    derived_test_id(popup_test_id.as_ref(), "preview"),
+                    derived_test_id(popup_test_id.as_ref(), "options"),
                 )
             });
-            let numbers = (popup_options.numeric_inputs != ColorEditPopupNumericInputs::Hidden)
+            let side_preview = effective_popup_options
+                .side_preview
+                .has_visible_content()
+                .then(|| {
+                    color_side_preview(
+                        cx,
+                        current,
+                        reference_color,
+                        model.clone(),
+                        draft.clone(),
+                        error.clone(),
+                        effective_popup_options.side_preview,
+                        show_alpha,
+                        enabled,
+                        alpha_preview,
+                        derived_test_id(popup_test_id.as_ref(), "preview"),
+                    )
+                });
+            let numbers = (effective_popup_options.numeric_inputs
+                != ColorEditPopupNumericInputs::Hidden)
                 .then(|| {
                     color_numeric_inputs(
                         cx,
@@ -154,13 +176,13 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                         rgb_draft.clone(),
                         hsv_draft.clone(),
                         numeric_error.clone(),
-                        popup_options.numeric_inputs,
+                        effective_popup_options.numeric_inputs,
                         show_alpha,
                         enabled,
                         derived_test_id(popup_test_id.as_ref(), "numbers"),
                     )
                 });
-            let swatches = popup_options.presets.then(|| {
+            let swatches = effective_popup_options.presets.then(|| {
                 preset_swatches(
                     cx,
                     current,
@@ -174,8 +196,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     popup_test_id.clone(),
                 )
             });
-            let standalone_alpha_bar = if popup_options.picker == ColorEditPopupPicker::Hidden
-                && popup_options.shows_alpha_bar(show_alpha)
+            let standalone_alpha_bar = if effective_popup_options.picker
+                == ColorEditPopupPicker::Hidden
+                && effective_popup_options.shows_alpha_bar(show_alpha)
             {
                 Some(alpha_bar(
                     cx,
@@ -210,6 +233,9 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     let mut out = Vec::new();
                     if let Some(picker) = picker {
                         out.push(picker);
+                    }
+                    if let Some(picker_options) = picker_options {
+                        out.push(picker_options);
                     }
                     if let Some(side_preview) = side_preview {
                         out.push(side_preview);

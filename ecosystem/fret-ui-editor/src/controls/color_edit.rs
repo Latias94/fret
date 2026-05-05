@@ -219,6 +219,11 @@ pub struct ColorEditPopupOptions {
     pub side_preview: ColorEditPopupSidePreview,
     pub presets: bool,
     pub alpha_bar: bool,
+    /// Show popup-local controls for picker shape and AlphaBar visibility.
+    ///
+    /// This intentionally replaces Dear ImGui's global `ColorPickerOptionsPopup()` state with a
+    /// per-control runtime override owned by editor `ColorEdit`.
+    pub picker_options: bool,
 }
 
 impl ColorEditPopupOptions {
@@ -228,10 +233,39 @@ impl ColorEditPopupOptions {
             || self.side_preview.has_visible_content()
             || self.presets
             || self.shows_alpha_bar(show_alpha)
+            || self.shows_picker_options(show_alpha)
     }
 
     fn shows_alpha_bar(self, show_alpha: bool) -> bool {
         show_alpha && self.alpha_bar
+    }
+
+    fn shows_picker_options(self, show_alpha: bool) -> bool {
+        self.picker_options && (self.picker != ColorEditPopupPicker::Hidden || show_alpha)
+    }
+
+    fn runtime_defaults(self) -> ColorEditPopupRuntimeOptions {
+        ColorEditPopupRuntimeOptions {
+            default_picker: self.picker,
+            picker: self.picker,
+            default_alpha_bar: self.alpha_bar,
+            alpha_bar: self.alpha_bar,
+        }
+    }
+
+    fn with_runtime_options(self, runtime: ColorEditPopupRuntimeOptions) -> Self {
+        if !self.picker_options {
+            return self;
+        }
+
+        let mut options = self;
+        if self.picker != ColorEditPopupPicker::Hidden
+            && runtime.picker != ColorEditPopupPicker::Hidden
+        {
+            options.picker = runtime.picker;
+        }
+        options.alpha_bar = runtime.alpha_bar;
+        options
     }
 }
 
@@ -243,6 +277,28 @@ impl Default for ColorEditPopupOptions {
             side_preview: ColorEditPopupSidePreview::default(),
             presets: true,
             alpha_bar: true,
+            picker_options: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::controls::color_edit) struct ColorEditPopupRuntimeOptions {
+    pub(in crate::controls::color_edit) default_picker: ColorEditPopupPicker,
+    pub(in crate::controls::color_edit) picker: ColorEditPopupPicker,
+    pub(in crate::controls::color_edit) default_alpha_bar: bool,
+    pub(in crate::controls::color_edit) alpha_bar: bool,
+}
+
+impl ColorEditPopupRuntimeOptions {
+    fn sync_defaults(&mut self, defaults: Self) {
+        if self.default_picker != defaults.default_picker {
+            self.default_picker = defaults.default_picker;
+            self.picker = defaults.picker;
+        }
+        if self.default_alpha_bar != defaults.default_alpha_bar {
+            self.default_alpha_bar = defaults.default_alpha_bar;
+            self.alpha_bar = defaults.alpha_bar;
         }
     }
 }
@@ -377,7 +433,15 @@ impl ColorEdit {
             .clone()
             .or_else(|| derived_test_id(self.options.test_id.as_ref(), "popup"));
         let popup_options = self.options.popup;
-        let popup_has_visible_content = popup_options.has_visible_content(self.options.show_alpha);
+        let popup_runtime_options =
+            popup_runtime_options_model(cx, popup_options.runtime_defaults());
+        sync_popup_runtime_options(cx, &popup_runtime_options, popup_options.runtime_defaults());
+        let popup_options_for_frame = popup_options.with_runtime_options(
+            cx.get_model_copied(&popup_runtime_options, Invalidation::Paint)
+                .unwrap_or_else(|| popup_options.runtime_defaults()),
+        );
+        let popup_has_visible_content =
+            popup_options_for_frame.has_visible_content(self.options.show_alpha);
         let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
         let swatch_enabled =
             self.options.enabled && (popup_has_visible_content || drag_drop_enabled);
@@ -656,6 +720,7 @@ impl ColorEdit {
             self.options.enabled,
             self.options.alpha_preview,
             popup_options,
+            popup_runtime_options,
             popup_padding,
             popup_test_id,
         );
@@ -756,4 +821,23 @@ fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 #[track_caller]
 fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
     cx.local_model(|| None::<Arc<str>>)
+}
+
+#[track_caller]
+fn popup_runtime_options_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    defaults: ColorEditPopupRuntimeOptions,
+) -> Model<ColorEditPopupRuntimeOptions> {
+    cx.local_model_keyed("popup_runtime_options", move || defaults)
+}
+
+fn sync_popup_runtime_options<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: &Model<ColorEditPopupRuntimeOptions>,
+    defaults: ColorEditPopupRuntimeOptions,
+) {
+    let _ = cx
+        .app
+        .models_mut()
+        .update(model, |runtime| runtime.sync_defaults(defaults));
 }

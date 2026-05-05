@@ -7,6 +7,8 @@ const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
+const COLOR_EDIT_POPUP_OPTIONS_RS: &str =
+    include_str!("../src/controls/color_edit/popup/options.rs");
 const COLOR_EDIT_POPUP_PICKER_RS: &str = include_str!("../src/controls/color_edit/popup/picker.rs");
 const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
@@ -35,6 +37,9 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn vertical_alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_POPUP_NUMERIC_RS.contains("fn color_numeric_inputs<"));
     assert!(COLOR_EDIT_POPUP_NUMERIC_RS.contains("fn color_numeric_input_field<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn color_picker_options<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn picker_options_row<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn alpha_bar_option<"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn rgb_numeric_text("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn hsv_numeric_text("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn parse_color_numeric_input("));
@@ -48,6 +53,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropPayload"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupPicker"));
     assert!(COLOR_EDIT_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_RS.contains("struct ColorEditPopupRuntimeOptions"));
+    assert!(COLOR_EDIT_RS.contains("fn sync_popup_runtime_options<"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupNumericInputs"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupSidePreview"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
@@ -60,6 +67,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn preview_color_for_alpha_visibility("));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("color_picker_options("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_wheel_canvas<"));
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
