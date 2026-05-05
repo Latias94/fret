@@ -48,6 +48,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn alpha_bar<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPopupOptions"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPaletteEntry"));
+    assert!(COLOR_EDIT_RS.contains("pub fn default_color_edit_palette()"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditAlphaPreview"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropPayload"));
@@ -68,12 +70,13 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
     assert!(COLOR_EDIT_POPUP_RS.contains("color_picker_options("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_wheel_canvas<"));
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));
-    assert!(COLOR_EDIT_RS.contains("fn has_visible_content(self, show_alpha: bool) -> bool"));
+    assert!(COLOR_EDIT_RS.contains("fn has_visible_content_with_palette("));
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));
     assert!(!COLOR_EDIT_POPUP_RS.contains("Color picker (stub)"));

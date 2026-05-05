@@ -16,8 +16,9 @@ use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
 use super::{
-    ColorEditAlphaPreview, ColorEditPopupNumericInputs, ColorEditPopupOptions,
-    ColorEditPopupPicker, ColorEditPopupRuntimeOptions, draft_model, error_model,
+    ColorEditAlphaPreview, ColorEditPaletteEntry, ColorEditPopupNumericInputs,
+    ColorEditPopupOptions, ColorEditPopupPicker, ColorEditPopupRuntimeOptions, draft_model,
+    error_model,
 };
 
 mod numeric;
@@ -44,12 +45,13 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     show_alpha: bool,
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
+    palette: Arc<[ColorEditPaletteEntry]>,
     popup_options: ColorEditPopupOptions,
     popup_runtime_options: Model<ColorEditPopupRuntimeOptions>,
     popup_padding: Px,
     popup_test_id: Option<Arc<str>>,
 ) {
-    if !popup_options.has_visible_content(show_alpha) {
+    if !popup_options.has_visible_content_with_palette(show_alpha, !palette.is_empty()) {
         return;
     }
 
@@ -182,7 +184,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                         derived_test_id(popup_test_id.as_ref(), "numbers"),
                     )
                 });
-            let swatches = effective_popup_options.presets.then(|| {
+            let swatches = (effective_popup_options.presets && !palette.is_empty()).then(|| {
                 preset_swatches(
                     cx,
                     current,
@@ -193,6 +195,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     show_alpha,
                     enabled,
                     alpha_preview,
+                    palette.clone(),
                     popup_test_id.clone(),
                 )
             });

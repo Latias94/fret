@@ -12,7 +12,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::primitives::input_group::derived_test_id;
 
 use super::super::model::{color_from_rgb_preserving_alpha, format_hex};
-use super::super::{COLOR_PRESETS, ColorEditAlphaPreview};
+use super::super::{ColorEditAlphaPreview, ColorEditPaletteEntry};
 use super::preview::color_preview_stack;
 
 pub(super) fn preset_swatches<H: UiHost>(
@@ -25,6 +25,7 @@ pub(super) fn preset_swatches<H: UiHost>(
     show_alpha: bool,
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
+    palette: Arc<[ColorEditPaletteEntry]>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let current_rgb = fret_ui_kit::colors::hex_rgb_from_linear(current);
@@ -46,15 +47,15 @@ pub(super) fn preset_swatches<H: UiHost>(
             wrap: true,
         },
         move |cx| {
-            COLOR_PRESETS
+            palette
                 .iter()
                 .enumerate()
-                .map(|(idx, (name, rgb))| {
+                .map(|(idx, entry)| {
                     preset_swatch(
                         cx,
-                        *name,
-                        *rgb,
-                        current_rgb == *rgb,
+                        entry.name.clone(),
+                        entry.rgb,
+                        current_rgb == entry.rgb,
                         current.a,
                         model.clone(),
                         draft.clone(),
@@ -73,7 +74,7 @@ pub(super) fn preset_swatches<H: UiHost>(
 
 fn preset_swatch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    name: &'static str,
+    name: Arc<str>,
     rgb: u32,
     selected: bool,
     current_alpha: f32,
@@ -130,7 +131,7 @@ fn preset_swatch<H: UiHost>(
             focusable: enabled,
             a11y: PressableA11y {
                 role: Some(fret_core::SemanticsRole::Button),
-                label: Some(Arc::from(format!("{name} color preset"))),
+                label: Some(Arc::from(format!("{} color preset", name.as_ref()))),
                 ..Default::default()
             },
             focus_ring: Some(fret_ui::element::RingStyle {

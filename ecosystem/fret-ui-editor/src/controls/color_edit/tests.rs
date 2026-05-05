@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use super::model::{
     ColorNumericInputMode, HsvColor, HueWheelDragTarget, color_from_rgb_preserving_alpha,
@@ -17,12 +18,44 @@ use super::*;
 #[test]
 fn color_presets_are_unique_and_hex_formattable() {
     let mut seen = BTreeSet::new();
-    for (name, rgb) in COLOR_PRESETS {
-        assert!(seen.insert(rgb), "duplicate preset rgb for {name}");
-        let formatted = format_hex(Color::from_srgb_hex_rgb(rgb), false);
+    let palette = default_color_edit_palette();
+    for entry in palette.iter() {
+        assert!(
+            seen.insert(entry.rgb),
+            "duplicate preset rgb for {}",
+            entry.name
+        );
+        let formatted = format_hex(Color::from_srgb_hex_rgb(entry.rgb), false);
         assert_eq!(formatted.len(), 7);
         assert!(formatted.starts_with('#'));
     }
+    assert_eq!(palette.len(), COLOR_PRESETS.len());
+}
+
+#[test]
+fn color_edit_options_default_to_the_builtin_palette_source() {
+    let options = ColorEditOptions::default();
+
+    assert_eq!(options.palette, default_color_edit_palette());
+    assert_eq!(options.palette.len(), 12);
+}
+
+#[test]
+fn color_edit_palette_entries_are_app_owned_rgb_slots() {
+    let custom: Arc<[ColorEditPaletteEntry]> = vec![
+        ColorEditPaletteEntry::new("Brand Primary", 0x12_34_56),
+        ColorEditPaletteEntry::new("Brand Accent", 0xab_cd_ef),
+    ]
+    .into();
+
+    let options = ColorEditOptions {
+        palette: custom.clone(),
+        ..Default::default()
+    };
+
+    assert_eq!(options.palette, custom);
+    assert_eq!(options.palette[0].name.as_ref(), "Brand Primary");
+    assert_eq!(options.palette[1].rgb, 0xab_cd_ef);
 }
 
 #[test]
@@ -41,8 +74,8 @@ fn popup_options_default_to_imgui_like_hue_bar_surface() {
     assert!(options.presets);
     assert!(options.alpha_bar);
     assert!(options.picker_options);
-    assert!(options.has_visible_content(false));
-    assert!(options.has_visible_content(true));
+    assert!(options.has_visible_content_with_palette(false, true));
+    assert!(options.has_visible_content_with_palette(true, true));
     assert!(!options.shows_alpha_bar(false));
     assert!(options.shows_alpha_bar(true));
     assert!(options.shows_picker_options(false));
@@ -138,8 +171,23 @@ fn popup_options_can_hide_every_popup_affordance() {
         picker_options: false,
     };
 
-    assert!(!options.has_visible_content(false));
-    assert!(!options.has_visible_content(true));
+    assert!(!options.has_visible_content_with_palette(false, false));
+    assert!(!options.has_visible_content_with_palette(true, false));
+}
+
+#[test]
+fn empty_palette_does_not_count_as_visible_popup_content() {
+    let options = ColorEditPopupOptions {
+        picker: ColorEditPopupPicker::Hidden,
+        numeric_inputs: ColorEditPopupNumericInputs::Hidden,
+        side_preview: ColorEditPopupSidePreview::Hidden,
+        presets: true,
+        alpha_bar: false,
+        picker_options: false,
+    };
+
+    assert!(!options.has_visible_content_with_palette(false, false));
+    assert!(options.has_visible_content_with_palette(false, true));
 }
 
 #[test]
@@ -400,9 +448,9 @@ fn hsv_conversion_handles_grayscale_without_unstable_hue() {
 
 #[test]
 fn hsv_conversion_roundtrips_color_presets() {
-    for (_name, rgb) in COLOR_PRESETS {
-        let hsv = rgb_to_hsv(rgb);
-        assert_eq!(hsv_to_rgb(hsv), rgb);
+    for entry in default_color_edit_palette().iter() {
+        let hsv = rgb_to_hsv(entry.rgb);
+        assert_eq!(hsv_to_rgb(hsv), entry.rgb);
     }
 }
 

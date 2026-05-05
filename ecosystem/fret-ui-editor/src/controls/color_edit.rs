@@ -2,7 +2,7 @@
 //!
 //! v1 scope:
 //! - hex input for `#RRGGBB` (and optionally `#RRGGBBAA`)
-//! - swatch button that opens HSV picker controls plus a small preset palette
+//! - swatch button that opens HSV picker controls plus an app-owned preset palette
 //! - RGB-only edits preserve alpha; `show_alpha` only controls explicit alpha editing
 //! - per-control alpha preview policy mirroring Dear ImGui's ColorButton preview modes
 
@@ -57,6 +57,29 @@ const COLOR_PRESETS: [(&str, u32); 12] = [
     ("Fuchsia", 0xd9_46_ef),
     ("White", 0xff_ff_ff),
 ];
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ColorEditPaletteEntry {
+    pub name: Arc<str>,
+    pub rgb: u32,
+}
+
+impl ColorEditPaletteEntry {
+    pub fn new(name: impl Into<Arc<str>>, rgb: u32) -> Self {
+        Self {
+            name: name.into(),
+            rgb,
+        }
+    }
+}
+
+pub fn default_color_edit_palette() -> Arc<[ColorEditPaletteEntry]> {
+    COLOR_PRESETS
+        .iter()
+        .map(|(name, rgb)| ColorEditPaletteEntry::new(*name, *rgb))
+        .collect::<Vec<_>>()
+        .into()
+}
 
 const CHECKERBOARD_LIGHT_RGB: u32 = 0xd8_de_e8;
 const CHECKERBOARD_DARK_RGB: u32 = 0x8b_95_a5;
@@ -227,11 +250,11 @@ pub struct ColorEditPopupOptions {
 }
 
 impl ColorEditPopupOptions {
-    fn has_visible_content(self, show_alpha: bool) -> bool {
+    fn has_visible_content_with_palette(self, show_alpha: bool, has_palette: bool) -> bool {
         self.picker != ColorEditPopupPicker::Hidden
             || self.numeric_inputs != ColorEditPopupNumericInputs::Hidden
             || self.side_preview.has_visible_content()
-            || self.presets
+            || (self.presets && has_palette)
             || self.shows_alpha_bar(show_alpha)
             || self.shows_picker_options(show_alpha)
     }
@@ -312,6 +335,11 @@ pub struct ColorEditOptions {
     pub alpha_preview: ColorEditAlphaPreview,
     pub drag_drop: ColorEditDragDropOptions,
     pub popup: ColorEditPopupOptions,
+    /// App-owned palette entries shown by the popup preset row when `popup.presets` is enabled.
+    ///
+    /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
+    /// ownership by making the palette data explicit on the editor control options.
+    pub palette: Arc<[ColorEditPaletteEntry]>,
     /// Explicit identity source for internal state (draft/error/open models, overlay root ids).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -341,6 +369,7 @@ impl Default for ColorEditOptions {
             alpha_preview: ColorEditAlphaPreview::default(),
             drag_drop: ColorEditDragDropOptions::default(),
             popup: ColorEditPopupOptions::default(),
+            palette: default_color_edit_palette(),
             id_source: None,
             test_id: None,
             swatch_test_id: None,
@@ -440,8 +469,9 @@ impl ColorEdit {
             cx.get_model_copied(&popup_runtime_options, Invalidation::Paint)
                 .unwrap_or_else(|| popup_options.runtime_defaults()),
         );
-        let popup_has_visible_content =
-            popup_options_for_frame.has_visible_content(self.options.show_alpha);
+        let palette = self.options.palette.clone();
+        let popup_has_visible_content = popup_options_for_frame
+            .has_visible_content_with_palette(self.options.show_alpha, !palette.is_empty());
         let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
         let swatch_enabled =
             self.options.enabled && (popup_has_visible_content || drag_drop_enabled);
@@ -719,6 +749,7 @@ impl ColorEdit {
             self.options.show_alpha,
             self.options.enabled,
             self.options.alpha_preview,
+            palette,
             popup_options,
             popup_runtime_options,
             popup_padding,

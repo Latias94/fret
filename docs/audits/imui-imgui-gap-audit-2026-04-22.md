@@ -208,7 +208,9 @@ superseded by `docs/workstreams/imui-color-edit-vertical-hue-bar-v1/`; vertical 
 partially superseded by `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/`; HueWheel picker
 shape is partially superseded by `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/`; picker
 options popup behavior is partially superseded by
-`docs/workstreams/imui-color-edit-picker-options-popup-v1/`.
+`docs/workstreams/imui-color-edit-picker-options-popup-v1/`; app-owned palette source
+customization is partially superseded by
+`docs/workstreams/imui-color-edit-palette-customization-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -229,6 +231,8 @@ Current editor `ColorEdit` now has:
   mapping, Canvas rendering, and optional vertical AlphaBar composition,
 - a popup-local picker options surface for switching between `HsvHueBar` and `HsvHueWheel` and
   toggling AlphaBar visibility without global `SetColorEditOptions()` state,
+- app-owned palette entries through `ColorEditOptions::palette`, preserving the built-in palette
+  and alpha-preserving palette activation,
 - RGB and HSV numeric readouts, with alpha percent shown when alpha is visible,
 - editable RGB/HSV numeric popup rows with editor-owned validation,
 - per-control popup defaults for HueBar picker, RGB/HSV numeric rows, preset palette, and AlphaBar
@@ -263,8 +267,8 @@ Conclusion:
 
 - The remaining color gap is deeper picker/editor affordances, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
-- Start separate narrow follow-ons for color history, eyedropper behavior, palette customization,
-  or higher-fidelity picker preview polish.
+- Start separate narrow follow-ons for editable palette slots, drag/drop-to-palette-slot mutation,
+  color history, eyedropper behavior, or higher-fidelity picker preview polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
 
 Evidence anchors:

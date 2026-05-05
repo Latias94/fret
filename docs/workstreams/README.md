@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 326
+- Dedicated directories: 327
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -396,6 +396,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: closed after adding a popup-local options surface that switches editor `ColorEdit`
     between `HsvHueBar` and `HsvHueWheel` and toggles AlphaBar visibility without global
     `SetColorEditOptions()` state.
+
+- Closed narrow P1 color edit palette customization follow-on:
+  - `docs/workstreams/imui-color-edit-palette-customization-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-palette-customization-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-palette-customization-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-palette-customization-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-palette-customization-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-palette-customization-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after replacing the hard-coded preset-only palette source with app-owned
+    `ColorEditPaletteEntry` data while preserving the built-in palette and alpha-preserving
+    palette activation.
 
 - Closed narrow P1 color edit AlphaBar follow-on:
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json`
@@ -1499,6 +1510,7 @@ Rule:
 - `docs/workstreams/imui-color-edit-numeric-input-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on making editor `ColorEdit` RGB/HSV numeric popup rows editable)
 - `docs/workstreams/imui-color-edit-popup-options-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding per-control popup defaults for editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-picker-options-popup-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding popup-local picker shape and AlphaBar options to editor `ColorEdit`)
+- `docs/workstreams/imui-color-edit-palette-customization-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding app-owned palette entries to editor `ColorEdit`)
 - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting editable popup numeric rows into `popup/numeric.rs`)
 - `docs/workstreams/imui-color-edit-popup-picker-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting HSV/SV/Hue and AlphaBar picker composition into `popup/picker.rs`)
 - `docs/workstreams/imui-color-edit-popup-preview-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting shared preview helpers into `popup/preview.rs`)
