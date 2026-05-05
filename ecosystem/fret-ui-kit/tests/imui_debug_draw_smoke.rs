@@ -20,6 +20,15 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Color::from_srgb_hex_rgb(0xef_44_44),
             Px(1.0),
         );
+        draw.channels_split(2);
+        draw.channels_set_current(1);
+        draw.add_text(
+            Point::new(Px(6.0), Px(6.0)),
+            "foreground",
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(10.0),
+        );
+        draw.channels_set_current(0);
         draw.add_polyline_with_style(
             [
                 Point::new(Px(4.0), Px(44.0)),
@@ -33,6 +42,7 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 .with_dash(Px(4.0), Px(2.0), Px(0.0)),
             false,
         );
+        draw.channels_merge();
         draw.add_convex_poly_filled(
             [
                 Point::new(Px(52.0), Px(48.0)),

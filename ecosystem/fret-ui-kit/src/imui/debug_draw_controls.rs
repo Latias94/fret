@@ -50,6 +50,13 @@ impl Default for DebugDrawOptions {
 #[derive(Debug, Clone)]
 pub struct ImUiDebugDrawList {
     commands: Vec<DebugDrawCommand>,
+    channel_split: Option<DebugDrawChannelSplit>,
+}
+
+#[derive(Debug, Clone)]
+struct DebugDrawChannelSplit {
+    channels: Vec<Vec<DebugDrawCommand>>,
+    current: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -453,6 +460,43 @@ impl ImUiDebugDrawList {
             points: Vec::new(),
         };
         build(&mut path);
+    }
+
+    pub fn channels_split(&mut self, count: usize) {
+        if count <= 1 || self.channel_split.is_some() {
+            return;
+        }
+        self.channel_split = Some(DebugDrawChannelSplit {
+            channels: (0..count).map(|_| Vec::new()).collect(),
+            current: 0,
+        });
+    }
+
+    pub fn channels_set_current(&mut self, channel: usize) {
+        let Some(split) = self.channel_split.as_mut() else {
+            return;
+        };
+        if channel >= split.channels.len() || channel == split.current {
+            return;
+        }
+
+        std::mem::swap(&mut split.channels[split.current], &mut self.commands);
+        std::mem::swap(&mut split.channels[channel], &mut self.commands);
+        split.current = channel;
+    }
+
+    pub fn channels_merge(&mut self) {
+        let Some(mut split) = self.channel_split.take() else {
+            return;
+        };
+        std::mem::swap(&mut split.channels[split.current], &mut self.commands);
+
+        let total_commands = split.channels.iter().map(Vec::len).sum();
+        let mut merged = Vec::with_capacity(total_commands);
+        for mut channel in split.channels {
+            merged.append(&mut channel);
+        }
+        self.commands = merged;
     }
 
     pub fn add_line(&mut self, from: Point, to: Point, color: Color, thickness: Px) {
@@ -948,11 +992,16 @@ impl ImUiDebugDrawList {
     }
 
     pub fn command_count(&self) -> usize {
-        self.commands.len()
+        let split_count = self
+            .channel_split
+            .as_ref()
+            .map(|split| split.channels.iter().map(Vec::len).sum())
+            .unwrap_or(0);
+        self.commands.len() + split_count
     }
 
     pub fn is_empty(&self) -> bool {
-        self.commands.is_empty()
+        self.command_count() == 0
     }
 }
 
@@ -960,6 +1009,7 @@ impl Default for ImUiDebugDrawList {
     fn default() -> Self {
         Self {
             commands: Vec::new(),
+            channel_split: None,
         }
     }
 }
@@ -1152,6 +1202,7 @@ pub(super) fn debug_draw_with_options<H, W, K, F>(
 {
     let mut list = ImUiDebugDrawList::default();
     draw(&mut list);
+    list.channels_merge();
     let commands: Arc<[DebugDrawCommand]> = Arc::from(list.commands.into_boxed_slice());
     let element = ui.with_cx_mut(|cx| {
         cx.keyed(("fret-ui-kit.imui.debug_draw", id), |cx| {
@@ -2520,6 +2571,69 @@ mod tests {
             DebugDrawCommand::PushClipRect { .. }
         ));
         assert!(matches!(list.commands[1], DebugDrawCommand::PopClipRect));
+    }
+
+    #[test]
+    fn debug_draw_channels_merge_in_channel_order() {
+        let mut list = ImUiDebugDrawList::default();
+        list.add_line(
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(1.0), Px(1.0)),
+            Color::from_srgb_hex_rgb(0xff_00_00),
+            Px(1.0),
+        );
+
+        list.channels_split(3);
+        list.channels_set_current(2);
+        list.add_text(
+            Point::new(Px(8.0), Px(8.0)),
+            "foreground",
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(12.0),
+        );
+        list.channels_set_current(1);
+        list.add_rect_filled(
+            Rect::new(Point::new(Px(2.0), Px(2.0)), Size::new(Px(4.0), Px(4.0))),
+            Color::from_srgb_hex_rgb(0x00_ff_00),
+        );
+        list.channels_set_current(0);
+        list.add_circle_filled(
+            Point::new(Px(6.0), Px(6.0)),
+            Px(2.0),
+            Color::from_srgb_hex_rgb(0x00_00_ff),
+        );
+
+        assert_eq!(list.command_count(), 4);
+        list.channels_merge();
+
+        assert_eq!(list.command_count(), 4);
+        assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
+        assert!(matches!(
+            list.commands[1],
+            DebugDrawCommand::CircleFilled { .. }
+        ));
+        assert!(matches!(
+            list.commands[2],
+            DebugDrawCommand::RectFilled { .. }
+        ));
+        assert!(matches!(list.commands[3], DebugDrawCommand::Text { .. }));
+    }
+
+    #[test]
+    fn debug_draw_channels_ignore_invalid_channel_switches() {
+        let mut list = ImUiDebugDrawList::default();
+        list.channels_split(2);
+        list.channels_set_current(4);
+        list.add_text(
+            Point::new(Px(0.0), Px(0.0)),
+            "still-channel-zero",
+            Color::from_srgb_hex_rgb(0xff_ff_ff),
+            Px(12.0),
+        );
+        list.channels_merge();
+
+        assert_eq!(list.command_count(), 1);
+        assert!(matches!(list.commands[0], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
