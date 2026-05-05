@@ -1,6 +1,12 @@
 use std::collections::BTreeSet;
 
-use super::model::{hsv_to_rgb, rgb_to_hsv};
+use super::model::{
+    ColorNumericInputMode, HsvColor, color_from_rgb_preserving_alpha, color_numeric_input_modes,
+    hsv_from_color, hsv_numeric_text, hsv_to_color_preserving_alpha, hsv_to_rgb,
+    hsv_with_sv_from_local_position, hue_from_local_x, parse_color_numeric_input, rgb_numeric_text,
+    rgb_to_hsv,
+};
+use super::popup::{alpha_from_local_x, alpha_percent_text, checkerboard_cell_color};
 use super::*;
 
 #[test]

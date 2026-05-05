@@ -3,6 +3,7 @@
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
+const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -15,30 +16,32 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 #[test]
 fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("const COLOR_PRESETS:"));
-    assert!(COLOR_EDIT_RS.contains("fn preset_swatch<"));
-    assert!(COLOR_EDIT_RS.contains("fn color_preview_stack<"));
-    assert!(COLOR_EDIT_RS.contains("fn checkerboard_grid<"));
-    assert!(COLOR_EDIT_RS.contains("fn hsv_picker<"));
-    assert!(COLOR_EDIT_RS.contains("fn sv_picker<"));
-    assert!(COLOR_EDIT_RS.contains("fn hue_bar<"));
-    assert!(COLOR_EDIT_RS.contains("fn color_numeric_inputs<"));
-    assert!(COLOR_EDIT_RS.contains("fn color_numeric_input_field<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn preset_swatch<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn color_preview_stack<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn checkerboard_grid<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn hsv_picker<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn sv_picker<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn hue_bar<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn color_numeric_inputs<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn color_numeric_input_field<"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn rgb_numeric_text("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn hsv_numeric_text("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn parse_color_numeric_input("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn rgb_to_hsv("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn hsv_to_rgb("));
-    assert!(COLOR_EDIT_RS.contains("fn alpha_bar<"));
-    assert!(COLOR_EDIT_RS.contains("fn alpha_gradient_overlay<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn alpha_bar<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("fn alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPopupOptions"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupPicker"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupNumericInputs"));
-    assert!(COLOR_EDIT_RS.contains("ColorEditPopupPicker::HsvHueBar"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_RS.contains("fn has_visible_content(self, show_alpha: bool) -> bool"));
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("Color picker (stub)"));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("picker TBD"));
 }
 
 #[test]

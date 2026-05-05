@@ -191,7 +191,8 @@ Update (2026-05-04): partially superseded by
 `docs/workstreams/imui-color-edit-numeric-input-v1/`. Update (2026-05-05): popup option/default
 depth is now partially superseded by `docs/workstreams/imui-color-edit-popup-options-v1/`; the
 post-depth file-size hazard is partially superseded by
-`docs/workstreams/imui-color-edit-model-split-v1/`.
+`docs/workstreams/imui-color-edit-model-split-v1/` and
+`docs/workstreams/imui-color-edit-popup-split-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -208,6 +209,8 @@ Current editor `ColorEdit` now has:
   visibility,
 - an internal model module for color parsing, formatting, HSV/RGB conversion, coordinate math,
   sanitization, and a11y helper text,
+- an internal popup module for overlay composition, picker UI, numeric rows, alpha/preset previews,
+  and popup-local pointer handlers,
 - and an app-facing cookbook proof through `fret::imui::editor`.
 
 #### 4.1b Debug draw is no longer missing at the first baseline level
@@ -237,6 +240,7 @@ Evidence anchors:
 
 - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs`
 - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
 - `repo-ref/imgui/imgui_demo.cpp`
@@ -337,7 +341,8 @@ retired.
 
 Update (2026-05-05): `docs/workstreams/imui-color-edit-model-split-v1/` moves the editor
 `ColorEdit` pure model helpers into `src/controls/color_edit/model.rs` and moves focused tests into
-`src/controls/color_edit/tests.rs`.
+`src/controls/color_edit/tests.rs`. `docs/workstreams/imui-color-edit-popup-split-v1/` then moves
+popup UI composition and popup-local pointer helpers into `src/controls/color_edit/popup.rs`.
 
 Conclusion:
 
@@ -353,6 +358,7 @@ Evidence anchors:
 - `ecosystem/fret-imui/src/tests/interaction.rs`
 - `ecosystem/fret-imui/src/tests/models.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs`
 - `ecosystem/fret-imui/src/tests/models_text_basic.rs`
 - `ecosystem/fret-imui/src/tests/models_text_lifecycle.rs`
@@ -449,7 +455,8 @@ If the goal is "reach imgui-level usefulness", the next wins are:
 
 - the remaining text/input parity after read-only/password/auto-select-all/AllowTabInput,
 - menu/tab depth,
-- continued test/control architecture decomposition after the first picker and color-model splits,
+- continued test/control architecture decomposition after the first picker, color-model, and popup
+  splits,
 - and a deliberate decision on whether immediate debug-draw belongs in the ecosystem.
 
 Not the right next move:
