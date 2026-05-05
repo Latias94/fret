@@ -1,10 +1,11 @@
 use std::collections::BTreeSet;
 
 use super::model::{
-    ColorNumericInputMode, HsvColor, color_from_rgb_preserving_alpha, color_numeric_input_modes,
-    hsv_from_color, hsv_numeric_text, hsv_to_color_preserving_alpha, hsv_to_rgb,
-    hsv_with_sv_from_local_position, hue_from_local_y, parse_color_numeric_input, rgb_numeric_text,
-    rgb_to_hsv,
+    ColorNumericInputMode, HsvColor, HueWheelDragTarget, color_from_rgb_preserving_alpha,
+    color_numeric_input_modes, hsv_from_color, hsv_numeric_text, hsv_to_color_preserving_alpha,
+    hsv_to_rgb, hsv_with_hue_wheel_position, hsv_with_sv_from_local_position, hue_from_local_y,
+    hue_wheel_geometry, hue_wheel_rotated_triangle, hue_wheel_sv_cursor_position,
+    hue_wheel_target_from_local_position, parse_color_numeric_input, rgb_numeric_text, rgb_to_hsv,
 };
 use super::popup::picker::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
 use super::popup::preview::{
@@ -346,6 +347,210 @@ fn vertical_hue_bar_position_maps_local_y_to_clamped_hue() {
     assert!((hue_from_local_y(37.5, 100.0) - 0.375).abs() < f32::EPSILON);
     assert_eq!(hue_from_local_y(120.0, 100.0), 1.0);
     assert_eq!(hue_from_local_y(10.0, 0.0), 0.0);
+}
+
+#[test]
+fn hue_wheel_ring_maps_screen_angle_to_hue() {
+    let current = HsvColor {
+        hue: 0.0,
+        saturation: 0.4,
+        value: 0.6,
+    };
+    let width = 138.0;
+    let height = 120.0;
+    let geometry = hue_wheel_geometry(width, height);
+    let radius = (geometry.wheel_r_inner + geometry.wheel_r_outer) * 0.5;
+
+    let right = (geometry.center_x + radius, geometry.center_y);
+    assert_eq!(
+        hue_wheel_target_from_local_position(current, right.0, right.1, width, height),
+        Some(HueWheelDragTarget::Hue)
+    );
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            right.0,
+            right.1,
+            width,
+            height,
+            HueWheelDragTarget::Hue,
+        ),
+        0.0,
+        0.4,
+        0.6,
+    );
+
+    let down = (geometry.center_x, geometry.center_y + radius);
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            down.0,
+            down.1,
+            width,
+            height,
+            HueWheelDragTarget::Hue,
+        ),
+        0.25,
+        0.4,
+        0.6,
+    );
+
+    let left = (geometry.center_x - radius, geometry.center_y);
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            left.0,
+            left.1,
+            width,
+            height,
+            HueWheelDragTarget::Hue,
+        ),
+        0.5,
+        0.4,
+        0.6,
+    );
+
+    let up = (geometry.center_x, geometry.center_y - radius);
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(current, up.0, up.1, width, height, HueWheelDragTarget::Hue),
+        0.75,
+        0.4,
+        0.6,
+    );
+}
+
+#[test]
+fn hue_wheel_triangle_maps_imgui_barycentric_sv() {
+    let current = HsvColor {
+        hue: 0.0,
+        saturation: 0.5,
+        value: 0.5,
+    };
+    let width = 138.0;
+    let height = 120.0;
+    let geometry = hue_wheel_geometry(width, height);
+    let triangle = hue_wheel_rotated_triangle(geometry, current.hue);
+
+    assert_eq!(
+        hue_wheel_target_from_local_position(
+            current,
+            triangle.hue.0,
+            triangle.hue.1,
+            width,
+            height
+        ),
+        Some(HueWheelDragTarget::SaturationValue)
+    );
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            triangle.hue.0,
+            triangle.hue.1,
+            width,
+            height,
+            HueWheelDragTarget::SaturationValue,
+        ),
+        0.0,
+        1.0,
+        1.0,
+    );
+
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            triangle.white.0,
+            triangle.white.1,
+            width,
+            height,
+            HueWheelDragTarget::SaturationValue,
+        ),
+        0.0,
+        0.0001,
+        1.0,
+    );
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            triangle.black.0,
+            triangle.black.1,
+            width,
+            height,
+            HueWheelDragTarget::SaturationValue,
+        ),
+        0.0,
+        0.0001,
+        0.0001,
+    );
+
+    let centroid = (
+        (triangle.hue.0 + triangle.black.0 + triangle.white.0) / 3.0,
+        (triangle.hue.1 + triangle.black.1 + triangle.white.1) / 3.0,
+    );
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            current,
+            centroid.0,
+            centroid.1,
+            width,
+            height,
+            HueWheelDragTarget::SaturationValue,
+        ),
+        0.0,
+        0.5,
+        2.0 / 3.0,
+    );
+}
+
+#[test]
+fn hue_wheel_triangle_rotates_with_hue() {
+    let hsv = HsvColor {
+        hue: 0.25,
+        saturation: 1.0,
+        value: 1.0,
+    };
+    let width = 138.0;
+    let height = 120.0;
+    let geometry = hue_wheel_geometry(width, height);
+    let triangle = hue_wheel_rotated_triangle(geometry, hsv.hue);
+    let cursor = hue_wheel_sv_cursor_position(hsv, width, height);
+
+    assert_eq!(
+        hue_wheel_target_from_local_position(hsv, triangle.hue.0, triangle.hue.1, width, height),
+        Some(HueWheelDragTarget::SaturationValue)
+    );
+    assert!((cursor.0 - triangle.hue.0).abs() < 0.002);
+    assert!((cursor.1 - triangle.hue.1).abs() < 0.002);
+    assert_hsv_close(
+        hsv_with_hue_wheel_position(
+            hsv,
+            triangle.hue.0,
+            triangle.hue.1,
+            width,
+            height,
+            HueWheelDragTarget::SaturationValue,
+        ),
+        0.25,
+        1.0,
+        1.0,
+    );
+}
+
+#[test]
+fn hue_wheel_target_rejects_outside_or_empty_geometry() {
+    let current = HsvColor {
+        hue: 0.0,
+        saturation: 0.5,
+        value: 0.5,
+    };
+
+    assert_eq!(
+        hue_wheel_target_from_local_position(current, 0.0, 0.0, 138.0, 120.0),
+        None
+    );
+    assert_eq!(
+        hue_wheel_target_from_local_position(current, 10.0, 10.0, 0.0, 120.0),
+        None
+    );
 }
 
 #[test]

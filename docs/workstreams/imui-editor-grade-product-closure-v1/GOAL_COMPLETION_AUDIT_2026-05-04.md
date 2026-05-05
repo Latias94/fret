@@ -75,9 +75,10 @@ The active goal asks for:
   depends on the active docking/multiwindow parity lane. M12 refreshed local non-interactive gates,
   but the launched bounded campaign timed out and is not counted as passing evidence.
 - **Full `ColorPicker4` / `ColorEdit4` parity is not closed.** The editor `ColorEdit` popup has
-  moved beyond a stub, including alpha, HSV, numeric-readout, and editable numeric-input slices, but
-  history/palette customization, HueWheel fidelity, eyedropper behavior, and full picker polish
-  remain narrower follow-ons.
+  moved beyond a stub, including alpha, HSV, numeric-readout, and editable numeric-input slices.
+  Status note (2026-05-05): HueWheel picker fidelity is now partially superseded by
+  `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/`, but picker options, history/palette
+  customization, eyedropper behavior, and full picker polish remain narrower follow-ons.
 - **Other IMUI mega-tests still deserve decomposition.** `models_text.rs` is retired, but
   `interaction.rs`, `models.rs`, `floating.rs`, and `popup_hover.rs` still concentrate broad
   behavior coverage.
@@ -121,7 +122,8 @@ The docking local non-interactive refresh also passed the manifest and non-GUI g
 ## Next Concrete Follow-Ons
 
 1. Pick one product-facing missing capability rather than continuing generic helper growth:
-   color history/HueWheel/eyedropper depth or docking multi-window hand-feel.
+   picker options, color history, eyedropper depth, palette customization, or docking
+   multi-window hand-feel.
 2. Keep the implementation in the correct owner layer:
    `fret-ui-editor` for editor controls, `fret-docking`/runner crates for multi-window, and a
    dedicated ecosystem lane for debug draw if it becomes a first-party need.

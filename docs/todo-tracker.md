@@ -266,6 +266,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-color-edit-vertical-alpha-bar-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` HueWheel picker:
+  - `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-hue-wheel-picker-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - Closed narrow follow-on for IMUI editor `ColorEdit` AlphaBar:
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/TODO.md`

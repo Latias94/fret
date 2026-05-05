@@ -142,6 +142,11 @@ impl Default for ColorEditDragDropOptions {
 pub enum ColorEditPopupPicker {
     /// Dear ImGui's default `PickerHueBar` shape: saturation/value area plus a hue bar.
     HsvHueBar,
+    /// Dear ImGui's `PickerHueWheel` shape.
+    ///
+    /// Use `ColorEditPopupPicker::HsvHueWheel` for a hue wheel plus a rotated saturation/value
+    /// triangle.
+    HsvHueWheel,
     /// Hide the picker surface while keeping other popup affordances available.
     Hidden,
 }

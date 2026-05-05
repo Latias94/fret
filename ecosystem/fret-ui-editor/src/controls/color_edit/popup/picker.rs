@@ -1,28 +1,37 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Color, Corners, Edges, MouseButton, Px};
+use fret_core::{
+    Axis, Color, ColorSpace, Corners, DrawOrder, Edges, FillStyle, GradientStop, MAX_STOPS,
+    MouseButton, Paint, PathCommand, PathStyle, Point, Px, StrokeCapV1, StrokeJoinV1, StrokeStyle,
+    StrokeStyleV2, SweepGradient, TileMode,
+};
 use fret_runtime::Model;
 use fret_ui::action::{
     ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiPointerActionHost,
 };
+use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, GridProps, GridTrackSizing,
-    LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle,
-    SpacingLength, StackProps,
+    AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, GridProps,
+    GridTrackSizing, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
+    SizeStyle, SpacingLength, StackProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::primitives::input_group::derived_test_id;
 
 use super::super::model::{
-    HsvColor, color_from_rgb_preserving_alpha, format_hex, hsv_from_color,
-    hsv_to_color_preserving_alpha, hsv_with_sv_from_local_position, hue_from_local_y,
-    hue_percent_text, sv_picker_a11y_text, unit_from_step,
+    HsvColor, HueWheelDragTarget, color_from_rgb_preserving_alpha, format_hex, hsv_from_color,
+    hsv_to_color_preserving_alpha, hsv_with_hue_wheel_position, hsv_with_sv_from_local_position,
+    hue_from_local_y, hue_percent_text, hue_wheel_geometry, hue_wheel_rotated_triangle,
+    hue_wheel_sv_cursor_position, hue_wheel_target_from_local_position, sv_picker_a11y_text,
+    unit_from_step,
 };
 use super::super::{ALPHA_BAR_STEPS, HUE_BAR_STEPS, SV_PICKER_STEPS};
 use super::preview::{checkerboard_grid, fill_preview_layout};
 
 const HSV_PICKER_SIZE: Px = Px(120.0);
+const HUE_WHEEL_PICKER_WIDTH: Px = Px(138.0);
+const HUE_WHEEL_TRIANGLE_STEPS: usize = 12;
 
 pub(super) fn hsv_picker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -91,6 +100,546 @@ pub(super) fn hsv_picker<H: UiHost>(
         picker = picker.test_id(test_id);
     }
     picker
+}
+
+pub(super) fn hsv_hue_wheel_picker<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    current: Color,
+    model: Model<Color>,
+    draft: Model<String>,
+    error: Model<Option<Arc<str>>>,
+    show_alpha: bool,
+    show_alpha_bar: bool,
+    enabled: bool,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let wheel_test_id = derived_test_id(test_id.as_ref(), "wheel");
+    let alpha_test_id = derived_test_id(test_id.as_ref(), "alpha");
+    let wheel = hue_wheel_picker(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        show_alpha,
+        enabled,
+        wheel_test_id,
+    );
+    let alpha = show_alpha_bar
+        .then(|| vertical_alpha_bar(cx, current, model, draft, error, enabled, alpha_test_id));
+
+    let mut picker = cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: Axis::Horizontal,
+            gap: SpacingLength::Px(Px(6.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |_cx| {
+            let mut out = vec![wheel];
+            if let Some(alpha) = alpha {
+                out.push(alpha);
+            }
+            out
+        },
+    );
+
+    if let Some(test_id) = test_id {
+        picker = picker.test_id(test_id);
+    }
+    picker
+}
+
+fn hue_wheel_picker<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    current: Color,
+    model: Model<Color>,
+    draft: Model<String>,
+    error: Model<Option<Arc<str>>>,
+    show_alpha: bool,
+    enabled: bool,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let hsv = hsv_from_color(current);
+    let value = Arc::from(format!(
+        "Hue {}%, S {}%, V {}%",
+        (hsv.hue.clamp(0.0, 1.0) * 100.0).round() as u8,
+        (hsv.saturation.clamp(0.0, 1.0) * 100.0).round() as u8,
+        (hsv.value.clamp(0.0, 1.0) * 100.0).round() as u8
+    ));
+
+    let drag_target = Arc::new(Mutex::new(None::<HueWheelDragTarget>));
+    let target_for_down = Arc::clone(&drag_target);
+    let target_for_move = Arc::clone(&drag_target);
+    let target_for_up = Arc::clone(&drag_target);
+
+    let model_for_down = model.clone();
+    let draft_for_down = draft.clone();
+    let error_for_down = error.clone();
+    let model_for_move = model;
+    let draft_for_move = draft;
+    let error_for_move = error;
+
+    let mut picker = cx.pressable(
+        PressableProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Px(HUE_WHEEL_PICKER_WIDTH),
+                    height: Length::Px(HSV_PICKER_SIZE),
+                    min_width: Some(Length::Px(HUE_WHEEL_PICKER_WIDTH)),
+                    min_height: Some(Length::Px(HSV_PICKER_SIZE)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            enabled,
+            focusable: enabled,
+            a11y: PressableA11y {
+                role: Some(fret_core::SemanticsRole::Slider),
+                label: Some(Arc::from("Hue wheel and saturation/value triangle")),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, st| {
+            cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
+                if down.button != MouseButton::Left {
+                    return PressablePointerDownResult::Continue;
+                }
+
+                let current = host
+                    .models_mut()
+                    .get_copied(&model_for_down)
+                    .unwrap_or(Color::TRANSPARENT);
+                let hsv = hsv_from_color(current);
+                let bounds = host.bounds();
+                let target = hue_wheel_target_from_local_position(
+                    hsv,
+                    down.position_local.x.0,
+                    down.position_local.y.0,
+                    bounds.size.width.0,
+                    bounds.size.height.0,
+                );
+                let Some(target) = target else {
+                    return PressablePointerDownResult::Continue;
+                };
+
+                if let Ok(mut slot) = target_for_down.lock() {
+                    *slot = Some(target);
+                }
+                apply_hue_wheel_position(
+                    host,
+                    action_cx,
+                    &model_for_down,
+                    &draft_for_down,
+                    &error_for_down,
+                    show_alpha,
+                    target,
+                    down.position_local.x.0,
+                    down.position_local.y.0,
+                );
+                host.capture_pointer();
+                PressablePointerDownResult::Continue
+            }));
+
+            cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                if !mv.buttons.left {
+                    if let Ok(mut slot) = target_for_move.lock() {
+                        *slot = None;
+                    }
+                    host.release_pointer_capture();
+                    return false;
+                }
+
+                let target = target_for_move.lock().ok().and_then(|slot| *slot);
+                let Some(target) = target else {
+                    return false;
+                };
+                apply_hue_wheel_position(
+                    host,
+                    action_cx,
+                    &model_for_move,
+                    &draft_for_move,
+                    &error_for_move,
+                    show_alpha,
+                    target,
+                    mv.position_local.x.0,
+                    mv.position_local.y.0,
+                );
+                true
+            }));
+            cx.pressable_add_on_pointer_up(Arc::new(move |host, _action_cx, _up| {
+                if let Ok(mut slot) = target_for_up.lock() {
+                    *slot = None;
+                }
+                host.release_pointer_capture();
+                PressablePointerUpResult::Continue
+            }));
+
+            let (border, ring) = {
+                let theme = Theme::global(&*cx.app);
+                let border = theme
+                    .color_by_key("border")
+                    .unwrap_or_else(|| theme.color_token("border"));
+                let ring = theme
+                    .color_by_key("ring")
+                    .unwrap_or_else(|| theme.color_token("primary"));
+                (border, ring)
+            };
+            let border_color = if st.focused { ring } else { border };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        overflow: Overflow::Clip,
+                        ..fill_preview_layout()
+                    },
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(border_color),
+                    corner_radii: Corners::all(Px(5.0)),
+                    ..Default::default()
+                },
+                move |cx| vec![hue_wheel_canvas(cx, hsv)],
+            )]
+        },
+    );
+
+    if let Some(test_id) = test_id {
+        picker = picker.test_id(test_id);
+    }
+    picker.a11y_value(value)
+}
+
+fn hue_wheel_canvas<H: UiHost>(cx: &mut ElementContext<'_, H>, hsv: HsvColor) -> AnyElement {
+    cx.canvas(
+        CanvasProps {
+            layout: fill_preview_layout(),
+            ..Default::default()
+        },
+        move |painter| paint_hue_wheel_canvas(painter, hsv),
+    )
+}
+
+fn paint_hue_wheel_canvas(painter: &mut CanvasPainter<'_>, hsv: HsvColor) {
+    let bounds = painter.bounds();
+    let geometry = hue_wheel_geometry(bounds.size.width.0, bounds.size.height.0);
+    if geometry.wheel_r_outer <= f32::EPSILON || geometry.wheel_thickness <= f32::EPSILON {
+        return;
+    }
+
+    let scale = painter.scale_factor().max(1.0);
+    let origin = bounds.origin;
+    let base = painter.key_scope(&"fret-ui-editor.color_edit.hue_wheel");
+    paint_hue_wheel_ring(painter, base, origin, geometry, scale);
+    paint_hue_wheel_triangle(painter, base, origin, geometry, hsv, scale);
+    paint_hue_wheel_cursors(painter, base, origin, geometry, hsv, scale);
+}
+
+fn paint_hue_wheel_ring(
+    painter: &mut CanvasPainter<'_>,
+    base: fret_ui::canvas::CanvasKey,
+    origin: Point,
+    geometry: super::super::model::HueWheelGeometry,
+    scale: f32,
+) {
+    let center = absolute_point(origin, (geometry.center_x, geometry.center_y));
+    let radius = (geometry.wheel_r_inner + geometry.wheel_r_outer) * 0.5;
+    let path = circle_path(center, radius);
+    let mut stops = [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
+    stops[0] = GradientStop::new(0.0, Color::from_srgb_hex_rgb(0xff_00_00));
+    stops[1] = GradientStop::new(1.0 / 6.0, Color::from_srgb_hex_rgb(0xff_ff_00));
+    stops[2] = GradientStop::new(2.0 / 6.0, Color::from_srgb_hex_rgb(0x00_ff_00));
+    stops[3] = GradientStop::new(3.0 / 6.0, Color::from_srgb_hex_rgb(0x00_ff_ff));
+    stops[4] = GradientStop::new(4.0 / 6.0, Color::from_srgb_hex_rgb(0x00_00_ff));
+    stops[5] = GradientStop::new(5.0 / 6.0, Color::from_srgb_hex_rgb(0xff_00_ff));
+    stops[6] = GradientStop::new(1.0, Color::from_srgb_hex_rgb(0xff_00_00));
+
+    painter.path_paint(
+        u64::from(painter.child_key(base, &"ring")),
+        DrawOrder(0),
+        Point::new(Px(0.0), Px(0.0)),
+        &path,
+        PathStyle::StrokeV2(StrokeStyleV2 {
+            width: Px(geometry.wheel_thickness),
+            join: StrokeJoinV1::Round,
+            cap: StrokeCapV1::Butt,
+            ..Default::default()
+        }),
+        Paint::SweepGradient(SweepGradient {
+            center,
+            start_angle_turns: 0.0,
+            end_angle_turns: 1.0,
+            tile_mode: TileMode::Clamp,
+            color_space: ColorSpace::Srgb,
+            stop_count: 7,
+            stops,
+        })
+        .into(),
+        scale,
+    );
+}
+
+fn paint_hue_wheel_triangle(
+    painter: &mut CanvasPainter<'_>,
+    base: fret_ui::canvas::CanvasKey,
+    origin: Point,
+    geometry: super::super::model::HueWheelGeometry,
+    hsv: HsvColor,
+    scale: f32,
+) {
+    let triangle = hue_wheel_rotated_triangle(geometry, hsv.hue);
+    let mut order = 10u32;
+    for i in 0..HUE_WHEEL_TRIANGLE_STEPS {
+        for j in 0..(HUE_WHEEL_TRIANGLE_STEPS - i) {
+            let p0 = triangle_grid_barycentric(i, j);
+            let p1 = triangle_grid_barycentric(i + 1, j);
+            let p2 = triangle_grid_barycentric(i, j + 1);
+            paint_hue_wheel_triangle_cell(
+                painter, base, origin, triangle, hsv.hue, p0, p1, p2, order, scale,
+            );
+            order += 1;
+
+            if j < HUE_WHEEL_TRIANGLE_STEPS - i - 1 {
+                let p3 = triangle_grid_barycentric(i + 1, j + 1);
+                paint_hue_wheel_triangle_cell(
+                    painter, base, origin, triangle, hsv.hue, p1, p3, p2, order, scale,
+                );
+                order += 1;
+            }
+        }
+    }
+
+    let border_path = triangle_path(
+        absolute_point(origin, triangle.hue),
+        absolute_point(origin, triangle.black),
+        absolute_point(origin, triangle.white),
+    );
+    painter.path(
+        u64::from(painter.child_key(base, &"triangle.border")),
+        DrawOrder(order),
+        Point::new(Px(0.0), Px(0.0)),
+        &border_path,
+        PathStyle::Stroke(StrokeStyle { width: Px(1.5) }),
+        Color::from_srgb_hex_rgb(0x80_80_80),
+        scale,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn paint_hue_wheel_triangle_cell(
+    painter: &mut CanvasPainter<'_>,
+    base: fret_ui::canvas::CanvasKey,
+    origin: Point,
+    triangle: super::super::model::HueWheelTriangle,
+    hue: f32,
+    a: (f32, f32, f32),
+    b: (f32, f32, f32),
+    c: (f32, f32, f32),
+    order: u32,
+    scale: f32,
+) {
+    let centroid = (
+        (a.0 + b.0 + c.0) / 3.0,
+        (a.1 + b.1 + c.1) / 3.0,
+        (a.2 + b.2 + c.2) / 3.0,
+    );
+    let value = (1.0 - centroid.1).clamp(0.0, 1.0);
+    let saturation = if value <= f32::EPSILON {
+        0.0
+    } else {
+        (centroid.0 / value).clamp(0.0, 1.0)
+    };
+    let color = hsv_to_color_preserving_alpha(
+        HsvColor {
+            hue,
+            saturation,
+            value,
+        },
+        1.0,
+    );
+    let path = triangle_path(
+        absolute_point(origin, point_from_triangle_barycentric(triangle, a)),
+        absolute_point(origin, point_from_triangle_barycentric(triangle, b)),
+        absolute_point(origin, point_from_triangle_barycentric(triangle, c)),
+    );
+    painter.path(
+        u64::from(painter.child_key(base, &("triangle.cell", order))),
+        DrawOrder(order),
+        Point::new(Px(0.0), Px(0.0)),
+        &path,
+        PathStyle::Fill(FillStyle::default()),
+        color,
+        scale,
+    );
+}
+
+fn paint_hue_wheel_cursors(
+    painter: &mut CanvasPainter<'_>,
+    base: fret_ui::canvas::CanvasKey,
+    origin: Point,
+    geometry: super::super::model::HueWheelGeometry,
+    hsv: HsvColor,
+    scale: f32,
+) {
+    let hue_angle = hsv.hue.rem_euclid(1.0) * std::f32::consts::PI * 2.0;
+    let hue_radius = (geometry.wheel_r_inner + geometry.wheel_r_outer) * 0.5;
+    let hue_cursor = absolute_point(
+        origin,
+        (
+            geometry.center_x + hue_angle.cos() * hue_radius,
+            geometry.center_y + hue_angle.sin() * hue_radius,
+        ),
+    );
+    let hue_color = hsv_to_color_preserving_alpha(
+        HsvColor {
+            hue: hsv.hue,
+            saturation: 1.0,
+            value: 1.0,
+        },
+        1.0,
+    );
+    paint_cursor_circle(
+        painter,
+        base,
+        "hue.cursor",
+        DrawOrder(320),
+        hue_cursor,
+        geometry.wheel_thickness * 0.55,
+        hue_color,
+        scale,
+    );
+
+    let sv_cursor = absolute_point(
+        origin,
+        hue_wheel_sv_cursor_position(hsv, geometry.center_x * 2.0, geometry.center_y * 2.0),
+    );
+    paint_cursor_circle(
+        painter,
+        base,
+        "sv.cursor",
+        DrawOrder(324),
+        sv_cursor,
+        geometry.wheel_thickness * 0.40,
+        hsv_to_color_preserving_alpha(hsv, 1.0),
+        scale,
+    );
+}
+
+fn paint_cursor_circle(
+    painter: &mut CanvasPainter<'_>,
+    base: fret_ui::canvas::CanvasKey,
+    key: &'static str,
+    order: DrawOrder,
+    center: Point,
+    radius: f32,
+    color: Color,
+    scale: f32,
+) {
+    let fill = circle_path(center, radius.max(1.0));
+    painter.path(
+        u64::from(painter.child_key(base, &(key, "fill"))),
+        order,
+        Point::new(Px(0.0), Px(0.0)),
+        &fill,
+        PathStyle::Fill(FillStyle::default()),
+        color,
+        scale,
+    );
+    let outer = circle_path(center, (radius + 1.0).max(1.0));
+    painter.path(
+        u64::from(painter.child_key(base, &(key, "outer"))),
+        DrawOrder(order.0 + 1),
+        Point::new(Px(0.0), Px(0.0)),
+        &outer,
+        PathStyle::Stroke(StrokeStyle { width: Px(1.0) }),
+        Color::from_srgb_hex_rgb(0x80_80_80),
+        scale,
+    );
+    let inner = circle_path(center, radius.max(1.0));
+    painter.path(
+        u64::from(painter.child_key(base, &(key, "inner"))),
+        DrawOrder(order.0 + 2),
+        Point::new(Px(0.0), Px(0.0)),
+        &inner,
+        PathStyle::Stroke(StrokeStyle { width: Px(1.0) }),
+        Color::from_srgb_hex_rgb(0xff_ff_ff),
+        scale,
+    );
+}
+
+fn triangle_grid_barycentric(i: usize, j: usize) -> (f32, f32, f32) {
+    let n = HUE_WHEEL_TRIANGLE_STEPS as f32;
+    let u = i as f32 / n;
+    let v = j as f32 / n;
+    (u, v, (1.0 - u - v).max(0.0))
+}
+
+fn point_from_triangle_barycentric(
+    triangle: super::super::model::HueWheelTriangle,
+    barycentric: (f32, f32, f32),
+) -> (f32, f32) {
+    (
+        triangle.hue.0 * barycentric.0
+            + triangle.black.0 * barycentric.1
+            + triangle.white.0 * barycentric.2,
+        triangle.hue.1 * barycentric.0
+            + triangle.black.1 * barycentric.1
+            + triangle.white.1 * barycentric.2,
+    )
+}
+
+fn absolute_point(origin: Point, local: (f32, f32)) -> Point {
+    Point::new(Px(origin.x.0 + local.0), Px(origin.y.0 + local.1))
+}
+
+fn triangle_path(a: Point, b: Point, c: Point) -> [PathCommand; 4] {
+    [
+        PathCommand::MoveTo(a),
+        PathCommand::LineTo(b),
+        PathCommand::LineTo(c),
+        PathCommand::Close,
+    ]
+}
+
+fn circle_path(center: Point, radius: f32) -> [PathCommand; 6] {
+    let r = radius.max(0.0);
+    let k = 0.552_284_8_f32 * r;
+    let cx = center.x.0;
+    let cy = center.y.0;
+    [
+        PathCommand::MoveTo(Point::new(Px(cx + r), Px(cy))),
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx + r), Px(cy + k)),
+            ctrl2: Point::new(Px(cx + k), Px(cy + r)),
+            to: Point::new(Px(cx), Px(cy + r)),
+        },
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx - k), Px(cy + r)),
+            ctrl2: Point::new(Px(cx - r), Px(cy + k)),
+            to: Point::new(Px(cx - r), Px(cy)),
+        },
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx - r), Px(cy - k)),
+            ctrl2: Point::new(Px(cx - k), Px(cy - r)),
+            to: Point::new(Px(cx), Px(cy - r)),
+        },
+        PathCommand::CubicTo {
+            ctrl1: Point::new(Px(cx + k), Px(cy - r)),
+            ctrl2: Point::new(Px(cx + r), Px(cy - k)),
+            to: Point::new(Px(cx + r), Px(cy)),
+        },
+        PathCommand::Close,
+    ]
 }
 
 fn sv_picker<H: UiHost>(
@@ -1150,6 +1699,37 @@ fn apply_hue_bar_position(
         .unwrap_or(Color::TRANSPARENT);
     let mut next_hsv = hsv_from_color(current);
     next_hsv.hue = hue_from_local_y(y, height);
+    apply_hsv_color(
+        host, action_cx, model, draft, error, show_alpha, current, next_hsv,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_hue_wheel_position(
+    host: &mut dyn UiPointerActionHost,
+    action_cx: ActionCx,
+    model: &Model<Color>,
+    draft: &Model<String>,
+    error: &Model<Option<Arc<str>>>,
+    show_alpha: bool,
+    target: HueWheelDragTarget,
+    x: f32,
+    y: f32,
+) {
+    let bounds = host.bounds();
+    let current = host
+        .models_mut()
+        .get_copied(model)
+        .unwrap_or(Color::TRANSPARENT);
+    let current_hsv = hsv_from_color(current);
+    let next_hsv = hsv_with_hue_wheel_position(
+        current_hsv,
+        x,
+        y,
+        bounds.size.width.0,
+        bounds.size.height.0,
+        target,
+    );
     apply_hsv_color(
         host, action_cx, model, draft, error, show_alpha, current, next_hsv,
     );

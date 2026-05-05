@@ -26,7 +26,7 @@ pub(super) mod preview;
 mod swatches;
 
 use self::numeric::color_numeric_inputs;
-use self::picker::{alpha_bar, hsv_picker};
+use self::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
 pub(super) use self::preview::color_preview_stack;
 use self::preview::color_side_preview;
 use self::swatches::preset_swatches;
@@ -115,6 +115,17 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     popup_options.shows_alpha_bar(show_alpha),
                     enabled,
                     derived_test_id(popup_test_id.as_ref(), "hsv"),
+                )),
+                ColorEditPopupPicker::HsvHueWheel => Some(hsv_hue_wheel_picker(
+                    cx,
+                    current,
+                    model.clone(),
+                    draft.clone(),
+                    error.clone(),
+                    show_alpha,
+                    popup_options.shows_alpha_bar(show_alpha),
+                    enabled,
+                    derived_test_id(popup_test_id.as_ref(), "hsv-wheel"),
                 )),
                 ColorEditPopupPicker::Hidden => None,
             };

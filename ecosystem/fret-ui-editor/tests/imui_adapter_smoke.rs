@@ -414,6 +414,7 @@ fn editor_imui_adapter_option_defaults_compile() {
         ..Default::default()
     };
     assert_eq!(color_options.popup.picker, ColorEditPopupPicker::Hidden);
+    let _ = ColorEditPopupPicker::HsvHueWheel;
     let _ = DragValueOptions::default();
     let _ = AxisDragValueOptions::default();
     let _ = NumericInputOptions::default();
