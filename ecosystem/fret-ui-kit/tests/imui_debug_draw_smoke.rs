@@ -153,6 +153,14 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                     6,
                 )
                 .arc_to_fast(Point::new(Px(220.0), Px(68.0)), Px(8.0), 0, 3)
+                .elliptical_arc_to(
+                    Point::new(Px(232.0), Px(72.0)),
+                    Size::new(Px(10.0), Px(5.0)),
+                    0.25,
+                    0.0,
+                    std::f32::consts::PI,
+                    6,
+                )
                 .bezier_quadratic_curve_to(
                     Point::new(Px(202.0), Px(54.0)),
                     Point::new(Px(212.0), Px(68.0)),

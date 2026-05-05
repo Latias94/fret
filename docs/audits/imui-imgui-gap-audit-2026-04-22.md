@@ -284,7 +284,9 @@ ergonomics are partially superseded by
 `docs/workstreams/imui-debug-draw-path-builder-v1/`; path Bezier builder ergonomics are partially
 superseded by `docs/workstreams/imui-debug-draw-path-bezier-builder-v1/`; circular path arc
 ergonomics are partially superseded by
-`docs/workstreams/imui-debug-draw-path-arc-builder-v1/`.
+`docs/workstreams/imui-debug-draw-path-arc-builder-v1/`; elliptical path arc ergonomics are
+partially superseded by
+`docs/workstreams/imui-debug-draw-path-elliptical-arc-builder-v1/`.
 
 Current IMUI now exposes:
 
@@ -299,14 +301,16 @@ Current IMUI now exposes:
   points in `draw.path(...)`,
 - scoped `PathArcTo` / `PathArcToFast`-style circular arc helpers through sampled points in
   `draw.path(...)`,
+- a scoped `PathEllipticalArcTo`-style rotated elliptical arc helper through sampled points in
+  `draw.path(...)`,
 - explicit stroke width/cap/join/miter/dash policy,
 - clip rect stack commands with paint-end auto-balancing,
 - registered image, image-region, SVG image, and SVG mask icon overlay commands,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
-Dear ImGui still goes much deeper through full `DrawList` parity, elliptical path arcs, rounded
-`PathRect` parity, channel splitting, per-command metadata, and hit-test-aware debug interaction.
+Dear ImGui still goes much deeper through full `DrawList` parity, rounded `PathRect` parity, channel
+splitting, per-command metadata, and hit-test-aware debug interaction.
 
 Conclusion:
 

@@ -21,6 +21,7 @@ use super::UiWriterImUiFacadeExt;
 const DEFAULT_ELLIPSE_SEGMENTS: usize = 32;
 const DEFAULT_PATH_ARC_SEGMENTS: usize = 12;
 const DEFAULT_PATH_BEZIER_SEGMENTS: usize = 12;
+const DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS: usize = 32;
 
 #[derive(Debug, Clone)]
 pub struct DebugDrawOptions {
@@ -281,6 +282,37 @@ impl ImUiDebugDrawPath<'_> {
             a_min,
             a_max,
             a_min_of_12.abs_diff(a_max_of_12) as usize,
+        );
+        self
+    }
+
+    pub fn elliptical_arc_to(
+        &mut self,
+        center: Point,
+        radius: Size,
+        rotation_radians: f32,
+        a_min: f32,
+        a_max: f32,
+        segments: usize,
+    ) -> &mut Self {
+        if radius.width.0 <= 0.0
+            || radius.height.0 <= 0.0
+            || !radius.width.0.is_finite()
+            || !radius.height.0.is_finite()
+            || !rotation_radians.is_finite()
+            || !a_min.is_finite()
+            || !a_max.is_finite()
+        {
+            return self;
+        }
+        append_elliptical_arc_points(
+            &mut self.points,
+            center,
+            radius,
+            rotation_radians,
+            a_min,
+            a_max,
+            path_elliptical_arc_segments(segments),
         );
         self
     }
@@ -1435,6 +1467,14 @@ fn path_bezier_segments(segments: usize) -> usize {
     }
 }
 
+fn path_elliptical_arc_segments(segments: usize) -> usize {
+    if segments == 0 {
+        DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS
+    } else {
+        segments
+    }
+}
+
 fn append_arc_points(
     points: &mut Vec<Point>,
     center: Point,
@@ -1458,6 +1498,41 @@ fn arc_point(center: Point, radius: Px, angle: f32) -> Point {
     Point::new(
         Px(center.x.0 + cos * radius.0),
         Px(center.y.0 + sin * radius.0),
+    )
+}
+
+fn append_elliptical_arc_points(
+    points: &mut Vec<Point>,
+    center: Point,
+    radius: Size,
+    rotation_radians: f32,
+    a_min: f32,
+    a_max: f32,
+    segments: usize,
+) {
+    for step in 0..=segments {
+        let t = if segments == 0 {
+            0.0
+        } else {
+            step as f32 / segments as f32
+        };
+        points.push(elliptical_arc_point(
+            center,
+            radius,
+            rotation_radians,
+            a_min + t * (a_max - a_min),
+        ));
+    }
+}
+
+fn elliptical_arc_point(center: Point, radius: Size, rotation_radians: f32, angle: f32) -> Point {
+    let (angle_sin, angle_cos) = angle.sin_cos();
+    let (rot_sin, rot_cos) = rotation_radians.sin_cos();
+    let x = angle_cos * radius.width.0;
+    let y = angle_sin * radius.height.0;
+    Point::new(
+        Px(center.x.0 + x * rot_cos - y * rot_sin),
+        Px(center.y.0 + x * rot_sin + y * rot_cos),
     )
 }
 
@@ -2063,6 +2138,94 @@ mod tests {
             path.arc_to_fast(center, Px(8.0), 3, 0);
             assert_eq!(path.point_count(), 4);
             path.clear();
+        });
+
+        assert_eq!(list.command_count(), 0);
+    }
+
+    #[test]
+    fn debug_draw_path_builder_appends_elliptical_arc_samples() {
+        let mut list = ImUiDebugDrawList::default();
+        let center = Point::new(Px(10.0), Px(20.0));
+
+        list.path(|path| {
+            path.elliptical_arc_to(
+                center,
+                Size::new(Px(8.0), Px(4.0)),
+                0.0,
+                0.0,
+                std::f32::consts::PI,
+                2,
+            );
+            assert_eq!(path.point_count(), 3);
+            path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), false);
+        });
+
+        let DebugDrawCommand::Polyline { points, .. } = &list.commands[0] else {
+            panic!("path elliptical arc helper should record a sampled polyline command");
+        };
+        assert_eq!(points.len(), 3);
+        assert_point_near(points[0], Point::new(Px(18.0), Px(20.0)));
+        assert_point_near(points[1], Point::new(Px(10.0), Px(24.0)));
+        assert_point_near(points[2], Point::new(Px(2.0), Px(20.0)));
+    }
+
+    #[test]
+    fn debug_draw_path_builder_elliptical_arc_handles_rotation_default_and_invalid_inputs() {
+        let mut list = ImUiDebugDrawList::default();
+        let center = Point::new(Px(10.0), Px(20.0));
+
+        list.path(|path| {
+            path.elliptical_arc_to(
+                center,
+                Size::new(Px(8.0), Px(4.0)),
+                std::f32::consts::FRAC_PI_2,
+                0.0,
+                std::f32::consts::PI,
+                2,
+            );
+            assert_eq!(path.point_count(), 3);
+            assert_point_near(path.points[0], Point::new(Px(10.0), Px(28.0)));
+            assert_point_near(path.points[1], Point::new(Px(6.0), Px(20.0)));
+            assert_point_near(path.points[2], Point::new(Px(10.0), Px(12.0)));
+            path.clear();
+
+            path.elliptical_arc_to(
+                center,
+                Size::new(Px(8.0), Px(4.0)),
+                0.0,
+                0.0,
+                std::f32::consts::FRAC_PI_2,
+                0,
+            );
+            assert_eq!(path.point_count(), DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS + 1);
+            path.clear();
+
+            path.elliptical_arc_to(
+                center,
+                Size::new(Px(0.0), Px(4.0)),
+                0.0,
+                0.0,
+                std::f32::consts::PI,
+                2,
+            );
+            path.elliptical_arc_to(
+                center,
+                Size::new(Px(8.0), Px(4.0)),
+                f32::NAN,
+                0.0,
+                std::f32::consts::PI,
+                2,
+            );
+            path.elliptical_arc_to(
+                center,
+                Size::new(Px(8.0), Px(4.0)),
+                0.0,
+                f32::NAN,
+                std::f32::consts::PI,
+                2,
+            );
+            assert!(path.is_empty());
         });
 
         assert_eq!(list.command_count(), 0);
