@@ -369,6 +369,12 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw rounded image follow-on (closed narrow P1 lane adding Dear ImGui-style
+  `AddImageRounded` clipping semantics for registered images and image regions through existing
+  rounded-rect scene clips):
+  `docs/workstreams/imui-debug-draw-rounded-image-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-rounded-image-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-rounded-image-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

@@ -289,7 +289,8 @@ partially superseded by
 `docs/workstreams/imui-debug-draw-path-elliptical-arc-builder-v1/`; path rectangle ergonomics are
 partially superseded by `docs/workstreams/imui-debug-draw-path-rect-builder-v1/`; concave polygon
 fill semantics are partially superseded by
-`docs/workstreams/imui-debug-draw-concave-poly-fill-v1/`.
+`docs/workstreams/imui-debug-draw-concave-poly-fill-v1/`; rounded image clipping semantics are
+partially superseded by `docs/workstreams/imui-debug-draw-rounded-image-v1/`.
 
 Current IMUI now exposes:
 
@@ -310,12 +311,16 @@ Current IMUI now exposes:
   `draw.path(...)`,
 - explicit stroke width/cap/join/miter/dash policy,
 - clip rect stack commands with paint-end auto-balancing,
-- registered image, image-region, SVG image, and SVG mask icon overlay commands,
+- registered image, image-region, rounded image, rounded image-region, SVG image, and SVG mask icon
+  overlay commands,
 - declarative lowering into `Canvas`,
 - and smoke tests that keep the facade boundary clean.
 
 Dear ImGui still goes much deeper through full `DrawList` parity, channel splitting, per-command
-metadata, multi-color rect fill, rounded image fill, and hit-test-aware debug interaction.
+metadata, arbitrary image quads, image tinting, multi-color rect fill, and hit-test-aware debug
+interaction. In particular, `AddRectFilledMultiColor` writes four vertex colors into two triangles;
+Fret's current `SceneOp::Quad` and paint bindings cannot express that as a semantically equivalent
+single primitive.
 
 Conclusion:
 

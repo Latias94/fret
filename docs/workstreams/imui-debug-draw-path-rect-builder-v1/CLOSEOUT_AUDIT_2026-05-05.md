@@ -25,4 +25,5 @@ debug-draw helper.
 
 Full Dear ImGui `ImDrawList` parity is still not closed. Start separate follow-ons for channel
 splitting, hit-test-aware debug interaction, reusable draw-list command metadata, image loading
-recipes, multi-color rect fill, or image rounded parity.
+recipes, image tinting, arbitrary image quads, or multi-color rect fill. Rounded image clipping is
+covered by `docs/workstreams/imui-debug-draw-rounded-image-v1/`.

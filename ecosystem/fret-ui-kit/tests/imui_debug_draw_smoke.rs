@@ -228,6 +228,30 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             UvRect::FULL,
             DebugDrawImageOptions::default(),
         );
+        draw.add_image_rounded(
+            Rect::new(
+                Point::new(Px(204.0), Px(8.0)),
+                Size::new(Px(24.0), Px(24.0)),
+            ),
+            ImageId::default(),
+            Px(6.0),
+            DebugDrawRoundCorners::ALL,
+        );
+        draw.add_image_region_rounded(
+            Rect::new(
+                Point::new(Px(232.0), Px(8.0)),
+                Size::new(Px(24.0), Px(24.0)),
+            ),
+            ImageId::default(),
+            UvRect::FULL,
+            DebugDrawImageOptions {
+                fit: ViewportFit::Stretch,
+                sampling: ImageSamplingHint::Nearest,
+                opacity: 0.7,
+            },
+            Px(6.0),
+            DebugDrawRoundCorners::TOP_LEFT | DebugDrawRoundCorners::BOTTOM_RIGHT,
+        );
         draw.add_svg_image_with_options(
             Rect::new(
                 Point::new(Px(148.0), Px(36.0)),

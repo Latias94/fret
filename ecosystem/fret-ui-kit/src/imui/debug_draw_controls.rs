@@ -795,6 +795,58 @@ impl ImUiDebugDrawList {
         });
     }
 
+    pub fn add_image_rounded(
+        &mut self,
+        rect: Rect,
+        image: ImageId,
+        rounding: Px,
+        corners: DebugDrawRoundCorners,
+    ) {
+        self.add_image_rounded_with_options(
+            rect,
+            image,
+            DebugDrawImageOptions::default(),
+            rounding,
+            corners,
+        );
+    }
+
+    pub fn add_image_rounded_with_options(
+        &mut self,
+        rect: Rect,
+        image: ImageId,
+        options: DebugDrawImageOptions,
+        rounding: Px,
+        corners: DebugDrawRoundCorners,
+    ) {
+        self.commands.push(DebugDrawCommand::ImageRounded {
+            rect,
+            image,
+            options,
+            rounding,
+            corners,
+        });
+    }
+
+    pub fn add_image_region_rounded(
+        &mut self,
+        rect: Rect,
+        image: ImageId,
+        uv: UvRect,
+        options: DebugDrawImageOptions,
+        rounding: Px,
+        corners: DebugDrawRoundCorners,
+    ) {
+        self.commands.push(DebugDrawCommand::ImageRegionRounded {
+            rect,
+            image,
+            uv,
+            options,
+            rounding,
+            corners,
+        });
+    }
+
     pub fn add_svg_image(&mut self, rect: Rect, svg: SvgSource) {
         self.add_svg_image_with_options(rect, svg, DebugDrawSvgOptions::default());
     }
@@ -982,6 +1034,21 @@ enum DebugDrawCommand {
         uv: UvRect,
         options: DebugDrawImageOptions,
     },
+    ImageRounded {
+        rect: Rect,
+        image: ImageId,
+        options: DebugDrawImageOptions,
+        rounding: Px,
+        corners: DebugDrawRoundCorners,
+    },
+    ImageRegionRounded {
+        rect: Rect,
+        image: ImageId,
+        uv: UvRect,
+        options: DebugDrawImageOptions,
+        rounding: Px,
+        corners: DebugDrawRoundCorners,
+    },
     SvgImage {
         rect: Rect,
         svg: SvgSource,
@@ -1084,14 +1151,7 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                 if opacity <= 0.0 || rect_is_empty(*rect) {
                     continue;
                 }
-                painter.scene().push(fret_core::SceneOp::Image {
-                    order,
-                    rect: *rect,
-                    image: *image,
-                    fit: options.fit,
-                    sampling: options.sampling,
-                    opacity,
-                });
+                paint_image(painter, order, *rect, *image, *options, opacity);
             }
             DebugDrawCommand::ImageRegion {
                 rect,
@@ -1103,14 +1163,58 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                 if opacity <= 0.0 || rect_is_empty(*rect) || !uv_rect_is_valid(*uv) {
                     continue;
                 }
-                painter.scene().push(fret_core::SceneOp::ImageRegion {
-                    order,
-                    rect: *rect,
-                    image: *image,
-                    uv: *uv,
-                    sampling: options.sampling,
-                    opacity,
-                });
+                paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
+            }
+            DebugDrawCommand::ImageRounded {
+                rect,
+                image,
+                options,
+                rounding,
+                corners,
+            } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0 || rect_is_empty(*rect) || !rect_is_finite(*rect) {
+                    continue;
+                }
+                let corner_radii = rounded_rect_corner_radii(*rect, *rounding, *corners);
+                if corner_radii_are_visible(corner_radii) {
+                    painter.scene().push(fret_core::SceneOp::PushClipRRect {
+                        rect: *rect,
+                        corner_radii,
+                    });
+                    paint_image(painter, order, *rect, *image, *options, opacity);
+                    painter.scene().push(fret_core::SceneOp::PopClip);
+                } else {
+                    paint_image(painter, order, *rect, *image, *options, opacity);
+                }
+            }
+            DebugDrawCommand::ImageRegionRounded {
+                rect,
+                image,
+                uv,
+                options,
+                rounding,
+                corners,
+            } => {
+                let opacity = normalized_opacity(options.opacity);
+                if opacity <= 0.0
+                    || rect_is_empty(*rect)
+                    || !rect_is_finite(*rect)
+                    || !uv_rect_is_valid(*uv)
+                {
+                    continue;
+                }
+                let corner_radii = rounded_rect_corner_radii(*rect, *rounding, *corners);
+                if corner_radii_are_visible(corner_radii) {
+                    painter.scene().push(fret_core::SceneOp::PushClipRRect {
+                        rect: *rect,
+                        corner_radii,
+                    });
+                    paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
+                    painter.scene().push(fret_core::SceneOp::PopClip);
+                } else {
+                    paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
+                }
             }
             DebugDrawCommand::SvgImage { rect, svg, options } => {
                 let opacity = normalized_opacity(options.opacity);
@@ -1553,6 +1657,113 @@ fn uv_rect_is_valid(uv: UvRect) -> bool {
         && uv.v1 > uv.v0
 }
 
+fn paint_image(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    rect: Rect,
+    image: ImageId,
+    options: DebugDrawImageOptions,
+    opacity: f32,
+) {
+    painter.scene().push(fret_core::SceneOp::Image {
+        order,
+        rect,
+        image,
+        fit: options.fit,
+        sampling: options.sampling,
+        opacity,
+    });
+}
+
+fn paint_image_region(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    rect: Rect,
+    image: ImageId,
+    uv: UvRect,
+    options: DebugDrawImageOptions,
+    opacity: f32,
+) {
+    painter.scene().push(fret_core::SceneOp::ImageRegion {
+        order,
+        rect,
+        image,
+        uv,
+        sampling: options.sampling,
+        opacity,
+    });
+}
+
+fn corner_radii_are_visible(radii: Corners) -> bool {
+    radii.top_left.0 > 0.0
+        || radii.top_right.0 > 0.0
+        || radii.bottom_right.0 > 0.0
+        || radii.bottom_left.0 > 0.0
+}
+
+fn rounded_rect_corner_radii(rect: Rect, rounding: Px, corners: DebugDrawRoundCorners) -> Corners {
+    let rounding = effective_rect_rounding(rect, rounding, corners);
+    Corners {
+        top_left: if corners.contains(DebugDrawRoundCorners::TOP_LEFT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+        top_right: if corners.contains(DebugDrawRoundCorners::TOP_RIGHT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+        bottom_right: if corners.contains(DebugDrawRoundCorners::BOTTOM_RIGHT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+        bottom_left: if corners.contains(DebugDrawRoundCorners::BOTTOM_LEFT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+    }
+}
+
+fn effective_rect_rounding(rect: Rect, rounding: Px, corners: DebugDrawRoundCorners) -> Px {
+    if rect_is_empty(rect)
+        || !rect_is_finite(rect)
+        || !rounding.0.is_finite()
+        || rounding.0 < 0.5
+        || corners.is_empty()
+    {
+        return Px(0.0);
+    }
+
+    let width = rect.size.width.0.abs();
+    let height = rect.size.height.0.abs();
+    let x_scale = if corners.contains(DebugDrawRoundCorners::TOP)
+        || corners.contains(DebugDrawRoundCorners::BOTTOM)
+    {
+        0.5
+    } else {
+        1.0
+    };
+    let y_scale = if corners.contains(DebugDrawRoundCorners::LEFT)
+        || corners.contains(DebugDrawRoundCorners::RIGHT)
+    {
+        0.5
+    } else {
+        1.0
+    };
+    let rounding = rounding
+        .0
+        .min(width * x_scale - 1.0)
+        .min(height * y_scale - 1.0);
+    if rounding >= 0.5 {
+        Px(rounding)
+    } else {
+        Px(0.0)
+    }
+}
+
 fn path_stroke_required_points(closed: bool) -> usize {
     if closed { 3 } else { 2 }
 }
@@ -1712,30 +1923,9 @@ fn append_path_rect_points(
 ) {
     let a = rect.origin;
     let b = rect_max_point(rect);
-    let mut rounding = rounding.0;
+    let rounding = effective_rect_rounding(rect, rounding, corners);
 
-    if rounding >= 0.5 && !corners.is_empty() {
-        let width = rect.size.width.0.abs();
-        let height = rect.size.height.0.abs();
-        let x_scale = if corners.contains(DebugDrawRoundCorners::TOP)
-            || corners.contains(DebugDrawRoundCorners::BOTTOM)
-        {
-            0.5
-        } else {
-            1.0
-        };
-        let y_scale = if corners.contains(DebugDrawRoundCorners::LEFT)
-            || corners.contains(DebugDrawRoundCorners::RIGHT)
-        {
-            0.5
-        } else {
-            1.0
-        };
-        rounding = rounding.min(width * x_scale - 1.0);
-        rounding = rounding.min(height * y_scale - 1.0);
-    }
-
-    if rounding < 0.5 || corners.is_empty() {
+    if rounding.0 < 0.5 {
         points.push(a);
         points.push(Point::new(b.x, a.y));
         points.push(b);
@@ -1743,7 +1933,6 @@ fn append_path_rect_points(
         return;
     }
 
-    let rounding = Px(rounding);
     let rounding_tl = if corners.contains(DebugDrawRoundCorners::TOP_LEFT) {
         rounding
     } else {
@@ -2199,6 +2388,20 @@ mod tests {
 
         list.add_image_with_options(rect, image, image_options);
         list.add_image_region(rect, image, UvRect::FULL, image_options);
+        list.add_image_rounded(
+            rect,
+            image,
+            Px(4.0),
+            DebugDrawRoundCorners::TOP_LEFT | DebugDrawRoundCorners::BOTTOM_RIGHT,
+        );
+        list.add_image_region_rounded(
+            rect,
+            image,
+            UvRect::FULL,
+            image_options,
+            Px(4.0),
+            DebugDrawRoundCorners::ALL,
+        );
         list.add_svg_image_with_options(rect, SvgSource::Static(b"<svg/>"), svg_options);
         list.add_svg_mask_icon_with_options(
             rect,
@@ -2207,7 +2410,7 @@ mod tests {
             svg_options,
         );
 
-        assert_eq!(list.command_count(), 4);
+        assert_eq!(list.command_count(), 6);
         assert!(matches!(list.commands[0], DebugDrawCommand::Image { .. }));
         assert!(matches!(
             list.commands[1],
@@ -2215,10 +2418,18 @@ mod tests {
         ));
         assert!(matches!(
             list.commands[2],
-            DebugDrawCommand::SvgImage { .. }
+            DebugDrawCommand::ImageRounded { .. }
         ));
         assert!(matches!(
             list.commands[3],
+            DebugDrawCommand::ImageRegionRounded { .. }
+        ));
+        assert!(matches!(
+            list.commands[4],
+            DebugDrawCommand::SvgImage { .. }
+        ));
+        assert!(matches!(
+            list.commands[5],
             DebugDrawCommand::SvgMaskIcon { .. }
         ));
     }
@@ -2652,6 +2863,34 @@ mod tests {
             u1: 0.25,
             v1: 1.0,
         }));
+    }
+
+    #[test]
+    fn rounded_image_helpers_follow_imgui_path_rect_corner_rules() {
+        let rect = Rect::new(Point::new(Px(10.0), Px(20.0)), Size::new(Px(12.0), Px(8.0)));
+
+        let all = rounded_rect_corner_radii(rect, Px(50.0), DebugDrawRoundCorners::ALL);
+        assert_eq!(all, Corners::all(Px(3.0)));
+        assert!(corner_radii_are_visible(all));
+
+        let diagonal = rounded_rect_corner_radii(
+            rect,
+            Px(50.0),
+            DebugDrawRoundCorners::TOP_LEFT | DebugDrawRoundCorners::BOTTOM_RIGHT,
+        );
+        assert_eq!(diagonal.top_left, Px(7.0));
+        assert_eq!(diagonal.top_right, Px(0.0));
+        assert_eq!(diagonal.bottom_right, Px(7.0));
+        assert_eq!(diagonal.bottom_left, Px(0.0));
+
+        assert_eq!(
+            rounded_rect_corner_radii(rect, Px(4.0), DebugDrawRoundCorners::NONE),
+            Corners::all(Px(0.0))
+        );
+        assert_eq!(
+            rounded_rect_corner_radii(rect, Px(f32::NAN), DebugDrawRoundCorners::ALL),
+            Corners::all(Px(0.0))
+        );
     }
 
     #[test]
