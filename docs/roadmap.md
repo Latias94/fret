@@ -172,6 +172,12 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-picker-options-popup-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-picker-options-popup-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-picker-options-popup-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit picker options thumbnail preview follow-on (closed narrow P1 polish lane adding
+  Dear ImGui-style picker type thumbnails to the existing popup-local options surface while reusing
+  editor picker preview renderers):
+  `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi color edit palette customization follow-on (closed narrow P1 lane adding an app-owned
   palette source for editor `ColorEdit`, preserving the built-in palette and alpha-preserving
   palette activation while leaving editable palette slots separate):

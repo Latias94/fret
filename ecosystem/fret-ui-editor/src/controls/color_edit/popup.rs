@@ -155,6 +155,7 @@ pub(super) fn request_popup_overlay<H: UiHost>(
             let picker_options = popup_options.shows_picker_options(show_alpha).then(|| {
                 color_picker_options(
                     cx,
+                    current,
                     popup_options,
                     runtime_options,
                     popup_runtime_options.clone(),

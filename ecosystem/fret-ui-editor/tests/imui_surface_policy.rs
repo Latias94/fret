@@ -96,6 +96,11 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("radix_tooltip::tooltip_request("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_wheel_canvas<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn picker_option_thumbnail<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn hue_bar_picker_thumbnail<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn hue_wheel_picker_thumbnail<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("sv_picker_preview_stack("));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("hue_wheel_canvas("));
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));

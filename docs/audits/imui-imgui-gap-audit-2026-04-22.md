@@ -215,7 +215,9 @@ partially superseded by `docs/workstreams/imui-color-edit-editable-palette-slots
 recent color history swatches are partially superseded by
 `docs/workstreams/imui-color-edit-history-swatches-v1/`; hover tooltip previews are partially
 superseded by `docs/workstreams/imui-color-edit-tooltip-preview-v1/`; copy-as context menu payloads
-are partially superseded by `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/`.
+are partially superseded by `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/`; picker
+options thumbnails are partially superseded by
+`docs/workstreams/imui-color-edit-picker-options-thumbnail-preview-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -236,6 +238,7 @@ Current editor `ColorEdit` now has:
   mapping, Canvas rendering, and optional vertical AlphaBar composition,
 - a popup-local picker options surface for switching between `HsvHueBar` and `HsvHueWheel` and
   toggling AlphaBar visibility without global `SetColorEditOptions()` state,
+- Dear ImGui-style picker type thumbnails inside the popup-local picker options surface,
 - app-owned palette entries through `ColorEditOptions::palette`, preserving the built-in palette
   and alpha-preserving palette activation,
 - editable popup palette slots through `OnColorEditPaletteSlotDrop`, with palette swatches acting

@@ -320,7 +320,10 @@ fn hue_wheel_picker<H: UiHost>(
     picker.a11y_value(value)
 }
 
-fn hue_wheel_canvas<H: UiHost>(cx: &mut ElementContext<'_, H>, hsv: HsvColor) -> AnyElement {
+pub(super) fn hue_wheel_canvas<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    hsv: HsvColor,
+) -> AnyElement {
     cx.canvas(
         CanvasProps {
             layout: fill_preview_layout(),
@@ -755,7 +758,10 @@ fn sv_picker<H: UiHost>(
     picker.a11y_value(value)
 }
 
-fn sv_picker_preview_stack<H: UiHost>(cx: &mut ElementContext<'_, H>, hsv: HsvColor) -> AnyElement {
+pub(super) fn sv_picker_preview_stack<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    hsv: HsvColor,
+) -> AnyElement {
     cx.stack_props(
         StackProps {
             layout: fill_preview_layout(),
@@ -1042,7 +1048,10 @@ fn hue_bar<H: UiHost>(
     bar.a11y_value(value)
 }
 
-fn hue_bar_preview_stack<H: UiHost>(cx: &mut ElementContext<'_, H>, hue: f32) -> AnyElement {
+pub(super) fn hue_bar_preview_stack<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    hue: f32,
+) -> AnyElement {
     cx.stack_props(
         StackProps {
             layout: fill_preview_layout(),
