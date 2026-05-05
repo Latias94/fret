@@ -15,10 +15,11 @@ use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
+use super::drag_drop::ColorDragDropStore;
 use super::{
-    ColorEditAlphaPreview, ColorEditPaletteEntry, ColorEditPopupNumericInputs,
-    ColorEditPopupOptions, ColorEditPopupPicker, ColorEditPopupRuntimeOptions, draft_model,
-    error_model,
+    ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditPaletteEntry,
+    ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
+    ColorEditPopupRuntimeOptions, OnColorEditPaletteSlotDrop, draft_model, error_model,
 };
 
 mod numeric;
@@ -46,6 +47,10 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
     palette: Arc<[ColorEditPaletteEntry]>,
+    drag_drop_store: Model<ColorDragDropStore>,
+    drag_drop_options: ColorEditDragDropOptions,
+    drag_threshold: Px,
+    on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
     popup_options: ColorEditPopupOptions,
     popup_runtime_options: Model<ColorEditPopupRuntimeOptions>,
     popup_padding: Px,
@@ -196,6 +201,10 @@ pub(super) fn request_popup_overlay<H: UiHost>(
                     enabled,
                     alpha_preview,
                     palette.clone(),
+                    drag_drop_store.clone(),
+                    drag_drop_options,
+                    drag_threshold,
+                    on_palette_slot_drop.clone(),
                     popup_test_id.clone(),
                 )
             });

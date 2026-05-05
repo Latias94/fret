@@ -5,7 +5,10 @@ use fret_runtime::{DragKindId, DragPhase, DragSessionId, Model, TickId};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt as _};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 
-use super::{ColorEditDragDropComponents, ColorEditDragDropOptions, ColorEditDragDropPayload};
+use super::{
+    ColorEditDragDropComponents, ColorEditDragDropOptions, ColorEditDragDropPayload,
+    ColorEditPaletteEntry,
+};
 
 const COLOR_DRAG_KIND_MASK: u64 = 0x4000_0000_0000_0000;
 const DEFAULT_COLOR_DRAG_THRESHOLD_PX: f32 = 6.0;
@@ -16,7 +19,7 @@ struct ColorDragDropStoreGlobal {
 }
 
 #[derive(Default)]
-pub(super) struct ColorDragDropStore {
+pub(in crate::controls::color_edit) struct ColorDragDropStore {
     active: HashMap<DragSessionId, ActiveColorDrag>,
     delivered: HashMap<GlobalElementId, DeliveredColorDrop>,
 }
@@ -91,7 +94,7 @@ pub(super) fn resolve_color_drag_threshold<H: UiHost>(cx: &ElementContext<'_, H>
     }
 }
 
-pub(super) fn install_color_drag_source<H: UiHost>(
+pub(in crate::controls::color_edit) fn install_color_drag_source<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     source_id: GlobalElementId,
     store: Model<ColorDragDropStore>,
@@ -273,7 +276,7 @@ pub(super) fn install_color_drag_source<H: UiHost>(
     });
 }
 
-pub(super) fn update_color_drop_target<H: UiHost>(
+pub(in crate::controls::color_edit) fn update_color_drop_target<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     store: &Model<ColorDragDropStore>,
     target_id: GlobalElementId,
@@ -318,7 +321,7 @@ pub(super) fn update_color_drop_target<H: UiHost>(
     over
 }
 
-pub(super) fn take_delivered_color_drop<H: UiHost>(
+pub(in crate::controls::color_edit) fn take_delivered_color_drop<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     store: &Model<ColorDragDropStore>,
     target_id: GlobalElementId,
@@ -347,6 +350,13 @@ pub(super) fn apply_color_drop_payload(
         next.a = current.a;
     }
     next
+}
+
+pub(super) fn palette_slot_drop_from_payload(
+    previous: ColorEditPaletteEntry,
+    payload: ColorEditDragDropPayload,
+) -> ColorEditPaletteEntry {
+    previous.with_rgb(fret_ui_kit::colors::hex_rgb_from_linear(payload.color))
 }
 
 fn color_drag_kind_for_element(element: GlobalElementId) -> DragKindId {

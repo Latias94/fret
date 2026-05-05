@@ -49,6 +49,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPopupOptions"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPaletteEntry"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPaletteSlotDrop"));
+    assert!(COLOR_EDIT_RS.contains("pub type OnColorEditPaletteSlotDrop"));
     assert!(COLOR_EDIT_RS.contains("pub fn default_color_edit_palette()"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditAlphaPreview"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropOptions"));
@@ -62,6 +64,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn palette_slot_drop_from_payload("));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("ColorEditAlphaPreview::Half"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_side_preview<"));
@@ -71,6 +74,9 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
     assert!(COLOR_EDIT_POPUP_RS.contains("color_picker_options("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("install_color_drag_source("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("take_delivered_color_drop("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteSlotDrop::new("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_wheel_canvas<"));
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));

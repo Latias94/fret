@@ -210,7 +210,8 @@ shape is partially superseded by `docs/workstreams/imui-color-edit-hue-wheel-pic
 options popup behavior is partially superseded by
 `docs/workstreams/imui-color-edit-picker-options-popup-v1/`; app-owned palette source
 customization is partially superseded by
-`docs/workstreams/imui-color-edit-palette-customization-v1/`.
+`docs/workstreams/imui-color-edit-palette-customization-v1/`; editable palette slot drag/drop is
+partially superseded by `docs/workstreams/imui-color-edit-editable-palette-slots-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -233,6 +234,8 @@ Current editor `ColorEdit` now has:
   toggling AlphaBar visibility without global `SetColorEditOptions()` state,
 - app-owned palette entries through `ColorEditOptions::palette`, preserving the built-in palette
   and alpha-preserving palette activation,
+- editable popup palette slots through `OnColorEditPaletteSlotDrop`, with palette swatches acting
+  as RGB drag sources and optional app-owned drop targets,
 - RGB and HSV numeric readouts, with alpha percent shown when alpha is visible,
 - editable RGB/HSV numeric popup rows with editor-owned validation,
 - per-control popup defaults for HueBar picker, RGB/HSV numeric rows, preset palette, and AlphaBar
@@ -267,8 +270,8 @@ Conclusion:
 
 - The remaining color gap is deeper picker/editor affordances, not "visible popup is a stub".
 - Keep the current alpha-preserving RGB policy in `fret-ui-editor`.
-- Start separate narrow follow-ons for editable palette slots, drag/drop-to-palette-slot mutation,
-  color history, eyedropper behavior, or higher-fidelity picker preview polish.
+- Start separate narrow follow-ons for color history, eyedropper behavior, or higher-fidelity
+  picker preview polish.
 - The remaining debug-draw gap is richer DrawList parity, not "no debug-draw surface exists".
 
 Evidence anchors:
@@ -280,7 +283,9 @@ Evidence anchors:
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches.rs`
 - `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs`
+- `ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs`
 - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
 - `repo-ref/imgui/imgui_demo.cpp`
 - `repo-ref/imgui/imgui_widgets.cpp`

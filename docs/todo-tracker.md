@@ -287,6 +287,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-color-edit-palette-customization-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-color-edit-palette-customization-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-color-edit-palette-customization-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` editable palette slots:
+  - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - Closed narrow follow-on for IMUI editor `ColorEdit` AlphaBar:
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/DESIGN.md`
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/TODO.md`

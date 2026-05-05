@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost, UiActionHostAdapter};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, SizeStyle, SpacingLength,
@@ -11,8 +11,15 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::primitives::input_group::derived_test_id;
 
+use super::super::drag_drop::{
+    ColorDragDropStore, install_color_drag_source, take_delivered_color_drop,
+    update_color_drop_target,
+};
 use super::super::model::{color_from_rgb_preserving_alpha, format_hex};
-use super::super::{ColorEditAlphaPreview, ColorEditPaletteEntry};
+use super::super::{
+    ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditDragDropPayload,
+    ColorEditPaletteEntry, ColorEditPaletteSlotDrop, OnColorEditPaletteSlotDrop,
+};
 use super::preview::color_preview_stack;
 
 pub(super) fn preset_swatches<H: UiHost>(
@@ -26,6 +33,10 @@ pub(super) fn preset_swatches<H: UiHost>(
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
     palette: Arc<[ColorEditPaletteEntry]>,
+    drag_drop_store: Model<ColorDragDropStore>,
+    drag_drop_options: ColorEditDragDropOptions,
+    drag_threshold: Px,
+    on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let current_rgb = fret_ui_kit::colors::hex_rgb_from_linear(current);
@@ -53,8 +64,8 @@ pub(super) fn preset_swatches<H: UiHost>(
                 .map(|(idx, entry)| {
                     preset_swatch(
                         cx,
-                        entry.name.clone(),
-                        entry.rgb,
+                        idx,
+                        entry.clone(),
                         current_rgb == entry.rgb,
                         current.a,
                         model.clone(),
@@ -64,6 +75,10 @@ pub(super) fn preset_swatches<H: UiHost>(
                         show_alpha,
                         enabled,
                         alpha_preview,
+                        drag_drop_store.clone(),
+                        drag_drop_options,
+                        drag_threshold,
+                        on_palette_slot_drop.clone(),
                         derived_test_id(test_id.as_ref(), format!("preset.{idx}").as_str()),
                     )
                 })
@@ -74,8 +89,8 @@ pub(super) fn preset_swatches<H: UiHost>(
 
 fn preset_swatch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    name: Arc<str>,
-    rgb: u32,
+    index: usize,
+    entry: ColorEditPaletteEntry,
     selected: bool,
     current_alpha: f32,
     model: Model<Color>,
@@ -85,8 +100,14 @@ fn preset_swatch<H: UiHost>(
     show_alpha: bool,
     enabled: bool,
     alpha_preview: ColorEditAlphaPreview,
+    drag_drop_store: Model<ColorDragDropStore>,
+    drag_drop_options: ColorEditDragDropOptions,
+    drag_threshold: Px,
+    on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    let name = entry.name.clone();
+    let rgb = entry.rgb;
     let color = color_from_rgb_preserving_alpha(rgb, current_alpha);
     let on_activate: OnActivate =
         Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
@@ -102,20 +123,18 @@ fn preset_swatch<H: UiHost>(
             host.request_redraw(action_cx.window);
         });
 
-    let (border_color, ring) = {
+    let (idle_border_color, ring) = {
         let theme = Theme::global(&*cx.app);
         let ring = theme
             .color_by_key("ring")
             .unwrap_or_else(|| theme.color_token("primary"));
-        let border_color = if selected {
-            ring
-        } else {
-            theme
-                .color_by_key("border")
-                .unwrap_or_else(|| theme.color_token("border"))
-        };
+        let border_color = theme
+            .color_by_key("border")
+            .unwrap_or_else(|| theme.color_token("border"));
         (border_color, ring)
     };
+    let drag_drop_store_for_render = drag_drop_store.clone();
+    let on_palette_slot_drop_for_render = on_palette_slot_drop.clone();
 
     let mut swatch = cx.pressable(
         PressableProps {
@@ -144,8 +163,30 @@ fn preset_swatch<H: UiHost>(
             }),
             ..Default::default()
         },
-        move |cx, _st| {
+        move |cx, st| {
             cx.pressable_add_on_activate(on_activate.clone());
+            let swatch_id = cx.root_id();
+            let source_options = ColorEditDragDropOptions {
+                enabled: enabled && drag_drop_options.enabled,
+                ..drag_drop_options
+            };
+            install_color_drag_source(
+                cx,
+                swatch_id,
+                drag_drop_store_for_render.clone(),
+                ColorEditDragDropPayload::from_color(color, false),
+                source_options,
+                drag_threshold,
+            );
+            let drop_over = update_color_drop_target(
+                cx,
+                &drag_drop_store_for_render,
+                swatch_id,
+                st.hovered_raw,
+                source_options.enabled && on_palette_slot_drop_for_render.is_some(),
+            );
+            let active = selected || drop_over;
+            let border_width = if active { Px(2.0) } else { Px(1.0) };
             vec![cx.container(
                 ContainerProps {
                     layout: LayoutStyle {
@@ -157,10 +198,10 @@ fn preset_swatch<H: UiHost>(
                         overflow: Overflow::Clip,
                         ..Default::default()
                     },
-                    border: Edges::all(if selected { Px(2.0) } else { Px(1.0) }),
-                    border_color: Some(border_color),
+                    border: Edges::all(border_width),
+                    border_color: Some(if active { ring } else { idle_border_color }),
                     corner_radii: Corners::all(Px(5.0)),
-                    padding: Edges::all(if selected { Px(2.0) } else { Px(1.0) }).into(),
+                    padding: Edges::all(border_width).into(),
                     ..Default::default()
                 },
                 move |cx| vec![color_preview_stack(cx, color, Px(5.0), alpha_preview)],
@@ -170,6 +211,20 @@ fn preset_swatch<H: UiHost>(
 
     if let Some(test_id) = test_id {
         swatch = swatch.test_id(test_id);
+    }
+    if enabled
+        && drag_drop_options.enabled
+        && let Some(on_palette_slot_drop) = on_palette_slot_drop
+        && let Some(payload) = take_delivered_color_drop(cx, &drag_drop_store, swatch.id)
+    {
+        let action_cx = ActionCx {
+            window: cx.window,
+            target: swatch.id,
+        };
+        let event = ColorEditPaletteSlotDrop::new(index, entry, payload);
+        let mut host = UiActionHostAdapter { app: cx.app };
+        on_palette_slot_drop(&mut host, action_cx, event);
+        host.request_redraw(action_cx.window);
     }
     swatch.a11y_value(format_hex(color, show_alpha))
 }

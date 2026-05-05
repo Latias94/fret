@@ -16,15 +16,15 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
-    ColorEdit, ColorEditOptions, ColorEditPaletteEntry, ColorEditPopupNumericInputs,
-    ColorEditPopupOptions, ColorEditPopupPicker, ColorEditPopupSidePreview, DragValue,
-    DragValueOptions, DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, FieldStatusBadgeOptions, IconButton, IconButtonOptions, MiniSearchBox,
-    MiniSearchBoxOptions, NumericInput, NumericInputOptions, NumericPresentation,
-    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
-    TextAssistFieldSurface, TextField, TextFieldOptions, TransformEdit, TransformEditAxisOutcome,
-    TransformEditOptions, TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit,
-    VecEditAxisOutcome, VecEditOptions,
+    ColorEdit, ColorEditOptions, ColorEditPaletteEntry, ColorEditPaletteSlotDrop,
+    ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
+    ColorEditPopupSidePreview, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
+    EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions,
+    IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions, NumericInput,
+    NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider, SliderOptions,
+    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField, TextFieldOptions,
+    TransformEdit, TransformEditAxisOutcome, TransformEditOptions, TransformEditPresentations,
+    Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
 
@@ -52,6 +52,11 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         TextAssistItem::new("camera", "Camera"),
     ]
     .into();
+    let on_palette_slot_drop = Arc::new(
+        |_host: &mut dyn fret_ui::action::UiActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         _drop: ColorEditPaletteSlotDrop| {},
+    );
 
     imui::text_field(
         ui,
@@ -74,6 +79,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
                 picker_options: true,
             },
             palette: vec![ColorEditPaletteEntry::new("Brand", 0x22_44_66)].into(),
+            on_palette_slot_drop: Some(on_palette_slot_drop),
             ..Default::default()
         }),
     );
@@ -420,6 +426,14 @@ fn editor_imui_adapter_option_defaults_compile() {
     assert_eq!(color_options.popup.picker, ColorEditPopupPicker::Hidden);
     let _ = ColorEditPopupPicker::HsvHueWheel;
     let _ = ColorEditPaletteEntry::new("Brand Accent", 0xab_cd_ef);
+    let _ = ColorEditPaletteSlotDrop::new(
+        0,
+        ColorEditPaletteEntry::new("Saved", 0x00_00_00),
+        fret_ui_editor::controls::ColorEditDragDropPayload::from_color(
+            Color::from_srgb_hex_rgb(0x22_44_66),
+            false,
+        ),
+    );
     let _ = DragValueOptions::default();
     let _ = AxisDragValueOptions::default();
     let _ = NumericInputOptions::default();

@@ -2,7 +2,7 @@
 //!
 //! v1 scope:
 //! - hex input for `#RRGGBB` (and optionally `#RRGGBBAA`)
-//! - swatch button that opens HSV picker controls plus an app-owned preset palette
+//! - swatch button that opens HSV picker controls plus an app-owned, optionally editable palette
 //! - RGB-only edits preserve alpha; `show_alpha` only controls explicit alpha editing
 //! - per-control alpha preview policy mirroring Dear ImGui's ColorButton preview modes
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextInputProps,
@@ -37,8 +37,8 @@ mod tests;
 
 use self::drag_drop::{
     apply_color_drop_payload, color_drag_drop_store_for, install_color_drag_source,
-    prune_color_drag_drop_store, resolve_color_drag_threshold, take_delivered_color_drop,
-    update_color_drop_target,
+    palette_slot_drop_from_payload, prune_color_drag_drop_store, resolve_color_drag_threshold,
+    take_delivered_color_drop, update_color_drop_target,
 };
 use self::model::{format_hex, parse_hex};
 use self::popup::{color_preview_stack, request_popup_overlay};
@@ -71,6 +71,11 @@ impl ColorEditPaletteEntry {
             rgb,
         }
     }
+
+    pub fn with_rgb(mut self, rgb: u32) -> Self {
+        self.rgb = rgb;
+        self
+    }
 }
 
 pub fn default_color_edit_palette() -> Arc<[ColorEditPaletteEntry]> {
@@ -80,6 +85,34 @@ pub fn default_color_edit_palette() -> Arc<[ColorEditPaletteEntry]> {
         .collect::<Vec<_>>()
         .into()
 }
+
+/// App-owned palette slot mutation request emitted when a color payload is dropped onto a
+/// `ColorEdit` popup palette entry.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColorEditPaletteSlotDrop {
+    pub index: usize,
+    pub previous: ColorEditPaletteEntry,
+    pub payload: ColorEditDragDropPayload,
+    pub next: ColorEditPaletteEntry,
+}
+
+impl ColorEditPaletteSlotDrop {
+    pub fn new(
+        index: usize,
+        previous: ColorEditPaletteEntry,
+        payload: ColorEditDragDropPayload,
+    ) -> Self {
+        Self {
+            index,
+            next: palette_slot_drop_from_payload(previous.clone(), payload),
+            previous,
+            payload,
+        }
+    }
+}
+
+pub type OnColorEditPaletteSlotDrop =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ColorEditPaletteSlotDrop) + 'static>;
 
 const CHECKERBOARD_LIGHT_RGB: u32 = 0xd8_de_e8;
 const CHECKERBOARD_DARK_RGB: u32 = 0x8b_95_a5;
@@ -326,7 +359,7 @@ impl ColorEditPopupRuntimeOptions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ColorEditOptions {
     pub layout: LayoutStyle,
     pub enabled: bool,
@@ -340,6 +373,11 @@ pub struct ColorEditOptions {
     /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
     /// ownership by making the palette data explicit on the editor control options.
     pub palette: Arc<[ColorEditPaletteEntry]>,
+    /// Called when a compatible editor color payload is dropped onto a popup palette slot.
+    ///
+    /// The callback owns the final app-state mutation. When it is absent, palette swatches still
+    /// publish RGB drag payloads but do not accept drops as editable slots.
+    pub on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
     /// Explicit identity source for internal state (draft/error/open models, overlay root ids).
     ///
     /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
@@ -350,6 +388,30 @@ pub struct ColorEditOptions {
     pub swatch_test_id: Option<Arc<str>>,
     pub input_test_id: Option<Arc<str>>,
     pub popup_test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for ColorEditOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ColorEditOptions")
+            .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
+            .field("show_alpha", &self.show_alpha)
+            .field("alpha_preview", &self.alpha_preview)
+            .field("drag_drop", &self.drag_drop)
+            .field("popup", &self.popup)
+            .field("palette", &self.palette)
+            .field(
+                "on_palette_slot_drop",
+                &self.on_palette_slot_drop.as_ref().map(|_| "<callback>"),
+            )
+            .field("id_source", &self.id_source)
+            .field("test_id", &self.test_id)
+            .field("swatch_test_id", &self.swatch_test_id)
+            .field("input_test_id", &self.input_test_id)
+            .field("popup_test_id", &self.popup_test_id)
+            .finish()
+    }
 }
 
 impl Default for ColorEditOptions {
@@ -370,6 +432,7 @@ impl Default for ColorEditOptions {
             drag_drop: ColorEditDragDropOptions::default(),
             popup: ColorEditPopupOptions::default(),
             palette: default_color_edit_palette(),
+            on_palette_slot_drop: None,
             id_source: None,
             test_id: None,
             swatch_test_id: None,
@@ -750,6 +813,10 @@ impl ColorEdit {
             self.options.enabled,
             self.options.alpha_preview,
             palette,
+            drag_drop_store.clone(),
+            drag_drop_options,
+            drag_threshold,
+            self.options.on_palette_slot_drop.clone(),
             popup_options,
             popup_runtime_options,
             popup_padding,
