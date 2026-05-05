@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 330
+- Dedicated directories: 331
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -437,6 +437,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-color-edit-tooltip-preview-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after adding Dear ImGui-style `ColorTooltip()` hover previews to editor
     `ColorEdit` root swatches while keeping tooltip policy per-control and editor-owned.
+
+- Closed narrow P1 color edit copy-as context menu follow-on:
+  - `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding Dear ImGui-style `ColorEditOptionsPopup()` copy payloads to editor
+    `ColorEdit` root swatches while keeping clipboard writes effect-driven and editor-owned.
 
 - Closed narrow P1 color edit AlphaBar follow-on:
   - `docs/workstreams/imui-color-edit-alpha-bar-v1/WORKSTREAM.json`
@@ -1544,6 +1554,7 @@ Rule:
 - `docs/workstreams/imui-color-edit-editable-palette-slots-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on making `ColorEdit` popup palette entries RGB drag sources and app-owned editable drop targets)
 - `docs/workstreams/imui-color-edit-history-swatches-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow follow-on adding app-owned recent color swatches to editor `ColorEdit` popups)
 - `docs/workstreams/imui-color-edit-tooltip-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style hover tooltip previews to editor `ColorEdit` root swatches)
+- `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding Dear ImGui-style copy-as context menus to editor `ColorEdit` root swatches)
 - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting editable popup numeric rows into `popup/numeric.rs`)
 - `docs/workstreams/imui-color-edit-popup-picker-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting HSV/SV/Hue and AlphaBar picker composition into `popup/picker.rs`)
 - `docs/workstreams/imui-color-edit-popup-preview-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting shared preview helpers into `popup/preview.rs`)

@@ -10,9 +10,11 @@ use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, MouseButton, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
+use fret_ui::action::{
+    ActionCx, ActivateReason, OnActivate, PressablePointerDownResult, UiActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextInputProps,
@@ -41,7 +43,10 @@ use self::drag_drop::{
     take_delivered_color_drop, update_color_drop_target,
 };
 use self::model::{format_hex, parse_hex};
-use self::popup::{color_preview_stack, request_color_tooltip_overlay, request_popup_overlay};
+use self::popup::{
+    color_preview_stack, request_color_copy_menu_overlay, request_color_tooltip_overlay,
+    request_popup_overlay,
+};
 
 const COLOR_PRESETS: [(&str, u32); 12] = [
     ("Slate", 0x0f_17_2a),
@@ -359,6 +364,21 @@ impl Default for ColorEditTooltipOptions {
     }
 }
 
+/// Context-menu copy policy for editor `ColorEdit` preview swatches.
+///
+/// Dear ImGui exposes `Copy as..` inside `ColorEditOptionsPopup()`. Fret keeps the behavior local
+/// to the editor control and writes through the existing clipboard effect boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ColorEditCopyOptions {
+    pub enabled: bool,
+}
+
+impl Default for ColorEditCopyOptions {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::controls::color_edit) struct ColorEditPopupRuntimeOptions {
     pub(in crate::controls::color_edit) default_picker: ColorEditPopupPicker,
@@ -390,6 +410,7 @@ pub struct ColorEditOptions {
     pub drag_drop: ColorEditDragDropOptions,
     pub popup: ColorEditPopupOptions,
     pub tooltip: ColorEditTooltipOptions,
+    pub copy: ColorEditCopyOptions,
     /// App-owned palette entries shown by the popup preset row when `popup.presets` is enabled.
     ///
     /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
@@ -416,6 +437,7 @@ pub struct ColorEditOptions {
     pub input_test_id: Option<Arc<str>>,
     pub popup_test_id: Option<Arc<str>>,
     pub tooltip_test_id: Option<Arc<str>>,
+    pub copy_menu_test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for ColorEditOptions {
@@ -429,6 +451,7 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("drag_drop", &self.drag_drop)
             .field("popup", &self.popup)
             .field("tooltip", &self.tooltip)
+            .field("copy", &self.copy)
             .field("palette", &self.palette)
             .field("history", &self.history)
             .field(
@@ -441,6 +464,7 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("input_test_id", &self.input_test_id)
             .field("popup_test_id", &self.popup_test_id)
             .field("tooltip_test_id", &self.tooltip_test_id)
+            .field("copy_menu_test_id", &self.copy_menu_test_id)
             .finish()
     }
 }
@@ -463,6 +487,7 @@ impl Default for ColorEditOptions {
             drag_drop: ColorEditDragDropOptions::default(),
             popup: ColorEditPopupOptions::default(),
             tooltip: ColorEditTooltipOptions::default(),
+            copy: ColorEditCopyOptions::default(),
             palette: default_color_edit_palette(),
             history: Vec::new().into(),
             on_palette_slot_drop: None,
@@ -472,6 +497,7 @@ impl Default for ColorEditOptions {
             input_test_id: None,
             popup_test_id: None,
             tooltip_test_id: None,
+            copy_menu_test_id: None,
         }
     }
 }
@@ -516,6 +542,7 @@ impl ColorEdit {
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = popup_open_model(cx);
         let tooltip_open = tooltip_open_model(cx);
+        let copy_menu_open = copy_menu_open_model(cx);
         let reference = reference_model(cx);
         let draft = draft_model(cx);
         let error = error_model(cx);
@@ -564,8 +591,14 @@ impl ColorEdit {
             .tooltip_test_id
             .clone()
             .or_else(|| derived_test_id(self.options.test_id.as_ref(), "tooltip"));
+        let copy_menu_test_id = self
+            .options
+            .copy_menu_test_id
+            .clone()
+            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "copy-menu"));
         let popup_options = self.options.popup;
         let tooltip_options = self.options.tooltip;
+        let copy_options = self.options.copy;
         let popup_runtime_options =
             popup_runtime_options_model(cx, popup_options.runtime_defaults());
         sync_popup_runtime_options(cx, &popup_runtime_options, popup_options.runtime_defaults());
@@ -582,10 +615,11 @@ impl ColorEdit {
         );
         let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
         let tooltip_enabled = self.options.enabled && tooltip_options.enabled;
+        let copy_enabled = self.options.enabled && copy_options.enabled;
         let swatch_enabled = self.options.enabled
-            && (popup_has_visible_content || drag_drop_enabled || tooltip_enabled);
-        let swatch_focusable =
-            self.options.focusable && (popup_has_visible_content || drag_drop_enabled);
+            && (popup_has_visible_content || drag_drop_enabled || tooltip_enabled || copy_enabled);
+        let swatch_focusable = self.options.focusable
+            && (popup_has_visible_content || drag_drop_enabled || copy_enabled);
 
         let input = {
             let (chrome, text_style) = {
@@ -700,6 +734,11 @@ impl ColorEdit {
             let open_for_activate = open.clone();
             let open_for_paint = open.clone();
             let tooltip_open_for_paint = tooltip_open.clone();
+            let copy_menu_open_for_activate = copy_menu_open.clone();
+            let copy_menu_open_for_pointer = copy_menu_open.clone();
+            let copy_menu_open_for_paint = copy_menu_open.clone();
+            let open_for_pointer = open.clone();
+            let tooltip_open_for_pointer = tooltip_open.clone();
             let reference_for_activate = reference.clone();
             let model_for_activate = self.model.clone();
             let enabled_for_paint = self.options.enabled;
@@ -728,6 +767,9 @@ impl ColorEdit {
                     let _ = host
                         .models_mut()
                         .update(&open_for_activate, |v| *v = opening);
+                    let _ = host
+                        .models_mut()
+                        .update(&copy_menu_open_for_activate, |v| *v = false);
                     host.request_redraw(action_cx.window);
                 });
 
@@ -760,6 +802,35 @@ impl ColorEdit {
                 },
                 move |cx, st| {
                     cx.pressable_add_on_activate(on_activate.clone());
+                    if copy_options.enabled {
+                        cx.pressable_add_on_pointer_down(Arc::new({
+                            let copy_menu_open_for_pointer = copy_menu_open_for_pointer.clone();
+                            let open_for_pointer = open_for_pointer.clone();
+                            let tooltip_open_for_pointer = tooltip_open_for_pointer.clone();
+                            move |host, action_cx, down| {
+                                let is_context_menu = down.button == MouseButton::Right
+                                    || (cfg!(target_os = "macos")
+                                        && down.button == MouseButton::Left
+                                        && down.modifiers.ctrl);
+                                if !is_context_menu {
+                                    return PressablePointerDownResult::Continue;
+                                }
+
+                                let _ = host
+                                    .models_mut()
+                                    .update(&open_for_pointer, |value| *value = false);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&tooltip_open_for_pointer, |value| *value = false);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&copy_menu_open_for_pointer, |value| *value = true);
+                                host.request_focus(action_cx.target);
+                                host.request_redraw(action_cx.window);
+                                PressablePointerDownResult::SkipDefaultAndStopPropagation
+                            }
+                        }));
+                    }
                     let swatch_id = cx.root_id();
                     install_color_drag_source(
                         cx,
@@ -780,8 +851,14 @@ impl ColorEdit {
                     let is_open = cx
                         .get_model_copied(&open_for_paint, Invalidation::Paint)
                         .unwrap_or(false);
-                    let tooltip_visible =
-                        tooltip_options.enabled && enabled_for_paint && !is_open && st.hovered_raw;
+                    let copy_menu_is_open = cx
+                        .get_model_copied(&copy_menu_open_for_paint, Invalidation::Paint)
+                        .unwrap_or(false);
+                    let tooltip_visible = tooltip_options.enabled
+                        && enabled_for_paint
+                        && !is_open
+                        && !copy_menu_is_open
+                        && st.hovered_raw;
                     let tooltip_open_now = cx
                         .get_model_copied(&tooltip_open_for_paint, Invalidation::Paint)
                         .unwrap_or(false);
@@ -800,7 +877,7 @@ impl ColorEdit {
                                 hovered: st.hovered || st.hovered_raw,
                                 pressed: st.pressed || drop_over,
                                 focused: st.focused,
-                                open: is_open && popup_has_visible_content,
+                                open: (is_open && popup_has_visible_content) || copy_menu_is_open,
                                 semantic: EditorFrameSemanticState::default(),
                             },
                         )
@@ -839,6 +916,44 @@ impl ColorEdit {
                 swatch = swatch.test_id(test_id.clone());
             }
             swatch = swatch.a11y_value(current_hex.clone());
+            if copy_enabled {
+                let open_for_key = open.clone();
+                let tooltip_open_for_key = tooltip_open.clone();
+                let copy_menu_open_for_key = copy_menu_open.clone();
+                cx.key_on_key_down_for(
+                    swatch.id,
+                    Arc::new(move |host, action_cx, down| {
+                        if down.repeat {
+                            return false;
+                        }
+
+                        let no_extra_modifiers = !down.modifiers.ctrl
+                            && !down.modifiers.alt
+                            && !down.modifiers.meta
+                            && !down.modifiers.alt_gr;
+                        let is_shift_f10 =
+                            down.key == KeyCode::F10 && down.modifiers.shift && no_extra_modifiers;
+                        let is_context_menu_key = down.key == KeyCode::ContextMenu
+                            && !down.modifiers.shift
+                            && no_extra_modifiers;
+                        if !is_shift_f10 && !is_context_menu_key {
+                            return false;
+                        }
+
+                        let _ = host
+                            .models_mut()
+                            .update(&open_for_key, |value| *value = false);
+                        let _ = host
+                            .models_mut()
+                            .update(&tooltip_open_for_key, |value| *value = false);
+                        let _ = host
+                            .models_mut()
+                            .update(&copy_menu_open_for_key, |value| *value = true);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+            }
             swatch
         };
 
@@ -892,6 +1007,15 @@ impl ColorEdit {
             self.options.alpha_preview,
             tooltip_options,
             tooltip_test_id,
+        );
+        request_color_copy_menu_overlay(
+            cx,
+            swatch.id,
+            copy_menu_open,
+            current,
+            self.options.show_alpha,
+            copy_options,
+            copy_menu_test_id,
         );
 
         let error_msg = cx
@@ -980,6 +1104,11 @@ fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 #[track_caller]
 fn tooltip_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     cx.local_model_keyed("tooltip_open", || false)
+}
+
+#[track_caller]
+fn copy_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    cx.local_model_keyed("copy_menu_open", || false)
 }
 
 #[track_caller]

@@ -8,6 +8,7 @@ use super::model::{
     hue_wheel_geometry, hue_wheel_rotated_triangle, hue_wheel_sv_cursor_position,
     hue_wheel_target_from_local_position, parse_color_numeric_input, rgb_numeric_text, rgb_to_hsv,
 };
+use super::popup::copy::{ColorEditCopyFormat, color_copy_entries};
 use super::popup::picker::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
 use super::popup::preview::{
     checkerboard_cell_color, opaque_preview_color, preview_color_for_alpha_visibility,
@@ -181,6 +182,14 @@ fn tooltip_options_default_to_imgui_hover_preview_enabled() {
 }
 
 #[test]
+fn copy_options_default_to_imgui_context_copy_enabled() {
+    let options = ColorEditOptions::default();
+
+    assert!(options.copy.enabled);
+    assert!(options.copy_menu_test_id.is_none());
+}
+
+#[test]
 fn color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text() {
     let mut color = Color::from_srgb_hex_rgb(0x33_66_99);
     color.a = 0.5;
@@ -194,6 +203,30 @@ fn color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text() {
     let rgba_lines = color_tooltip_lines(color, true);
     assert_eq!(rgba_lines[0].as_ref(), "#33669980");
     assert_eq!(rgba_lines[1].as_ref(), "RGB 51 102 153 | A 50%");
+}
+
+#[test]
+fn color_copy_entries_match_imgui_copy_as_payloads() {
+    let mut color = Color::from_srgb_hex_rgb(0x33_66_99);
+    color.a = 0.5;
+
+    let rgb_entries = color_copy_entries(color, false);
+    assert_eq!(rgb_entries.len(), 3);
+    assert_eq!(rgb_entries[0].format, ColorEditCopyFormat::FloatTuple);
+    assert!(rgb_entries[0].text.ends_with(", 1.000f)"));
+    assert_eq!(rgb_entries[1].format, ColorEditCopyFormat::IntTuple);
+    assert_eq!(rgb_entries[1].text.as_ref(), "(51,102,153,255)");
+    assert_eq!(rgb_entries[2].format, ColorEditCopyFormat::HexRgb);
+    assert_eq!(rgb_entries[2].text.as_ref(), "#336699");
+
+    let rgba_entries = color_copy_entries(color, true);
+    assert_eq!(rgba_entries.len(), 4);
+    assert_eq!(rgba_entries[0].format, ColorEditCopyFormat::FloatTuple);
+    assert!(rgba_entries[0].text.ends_with(", 0.500f)"));
+    assert_eq!(rgba_entries[1].text.as_ref(), "(51,102,153,128)");
+    assert_eq!(rgba_entries[2].text.as_ref(), "#336699");
+    assert_eq!(rgba_entries[3].format, ColorEditCopyFormat::HexRgba);
+    assert_eq!(rgba_entries[3].text.as_ref(), "#33669980");
 }
 
 #[test]

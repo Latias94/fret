@@ -214,7 +214,8 @@ customization is partially superseded by
 partially superseded by `docs/workstreams/imui-color-edit-editable-palette-slots-v1/`; app-owned
 recent color history swatches are partially superseded by
 `docs/workstreams/imui-color-edit-history-swatches-v1/`; hover tooltip previews are partially
-superseded by `docs/workstreams/imui-color-edit-tooltip-preview-v1/`.
+superseded by `docs/workstreams/imui-color-edit-tooltip-preview-v1/`; copy-as context menu payloads
+are partially superseded by `docs/workstreams/imui-color-edit-copy-as-context-menu-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -242,6 +243,8 @@ Current editor `ColorEdit` now has:
 - app-owned recent color history swatches through `ColorEditOptions::history`,
 - Dear ImGui-style hover tooltip previews on root swatches through `ColorEditOptions::tooltip`,
   including hex, RGB, and HSV text,
+- Dear ImGui-style copy-as context menus on root swatches through `ColorEditOptions::copy`, with
+  float tuple, integer tuple, RGB hex, and visible-alpha RGBA hex clipboard payloads,
 - RGB and HSV numeric readouts, with alpha percent shown when alpha is visible,
 - editable RGB/HSV numeric popup rows with editor-owned validation,
 - per-control popup defaults for HueBar picker, RGB/HSV numeric rows, preset palette, and AlphaBar

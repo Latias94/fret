@@ -2,6 +2,7 @@
 
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
+const COLOR_EDIT_POPUP_COPY_RS: &str = include_str!("../src/controls/color_edit/popup/copy.rs");
 const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
@@ -67,6 +68,12 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditTooltipOptions"));
     assert!(COLOR_EDIT_RS.contains("pub tooltip: ColorEditTooltipOptions"));
     assert!(COLOR_EDIT_RS.contains("fn tooltip_open_model<"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditCopyOptions"));
+    assert!(COLOR_EDIT_RS.contains("pub copy: ColorEditCopyOptions"));
+    assert!(COLOR_EDIT_RS.contains("fn copy_menu_open_model<"));
+    assert!(COLOR_EDIT_POPUP_COPY_RS.contains("fn request_color_copy_menu_overlay<"));
+    assert!(COLOR_EDIT_POPUP_COPY_RS.contains("fn color_copy_entries("));
+    assert!(COLOR_EDIT_POPUP_COPY_RS.contains("Effect::ClipboardWriteText"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));

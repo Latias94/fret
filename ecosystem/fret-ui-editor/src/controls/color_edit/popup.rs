@@ -22,6 +22,7 @@ use super::{
     ColorEditPopupRuntimeOptions, OnColorEditPaletteSlotDrop, draft_model, error_model,
 };
 
+pub(in crate::controls::color_edit) mod copy;
 mod numeric;
 mod options;
 pub(super) mod picker;
@@ -29,6 +30,7 @@ pub(super) mod preview;
 mod swatches;
 pub(in crate::controls::color_edit) mod tooltip;
 
+pub(super) use self::copy::request_color_copy_menu_overlay;
 use self::numeric::color_numeric_inputs;
 use self::options::color_picker_options;
 use self::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
