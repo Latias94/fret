@@ -404,6 +404,14 @@ impl ImUiDebugDrawPath<'_> {
         self.draw_list.add_convex_poly_filled(points, color);
     }
 
+    pub fn fill_concave(&mut self, color: Color) {
+        let points = std::mem::take(&mut self.points);
+        if points.len() < 3 {
+            return;
+        }
+        self.draw_list.add_concave_poly_filled(points, color);
+    }
+
     pub fn point_count(&self) -> usize {
         self.points.len()
     }
@@ -476,6 +484,15 @@ impl ImUiDebugDrawList {
         let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
         self.commands
             .push(DebugDrawCommand::ConvexPolyFilled { points, color });
+    }
+
+    pub fn add_concave_poly_filled<I>(&mut self, points: I, color: Color)
+    where
+        I: IntoIterator<Item = Point>,
+    {
+        let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
+        self.commands
+            .push(DebugDrawCommand::ConcavePolyFilled { points, color });
     }
 
     pub fn add_rect(&mut self, rect: Rect, color: Color, thickness: Px) {
@@ -855,6 +872,10 @@ enum DebugDrawCommand {
         points: Arc<[Point]>,
         color: Color,
     },
+    ConcavePolyFilled {
+        points: Arc<[Point]>,
+        color: Color,
+    },
     Rect {
         rect: Rect,
         color: Color,
@@ -1157,6 +1178,23 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     continue;
                 }
                 let Some(commands) = convex_poly_fill_path(points) else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::ConcavePolyFilled { points, color } => {
+                if color.a <= 0.0 {
+                    continue;
+                }
+                let Some(commands) = concave_poly_fill_path(points) else {
                     continue;
                 };
                 painter.path(
@@ -1645,6 +1683,10 @@ fn polyline_path(points: &[Point], closed: bool) -> Option<Vec<PathCommand>> {
 }
 
 fn convex_poly_fill_path(points: &[Point]) -> Option<Vec<PathCommand>> {
+    polyline_path(points, true)
+}
+
+fn concave_poly_fill_path(points: &[Point]) -> Option<Vec<PathCommand>> {
     polyline_path(points, true)
 }
 
@@ -2182,6 +2224,28 @@ mod tests {
     }
 
     #[test]
+    fn debug_draw_list_records_concave_poly_fill_command() {
+        let mut list = ImUiDebugDrawList::default();
+        let points = [
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(18.0), Px(0.0)),
+            Point::new(Px(10.0), Px(8.0)),
+            Point::new(Px(18.0), Px(16.0)),
+            Point::new(Px(0.0), Px(16.0)),
+        ];
+
+        list.add_concave_poly_filled(points, Color::from_srgb_hex_rgb(0xff_ff_ff));
+
+        let DebugDrawCommand::ConcavePolyFilled {
+            points: recorded, ..
+        } = &list.commands[0]
+        else {
+            panic!("concave polygon fill should record a dedicated command");
+        };
+        assert_eq!(&**recorded, &points);
+    }
+
+    #[test]
     fn debug_draw_path_builder_records_stroke_and_fill_commands() {
         let mut list = ImUiDebugDrawList::default();
         let p0 = Point::new(Px(0.0), Px(0.0));
@@ -2227,6 +2291,41 @@ mod tests {
             panic!("path fill should record a convex fill command");
         };
         assert_eq!(&**points, &[p0, p1, p2, p3]);
+    }
+
+    #[test]
+    fn debug_draw_path_builder_records_concave_fill_command() {
+        let mut list = ImUiDebugDrawList::default();
+        let points = [
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(18.0), Px(0.0)),
+            Point::new(Px(10.0), Px(8.0)),
+            Point::new(Px(18.0), Px(16.0)),
+            Point::new(Px(0.0), Px(16.0)),
+        ];
+
+        list.path(|path| {
+            path.line_to(points[0])
+                .line_to(points[1])
+                .line_to(points[2])
+                .line_to(points[3])
+                .line_to(points[4]);
+            path.fill_concave(Color::from_srgb_hex_rgb(0xff_ff_ff));
+            assert!(path.is_empty());
+
+            path.line_to(points[0]).line_to(points[1]);
+            path.fill_concave(Color::from_srgb_hex_rgb(0xff_ff_ff));
+            assert!(path.is_empty());
+        });
+
+        assert_eq!(list.command_count(), 1);
+        let DebugDrawCommand::ConcavePolyFilled {
+            points: recorded, ..
+        } = &list.commands[0]
+        else {
+            panic!("path concave fill should record a dedicated command");
+        };
+        assert_eq!(&**recorded, &points);
     }
 
     #[test]
@@ -2671,6 +2770,36 @@ mod tests {
                 PathCommand::LineTo(Point::new(Px(10.0), Px(0.0))),
                 PathCommand::LineTo(Point::new(Px(12.0), Px(8.0))),
                 PathCommand::LineTo(Point::new(Px(2.0), Px(10.0))),
+                PathCommand::Close,
+            ]
+        );
+    }
+
+    #[test]
+    fn concave_poly_fill_path_requires_three_points_and_closes() {
+        assert!(concave_poly_fill_path(&[Point::new(Px(0.0), Px(0.0))]).is_none());
+        assert!(
+            concave_poly_fill_path(&[Point::new(Px(0.0), Px(0.0)), Point::new(Px(10.0), Px(0.0)),])
+                .is_none()
+        );
+
+        let path = concave_poly_fill_path(&[
+            Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(18.0), Px(0.0)),
+            Point::new(Px(10.0), Px(8.0)),
+            Point::new(Px(18.0), Px(16.0)),
+            Point::new(Px(0.0), Px(16.0)),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            path,
+            vec![
+                PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(18.0), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(10.0), Px(8.0))),
+                PathCommand::LineTo(Point::new(Px(18.0), Px(16.0))),
+                PathCommand::LineTo(Point::new(Px(0.0), Px(16.0))),
                 PathCommand::Close,
             ]
         );

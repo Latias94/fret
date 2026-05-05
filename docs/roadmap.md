@@ -364,6 +364,11 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-path-rect-builder-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-path-rect-builder-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-path-rect-builder-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw concave polygon fill follow-on (closed narrow P1 lane adding Dear ImGui-style
+  `AddConcavePolyFilled` / `PathFillConcave` facade semantics above the existing Canvas fill path):
+  `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-concave-poly-fill-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

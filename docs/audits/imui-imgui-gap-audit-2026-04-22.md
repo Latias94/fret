@@ -287,7 +287,9 @@ ergonomics are partially superseded by
 `docs/workstreams/imui-debug-draw-path-arc-builder-v1/`; elliptical path arc ergonomics are
 partially superseded by
 `docs/workstreams/imui-debug-draw-path-elliptical-arc-builder-v1/`; path rectangle ergonomics are
-partially superseded by `docs/workstreams/imui-debug-draw-path-rect-builder-v1/`.
+partially superseded by `docs/workstreams/imui-debug-draw-path-rect-builder-v1/`; concave polygon
+fill semantics are partially superseded by
+`docs/workstreams/imui-debug-draw-concave-poly-fill-v1/`.
 
 Current IMUI now exposes:
 
@@ -295,7 +297,7 @@ Current IMUI now exposes:
 - line, rect, filled rect, and text primitives,
 - polyline, stroked/filled quad, stroked/filled triangle, stroked/filled circle, stroked/filled
   regular polygon, stroked/filled ellipse, quadratic Bezier, and cubic Bezier primitives,
-- an `AddConvexPolyFilled`-style filled convex polygon command,
+- `AddConvexPolyFilled`- and `AddConcavePolyFilled`-style polygon fill commands,
 - scoped `PathLineTo` / `PathLineToMergeDuplicate` / `PathStroke` / `PathFillConvex`-style
   ergonomics through `draw.path(...)`,
 - scoped `PathBezierQuadraticCurveTo` / `PathBezierCubicCurveTo`-style helpers through sampled
@@ -313,7 +315,7 @@ Current IMUI now exposes:
 - and smoke tests that keep the facade boundary clean.
 
 Dear ImGui still goes much deeper through full `DrawList` parity, channel splitting, per-command
-metadata, concave path fill, and hit-test-aware debug interaction.
+metadata, multi-color rect fill, rounded image fill, and hit-test-aware debug interaction.
 
 Conclusion:
 

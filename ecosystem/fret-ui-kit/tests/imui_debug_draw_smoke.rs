@@ -42,6 +42,16 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             ],
             Color::from_srgb_hex_rgb(0x10_b9_81),
         );
+        draw.add_concave_poly_filled(
+            [
+                Point::new(Px(82.0), Px(42.0)),
+                Point::new(Px(104.0), Px(42.0)),
+                Point::new(Px(94.0), Px(52.0)),
+                Point::new(Px(104.0), Px(62.0)),
+                Point::new(Px(82.0), Px(62.0)),
+            ],
+            Color::from_srgb_hex_rgb(0x34_d3_99),
+        );
         draw.add_rect(
             Rect::new(Point::new(Px(8.0), Px(8.0)), Size::new(Px(64.0), Px(32.0))),
             Color::from_srgb_hex_rgb(0x22_c5_5e),
@@ -189,6 +199,12 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 .line_to(Point::new(Px(190.0), Px(76.0)))
                 .line_to(Point::new(Px(178.0), Px(92.0)));
             path.fill_convex(Color::from_srgb_hex_rgb(0xa7_f3_d0));
+            path.line_to(Point::new(Px(198.0), Px(76.0)))
+                .line_to(Point::new(Px(222.0), Px(76.0)))
+                .line_to(Point::new(Px(210.0), Px(84.0)))
+                .line_to(Point::new(Px(222.0), Px(92.0)))
+                .line_to(Point::new(Px(198.0), Px(92.0)));
+            path.fill_concave(Color::from_srgb_hex_rgb(0x86_ef_ac));
         });
         draw.pop_clip_rect();
         draw.add_image_with_options(
