@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 336
+- Dedicated directories: 337
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -666,6 +666,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-debug-draw-convex-poly-fill-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after adding an `AddConvexPolyFilled`-style command to the canvas-backed IMUI
     debug-draw helper while keeping convexity validation and tessellation out of the facade.
+
+- Closed narrow P1 debug draw quad primitives follow-on:
+  - `docs/workstreams/imui-debug-draw-quad-primitives-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-quad-primitives-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-quad-primitives-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-quad-primitives-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-quad-primitives-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-quad-primitives-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after adding `AddQuad`- and `AddQuadFilled`-style helpers to the IMUI
+    debug-draw surface while keeping tessellation and hit-testing out of the facade.
 
 - Closed narrow P1 item-behavior kernel follow-on:
   - `docs/workstreams/imui-item-behavior-kernel-v1/WORKSTREAM.json`
@@ -1625,6 +1635,7 @@ Rule:
 - `docs/workstreams/imui-debug-draw-image-overlay-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding registered image, image-region, SVG image, and SVG mask icon overlay commands to the IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-bezier-primitives-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding quadratic and cubic Bezier commands to the IMUI debug-draw helper)
 - `docs/workstreams/imui-debug-draw-convex-poly-fill-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding an `AddConvexPolyFilled`-style helper to the IMUI debug-draw surface)
+- `docs/workstreams/imui-debug-draw-quad-primitives-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding `AddQuad`- and `AddQuadFilled`-style helpers to the IMUI debug-draw surface)
 - `docs/workstreams/imui-color-edit-alpha-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on preserving alpha for editor `ColorEdit` RGB-only hex commits and preset swatch activations after the popup-depth slice)
 - `docs/workstreams/imui-color-edit-alpha-preview-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding checkerboard-backed alpha previews to editor `ColorEdit` main and preset swatches)
 - `docs/workstreams/imui-color-edit-popup-depth-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on replacing the editor `ColorEdit` popup stub with a preset swatch palette for the public IMUI editor-control path)

@@ -54,6 +54,21 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             ),
             Color::from_srgb_hex_rgb(0x3b_82_f6),
         );
+        draw.add_quad_with_style(
+            Point::new(Px(36.0), Px(10.0)),
+            Point::new(Px(56.0), Px(8.0)),
+            Point::new(Px(60.0), Px(26.0)),
+            Point::new(Px(38.0), Px(30.0)),
+            Color::from_srgb_hex_rgb(0xfb_71_85),
+            DebugDrawStrokeStyle::new(Px(1.0)).with_join(StrokeJoinV1::Round),
+        );
+        draw.add_quad_filled(
+            Point::new(Px(60.0), Px(12.0)),
+            Point::new(Px(76.0), Px(10.0)),
+            Point::new(Px(78.0), Px(28.0)),
+            Point::new(Px(62.0), Px(30.0)),
+            Color::from_srgb_hex_rgb(0x2d_d4_bf),
+        );
         draw.push_clip_rect(Rect::new(
             Point::new(Px(80.0), Px(0.0)),
             Size::new(Px(80.0), Px(64.0)),

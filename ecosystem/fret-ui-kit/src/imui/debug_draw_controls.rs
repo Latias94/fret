@@ -244,6 +244,47 @@ impl ImUiDebugDrawList {
             .push(DebugDrawCommand::RectFilled { rect, color });
     }
 
+    pub fn add_quad(
+        &mut self,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        p4: Point,
+        color: Color,
+        thickness: Px,
+    ) {
+        self.add_quad_with_style(p1, p2, p3, p4, color, thickness);
+    }
+
+    pub fn add_quad_with_style(
+        &mut self,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        p4: Point,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Quad {
+            p1,
+            p2,
+            p3,
+            p4,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_quad_filled(&mut self, p1: Point, p2: Point, p3: Point, p4: Point, color: Color) {
+        self.commands.push(DebugDrawCommand::QuadFilled {
+            p1,
+            p2,
+            p3,
+            p4,
+            color,
+        });
+    }
+
     pub fn add_triangle(&mut self, p1: Point, p2: Point, p3: Point, color: Color, thickness: Px) {
         self.add_triangle_with_style(p1, p2, p3, color, thickness);
     }
@@ -480,6 +521,21 @@ enum DebugDrawCommand {
     },
     RectFilled {
         rect: Rect,
+        color: Color,
+    },
+    Quad {
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        p4: Point,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    QuadFilled {
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        p4: Point,
         color: Color,
     },
     Triangle {
@@ -772,6 +828,49 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
+            DebugDrawCommand::Quad {
+                p1,
+                p2,
+                p3,
+                p4,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let commands = quad_path(*p1, *p2, *p3, *p4);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::QuadFilled {
+                p1,
+                p2,
+                p3,
+                p4,
+                color,
+            } => {
+                if color.a <= 0.0 {
+                    continue;
+                }
+                let commands = quad_path(*p1, *p2, *p3, *p4);
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
             DebugDrawCommand::Triangle {
                 p1,
                 p2,
@@ -990,6 +1089,16 @@ fn triangle_path(p1: Point, p2: Point, p3: Point) -> [PathCommand; 4] {
     ]
 }
 
+fn quad_path(p1: Point, p2: Point, p3: Point, p4: Point) -> [PathCommand; 5] {
+    [
+        PathCommand::MoveTo(p1),
+        PathCommand::LineTo(p2),
+        PathCommand::LineTo(p3),
+        PathCommand::LineTo(p4),
+        PathCommand::Close,
+    ]
+}
+
 fn triangle_is_degenerate(p1: Point, p2: Point, p3: Point) -> bool {
     let ax = p2.x.0 - p1.x.0;
     let ay = p2.y.0 - p1.y.0;
@@ -1085,6 +1194,21 @@ mod tests {
             Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(2.0), Px(2.0))),
             Color::from_srgb_hex_rgb(0x00_00_ff),
         );
+        list.add_quad(
+            Point::new(Px(8.0), Px(8.0)),
+            Point::new(Px(18.0), Px(6.0)),
+            Point::new(Px(22.0), Px(18.0)),
+            Point::new(Px(10.0), Px(20.0)),
+            Color::from_srgb_hex_rgb(0xfb_71_85),
+            Px(1.0),
+        );
+        list.add_quad_filled(
+            Point::new(Px(24.0), Px(8.0)),
+            Point::new(Px(34.0), Px(6.0)),
+            Point::new(Px(38.0), Px(18.0)),
+            Point::new(Px(26.0), Px(20.0)),
+            Color::from_srgb_hex_rgb(0x2d_d4_bf),
+        );
         list.add_triangle(
             Point::new(Px(1.0), Px(1.0)),
             Point::new(Px(5.0), Px(1.0)),
@@ -1131,7 +1255,7 @@ mod tests {
             Px(12.0),
         );
 
-        assert_eq!(list.command_count(), 12);
+        assert_eq!(list.command_count(), 14);
         assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
         assert!(matches!(
             list.commands[1],
@@ -1146,28 +1270,33 @@ mod tests {
             list.commands[4],
             DebugDrawCommand::RectFilled { .. }
         ));
+        assert!(matches!(list.commands[5], DebugDrawCommand::Quad { .. }));
         assert!(matches!(
-            list.commands[5],
+            list.commands[6],
+            DebugDrawCommand::QuadFilled { .. }
+        ));
+        assert!(matches!(
+            list.commands[7],
             DebugDrawCommand::Triangle { .. }
         ));
         assert!(matches!(
-            list.commands[6],
+            list.commands[8],
             DebugDrawCommand::TriangleFilled { .. }
         ));
-        assert!(matches!(list.commands[7], DebugDrawCommand::Circle { .. }));
+        assert!(matches!(list.commands[9], DebugDrawCommand::Circle { .. }));
         assert!(matches!(
-            list.commands[8],
+            list.commands[10],
             DebugDrawCommand::CircleFilled { .. }
         ));
         assert!(matches!(
-            list.commands[9],
+            list.commands[11],
             DebugDrawCommand::BezierQuadratic { .. }
         ));
         assert!(matches!(
-            list.commands[10],
+            list.commands[12],
             DebugDrawCommand::BezierCubic { .. }
         ));
-        assert!(matches!(list.commands[11], DebugDrawCommand::Text { .. }));
+        assert!(matches!(list.commands[13], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
@@ -1381,6 +1510,25 @@ mod tests {
         );
         assert!(!triangle_is_degenerate(p1, p2, p3));
         assert!(triangle_is_degenerate(p1, Point::new(Px(5.0), Px(0.0)), p2));
+    }
+
+    #[test]
+    fn quad_path_closes_four_ordered_points() {
+        let p1 = Point::new(Px(0.0), Px(0.0));
+        let p2 = Point::new(Px(10.0), Px(2.0));
+        let p3 = Point::new(Px(12.0), Px(12.0));
+        let p4 = Point::new(Px(2.0), Px(10.0));
+
+        assert_eq!(
+            quad_path(p1, p2, p3, p4),
+            [
+                PathCommand::MoveTo(p1),
+                PathCommand::LineTo(p2),
+                PathCommand::LineTo(p3),
+                PathCommand::LineTo(p4),
+                PathCommand::Close,
+            ]
+        );
     }
 
     #[test]
