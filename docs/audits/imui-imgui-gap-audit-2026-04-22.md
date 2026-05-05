@@ -193,7 +193,9 @@ depth is now partially superseded by `docs/workstreams/imui-color-edit-popup-opt
 post-depth file-size hazard is partially superseded by
 `docs/workstreams/imui-color-edit-model-split-v1/` and
 `docs/workstreams/imui-color-edit-popup-split-v1/`; editable numeric row ownership is partially
-superseded by `docs/workstreams/imui-color-edit-popup-numeric-split-v1/`.
+superseded by `docs/workstreams/imui-color-edit-popup-numeric-split-v1/`; HSV/SV/Hue and
+AlphaBar picker ownership is partially superseded by
+`docs/workstreams/imui-color-edit-popup-picker-split-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -210,9 +212,10 @@ Current editor `ColorEdit` now has:
   visibility,
 - an internal model module for color parsing, formatting, HSV/RGB conversion, coordinate math,
   sanitization, and a11y helper text,
-- an internal popup module for overlay composition, picker UI, numeric rows, alpha/preset previews,
-  and popup-local pointer handlers,
+- an internal popup module for overlay composition, preset swatches, and shared preview helpers,
 - an internal popup numeric module for editable RGB/HSV row composition and commit handling,
+- an internal popup picker module for HSV/SV/Hue and AlphaBar composition, gradient/thumb preview
+  helpers, and picker-local pointer handlers,
 - and an app-facing cookbook proof through `fret::imui::editor`.
 
 #### 4.1b Debug draw is no longer missing at the first baseline level
@@ -348,6 +351,9 @@ Update (2026-05-05): `docs/workstreams/imui-color-edit-model-split-v1/` moves th
 popup UI composition and popup-local pointer helpers into `src/controls/color_edit/popup.rs`.
 `docs/workstreams/imui-color-edit-popup-numeric-split-v1/` moves editable numeric row composition
 and commit handling into `src/controls/color_edit/popup/numeric.rs`.
+`docs/workstreams/imui-color-edit-popup-picker-split-v1/` moves HSV/SV/Hue and AlphaBar picker
+composition, gradient/thumb helpers, and picker-local pointer handlers into
+`src/controls/color_edit/popup/picker.rs`.
 
 Conclusion:
 
@@ -461,8 +467,8 @@ If the goal is "reach imgui-level usefulness", the next wins are:
 
 - the remaining text/input parity after read-only/password/auto-select-all/AllowTabInput,
 - menu/tab depth,
-- continued test/control architecture decomposition after the first picker, color-model, popup, and
-  popup-numeric splits,
+- continued test/control architecture decomposition after the first picker, color-model, popup,
+  popup-numeric, and popup-picker splits,
 - and a deliberate decision on whether immediate debug-draw belongs in the ecosystem.
 
 Not the right next move:

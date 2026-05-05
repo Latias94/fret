@@ -287,6 +287,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-color-edit-popup-numeric-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+- Closed narrow follow-on for IMUI editor `ColorEdit` popup picker split:
+  - `docs/workstreams/imui-color-edit-popup-picker-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-picker-split-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-picker-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-picker-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-picker-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-picker-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
 - Closed narrow follow-on for IMUI debug draw baseline:
   - `docs/workstreams/imui-debug-draw-baseline-v1/DESIGN.md`
   - `docs/workstreams/imui-debug-draw-baseline-v1/TODO.md`

@@ -176,6 +176,12 @@ Tracker highlights:
   `docs/workstreams/imui-color-edit-popup-numeric-split-v1/DESIGN.md`,
   `docs/workstreams/imui-color-edit-popup-numeric-split-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-color-edit-popup-numeric-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi color edit popup picker split follow-on (closed narrow P1 refactor lane splitting HSV/SV/Hue
+  and AlphaBar picker composition, gradient/thumb preview helpers, and picker-local pointer commit
+  handlers into `popup/picker.rs` without behavior changes):
+  `docs/workstreams/imui-color-edit-popup-picker-split-v1/DESIGN.md`,
+  `docs/workstreams/imui-color-edit-popup-picker-split-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-color-edit-popup-picker-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi debug draw baseline follow-on (closed narrow P1 lane exposing a canvas-backed immediate-mode
   debug-draw helper in `fret-ui-kit::imui` for lines, rects, filled rects, and text without turning
   `fret-imui` into a renderer): `docs/workstreams/imui-debug-draw-baseline-v1/DESIGN.md`,
