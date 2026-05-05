@@ -4,9 +4,8 @@ use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, GridProps, GridTrackSizing, InsetStyle,
-    LayoutStyle, Length, MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableA11y,
-    PressableProps, SizeStyle, SpacingLength, StackProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -18,15 +17,17 @@ use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
 use super::model::{color_from_rgb_preserving_alpha, format_hex};
 use super::{
-    CHECKERBOARD_DARK_RGB, CHECKERBOARD_LIGHT_RGB, COLOR_PRESETS, ColorEditPopupNumericInputs,
-    ColorEditPopupOptions, ColorEditPopupPicker, draft_model, error_model,
+    COLOR_PRESETS, ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
+    draft_model, error_model,
 };
 
 mod numeric;
 pub(super) mod picker;
+pub(super) mod preview;
 
 use self::numeric::color_numeric_inputs;
 use self::picker::{alpha_bar, hsv_picker};
+pub(super) use self::preview::color_preview_stack;
 
 pub(super) fn request_popup_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -279,104 +280,6 @@ pub(super) fn request_popup_overlay<H: UiHost>(
     request.on_close_auto_focus = Some(close_focus);
 
     OverlayController::request(cx, request);
-}
-
-pub(super) fn color_preview_stack<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    color: Color,
-    radius: Px,
-) -> AnyElement {
-    cx.container(
-        ContainerProps {
-            layout: fill_preview_layout(),
-            corner_radii: Corners::all(radius),
-            ..Default::default()
-        },
-        move |cx| {
-            vec![cx.stack_props(
-                StackProps {
-                    layout: fill_preview_layout(),
-                },
-                move |cx| {
-                    let checkerboard = checkerboard_grid(cx);
-                    let overlay = cx.container(
-                        ContainerProps {
-                            layout: fill_absolute_preview_layout(),
-                            background: Some(color),
-                            corner_radii: Corners::all(radius),
-                            ..Default::default()
-                        },
-                        |_cx| vec![],
-                    );
-                    vec![checkerboard, overlay]
-                },
-            )]
-        },
-    )
-}
-
-pub(super) fn checkerboard_grid<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    cx.grid(
-        GridProps {
-            layout: fill_preview_layout(),
-            cols: 2,
-            rows: Some(2),
-            template_columns: Some(vec![GridTrackSizing::Flex(1.0), GridTrackSizing::Flex(1.0)]),
-            template_rows: Some(vec![GridTrackSizing::Flex(1.0), GridTrackSizing::Flex(1.0)]),
-            gap: SpacingLength::Px(Px(0.0)),
-            padding: Edges::all(Px(0.0)).into(),
-            ..Default::default()
-        },
-        |cx| {
-            (0..4)
-                .map(|idx| {
-                    let row = idx / 2;
-                    let col = idx % 2;
-                    cx.container(
-                        ContainerProps {
-                            layout: fill_preview_layout(),
-                            background: Some(checkerboard_cell_color(row, col)),
-                            ..Default::default()
-                        },
-                        |_cx| vec![],
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    )
-}
-
-pub(super) fn fill_preview_layout() -> LayoutStyle {
-    LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Fill,
-            ..Default::default()
-        },
-        overflow: Overflow::Clip,
-        ..Default::default()
-    }
-}
-
-fn fill_absolute_preview_layout() -> LayoutStyle {
-    let mut layout = fill_preview_layout();
-    layout.position = PositionStyle::Absolute;
-    layout.inset = InsetStyle {
-        top: Some(Px(0.0)).into(),
-        right: Some(Px(0.0)).into(),
-        bottom: Some(Px(0.0)).into(),
-        left: Some(Px(0.0)).into(),
-    };
-    layout
-}
-
-pub(super) fn checkerboard_cell_color(row: usize, col: usize) -> Color {
-    let rgb = if (row + col).is_multiple_of(2) {
-        CHECKERBOARD_LIGHT_RGB
-    } else {
-        CHECKERBOARD_DARK_RGB
-    };
-    Color::from_srgb_hex_rgb(rgb)
 }
 
 fn preset_swatch<H: UiHost>(

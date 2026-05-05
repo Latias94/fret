@@ -20,7 +20,7 @@ use super::super::model::{
     hue_percent_text, sv_picker_a11y_text, unit_from_step,
 };
 use super::super::{ALPHA_BAR_STEPS, HUE_BAR_STEPS, SV_PICKER_STEPS};
-use super::{checkerboard_grid, fill_preview_layout};
+use super::preview::{checkerboard_grid, fill_preview_layout};
 
 pub(super) fn hsv_picker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
