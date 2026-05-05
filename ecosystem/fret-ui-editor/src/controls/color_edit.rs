@@ -41,7 +41,7 @@ use self::drag_drop::{
     take_delivered_color_drop, update_color_drop_target,
 };
 use self::model::{format_hex, parse_hex};
-use self::popup::{color_preview_stack, request_popup_overlay};
+use self::popup::{color_preview_stack, request_color_tooltip_overlay, request_popup_overlay};
 
 const COLOR_PRESETS: [(&str, u32); 12] = [
     ("Slate", 0x0f_17_2a),
@@ -344,6 +344,21 @@ impl Default for ColorEditPopupOptions {
     }
 }
 
+/// Hover tooltip policy for editor `ColorEdit` preview swatches.
+///
+/// Dear ImGui exposes this as `ImGuiColorEditFlags_NoTooltip`. Fret keeps it as explicit
+/// per-control editor policy and avoids global color-edit option state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ColorEditTooltipOptions {
+    pub enabled: bool,
+}
+
+impl Default for ColorEditTooltipOptions {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::controls::color_edit) struct ColorEditPopupRuntimeOptions {
     pub(in crate::controls::color_edit) default_picker: ColorEditPopupPicker,
@@ -374,6 +389,7 @@ pub struct ColorEditOptions {
     pub alpha_preview: ColorEditAlphaPreview,
     pub drag_drop: ColorEditDragDropOptions,
     pub popup: ColorEditPopupOptions,
+    pub tooltip: ColorEditTooltipOptions,
     /// App-owned palette entries shown by the popup preset row when `popup.presets` is enabled.
     ///
     /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
@@ -399,6 +415,7 @@ pub struct ColorEditOptions {
     pub swatch_test_id: Option<Arc<str>>,
     pub input_test_id: Option<Arc<str>>,
     pub popup_test_id: Option<Arc<str>>,
+    pub tooltip_test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for ColorEditOptions {
@@ -411,6 +428,7 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("alpha_preview", &self.alpha_preview)
             .field("drag_drop", &self.drag_drop)
             .field("popup", &self.popup)
+            .field("tooltip", &self.tooltip)
             .field("palette", &self.palette)
             .field("history", &self.history)
             .field(
@@ -422,6 +440,7 @@ impl std::fmt::Debug for ColorEditOptions {
             .field("swatch_test_id", &self.swatch_test_id)
             .field("input_test_id", &self.input_test_id)
             .field("popup_test_id", &self.popup_test_id)
+            .field("tooltip_test_id", &self.tooltip_test_id)
             .finish()
     }
 }
@@ -443,6 +462,7 @@ impl Default for ColorEditOptions {
             alpha_preview: ColorEditAlphaPreview::default(),
             drag_drop: ColorEditDragDropOptions::default(),
             popup: ColorEditPopupOptions::default(),
+            tooltip: ColorEditTooltipOptions::default(),
             palette: default_color_edit_palette(),
             history: Vec::new().into(),
             on_palette_slot_drop: None,
@@ -451,6 +471,7 @@ impl Default for ColorEditOptions {
             swatch_test_id: None,
             input_test_id: None,
             popup_test_id: None,
+            tooltip_test_id: None,
         }
     }
 }
@@ -494,6 +515,7 @@ impl ColorEdit {
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = popup_open_model(cx);
+        let tooltip_open = tooltip_open_model(cx);
         let reference = reference_model(cx);
         let draft = draft_model(cx);
         let error = error_model(cx);
@@ -537,7 +559,13 @@ impl ColorEdit {
             .popup_test_id
             .clone()
             .or_else(|| derived_test_id(self.options.test_id.as_ref(), "popup"));
+        let tooltip_test_id = self
+            .options
+            .tooltip_test_id
+            .clone()
+            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "tooltip"));
         let popup_options = self.options.popup;
+        let tooltip_options = self.options.tooltip;
         let popup_runtime_options =
             popup_runtime_options_model(cx, popup_options.runtime_defaults());
         sync_popup_runtime_options(cx, &popup_runtime_options, popup_options.runtime_defaults());
@@ -553,8 +581,11 @@ impl ColorEdit {
             !history.is_empty(),
         );
         let drag_drop_enabled = self.options.enabled && drag_drop_options.enabled;
-        let swatch_enabled =
-            self.options.enabled && (popup_has_visible_content || drag_drop_enabled);
+        let tooltip_enabled = self.options.enabled && tooltip_options.enabled;
+        let swatch_enabled = self.options.enabled
+            && (popup_has_visible_content || drag_drop_enabled || tooltip_enabled);
+        let swatch_focusable =
+            self.options.focusable && (popup_has_visible_content || drag_drop_enabled);
 
         let input = {
             let (chrome, text_style) = {
@@ -668,6 +699,7 @@ impl ColorEdit {
         let swatch = {
             let open_for_activate = open.clone();
             let open_for_paint = open.clone();
+            let tooltip_open_for_paint = tooltip_open.clone();
             let reference_for_activate = reference.clone();
             let model_for_activate = self.model.clone();
             let enabled_for_paint = self.options.enabled;
@@ -710,7 +742,7 @@ impl ColorEdit {
                         ..Default::default()
                     },
                     enabled: swatch_enabled,
-                    focusable: swatch_enabled && self.options.focusable,
+                    focusable: swatch_enabled && swatch_focusable,
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Button),
                         label: Some(Arc::from("Color swatch")),
@@ -748,6 +780,17 @@ impl ColorEdit {
                     let is_open = cx
                         .get_model_copied(&open_for_paint, Invalidation::Paint)
                         .unwrap_or(false);
+                    let tooltip_visible =
+                        tooltip_options.enabled && enabled_for_paint && !is_open && st.hovered_raw;
+                    let tooltip_open_now = cx
+                        .get_model_copied(&tooltip_open_for_paint, Invalidation::Paint)
+                        .unwrap_or(false);
+                    if tooltip_open_now != tooltip_visible {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&tooltip_open_for_paint, |value| *value = tooltip_visible);
+                    }
                     let visuals = {
                         let theme = Theme::global(&*cx.app);
                         EditorWidgetVisuals::new(theme).frame_visuals(
@@ -840,6 +883,16 @@ impl ColorEdit {
             popup_padding,
             popup_test_id,
         );
+        request_color_tooltip_overlay(
+            cx,
+            swatch.id,
+            tooltip_open,
+            current,
+            self.options.show_alpha,
+            self.options.alpha_preview,
+            tooltip_options,
+            tooltip_test_id,
+        );
 
         let error_msg = cx
             .get_model_cloned(&error, Invalidation::Paint)
@@ -922,6 +975,11 @@ impl ColorEdit {
 #[track_caller]
 fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     cx.local_model(|| false)
+}
+
+#[track_caller]
+fn tooltip_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    cx.local_model_keyed("tooltip_open", || false)
 }
 
 #[track_caller]

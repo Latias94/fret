@@ -27,6 +27,7 @@ mod options;
 pub(super) mod picker;
 pub(super) mod preview;
 mod swatches;
+pub(in crate::controls::color_edit) mod tooltip;
 
 use self::numeric::color_numeric_inputs;
 use self::options::color_picker_options;
@@ -34,6 +35,7 @@ use self::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
 pub(super) use self::preview::color_preview_stack;
 use self::preview::color_side_preview;
 use self::swatches::{history_swatches, preset_swatches};
+pub(super) use self::tooltip::request_color_tooltip_overlay;
 
 pub(super) fn request_popup_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

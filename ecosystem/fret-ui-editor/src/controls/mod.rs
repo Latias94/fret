@@ -29,7 +29,8 @@ pub use color_edit::{
     ColorEdit, ColorEditAlphaPreview, ColorEditDragDropComponents, ColorEditDragDropOptions,
     ColorEditDragDropPayload, ColorEditOptions, ColorEditPaletteEntry, ColorEditPaletteSlotDrop,
     ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
-    ColorEditPopupSidePreview, OnColorEditPaletteSlotDrop, default_color_edit_palette,
+    ColorEditPopupSidePreview, ColorEditTooltipOptions, OnColorEditPaletteSlotDrop,
+    default_color_edit_palette,
 };
 pub use drag_value::{DragValue, DragValueOptions, DragValueOutcome, OnDragValueOutcome};
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};

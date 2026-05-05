@@ -13,6 +13,7 @@ use super::popup::preview::{
     checkerboard_cell_color, opaque_preview_color, preview_color_for_alpha_visibility,
     restore_reference_color,
 };
+use super::popup::tooltip::color_tooltip_lines;
 use super::*;
 
 #[test]
@@ -169,6 +170,30 @@ fn drag_drop_options_default_to_imgui_enabled_local_payloads() {
 
     assert!(options.drag_drop.enabled);
     assert!(!options.drag_drop.cross_window);
+}
+
+#[test]
+fn tooltip_options_default_to_imgui_hover_preview_enabled() {
+    let options = ColorEditOptions::default();
+
+    assert!(options.tooltip.enabled);
+    assert!(options.tooltip_test_id.is_none());
+}
+
+#[test]
+fn color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text() {
+    let mut color = Color::from_srgb_hex_rgb(0x33_66_99);
+    color.a = 0.5;
+
+    let rgb_lines = color_tooltip_lines(color, false);
+    assert_eq!(rgb_lines.len(), 3);
+    assert_eq!(rgb_lines[0].as_ref(), "#336699");
+    assert_eq!(rgb_lines[1].as_ref(), "RGB 51 102 153");
+    assert_eq!(rgb_lines[2].as_ref(), "HSV 210deg | S 67% | V 60%");
+
+    let rgba_lines = color_tooltip_lines(color, true);
+    assert_eq!(rgba_lines[0].as_ref(), "#33669980");
+    assert_eq!(rgba_lines[1].as_ref(), "RGB 51 102 153 | A 50%");
 }
 
 #[test]

@@ -213,7 +213,8 @@ customization is partially superseded by
 `docs/workstreams/imui-color-edit-palette-customization-v1/`; editable palette slot drag/drop is
 partially superseded by `docs/workstreams/imui-color-edit-editable-palette-slots-v1/`; app-owned
 recent color history swatches are partially superseded by
-`docs/workstreams/imui-color-edit-history-swatches-v1/`.
+`docs/workstreams/imui-color-edit-history-swatches-v1/`; hover tooltip previews are partially
+superseded by `docs/workstreams/imui-color-edit-tooltip-preview-v1/`.
 
 Current editor `ColorEdit` now has:
 
@@ -239,6 +240,8 @@ Current editor `ColorEdit` now has:
 - editable popup palette slots through `OnColorEditPaletteSlotDrop`, with palette swatches acting
   as RGB drag sources and optional app-owned drop targets,
 - app-owned recent color history swatches through `ColorEditOptions::history`,
+- Dear ImGui-style hover tooltip previews on root swatches through `ColorEditOptions::tooltip`,
+  including hex, RGB, and HSV text,
 - RGB and HSV numeric readouts, with alpha percent shown when alpha is visible,
 - editable RGB/HSV numeric popup rows with editor-owned validation,
 - per-control popup defaults for HueBar picker, RGB/HSV numeric rows, preset palette, and AlphaBar

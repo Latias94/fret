@@ -14,6 +14,8 @@ const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
 const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
     include_str!("../src/controls/color_edit/popup/swatches.rs");
+const COLOR_EDIT_POPUP_TOOLTIP_RS: &str =
+    include_str!("../src/controls/color_edit/popup/tooltip.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -62,6 +64,9 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("fn sync_popup_runtime_options<"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupNumericInputs"));
     assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupSidePreview"));
+    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditTooltipOptions"));
+    assert!(COLOR_EDIT_RS.contains("pub tooltip: ColorEditTooltipOptions"));
+    assert!(COLOR_EDIT_RS.contains("fn tooltip_open_model<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
@@ -79,6 +84,9 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("install_color_drag_source("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("take_delivered_color_drop("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteSlotDrop::new("));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn request_color_tooltip_overlay<"));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn color_tooltip_lines("));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("radix_tooltip::tooltip_request("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_wheel_canvas<"));
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));

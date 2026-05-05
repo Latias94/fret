@@ -18,13 +18,13 @@ use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
     ColorEdit, ColorEditOptions, ColorEditPaletteEntry, ColorEditPaletteSlotDrop,
     ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
-    ColorEditPopupSidePreview, DragValue, DragValueOptions, DragValueOutcome, EnumSelect,
-    EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions,
-    IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions, NumericInput,
-    NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider, SliderOptions,
-    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField, TextFieldOptions,
-    TransformEdit, TransformEditAxisOutcome, TransformEditOptions, TransformEditPresentations,
-    Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
+    ColorEditPopupSidePreview, ColorEditTooltipOptions, DragValue, DragValueOptions,
+    DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge,
+    FieldStatusBadgeOptions, IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions,
+    NumericInput, NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider,
+    SliderOptions, TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
+    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, TransformEditOptions,
+    TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
 
@@ -78,6 +78,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
                 alpha_bar: true,
                 picker_options: true,
             },
+            tooltip: ColorEditTooltipOptions { enabled: true },
             palette: vec![ColorEditPaletteEntry::new("Brand", 0x22_44_66)].into(),
             history: vec![ColorEditPaletteEntry::new("Recent", 0xef_44_44)].into(),
             on_palette_slot_drop: Some(on_palette_slot_drop),
@@ -425,6 +426,8 @@ fn editor_imui_adapter_option_defaults_compile() {
         ..Default::default()
     };
     assert_eq!(color_options.popup.picker, ColorEditPopupPicker::Hidden);
+    assert!(color_options.tooltip.enabled);
+    let _ = ColorEditTooltipOptions { enabled: false };
     let _ = ColorEditPopupPicker::HsvHueWheel;
     let _ = ColorEditPaletteEntry::new("Brand Accent", 0xab_cd_ef);
     let _ = ColorEditPaletteSlotDrop::new(
