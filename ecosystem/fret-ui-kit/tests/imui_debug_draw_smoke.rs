@@ -110,6 +110,21 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             6,
             Color::from_srgb_hex_rgb(0xc0_84_fc),
         );
+        draw.add_ellipse_with_style(
+            Point::new(Px(104.0), Px(88.0)),
+            Size::new(Px(18.0), Px(8.0)),
+            0.35,
+            24,
+            Color::from_srgb_hex_rgb(0x38_bd_f8),
+            DebugDrawStrokeStyle::new(Px(1.0)).with_cap(StrokeCapV1::Round),
+        );
+        draw.add_ellipse_filled(
+            Point::new(Px(148.0), Px(88.0)),
+            Size::new(Px(16.0), Px(7.0)),
+            0.5,
+            0,
+            Color::from_srgb_hex_rgb(0xf0_ab_fc),
+        );
         draw.add_bezier_quadratic_with_style(
             Point::new(Px(88.0), Px(62.0)),
             Point::new(Px(104.0), Px(48.0)),

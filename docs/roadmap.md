@@ -330,6 +330,12 @@ Tracker highlights:
   `docs/workstreams/imui-debug-draw-ngon-primitives-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-ngon-primitives-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-debug-draw-ngon-primitives-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
+- ImUi debug draw ellipse primitives follow-on (closed narrow P1 lane adding `AddEllipse`- and
+  `AddEllipseFilled`-style commands to the canvas-backed helper without adding tessellation or
+  hit-testing contracts):
+  `docs/workstreams/imui-debug-draw-ellipse-primitives-v1/DESIGN.md`,
+  `docs/workstreams/imui-debug-draw-ellipse-primitives-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-debug-draw-ellipse-primitives-v1/CLOSEOUT_AUDIT_2026-05-05.md`.
 - ImUi item-behavior kernel follow-on (closed fearless private `fret-ui-kit::imui` refactor that
   converged full pressable item behavior for button, checkbox/radio, selectable, and combo trigger
   controls while deleting obsolete duplicate paths instead of preserving compatibility fallback):

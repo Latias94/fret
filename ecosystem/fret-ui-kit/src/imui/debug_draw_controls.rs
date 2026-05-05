@@ -7,7 +7,7 @@ use fret_core::scene::ImageSamplingHint;
 use fret_core::scene::{DashPatternV1, Paint};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, FillStyle, ImageId, PathCommand, PathStyle, Point, Px, Rect,
-    StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit, TextOverflow, TextStyle,
+    Size, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit, TextOverflow, TextStyle,
     TextWrap, UvRect, ViewportFit,
 };
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
@@ -17,6 +17,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, SvgSource, UiHost};
 
 use super::UiWriterImUiFacadeExt;
+
+const DEFAULT_ELLIPSE_SEGMENTS: usize = 32;
 
 #[derive(Debug, Clone)]
 pub struct DebugDrawOptions {
@@ -375,6 +377,54 @@ impl ImUiDebugDrawList {
         });
     }
 
+    pub fn add_ellipse(
+        &mut self,
+        center: Point,
+        radius: Size,
+        rotation_radians: f32,
+        segments: usize,
+        color: Color,
+        thickness: Px,
+    ) {
+        self.add_ellipse_with_style(center, radius, rotation_radians, segments, color, thickness);
+    }
+
+    pub fn add_ellipse_with_style(
+        &mut self,
+        center: Point,
+        radius: Size,
+        rotation_radians: f32,
+        segments: usize,
+        color: Color,
+        style: impl Into<DebugDrawStrokeStyle>,
+    ) {
+        self.commands.push(DebugDrawCommand::Ellipse {
+            center,
+            radius,
+            rotation_radians,
+            segments,
+            color,
+            style: style.into(),
+        });
+    }
+
+    pub fn add_ellipse_filled(
+        &mut self,
+        center: Point,
+        radius: Size,
+        rotation_radians: f32,
+        segments: usize,
+        color: Color,
+    ) {
+        self.commands.push(DebugDrawCommand::EllipseFilled {
+            center,
+            radius,
+            rotation_radians,
+            segments,
+            color,
+        });
+    }
+
     pub fn add_bezier_quadratic(
         &mut self,
         from: Point,
@@ -609,6 +659,21 @@ enum DebugDrawCommand {
     NgonFilled {
         center: Point,
         radius: Px,
+        segments: usize,
+        color: Color,
+    },
+    Ellipse {
+        center: Point,
+        radius: Size,
+        rotation_radians: f32,
+        segments: usize,
+        color: Color,
+        style: DebugDrawStrokeStyle,
+    },
+    EllipseFilled {
+        center: Point,
+        radius: Size,
+        rotation_radians: f32,
         segments: usize,
         color: Color,
     },
@@ -1041,6 +1106,55 @@ fn paint_debug_draw_commands(painter: &mut CanvasPainter<'_>, commands: &[DebugD
                     scale,
                 );
             }
+            DebugDrawCommand::Ellipse {
+                center,
+                radius,
+                rotation_radians,
+                segments,
+                color,
+                style,
+            } => {
+                if color.a <= 0.0 || !style.is_visible() {
+                    continue;
+                }
+                let Some(commands) = ellipse_path(*center, *radius, *rotation_radians, *segments)
+                else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    style.path_style(),
+                    *color,
+                    scale,
+                );
+            }
+            DebugDrawCommand::EllipseFilled {
+                center,
+                radius,
+                rotation_radians,
+                segments,
+                color,
+            } => {
+                if color.a <= 0.0 {
+                    continue;
+                }
+                let Some(commands) = ellipse_path(*center, *radius, *rotation_radians, *segments)
+                else {
+                    continue;
+                };
+                painter.path(
+                    key,
+                    order,
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    *color,
+                    scale,
+                );
+            }
             DebugDrawCommand::BezierQuadratic {
                 from,
                 ctrl,
@@ -1256,6 +1370,48 @@ fn ngon_path(center: Point, radius: Px, segments: usize) -> Option<Vec<PathComma
     Some(commands)
 }
 
+fn ellipse_path(
+    center: Point,
+    radius: Size,
+    rotation_radians: f32,
+    segments: usize,
+) -> Option<Vec<PathCommand>> {
+    let segments = if segments == 0 {
+        DEFAULT_ELLIPSE_SEGMENTS
+    } else {
+        segments
+    };
+    if segments < 3
+        || radius.width.0 <= 0.0
+        || radius.height.0 <= 0.0
+        || !radius.width.0.is_finite()
+        || !radius.height.0.is_finite()
+        || !rotation_radians.is_finite()
+    {
+        return None;
+    }
+
+    let (rot_sin, rot_cos) = rotation_radians.sin_cos();
+    let mut commands = Vec::with_capacity(segments.checked_add(1)?);
+    for index in 0..segments {
+        let angle = std::f32::consts::TAU * index as f32 / segments as f32;
+        let (angle_sin, angle_cos) = angle.sin_cos();
+        let x = angle_cos * radius.width.0;
+        let y = angle_sin * radius.height.0;
+        let point = Point::new(
+            Px(center.x.0 + x * rot_cos - y * rot_sin),
+            Px(center.y.0 + x * rot_sin + y * rot_cos),
+        );
+        if index == 0 {
+            commands.push(PathCommand::MoveTo(point));
+        } else {
+            commands.push(PathCommand::LineTo(point));
+        }
+    }
+    commands.push(PathCommand::Close);
+    Some(commands)
+}
+
 fn bezier_quadratic_path(from: Point, ctrl: Point, to: Point) -> [PathCommand; 2] {
     [PathCommand::MoveTo(from), PathCommand::QuadTo { ctrl, to }]
 }
@@ -1364,6 +1520,21 @@ mod tests {
             6,
             Color::from_srgb_hex_rgb(0xc0_84_fc),
         );
+        list.add_ellipse(
+            Point::new(Px(96.0), Px(20.0)),
+            Size::new(Px(12.0), Px(6.0)),
+            0.25,
+            16,
+            Color::from_srgb_hex_rgb(0x38_bd_f8),
+            Px(1.0),
+        );
+        list.add_ellipse_filled(
+            Point::new(Px(122.0), Px(20.0)),
+            Size::new(Px(10.0), Px(5.0)),
+            0.5,
+            0,
+            Color::from_srgb_hex_rgb(0xf0_ab_fc),
+        );
         list.add_bezier_quadratic(
             Point::new(Px(2.0), Px(60.0)),
             Point::new(Px(20.0), Px(42.0)),
@@ -1386,7 +1557,7 @@ mod tests {
             Px(12.0),
         );
 
-        assert_eq!(list.command_count(), 16);
+        assert_eq!(list.command_count(), 18);
         assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
         assert!(matches!(
             list.commands[1],
@@ -1426,13 +1597,21 @@ mod tests {
         ));
         assert!(matches!(
             list.commands[13],
-            DebugDrawCommand::BezierQuadratic { .. }
+            DebugDrawCommand::Ellipse { .. }
         ));
         assert!(matches!(
             list.commands[14],
+            DebugDrawCommand::EllipseFilled { .. }
+        ));
+        assert!(matches!(
+            list.commands[15],
+            DebugDrawCommand::BezierQuadratic { .. }
+        ));
+        assert!(matches!(
+            list.commands[16],
             DebugDrawCommand::BezierCubic { .. }
         ));
-        assert!(matches!(list.commands[15], DebugDrawCommand::Text { .. }));
+        assert!(matches!(list.commands[17], DebugDrawCommand::Text { .. }));
     }
 
     #[test]
@@ -1693,6 +1872,65 @@ mod tests {
         assert!(matches!(path[2], PathCommand::LineTo(_)));
         assert!(matches!(path[3], PathCommand::LineTo(_)));
         assert_eq!(path[4], PathCommand::Close);
+    }
+
+    #[test]
+    fn ellipse_path_defaults_segments_and_supports_rotation() {
+        assert!(
+            ellipse_path(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(8.0), Px(4.0)),
+                0.0,
+                2
+            )
+            .is_none()
+        );
+        assert!(
+            ellipse_path(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(0.0), Px(4.0)),
+                0.0,
+                4
+            )
+            .is_none()
+        );
+        assert!(
+            ellipse_path(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(8.0), Px(4.0)),
+                f32::NAN,
+                4,
+            )
+            .is_none()
+        );
+
+        let default_path = ellipse_path(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(8.0), Px(4.0)),
+            0.0,
+            0,
+        )
+        .unwrap();
+        assert_eq!(default_path.len(), DEFAULT_ELLIPSE_SEGMENTS + 1);
+        assert_eq!(
+            default_path[0],
+            PathCommand::MoveTo(Point::new(Px(18.0), Px(20.0)))
+        );
+        assert_eq!(default_path[DEFAULT_ELLIPSE_SEGMENTS], PathCommand::Close);
+
+        let rotated_path = ellipse_path(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(8.0), Px(4.0)),
+            std::f32::consts::FRAC_PI_2,
+            4,
+        )
+        .unwrap();
+        let PathCommand::MoveTo(point) = &rotated_path[0] else {
+            panic!("rotated ellipse should start with a MoveTo");
+        };
+        assert!((point.x.0 - 10.0).abs() <= 0.000_1);
+        assert!((point.y.0 - 28.0).abs() <= 0.000_1);
+        assert_eq!(rotated_path[4], PathCommand::Close);
     }
 
     #[test]
