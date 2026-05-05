@@ -9,6 +9,8 @@ const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
 const COLOR_EDIT_POPUP_PICKER_RS: &str = include_str!("../src/controls/color_edit/popup/picker.rs");
 const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
+const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
+    include_str!("../src/controls/color_edit/popup/swatches.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -21,7 +23,7 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 #[test]
 fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("const COLOR_PRESETS:"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("fn preset_swatch<"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn preset_swatch<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_preview_stack<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn checkerboard_grid<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_picker<"));

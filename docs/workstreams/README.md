@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 318
+- Dedicated directories: 319
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -429,6 +429,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-color-edit-popup-preview-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
   - Scope: closed after splitting shared checkerboard, fill-preview layout, and color preview stack
     helpers into `popup/preview.rs`.
+
+- Closed narrow P1 color edit popup swatches split follow-on:
+  - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/TODO.md`
+  - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-color-edit-popup-swatches-split-v1/CLOSEOUT_AUDIT_2026-05-05.md`
+  - Scope: closed after splitting preset swatch row composition and alpha-preserving preset
+    activation handling into `popup/swatches.rs`.
 
 - Closed narrow P1 debug draw baseline follow-on:
   - `docs/workstreams/imui-debug-draw-baseline-v1/WORKSTREAM.json`
@@ -1416,6 +1426,7 @@ Rule:
 - `docs/workstreams/imui-color-edit-popup-picker-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting HSV/SV/Hue and AlphaBar picker composition into `popup/picker.rs`)
 - `docs/workstreams/imui-color-edit-popup-preview-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting shared preview helpers into `popup/preview.rs`)
 - `docs/workstreams/imui-color-edit-popup-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow refactor follow-on splitting popup composition helpers out of editor `ColorEdit` public control wiring)
+- `docs/workstreams/imui-color-edit-popup-swatches-split-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow refactor follow-on splitting preset swatches into `popup/swatches.rs`)
 - `docs/workstreams/imui-color-edit-numeric-readout-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on showing RGB/HSV numeric readouts in the editor `ColorEdit` popup)
 - `docs/workstreams/imui-debug-draw-baseline-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on exposing a canvas-backed immediate-mode debug-draw helper in `fret-ui-kit::imui`)
 - `docs/workstreams/imui-debug-draw-shape-primitives-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on adding polyline, triangle, and circle primitives to the canvas-backed IMUI debug-draw helper)
