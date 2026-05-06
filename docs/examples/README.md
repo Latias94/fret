@@ -146,6 +146,12 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
     dispatch, editor controls, menu/popup behavior, and diagnostic `test_id` anchors
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
+    - `fretboard` / `fretboard-dev` need an explicit package here because both
+      `fret-demo` and `fret-examples-imui` both define `imui_hello_demo`
+    - maintainer wrapper:
+      `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`
+    - standalone fast-path:
+      `cargo run -p fretboard -- dev native --package fret-examples-imui --bin imui_hello_demo`
 - Reference/contract proof:
   - `imui_response_signals_demo` — proof/contract surface for outward responses, helper lifecycle,
     and interaction queries
@@ -169,6 +175,7 @@ Mounting rule for the immediate-mode lane:
 - `imui_action_basics` demonstrates the explicit layout-host + raw shape on the root `fret::imui`
   lane; `imui_hello_demo` remains the small smoke/reference proof of the default root-hosted
   shape.
+  - the public CLI must choose a package explicitly for this binary name collision
 
 Stable identity rule for the immediate-mode lane:
 
@@ -251,6 +258,10 @@ Explicit advanced/reference roster:
   runnable facade check, but the generic/editor immediate teaching path should start from
   `imui_action_basics` and `imui_editor_controls_basics`; use `imui_editor_proof_demo` when you
   need the heavier editor product proof.
+  - when launched through `fretboard`, select `fret-demo` or `fret-examples-imui` explicitly:
+    `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`
+    or
+    `cargo run -p fretboard -- dev native --package fret-examples-imui --bin imui_hello_demo`
 - `imui_response_signals_demo` is an IMUI proof/contract surface. It validates response/query
   behavior and canonical helper outward responses rather than the default immediate teaching path.
 - `imui_interaction_showcase_demo` and `imui_shadcn_adapter_demo` are IMUI product-validation

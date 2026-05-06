@@ -14,6 +14,7 @@ Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just 
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_STABLE_IDENTITY_RULE_2026-04-12.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
 - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
+- `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md`
 - `tools/diag_gate_action_first_authoring_v1.py`
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/suites/cookbook-imui-action-basics/suite.json`
@@ -405,6 +406,7 @@ not counted as passing hand-feel evidence.
 - `python3 tools/check_workstream_catalog.py`
 - `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
 - `python3 -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json > /dev/null`
+- `rg -n "imui_hello_demo|fret-examples-imui|--package fret-demo|--package fret-examples-imui" docs/examples/README.md apps/fret-cookbook/README.md apps/fret-cookbook/EXAMPLES.md`
 
 ## Remaining gates that should become real before claiming closure
 

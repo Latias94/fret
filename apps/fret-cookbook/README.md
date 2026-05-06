@@ -110,9 +110,16 @@ required cookbook features for known Lab examples and print what it enabled.
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_debug_draw_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics`
-    - next proof after the three focused lessons: `cargo run -p fret-demo --bin imui_editor_proof_demo`
+    - next proof after the three focused lessons:
+      `cargo run -p fret-demo --bin imui_editor_proof_demo`
       for the heavier editor-panel path with state, command actions, menu/popup behavior, and
       diagnostic `test_id` anchors
+    - if you are using the public workspace runner for the tiny smoke surface, choose a package
+      explicitly because `fret-demo` and `fret-examples-imui` both define `imui_hello_demo`
+      - maintainer wrapper:
+        `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`
+      - standalone fast-path:
+        `cargo run -p fretboard -- dev native --package fret-examples-imui --bin imui_hello_demo`
   - Docking:
     - `cargo run -p fret-cookbook --features cookbook-docking --example docking_basics`
   - Embedded viewport / external textures:

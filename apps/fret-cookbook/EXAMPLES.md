@@ -152,6 +152,14 @@ the heavier editor-panel proof that combines state, command actions, editor cont
 behavior, and diagnostic `test_id` anchors. It lives in `fret-demo`, so it is not listed as a
 cookbook example row.
 
+If you are invoking the tiny smoke surface through the public workspace runner, pick the package
+explicitly because `fret-demo` and `fret-examples-imui` both define `imui_hello_demo`:
+
+- maintainer wrapper:
+  `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`
+- standalone fast-path:
+  `cargo run -p fretboard -- dev native --package fret-examples-imui --bin imui_hello_demo`
+
 ## Advanced — Content (feature-gated, still evolving)
 
 Example | Status | Feature | Run | Diag suite

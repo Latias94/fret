@@ -67,6 +67,11 @@ in `docs/workstreams/imui-child-region-depth-v1/` and the remaining P3 execution
       action into one view-local state path; `tools/diag_gate_action_first_authoring_v1.py --only
       cookbook-imui-action-basics-cross-frontend` runs that proof without the broader action-first
       gate set.
+- [x] Record the current product-workflow coherence review that fixes `imui_hello_demo` package
+      selection ambiguity in the source docs.
+      Result: `P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md` records the current first-open
+      command clarity read and points the docs/indexes at explicit `--package` selection for the
+      colliding `imui_hello_demo` binary name.
 
 ## P1 - Editor workbench shell closure
 
