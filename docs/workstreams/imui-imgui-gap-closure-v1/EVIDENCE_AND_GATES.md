@@ -18,6 +18,7 @@ Last updated: 2026-05-06
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
 - Current Fret IMUI source:
@@ -121,6 +122,21 @@ Use these for the current collection-helper readiness note:
 ```powershell
 cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast
 cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_sortable_recipe_smoke --test imui_drag_preview_smoke --no-fail-fast
+```
+
+## P3 Execution Priority Review Gates
+
+Use these when changing the P3 execution-priority read:
+
+```powershell
+python tools/audit_crate.py --crate fret-imui
+python tools/audit_crate.py --crate fret-ui-kit
+python tools/audit_crate.py --crate fret-ui-editor
+python tools/audit_crate.py --crate fret
+python tools/gate_imui_workstream_source.py
+python tools/gate_imui_facade_teaching_source.py
+python tools/check_workstream_catalog.py
+git diff --check
 ```
 
 ## P0 Gates

@@ -89,3 +89,7 @@ Exit criteria:
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
+  Current execution-priority review result: treat the P3 catalog notes as readiness maps, not an
+  implementation queue. Product/golden workflow coherence, runner/backend multi-window hand-feel,
+  and diagnostics/DevTools discoverability remain higher-value Dear ImGui-grade closure work than
+  blind widget/API mirroring.

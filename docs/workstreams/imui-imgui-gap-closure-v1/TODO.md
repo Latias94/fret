@@ -63,7 +63,12 @@ Last updated: 2026-05-06
 
 ## P3 - Dear ImGui-Class Follow-On Candidates
 
-Priority order for the next locally testable slices:
+The catalog order below is a readiness/review order, not an implementation queue. Current execution
+priority stays: product/golden workflow coherence, runner/backend multi-window hand-feel,
+diagnostics/DevTools discoverability, then proof-led helper/API widening. See
+`P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md`.
+
+Readiness order for the next locally testable review slices:
 
 1. Public facade/API catalog: keep the app-facing `fret::imui` lane explicit and freeze owner
    rules before adding more public helpers.
