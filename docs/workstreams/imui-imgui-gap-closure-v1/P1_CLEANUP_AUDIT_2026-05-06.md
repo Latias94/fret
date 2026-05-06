@@ -38,6 +38,23 @@ composites. It uses one local `add_editor_element(...)` helper and forwards cont
 `into_element(...)`; it does not reimplement editor control behavior. No `fret-ui-editor::imui`
 code refactor is needed for this P1 pass.
 
+## Duplicate Helper Alias Check
+
+No additional public helper alias should be deleted in this lane:
+
+- Historical duplicate names such as `select_model_ex`, `window_ex`, `window_open_ex`,
+  `floating_area_show_ex`, `begin_disabled`, `button_adapter`, and `checkbox_model_adapter` are
+  already gone from active source. Current references are historical docs, source gates, or tests
+  proving those names stay absent.
+- `ecosystem/fret-ui-kit/src/imui/adapters.rs` is not a duplicate helper family. It is a
+  contract-only external-adapter seam (`AdapterSignal*`, `AdapterSeamOptions`, and
+  `report_adapter_signal(...)`) with smoke tests.
+- `*_with_options(...)` helpers are the canonical paired API shape for default options versus
+  explicit options. They are not compatibility aliases and should not be collapsed without stronger
+  first-party proof.
+
+Decision: close the P1 alias-deletion check with a no-delete verdict.
+
 ## Large Owner Candidates
 
 The large implementation files are in `ecosystem/fret-ui-kit/src/imui/`, not

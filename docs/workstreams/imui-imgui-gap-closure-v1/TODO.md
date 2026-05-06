@@ -30,7 +30,10 @@ Last updated: 2026-05-06
       Third slice landed: `apps/fret-examples/src/imui_editor_proof_demo.rs` and its
       `collection.rs` module now route golden-proof IMUI option/state types through `fret::imui`,
       while recipe-layer imports stay explicit.
-- [ ] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
+- [x] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
+      Audit result: historical duplicate aliases are already deleted from active source,
+      `imui::adapters` is contract-only, and `*_with_options(...)` helpers are canonical explicit
+      option entry points rather than compatibility aliases. P1 closes with no further delete.
 - [x] Check whether `fret-ui-editor::imui` remains a pure adapter over declarative editor controls.
       Audit result: current `ecosystem/fret-ui-editor/src/imui.rs` remains a thin adapter around
       declarative editor controls/composites via `into_element(...)`; no code refactor is needed in
@@ -58,4 +61,6 @@ Last updated: 2026-05-06
 
 ## Closeout
 
-- [ ] Add a closeout audit once the first cleanup/refactor slice lands and gates pass.
+- [x] Add a closeout audit once the first cleanup/refactor slice lands and gates pass.
+      Result: `P1_CLOSEOUT_AUDIT_2026-05-06.md` closes P1 cleanup while leaving this lane active for
+      P2/P3 sequencing.

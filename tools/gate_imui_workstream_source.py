@@ -36,6 +36,56 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
 def main() -> None:
     checks = [
         SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-imgui-gap-closure-v1"',
+                '"status": "active"',
+                '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"',
+                '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"',
+                "python tools/gate_imui_facade_teaching_source.py",
+                "python tools/gate_imui_workstream_source.py",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"),
+            required=[
+                "Decision: close the P1 alias-deletion check with a no-delete verdict.",
+                "`ecosystem/fret-ui-kit/src/imui/adapters.rs` is not a duplicate helper family.",
+                "`*_with_options(...)` helpers are the canonical paired API shape",
+                "`debug_draw_controls.rs` | 139 KB | Highest split candidate",
+            ],
+            forbidden=[
+                "delete `imui::adapters`",
+                "delete `*_with_options",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"),
+            required=[
+                "Status: P1 cleanup slice closed; lane remains active for P2/P3 sequencing.",
+                "duplicate helper alias review found no current public helper alias worth deleting",
+                "Do not delete more IMUI helpers from this source-audit lane.",
+                "`imui::adapters` is a contract-only external-adapter seam",
+                "`*_with_options(...)` helpers are canonical explicit-options entry points",
+                "`imui-debug-draw-owner-split-v1`",
+            ],
+            forbidden=[
+                "Status: Closed",
+                "close the whole lane",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/TODO.md"),
+            required=[
+                "- [x] Identify duplicate helper aliases that can be deleted behind a source-policy gate.",
+                "P1 closes with no further delete.",
+                "- [x] Add a closeout audit once the first cleanup/refactor slice lands and gates pass.",
+                "`P1_CLOSEOUT_AUDIT_2026-05-06.md` closes P1 cleanup while leaving this lane active",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("docs/workstreams/imui-response-status-lifecycle-v1/DESIGN.md"),
             required=[
                 "`fret-authoring::Response` must stay unchanged.",
