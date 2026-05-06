@@ -12,6 +12,7 @@ Last updated: 2026-05-06
 - `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md`
+- `docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/TODO.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/MILESTONES.md`
 - `docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md`

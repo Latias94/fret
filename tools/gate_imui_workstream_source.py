@@ -84,6 +84,7 @@ def main() -> None:
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md"',
+                '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md"',
                 "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast",
                 "python tools/gate_imui_workstream_source.py",
                 "python tools/gate_imui_facade_teaching_source.py",
@@ -146,6 +147,21 @@ def main() -> None:
                 "`debug_draw_controls.rs`: 3994 lines before M2, 3431 lines after M2.",
                 "`debug_draw_controls/paint.rs`: 583 lines after M2.",
                 "Split path sampling and shape conversion helpers into a private `paths.rs` owner.",
+            ],
+            forbidden=[
+                "public API names changed",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md"),
+            required=[
+                "Status: path/shape sampling owner split landed",
+                "`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs`",
+                "Moved the path sampling and shape-conversion helpers into that owner.",
+                "No public API names, defaults, method names, or re-export paths changed.",
+                "`debug_draw_controls.rs`: 3431 lines before M3, 3057 lines after M3.",
+                "`debug_draw_controls/paths.rs`: 401 lines after M3.",
+                "Decide whether the remaining low-level geometry helpers should stay parent-local",
             ],
             forbidden=[
                 "public API names changed",

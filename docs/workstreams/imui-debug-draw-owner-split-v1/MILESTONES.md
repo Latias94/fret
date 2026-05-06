@@ -43,7 +43,7 @@ Exit criteria:
 - Any shared finite/rounding helpers either stay local to paint/path or move into a small private
   geometry owner with no public exposure.
 
-Status: next.
+Status: done. See `M3_PATHS_SLICE_2026-05-06.md`.
 
 ## Closeout
 
@@ -53,4 +53,4 @@ Exit criteria:
 - Future additive capabilities have a clear rule to start separate follow-ons.
 - The lane has a closeout audit with commands run and residual gaps.
 
-Status: planned.
+Status: next.

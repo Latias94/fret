@@ -13,10 +13,11 @@ Last updated: 2026-05-06
 - [x] Run the remaining source-policy, catalog, format-check, and diff-check gates.
 - [x] Split paint command dispatch into `debug_draw_controls/paint.rs`.
 - [x] Add a short M2 status note after the paint-dispatch slice lands.
+- [x] Split path and shape sampling into `debug_draw_controls/paths.rs`.
+- [x] Add a short M3 status note after the path-slice lands.
 
 ## Next slices
 
-- [ ] Split path sampling and shape conversion helpers into a private `paths.rs` owner.
 - [ ] Decide whether low-level image/mesh helpers stay parent-local or move into a later
       `geometry.rs`/`paint_helpers.rs` owner after the path split.
 - [ ] Decide whether private tests should remain colocated or move into owner-specific test modules.
