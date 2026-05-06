@@ -71,9 +71,9 @@ understates several areas:
 | P2 | Workbench product closure | Dear ImGui feels complete because demo, dockspace, inspector, collection, console, and metrics compose as one product. Fret still has adjacent proofs. | workspace/docking/editor/devtools | workspace shell + editor proof gates |
 | P3 | Multi-window/backend hand-feel | Still a top parity risk: hovered viewport, peek-behind, transparent payload, mixed-DPI, release/cancel paths. | runner/backend + `fret-docking` | `imui-p3-multiwindow-parity` campaign |
 | P3 | Diagnostics ambient usability | Scripted diagnostics are strong, but the always-open Demo/Metrics/Debug culture is less immediate than Dear ImGui. | `fret-diag`, `fret-devtools`, bootstrap | devtools first-open smoke |
-| P3 | Porting ergonomics | Direct Dear ImGui ports still pay a syntax/layout tax around `SameLine`, item width, label ID grammar, and child regions. | `fret-imui` / `fret-ui-kit::imui` | two-proof helper-readiness rule |
+| P3 | Porting ergonomics | Current proof surfaces already cover most authoring friction with explicit `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and stable `id_source` / `test_id` wiring. Direct Dear ImGui ports are still more verbose, but the same tax does not yet repeat across two proof surfaces, so `SameLine` / item-width / label-ID sugar stays candidate-only. | `fret-imui` / `fret-ui-kit::imui` | two-proof helper-readiness rule |
 | P3 | Child-region depth | Fret has child region chrome, but not full `BeginChild()` semantics such as axis-specific resize, clipping return, and nav flattening. | `fret-ui-kit::imui` if proven | child-region focused tests |
-| P3 | Collection helper readiness | Two collection proofs exist, but do not yet prove one shared helper shape. | app proof first, shared helper later | collection proof-surface gates |
+| P3 | Collection helper readiness | The editor collection proof is strong but app-owned. Current shared pieces are already narrow (`ImUiMultiSelectState`, sortable row recipe, drag-preview recipe). `fret-node` has marquee/multi-selection behavior, but its graph-space node/edge/group semantics are not a second IMUI collection proof. | app proof first, shared helper later | collection proof-surface gates |
 | P4 | Runtime public surface | No current evidence says `crates/fret-ui` must widen for Dear ImGui parity. | runtime ADR only if proven | ADR + focused tests |
 
 ## Fearless Refactor / Delete Candidates
@@ -99,8 +99,10 @@ These are candidates, not approved edits. Each requires a narrow follow-on with 
    surface with property grid, color edit, input, menu/popup, and debug draw references.
 3. P3 porting sugar proposal: only after two proof surfaces show repeated friction, propose opt-in
    `same_line` / item-width / label-ID helpers in `fret-ui-kit::imui`.
-4. P3 diagnostics proposal: define the Fret equivalent of `ShowDemoWindow + ShowMetricsWindow` as
-   a devtools/bootstrap surface, not as runtime clutter.
+4. P3 diagnostics proposal: use the existing
+   `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` follow-on to keep the
+   `ShowDemoWindow + ShowMetricsWindow` equivalent on the diagnostics-consumer lane, not as
+   runtime clutter.
 5. P3 multi-window follow-on: continue in `docking-multiwindow-imgui-parity`, not in generic IMUI.
 
 ## Decision

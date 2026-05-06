@@ -1,0 +1,124 @@
+# P3 Porting Sugar Readiness - 2026-05-06
+
+Status: readiness audit; no porting-sugar follow-on opened yet
+Last updated: 2026-05-06
+
+## Decision
+
+Do not add broad Dear ImGui porting-sugar APIs to `fret-imui` or `fret-ui-kit::imui` from this
+source-audit lane.
+
+The current Fret proof surfaces already cover the common authoring pressure without needing a
+public mirror of Dear ImGui's cursor and label grammar:
+
+- `ecosystem/fret-imui/src/frontend.rs` exposes `row`, `column`, `id`, `push_id`, and keyed
+  iteration for the minimal immediate-mode surface.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` exposes typed container helpers such as
+  `horizontal_with_options`, `vertical_with_options`, `grid_with_options`, `table_with_options`,
+  `scroll_with_options`, and `child_region_with_options`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers.rs` keeps horizontal layout explicit through
+  `HorizontalOptions` (`layout`, `gap`, `justify`, `items`, `wrap`, `test_id`).
+- `apps/fret-cookbook/examples/imui_action_basics.rs` uses `ui.horizontal(...)` for small inline
+  command groups.
+- `apps/fret-cookbook/examples/imui_editor_controls_basics.rs` and
+  `apps/fret-examples/src/imui_editor_proof_demo.rs` use explicit `id_source` / `test_id` fields
+  on editor controls instead of label-string suffix parsing.
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` uses `PropertyGrid::row_with(...)` for
+  editor-style label/value rows, which is the main place Dear ImGui authors would otherwise reach
+  for `SameLine()` plus item-width tuning.
+
+That is enough for current editor proofs, but it is not a "drop C++ Dear ImGui code into Fret"
+compatibility surface.
+
+## Dear ImGui Reference Axes
+
+The relevant `repo-ref/imgui` behavior axes are:
+
+- `SameLine(offset_from_start_x, spacing)` mutates the current window cursor so the next submitted
+  item appears to the right of the previous item.
+- `PushItemWidth`, `PopItemWidth`, `SetNextItemWidth`, and `CalcItemWidth` provide stack/next-item
+  width defaults for "large item plus label" widgets.
+- `PushID` / `PopID` and label suffixes (`##` / `###`) let authors decouple visible labels from
+  hashed item identity.
+- The Dear ImGui demo uses these together to build dense settings panes, help markers, metrics
+  rows, log controls, ID-stack tools, and table-like inline groups.
+
+These APIs are effective in Dear ImGui because it owns a mutable cursor, a per-window ID stack, and
+a label parser. Fret's public surface should not copy that grammar unless a Fret-native proof shows
+the same authoring tax in at least two places.
+
+## Current Fret Read
+
+- Confident: inline layout is already covered for current teaching surfaces.
+  Evidence: `ui.row(...)`, `ui.horizontal(...)`, and `horizontal_with_options(...)` cover the
+  current cookbook and proof needs without a mutable `SameLine()` cursor operation.
+- Confident: editor label/value layout should stay component-owned for now.
+  Evidence: `PropertyGrid::row_with(...)` expresses the "label plus control plus optional trailing
+  affordance" shape directly, avoiding per-control item-width stack state.
+- Confident: label and identity must stay explicit, not string-parsed.
+  Evidence: Fret controls expose `id_source`, `test_id`, `a11y_label`, row/test id options, and
+  `ui.push_id(...)`; current proofs use those fields repeatedly.
+- Likely: a small `same_line`-style alias would be weaker than the existing typed layout helpers.
+  It would add Dear ImGui vocabulary without solving a repeated Fret-specific pain point.
+- Likely: a future item-width helper, if justified, should be an editor/property-row or control
+  sizing option rather than a global stack/next-item API.
+- Unclear: whether a migration shim for raw Dear ImGui snippets is worth supporting. No current
+  first-party proof is trying to mechanically port a large Dear ImGui demo body into Fret.
+
+## Follow-On Threshold
+
+Open a narrow porting-sugar follow-on only when a repeated authoring tax appears in at least two
+first-party proof surfaces with a runnable repro and gate.
+
+Candidate follow-ons, in priority order:
+
+1. **Inline layout alias**: only if two proof surfaces repeatedly need one-item horizontal
+   continuation and `horizontal_with_options(...)` is visibly too heavy.
+2. **Property-row width policy**: only if two editor/property surfaces need the same label width,
+   control width, right-alignment, or trailing affordance policy and `PropertyGrid::row_with(...)`
+   cannot express it cleanly.
+3. **Control sizing preset**: only if multiple controls duplicate the same width/height options in
+   app code; keep this as typed options, not an item-width stack.
+4. **Label/identity helper**: only for a Fret-native naming helper that preserves explicit
+   `label`, `id_source`, `test_id`, and accessibility fields. Do not parse `##` / `###` suffixes in
+   public APIs by default.
+
+## Rejection Criteria
+
+Do not open this follow-on for any of these reasons alone:
+
+- a single cookbook example uses `ui.horizontal(...)`,
+- app code repeats `id_source` and `test_id` once per control,
+- one proof has many `PropertyGrid::row_with(...)` calls,
+- a Dear ImGui demo snippet would be shorter with `SameLine()`,
+- a C++ API name exists upstream but lacks a Fret-native owner, repro, and gate.
+
+## Recommended Next Slice
+
+Keep `porting sugar readiness` candidate-only for now.
+
+If this becomes active, start with the smallest named pain point:
+
+- `imui-inline-layout-alias-v1` for a proven two-surface inline layout tax, or
+- `imui-property-row-width-policy-v1` for a proven editor/property-grid sizing tax.
+
+Do not start with a broad `imgui-porting-sugar` crate or a direct mirror of
+`SameLine` / `PushItemWidth` / `SetNextItemWidth` / label suffix parsing.
+
+Suggested readiness gates:
+
+```powershell
+rg -n "SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp
+rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
+cargo check -p fret-demo --bin imui_editor_proof_demo
+```
+
+## Gate Results
+
+2026-05-06 local results:
+
+- `rg -n "SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp`
+  passed and confirmed the relevant Dear ImGui cursor, width, and identity axes.
+- `rg -n "row\\(|horizontal\\(|horizontal_with_options|row_with|id_source|test_id|push_id" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs`
+  passed and confirmed the current Fret authoring/proof anchors.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo` passed.

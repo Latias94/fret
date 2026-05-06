@@ -147,6 +147,11 @@ Example | Status | Feature | Run | Diag suite
 [`imui_debug_draw_basics.rs`](./examples/imui_debug_draw_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_debug_draw_basics` | `cookbook-imui-debug-draw-basics`
 [`imui_editor_controls_basics.rs`](./examples/imui_editor_controls_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_editor_controls_basics` | -
 
+After these focused cookbook lessons, use `cargo run -p fret-demo --bin imui_editor_proof_demo` for
+the heavier editor-panel proof that combines state, command actions, editor controls, menu/popup
+behavior, and diagnostic `test_id` anchors. It lives in `fret-demo`, so it is not listed as a
+cookbook example row.
+
 ## Advanced — Content (feature-gated, still evolving)
 
 Example | Status | Feature | Run | Diag suite

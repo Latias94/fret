@@ -25,6 +25,34 @@
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P2_GOLDEN_PATH_PROMOTION_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_DESIGN_SURFACE_READINESS_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/TODO.md"
     },
@@ -78,6 +106,78 @@
       "command": "cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast"
     },
     {
+      "name": "imui editor proof source gates",
+      "command": "cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast"
+    },
+    {
+      "name": "imui editor proof bin check",
+      "command": "cargo check -p fret-demo --bin imui_editor_proof_demo"
+    },
+    {
+      "name": "imui editor proof docs promotion anchors",
+      "command": "rg -n \"imui_editor_proof_demo|state, command actions|command/action dispatch\" apps/fret-cookbook/README.md apps/fret-cookbook/EXAMPLES.md docs/examples/README.md"
+    },
+    {
+      "name": "imui public surface facade anchors",
+      "command": "rg -n \"pub mod imui|pub use fret_imui|pub use fret_ui_kit::imui|pub mod kit|pub mod editor|pub mod docking|pub mod prelude\" ecosystem/fret/src/lib.rs"
+    },
+    {
+      "name": "imui public surface facade tests",
+      "command": "cargo nextest run -p fret root_surface_exposes_explicit_imui_module readme_and_rustdoc_expose_imui_as_explicit_optional_surface --no-fail-fast"
+    },
+    {
+      "name": "fret facade imui feature check",
+      "command": "cargo check -p fret --no-default-features --features imui"
+    },
+    {
+      "name": "imui component surface kit anchors",
+      "command": "rg -n \"pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls\" ecosystem/fret-ui-kit/src/imui.rs"
+    },
+    {
+      "name": "imui component surface facade anchors",
+      "command": "rg -n \"fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)\" ecosystem/fret-ui-kit/src/imui/facade_writer.rs"
+    },
+    {
+      "name": "imui component surface editor anchors",
+      "command": "rg -n \"pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)\" ecosystem/fret-ui-editor/src/imui.rs"
+    },
+    {
+      "name": "imui component surface upstream anchors",
+      "command": "rg -n \"Widgets: Text|Widgets: Main|Widgets: Combo Box|Widgets: Trees|Widgets: Selectables|Widgets: List Boxes|Widgets: Data Plotting|Widgets: Menus|Tooltips|Popups, Modals|Tables|Tab Bars|Drag and Drop|Debug Utilities\" repo-ref/imgui/imgui.h"
+    },
+    {
+      "name": "imui component surface kit smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui design surface editor anchors",
+      "command": "rg -n \"EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1\" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
+    },
+    {
+      "name": "imui design surface kit anchors",
+      "command": "rg -n \"component\\\\.imui\\\\.disabled_alpha|imui_text_input_style_from_theme|input_text_model_uses_compact_imui_chrome_without_focus_ring|textarea_model_uses_compact_imui_chrome_without_focus_ring|hovered_like_imgui|ImUiHoveredFlags\" ecosystem/fret-ui-kit/src/imui"
+    },
+    {
+      "name": "imui design surface upstream anchors",
+      "command": "rg -n \"ShowStyleEditor|ImGuiStyle|PushStyleColor|PushStyleVar|StyleColorsDark|StyleColorsLight|StyleColorsClassic\" repo-ref/imgui/imgui.h repo-ref/imgui/imgui_demo.cpp"
+    },
+    {
+      "name": "imui design surface editor tests",
+      "command": "cargo nextest run -p fret-ui-editor default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome installed_preset_can_be_reapplied_after_base_theme_reset --no-fail-fast"
+    },
+    {
+      "name": "imui design surface kit tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui input_text_model_uses_compact_imui_chrome_without_focus_ring textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast"
+    },
+    {
+      "name": "porting sugar imgui anchors",
+      "command": "rg -n \"SameLine|PushItemWidth|SetNextItemWidth|CalcItemWidth|PushID|##|###\" repo-ref/imgui/imgui.h repo-ref/imgui/imgui.cpp repo-ref/imgui/imgui_demo.cpp"
+    },
+    {
+      "name": "porting sugar fret anchors",
+      "command": "rg -n \"row\\\\(|horizontal\\\\(|horizontal_with_options|row_with|id_source|test_id|push_id\" ecosystem/fret-imui/src/frontend.rs ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/options/containers.rs apps/fret-cookbook/examples/imui_action_basics.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }
@@ -86,6 +186,13 @@
     "docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P2_GOLDEN_PATH_PROMOTION_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_DESIGN_SURFACE_READINESS_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "ecosystem/fret-imui/src/lib.rs",
@@ -93,9 +200,24 @@
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret/src/lib.rs",
+    "apps/fret-cookbook/src/lib.rs",
+    "apps/fret-cookbook/README.md",
+    "apps/fret-cookbook/EXAMPLES.md",
+    "docs/examples/README.md",
     "apps/fret-cookbook/examples/imui_action_basics.rs",
     "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
     "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "apps/fret-demo/src/bin/imui_editor_proof_demo.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_context_menu_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_select_all_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_rename_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_delete_action_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",
     "repo-ref/imgui/imgui_draw.cpp",

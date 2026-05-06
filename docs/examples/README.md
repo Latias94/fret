@@ -140,8 +140,10 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
   - `imui_debug_draw_basics` — canvas-backed draw-list authoring and metadata through
     `fret::imui::kit`
 - Product proof:
-- `imui_editor_proof_demo` is the heavier proof where explicit stable identity is already visible;
-  use it when you need the intended generic/editor owner split
+  - `cargo run -p fret-demo --bin imui_editor_proof_demo`
+  - `imui_editor_proof_demo` is the heavier proof where explicit stable identity is already visible
+  - use it when you need the intended generic/editor owner split plus state, command/action
+    dispatch, editor controls, menu/popup behavior, and diagnostic `test_id` anchors
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
 - Reference/contract proof:

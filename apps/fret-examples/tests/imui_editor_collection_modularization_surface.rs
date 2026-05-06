@@ -29,7 +29,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "pub(super) fn render_collection_first_asset_browser_proof(",
-        "ui: &mut fret_imui::ImUi<'_, '_, KernelApp>,",
+        "ui: &mut ImUi<'_, '_, KernelApp>",
         "#[cfg(test)]",
         "fn proof_collection_drag_rect_normalizes_drag_direction() {",
     ] {

@@ -55,6 +55,11 @@ Exit criteria:
 - It combines immediate authoring, editor controls, actions/commands, popup/menu behavior, and
   diagnostic hooks.
 - Cookbook/docs point at that proof without promoting historical smoke demos as the default path.
+  Current proof surface: `apps/fret-examples/src/imui_editor_proof_demo.rs` with the demo-local
+  `collection.rs` module. The proof has been gated with focused collection source tests plus
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`; cookbook/docs promotion now points from
+  the focused IMUI cookbook lessons to the heavier `fret-demo` proof without turning it into a
+  boring-ladder cookbook example.
 
 ## M4 - Follow-On Split
 
@@ -62,3 +67,25 @@ Exit criteria:
 
 - Remaining Dear ImGui-class gaps are split into narrow lanes with owner, repro, gate, and evidence.
 - This lane remains the source-audit and priority map, not a dumping ground for all implementation.
+  Current public-surface audit result: keep the existing owner split. `fret-imui` stays
+  policy-light, apps teach the opt-in `fret::imui` lane, and policy-heavy widgets remain under
+  `fret::imui::kit` / `editor` / `docking`. New public helpers need two proof surfaces plus a
+  focused gate before they become default authoring vocabulary.
+  Current component-surface audit result: do not open a broad widget-backlog lane. The current
+  `fret-ui-kit::imui` surface already covers the editor-proof path across controls, text,
+  disclosure, menus/popups/tooltips, tabs, tables, drag/drop, child regions, virtual lists, and
+  debug draw. List-box, plotting, image item, style-editor, advanced-table, and child-flag work
+  should be narrow proof-led follow-ons.
+  Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
+  outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
+  Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
+  Current porting-sugar audit result: keep `SameLine` / item-width / label-ID sugar candidate-only
+  until at least two proof surfaces pay the same authoring tax. Prefer typed Fret helpers
+  (`horizontal_with_options`, `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over
+  copying Dear ImGui's mutable cursor, item-width stack, or label suffix parser.
+  Current child-region audit result: keep `child-region depth` as a candidate-only item until a
+  behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
+  proof and gate.
+  Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
+  proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
+  evidence, not an API-freezing proof surface.

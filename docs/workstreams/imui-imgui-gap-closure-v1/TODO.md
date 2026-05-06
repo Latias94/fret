@@ -45,19 +45,66 @@ Last updated: 2026-05-06
 
 ## P2 - User-Usable Golden Path
 
-- [ ] Pick the smallest runnable proof that should teach a complete editor panel.
-- [ ] Verify the proof includes state, command/action dispatch, editor controls, menu/popup, and
+- [x] Pick the smallest runnable proof that should teach a complete editor panel.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo.rs` plus the demo-local
+      `collection.rs` module is the selected proof surface; `cargo check -p fret-demo --bin
+      imui_editor_proof_demo` passes.
+- [x] Verify the proof includes state, command/action dispatch, editor controls, menu/popup, and
       diagnostic-friendly `test_id`s.
-- [ ] Promote missing cookbook/docs references only after the proof runs and source gates pass.
+      Result: the proof carries named demo state, explicit action handlers, popup/menu dispatch,
+      and stable `test_id` / `viewport_test_id` anchors; the collection source-guard tests now
+      pass under `cargo nextest run -p fret-examples --test ...`.
+- [x] Promote missing cookbook/docs references only after the proof runs and source gates pass.
+      Result: `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, and
+      `docs/examples/README.md` now point from the focused IMUI cookbook lessons to
+      `cargo run -p fret-demo --bin imui_editor_proof_demo` as the heavier editor-panel proof,
+      without reclassifying it as a boring-ladder cookbook example.
 
 ## P3 - Dear ImGui-Class Follow-On Candidates
 
-- [ ] Porting sugar readiness: `SameLine`/item-width/label-ID helpers only if two proof surfaces pay
-      the same tax.
-- [ ] Diagnostics/devtools readiness: define a Fret equivalent of Demo/Metrics/Debug discoverability.
-- [ ] Collection helper readiness: keep app-owned until both proof surfaces require one helper.
-- [ ] Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
-- [ ] Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
+Priority order for the next locally testable slices:
+
+1. Public facade/API catalog: keep the app-facing `fret::imui` lane explicit and freeze owner
+   rules before adding more public helpers.
+   Current readiness audit: `P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md`. Keep `fret-imui`
+   policy-light, put generic policy-heavy helpers in `kit`, editor controls in `editor`, docking
+   helpers in `docking`, and continue teaching apps through `fret::imui`.
+2. Component surface catalog: keep the widget/component gap read source-backed before opening
+   implementation follow-ons.
+   Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
+   enough for the active editor proof; list-box, plot, image-item, style-editor, advanced-table, and
+   child-flag mirrors remain behavior-specific candidates, not a broad widget backlog.
+3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
+   mutable runtime style stack.
+   Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
+   editor tokens cover the active proof; a style editor, preset selector, or visual gate should be a
+   narrow follow-on with evidence.
+4. Porting sugar readiness: `SameLine`/item-width/label-ID helpers only if two proof surfaces pay
+   the same tax. Current proof surfaces already keep most of that tax local with
+   `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and
+   explicit `id_source` / `test_id` wiring.
+   Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen sugar until a
+   second surface repeats the same pattern; do not copy Dear ImGui's string-label parser or
+   stack/next-item width grammar into Fret by default.
+5. Diagnostics/devtools readiness: define a Fret equivalent of Demo/Metrics/Debug discoverability.
+   Follow-on: `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` and
+   `docs/workstreams/diag-fearless-refactor-v2/README.md` keep the GUI
+   productization / first-open workflow on the existing diagnostics-consumer lane.
+6. Collection helper readiness: keep app-owned until both proof surfaces require one helper.
+   Current readiness audit: `P3_COLLECTION_HELPER_READINESS_2026-05-06.md`. The collection proof is
+   editor-grade, but most behavior remains app-owned; the already-extracted shared pieces are
+   `ImUiMultiSelectState`, sortable row recipes, and drag-preview recipes. `fret-node` is useful
+   comparison evidence but not a second IMUI collection proof because it owns graph-specific
+   node/edge/group semantics.
+7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
+   Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
+   keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
+   collection behavior. The next credible follow-on is behavior-specific, with `ResizeY` first if a
+   proof needs it; do not open a generic `BeginChild()` flag-mirror lane.
+8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
+
+These slices should stay Windows/Web-verifiable first; Linux-specific validation is not a gate for
+opening the slice.
 
 ## Closeout
 
