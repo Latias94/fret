@@ -38,6 +38,15 @@ for implementation work. The execution order should be:
      Blindly mirroring Dear ImGui API names would add maintenance cost without improving the
      architecture.
 
+5. **Performance discipline**
+   - Keep runtime smoothness work in the dedicated perf workstreams:
+     `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md`,
+     `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1.md`, and the
+     `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
+     comparison note.
+   - Reason: performance gaps are review and attribution problems first, not a signal to widen the
+     IMUI widget backlog.
+
 ## What Is Already Correct
 
 - `fret-imui` is still policy-light and depends only on `fret-authoring` + `fret-ui`.
