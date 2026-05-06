@@ -175,14 +175,55 @@ Evidence:
 
 Follow-up:
 
-- The full `ui-gallery-steady` suite now exposes a separate suite/baseline drift:
-  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json` exists in
-    `tools/diag-scripts/suites/perf-ui-gallery-steady/suite.json`.
-  - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json` has no row for it.
-- Attempting to seed that row locally with the suite prewarm/prelude hooks timed out before writing
-  `--perf-baseline-out`; do not synthesize this baseline row from a failed run. Treat it as a narrow
-  follow-up: stabilize or simplify `ui-gallery-overlay-pointer-move-steady`, then seed the missing
-  Windows baseline row from a passing run.
+- Resolved below: `ui-gallery-overlay-pointer-move-steady` was stabilized and seeded into the
+  Windows RTX4090 baseline.
+
+## Finding (2026-05-06): overlay pointer-move probe should be a bounded steady pointer sample
+
+Observed:
+
+- `ui-gallery-overlay-pointer-move-steady` was part of the `ui-gallery-steady` suite, but the
+  Windows RTX4090 baseline had no row for it.
+- The script still used the old pattern of navigating through the sidebar and waiting for font
+  catalog stability inside the measured script.
+- The pointer sweep used `steps=420`; `move_pointer_sweep` advances one step per frame, so this
+  could exceed normal gate timeouts and exceeded the bundle retention budget (`max_snapshots=240`).
+
+Change:
+
+- Added `FRET_UI_GALLERY_START_PAGE=overlay` to the script metadata.
+- Removed sidebar navigation and script-local font stabilization from the probe.
+- Reduced the sweep to `steps=96`, which still produces a large enough pointer-move sample for
+  dispatch/hit-test accounting while keeping the script bounded.
+- Added the missing Windows baseline row for
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json`.
+
+Evidence:
+
+- `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json --dir target/fret-diag/overlay-pointer-steady-script-check2 --session-auto --timeout-ms 240000 --launch target/release/fret-ui-gallery.exe`
+  - Passed (`run_id=1778078914577`).
+  - Bundle:
+    `target/fret-diag/overlay-pointer-steady-script-check2/sessions/1778078912845-86592/1778079003710-ui-gallery-overlay-pointer-move-steady/bundle.schema2.json`
+- `target/release/fretboard.exe diag stats <bundle> --sort time --top 20`
+  - `time p50/p95 (us)`: total `1469/3038`, layout `1150/1715`, prepaint `181/224`, paint `127/287`,
+    dispatch `122/176`, hit_test `6/15`.
+  - Derived pointer move: `frames_considered=98`, max dispatch/hit_test `277/22us`,
+    `snapshots_with_global_changes=0`.
+- `cargo run -p fretboard-dev -- diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json <bundle> --perf-baseline-out target/fret-diag/baseline-ui-gallery-overlay-pointer-move.windows-rtx4090.v1.json --sort time --warmup-frames 5 --perf-baseline-headroom-pct 40`
+  - Wrote the baseline seed used for the checked-in row.
+- Suite/baseline membership check:
+  - `ui-gallery-steady` suite scripts: `11`
+  - `ui-gallery-steady.windows-rtx4090.v1.json` rows: `11`
+  - Missing in baseline: none.
+
+Remaining blocker:
+
+- The full `ui-gallery-steady` gate still stalls before measured scripts when using the suite prewarm
+  hook:
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 600000 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+  - The latest `target/fret-diag/script.json` was the prewarm script and stopped at step 0
+    (`font_catalog_populated`), so this is a suite prewarm/normalization issue rather than a
+    baseline-entry issue.
 
 ## Complex UI suite (typical perf)
 
