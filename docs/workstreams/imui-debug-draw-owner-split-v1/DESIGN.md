@@ -1,6 +1,6 @@
 # ImUi Debug Draw Owner Split v1
 
-Status: active execution lane
+Status: closed execution lane
 Last updated: 2026-05-06
 
 Related:
@@ -81,6 +81,12 @@ which makes the next Dear ImGui-class draw-list work harder to review safely.
 3. Preserve the existing `fret-ui-kit` debug draw smoke/test floor.
 4. Leave the next paint/path/test split candidates explicit instead of treating this as a generic
    cleanup bucket.
+
+Closeout note (2026-05-06): the lane completed the private owner split and then moved the large
+colocated test block into a private `debug_draw_controls/tests.rs` owner instead of splitting tests
+across `commands.rs` / `paint.rs` / `paths.rs`. That per-source-owner split was judged not worth the
+extra boundary noise because the tests intentionally exercise the parent façade plus multiple
+private owners together.
 
 ## Non-goals
 

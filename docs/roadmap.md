@@ -32,13 +32,16 @@ Tracker highlights:
   `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`,
   `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`, and
   `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`.
-- ImUi debug draw owner-split follow-on (active narrow structural lane for splitting
-  `debug_draw_controls.rs` private command/paint/path owners without public API widening):
+- ImUi debug draw owner-split follow-on (closed narrow structural lane for splitting
+  `debug_draw_controls.rs` private command/paint/path owners without public API widening; see the
+  closeout audit for the private test-owner verdict):
   `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`,
   `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`,
   `docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md`,
-  `docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md`, and
+  `docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md`,
+  `docs/workstreams/imui-debug-draw-owner-split-v1/M4_GEOMETRY_AND_PAINT_HELPERS_SLICE_2026-05-06.md`,
+  `docs/workstreams/imui-debug-draw-owner-split-v1/CLOSEOUT_AUDIT_2026-05-06.md`, and
   `docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md`.
 - ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in

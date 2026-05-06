@@ -1,6 +1,6 @@
 # ImUi Debug Draw Owner Split v1 - TODO
 
-Status: active
+Status: closed
 Last updated: 2026-05-06
 
 ## Current slice
@@ -20,10 +20,13 @@ Last updated: 2026-05-06
 
 - [x] Split the remaining geometry / image / mesh helpers into `geometry.rs` and `paint.rs`
       while keeping public debug draw names stable.
-- [ ] Decide whether private tests should remain colocated or move into owner-specific test modules.
+- [x] Decide whether private tests should remain colocated or move into owner-specific test modules.
+      Verdict: move the large colocated block into private `debug_draw_controls/tests.rs`; do not
+      split the tests into source-owner files because the coverage intentionally spans the parent
+      recording façade plus private command/path/paint owners.
 
 ## Guardrails
 
-- [ ] Keep all public `fret-ui-kit::imui` debug draw names stable.
-- [ ] Keep `ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs` compiling without path changes.
-- [ ] Keep additive draw-list capability work out of this lane.
+- [x] Keep all public `fret-ui-kit::imui` debug draw names stable.
+- [x] Keep `ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs` compiling without path changes.
+- [x] Keep additive draw-list capability work out of this lane.

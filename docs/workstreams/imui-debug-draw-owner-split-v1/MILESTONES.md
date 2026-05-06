@@ -1,6 +1,6 @@
 # ImUi Debug Draw Owner Split v1 - Milestones
 
-Status: active
+Status: closed
 Last updated: 2026-05-06
 
 ## M0 - Baseline and lane scaffold
@@ -66,4 +66,4 @@ Exit criteria:
 - Future additive capabilities have a clear rule to start separate follow-ons.
 - The lane has a closeout audit with commands run and residual gaps.
 
-Status: next.
+Status: done. See `CLOSEOUT_AUDIT_2026-05-06.md`.

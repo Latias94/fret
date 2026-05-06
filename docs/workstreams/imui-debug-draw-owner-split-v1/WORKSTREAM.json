@@ -50,6 +50,10 @@
     },
     {
       "role": "reference",
+      "path": "docs/workstreams/imui-debug-draw-owner-split-v1/CLOSEOUT_AUDIT_2026-05-06.md"
+    },
+    {
+      "role": "reference",
       "path": "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs"
     },
     {
@@ -59,6 +63,10 @@
     {
       "role": "reference",
       "path": "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs"
+    },
+    {
+      "role": "reference",
+      "path": "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests.rs"
     },
     {
       "role": "reference",
@@ -115,6 +123,7 @@
     "docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md",
     "docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md",
     "docs/workstreams/imui-debug-draw-owner-split-v1/M4_GEOMETRY_AND_PAINT_HELPERS_SLICE_2026-05-06.md",
+    "docs/workstreams/imui-debug-draw-owner-split-v1/CLOSEOUT_AUDIT_2026-05-06.md",
     "docs/workstreams/imui-debug-draw-owner-split-v1/TODO.md",
     "docs/workstreams/imui-debug-draw-owner-split-v1/MILESTONES.md",
     "docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md",
@@ -122,6 +131,7 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests.rs",
     "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs",
     "docs/workstreams/README.md",
     "docs/roadmap.md",
@@ -132,7 +142,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
+    "default_action": "close",
     "notes": "Continue this lane only for private debug draw owner splits that preserve public API shape and behavior. Additive draw-list capabilities, renderer draw-call attribution, raw buffers, callbacks, or per-geometry hit testing must start as separate follow-ons."
   }
 }
