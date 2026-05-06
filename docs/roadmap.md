@@ -36,7 +36,8 @@ Tracker highlights:
   `debug_draw_controls.rs` private command/paint/path owners without public API widening):
   `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`,
   `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`,
-  `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`, and
+  `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`,
+  `docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md`, and
   `docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md`.
 - ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in

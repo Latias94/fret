@@ -33,7 +33,7 @@ Exit criteria:
 - Debug draw list recording methods stay public-surface owned by `debug_draw_controls.rs`.
 - Existing image/SVG/mesh/clip tests and smoke coverage still pass.
 
-Status: next.
+Status: done. See `M2_PAINT_DISPATCH_SLICE_2026-05-06.md`.
 
 ## M3 - Path/geometry owner
 
@@ -43,7 +43,7 @@ Exit criteria:
 - Any shared finite/rounding helpers either stay local to paint/path or move into a small private
   geometry owner with no public exposure.
 
-Status: planned.
+Status: next.
 
 ## Closeout
 

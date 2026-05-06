@@ -83,6 +83,7 @@ def main() -> None:
                 '"follow_on_of": "imui-imgui-gap-closure-v1"',
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md"',
+                '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md"',
                 "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast",
                 "python tools/gate_imui_workstream_source.py",
                 "python tools/gate_imui_facade_teaching_source.py",
@@ -133,6 +134,21 @@ def main() -> None:
             ],
             forbidden=[
                 "runtime contract changed",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md"),
+            required=[
+                "Status: paint command-dispatch owner split landed",
+                "`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs`",
+                "Moved `paint_debug_draw_commands(...)` into that owner.",
+                "No public API names, defaults, method names, or re-export paths changed.",
+                "`debug_draw_controls.rs`: 3994 lines before M2, 3431 lines after M2.",
+                "`debug_draw_controls/paint.rs`: 583 lines after M2.",
+                "Split path sampling and shape conversion helpers into a private `paths.rs` owner.",
+            ],
+            forbidden=[
+                "public API names changed",
             ],
         ),
         SourceCheck(
