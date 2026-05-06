@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "slug": "imui-imgui-gap-closure-v1",
+  "title": "ImUi Dear ImGui Gap Closure v1",
+  "status": "active",
+  "updated": "2026-05-06",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/DESIGN.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the three current IMUI teaching examples plus the editor/workbench/docking proof surfaces before adding or deleting IMUI APIs.",
+    "commands": [
+      "cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics",
+      "cargo run -p fret-cookbook --features cookbook-imui --example imui_debug_draw_basics",
+      "cargo run -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics",
+      "cargo run -p fret-demo --bin imui_editor_proof_demo",
+      "cargo run -p fret-demo --bin workspace_shell_demo",
+      "cargo run -p fret-demo --bin docking_arbitration_demo"
+    ]
+  },
+  "gates": [
+    {
+      "name": "json shape",
+      "command": "python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "imui facade teaching source",
+      "command": "python tools/gate_imui_facade_teaching_source.py"
+    },
+    {
+      "name": "imui workstream source",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "fret-imui focused tests",
+      "command": "cargo nextest run -p fret-imui --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit imui smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-editor imui smoke",
+      "command": "cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
+    "ecosystem/fret-imui/src/lib.rs",
+    "ecosystem/fret-imui/src/frontend.rs",
+    "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-ui-editor/src/imui.rs",
+    "apps/fret-cookbook/examples/imui_action_basics.rs",
+    "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "repo-ref/imgui/imgui.h",
+    "repo-ref/imgui/imgui.cpp",
+    "repo-ref/imgui/imgui_draw.cpp",
+    "repo-ref/imgui/imgui_demo.cpp",
+    "repo-ref/imgui/docs/BACKENDS.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue here while the work is source-audit, prioritization, and first-slice coordination. Split implementation-heavy fixes into narrower follow-ons once a specific owner, repro, and gate is named."
+  }
+}

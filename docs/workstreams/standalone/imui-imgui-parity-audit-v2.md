@@ -1,7 +1,12 @@
 # imui ↔ Dear ImGui Parity Audit (v2)
 
-Status: current audit snapshot (not an ADR)
-Last updated: 2026-04-23
+Status: Historical reference (partially superseded by `docs/workstreams/imui-imgui-gap-closure-v1/`)
+Last updated: 2026-05-06
+
+Status note (2026-05-06): this document remains useful as a comparison snapshot and historical
+evidence set, but the current gap-closing work now lives in
+`docs/workstreams/imui-imgui-gap-closure-v1/`. Read the sections below as archive evidence unless
+they are explicitly revalidated by the new lane's source audit.
 
 ## Purpose
 

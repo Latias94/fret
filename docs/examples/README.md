@@ -127,7 +127,8 @@ auto-enable required cookbook features for known Lab examples and print what it 
 Immediate-mode sidecar (when you intentionally want the IMUI lane):
 
 - First-party authoring policy: use the root `fret::imui` lane (`use fret::imui::prelude::*;` or
-  `use fret::imui::{kit::..., editor, prelude::*};`) for immediate-mode teaching surfaces. The
+  `use fret::imui::{kit::..., prelude::*};` for kit-focused teaching surfaces, or
+  `use fret::imui::{kit::..., editor, prelude::*};` for editor-grade teaching surfaces. The
   only deliberate exception is `imui_node_graph_demo`, which remains a compatibility-only
   retained-bridge proof.
 
@@ -139,7 +140,8 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
   - `imui_debug_draw_basics` — canvas-backed draw-list authoring and metadata through
     `fret::imui::kit`
 - Product proof:
-  - `imui_editor_proof_demo` — heavier editor-grade proof on the intended generic/editor owner split
+- `imui_editor_proof_demo` is the heavier proof where explicit stable identity is already visible;
+  use it when you need the intended generic/editor owner split
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
 - Reference/contract proof:

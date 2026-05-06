@@ -26,6 +26,12 @@ Workstream docs live under `docs/workstreams/` (living implementation trackers; 
 
 Tracker highlights:
 
+- ImUi Dear ImGui gap-closure lane (current source-backed audit for which IMUI gaps are still real,
+  which parity notes are stale, and which fearless cleanup or follow-on should be split next):
+  `docs/workstreams/imui-imgui-gap-closure-v1/DESIGN.md`,
+  `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`,
+  `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`, and
+  `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`.
 - ImUi editor-grade product-closure umbrella (maintenance/status lane that keeps the ordered phase
   ownership for the remaining gap against Dear ImGui, while implementation-heavy work stays in
   narrow follow-ons or the active docking parity lane): `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`,

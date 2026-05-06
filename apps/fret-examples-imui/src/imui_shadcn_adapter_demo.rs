@@ -6,12 +6,13 @@
 
 use std::sync::Arc;
 
+#[rustfmt::skip]
 use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_kit::imui::TableSortDirection;
-use fret_ui_kit::{ColorRef, Space, UiExt as _, ui};
+use fret_ui_kit::{ui, ColorRef, Space, UiExt as _};
 use fret_ui_shadcn::facade as shadcn;
 
 const TEST_ID_ROOT: &str = "imui-shadcn-demo.root";
@@ -466,10 +467,7 @@ impl View for ImUiShadcnAdapterView {
                                 };
                                 let table_columns = if compact_surface {
                                     vec![
-                                        kit::TableColumn::px(
-                                            "Signal###inspector-signal",
-                                            inspector_widths.signal,
-                                        )
+                                        kit::TableColumn::fill("Signal###inspector-signal")
                                         .sorted(inspector_sort.direction())
                                         .resizable_with_limits(Some(Px(96.0)), Some(Px(180.0))),
                                         kit::TableColumn::px(
