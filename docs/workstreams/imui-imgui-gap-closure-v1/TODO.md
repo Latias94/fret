@@ -20,6 +20,10 @@ Last updated: 2026-05-06
 
 - [ ] Audit public teaching imports for stale direct `fret_imui::` or `fret_ui_kit::imui::`
       default-path examples.
+      First slice landed: `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs` now routes
+      `TableSortDirection` through the app-facing `fret::imui::kit` facade, and
+      `tools/gate_imui_facade_teaching_source.py` forbids the stale direct kit import from
+      returning there.
 - [ ] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
 - [ ] Check whether `fret-ui-editor::imui` remains a pure adapter over declarative editor controls.
 - [ ] Check large `fret-ui-kit::imui` implementation files for owner splits that can be performed

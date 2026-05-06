@@ -11,7 +11,6 @@ use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_kit::imui::TableSortDirection;
 use fret_ui_kit::{ui, ColorRef, Space, UiExt as _};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -71,10 +70,10 @@ impl Default for InspectorColumnWidths {
 }
 
 impl InspectorSort {
-    fn direction(self) -> TableSortDirection {
+    fn direction(self) -> kit::TableSortDirection {
         match self {
-            Self::FieldAscending => TableSortDirection::Ascending,
-            Self::FieldDescending => TableSortDirection::Descending,
+            Self::FieldAscending => kit::TableSortDirection::Ascending,
+            Self::FieldDescending => kit::TableSortDirection::Descending,
         }
     }
 

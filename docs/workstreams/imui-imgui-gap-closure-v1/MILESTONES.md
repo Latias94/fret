@@ -22,8 +22,10 @@ Exit criteria:
 - The candidate has a named owner crate/doc surface.
 - The candidate has a focused gate and a rollback-free delete/refactor plan.
 - Any closed historical lane remains closed unless a narrower follow-on is created.
-  Current first candidate under review: teaching-surface cleanup for `imui_shadcn_adapter_demo`
-  plus the docs/examples IMUI guidance block.
+  Current first candidate selected: teaching-surface cleanup for `imui_shadcn_adapter_demo`.
+  The first code slice routes `TableSortDirection` through `fret::imui::kit` and extends the
+  teaching-source gate so the stale direct `fret_ui_kit::imui::TableSortDirection` import cannot
+  return to that default-path example.
 
 ## M2 - First Cleanup/Refactor Slice
 

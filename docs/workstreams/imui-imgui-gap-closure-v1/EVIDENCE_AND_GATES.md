@@ -21,6 +21,7 @@ Last updated: 2026-05-06
   - `apps/fret-cookbook/examples/imui_action_basics.rs`
   - `apps/fret-cookbook/examples/imui_debug_draw_basics.rs`
   - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
+  - `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`
   - `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - `apps/fret-examples/src/workspace_shell_demo.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
@@ -44,6 +45,8 @@ python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json
 python tools/check_workstream_catalog.py
 python tools/gate_imui_facade_teaching_source.py
 python tools/gate_imui_workstream_source.py
+rustfmt --check apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs
+cargo check -p fret-examples-imui
 git diff --check
 ```
 
