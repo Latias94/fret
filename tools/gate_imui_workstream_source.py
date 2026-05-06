@@ -186,6 +186,9 @@ def main() -> None:
                 "fn workspace_shell_pane_proof<'a, Cx>(",
                 "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
                 "imui_build(cx, out, move |ui| {",
+                "kit::ChildRegionOptions {",
+                "kit::ScrollOptions {",
+                "kit::HorizontalOptions {",
                 "workspace-shell-pane-{}-proof.shell",
                 "workspace-shell-pane-{}-proof.toolbar",
                 "workspace-shell-pane-{}-proof.tabs",
@@ -194,7 +197,10 @@ def main() -> None:
                 "Decision: keep the current `child_region` seam for M3.",
                 "vec![workspace_shell_pane_proof(",
             ],
-            forbidden=[],
+            forbidden=[
+                "fret_ui_kit::imui::",
+                "use fret_ui_kit::imui",
+            ],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-collection-pane-proof-v1/M3_PANE_PROOF_CLOSURE_2026-04-21.md"),

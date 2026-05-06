@@ -26,6 +26,9 @@ Exit criteria:
   The first code slice routes `TableSortDirection` through `fret::imui::kit` and extends the
   teaching-source gate so the stale direct `fret_ui_kit::imui::TableSortDirection` import cannot
   return to that default-path example.
+  The second code slice routes `workspace_shell_demo` pane-proof option types through
+  `fret::imui::kit` and extends both IMUI source gates so direct `fret_ui_kit::imui` imports cannot
+  return to that default pane-first proof.
 
 ## M2 - First Cleanup/Refactor Slice
 

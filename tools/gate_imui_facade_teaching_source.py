@@ -460,8 +460,13 @@ def main() -> None:
             required=[
                 "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
                 "imui_build(cx, out, move |ui| {",
+                "kit::ChildRegionOptions {",
+                "kit::ScrollOptions {",
+                "kit::HorizontalOptions {",
             ],
             forbidden=[
+                "fret_ui_kit::imui::",
+                "use fret_ui_kit::imui",
                 "fret_imui::imui_build(cx, out, move |ui| {",
                 "UiWriterImUiFacadeExt as _",
             ],

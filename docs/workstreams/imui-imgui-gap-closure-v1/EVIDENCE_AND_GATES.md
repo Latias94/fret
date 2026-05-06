@@ -46,7 +46,9 @@ python tools/check_workstream_catalog.py
 python tools/gate_imui_facade_teaching_source.py
 python tools/gate_imui_workstream_source.py
 rustfmt --check apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs
+rustfmt --check apps/fret-examples/src/workspace_shell_demo.rs
 cargo check -p fret-examples-imui
+cargo check -p fret-demo --bin workspace_shell_demo
 git diff --check
 ```
 

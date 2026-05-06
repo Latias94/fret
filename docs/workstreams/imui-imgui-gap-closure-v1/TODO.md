@@ -24,6 +24,9 @@ Last updated: 2026-05-06
       `TableSortDirection` through the app-facing `fret::imui::kit` facade, and
       `tools/gate_imui_facade_teaching_source.py` forbids the stale direct kit import from
       returning there.
+      Second slice landed: `apps/fret-examples/src/workspace_shell_demo.rs` now routes pane-proof
+      IMUI option types through `fret::imui::kit`, and both IMUI source gates forbid direct
+      `fret_ui_kit::imui` imports from returning to that default pane-first proof.
 - [ ] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
 - [ ] Check whether `fret-ui-editor::imui` remains a pure adapter over declarative editor controls.
 - [ ] Check large `fret-ui-kit::imui` implementation files for owner splits that can be performed

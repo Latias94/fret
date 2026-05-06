@@ -22,9 +22,8 @@ use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
 };
+use fret_ui_kit::declarative::file_tree::{file_tree_view_retained_v0, FileTreeViewProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
-use fret_ui_kit::imui::{ChildRegionOptions, HorizontalOptions, ScrollOptions};
 use fret_ui_kit::{
     LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space,
     TreeItem, TreeState,
@@ -34,8 +33,8 @@ use fret_workspace::close_policy::{
 };
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
 use fret_workspace::{
-    WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
-    workspace_pane_tree_element_with_resize,
+    workspace_pane_tree_element_with_resize, WorkspaceCommandScope, WorkspaceFrame,
+    WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
 };
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -61,8 +60,8 @@ fn env_usize(name: &str) -> Option<usize> {
     v.trim().parse::<usize>().ok()
 }
 
-fn selected_workspace_shell_editor_theme_preset()
--> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+fn selected_workspace_shell_editor_theme_preset(
+) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
     crate::editor_theme_preset_from_env(ENV_WORKSPACE_SHELL_EDITOR_PRESET)
 }
 
@@ -326,9 +325,9 @@ where
 
             ui.child_region_with_options(
                 shell_id.as_str(),
-                ChildRegionOptions {
+                kit::ChildRegionOptions {
                     layout: LayoutRefinement::default().w_full().h_full(),
-                    scroll: ScrollOptions {
+                    scroll: kit::ScrollOptions {
                         viewport_test_id: Some(Arc::from(shell_viewport_id)),
                         ..Default::default()
                     },
@@ -344,9 +343,9 @@ where
 
                     ui.child_region_with_options(
                         toolbar_id.as_str(),
-                        ChildRegionOptions {
+                        kit::ChildRegionOptions {
                             layout: LayoutRefinement::default().w_full().h_px(Px(60.0)),
-                            scroll: ScrollOptions {
+                            scroll: kit::ScrollOptions {
                                 viewport_test_id: Some(Arc::from(toolbar_viewport_id)),
                                 ..Default::default()
                             },
@@ -357,7 +356,7 @@ where
                         |ui| {
                             ui.separator_text("Toolbar");
                             ui.horizontal_with_options(
-                                HorizontalOptions {
+                                kit::HorizontalOptions {
                                     gap: MetricRef::space(Space::N2),
                                     ..Default::default()
                                 },
@@ -372,7 +371,7 @@ where
                     );
 
                     ui.horizontal_with_options(
-                        HorizontalOptions {
+                        kit::HorizontalOptions {
                             gap: MetricRef::space(Space::N2),
                             items: fret_ui_kit::Items::Stretch,
                             ..Default::default()
@@ -380,9 +379,9 @@ where
                         |ui| {
                             ui.child_region_with_options(
                                 tabs_id.as_str(),
-                                ChildRegionOptions {
+                                kit::ChildRegionOptions {
                                     layout: LayoutRefinement::default().w_px(Px(200.0)).h_px(Px(148.0)),
-                                    scroll: ScrollOptions {
+                                    scroll: kit::ScrollOptions {
                                         viewport_test_id: Some(Arc::from(tabs_viewport_id)),
                                         ..Default::default()
                                     },
@@ -404,9 +403,9 @@ where
 
                             ui.child_region_with_options(
                                 inspector_id.as_str(),
-                                ChildRegionOptions {
+                                kit::ChildRegionOptions {
                                     layout: LayoutRefinement::default().w_full().h_px(Px(148.0)),
-                                    scroll: ScrollOptions {
+                                    scroll: kit::ScrollOptions {
                                         viewport_test_id: Some(Arc::from(inspector_viewport_id)),
                                         ..Default::default()
                                     },
@@ -432,9 +431,9 @@ where
 
                     ui.child_region_with_options(
                         status_id.as_str(),
-                        ChildRegionOptions {
+                        kit::ChildRegionOptions {
                             layout: LayoutRefinement::default().w_full().h_px(Px(76.0)),
-                            scroll: ScrollOptions {
+                            scroll: kit::ScrollOptions {
                                 viewport_test_id: Some(Arc::from(status_viewport_id)),
                                 ..Default::default()
                             },
