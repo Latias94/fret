@@ -171,12 +171,22 @@ pub fn register_debug_extension_best_effort(
 /// Returns `true` when UI diagnostics consumed the event (ignore/intercept).
 ///
 /// This helper keeps app drivers consistent:
+/// - drive the script keepalive timer so scripted playback can advance even when a custom driver
+///   bypasses the shared `ui_app_driver` event path,
 /// - ignore external (non-script) pointer/keyboard input while a script is running (determinism),
 /// - record platform-delivered events into the diagnostics ring buffer (for `event_kind_seen`, etc),
 /// - intercept inspect/pick controls when enabled.
 pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) -> bool {
     #[cfg(feature = "diagnostics")]
     {
+        if let Event::Timer { token } = event
+            && app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                svc.maybe_handle_script_keepalive_timer_event(app, window, *token)
+            })
+        {
+            return true;
+        }
+
         if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
             svc.should_ignore_external_pointer_event(event)
                 || svc.should_ignore_external_keyboard_event(event)

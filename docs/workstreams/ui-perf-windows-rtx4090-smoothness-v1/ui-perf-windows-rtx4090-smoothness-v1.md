@@ -120,6 +120,33 @@ Follow-up:
 - Do not re-seed suite baselines from those failed suite attempts. Use the single-script evidence
   above until the suite prewarm/prelude lane is fixed.
 
+## Finding (2026-05-06): diagnostics keepalive timer was only wired through the shared ui-app-driver path
+
+Observed:
+
+- The UI gallery uses a custom `WinitAppDriver` implementation, and it already called the public
+  `fret_bootstrap::maybe_consume_event` helper.
+- The keepalive timer branch lived only in the shared `ui_app_driver` event path, so the gallery
+  never consumed `Event::Timer` for scripted keepalive. In practice, `wait_frames` and other
+  frame-driven script steps could starve until a rare redraw or fallback tick arrived.
+
+Change:
+
+- Moved diagnostics timer consumption into the public `fret_bootstrap::ui_diagnostics::maybe_consume_event`
+  entrypoint, so every driver using the public helper gets the same keepalive contract.
+- Removed the duplicate timer branch from `ui_app_driver`.
+
+Evidence:
+
+- `cargo check -p fret-bootstrap --features diagnostics,ui-app-driver`
+- `cargo build -p fret-ui-gallery --release --features gallery-dev`
+- `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json --dir target/fret-diag/context-menu-keepalive-check --session-auto --timeout-ms 240000 --launch target/release/fret-ui-gallery.exe`
+  - Passed (`run_id=1778075858405`).
+  - The same script completed materially faster than the earlier stuck/slow runs.
+- `target/release/fretboard.exe diag stats target/fret-diag/context-menu-keepalive-check/sessions/1778075856663-88504/1778075909476-ui-gallery-context-action-steady/bundle.schema2.json --sort time --top 30`
+  - `time p50/p95 (us)`: total `2607/3375`, layout `2134/2761`, prepaint `267/386`, paint `207/229`.
+  - Interpretation: the probe is now advancing normally again; remaining cost is CPU/layout work, not a keepalive starvation bug.
+
 ## Complex UI suite (typical perf)
 
 Use two separate suites depending on whether you are hunting tail spikes or checking “normal”
