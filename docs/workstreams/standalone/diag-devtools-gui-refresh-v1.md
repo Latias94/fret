@@ -1,9 +1,14 @@
 ---
 title: Diagnostics DevTools GUI Refresh v1
-status: draft
+status: maintenance
 date: 2026-03-06
 scope: diagnostics, devtools, gui, ux, product
 ---
+
+Status note (2026-05-06): current `apps/fret-devtools` already has the grouped workflow control
+cards, the `Regression` master-detail surface, and the local `diag_card` / `diag_section` helper
+set. This note now tracks the remaining maintenance-phase polish only, not a new diagnostics
+model or a major layout rewrite.
 
 # Diagnostics DevTools GUI Refresh v1
 
@@ -372,6 +377,72 @@ The refresh currently uses only thin local helpers inside `apps/fret-devtools`:
 - `diag_section` for inspector/debug subsections.
 
 This is intentionally enough to reduce duplication without promoting a new diagnostics UI layer yet.
+
+## Maintenance readiness audit (2026-05-06)
+
+Verdict:
+
+- keep this note in maintenance status,
+- do not start a new DevTools GUI architecture lane for the current source state,
+- do not extract `diag_card` / `diag_section` into a public diagnostics component crate yet,
+- do not widen diagnostics schemas or invent GUI-only regression state for product polish.
+
+Assumptions-first resume:
+
+- Area: lane status
+  - Assumption: this refresh is maintenance-only now.
+  - Evidence: the status note above, the implemented slices below, and the current grouped surfaces
+    in `apps/fret-devtools/src/native.rs`.
+  - Confidence: Confident
+  - Consequence if wrong: new work would be recorded as polish instead of a broader follow-on.
+- Area: public surface
+  - Assumption: the current helper set is still app-local and should remain private.
+  - Evidence: `diag_card` and `diag_section` are local functions in
+    `apps/fret-devtools/src/native.rs`, and no second diagnostics UI consumer has proved the same
+    helper contract.
+  - Confidence: Confident
+  - Consequence if wrong: extracting too late could leave duplicate UI shell code in another
+    diagnostics consumer.
+- Area: diagnostics model
+  - Assumption: DevTools GUI remains a thin reader/driver over shared artifacts.
+  - Evidence: the `Regression` tab reads `regression.index.json` / `regression.summary.json`,
+    selection drill-down loads existing summary files, and selected evidence packing reuses bundle
+    directories rather than GUI-owned state.
+  - Confidence: Confident
+  - Consequence if wrong: GUI behavior could drift from CLI/MCP diagnostics semantics.
+- Area: next priority
+  - Assumption: the next useful diagnostics work is automation/evidence consumption, not more GUI
+    chrome.
+  - Evidence: `docs/workstreams/diag-fearless-refactor-v2/NEXT_DEVELOPMENT_PRIORITIES.md` ranks
+    policy-skip/provenance consumer adoption ahead of another DevTools polish wave.
+  - Confidence: Likely
+  - Consequence if wrong: a real dogfood blocker could still justify a narrow UI polish follow-on.
+
+Current source-backed readiness:
+
+- `Script Studio` already stages the workflow as `Workflow Controls`, `Outputs & Bundles`,
+  `Script Source`, `Editor`, and `Helpers`.
+- `Evidence & Results` keeps inspect, pick, script, bundle, screenshot, regression, and selected
+  semantics payloads in one details surface.
+- `Regression Workspace` is already summary-first: aggregate status, primary actions, dashboard
+  preview, non-passing summaries, selected-summary actions, bundle dirs, capability sources, and
+  capability checks are separated before raw payloads.
+- Selected regression evidence now covers both bundle-backed failures and policy/capability skips,
+  which aligns with the current diagnostics priority to keep provenance and policy-skip semantics
+  readable by consumers.
+
+Maintenance gates:
+
+- `cargo check -p fret-devtools`
+- `python tools/check_workstream_catalog.py`
+- `git diff --check`
+
+Reopen or split a narrow follow-on only when one of these becomes true:
+
+- dogfooding shows a concrete inspect -> script -> summarize -> evidence handoff blocker,
+- a second diagnostics UI consumer needs the same helper shape,
+- a new shared artifact field requires GUI/CLI/MCP wording alignment,
+- campaign/suite execution becomes a real GUI consumer of the existing diagnostics contracts.
 
 ## Evidence snapshots
 
