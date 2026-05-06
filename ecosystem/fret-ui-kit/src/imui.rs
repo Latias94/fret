@@ -121,7 +121,8 @@ pub use options::{
     PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions, SelectableOptions,
     SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions, TabItemOptions, TableColumn,
     TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
-    TextAreaOptions, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    TextAreaOptions, TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions,
+    VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,

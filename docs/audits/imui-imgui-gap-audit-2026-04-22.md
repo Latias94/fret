@@ -116,13 +116,14 @@ Evidence anchors:
 
 #### 4.1 Input-text parity is still shallow
 
-Update (2026-05-04): partially superseded by
+Update (2026-05-06): partially superseded by
 `docs/workstreams/imui-text-input-policy-depth-v1/`, the command-oriented
 `docs/workstreams/imui-text-input-history-completion-policy-v1/`, and the public cookbook proof in
 `docs/workstreams/imui-editor-cookbook-proof-v1/`, plus the named filter policy slice in
 `docs/workstreams/imui-text-input-filter-policy-v1/` and the custom insertion-filter slice in
 `docs/workstreams/imui-text-input-custom-filter-policy-v1/`, and the undo command policy slice in
-`docs/workstreams/imui-text-input-undo-command-policy-v1/`, plus the visible picker recipe in
+`docs/workstreams/imui-text-input-undo-command-policy-v1/`, the textarea command policy slice in
+`docs/workstreams/imui-textarea-command-policy-v1/`, plus the visible picker recipe in
 `docs/workstreams/imui-text-input-picker-recipe-v1/`.
 
 Current `InputTextOptions` now includes:
@@ -139,6 +140,8 @@ Current `InputTextOptions` now includes:
   `CallbackCharFilter`,
 - app-owned undo/redo command routing for Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z,
 - `TextAreaOptions::allow_tab_input`,
+- app-owned `TextAreaOptions` submit/cancel command routing with Ctrl+Enter default submit and
+  opt-in Enter submit,
 - accessibility labels/roles,
 - placeholder,
 - submit/cancel commands.
@@ -157,9 +160,10 @@ Conclusion:
   `NoUndoRedo` behavior. A visible completion/history picker recipe now covers the first reusable UI
   layer, the picker keyboard-navigation follow-on covers ArrowUp/ArrowDown active movement plus
   Enter/NumpadEnter commit, and the picker accessibility follow-on covers generic combobox-style
-  expanded / controls / active-descendant semantics. The still-open pieces are editor-owned ranking
-  / storage, richer platform accessibility announcement checks, popup role refinement, and deeper
-  multiline-specific behavior beyond the landed Tab-input opt-in.
+  expanded / controls / active-descendant semantics. Multiline submit/cancel command routing is now
+  covered by `TextAreaOptions`. The still-open pieces are editor-owned ranking / storage, richer
+  platform accessibility announcement checks, popup role refinement, and deeper multiline-specific
+  behavior beyond the landed Tab-input and command submit/cancel routing.
 - These should stay in `fret-ui-kit::imui` and `fret-ui-editor`, not by bloating `fret-imui`.
 
 Evidence anchors:
@@ -578,9 +582,11 @@ Evidence anchors:
      UI is covered by `docs/workstreams/imui-text-input-picker-recipe-v1/`; picker keyboard
      navigation is covered by `docs/workstreams/imui-text-input-picker-keyboard-nav-v1/`; and
      generic picker active-descendant semantics are covered by
-     `docs/workstreams/imui-text-input-picker-a11y-v1/`.
+     `docs/workstreams/imui-text-input-picker-a11y-v1/`; multiline submit/cancel command routing
+     is covered by `docs/workstreams/imui-textarea-command-policy-v1/`.
    - Remaining focus: editor-owned completion/history ranking/storage, richer platform
-     accessibility announcement checks, popup role refinement, and deeper multiline behavior.
+     accessibility announcement checks, popup role refinement, and deeper multiline behavior beyond
+     Tab-input and command submit/cancel routing.
 
 3. Treat menu/tab depth as an explicit `fret-ui-kit::imui` policy lane.
    - Outcome: finish the difficult part of IMUI parity in the correct layer.

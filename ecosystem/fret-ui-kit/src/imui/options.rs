@@ -19,7 +19,7 @@ pub use controls::{
     ComboModelOptions, ComboOptions, InputTextCustomFilter, InputTextFilters, InputTextMode,
     InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, RadioOptions,
     SelectableOptions, SliderOptions, SwitchOptions, TabItemOptions, TextAreaOptions,
-    TreeNodeOptions,
+    TextAreaSubmitKey, TreeNodeOptions,
 };
 pub use menus::{
     BeginMenuOptions, BeginSubmenuOptions, MenuBarOptions, MenuItemOptions, PopupMenuOptions,

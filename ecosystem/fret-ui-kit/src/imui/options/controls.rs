@@ -563,6 +563,15 @@ impl Default for InputTextOptions {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextAreaSubmitKey {
+    /// Dispatch submit on Ctrl+Enter and leave unmodified Enter for multiline insertion.
+    #[default]
+    CtrlEnter,
+    /// Dispatch submit on unmodified Enter before the textarea inserts a newline.
+    Enter,
+}
+
 #[derive(Debug, Clone)]
 pub struct TextAreaOptions {
     pub enabled: bool,
@@ -575,6 +584,17 @@ pub struct TextAreaOptions {
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub min_height: Px,
+    /// Command dispatched from the focused text area when the configured submit key is pressed.
+    ///
+    /// This is the policy-layer equivalent of Dear ImGui's multiline submit behavior. The
+    /// default key is Ctrl+Enter so ordinary Enter keeps inserting newlines.
+    pub submit_command: Option<fret_runtime::CommandId>,
+    /// Command dispatched from the focused text area on unmodified Escape.
+    pub cancel_command: Option<fret_runtime::CommandId>,
+    /// Key policy used for `submit_command`.
+    pub submit_key: TextAreaSubmitKey,
+    /// Whether submit/cancel commands should fire for repeated keydown events.
+    pub submit_cancel_command_repeat: bool,
     /// If true, opt into a stable multiline line-box policy suitable for UI/form text areas.
     ///
     /// This is expected to reduce baseline jitter across mixed-script / emoji lines, at the cost
@@ -593,6 +613,10 @@ impl Default for TextAreaOptions {
             a11y_label: None,
             test_id: None,
             min_height: Px(80.0),
+            submit_command: None,
+            cancel_command: None,
+            submit_key: TextAreaSubmitKey::default(),
+            submit_cancel_command_repeat: false,
             stable_line_boxes: false,
         }
     }

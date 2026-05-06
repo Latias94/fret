@@ -203,6 +203,13 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-text-input-undo-command-policy-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-text-input-undo-command-policy-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-text-input-undo-command-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`
+- Closed narrow follow-on for IMUI textarea submit/cancel command policy:
+  - `docs/workstreams/imui-textarea-command-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-textarea-command-policy-v1/TODO.md`
+  - `docs/workstreams/imui-textarea-command-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-textarea-command-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-textarea-command-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-textarea-command-policy-v1/CLOSEOUT_AUDIT_2026-05-06.md`
 - Closed narrow follow-on for the public IMUI editor cookbook proof:
   - `docs/workstreams/imui-editor-cookbook-proof-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-cookbook-proof-v1/TODO.md`

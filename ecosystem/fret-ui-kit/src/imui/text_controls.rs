@@ -3,12 +3,15 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use fret_core::{Color, Corners, Edges, KeyCode, NodeId, Px};
+use fret_core::{Color, Corners, Edges, KeyCode, Modifiers, NodeId, Px};
 use fret_runtime::{CommandId, Effect, TimerToken};
 use fret_ui::UiHost;
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 
-use super::{InputTextMode, InputTextOptions, ResponseExt, TextAreaOptions, UiWriterImUiFacadeExt};
+use super::{
+    InputTextMode, InputTextOptions, ResponseExt, TextAreaOptions, TextAreaSubmitKey,
+    UiWriterImUiFacadeExt,
+};
 
 fn text_model_changed_for<H: UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
@@ -276,6 +279,61 @@ fn install_input_text_policy_commands<H: UiHost>(
     );
 }
 
+fn install_textarea_policy_commands<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    id: fret_ui::GlobalElementId,
+    options: &TextAreaOptions,
+) {
+    let submit_command = options.submit_command.clone();
+    let cancel_command = options.cancel_command.clone();
+    let submit_key = options.submit_key;
+    let command_repeat = options.submit_cancel_command_repeat;
+
+    if submit_command.is_none() && cancel_command.is_none() {
+        return;
+    }
+
+    cx.key_add_on_key_down_capture_for(
+        id,
+        Arc::new(move |host, action_cx, down| {
+            if down.ime_composing || down.modifiers.alt || down.modifiers.meta {
+                return false;
+            }
+
+            let command = match down.key {
+                KeyCode::Enter | KeyCode::NumpadEnter => match submit_key {
+                    TextAreaSubmitKey::CtrlEnter
+                        if down.modifiers
+                            == (Modifiers {
+                                ctrl: true,
+                                ..Default::default()
+                            }) =>
+                    {
+                        submit_command.clone()
+                    }
+                    TextAreaSubmitKey::Enter if down.modifiers == Modifiers::default() => {
+                        submit_command.clone()
+                    }
+                    _ => None,
+                },
+                KeyCode::Escape if down.modifiers == Modifiers::default() => cancel_command.clone(),
+                _ => None,
+            };
+
+            let Some(command) = command else {
+                return false;
+            };
+
+            if down.repeat && !command_repeat {
+                return true;
+            }
+
+            host.dispatch_command(Some(action_cx.window), command);
+            true
+        }),
+    );
+}
+
 pub(super) fn input_text_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     model: &fret_runtime::Model<String>,
@@ -457,6 +515,7 @@ pub(super) fn textarea_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H>
 
             let mut element = cx.text_area(props);
             element.id = id;
+            install_textarea_policy_commands(cx, id, &options);
             element
         })
     });

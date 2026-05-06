@@ -110,6 +110,12 @@ Tracker highlights:
   `docs/workstreams/imui-text-input-undo-command-policy-v1/DESIGN.md`,
   `docs/workstreams/imui-text-input-undo-command-policy-v1/EVIDENCE_AND_GATES.md`, and
   `docs/workstreams/imui-text-input-undo-command-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md`.
+- ImUi textarea command policy follow-on (closed narrow P1 lane adding app-owned submit/cancel
+  command routing for multiline `TextAreaOptions`, defaulting submit to Ctrl+Enter so ordinary
+  Enter keeps inserting newlines while Enter-submit can be opted in):
+  `docs/workstreams/imui-textarea-command-policy-v1/DESIGN.md`,
+  `docs/workstreams/imui-textarea-command-policy-v1/EVIDENCE_AND_GATES.md`, and
+  `docs/workstreams/imui-textarea-command-policy-v1/CLOSEOUT_AUDIT_2026-05-06.md`.
 - ImUi editor cookbook proof follow-on (closed narrow P1 lane proving that app authors can reach
   editor-grade immediate-mode controls through `fret::imui::editor` without direct
   `fret_ui_editor` imports): `docs/workstreams/imui-editor-cookbook-proof-v1/DESIGN.md`,
