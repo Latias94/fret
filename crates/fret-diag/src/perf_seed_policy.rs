@@ -501,35 +501,7 @@ fn expand_scope_to_script_keys(
     if scripts_by_key.contains_key(&key) {
         Ok(vec![key])
     } else {
-        // Compatibility: allow rule scopes to reference a `script_redirect` stub path.
-        // This keeps old preset files working after script taxonomy moves.
-        let scope_path = if Path::new(scope).is_absolute() {
-            PathBuf::from(scope)
-        } else {
-            workspace_root.join(scope)
-        };
-        let bytes = std::fs::read(&scope_path).ok();
-        let redirected = bytes
-            .as_deref()
-            .and_then(|b| serde_json::from_slice::<Value>(b).ok())
-            .and_then(|v| {
-                let kind = v.get("kind").and_then(|v| v.as_str());
-                let to = v.get("to").and_then(|v| v.as_str());
-                if kind == Some("script_redirect") {
-                    to.map(|s| s.to_string())
-                } else {
-                    None
-                }
-            })
-            .map(|to| to.replace('\\', "/"))
-            .map(|to| normalize_repo_relative_path(workspace_root, &workspace_root.join(to)));
-        if let Some(key) = redirected
-            && scripts_by_key.contains_key(&key)
-        {
-            Ok(vec![key])
-        } else {
-            Ok(Vec::new())
-        }
+        Ok(Vec::new())
     }
 }
 
@@ -545,16 +517,7 @@ mod tests {
         let scripts = vec![script_path];
 
         let preset_path = workspace_root.join("preset.json");
-        std::fs::create_dir_all(workspace_root.join("tools/diag-scripts/extras")).unwrap();
-        std::fs::write(
-            workspace_root.join("tools/diag-scripts/extras-marquee-steady.json"),
-            r#"{
-  "schema_version": 1,
-  "kind": "script_redirect",
-  "to": "tools/diag-scripts/extras/extras-marquee-steady.json"
-}"#,
-        )
-        .unwrap();
+        std::fs::create_dir_all(&workspace_root).unwrap();
         std::fs::write(
             &preset_path,
             r#"{
@@ -564,7 +527,7 @@ mod tests {
   "rules": [
     { "scope": "extras-marquee-steady", "metric": "top_total_time_us", "seed": "p90" },
     { "scope": "extras-marquee-steady", "metric": "top_layout_time_us", "seed": "p90" },
-    { "scope": "tools/diag-scripts/extras-marquee-steady.json", "metric": "top_layout_engine_solve_time_us", "seed": "p95" }
+    { "scope": "tools/diag-scripts/extras/extras-marquee-steady.json", "metric": "top_layout_engine_solve_time_us", "seed": "p95" }
   ]
 }"#,
         )
