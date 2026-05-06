@@ -18,7 +18,7 @@ Last updated: 2026-05-06
 
 ## P1 - Fearless Cleanup / Deletion Candidates
 
-- [ ] Audit public teaching imports for stale direct `fret_imui::` or `fret_ui_kit::imui::`
+- [x] Audit public teaching imports for stale direct `fret_imui::` or `fret_ui_kit::imui::`
       default-path examples.
       First slice landed: `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs` now routes
       `TableSortDirection` through the app-facing `fret::imui::kit` facade, and
@@ -31,15 +31,14 @@ Last updated: 2026-05-06
       `collection.rs` module now route golden-proof IMUI option/state types through `fret::imui`,
       while recipe-layer imports stay explicit.
 - [ ] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
-- [ ] Check whether `fret-ui-editor::imui` remains a pure adapter over declarative editor controls.
+- [x] Check whether `fret-ui-editor::imui` remains a pure adapter over declarative editor controls.
       Audit result: current `ecosystem/fret-ui-editor/src/imui.rs` remains a thin adapter around
       declarative editor controls/composites via `into_element(...)`; no code refactor is needed in
       that crate for this P1 pass.
-- [ ] Check large `fret-ui-kit::imui` implementation files for owner splits that can be performed
+- [x] Check large `fret-ui-kit::imui` implementation files for owner splits that can be performed
       without public API changes.
-      Candidate surfaced by the first pass: keep `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`
-      aligned with the current teaching-source marker set and then use the same gate to audit the
-      remaining IMUI teaching surfaces.
+      Audit result: `debug_draw_controls.rs` is the next split candidate, but it should be a
+      dedicated no-public-API follow-on rather than a drive-by edit in this source-audit lane.
 
 ## P2 - User-Usable Golden Path
 

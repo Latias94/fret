@@ -42,6 +42,8 @@ Exit criteria:
 - `fret-imui` stays policy-light.
 - `fret-ui-editor::imui` stays a thin adapter.
 - Focused gates pass.
+  Result: done for the P1 import cleanup pass on 2026-05-06. Remaining P1 item is duplicate helper
+  alias deletion, if source evidence finds a real alias worth removing.
 
 ## M3 - User-Usable Golden Path
 

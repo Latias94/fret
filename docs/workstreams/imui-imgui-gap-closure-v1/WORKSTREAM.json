@@ -17,6 +17,10 @@
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/TODO.md"
     },
@@ -76,6 +80,7 @@
   ],
   "evidence": [
     "docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "ecosystem/fret-imui/src/lib.rs",
