@@ -82,6 +82,44 @@ Suggested defaults for UI-gallery perf work:
 - `--prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json`
 - `--prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json`
 
+## Finding (2026-05-06): context-menu steady probe should not include sidebar navigation
+
+Observed:
+
+- `ui-gallery-context-menu-right-click-steady` could fail or drift before the measured interaction,
+  especially around sidebar search/scroll navigation to the internal Overlay page.
+- A failed run that stops before `reset_diagnostics` must not be treated as a perf baseline because
+  it mixes startup/navigation work into the sample.
+
+Change:
+
+- The script now sets `FRET_UI_GALLERY_START_PAGE=overlay` through `meta.env_defaults`.
+- The script no longer drives sidebar search/scroll to reach the Overlay page.
+- Font-catalog stabilization is left to suite-level prewarm hooks instead of the single script body.
+
+Evidence (local Windows / RTX 4090, release, `fret-ui-gallery --features gallery-dev`):
+
+- `target/release/fretboard.exe diag run tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json --dir target/fret-diag/context-menu-steady-release2 --session-auto --timeout-ms 240000 --launch target/release/fret-ui-gallery.exe`
+  - Passed, run id `1778072942604`.
+  - Bundle: `target/fret-diag/context-menu-steady-release2/sessions/1778072933113-84248/1778073162792-ui-gallery-context-action-steady/bundle.schema2.json`
+- `target/release/fretboard.exe diag stats <bundle> --sort time --top 30`
+  - `time p50/p95 (us)`: total `1399/1629`, layout `1107/1309`, prepaint `175/194`, paint `124/135`.
+  - Renderer p95/max (us): upload `353`, record `37`, finish `157`, encode `366`, text `394`.
+  - Interpretation: this probe is still CPU/layout dominated; GPU-side churn is not the first target.
+- `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json --repeat 2 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --timeout-ms 300000 --dir target/fret-diag/perf-context-menu-steady-check --launch target/release/fret-ui-gallery.exe`
+  - `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1578/1280/32/167/118/0/6`
+  - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1784/1450/35/216/131/0/6`
+
+Follow-up:
+
+- `ui-gallery-steady --reuse-launch` still needs suite normalization work on Windows:
+  - `--prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json` can stall at
+    `font_catalog_populated` in this local run.
+  - A no-prewarm suite run reached this script but stalled after `reset_diagnostics`, indicating
+    cross-script or reuse-launch state is still not normalized enough for the whole suite.
+- Do not re-seed suite baselines from those failed suite attempts. Use the single-script evidence
+  above until the suite prewarm/prelude lane is fixed.
+
 ## Complex UI suite (typical perf)
 
 Use two separate suites depending on whether you are hunting tail spikes or checking “normal”
