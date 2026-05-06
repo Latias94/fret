@@ -11,7 +11,7 @@ use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_kit::{ui, ColorRef, Space, UiExt as _};
+use fret_ui_kit::{ColorRef, Space, UiExt as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const TEST_ID_ROOT: &str = "imui-shadcn-demo.root";

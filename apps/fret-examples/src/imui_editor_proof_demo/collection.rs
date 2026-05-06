@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use fret::advanced::view::AppRenderDataExt as _;
-use fret::imui::prelude::*;
+use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret_core::{Color, KeyCode, Modifiers, Point, PointerId, Px, Rect, Size};
 use fret_runtime::{Model, TimerToken};
 use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
@@ -17,7 +17,6 @@ use fret_ui_editor::controls::{
     TextFieldOutcome,
 };
 use fret_ui_editor::primitives::EditSessionOutcome;
-use fret_ui_kit::imui::ImUiMultiSelectState;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
 };
@@ -1377,9 +1376,7 @@ fn authoring_parity_collection_drop_status_model<H: UiHost>(
     )
 }
 
-pub(super) fn render_collection_first_asset_browser_proof(
-    ui: &mut fret_imui::ImUi<'_, '_, KernelApp>,
-) {
+pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
     ui.text("Collection-first asset browser proof");
     ui.text(
         "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
@@ -1461,7 +1458,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
         } else {
             "Reverse visible order"
         },
-        fret_ui_kit::imui::ButtonOptions {
+        kit::ButtonOptions {
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.order-toggle",
             )),
@@ -1520,7 +1517,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
     ));
     let duplicate_selected = ui.button_with_options(
         "Duplicate selected assets",
-        fret_ui_kit::imui::ButtonOptions {
+        kit::ButtonOptions {
             enabled: !collection_selection.selected.is_empty(),
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.duplicate-selected",
@@ -1567,7 +1564,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
     }
     let rename_active = ui.button_with_options(
         "Rename active asset",
-        fret_ui_kit::imui::ButtonOptions {
+        kit::ButtonOptions {
             enabled: collection_rename_ready_session.is_some(),
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.rename-active",
@@ -1589,7 +1586,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
     }
     let delete_selected = ui.button_with_options(
         "Delete selected assets",
-        fret_ui_kit::imui::ButtonOptions {
+        kit::ButtonOptions {
             enabled: !collection_selection.selected.is_empty(),
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.delete-selected",
@@ -1636,11 +1633,11 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
     ui.child_region_with_options(
         "imui-editor-proof.authoring.imui.collection.browser",
-        fret_ui_kit::imui::ChildRegionOptions {
+        kit::ChildRegionOptions {
             layout: fret_ui_kit::LayoutRefinement::default()
                 .w_full()
                 .h_px(Px(220.0)),
-            scroll: fret_ui_kit::imui::ScrollOptions {
+            scroll: kit::ScrollOptions {
                 handle: Some(collection_scroll_handle.clone()),
                 viewport_test_id: Some(Arc::from(
                     "imui-editor-proof.authoring.imui.collection.browser.viewport",
@@ -2083,7 +2080,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
                             move |cx: &mut ElementContext<'_, KernelApp>, out| {
                                 imui_build(cx, out, |ui| {
                                     ui.grid_with_options(
-                                        fret_ui_kit::imui::GridOptions {
+                                        kit::GridOptions {
                                             columns: collection_layout.columns,
                                             column_gap: fret_ui_kit::MetricRef::space(
                                                 fret_ui_kit::Space::N2,
@@ -2115,7 +2112,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
                                                 ui.id(asset.id.clone(), |ui| {
                                                     ui.vertical_with_options(
-                                                        fret_ui_kit::imui::VerticalOptions {
+                                                        kit::VerticalOptions {
                                                             layout: fret_ui_kit::LayoutRefinement::default()
                                                                 .flex_1()
                                                                 .min_h(collection_layout.tile_min_height),
@@ -2135,7 +2132,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
                                                                     &collection_selection_model,
                                                                     &collection_keys,
                                                                     asset.id.clone(),
-                                                                    fret_ui_kit::imui::SelectableOptions {
+                                                                    kit::SelectableOptions {
                                                                         focusable: false,
                                                                         test_id: Some(Arc::from(format!(
                                                                             "imui-editor-proof.authoring.imui.collection.asset.{}.select",
@@ -2399,7 +2396,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
                                                                 .drag_source_with_options(
                                                                     trigger,
                                                                     payload.clone(),
-                                                                    fret_ui_kit::imui::DragSourceOptions::default(),
+                                                                    kit::DragSourceOptions::default(),
                                                                 );
                                                             let _ = drag_preview_ghost_with_options(
                                                                 ui,
@@ -2547,7 +2544,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
         let duplicate_from_menu = ui.menu_item_with_options(
             "Duplicate selected assets",
-            fret_ui_kit::imui::MenuItemOptions {
+            kit::MenuItemOptions {
                 enabled: !popup_collection_selection.selected.is_empty(),
                 close_popup: Some(collection_context_menu_open.clone()),
                 shortcut: Some(Arc::from("Primary+D")),
@@ -2597,7 +2594,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
         let rename_from_menu = ui.menu_item_with_options(
             "Rename active asset",
-            fret_ui_kit::imui::MenuItemOptions {
+            kit::MenuItemOptions {
                 enabled: rename_session.is_some(),
                 close_popup: Some(collection_context_menu_open.clone()),
                 shortcut: Some(Arc::from("F2")),
@@ -2622,7 +2619,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
         let delete_from_menu = ui.menu_item_with_options(
             "Delete selected assets",
-            fret_ui_kit::imui::MenuItemOptions {
+            kit::MenuItemOptions {
                 enabled: !popup_collection_selection.selected.is_empty(),
                 close_popup: Some(collection_context_menu_open.clone()),
                 shortcut: Some(Arc::from("Del")),
@@ -2671,7 +2668,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
         let _ = ui.menu_item_with_options(
             "Dismiss quick actions",
-            fret_ui_kit::imui::MenuItemOptions {
+            kit::MenuItemOptions {
                 close_popup: Some(collection_context_menu_open.clone()),
                 test_id: Some(Arc::from(
                     "imui-editor-proof.authoring.imui.collection.context-menu.dismiss",
@@ -2702,7 +2699,7 @@ pub(super) fn render_collection_first_asset_browser_proof(
 
     let import_trigger = ui.button_with_options(
         "Import selected set to bundle",
-        fret_ui_kit::imui::ButtonOptions {
+        kit::ButtonOptions {
             test_id: Some(Arc::from(
                 "imui-editor-proof.authoring.imui.collection.import-target",
             )),

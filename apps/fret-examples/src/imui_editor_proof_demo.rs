@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::advanced::view::{AppRenderDataExt as _, ViewWindowState};
-use fret::imui::prelude::*;
+use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
@@ -49,7 +49,6 @@ use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
 };
-use fret_ui_kit::imui::ImUiMultiSelectState;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
     publish_cross_window_drag_preview_ghost_with_options, render_cross_window_drag_preview_ghosts,
@@ -815,7 +814,7 @@ where
                                 "imui-editor-proof.controls.reset-layout.tooltip",
                                 reset,
                                 "Restore the canonical dock graph for this proof window.",
-                                fret_ui_kit::imui::TooltipOptions {
+                                kit::TooltipOptions {
                                     open_delay_frames_override: Some(0),
                                     close_delay_frames_override: Some(0),
                                     test_id: Some(Arc::from(
@@ -833,7 +832,7 @@ where
                                 "imui-editor-proof.controls.center-floatings.tooltip",
                                 recenter,
                                 "Recenter in-window floating panels without resetting content state.",
-                                fret_ui_kit::imui::TooltipOptions {
+                                kit::TooltipOptions {
                                     open_delay_frames_override: Some(0),
                                     close_delay_frames_override: Some(0),
                                     test_id: Some(Arc::from(
@@ -3050,7 +3049,7 @@ fn render_authoring_parity_imui_group(
         let _ = ui.collapsing_header_with_options(
             "imui-editor-proof.authoring.imui.outliner.section",
             "Scene outliner",
-            fret_ui_kit::imui::CollapsingHeaderOptions {
+            kit::CollapsingHeaderOptions {
                 default_open: true,
                 test_id: Some(Arc::from(
                     "imui-editor-proof.authoring.imui.outliner.section",
@@ -3067,7 +3066,7 @@ fn render_authoring_parity_imui_group(
                 let _ = ui.tree_node_with_options(
                     "imui-editor-proof.authoring.imui.outliner.scene",
                     "Scene",
-                    fret_ui_kit::imui::TreeNodeOptions {
+                    kit::TreeNodeOptions {
                         default_open: true,
                         test_id: Some(Arc::from(
                             "imui-editor-proof.authoring.imui.outliner.scene",
@@ -3081,7 +3080,7 @@ fn render_authoring_parity_imui_group(
                         let _ = ui.tree_node_with_options(
                             "imui-editor-proof.authoring.imui.outliner.scene.camera",
                             "Camera",
-                            fret_ui_kit::imui::TreeNodeOptions {
+                            kit::TreeNodeOptions {
                                 leaf: true,
                                 level: 2,
                                 selected: true,
@@ -3095,7 +3094,7 @@ fn render_authoring_parity_imui_group(
                         let _ = ui.tree_node_with_options(
                             "imui-editor-proof.authoring.imui.outliner.scene.geometry",
                             "Geometry",
-                            fret_ui_kit::imui::TreeNodeOptions {
+                            kit::TreeNodeOptions {
                                 default_open: true,
                                 level: 2,
                                 test_id: Some(Arc::from(
@@ -3110,7 +3109,7 @@ fn render_authoring_parity_imui_group(
                                 let _ = ui.tree_node_with_options(
                                     "imui-editor-proof.authoring.imui.outliner.scene.geometry.cube",
                                     "Cube",
-                                    fret_ui_kit::imui::TreeNodeOptions {
+                                    kit::TreeNodeOptions {
                                         leaf: true,
                                         level: 3,
                                         test_id: Some(Arc::from(
@@ -3123,7 +3122,7 @@ fn render_authoring_parity_imui_group(
                                 let _ = ui.tree_node_with_options(
                                     "imui-editor-proof.authoring.imui.outliner.scene.geometry.key-light",
                                     "Key light",
-                                    fret_ui_kit::imui::TreeNodeOptions {
+                                    kit::TreeNodeOptions {
                                         leaf: true,
                                         level: 3,
                                         test_id: Some(Arc::from(
@@ -3138,7 +3137,7 @@ fn render_authoring_parity_imui_group(
                         let _ = ui.tree_node_with_options(
                             "imui-editor-proof.authoring.imui.outliner.scene.postfx",
                             "Post FX",
-                            fret_ui_kit::imui::TreeNodeOptions {
+                            kit::TreeNodeOptions {
                                 leaf: true,
                                 level: 2,
                                 test_id: Some(Arc::from(
@@ -3164,7 +3163,7 @@ fn render_authoring_parity_imui_group(
             for (ix, asset) in asset_chips.iter().enumerate() {
                 let trigger = ui.button_with_options(
                     asset.label.clone(),
-                    fret_ui_kit::imui::ButtonOptions {
+                    kit::ButtonOptions {
                         test_id: Some(Arc::from(format!(
                             "imui-editor-proof.authoring.imui.drag-drop.asset.{ix}"
                         ))),
@@ -3174,7 +3173,7 @@ fn render_authoring_parity_imui_group(
                 let source = ui.drag_source_with_options(
                     trigger,
                     asset.clone(),
-                    fret_ui_kit::imui::DragSourceOptions {
+                    kit::DragSourceOptions {
                         cross_window: true,
                         ..Default::default()
                     },
@@ -3203,7 +3202,7 @@ fn render_authoring_parity_imui_group(
         let assigned_asset = editor_string_model_readout(ui.cx_mut(), &asset_slot_model);
         let slot_trigger = ui.button_with_options(
             format!("Base color slot: {assigned_asset}"),
-            fret_ui_kit::imui::ButtonOptions {
+            kit::ButtonOptions {
                 test_id: Some(Arc::from("imui-editor-proof.authoring.imui.drag-drop.slot")),
                 ..Default::default()
             },
@@ -3256,7 +3255,7 @@ fn render_authoring_parity_imui_group(
         let _ = ui.tree_node_with_options(
             "imui-editor-proof.authoring.imui.outliner.reorder.scene",
             "Scene",
-            fret_ui_kit::imui::TreeNodeOptions {
+            kit::TreeNodeOptions {
                 default_open: true,
                 test_id: Some(Arc::from(
                     "imui-editor-proof.authoring.imui.outliner.reorder.scene",
@@ -3271,7 +3270,7 @@ fn render_authoring_parity_imui_group(
                     let row = ui.tree_node_with_options(
                         item.id.as_ref(),
                         item.label.clone(),
-                        fret_ui_kit::imui::TreeNodeOptions {
+                        kit::TreeNodeOptions {
                             leaf: true,
                             level: 2,
                             test_id: Some(Arc::from(format!(
@@ -3451,7 +3450,7 @@ fn render_authoring_parity_imui_host<H, F>(
 ) -> impl IntoUiElement<H> + use<H, F>
 where
     H: UiHost,
-    F: for<'cx, 'a> FnOnce(&mut fret_imui::ImUi<'cx, 'a, H>) + 'static,
+    F: for<'cx, 'a> FnOnce(&mut ImUi<'cx, 'a, H>) + 'static,
 {
     // Authoring-parity IMUI content can emit multiple siblings, so the proof-local host must own
     // vertical flow explicitly instead of forwarding them through a non-layout container box.

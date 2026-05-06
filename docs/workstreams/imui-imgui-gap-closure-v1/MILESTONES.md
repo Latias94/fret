@@ -29,6 +29,9 @@ Exit criteria:
   The second code slice routes `workspace_shell_demo` pane-proof option types through
   `fret::imui::kit` and extends both IMUI source gates so direct `fret_ui_kit::imui` imports cannot
   return to that default pane-first proof.
+  The third code slice routes `imui_editor_proof_demo` and its `collection.rs` module through the
+  app-facing `fret::imui` facade for IMUI option/state types while keeping recipe-layer imports
+  explicit. `fret-ui-editor::imui` was audited and remains a thin declarative-control adapter.
 
 ## M2 - First Cleanup/Refactor Slice
 

@@ -156,8 +156,14 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs"),
             required=[
+                "use fret::imui::{kit::ImUiMultiSelectState, prelude::*};",
                 "Collection-first asset browser proof",
                 "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
+                "pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {",
+                "kit::ButtonOptions {",
+                "kit::ChildRegionOptions {",
+                "kit::GridOptions {",
+                "kit::MenuItemOptions {",
                 "imui-editor-proof.authoring.imui.collection.order-toggle",
                 "imui-editor-proof.authoring.imui.collection.browser",
                 "imui-editor-proof.authoring.imui.collection.grid",
@@ -167,7 +173,11 @@ def main() -> None:
                 "imui_editor_proof_demo.model.authoring_parity.collection_drop_status",
                 "ui.id(asset.id.clone(), |ui| {",
             ],
-            forbidden=[],
+            forbidden=[
+                "use fret_ui_kit::imui",
+                "fret_ui_kit::imui::",
+                "fret_imui::ImUi",
+            ],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-collection-pane-proof-v1/M2_COLLECTION_PROOF_CLOSURE_2026-04-21.md"),
@@ -1305,7 +1315,7 @@ def main() -> None:
             required=[
                 "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "pub(super) fn render_collection_first_asset_browser_proof(",
-                "ui: &mut fret_imui::ImUi<'_, '_, KernelApp>,",
+                "pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],

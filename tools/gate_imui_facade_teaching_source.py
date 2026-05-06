@@ -379,14 +379,16 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
             required=[
-                "use fret::imui::prelude::*;",
+                "use fret::imui::{kit::ImUiMultiSelectState, prelude::*};",
                 "use fret_ui_editor::imui as editor_imui;",
-                "use fret_ui_kit::imui::ImUiMultiSelectState;",
                 "imui(cx, |ui| {",
                 "imui(cx, move |ui| {",
                 "imui_build(cx, out, |ui| {",
                 "imui_build(cx, &mut out, move |ui| {",
                 "imui_build(cx, out, f);",
+                "kit::TooltipOptions {",
+                "kit::CollapsingHeaderOptions {",
+                "F: for<'cx, 'a> FnOnce(&mut ImUi<'cx, 'a, H>) + 'static,",
                 "editor_imui::property_grid(",
                 "editor_imui::numeric_input(",
                 "editor_imui::gradient_editor(",
@@ -401,6 +403,9 @@ def main() -> None:
             forbidden=[
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "use fret_ui_kit::imui::UiWriterUiKitExt as _;",
+                "use fret_ui_kit::imui",
+                "fret_ui_kit::imui::",
+                "fret_imui::ImUi",
                 "fret_imui::imui(cx, |ui| {",
                 "fret_imui::imui(cx, move |ui| {",
                 "fret_imui::imui_build(cx, out, |ui| {",

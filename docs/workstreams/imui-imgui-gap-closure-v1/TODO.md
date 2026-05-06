@@ -27,8 +27,14 @@ Last updated: 2026-05-06
       Second slice landed: `apps/fret-examples/src/workspace_shell_demo.rs` now routes pane-proof
       IMUI option types through `fret::imui::kit`, and both IMUI source gates forbid direct
       `fret_ui_kit::imui` imports from returning to that default pane-first proof.
+      Third slice landed: `apps/fret-examples/src/imui_editor_proof_demo.rs` and its
+      `collection.rs` module now route golden-proof IMUI option/state types through `fret::imui`,
+      while recipe-layer imports stay explicit.
 - [ ] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
 - [ ] Check whether `fret-ui-editor::imui` remains a pure adapter over declarative editor controls.
+      Audit result: current `ecosystem/fret-ui-editor/src/imui.rs` remains a thin adapter around
+      declarative editor controls/composites via `into_element(...)`; no code refactor is needed in
+      that crate for this P1 pass.
 - [ ] Check large `fret-ui-kit::imui` implementation files for owner splits that can be performed
       without public API changes.
       Candidate surfaced by the first pass: keep `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`

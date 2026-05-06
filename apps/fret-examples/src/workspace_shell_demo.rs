@@ -22,8 +22,8 @@ use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
 };
-use fret_ui_kit::declarative::file_tree::{file_tree_view_retained_v0, FileTreeViewProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{
     LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space,
     TreeItem, TreeState,
@@ -33,8 +33,8 @@ use fret_workspace::close_policy::{
 };
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
 use fret_workspace::{
-    workspace_pane_tree_element_with_resize, WorkspaceCommandScope, WorkspaceFrame,
-    WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
+    WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
+    workspace_pane_tree_element_with_resize,
 };
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -60,8 +60,8 @@ fn env_usize(name: &str) -> Option<usize> {
     v.trim().parse::<usize>().ok()
 }
 
-fn selected_workspace_shell_editor_theme_preset(
-) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+fn selected_workspace_shell_editor_theme_preset()
+-> Option<fret_ui_editor::theme::EditorThemePresetV1> {
     crate::editor_theme_preset_from_env(ENV_WORKSPACE_SHELL_EDITOR_PRESET)
 }
 
