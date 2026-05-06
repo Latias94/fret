@@ -14,12 +14,12 @@
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
       "metric": "top_total_time_us",
       "seed": "p95"
     },

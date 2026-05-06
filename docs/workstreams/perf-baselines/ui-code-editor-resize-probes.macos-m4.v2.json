@@ -26,7 +26,7 @@
         "top_layout_time_us": 2859,
         "top_total_time_us": 13587
       },
-      "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 308,
         "top_layout_time_us": 2859,
@@ -56,37 +56,37 @@
     "rules": [
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "seed": "p95",
         "source": "default"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "seed": "p95",
         "source": "default"
       },
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "seed": "p95",
         "source": "default"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         "seed": "p95",
         "source": "preset"
       }

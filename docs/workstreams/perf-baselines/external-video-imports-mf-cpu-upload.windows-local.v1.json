@@ -35,7 +35,7 @@
         "top_layout_time_us": 23,
         "top_total_time_us": 50
       },
-      "script": "tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json",
+      "script": "tools/diag-scripts/tooling/external-video-imports/external-video-imports-mf-cpu-upload-perf-steady.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": null,
         "frame_p95_layout_time_us": null,

@@ -14,7 +14,7 @@
         "top_layout_time_us": 4338,
         "top_total_time_us": 7372
       },
-      "script": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 504,
         "max_pointer_move_global_changes": 3,
@@ -33,7 +33,7 @@
         "top_layout_time_us": 3672,
         "top_total_time_us": 4653
       },
-      "script": "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 472,
         "max_pointer_move_global_changes": 2,
@@ -52,7 +52,7 @@
         "top_layout_time_us": 3254,
         "top_total_time_us": 3753
       },
-      "script": "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 468,
         "max_pointer_move_global_changes": 2,
@@ -71,7 +71,7 @@
         "top_layout_time_us": 3408,
         "top_total_time_us": 4353
       },
-      "script": "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 468,
         "max_pointer_move_global_changes": 0,
@@ -90,7 +90,7 @@
         "top_layout_time_us": 1600,
         "top_total_time_us": 2189
       },
-      "script": "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 44,
         "max_pointer_move_global_changes": 0,
@@ -109,7 +109,7 @@
         "top_layout_time_us": 1950,
         "top_total_time_us": 2568
       },
-      "script": "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 408,
         "max_pointer_move_global_changes": 0,
@@ -128,7 +128,7 @@
         "top_layout_time_us": 6133,
         "top_total_time_us": 7649
       },
-      "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 776,
         "max_pointer_move_global_changes": 0,
@@ -147,7 +147,7 @@
         "top_layout_time_us": 1515,
         "top_total_time_us": 7977
       },
-      "script": "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 32,
         "max_pointer_move_global_changes": 0,
@@ -166,7 +166,7 @@
         "top_layout_time_us": 2842,
         "top_total_time_us": 3611
       },
-      "script": "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 468,
         "max_pointer_move_global_changes": 0,
@@ -185,7 +185,7 @@
         "top_layout_time_us": 10197,
         "top_total_time_us": 12092
       },
-      "script": "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 3204,
         "max_pointer_move_global_changes": 0,
@@ -204,7 +204,7 @@
         "top_layout_time_us": 13362,
         "top_total_time_us": 16935
       },
-      "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 5960,
         "max_pointer_move_global_changes": 33,

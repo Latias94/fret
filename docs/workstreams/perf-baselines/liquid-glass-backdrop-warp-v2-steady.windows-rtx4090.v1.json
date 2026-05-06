@@ -35,7 +35,7 @@
         "top_layout_time_us": 6289,
         "top_total_time_us": 7445
       },
-      "script": "tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json",
+      "script": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-v2-steady.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": null,
         "frame_p95_layout_time_us": null,

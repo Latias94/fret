@@ -26,7 +26,7 @@
         "top_layout_time_us": 12083,
         "top_total_time_us": 13417
       },
-      "script": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 103,
         "top_layout_time_us": 12083,
@@ -56,19 +56,19 @@
     "rules": [
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       }

@@ -12,7 +12,7 @@
     "default_seed": "max",
     "rules": [
       {
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "metric": "top_layout_engine_solve_time_us",
         "seed": "p95",
         "source": "preset"
@@ -21,7 +21,7 @@
   },
   "rows": [
     {
-      "script": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
       "measured_max": {
         "top_total_time_us": 11045,
         "top_layout_time_us": 9592,
@@ -64,7 +64,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
       "measured_max": {
         "top_total_time_us": 13096,
         "top_layout_time_us": 10778,
@@ -107,7 +107,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
       "measured_max": {
         "top_total_time_us": 13196,
         "top_layout_time_us": 10426,
@@ -150,7 +150,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
       "measured_max": {
         "top_total_time_us": 12129,
         "top_layout_time_us": 9572,
@@ -193,7 +193,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture-steady.json",
       "measured_max": {
         "top_total_time_us": 6970,
         "top_layout_time_us": 4953,
@@ -236,7 +236,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
       "measured_max": {
         "top_total_time_us": 5316,
         "top_layout_time_us": 4037,
@@ -279,7 +279,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
       "measured_max": {
         "top_total_time_us": 14273,
         "top_layout_time_us": 10239,
@@ -322,7 +322,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
       "measured_max": {
         "top_total_time_us": 8064,
         "top_layout_time_us": 5131,
@@ -365,7 +365,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
       "measured_max": {
         "top_total_time_us": 22650,
         "top_layout_time_us": 16101,
@@ -408,7 +408,7 @@
       }
     },
     {
-      "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
       "measured_max": {
         "top_total_time_us": 38196,
         "top_layout_time_us": 26702,

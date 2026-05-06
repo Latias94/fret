@@ -35,7 +35,7 @@
         "top_layout_time_us": 245,
         "top_total_time_us": 267
       },
-      "script": "tools/diag-scripts/drop-shadow-v1-steady.json",
+      "script": "tools/diag-scripts/renderer/effects/drop-shadow-v1-steady.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": null,
         "frame_p95_layout_time_us": null,

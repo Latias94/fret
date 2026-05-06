@@ -26,7 +26,7 @@
         "top_layout_time_us": 48,
         "top_total_time_us": 75
       },
-      "script": "tools/diag-scripts/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
+      "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 0,
         "top_layout_time_us": 48,
@@ -56,19 +56,19 @@
     "rules": [
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
+        "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
+        "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
+        "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-decoded-png-cpu-copy-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       }

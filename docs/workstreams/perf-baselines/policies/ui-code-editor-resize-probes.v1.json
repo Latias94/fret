@@ -4,17 +4,17 @@
   "default_seed": "max",
   "rules": [
     {
-      "scope": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
       "metric": "top_total_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     }

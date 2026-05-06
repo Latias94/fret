@@ -26,7 +26,7 @@
         "top_layout_time_us": 2177,
         "top_total_time_us": 2430
       },
-      "script": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 47,
         "top_layout_time_us": 2177,
@@ -56,19 +56,19 @@
     "rules": [
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       }

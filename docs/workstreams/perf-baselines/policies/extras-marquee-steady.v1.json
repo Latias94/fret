@@ -14,7 +14,7 @@
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/extras-marquee-steady.json",
+      "scope": "tools/diag-scripts/extras/extras-marquee-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     }

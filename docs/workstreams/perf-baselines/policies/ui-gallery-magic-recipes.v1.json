@@ -4,92 +4,92 @@
   "default_seed": "max",
   "rules": [
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
       "metric": "top_total_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
       "metric": "top_total_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-lens-perf-steady.json",
       "metric": "top_total_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-lens-perf-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-lens-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-lens-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-border-beam-perf-steady.json",
       "metric": "top_total_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-border-beam-perf-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-border-beam-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-border-beam-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-dock-perf-steady.json",
       "metric": "top_total_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-dock-perf-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-dock-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-dock-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-marquee-perf-steady.json",
       "metric": "top_total_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-marquee-perf-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p90"
     },
     {
-      "scope": "tools/diag-scripts/ui-gallery-magic-marquee-perf-steady.json",
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-marquee-perf-steady.json",
       "metric": "top_layout_engine_solve_time_us",
       "seed": "p95"
     }

@@ -26,7 +26,7 @@
         "top_layout_time_us": 13586,
         "top_total_time_us": 22014
       },
-      "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 2547,
         "top_layout_time_us": 13586,
@@ -69,7 +69,7 @@
         "top_layout_time_us": 10075,
         "top_total_time_us": 15910
       },
-      "script": "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 2345,
         "top_layout_time_us": 10217,
@@ -99,19 +99,19 @@
     "rules": [
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "seed": "p95",
         "source": "default"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "seed": "p95",
         "source": "default"
       },
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         "seed": "p95",
         "source": "default"
       }

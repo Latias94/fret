@@ -22,7 +22,7 @@
         "top_layout_time_us": 2000,
         "top_total_time_us": 5800
       },
-      "script": "tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady-web.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-patterns-torture-perf-steady-web.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 0,
         "max_pointer_move_global_changes": 0,

@@ -16,7 +16,7 @@
         "top_layout_time_us": 6009,
         "top_total_time_us": 9602
       },
-      "script": "tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-image-object-fit-perf-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 0,
         "max_pointer_move_global_changes": 0,

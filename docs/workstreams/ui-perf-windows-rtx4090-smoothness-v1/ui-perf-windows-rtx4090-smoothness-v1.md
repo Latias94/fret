@@ -147,6 +147,43 @@ Evidence:
   - `time p50/p95 (us)`: total `2607/3375`, layout `2134/2761`, prepaint `267/386`, paint `207/229`.
   - Interpretation: the probe is now advancing normally again; remaining cost is CPU/layout work, not a keepalive starvation bug.
 
+## Finding (2026-05-06): perf baselines must use canonical script paths, not redirect stubs
+
+Observed:
+
+- `ui-gallery-steady` failed before measuring because the suite manifest used canonical script paths
+  while the checked-in perf baselines still used old top-level `script_redirect` stubs.
+- Example failure:
+  - `perf baseline missing entry for script: tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`
+  - Baseline row still pointed at `tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json`.
+
+Change:
+
+- Migrated `docs/workstreams/perf-baselines/**/*.json` from redirect stub script keys/scopes to the
+  final canonical `tools/diag-scripts/...` targets.
+- Kept the comparison layer strict; `read_perf_baseline_file` does not follow redirects implicitly.
+
+Evidence:
+
+- Redirect reference scan after migration:
+  - `remaining_redirect_refs=0 files=0`
+- `cargo nextest run -p fret-diag perf_baseline_parse`
+  - Passed (`tests::perf_baseline_parse_reads_script_thresholds`).
+- Narrow baseline lookup:
+  - `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json --repeat 1 --warmup-frames 5 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --timeout-ms 300000 --launch target/release/fret-ui-gallery.exe`
+  - Passed; `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2338/1879/47/256/203/0/10`.
+
+Follow-up:
+
+- The full `ui-gallery-steady` suite now exposes a separate suite/baseline drift:
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json` exists in
+    `tools/diag-scripts/suites/perf-ui-gallery-steady/suite.json`.
+  - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json` has no row for it.
+- Attempting to seed that row locally with the suite prewarm/prelude hooks timed out before writing
+  `--perf-baseline-out`; do not synthesize this baseline row from a failed run. Treat it as a narrow
+  follow-up: stabilize or simplify `ui-gallery-overlay-pointer-move-steady`, then seed the missing
+  Windows baseline row from a passing run.
+
 ## Complex UI suite (typical perf)
 
 Use two separate suites depending on whether you are hunting tail spikes or checking “normal”

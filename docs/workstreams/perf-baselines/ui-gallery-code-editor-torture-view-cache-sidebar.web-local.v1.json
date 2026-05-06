@@ -22,7 +22,7 @@
         "top_layout_time_us": 2200,
         "top_total_time_us": 8700
       },
-      "script": "tools/diag-scripts/ui-gallery-code-editor-torture-perf-steady-web-view-cache-sidebar.json",
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-perf-steady-web-view-cache-sidebar.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 0,
         "max_pointer_move_global_changes": 0,

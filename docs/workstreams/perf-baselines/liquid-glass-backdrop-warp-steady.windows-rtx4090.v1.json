@@ -35,7 +35,7 @@
         "top_layout_time_us": 1664,
         "top_total_time_us": 1919
       },
-      "script": "tools/diag-scripts/liquid-glass-backdrop-warp-steady.json",
+      "script": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": null,
         "frame_p95_layout_time_us": null,
@@ -74,13 +74,13 @@
     "rules": [
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/liquid-glass-backdrop-warp-steady.json",
+        "script": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/liquid-glass-backdrop-warp-steady.json",
+        "script": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
         "seed": "p90",
         "source": "preset-suite"
       }

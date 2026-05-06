@@ -26,7 +26,7 @@
         "top_layout_time_us": 181,
         "top_total_time_us": 259
       },
-      "script": "tools/diag-scripts/extras-marquee-steady.json",
+      "script": "tools/diag-scripts/extras/extras-marquee-steady.json",
       "threshold_seed": {
         "top_layout_engine_solve_time_us": 0,
         "top_layout_time_us": 181,
@@ -56,19 +56,19 @@
     "rules": [
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/extras-marquee-steady.json",
+        "script": "tools/diag-scripts/extras/extras-marquee-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/extras-marquee-steady.json",
+        "script": "tools/diag-scripts/extras/extras-marquee-steady.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/extras-marquee-steady.json",
+        "script": "tools/diag-scripts/extras/extras-marquee-steady.json",
         "seed": "p90",
         "source": "preset-suite"
       }

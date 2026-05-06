@@ -12,19 +12,19 @@
     "default_seed": "max",
     "rules": [
       {
-        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         "metric": "top_layout_engine_solve_time_us",
         "seed": "p95",
         "source": "preset"
       },
       {
-        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         "metric": "top_layout_time_us",
         "seed": "p95",
         "source": "preset"
       },
       {
-        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         "metric": "top_total_time_us",
         "seed": "p95",
         "source": "preset"
@@ -33,7 +33,7 @@
   },
   "rows": [
     {
-      "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
       "measured_max": {
         "top_total_time_us": 20040,
         "top_layout_time_us": 16188,

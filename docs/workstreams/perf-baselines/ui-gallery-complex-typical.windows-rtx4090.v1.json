@@ -35,7 +35,7 @@
         "top_layout_time_us": 2949,
         "top_total_time_us": 4818
       },
-      "script": "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": 61,
         "frame_p95_layout_time_us": 1830,
@@ -96,7 +96,7 @@
         "top_layout_time_us": 4648,
         "top_total_time_us": 15068
       },
-      "script": "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
+      "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": 44,
         "frame_p95_layout_time_us": 3870,
@@ -157,7 +157,7 @@
         "top_layout_time_us": 4811,
         "top_total_time_us": 7138
       },
-      "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": 42,
         "frame_p95_layout_time_us": 3051,
@@ -218,7 +218,7 @@
         "top_layout_time_us": 5517,
         "top_total_time_us": 8253
       },
-      "script": "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
+      "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": 63,
         "frame_p95_layout_time_us": 4651,
@@ -257,73 +257,73 @@
     "rules": [
       {
         "metric": "frame_p95_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
         "seed": "p95",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
         "seed": "p95",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
         "seed": "p95",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
         "seed": "p95",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_layout_time_us",
-        "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       },
       {
         "metric": "frame_p95_total_time_us",
-        "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
+        "script": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
         "seed": "p90",
         "source": "preset-suite"
       }

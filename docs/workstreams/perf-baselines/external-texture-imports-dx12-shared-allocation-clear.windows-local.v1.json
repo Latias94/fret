@@ -35,7 +35,7 @@
         "top_layout_time_us": 143,
         "top_total_time_us": 204
       },
-      "script": "tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
+      "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
       "threshold_seed": {
         "frame_p95_layout_engine_solve_time_us": null,
         "frame_p95_layout_time_us": null,
@@ -74,19 +74,19 @@
     "rules": [
       {
         "metric": "top_layout_engine_solve_time_us",
-        "script": "tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
+        "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
         "seed": "p95",
         "source": "preset"
       },
       {
         "metric": "top_layout_time_us",
-        "script": "tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
+        "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       },
       {
         "metric": "top_total_time_us",
-        "script": "tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
+        "script": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json",
         "seed": "p90",
         "source": "preset"
       }

@@ -16,7 +16,7 @@
         "top_layout_time_us": 31,
         "top_total_time_us": 41
       },
-      "script": "tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-perf-steady.json",
+      "script": "tools/diag-scripts/tooling/external-video-imports/external-video-imports-mf-dx12-gpu-copy-perf-steady.json",
       "thresholds": {
         "max_pointer_move_dispatch_us": 0,
         "max_pointer_move_global_changes": 0,
