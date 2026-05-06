@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "imui-debug-draw-owner-split-v1",
   "title": "ImUi Debug Draw Owner Split v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-06",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "follow_on_of": "imui-imgui-gap-closure-v1",
   "problem": "The IMUI debug draw implementation has become a monolithic owner for command recording, metadata, path sampling, canvas painting, interaction wrapping, and tests. This lane reduces refactor hazard by splitting private owner modules while keeping the public `fret-ui-kit::imui` debug draw API, facade re-exports, runtime contracts, and behavior unchanged.",
   "authoritative_docs": [
@@ -142,7 +142,7 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "close",
-    "notes": "Continue this lane only for private debug draw owner splits that preserve public API shape and behavior. Additive draw-list capabilities, renderer draw-call attribution, raw buffers, callbacks, or per-geometry hit testing must start as separate follow-ons."
+    "default_action": "stay_closed",
+    "notes": "Treat this lane as closed history for the private debug draw owner split. Additive draw-list capabilities, renderer draw-call attribution, raw buffers, callbacks, or per-geometry hit testing must start as separate follow-ons."
   }
 }

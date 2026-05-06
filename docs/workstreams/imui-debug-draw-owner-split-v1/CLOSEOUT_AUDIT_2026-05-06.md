@@ -46,6 +46,6 @@ This is the explicit no-split verdict for source-owner-specific test modules.
 The monolithic file is no longer the primary debug draw refactor hotspot, and the lane is now
 closed with clear evidence and a durable ownership map.
 
-Implementation note: `WORKSTREAM.json` stays marked `active` because the source-policy gate for
-this repo treats that file as an active reference marker. The closure decision itself is carried by
-this audit, `DESIGN.md`, `TODO.md`, and `MILESTONES.md`.
+Implementation note: `WORKSTREAM.json` is now marked `closed` and `stay_closed` so the
+machine-readable lane state matches this closeout audit. Additive debug draw work must start as a
+separate follow-on with its own proof and gates.

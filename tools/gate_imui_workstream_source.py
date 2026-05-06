@@ -79,7 +79,8 @@ def main() -> None:
             Path("docs/workstreams/imui-debug-draw-owner-split-v1/WORKSTREAM.json"),
             required=[
                 '"slug": "imui-debug-draw-owner-split-v1"',
-                '"status": "active"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
                 '"follow_on_of": "imui-imgui-gap-closure-v1"',
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md"',
@@ -88,9 +89,11 @@ def main() -> None:
                 "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast",
                 "python tools/gate_imui_workstream_source.py",
                 "python tools/gate_imui_facade_teaching_source.py",
+                '"default_action": "stay_closed"',
             ],
             forbidden=[
-                '"status": "closed"',
+                '"status": "active"',
+                '"default_action": "close"',
                 "AddCallback",
                 "raw mutable draw buffers",
             ],

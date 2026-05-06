@@ -40,8 +40,9 @@ Last updated: 2026-05-06
       that crate for this P1 pass.
 - [x] Check large `fret-ui-kit::imui` implementation files for owner splits that can be performed
       without public API changes.
-      Audit result: `debug_draw_controls.rs` is the next split candidate, but it should be a
-      dedicated no-public-API follow-on rather than a drive-by edit in this source-audit lane.
+      Audit result: `debug_draw_controls.rs` was split in the dedicated
+      `imui-debug-draw-owner-split-v1` follow-on and that lane is now closed. Future additive debug
+      draw capabilities still need separate follow-ons.
 
 ## P2 - User-Usable Golden Path
 

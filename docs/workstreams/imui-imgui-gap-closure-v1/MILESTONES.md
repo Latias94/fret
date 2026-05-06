@@ -44,8 +44,8 @@ Exit criteria:
 - Focused gates pass.
   Result: done for the P1 import cleanup pass on 2026-05-06. Remaining P1 item is duplicate helper
   alias deletion, if source evidence finds a real alias worth removing.
-  P1 closeout result: no additional alias delete is justified; split debug draw owner cleanup into
-  a narrower follow-on if accepted.
+  P1 closeout result: no additional alias delete is justified. The debug draw owner cleanup was
+  split into `imui-debug-draw-owner-split-v1` and that follow-on is now closed.
 
 ## M3 - User-Usable Golden Path
 
