@@ -18,8 +18,8 @@ Last updated: 2026-05-06
 
 ## Next slices
 
-- [ ] Decide whether low-level image/mesh helpers stay parent-local or move into a later
-      `geometry.rs`/`paint_helpers.rs` owner after the path split.
+- [x] Split the remaining geometry / image / mesh helpers into `geometry.rs` and `paint.rs`
+      while keeping public debug draw names stable.
 - [ ] Decide whether private tests should remain colocated or move into owner-specific test modules.
 
 ## Guardrails

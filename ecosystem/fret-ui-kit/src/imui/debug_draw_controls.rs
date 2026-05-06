@@ -6,11 +6,10 @@ use std::sync::Arc;
 use fret_core::scene::DashPatternV1;
 use fret_core::scene::ImageSamplingHint;
 use fret_core::{
-    Color, Corners, DrawOrder, ImageId, PathStyle, Point, Px, Rect, SceneMeshVertex, Size,
-    StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, SvgFit, UvPoint, UvRect, ViewportFit,
+    Color, ImageId, PathStyle, Point, Px, Rect, SceneMeshVertex, Size, StrokeCapV1, StrokeJoinV1,
+    StrokeStyle, StrokeStyleV2, SvgFit, UvPoint, UvRect, ViewportFit,
 };
 use fret_ui::action::ActivateReason;
-use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
     AnyElement, CanvasCachePolicy, CanvasProps, LayoutStyle, Length, PressableA11y, PressableProps,
     SizeStyle,
@@ -20,18 +19,26 @@ use fret_ui::{ElementContext, SvgSource, UiHost};
 use super::{ResponseExt, UiWriterImUiFacadeExt};
 
 mod commands;
+mod geometry;
 mod paint;
 mod paths;
 
 use commands::DebugDrawCommand;
 pub use commands::{DebugDrawCommandKind, DebugDrawCommandSummary, DebugDrawListSummary};
+#[cfg(test)]
+use geometry::triangle_is_degenerate;
+use geometry::{rect_is_empty, rect_is_finite, sequential_triangle_indices};
 use paint::paint_debug_draw_commands;
+#[cfg(test)]
+use paint::{
+    corner_radii_are_visible, normalized_opacity, rounded_rect_corner_radii, uv_rect_is_valid,
+};
 use paths::{
     append_arc_points, append_elliptical_arc_points, append_path_rect_points, bezier_cubic_path,
     bezier_quadratic_path, circle_path, concave_poly_fill_path, convex_poly_fill_path,
     cubic_bezier_point, ellipse_path, ngon_path, path_arc_segments, path_bezier_segments,
     path_elliptical_arc_segments, path_stroke_required_points, polyline_path, quad_path,
-    quadratic_bezier_point, rect_path, triangle_is_degenerate, triangle_path,
+    quadratic_bezier_point, rect_path, triangle_path,
 };
 
 #[cfg(test)]
@@ -1394,259 +1401,13 @@ fn debug_draw_canvas_element<H: UiHost>(
     element
 }
 
-fn rect_is_empty(rect: Rect) -> bool {
-    rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0
-}
-
-fn rect_is_finite(rect: Rect) -> bool {
-    rect.origin.x.0.is_finite()
-        && rect.origin.y.0.is_finite()
-        && rect.size.width.0.is_finite()
-        && rect.size.height.0.is_finite()
-}
-
-fn point_is_finite(point: Point) -> bool {
-    point.x.0.is_finite() && point.y.0.is_finite()
-}
-
-fn points_are_finite(points: &[Point; 4]) -> bool {
-    points.iter().copied().all(point_is_finite)
-}
-
-fn uv_points_are_finite(uvs: &[UvPoint; 4]) -> bool {
-    uvs.iter().all(|uv| uv.u.is_finite() && uv.v.is_finite())
-}
-
-fn debug_draw_vertex_is_finite(vertex: DebugDrawVertex) -> bool {
-    point_is_finite(vertex.position)
-        && vertex.uv.u.is_finite()
-        && vertex.uv.v.is_finite()
-        && vertex.color.r.is_finite()
-        && vertex.color.g.is_finite()
-        && vertex.color.b.is_finite()
-        && vertex.color.a.is_finite()
-}
-
-fn triangle_vertices_are_drawable(vertices: &[DebugDrawVertex; 3]) -> bool {
-    vertices.iter().copied().all(debug_draw_vertex_is_finite)
-        && vertices.iter().any(|vertex| vertex.color.a > 0.0)
-        && !triangle_is_degenerate(
-            vertices[0].position,
-            vertices[1].position,
-            vertices[2].position,
-        )
-}
-
-fn indexed_triangle(vertices: &[DebugDrawVertex], indices: &[u32]) -> Option<[DebugDrawVertex; 3]> {
-    let i0 = usize::try_from(indices[0]).ok()?;
-    let i1 = usize::try_from(indices[1]).ok()?;
-    let i2 = usize::try_from(indices[2]).ok()?;
-    Some([*vertices.get(i0)?, *vertices.get(i1)?, *vertices.get(i2)?])
-}
-
-fn sequential_triangle_indices(len: usize) -> Arc<[u32]> {
-    let capped_len = len.min(u32::MAX as usize);
-    Arc::from(
-        (0..capped_len)
-            .map(|index| index as u32)
-            .collect::<Vec<_>>(),
-    )
-}
-
-fn paint_triangle_mesh(
-    painter: &mut CanvasPainter<'_>,
-    order: DrawOrder,
-    vertices: &[DebugDrawVertex],
-    indices: &[u32],
-) {
-    for triangle_indices in indices.chunks_exact(3) {
-        let Some(triangle) = indexed_triangle(vertices, triangle_indices) else {
-            continue;
-        };
-        if !triangle_vertices_are_drawable(&triangle) {
-            continue;
-        }
-        painter
-            .scene()
-            .push(fret_core::SceneOp::VertexColorTriangle {
-                order,
-                vertices: triangle.map(DebugDrawVertex::scene_vertex),
-            });
-    }
-}
-
-fn paint_image_triangle_mesh(
-    painter: &mut CanvasPainter<'_>,
-    order: DrawOrder,
-    image: ImageId,
-    vertices: &[DebugDrawVertex],
-    indices: &[u32],
-    options: DebugDrawImageMeshOptions,
-) {
-    if !options.opacity.is_finite() || options.opacity <= 0.0 {
-        return;
-    }
-    for triangle_indices in indices.chunks_exact(3) {
-        let Some(triangle) = indexed_triangle(vertices, triangle_indices) else {
-            continue;
-        };
-        if !triangle_vertices_are_drawable(&triangle) {
-            continue;
-        }
-        painter.scene().push(fret_core::SceneOp::ImageTriangle {
-            order,
-            image,
-            vertices: triangle.map(DebugDrawVertex::scene_vertex),
-            sampling: options.sampling,
-            opacity: options.opacity,
-        });
-    }
-}
-
-fn rect_quad_points(rect: Rect) -> [Point; 4] {
-    let x0 = rect.origin.x;
-    let y0 = rect.origin.y;
-    let x1 = Px(rect.origin.x.0 + rect.size.width.0);
-    let y1 = Px(rect.origin.y.0 + rect.size.height.0);
-    [
-        Point::new(x0, y0),
-        Point::new(x1, y0),
-        Point::new(x1, y1),
-        Point::new(x0, y1),
-    ]
-}
-
-fn normalized_opacity(opacity: f32) -> f32 {
-    if opacity.is_finite() {
-        opacity.clamp(0.0, 1.0)
-    } else {
-        1.0
-    }
-}
-
-fn uv_rect_is_valid(uv: UvRect) -> bool {
-    uv.u0.is_finite()
-        && uv.v0.is_finite()
-        && uv.u1.is_finite()
-        && uv.v1.is_finite()
-        && uv.u1 > uv.u0
-        && uv.v1 > uv.v0
-}
-
-fn paint_image(
-    painter: &mut CanvasPainter<'_>,
-    order: DrawOrder,
-    rect: Rect,
-    image: ImageId,
-    options: DebugDrawImageOptions,
-    opacity: f32,
-) {
-    painter.scene().push(fret_core::SceneOp::Image {
-        order,
-        rect,
-        image,
-        fit: options.fit,
-        sampling: options.sampling,
-        opacity,
-    });
-}
-
-fn paint_image_region(
-    painter: &mut CanvasPainter<'_>,
-    order: DrawOrder,
-    rect: Rect,
-    image: ImageId,
-    uv: UvRect,
-    options: DebugDrawImageOptions,
-    opacity: f32,
-) {
-    painter.scene().push(fret_core::SceneOp::ImageRegion {
-        order,
-        rect,
-        image,
-        uv,
-        sampling: options.sampling,
-        opacity,
-    });
-}
-
-fn corner_radii_are_visible(radii: Corners) -> bool {
-    radii.top_left.0 > 0.0
-        || radii.top_right.0 > 0.0
-        || radii.bottom_right.0 > 0.0
-        || radii.bottom_left.0 > 0.0
-}
-
-fn rounded_rect_corner_radii(rect: Rect, rounding: Px, corners: DebugDrawRoundCorners) -> Corners {
-    let rounding = effective_rect_rounding(rect, rounding, corners);
-    Corners {
-        top_left: if corners.contains(DebugDrawRoundCorners::TOP_LEFT) {
-            rounding
-        } else {
-            Px(0.0)
-        },
-        top_right: if corners.contains(DebugDrawRoundCorners::TOP_RIGHT) {
-            rounding
-        } else {
-            Px(0.0)
-        },
-        bottom_right: if corners.contains(DebugDrawRoundCorners::BOTTOM_RIGHT) {
-            rounding
-        } else {
-            Px(0.0)
-        },
-        bottom_left: if corners.contains(DebugDrawRoundCorners::BOTTOM_LEFT) {
-            rounding
-        } else {
-            Px(0.0)
-        },
-    }
-}
-
-fn effective_rect_rounding(rect: Rect, rounding: Px, corners: DebugDrawRoundCorners) -> Px {
-    if rect_is_empty(rect)
-        || !rect_is_finite(rect)
-        || !rounding.0.is_finite()
-        || rounding.0 < 0.5
-        || corners.is_empty()
-    {
-        return Px(0.0);
-    }
-
-    let width = rect.size.width.0.abs();
-    let height = rect.size.height.0.abs();
-    let x_scale = if corners.contains(DebugDrawRoundCorners::TOP)
-        || corners.contains(DebugDrawRoundCorners::BOTTOM)
-    {
-        0.5
-    } else {
-        1.0
-    };
-    let y_scale = if corners.contains(DebugDrawRoundCorners::LEFT)
-        || corners.contains(DebugDrawRoundCorners::RIGHT)
-    {
-        0.5
-    } else {
-        1.0
-    };
-    let rounding = rounding
-        .0
-        .min(width * x_scale - 1.0)
-        .min(height * y_scale - 1.0);
-    if rounding >= 0.5 {
-        Px(rounding)
-    } else {
-        Px(0.0)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use super::*;
     use fret_app::App;
-    use fret_core::{AppWindowId, Size};
+    use fret_core::{AppWindowId, Corners, Size};
     use fret_ui::element::ElementKind;
 
     fn bounds() -> Rect {

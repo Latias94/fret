@@ -1,8 +1,9 @@
 use fret_core::{PathCommand, Point, Px, Rect, Size};
 
+use super::geometry::effective_rect_rounding;
 use super::{
     DEFAULT_ELLIPSE_SEGMENTS, DEFAULT_PATH_ARC_SEGMENTS, DEFAULT_PATH_BEZIER_SEGMENTS,
-    DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS, DebugDrawRoundCorners, effective_rect_rounding,
+    DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS, DebugDrawRoundCorners,
 };
 
 pub(super) fn path_stroke_required_points(closed: bool) -> usize {
@@ -278,14 +279,6 @@ pub(super) fn quad_path(p1: Point, p2: Point, p3: Point, p4: Point) -> [PathComm
         PathCommand::LineTo(p4),
         PathCommand::Close,
     ]
-}
-
-pub(super) fn triangle_is_degenerate(p1: Point, p2: Point, p3: Point) -> bool {
-    let ax = p2.x.0 - p1.x.0;
-    let ay = p2.y.0 - p1.y.0;
-    let bx = p3.x.0 - p1.x.0;
-    let by = p3.y.0 - p1.y.0;
-    (ax * by - ay * bx).abs() <= f32::EPSILON
 }
 
 pub(super) fn circle_path(center: Point, radius: Px) -> [PathCommand; 6] {

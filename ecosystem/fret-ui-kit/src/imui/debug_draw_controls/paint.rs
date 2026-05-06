@@ -1,17 +1,20 @@
 use fret_core::scene::Paint;
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, FillStyle, PathCommand, PathStyle, Point, Px, TextOverflow,
-    TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, FillStyle, ImageId, PathCommand, PathStyle, Point, Px, Rect,
+    TextOverflow, TextStyle, TextWrap, UvRect,
 };
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 
 use super::{
-    DebugDrawCommand, bezier_cubic_path, bezier_quadratic_path, circle_path,
-    concave_poly_fill_path, convex_poly_fill_path, corner_radii_are_visible, ellipse_path,
-    ngon_path, normalized_opacity, paint_image, paint_image_region, paint_image_triangle_mesh,
-    paint_triangle_mesh, points_are_finite, polyline_path, quad_path, rect_is_empty,
-    rect_is_finite, rect_path, rect_quad_points, rounded_rect_corner_radii, triangle_is_degenerate,
-    triangle_path, uv_points_are_finite, uv_rect_is_valid,
+    DebugDrawCommand, DebugDrawImageMeshOptions, DebugDrawImageOptions, DebugDrawRoundCorners,
+    DebugDrawVertex, bezier_cubic_path, bezier_quadratic_path, circle_path, concave_poly_fill_path,
+    convex_poly_fill_path, ellipse_path,
+    geometry::{
+        effective_rect_rounding, indexed_triangle, points_are_finite, rect_is_empty,
+        rect_is_finite, rect_quad_points, triangle_is_degenerate, triangle_vertices_are_drawable,
+        uv_points_are_finite,
+    },
+    ngon_path, polyline_path, quad_path, rect_path, triangle_path,
 };
 
 pub(super) fn paint_debug_draw_commands(
@@ -580,4 +583,145 @@ pub(super) fn paint_debug_draw_commands(
     for _ in 0..open_clip_depth {
         painter.scene().push(fret_core::SceneOp::PopClip);
     }
+}
+
+pub(super) fn normalized_opacity(opacity: f32) -> f32 {
+    if opacity.is_finite() {
+        opacity.clamp(0.0, 1.0)
+    } else {
+        1.0
+    }
+}
+
+pub(super) fn uv_rect_is_valid(uv: UvRect) -> bool {
+    uv.u0.is_finite()
+        && uv.v0.is_finite()
+        && uv.u1.is_finite()
+        && uv.v1.is_finite()
+        && uv.u1 > uv.u0
+        && uv.v1 > uv.v0
+}
+
+pub(super) fn corner_radii_are_visible(radii: Corners) -> bool {
+    radii.top_left.0 > 0.0
+        || radii.top_right.0 > 0.0
+        || radii.bottom_right.0 > 0.0
+        || radii.bottom_left.0 > 0.0
+}
+
+pub(super) fn rounded_rect_corner_radii(
+    rect: Rect,
+    rounding: Px,
+    corners: DebugDrawRoundCorners,
+) -> Corners {
+    let rounding = effective_rect_rounding(rect, rounding, corners);
+    Corners {
+        top_left: if corners.contains(DebugDrawRoundCorners::TOP_LEFT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+        top_right: if corners.contains(DebugDrawRoundCorners::TOP_RIGHT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+        bottom_right: if corners.contains(DebugDrawRoundCorners::BOTTOM_RIGHT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+        bottom_left: if corners.contains(DebugDrawRoundCorners::BOTTOM_LEFT) {
+            rounding
+        } else {
+            Px(0.0)
+        },
+    }
+}
+
+pub(super) fn paint_triangle_mesh(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    vertices: &[DebugDrawVertex],
+    indices: &[u32],
+) {
+    for triangle_indices in indices.chunks_exact(3) {
+        let Some(triangle) = indexed_triangle(vertices, triangle_indices) else {
+            continue;
+        };
+        if !triangle_vertices_are_drawable(&triangle) {
+            continue;
+        }
+        painter
+            .scene()
+            .push(fret_core::SceneOp::VertexColorTriangle {
+                order,
+                vertices: triangle.map(DebugDrawVertex::scene_vertex),
+            });
+    }
+}
+
+pub(super) fn paint_image_triangle_mesh(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    image: ImageId,
+    vertices: &[DebugDrawVertex],
+    indices: &[u32],
+    options: DebugDrawImageMeshOptions,
+) {
+    if !options.opacity.is_finite() || options.opacity <= 0.0 {
+        return;
+    }
+    for triangle_indices in indices.chunks_exact(3) {
+        let Some(triangle) = indexed_triangle(vertices, triangle_indices) else {
+            continue;
+        };
+        if !triangle_vertices_are_drawable(&triangle) {
+            continue;
+        }
+        painter.scene().push(fret_core::SceneOp::ImageTriangle {
+            order,
+            image,
+            vertices: triangle.map(DebugDrawVertex::scene_vertex),
+            sampling: options.sampling,
+            opacity: options.opacity,
+        });
+    }
+}
+
+pub(super) fn paint_image(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    rect: Rect,
+    image: ImageId,
+    options: DebugDrawImageOptions,
+    opacity: f32,
+) {
+    painter.scene().push(fret_core::SceneOp::Image {
+        order,
+        rect,
+        image,
+        fit: options.fit,
+        sampling: options.sampling,
+        opacity,
+    });
+}
+
+pub(super) fn paint_image_region(
+    painter: &mut CanvasPainter<'_>,
+    order: DrawOrder,
+    rect: Rect,
+    image: ImageId,
+    uv: UvRect,
+    options: DebugDrawImageOptions,
+    opacity: f32,
+) {
+    painter.scene().push(fret_core::SceneOp::ImageRegion {
+        order,
+        rect,
+        image,
+        uv,
+        sampling: options.sampling,
+        opacity,
+    });
 }

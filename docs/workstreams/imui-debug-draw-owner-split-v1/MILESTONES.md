@@ -45,6 +45,19 @@ Exit criteria:
 
 Status: done. See `M3_PATHS_SLICE_2026-05-06.md`.
 
+## M4 - Geometry and paint helper owners
+
+Exit criteria:
+
+- Rect/point finiteness, triangle/index helpers, rect quad math, and rounding math live in
+  `geometry.rs`.
+- Opacity/UV validation, rounded-corner helpers, and low-level image/mesh paint emission live in
+  `paint.rs`.
+- Public debug draw names, defaults, and re-export paths remain stable.
+- Focused debug draw tests and the compile floor still pass.
+
+Status: done. See `M4_GEOMETRY_AND_PAINT_HELPERS_SLICE_2026-05-06.md`.
+
 ## Closeout
 
 Exit criteria:

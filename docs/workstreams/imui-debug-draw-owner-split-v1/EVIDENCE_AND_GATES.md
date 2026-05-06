@@ -13,10 +13,14 @@ Last updated: 2026-05-06
 - `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/M2_PAINT_DISPATCH_SLICE_2026-05-06.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/M3_PATHS_SLICE_2026-05-06.md`
+- `docs/workstreams/imui-debug-draw-owner-split-v1/M4_GEOMETRY_AND_PAINT_HELPERS_SLICE_2026-05-06.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/TODO.md`
 - `docs/workstreams/imui-debug-draw-owner-split-v1/MILESTONES.md`
+- `docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md`
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs`
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry.rs`
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs`
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs`
 - `ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs`
 - `docs/workstreams/README.md`
