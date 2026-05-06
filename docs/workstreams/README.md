@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 356
+- Dedicated directories: 357
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -108,6 +108,16 @@ Current source of truth for the in-tree immediate-mode stack:
   - Scope: current source-backed Dear ImGui gap audit and cleanup/prioritization lane. Use this when
     deciding which IMUI gaps are still real, which old parity claims are stale, and which cleanup or
     follow-on should be split next.
+
+- Debug draw private owner split follow-on:
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - Scope: active narrow follow-on for splitting `debug_draw_controls.rs` into private owner
+    modules without public API widening, runtime changes, or additive draw-list capabilities.
 
 - Maintenance umbrella for editor-grade product closure:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
@@ -1912,6 +1922,7 @@ Rule:
 - `docs/workstreams/imui-identity-browser-visual-gate-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for offline HTML identity browser smoke gates)
 - `docs/workstreams/imui-identity-browser-fixture-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for committed identity browser sample bundles)
 - `docs/workstreams/imui-imgui-gap-closure-v1/` — first 2026-05-06, latest 2026-05-06, 5 markdown docs (active source-audit lane for rebaselining the Dear ImGui gap against current Fret sources and `repo-ref/imgui` before further fearless cleanup or helper widening)
+- `docs/workstreams/imui-debug-draw-owner-split-v1/` — first 2026-05-06, latest 2026-05-06, 6 markdown docs (active narrow follow-on for splitting IMUI debug draw private owners without public API or behavior changes)
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest n/a, 20 markdown docs
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)

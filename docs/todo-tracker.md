@@ -106,6 +106,16 @@ It complements (but does not replace) ADRs:
   - Scope: rebase the Dear ImGui gap read from current source before any next fearless cleanup or
     helper widening. Treat the old v2 parity audit as historical evidence unless this lane
     revalidates it.
+- Active debug draw owner-split follow-on:
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/TODO.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-debug-draw-owner-split-v1/WORKSTREAM.json`
+  - Scope: split `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` into private command,
+    paint, and path owners without public API widening or behavior changes.
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`

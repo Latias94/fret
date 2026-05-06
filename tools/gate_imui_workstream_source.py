@@ -76,6 +76,66 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("docs/workstreams/imui-debug-draw-owner-split-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-debug-draw-owner-split-v1"',
+                '"status": "active"',
+                '"follow_on_of": "imui-imgui-gap-closure-v1"',
+                '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md"',
+                '"path": "docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md"',
+                "cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast",
+                "python tools/gate_imui_workstream_source.py",
+                "python tools/gate_imui_facade_teaching_source.py",
+            ],
+            forbidden=[
+                '"status": "closed"',
+                "AddCallback",
+                "raw mutable draw buffers",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-debug-draw-owner-split-v1/DESIGN.md"),
+            required=[
+                "This lane is a narrow follow-on from the current Dear ImGui gap-closure audit.",
+                "This is a private owner split, not a feature lane.",
+                "`fret-ui-kit::imui` owns the surface; `crates/fret-ui` stays unchanged.",
+                "The safest first split is command metadata/model ownership.",
+                "`debug_draw_controls/commands.rs`",
+                "No public API widening or renaming.",
+            ],
+            forbidden=[
+                "No `crates/fret-ui` or renderer contract changes.\n- Widening",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-debug-draw-owner-split-v1/M0_BASELINE_AUDIT_2026-05-06.md"),
+            required=[
+                "The file is about 139 KB / 4519 lines",
+                "Start with `debug_draw_controls/commands.rs`.",
+                "public command kind and summary vocabulary",
+                "private recorded command enum",
+                "Any new Dear ImGui draw-list capability",
+            ],
+            forbidden=[
+                "public API widening",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-debug-draw-owner-split-v1/M1_COMMAND_MODEL_SLICE_2026-05-06.md"),
+            required=[
+                "Status: command-model owner split landed",
+                "`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs`",
+                "`DebugDrawCommandKind`",
+                "private `DebugDrawCommand`",
+                "No public API names, defaults, method names, or re-export paths changed.",
+                "`debug_draw_controls.rs`: 4519 lines before M1, 3994 lines after M1.",
+                "`debug_draw_controls/commands.rs`: 539 lines after M1.",
+            ],
+            forbidden=[
+                "runtime contract changed",
+            ],
+        ),
+        SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/TODO.md"),
             required=[
                 "- [x] Identify duplicate helper aliases that can be deleted behind a source-policy gate.",
