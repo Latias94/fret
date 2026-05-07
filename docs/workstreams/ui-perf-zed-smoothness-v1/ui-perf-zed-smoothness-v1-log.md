@@ -9571,3 +9571,89 @@ Notes:
 - The font wait flake is gone with the direct start-page setup.
 - The remaining tail is no longer tabs navigation; next attention should move to the page shell / `content_view` /
   `ScrollArea` hot path.
+
+## 2026-05-07 19:58 (scroll post-layout extent reuse: material3-tabs)
+
+Change:
+- Reused the last known non-zero scroll content extent during final layout for definite vertical post-layout Scroll
+  surfaces when no explicit edge/growth probe is required.
+- This keeps the first frame authoritative, but avoids repeating a deep child `measure()` walk on steady invalidation
+  frames where post-layout overflow observation is already the scroll-range source of truth.
+
+Correctness gate:
+```powershell
+cargo nextest run -p fret-ui scroll_
+```
+
+Result:
+- `139` tests run, `139` passed.
+
+Perf command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-scroll-reuse `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| steady probe | 3619 | 3716 | 3716 | 1663 | 64 | 208 | 1866 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `3716`
+- bundle: `target/fret-diag/codex-material3-tabs-scroll-reuse/1778154696687/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-material3-tabs-scroll-reuse\1778154696687\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`1673/3716`, layout=`1208/1663`, prepaint=`183/195`, paint=`293/1866`, dispatch=`0/213496`, hit_test=`7/25`
+- hot p50/p95 (us): layout.engine_solve=`28/64`, paint.widget=`77/918`, paint.text_prepare=`0/0`
+- renderer p95/max (us): upload=`122/122`, record=`22/22`, finish=`92/92`, encode=`183/183`, text=`265/265`, svg=`4/4`
+- worst bundle frame: `layout.nodes=43`, `paint.nodes=1186`, `paint.cache_misses=1132`, `inv.nodes=324`
+
+Scroll phase profile:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-scroll-phase-profile `
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Profile notes:
+- `ui-gallery-content-viewport` first frame still measures (`measure_children_us=4199`), which is expected while
+  establishing the first authoritative extent.
+- On steady frames, `ui-gallery-content-viewport` reports `measure_children_us=0`; representative samples:
+  - frame after bootstrap: `solve_barrier_us=653`, `layout_children_us=670`, `total_us=1380`
+  - resized steady frame: `solve_barrier_us=344`, `layout_children_us=695`, `total_us=1044`
+  - late steady frames: `total_us=286-421`
+- This confirms the target cost moved out of child measurement. The remaining worst frame is paint-cache churn
+  (`paint.cache_misses=1132`) plus smaller layout work, not `layout.engine_solve`.
+- Follow-up: the same profile shows horizontal Material3 tabs scroll extent inflation
+  (`ui-gallery-material3-tabs-scrollable` `content_w` grows far beyond the measured tab strip). Keep that as a
+  separate correctness/perf slice because this change only touches the vertical post-layout path.
+
+Delta vs direct baseline from 2026-05-07 17:49:
+- `p95 total`: `6565us -> 3716us`
+- `p95 layout`: `4440us -> 1663us`
+- `p95 solve`: `186us -> 64us`
+- `p95 paint`: `1935us -> 1866us` (effectively unchanged; next hotspot is paint-cache invalidation/replay)

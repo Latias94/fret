@@ -96,6 +96,110 @@ fn scroll_intrinsic_content_mode_measures_children() {
 }
 
 #[test]
+fn scroll_post_layout_reuses_known_extent_for_invalidated_definite_surface_without_remeasuring() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    struct MeasureCountingLayoutNode {
+        size: Size,
+        measure_count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureCountingLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measure_count.fetch_add(1, Ordering::SeqCst);
+            self.size
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let measure_count = Arc::new(AtomicUsize::new(0));
+    let child = ui.create_node(MeasureCountingLayoutNode {
+        size: Size::new(Px(200.0), Px(240.0)),
+        measure_count: measure_count.clone(),
+    });
+
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-post-layout-reuses-known-extent",
+        {
+            let scroll_handle = scroll_handle.clone();
+            move |cx| {
+                let mut scroll_layout = crate::element::LayoutStyle::default();
+                scroll_layout.size.width = Length::Fill;
+                scroll_layout.size.height = Length::Fill;
+                scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                vec![cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: scroll_layout,
+                        scroll_handle: Some(scroll_handle.clone()),
+                        probe_unbounded: true,
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            }
+        },
+    );
+    ui.set_root(root0);
+    let scroll_node = ui.children(root0)[0];
+    ui.set_children(scroll_node, vec![child]);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let measure_calls_before = measure_count.load(Ordering::SeqCst);
+    assert!(
+        measure_calls_before > 0,
+        "expected the first frame to measure the child subtree"
+    );
+
+    let content_before = scroll_handle.content_size();
+    assert!(
+        content_before.height.0 > 0.0,
+        "expected the first frame to establish a non-zero scroll extent"
+    );
+
+    ui.test_set_layout_invalidation(scroll_node, true);
+    ui.test_set_layout_invalidation(child, true);
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        measure_count.load(Ordering::SeqCst),
+        measure_calls_before,
+        "expected a steady invalidated scroll surface with a known definite extent to reuse its prior child measurement instead of remeasuring"
+    );
+    assert_eq!(
+        scroll_handle.content_size(),
+        content_before,
+        "expected the reused extent path to preserve the established scroll content size"
+    );
+}
+
+#[test]
 fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_width_as_unknown() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 

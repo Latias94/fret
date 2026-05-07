@@ -905,6 +905,20 @@ Perf acceptance:
       - Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
       - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 14:26.
     - If acceptable, flip the default for resize-only (keep invalidation deferral opt-in).
+- [x] Reuse known post-layout scroll extents for definite vertical scroll surfaces.
+  - Scope: final layout only, vertical `probe_unbounded` Scroll nodes with a definite viewport and a previously
+    observed non-zero content extent.
+  - Rationale: once post-layout overflow observation is the authoritative extent source, steady invalidation frames
+    should not repeat a deep child `measure()` walk just to seed the scroll range.
+  - Gate: `cargo nextest run -p fret-ui scroll_`.
+  - Evidence: perf log entry `2026-05-07 19:58`; the Material3 tabs representative probe drops from
+    `p95 total/layout=6565/4440us` to `3716/1663us`, and `ui-gallery-content-viewport` steady
+    `measure_children_us` falls to `0`.
+- [ ] Split and fix horizontal Scroll extent inflation in Material3 tabs.
+  - Evidence from the same profiling pass: `ui-gallery-material3-tabs-scrollable` can grow `content_w` far beyond
+    the measured tab strip width while using the legacy horizontal unbounded-probe path.
+  - Keep this separate from the vertical post-layout reuse slice; it needs its own correctness repro before changing
+    X-axis extent policy.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`

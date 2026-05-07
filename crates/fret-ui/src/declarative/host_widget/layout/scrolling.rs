@@ -1709,10 +1709,17 @@ impl ElementHostWidget {
         );
         let intrinsic_cached_max_child = probe_seed.intrinsic_cached_max_child;
         let mut cached_max_child = probe_seed.cached_max_child;
+        let previous_content = handle.content_size();
 
         if must_probe_for_growing_extent {
             cached_max_child = None;
         }
+
+        let can_reuse_known_post_layout_extent = post_layout_extents_mode
+            && !must_probe_for_growing_extent
+            && non_default_size(previous_content).is_some()
+            && !matches!(props.layout.size.width, Length::Auto)
+            && !matches!(props.layout.size.height, Length::Auto);
 
         // Avoid recomputing the unbounded scroll probe twice in a single frame when the runtime
         // performs probe+final layout passes (e.g. view-cache reconciliation).
@@ -1824,6 +1831,12 @@ impl ElementHostWidget {
 
                 max_child
             }
+        } else if can_reuse_known_post_layout_extent {
+            // Definite post-layout scroll surfaces already know their viewport-sized box; the
+            // child walk is only needed to refresh the scrollable extent. Once a prior
+            // authoritative extent exists, reuse it and let the post-layout overflow observer
+            // reconcile any grow/shrink drift after the child subtree lays out.
+            previous_content
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -1874,7 +1887,6 @@ impl ElementHostWidget {
         // layout rounding. Match DOM behavior by rounding the scrollable axis up to the next
         // whole pixel (tolerating tiny floating point noise).
         const ROUND_EPSILON: f32 = 0.001;
-        let previous_content = handle.content_size();
         let trust_live_edge_probe_shrink =
             pending_extent_probe || (cx.children.len() == 1 && direct_children_layout_invalidated);
         let content_w = if props.axis.scroll_x() && probe_unbounded_for_measure {
