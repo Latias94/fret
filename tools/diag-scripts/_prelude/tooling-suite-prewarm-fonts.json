@@ -1,5 +1,10 @@
 {
   "schema_version": 2,
+  "meta": {
+    "env_defaults": {
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+    }
+  },
   "steps": [
     {
       "type": "wait_until",

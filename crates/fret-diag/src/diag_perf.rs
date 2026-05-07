@@ -65,7 +65,8 @@ fn merge_script_env_defaults_for_perf_launch(
     if !env_conflicts.is_empty() {
         env_conflicts.sort();
         return Err(format!(
-            "conflicting script meta.env_defaults in perf:\n- {}",
+            "conflicting script meta.env_defaults in perf:\n- {}\n\
+hint: use --reuse-launch-per-script for multi-script suites that need different launch env defaults",
             env_conflicts.join("\n- ")
         ));
     }
@@ -75,6 +76,23 @@ fn merge_script_env_defaults_for_perf_launch(
     }
 
     Ok(())
+}
+
+fn build_script_env_defaults_for_perf_launch(
+    launch_env: &[(String, String)],
+    script: &Path,
+    prewarm_scripts: &[PathBuf],
+    prelude_scripts: &[PathBuf],
+) -> Result<Vec<(String, String)>, String> {
+    let mut script_launch_env = launch_env.to_vec();
+    let script = script.to_path_buf();
+    merge_script_env_defaults_for_perf_launch(
+        &mut script_launch_env,
+        &[script],
+        prewarm_scripts,
+        prelude_scripts,
+    )?;
+    Ok(script_launch_env)
 }
 
 fn perf_row_status_and_reason(
@@ -719,6 +737,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
     let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
     let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
     let stats_opts = BundleStatsOptions { warmup_frames };
+    let suite_has_multiple_scripts = scripts.len() > 1;
     let perf_suite_prewarm_scripts: Vec<PathBuf> = suite_prewarm_scripts
         .iter()
         .cloned()
@@ -729,12 +748,16 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         .cloned()
         .map(|p| resolve_path(&workspace_root, p))
         .collect();
-    merge_script_env_defaults_for_perf_launch(
-        &mut perf_launch_env,
-        &scripts,
-        &perf_suite_prewarm_scripts,
-        &perf_suite_prelude_scripts,
-    )?;
+    let use_global_script_env_defaults =
+        reuse_process && (!reuse_launch_per_script || !suite_has_multiple_scripts);
+    if use_global_script_env_defaults {
+        merge_script_env_defaults_for_perf_launch(
+            &mut perf_launch_env,
+            &scripts,
+            &perf_suite_prewarm_scripts,
+            &perf_suite_prelude_scripts,
+        )?;
+    }
 
     let run_suite_aux_script_must_pass = |src: &PathBuf,
                                           child: &mut Option<LaunchedDemo>,
@@ -835,6 +858,19 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
     }
 
     for (script_index, src) in scripts.into_iter().enumerate() {
+        let script_launch_env_buf;
+        let script_launch_env = if use_global_script_env_defaults {
+            &perf_launch_env
+        } else {
+            script_launch_env_buf = build_script_env_defaults_for_perf_launch(
+                &perf_launch_env,
+                src.as_path(),
+                &perf_suite_prewarm_scripts,
+                &perf_suite_prelude_scripts,
+            )?;
+            &script_launch_env_buf
+        };
+
         if reuse_process_per_script && launched_by_fretboard && script_index > 0 {
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             child = None;
@@ -843,7 +879,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         if reuse_process_per_script && launched_by_fretboard && child.is_none() {
             child = maybe_launch_demo(
                 &launch,
-                &perf_launch_env,
+                script_launch_env,
                 &workspace_root,
                 &resolved_ready_path,
                 &resolved_exit_path,
@@ -885,7 +921,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             if !reuse_process {
                 child = maybe_launch_demo(
                     &launch,
-                    &perf_launch_env,
+                    script_launch_env,
                     &workspace_root,
                     &resolved_ready_path,
                     &resolved_exit_path,
@@ -1394,7 +1430,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             if !reuse_process {
                 child = maybe_launch_demo(
                     &launch,
-                    &perf_launch_env,
+                    script_launch_env,
                     &workspace_root,
                     &resolved_ready_path,
                     &resolved_exit_path,
