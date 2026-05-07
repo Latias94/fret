@@ -52,6 +52,8 @@ Conventions:
     - Added `click_stable` diag script step to reduce selector-driven flakiness: commit `75ac42db9`.
     - Stabilized the Dialog steady perf probe after gallery surface drift, fixed `diag perf` `meta.env_defaults`
       launch parity, and recorded Windows RTX4090 evidence: commit `76cd1160c`.
+    - Scoped suite env defaults to per-launch-group, moved font bootstrap ownership onto the prewarm script, and
+      verified a mixed `dialog` + `context-menu` smoke under `gallery-full`: commit `1776617de`.
 
 - [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
   bucketed/deferred/cached during live resize, and what must remain exact).

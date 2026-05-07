@@ -43,6 +43,9 @@ The intent is to stop drifting into “endless experiments” by pinning:
   - Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
   - Tip: when chasing rare resize tails, use `--attempts 3` and require a strict majority pass to reduce
     “single outlier run” flakiness without loosening thresholds.
+- `ui-gallery-steady` launch note:
+  - The suite mixes dev-only overlay pages and Material3 probes, so run it against a `gallery-full` build.
+  - If scripts need different launch env defaults, use `--reuse-launch-per-script` instead of `--reuse-launch`.
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.

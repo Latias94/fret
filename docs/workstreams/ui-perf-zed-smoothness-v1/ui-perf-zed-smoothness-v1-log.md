@@ -9377,3 +9377,53 @@ Notes:
 - The committed script is now a stable Dialog component probe, not a navigation/Overlay-page probe.
 - The baseline file above is local evidence only. Do not promote it as the canonical Windows suite baseline; refresh the
   full `ui-gallery-steady` Windows baseline with the candidate-selection workflow once the measurement surface is stable.
+
+## 2026-05-07 13:57 (commit `1776617de`)
+
+Change:
+- Kept `diag perf` suite launch defaults scoped to each launch group instead of forcing one global env for all scripts.
+  This lets mixed suites keep their own `meta.env_defaults` as long as they are launched per script.
+- Moved the font prewarm bootstrap default onto the prewarm script itself, so font-waiting prewarms no longer depend on
+  a sibling probe to supply `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1`.
+
+Machine:
+- OS: Microsoft Windows 11 Pro 10.0.26200
+- CPU: 13th Gen Intel(R) Core(TM) i9-13900KF
+- GPU: NVIDIA GeForce RTX 4090, driver 596.21, wgpu backend Vulkan
+- Toolchain: cargo 1.92.0, rustc 1.92.0, cargo-nextest 0.9.116
+
+Commands:
+```powershell
+cargo nextest run -p fret-diag perf_launch_env
+cargo build -p fret-ui-gallery --release --features gallery-full
+cargo build -p fretboard --release
+```
+
+Targeted smoke:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json ^
+  --repeat 1 --warmup-frames 5 --reuse-launch --reuse-launch-per-script --timeout-ms 300000 ^
+  --dir target/fret-diag/codex-ui-gallery-per-script-smoke ^
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json ^
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json ^
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 ^
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (top.us us):
+| script | total | layout | solve | prepaint | paint |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| dialog escape/focus restore | 1765 | 1353 | 29 | 274 | 138 |
+| context-menu right click | 8035 | 7581 | 1158 | 178 | 276 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`
+- top_total_time_us: `8035`
+- bundle: `target/fret-diag/codex-ui-gallery-per-script-smoke/1778132782905/bundle.schema2.json`
+
+Notes:
+- `ui-gallery-steady` now needs a `gallery-full` build for the full suite because it mixes dev-only overlay pages with
+  Material3 probes. Use `--reuse-launch-per-script` for the mixed suite; `--reuse-launch` alone is not a valid launch
+  model for those start-page defaults.
+- The full suite smoke is still too heavy to use as the default verification command; keep the smaller per-script smoke
+  above as the practical contract check while we split or normalize the suite further.
