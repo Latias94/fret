@@ -9523,3 +9523,51 @@ Notes:
   small daily smoke set and inspect the dispatch path separately if it widens.
 - The local baseline at `target/fret-diag/codex-material3-tabs-baseline/material3-tabs-baseline.json` is evidence-only
   for now and should not replace the committed canonical baseline without the normal selection workflow.
+
+## 2026-05-07 17:49 (steady probe stabilized: material3-tabs)
+
+Change:
+- Updated the steady Material 3 tabs probe to start directly on `material3_tabs` via script env defaults.
+- Removed the sidebar-navigation warmup path from the probe; the script now measures the tab interaction on the page
+  itself and no longer depends on the navigation scroll/search path.
+
+Command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-direct `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| steady probe | 6368 | 6565 | 6565 | 4440 | 186 | 190 | 1935 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `6565`
+- bundle: `target/fret-diag/codex-material3-tabs-direct/1778147521393/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-material3-tabs-direct\1778147521393\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`1646/6565`, layout=`1162/4440`, prepaint=`180/202`, paint=`305/1935`, dispatch=`0/211930`, hit_test=`7/26`
+- hot p50/p95 (us): layout.engine_solve=`30/186`, paint.widget=`81/933`, paint.text_prepare=`0/0`
+- renderer p95/max (us): upload=`95/95`, record=`33/33`, finish=`95/95`, encode=`186/186`, text=`204/204`, svg=`3/3`
+- worst bundle frame: `layout.nodes=43`, `paint.nodes=1186`, `paint.cache_misses=1132`, `inv.nodes=324`
+
+Notes:
+- The font wait flake is gone with the direct start-page setup.
+- The remaining tail is no longer tabs navigation; next attention should move to the page shell / `content_view` /
+  `ScrollArea` hot path.

@@ -233,16 +233,18 @@ impl Tabs {
                     .collect::<Vec<_>>(),
             );
 
-            let selected = cx
-                .get_model_cloned(&model, Invalidation::Layout)
+            let selected_value = cx
+                .get_model_cloned(&model, Invalidation::Paint)
                 .unwrap_or_else(empty_arc_str);
             let selected_idx = items
                 .iter()
-                .position(|it| it.value.as_ref() == selected.as_ref());
+                .position(|it| it.value.as_ref() == selected_value.as_ref());
 
             let tab_stop = items
                 .iter()
-                .position(|it| !disabled && !it.disabled && it.value.as_ref() == selected.as_ref())
+                .position(|it| {
+                    !disabled && !it.disabled && it.value.as_ref() == selected_value.as_ref()
+                })
                 .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
 
             let sem = SemanticsProps {
@@ -405,6 +407,7 @@ impl Tabs {
                                         tab_stop,
                                         disabled,
                                         scrollable,
+                                        selected_idx.is_some_and(|t| t == idx),
                                         &style,
                                     )
                                 })
@@ -439,6 +442,7 @@ fn material_primary_tab<H: UiHost>(
     tab_stop: bool,
     disabled_group: bool,
     scrollable: bool,
+    selected: bool,
     style_override: &TabsStyle,
 ) -> AnyElement {
     let value = item.value.clone();
@@ -448,10 +452,6 @@ fn material_primary_tab<H: UiHost>(
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
-        let selected = cx
-            .get_model_cloned(&model, Invalidation::Layout)
-            .map(|v| v.as_ref() == value.as_ref())
-            .unwrap_or(false);
 
         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
             rt.tabs.ensure_len(set_size);

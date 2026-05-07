@@ -1,58 +1,42 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-tabs-switch-perf-steady",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "material3", "tabs", "perf", "steady"],
+    "target_hints": [
+      "Starts on material3_tabs via env defaults so the steady probe measures tabs switching rather than sidebar navigation."
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+      "FRET_UI_GALLERY_START_PAGE": "material3_tabs"
+    }
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 1 },
-    { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
-      },
-      "timeout_frames": 240
-    },
-
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 720.0 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 2 },
 
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-tabs" },
-      "delta_y": -720.0,
-      "timeout_frames": 900
-    },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-tabs" },
-      "stable_frames": 3,
-      "eps_px": 1.0,
-      "timeout_frames": 900
-    },
-    { "type": "wait_frames", "n": 1 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-material3-tabs" }
       },
-      "timeout_frames": 900
+      "timeout_frames": 240
     },
-
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-tabs" },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
 
     {
       "type": "wait_until",
@@ -73,7 +57,9 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-tab-settings" } },
     { "type": "wait_frames", "n": 2 },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-tab-overview" } },
-    { "type": "wait_frames", "n": 4 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-tab-settings" } },
+    { "type": "wait_frames", "n": 2 },
 
     { "type": "reset_diagnostics" },
 

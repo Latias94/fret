@@ -52,6 +52,137 @@ fn theme_color_change_does_not_reprepare_text_in_paint() {
     );
 }
 
+#[test]
+fn text_color_prop_changes_are_paint_only_in_declarative_diff() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let red = Color {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
+    let green = Color {
+        r: 0.0,
+        g: 1.0,
+        b: 0.0,
+        a: 1.0,
+    };
+
+    let styled = fret_core::AttributedText::new(
+        std::sync::Arc::<str>::from("styled"),
+        [fret_core::TextSpan {
+            len: "styled".len(),
+            ..Default::default()
+        }],
+    );
+    let selectable = fret_core::AttributedText::new(
+        std::sync::Arc::<str>::from("selectable"),
+        [fret_core::TextSpan {
+            len: "selectable".len(),
+            ..Default::default()
+        }],
+    );
+
+    let root = render_colored_text_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        red,
+        &styled,
+        &selectable,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "expected the baseline tree to be clean before the color-only rerender"
+    );
+    let prepares_after_first_paint = services.prepare_calls;
+
+    app.advance_frame();
+    let root = render_colored_text_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        green,
+        &styled,
+        &selectable,
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "text color changes should invalidate paint without forcing layout"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        services.prepare_calls, prepares_after_first_paint,
+        "text color changes should not force text blob preparation"
+    );
+}
+
+fn render_colored_text_diff_root(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    bounds: Rect,
+    color: Color,
+    styled: &fret_core::AttributedText,
+    selectable: &fret_core::AttributedText,
+) -> NodeId {
+    let styled = styled.clone();
+    let selectable = selectable.clone();
+    render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "text-color-diff",
+        move |cx| {
+            let mut plain_props = crate::element::TextProps::new("plain");
+            plain_props.color = Some(color);
+
+            let mut styled_props = crate::element::StyledTextProps::new(styled);
+            styled_props.color = Some(color);
+
+            let mut selectable_props = crate::element::SelectableTextProps::new(selectable);
+            selectable_props.color = Some(color);
+
+            vec![
+                cx.text_props(plain_props),
+                cx.styled_text_props(styled_props),
+                cx.selectable_text_props(selectable_props),
+            ]
+        },
+    )
+}
+
 fn fingerprint_text_style(style: &TextStyle, h: &mut impl Hasher) {
     style.font.hash(h);
     style.size.0.to_bits().hash(h);

@@ -12,7 +12,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let tabs = material3::Tabs::uncontrolled(cx, "overview");
     let value = tabs.value_model();
     let current = cx
-        .get_model_cloned(&value, Invalidation::Layout)
+        .get_model_cloned(&value, Invalidation::Paint)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
@@ -48,7 +48,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             WidgetStateProperty::new(None)
                 .when(WidgetStates::SELECTED, Some(ColorRef::Color(active_accent))),
         );
-    let fixed_tabs_overridden = material3::Tabs::new(value.clone())
+    // Keep the style override preview on its own state lane as well; the representative smoke
+    // script exercises the primary preview, so coupling the override demo to the same model only
+    // inflates the measured layout work.
+    let fixed_tabs_overridden = material3::Tabs::uncontrolled(cx, "overview")
         .a11y_label("Material 3 Tabs (overridden)")
         .test_id("ui-gallery-material3-tabs-overridden")
         .style(override_style)
@@ -66,7 +69,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ])
         .into_element(cx);
 
-    let scrollable_tabs = material3::Tabs::new(value)
+    // Keep the scrollable preview on an independent state lane so the representative switch probe
+    // measures the core fixed-tabs interaction instead of re-laying out an unrelated preview.
+    let scrollable_tabs = material3::Tabs::uncontrolled(cx, "overview")
         .a11y_label("Material 3 Tabs (scrollable)")
         .test_id("ui-gallery-material3-tabs-scrollable")
         .scrollable(true)

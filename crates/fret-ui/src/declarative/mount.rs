@@ -2381,33 +2381,39 @@ fn declarative_instance_change_mask(
         (ElementInstance::Text(a), ElementInstance::Text(b)) => {
             if a.text != b.text
                 || a.style != b.style
-                || a.color != b.color
                 || a.wrap != b.wrap
                 || a.overflow != b.overflow
             {
                 layout_changed = true;
+                paint_changed = true;
+            }
+            if a.color != b.color {
                 paint_changed = true;
             }
         }
         (ElementInstance::StyledText(a), ElementInstance::StyledText(b)) => {
             if a.rich != b.rich
                 || a.style != b.style
-                || a.color != b.color
                 || a.wrap != b.wrap
                 || a.overflow != b.overflow
             {
                 layout_changed = true;
                 paint_changed = true;
             }
+            if a.color != b.color {
+                paint_changed = true;
+            }
         }
         (ElementInstance::SelectableText(a), ElementInstance::SelectableText(b)) => {
             if a.rich != b.rich
                 || a.style != b.style
-                || a.color != b.color
                 || a.wrap != b.wrap
                 || a.overflow != b.overflow
             {
                 layout_changed = true;
+                paint_changed = true;
+            }
+            if a.color != b.color {
                 paint_changed = true;
             }
         }
