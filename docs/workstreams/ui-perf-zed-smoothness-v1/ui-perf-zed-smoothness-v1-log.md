@@ -9872,3 +9872,72 @@ Implication:
 - The next optimization should not blindly widen layout containment for the content pane. The better target is reducing
   avoidable view-rerender pressure across the gallery content root, or splitting the content shell so only truly changing
   model reads sit outside the expensive page subtree.
+
+## 2026-05-07 23:59 (Material3 indication animation frames stay paint-only)
+
+Discovery:
+- The `needs_rerender` evidence after the cache-root diagnostic fix pointed at Material3 indication animation-frame
+  requests, especially `ecosystem/fret-ui-material3/src/foundation/indication.rs`.
+- A naive swap from `CanvasPainter::request_animation_frame()` to paint-only would have been incorrect: the previous
+  indication helper computed ripple/state-layer frames during declarative render and captured that snapshot into the
+  canvas paint closure. If view-cache reuse skipped render, the animation would freeze.
+
+Change:
+- Added `CanvasPainter::request_animation_frame_paint_only()` as a canvas-level forwarding API for paint-time retained
+  animations.
+- Moved Material3 pressable indication continuous-frame progression into a retained paint-time runtime:
+  - render updates input edges and targets,
+  - paint advances ripple/state-layer frames using `CanvasPainter::frame_id()`,
+  - indication-only frames request paint-only RAF,
+  - `extra_want_frames` still uses normal RAF because those callers may depend on render-time animation state.
+- Removed now-dead frame-snapshot indication helpers from the private Material3 foundation module.
+
+Correctness gates:
+```powershell
+cargo nextest run -p fret-ui canvas_paint_only_animation_frame_keeps_view_cache_root_reusable widget_request_animation_frame_marks_nearest_view_cache_root_dirty request_animation_frame_marks_view_cache_root_dirty
+cargo nextest run -p fret-ui view_cache
+cargo nextest run -p fret-ui-material3 indication_runtime_advances_ripple_from_paint_frames_without_render_update indication_runtime_releases_delayed_ripple_from_paint_frames
+cargo nextest run -p fret-ui-material3 tabs
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- Focused `fret-ui` RAF/view-cache tests: `3/3` passed.
+- `fret-ui` view-cache suite: `55/55` passed.
+- Material3 indication retained-runtime tests: `2/2` passed.
+- Material3 tabs tests: `6/6` passed.
+- Release gallery build passed; existing unused warnings remain in `fret-runtime` / `fret-ui`.
+
+Representative steady probe:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-paint-only-indication `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| cache reason fixed | 5682 | 5946 | 5946 | 4405 | 138 | 209 | 1453 |
+| paint-only indication | 3203 | 3210 | 3210 | 2502 | 266 | 104 | 620 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `3210`
+- bundle: `target/fret-diag/codex-material3-tabs-paint-only-indication/1778169629619/bundle.schema2.json`
+
+Bundle evidence:
+- `paint.cache_misses=0` remains stable.
+- Indication-only animation-frame invalidations now show `source=other detail=animation_frame_request`, truncate at the
+  content cache root, and do not mark it as `needs_rerender`.
+- Representative retained frames show `cache_reused=2/2`, `view_cache_roots_needs_rerender=0`, and
+  `layout_nodes_performed=9`.
+- A few tab-switch frames still report `needs_rerender=1`; those correspond to render-driven tab/indicator state, not
+  indication repaint. Keep the shell/content boundary follow-up open for that remaining class.

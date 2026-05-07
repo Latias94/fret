@@ -83,6 +83,7 @@ pub(crate) trait UiCanvasHost {
     fn theme(&mut self) -> &Theme;
     fn request_redraw(&mut self);
     fn request_animation_frame(&mut self);
+    fn request_animation_frame_paint_only(&mut self);
 
     fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation);
     fn observe_global(&mut self, global: TypeId, invalidation: Invalidation);
@@ -141,6 +142,10 @@ impl<'a, 'b, H: UiHost> UiCanvasHost for UiCanvasHostAdapter<'a, 'b, H> {
 
     fn request_animation_frame(&mut self) {
         self.cx.request_animation_frame();
+    }
+
+    fn request_animation_frame_paint_only(&mut self) {
+        self.cx.request_animation_frame_paint_only();
     }
 
     fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {
@@ -207,6 +212,15 @@ impl<'a> CanvasPainter<'a> {
 
     pub fn request_animation_frame(&mut self) {
         self.host.request_animation_frame();
+    }
+
+    /// Request the next animation frame without forcing the nearest view-cache root to rerender.
+    ///
+    /// Use this only when the canvas paint closure can advance the visual state from retained
+    /// paint-time data. If animation state is computed during declarative rendering, use
+    /// [`Self::request_animation_frame`] so view-cache roots are rerendered.
+    pub fn request_animation_frame_paint_only(&mut self) {
+        self.host.request_animation_frame_paint_only();
     }
 
     pub fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {

@@ -2,6 +2,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::*;
 use fret_core::FontId;
@@ -424,4 +425,72 @@ fn canvas_scoped_ops_keep_scene_stacks_balanced() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     scene.validate().expect("scene should validate");
+}
+
+#[test]
+fn canvas_paint_only_animation_frame_keeps_view_cache_root_reusable() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let paints = Arc::new(AtomicUsize::new(0));
+
+    for _ in 0..2 {
+        let renders = renders.clone();
+        let paints = paints.clone();
+        render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "canvas-paint-only-raf-view-cache",
+            move |cx| {
+                vec![
+                    cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        let paints = paints.clone();
+                        vec![cx.canvas(crate::element::CanvasProps::default(), move |p| {
+                            paints.fetch_add(1, Ordering::SeqCst);
+                            p.request_animation_frame_paint_only();
+                        })]
+                    }),
+                ]
+            },
+        );
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "paint-only canvas animation frames should still schedule the runner"
+        );
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "paint-only canvas animation should keep the view-cache render subtree reusable"
+    );
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        2,
+        "paint-only canvas animation should still repaint on the next frame"
+    );
 }

@@ -945,6 +945,15 @@ Perf acceptance:
   - Gate: `cargo nextest run -p fret-ui view_cache` (`54/54` passed).
   - Evidence: perf log entry `2026-05-07 23:30`; Material3 tabs content root now reports
     `reuse_reason="needs_rerender"` while paint cache misses remain `0`.
+- [x] Keep Material3 indication animation frames paint-only under view-cache reuse.
+  - Change: add `CanvasPainter::request_animation_frame_paint_only()` and move Material3 pressable indication progression
+    into retained paint-time state; preserve normal RAF for `extra_want_frames` callers that still depend on render-time
+    animation state.
+  - Gate: `cargo nextest run -p fret-ui view_cache`, focused Material3 indication tests, Material3 tabs tests, and
+    `cargo build -p fret-ui-gallery --release --features gallery-full`.
+  - Evidence: perf log entry `2026-05-07 23:59`; Material3 tabs steady p95 total/layout/paint moves from
+    `5946/4405/1453us` to `3210/2502/620us`, with indication-only RAF walks recorded as
+    `source=other detail=animation_frame_request` and no cache-root `needs_rerender`.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`
