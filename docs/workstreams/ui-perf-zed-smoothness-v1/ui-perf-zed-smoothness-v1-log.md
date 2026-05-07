@@ -9744,3 +9744,74 @@ Notes:
   probe.
 - Follow-up should target the page-shell/content paint-cache invalidation path rather than horizontal Scroll extent
   feedback.
+
+## 2026-05-07 22:25 (view-cache perf env drives the runtime model)
+
+Discovery:
+- The previous Material3 tabs steady probe passed `FRET_UI_GALLERY_VIEW_CACHE=1`, but the gallery runtime did not keep
+  that setting active after startup.
+- `UiTree` was initialized from `FRET_UI_GALLERY_VIEW_CACHE`, then `render_flow::begin_frame` overwrote it from the
+  `view_cache_enabled` model, whose default still came from the stale
+  `FRET_UI_GALLERY_VIEW_CACHE_ENABLE_INNER_CONTROL` config.
+- Evidence in the old worst bundle:
+  `target/fret-diag/codex-material3-tabs-x-feedback-fixed-steady/1778161143460/bundle.schema2.json` had both shell
+  cache roots reporting `reuse_reason="view_cache_disabled"`.
+
+Change:
+- Collapsed gallery view-cache startup into a single `ViewCacheBootConfig` and `install_view_cache_boot_config(...)`.
+- `FRET_UI_GALLERY_VIEW_CACHE` now initializes both the `view_cache_enabled` model and `UiTree.view_cache_enabled`.
+- Removed the stale `FRET_UI_GALLERY_VIEW_CACHE_ENABLE_INNER_CONTROL` branch instead of keeping compatibility.
+
+Correctness gates:
+```powershell
+cargo nextest run -p fret-ui-gallery view_cache_boot_config
+cargo nextest run -p fret-ui-gallery shell_cache_policy_can_be_enabled_without_global_view_cache
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- Focused gallery boot-config tests passed (`1/1` each).
+- Release gallery build passed; existing unused warnings remain in `fret-runtime` / `fret-ui`.
+
+Representative steady probe:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-view-cache-env-fixed `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| env fixed | 5682 | 5946 | 5946 | 4405 | 138 | 209 | 1453 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `5946`
+- bundle: `target/fret-diag/codex-material3-tabs-view-cache-env-fixed/1778163533864/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-material3-tabs-view-cache-env-fixed\1778163533864\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`4112/5946`, layout=`2828/4519`, prepaint=`148/200`, paint=`1037/1453`, dispatch=`0/426925`, hit_test=`15/48`
+- hot p50/p95 (us): layout.engine_solve=`53/170`, paint.widget=`401/542`, paint.text_prepare=`0/0`
+- worst bundle cache evidence: `paint.cache_misses=0`; cache root reuse no longer reports `view_cache_disabled`.
+
+Notes:
+- This corrects the measurement contract for all perf commands that rely on `FRET_UI_GALLERY_VIEW_CACHE=1`.
+- The previous `paint.cache_misses=1132` interpretation is now superseded for this script because the cache was not
+  actually enabled at runtime.
+- New follow-up: the content cache root can still report `reuse_reason="not_marked_reuse_root"` during layout-invalidated
+  frames, so the next architecture slice should review whether the gallery content pane should be a contained-layout
+  view-cache boundary, or whether the invalidation source should be narrowed before crossing that boundary.

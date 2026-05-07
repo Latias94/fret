@@ -922,6 +922,22 @@ Perf acceptance:
   - Gate: `cargo nextest run -p fret-ui scroll_` plus focused Material3 tabs layout tests.
   - Evidence: perf log entry `2026-05-07 21:36`; the X scroll node stays at `content_w=809.0` through the resized
     deferred frame and no longer emits X-axis `scroll extent grew` lines.
+- [x] Make `FRET_UI_GALLERY_VIEW_CACHE=1` drive the runtime model, not only initial `UiTree` state.
+  - Discovery: `render_flow::begin_frame` overwrote `UiTree.view_cache_enabled` from a model that still defaulted from
+    stale `FRET_UI_GALLERY_VIEW_CACHE_ENABLE_INNER_CONTROL`, so prior perf runs claiming view-cache mode could actually
+    run with cache roots reporting `reuse_reason="view_cache_disabled"`.
+  - Fix: use one gallery `ViewCacheBootConfig` to initialize both the model and `UiTree`; remove the stale env branch.
+  - Gate: focused `fret-ui-gallery` boot-config tests plus release gallery build.
+  - Evidence: perf log entry `2026-05-07 22:25`; Material3 tabs steady has `paint.cache_misses=0` and no
+    `view_cache_disabled` cache roots under `FRET_UI_GALLERY_VIEW_CACHE=1`.
+- [ ] Review gallery shell/content view-cache boundary semantics after env fix.
+  - Evidence: the env-fixed Material3 tabs steady bundle still shows the content cache root can report
+    `reuse_reason="not_marked_reuse_root"` during layout-invalidated frames, moving the hotspot from paint churn to
+    layout invalidation cost.
+  - Decision needed: either make the content pane an explicit contained-layout cache boundary when its outer size is
+    definite, or narrow the invalidation source before it crosses the content root.
+  - Gate candidates: Material3 tabs steady, `ui-gallery-steady`, and overlay/content navigation scripts with
+    `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`

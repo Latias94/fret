@@ -64,6 +64,77 @@ fn config_paint_cache_policy(env_name: &str, query_name: &str) -> PaintCachePoli
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ViewCacheBootConfig {
+    enabled: bool,
+    cache_shell: bool,
+    cache_content: bool,
+    inner_enabled: bool,
+    continuous: bool,
+}
+
+impl ViewCacheBootConfig {
+    fn from_runtime_config(workspace_shell_diag_profile: bool) -> Self {
+        let cache_shell_default = workspace_shell_diag_profile;
+
+        Self {
+            enabled: config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE",
+                "fret_ui_gallery_view_cache",
+                false,
+            ),
+            cache_shell: config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+                "fret_ui_gallery_view_cache_shell",
+                cache_shell_default,
+            ),
+            cache_content: config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
+                "fret_ui_gallery_view_cache_content",
+                true,
+            ),
+            inner_enabled: config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_INNER",
+                "fret_ui_gallery_view_cache_inner",
+                true,
+            ),
+            continuous: config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
+                "fret_ui_gallery_view_cache_continuous",
+                false,
+            ),
+        }
+    }
+}
+
+struct ViewCacheBootModels {
+    enabled: Model<bool>,
+    cache_shell: Model<bool>,
+    cache_content: Model<bool>,
+    inner_enabled: Model<bool>,
+    popover_open: Model<bool>,
+    continuous: Model<bool>,
+    counter: Model<u64>,
+}
+
+fn install_view_cache_boot_config(
+    app: &mut App,
+    ui: &mut UiTree<App>,
+    config: ViewCacheBootConfig,
+) -> ViewCacheBootModels {
+    ui.set_view_cache_enabled(config.enabled);
+
+    ViewCacheBootModels {
+        enabled: app.models_mut().insert(config.enabled),
+        cache_shell: app.models_mut().insert(config.cache_shell),
+        cache_content: app.models_mut().insert(config.cache_content),
+        inner_enabled: app.models_mut().insert(config.inner_enabled),
+        popover_open: app.models_mut().insert(false),
+        continuous: app.models_mut().insert(config.continuous),
+        counter: app.models_mut().insert(0u64),
+    }
+}
+
 fn register_harness_model_ids(app: &mut App, window: AppWindowId, state: &UiGalleryWindowState) {
     app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
         store.per_window.insert(
@@ -302,39 +373,6 @@ impl UiGalleryDriver {
         #[cfg(feature = "gallery-dev")]
         let virtual_list_torture_scroll = VirtualListScrollHandle::new();
 
-        let view_cache_enabled = app.models_mut().insert(config_bool(
-            "FRET_UI_GALLERY_VIEW_CACHE_ENABLE_INNER_CONTROL",
-            "fret_ui_gallery_view_cache_enable_inner_control",
-            false,
-        ));
-        let view_cache_shell_default = if workspace_shell_diag_profile {
-            true
-        } else {
-            false
-        };
-        let view_cache_cache_shell = app.models_mut().insert(config_bool(
-            "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
-            "fret_ui_gallery_view_cache_shell",
-            view_cache_shell_default,
-        ));
-        let view_cache_cache_content = app.models_mut().insert(config_bool(
-            "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
-            "fret_ui_gallery_view_cache_content",
-            true,
-        ));
-        let view_cache_inner_enabled = app.models_mut().insert(config_bool(
-            "FRET_UI_GALLERY_VIEW_CACHE_INNER",
-            "fret_ui_gallery_view_cache_inner",
-            true,
-        ));
-        let view_cache_popover_open = app.models_mut().insert(false);
-        let view_cache_continuous = app.models_mut().insert(config_bool(
-            "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
-            "fret_ui_gallery_view_cache_continuous",
-            false,
-        ));
-        let view_cache_counter = app.models_mut().insert(0u64);
-
         let perf_mode = std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
         let inspector_enabled = app.models_mut().insert(
             std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
@@ -345,11 +383,10 @@ impl UiGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        ui.set_view_cache_enabled(config_bool(
-            "FRET_UI_GALLERY_VIEW_CACHE",
-            "fret_ui_gallery_view_cache",
-            false,
-        ));
+        let view_cache_boot =
+            install_view_cache_boot_config(app, &mut ui, ViewCacheBootConfig::from_runtime_config(
+                workspace_shell_diag_profile,
+            ));
         ui.set_paint_cache_policy(config_paint_cache_policy(
             "FRET_UI_GALLERY_PAINT_CACHE",
             "fret_ui_gallery_paint_cache",
@@ -381,13 +418,13 @@ impl UiGalleryDriver {
             motion_preset_open,
             applied_motion_preset: None,
             applied_motion_preset_theme_preset: None,
-            view_cache_enabled,
-            view_cache_cache_shell,
-            view_cache_cache_content,
-            view_cache_inner_enabled,
-            view_cache_popover_open,
-            view_cache_continuous,
-            view_cache_counter,
+            view_cache_enabled: view_cache_boot.enabled,
+            view_cache_cache_shell: view_cache_boot.cache_shell,
+            view_cache_cache_content: view_cache_boot.cache_content,
+            view_cache_inner_enabled: view_cache_boot.inner_enabled,
+            view_cache_popover_open: view_cache_boot.popover_open,
+            view_cache_continuous: view_cache_boot.continuous,
+            view_cache_counter: view_cache_boot.counter,
             inspector_enabled,
             inspector_last_pointer,
             #[cfg(feature = "gallery-dev")]
@@ -507,5 +544,54 @@ impl UiGalleryDriver {
         Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
         state
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn view_cache_boot_config_drives_model_and_ui_tree_from_one_source() {
+        let mut app = App::new();
+        let mut ui = UiTree::new();
+        let config = ViewCacheBootConfig {
+            enabled: true,
+            cache_shell: true,
+            cache_content: false,
+            inner_enabled: false,
+            continuous: true,
+        };
+
+        let models = install_view_cache_boot_config(&mut app, &mut ui, config);
+
+        assert!(ui.view_cache_enabled());
+        assert_eq!(app.models().get_copied(&models.enabled), Some(true));
+        assert_eq!(app.models().get_copied(&models.cache_shell), Some(true));
+        assert_eq!(app.models().get_copied(&models.cache_content), Some(false));
+        assert_eq!(app.models().get_copied(&models.inner_enabled), Some(false));
+        assert_eq!(app.models().get_copied(&models.continuous), Some(true));
+        assert_eq!(app.models().get_copied(&models.popover_open), Some(false));
+        assert_eq!(app.models().get_copied(&models.counter), Some(0));
+    }
+
+    #[test]
+    fn shell_cache_policy_can_be_enabled_without_global_view_cache() {
+        let mut app = App::new();
+        let mut ui = UiTree::new();
+        let config = ViewCacheBootConfig {
+            enabled: false,
+            cache_shell: true,
+            cache_content: true,
+            inner_enabled: true,
+            continuous: false,
+        };
+
+        let models = install_view_cache_boot_config(&mut app, &mut ui, config);
+
+        assert!(!ui.view_cache_enabled());
+        assert_eq!(app.models().get_copied(&models.enabled), Some(false));
+        assert_eq!(app.models().get_copied(&models.cache_shell), Some(true));
+        assert_eq!(app.models().get_copied(&models.cache_content), Some(true));
     }
 }
