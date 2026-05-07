@@ -9298,3 +9298,82 @@ Results:
 Notes:
 - Verified evidence correctness: for each failing script, `evidence_run_index` matches the run with max `top_layout_engine_solve_time_us` in `.rows[].runs[]`.
 - Next: use `FRET_LAYOUT_NODE_PROFILE=1` to turn the virtual list and overlay solve spikes into actionable per-node constraints/hotspots.
+
+## 2026-05-07 11:56 (commit `76cd1160c6377b0d7ad0eda9a425202dbe5718e6`)
+
+Change:
+- Stabilized the Dialog steady perf script after the gallery surface moved: the script now starts on the default
+  Dialog page via `meta.env_defaults` and targets `ui-gallery-dialog-demo-*` ids instead of the old Overlay page.
+- Fixed `diag perf` launch parity with `diag run`: script `meta.env_defaults` from main/prewarm/prelude scripts are
+  merged into the launched demo environment, while explicit `--env` still wins and conflicting defaults fail early.
+- Fixed diagnostics predicate cache semantics so fresh current-window semantics are authoritative for
+  `exists`/`not_exists`, and `focus_is` never falls back to cached test-id geometry.
+- Fixed native font-rescan completion state so no-op async font rescans still publish an idle
+  `SystemFontRescanState`.
+
+Machine:
+- OS: Microsoft Windows 11 Pro 10.0.26200
+- CPU: 13th Gen Intel(R) Core(TM) i9-13900KF
+- GPU: NVIDIA GeForce RTX 4090, driver 596.21, wgpu backend Vulkan
+- Toolchain: cargo 1.92.0, rustc 1.92.0, cargo-nextest 0.9.116
+
+Commands:
+```powershell
+cargo nextest run -p fret-diag perf_launch_env
+cargo nextest run -p fret-launch system_font_rescan_result_finish
+cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver current_window_live_semantics_takes_precedence_over_cached_test_id_bounds not_exists_predicate_matches_absence
+git diff --check
+```
+
+Baseline seed command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-dialog-perf-baseline2 `
+  --perf-baseline-out target/fret-diag/codex-dialog-perf-baseline2/dialog-baseline.p95.json `
+  --perf-baseline-headroom-pct 20 `
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 `
+  --env FRET_UI_GALLERY_START_PAGE=dialog `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Gate command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-dialog-perf-gate `
+  --perf-baseline target/fret-diag/codex-dialog-perf-baseline2/dialog-baseline.p95.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline seed | 1291 | 1324 | 1324 | 1080 | 35 | 140 | 112 |
+| gate | 1164 | 1180 | 1180 | 941 | 31 | 123 | 118 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json`
+- top_total_time_us: `1180`
+- bundle: `target/fret-diag/codex-dialog-perf-gate/1778126265947/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target/fret-diag/codex-dialog-perf-gate/1778126265947/bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`1117/1180`, layout=`892/941`, prepaint=`115/134`, paint=`109/118`
+- hot p50/p95 (us): layout.engine_solve=`29/30`, paint.widget=`22/26`, paint.text_prepare=`0/0`
+- renderer p95/max (us): upload=`87/87`, record=`37/37`, finish=`110/110`, encode=`266/266`,
+  text=`329/329`, svg=`3/3`
+- churn signals were quiet: `paint.cache_misses=0`, `layout.nodes=9`, `paint.nodes=9`,
+  `dispatch=0`, `hit_test=0`
+
+Notes:
+- The committed script is now a stable Dialog component probe, not a navigation/Overlay-page probe.
+- The baseline file above is local evidence only. Do not promote it as the canonical Windows suite baseline; refresh the
+  full `ui-gallery-steady` Windows baseline with the candidate-selection workflow once the measurement surface is stable.

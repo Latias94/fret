@@ -50,6 +50,8 @@ Conventions:
   - Latest:
     - Added `fret-perf-attribution` skill (tail-hitch playbook): commit `7ea708d2f`.
     - Added `click_stable` diag script step to reduce selector-driven flakiness: commit `75ac42db9`.
+    - Stabilized the Dialog steady perf probe after gallery surface drift, fixed `diag perf` `meta.env_defaults`
+      launch parity, and recorded Windows RTX4090 evidence: commit `76cd1160c`.
 
 - [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
   bucketed/deferred/cached during live resize, and what must remain exact).
