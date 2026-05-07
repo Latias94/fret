@@ -46,6 +46,8 @@ The intent is to stop drifting into “endless experiments” by pinning:
 - `ui-gallery-steady` launch note:
   - The suite mixes dev-only overlay pages and Material3 probes, so run it against a `gallery-full` build.
   - If scripts need different launch env defaults, use `--reuse-launch-per-script` instead of `--reuse-launch`.
+  - For day-to-day verification, prefer the smaller representative smoke trio (`dialog`, `context-menu`,
+    `material3-tabs`); keep the full `ui-gallery-steady` suite for periodic maintenance or suite membership changes.
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.

@@ -9427,3 +9427,99 @@ Notes:
   model for those start-page defaults.
 - The full suite smoke is still too heavy to use as the default verification command; keep the smaller per-script smoke
   above as the practical contract check while we split or normalize the suite further.
+
+## 2026-05-07 13:58 (representative gate seed: context-menu)
+
+Change:
+- Seeded a local 3-run p95 baseline for the steady `context-menu` probe so the representative daily smoke set has a
+  stable anchor.
+- CPU attribution confirms this probe is still layout-dominated; the hot path is `layout.engine_solve`, not paint churn.
+
+Command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-context-menu-baseline `
+  --perf-baseline-out target/fret-diag/codex-context-menu-baseline/context-menu-baseline.json `
+  --perf-baseline-headroom-pct 20 `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline seed | 7664 | 7902 | 7902 | 7200 | 1122 | 191 | 269 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`
+- top_total_time_us: `7902`
+- bundle: `target/fret-diag/codex-context-menu-baseline/1778133515357/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-context-menu-baseline\1778133515357\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`1491/7902`, layout=`1196/7435`, prepaint=`181/194`, paint=`123/276`
+- hot p50/p95 (us): layout.engine_solve=`29/1122`, paint.widget=`21/69`, paint.text_prepare=`0/0`
+- renderer p95/max (us): upload=`110/110`, record=`26/26`, finish=`104/104`, encode=`251/251`, text=`241/241`, svg=`4/4`
+- churn signals were quiet: `paint.cache_misses=0`, `layout.nodes=42`, `paint.nodes=42`
+
+Notes:
+- This stays in the representative smoke set because the layout spike is real, but the probe is still short enough to
+  keep daily verification practical.
+- The full `ui-gallery-steady` suite remains a heavier maintenance check because it mixes dev-only overlay pages with
+  Material3 probes and needs `gallery-full`.
+
+## 2026-05-07 14:01 (representative gate seed: material3-tabs)
+
+Change:
+- Seeded a local 3-run p95 baseline for the steady Material3 tabs probe.
+- CPU attribution shows the worst bundle is still layout-dominated, but this probe also carries a mixed dispatch /
+  hit-test tail spike, so it belongs in the representative smoke set rather than being treated as paint-only.
+
+Command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-baseline `
+  --perf-baseline-out target/fret-diag/codex-material3-tabs-baseline/material3-tabs-baseline.json `
+  --perf-baseline-headroom-pct 20 `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline seed | 5432 | 5480 | 5480 | 4856 | 284 | 179 | 408 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `5480`
+- bundle: `target/fret-diag/codex-material3-tabs-baseline/1778133770478/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-material3-tabs-baseline\1778133770478\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`1719/5480`, layout=`1201/4859`, prepaint=`179/268`, paint=`316/442`, dispatch=`0/228866`, hit_test=`9/26`
+- hot p50/p95 (us): layout.engine_solve=`31/297`, paint.widget=`79/163`, paint.text_prepare=`0/0`
+- renderer p95/max (us): upload=`101/101`, record=`23/23`, finish=`95/95`, encode=`172/172`, text=`222/222`, svg=`3/3`
+- worst bundle frame: `layout.nodes=120`, `paint.nodes=120`, `paint.cache_misses=34`, `inv.nodes=1091`
+
+Notes:
+- The `dispatch=228866us` tail spike makes this a better representative gate than a paint-only probe; keep it in the
+  small daily smoke set and inspect the dispatch path separately if it widens.
+- The local baseline at `target/fret-diag/codex-material3-tabs-baseline/material3-tabs-baseline.json` is evidence-only
+  for now and should not replace the committed canonical baseline without the normal selection workflow.

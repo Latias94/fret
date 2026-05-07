@@ -40,6 +40,14 @@ Conventions:
       no-code-change evidence in the perf log.
     - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
 
+- Representative daily smoke set (local, not CI yet):
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json`
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json`
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+  - Use this trio as the default “is the frame still good?” loop; keep full `ui-gallery-steady` for periodic
+    maintenance or suite membership changes.
+  - Evidence: perf log entries `2026-05-07 13:58` and `2026-05-07 14:01`.
+
 - [ ] Keep the GPUI gap map current and milestone-linked:
   - Reference: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
