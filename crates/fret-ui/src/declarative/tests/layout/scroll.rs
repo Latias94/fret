@@ -200,6 +200,128 @@ fn scroll_post_layout_reuses_known_extent_for_invalidated_definite_surface_witho
 }
 
 #[test]
+fn scroll_x_unbounded_probe_does_not_grow_from_stretched_post_layout_bounds() {
+    struct FixedLeaf;
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureIntrinsicLayoutStretchedRow {
+        measured: Size,
+        children: Vec<NodeId>,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureIntrinsicLayoutStretchedRow {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measured
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child_size = Size::new(cx.available.width, cx.available.height);
+            for (idx, &child) in self.children.iter().enumerate() {
+                let x = cx.bounds.origin.x.0 + (idx as f32 * cx.available.width.0);
+                let rect = Rect::new(fret_core::Point::new(Px(x), cx.bounds.origin.y), child_size);
+                let _ = cx.layout_in(child, rect);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
+    cfg.scroll_defer_unbounded_probe_on_resize = true;
+    cfg.scroll_defer_unbounded_probe_stable_frames = 2;
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-x-no-stretched-post-layout-feedback",
+        {
+            let scroll_handle = scroll_handle.clone();
+            move |cx| {
+                let mut scroll_layout = crate::element::LayoutStyle::default();
+                scroll_layout.size.width = Length::Fill;
+                scroll_layout.size.height = Length::Fill;
+                scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                vec![cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: scroll_layout,
+                        axis: crate::element::ScrollAxis::X,
+                        scroll_handle: Some(scroll_handle.clone()),
+                        probe_unbounded: true,
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            }
+        },
+    );
+    ui.set_root(root);
+    let scroll_node = ui.children(root)[0];
+
+    let leaf_a = ui.create_node(FixedLeaf);
+    let leaf_b = ui.create_node(FixedLeaf);
+    let leaf_c = ui.create_node(FixedLeaf);
+    let row = ui.create_node(MeasureIntrinsicLayoutStretchedRow {
+        measured: Size::new(Px(160.0), Px(40.0)),
+        children: vec![leaf_a, leaf_b, leaf_c],
+    });
+    ui.set_children(row, vec![leaf_a, leaf_b, leaf_c]);
+    ui.set_children(scroll_node, vec![row]);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let content0 = scroll_handle.content_size();
+    assert!(
+        (content0.width.0 - 160.0).abs() <= 0.5,
+        "expected unbounded measurement to remain authoritative instead of growing from stretched final bounds: content={content0:?}"
+    );
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let content1 = scroll_handle.content_size();
+    assert!(
+        (content1.width.0 - 160.0).abs() <= 0.5,
+        "expected cached unbounded measurement to avoid post-layout feedback growth on the next frame: before={content0:?} after={content1:?}"
+    );
+
+    let resized_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut text, resized_bounds, 1.0);
+    let content2 = scroll_handle.content_size();
+    assert!(
+        (content2.width.0 - 160.0).abs() <= 0.5,
+        "expected deferred resize frame to keep the unbounded measurement authoritative instead of growing from stretched final bounds: before={content1:?} after={content2:?}"
+    );
+}
+
+#[test]
 fn scroll_probe_unbounded_treats_zero_placeholder_cross_axis_width_as_unknown() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 

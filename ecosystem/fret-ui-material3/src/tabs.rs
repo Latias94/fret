@@ -607,7 +607,7 @@ fn material_primary_tab<H: UiHost>(
                     indication_config,
                     false,
                 );
-                let label_el = primary_tab_label(cx, &label, label_color);
+                let label_el = primary_tab_label(cx, &label, label_color, scrollable);
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = if scrollable {
@@ -656,6 +656,7 @@ fn primary_tab_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &Arc<str>,
     color: Color,
+    scrollable: bool,
 ) -> AnyElement {
     let style = {
         let theme = Theme::global(&*cx.app);
@@ -668,10 +669,16 @@ fn primary_tab_label<H: UiHost>(
     let mut props = TextProps::new(label.clone());
     props.style = Some(style);
     props.color = Some(color);
-    props.layout.size.width = Length::Fill;
-    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-    props.layout.flex.grow = 1.0;
-    props.layout.flex.basis = Length::Px(Px(0.0));
+    if scrollable {
+        props.layout.size.width = Length::Auto;
+        props.layout.flex.grow = 0.0;
+        props.layout.flex.basis = Length::Auto;
+    } else {
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        props.layout.flex.grow = 1.0;
+        props.layout.flex.basis = Length::Px(Px(0.0));
+    }
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Clip;
     cx.text_props(props)
@@ -727,6 +734,33 @@ mod tests {
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn scrollable_primary_tab_labels_keep_intrinsic_width() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected = Arc::<str>::from("overview");
+        let label = Arc::<str>::from("Overview");
+        let model = app.models_mut().insert(selected.clone());
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-tabs", |cx| {
+            Tabs::new(model.clone())
+                .items(vec![
+                    TabItem::new(selected.clone(), label.clone()),
+                    TabItem::new("details", "Details"),
+                ])
+                .scrollable(true)
+                .into_element(cx)
+        });
+
+        let label = find_text_by_content(&el, label.as_ref()).expect("primary tab label text");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.size.width, Length::Auto);
+        assert_eq!(label.layout.size.min_width, None);
+        assert_eq!(label.layout.flex.grow, 0.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
     }
 }
 

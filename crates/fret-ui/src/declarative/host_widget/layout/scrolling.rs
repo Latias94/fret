@@ -2211,6 +2211,7 @@ impl ElementHostWidget {
 
             let authoritative_post_layout_observation = post_layout_authoritative_scan
                 && scroll_overflow_observation_is_authoritative(observation);
+            let mut deferred_unbounded_growth_observed_but_not_authoritative = false;
             if authoritative_post_layout_observation {
                 // Move the post-layout path closer to GPUI's authoritative child-bounds union:
                 // when descendants changed and the bounded observation completed within budget,
@@ -2288,15 +2289,30 @@ impl ElementHostWidget {
             } else {
                 // If post-layout child bounds exceed the currently inferred extent (cached/deferral
                 // cases), expand the scroll handle immediately so users can reach the new content.
+                let deferred_unbounded_probe_extent = defer_this_frame && props.probe_unbounded;
+                let edge_invalidation_observation_can_grow =
+                    !matches!(props.axis, crate::element::ScrollAxis::X)
+                        && at_scroll_extent_edge
+                        && children_layout_invalidated;
+                let observation_can_grow_x = post_layout_extents_mode
+                    || !probe_unbounded_for_measure
+                    || (defer_this_frame && !deferred_unbounded_probe_extent)
+                    || edge_invalidation_observation_can_grow;
+                let observation_can_grow_y = post_layout_extents_mode
+                    || !probe_unbounded_for_measure
+                    || (defer_this_frame && !deferred_unbounded_probe_extent)
+                    || edge_invalidation_observation_can_grow;
                 let mut changed_grow = false;
-                if props.axis.scroll_x()
+                if observation_can_grow_x
+                    && props.axis.scroll_x()
                     && observed.trusted.width.0 > 0.0
                     && observed.trusted.width.0 > content_w.0 + 0.5
                 {
                     content_w = Px(observed.trusted.width.0.max(desired.width.0.max(0.0)));
                     changed_grow = true;
                 }
-                if props.axis.scroll_y()
+                if observation_can_grow_y
+                    && props.axis.scroll_y()
                     && observed.trusted.height.0 > 0.0
                     && observed.trusted.height.0 > content_h.0 + 0.5
                 {
@@ -2363,6 +2379,15 @@ impl ElementHostWidget {
                     authoritative_observation_cleared_pending =
                         scroll_overflow_observation_is_authoritative(observation);
                 }
+
+                deferred_unbounded_growth_observed_but_not_authoritative =
+                    deferred_unbounded_probe_extent
+                        && ((props.axis.scroll_x()
+                            && !observation_can_grow_x
+                            && observed.trusted.width.0 > content_w.0 + 0.5)
+                            || (props.axis.scroll_y()
+                                && !observation_can_grow_y
+                                && observed.trusted.height.0 > content_h.0 + 0.5));
 
                 if shrink_validation_enabled
                     && !authoritative_observation_committed_this_pass
@@ -2478,7 +2503,8 @@ impl ElementHostWidget {
             let authoritative_observation_completed_without_extent_change =
                 !authoritative_observation_cleared_pending
                     && scroll_overflow_observation_is_authoritative(observation)
-                    && deferred_probe_state_still_armed;
+                    && deferred_probe_state_still_armed
+                    && !deferred_unbounded_growth_observed_but_not_authoritative;
             if authoritative_observation_completed_without_extent_change {
                 commit_scroll_authoritative_extent(
                     &mut *cx.app,

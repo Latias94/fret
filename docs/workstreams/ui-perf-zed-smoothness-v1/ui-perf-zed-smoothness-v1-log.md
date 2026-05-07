@@ -9657,3 +9657,90 @@ Delta vs direct baseline from 2026-05-07 17:49:
 - `p95 layout`: `4440us -> 1663us`
 - `p95 solve`: `186us -> 64us`
 - `p95 paint`: `1935us -> 1866us` (effectively unchanged; next hotspot is paint-cache invalidation/replay)
+
+## 2026-05-07 21:36 (horizontal scroll extent feedback guard: material3-tabs)
+
+Change:
+- Kept scrollable Material3 primary tab labels intrinsic-width instead of using equal-width slot flex rules inside
+  the horizontal scroll strip.
+- Tightened `Scroll` extent grow semantics for deferred unbounded-probe frames: when an unbounded measurement seed is
+  being reused, post-layout stretched geometry is not authoritative for growing the scroll-axis extent. If such a
+  growth observation is seen, keep the deferred probe armed so a later explicit measurement can settle true growth.
+
+Correctness gates:
+```powershell
+cargo nextest run -p fret-ui scroll_
+cargo nextest run -p fret-ui-material3 scrollable_primary_tab_labels_keep_intrinsic_width primary_tab_labels_can_shrink_within_equal_width_slots
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- `fret-ui`: `140` scroll-related tests run, `140` passed.
+- `fret-ui-material3`: `2` tabs tests run, `2` passed.
+- Release gallery build passed; existing unused warnings remain in `fret-runtime` / `fret-ui`.
+
+Debug/profile command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-x-feedback-fixed `
+  --env FRET_DEBUG_SCROLL_EXTENT_PROBE=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Correctness evidence:
+- Before this slice, `ui-gallery-material3-tabs-scrollable` could grow horizontal content from `809` to `5663` and then
+  `39648` via deferred resize frames reusing an unbounded measurement seed but trusting stretched post-layout bounds.
+- After the fix, the same X scroll node stays at `content_w=809.0` on frame `0`, frame `1`, and resized frame `6`.
+- The debug run no longer emits X-axis `scroll extent grew` lines. The only remaining scroll extent debug line in this
+  run is the known vertical content viewport shrink revalidation.
+
+Representative steady probe (same script, no scroll debug/profile):
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-x-feedback-fixed-steady `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| steady probe | 7742 | 7896 | 7896 | 3378 | 149 | 299 | 4575 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `7896`
+- bundle: `target/fret-diag/codex-material3-tabs-x-feedback-fixed-steady/1778161143460/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-material3-tabs-x-feedback-fixed-steady\1778161143460\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- snapshots considered: `10`
+- time p50/p95 (us): total=`3044/7896`, layout=`2230/3135`, prepaint=`277/320`, paint=`544/4575`, dispatch=`0/418306`, hit_test=`15/55`
+- hot p50/p95 (us): layout.engine_solve=`54/114`, paint.widget=`138/2237`, paint.text_prepare=`0/0`
+- renderer p95/max (us): upload=`130/130`, record=`43/43`, finish=`212/212`, encode=`417/417`, text=`421/421`, svg=`4/4`
+- worst bundle frame: `layout.nodes=43`, `paint.nodes=1186`, `paint.cache_misses=1132`, `inv.nodes=324`
+
+Notes:
+- This slice is a correctness and stability fix, not a new p95 win claim. The remaining representative tail is still
+  the known paint-cache churn frame (`paint.cache_misses=1132`), with the same shape as the previous Material3 tabs
+  probe.
+- Follow-up should target the page-shell/content paint-cache invalidation path rather than horizontal Scroll extent
+  feedback.

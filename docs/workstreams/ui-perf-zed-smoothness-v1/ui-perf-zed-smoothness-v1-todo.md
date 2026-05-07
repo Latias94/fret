@@ -914,11 +914,14 @@ Perf acceptance:
   - Evidence: perf log entry `2026-05-07 19:58`; the Material3 tabs representative probe drops from
     `p95 total/layout=6565/4440us` to `3716/1663us`, and `ui-gallery-content-viewport` steady
     `measure_children_us` falls to `0`.
-- [ ] Split and fix horizontal Scroll extent inflation in Material3 tabs.
-  - Evidence from the same profiling pass: `ui-gallery-material3-tabs-scrollable` can grow `content_w` far beyond
-    the measured tab strip width while using the legacy horizontal unbounded-probe path.
-  - Keep this separate from the vertical post-layout reuse slice; it needs its own correctness repro before changing
-    X-axis extent policy.
+- [x] Split and fix horizontal Scroll extent inflation in Material3 tabs.
+  - Evidence from the vertical post-layout reuse profiling pass: `ui-gallery-material3-tabs-scrollable` could grow
+    `content_w` from `809` to `5663` and then `39648` while using the horizontal unbounded-probe path.
+  - Fix: keep scrollable Material3 primary tab labels intrinsic-width, and prevent deferred unbounded-probe frames from
+    growing scroll-axis extents from stretched post-layout geometry.
+  - Gate: `cargo nextest run -p fret-ui scroll_` plus focused Material3 tabs layout tests.
+  - Evidence: perf log entry `2026-05-07 21:36`; the X scroll node stays at `content_w=809.0` through the resized
+    deferred frame and no longer emits X-axis `scroll extent grew` lines.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`
