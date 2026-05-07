@@ -1516,9 +1516,6 @@ fn mount_element<H: UiHost + 'static>(
             let layout_definite = !matches!(props.layout.size.width, crate::element::Length::Auto)
                 && !matches!(props.layout.size.height, crate::element::Length::Auto);
             ui.set_node_view_cache_flags(node, true, props.contained_layout, layout_definite);
-            if !reuse_view_cache {
-                ui.set_node_view_cache_needs_rerender(node, false);
-            }
             let reuse_reason = if !had_existing_node_entry {
                 crate::tree::UiDebugCacheRootReuseReason::FirstMount
             } else if !had_existing_node {
@@ -1544,6 +1541,9 @@ fn mount_element<H: UiHost + 'static>(
                 props.contained_layout,
                 reuse_reason,
             );
+            if !reuse_view_cache {
+                ui.set_node_view_cache_needs_rerender(node, false);
+            }
         }
         _ => {
             ui.set_node_view_cache_flags(node, false, false, false);

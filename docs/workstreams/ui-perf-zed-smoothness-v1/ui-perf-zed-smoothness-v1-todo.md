@@ -932,12 +932,19 @@ Perf acceptance:
     `view_cache_disabled` cache roots under `FRET_UI_GALLERY_VIEW_CACHE=1`.
 - [ ] Review gallery shell/content view-cache boundary semantics after env fix.
   - Evidence: the env-fixed Material3 tabs steady bundle still shows the content cache root can report
-    `reuse_reason="not_marked_reuse_root"` during layout-invalidated frames, moving the hotspot from paint churn to
-    layout invalidation cost.
-  - Decision needed: either make the content pane an explicit contained-layout cache boundary when its outer size is
-    definite, or narrow the invalidation source before it crosses the content root.
+    `reuse_reason="needs_rerender"` during most non-reuse frames, moving the hotspot from paint churn to avoidable
+    view-rerender pressure.
+  - Rejected experiment: blindly making the content pane `contained_layout` worsened the Material3 tabs steady sample
+    and did not remove the non-reuse frames.
+  - Decision needed: reduce the model/read surface that marks the whole content page dirty, or split the content shell
+    so stable expensive page subtrees can be cached below a smaller dynamic wrapper.
   - Gate candidates: Material3 tabs steady, `ui-gallery-steady`, and overlay/content navigation scripts with
     `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+- [x] Fix cache-root diagnostics so view-rerender misses are not hidden as generic non-reuse.
+  - Change: record `UiDebugCacheRootReuseReason` before clearing `view_cache_needs_rerender` in `mount_element`.
+  - Gate: `cargo nextest run -p fret-ui view_cache` (`54/54` passed).
+  - Evidence: perf log entry `2026-05-07 23:30`; Material3 tabs content root now reports
+    `reuse_reason="needs_rerender"` while paint cache misses remain `0`.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`

@@ -365,6 +365,7 @@ fn view_cache_inherits_model_observations_on_cache_hit_layout() {
     let window = AppWindowId::default();
     ui.set_window(window);
     ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
 
     let bounds = Rect::new(
         fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -380,7 +381,12 @@ fn view_cache_inherits_model_observations_on_cache_hit_layout() {
         renders: &Arc<AtomicUsize>,
         model: &fret_runtime::Model<u32>,
     ) -> AnyElement {
-        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+        let mut props = crate::element::ViewCacheProps::default();
+        props.layout.size.width = Length::Px(Px(120.0));
+        props.layout.size.height = Length::Px(Px(40.0));
+        props.contained_layout = true;
+
+        cx.view_cache(props, |cx| {
             renders.fetch_add(1, Ordering::SeqCst);
             cx.observe_model(model, Invalidation::Layout);
             let v = cx.app.models().get_copied(model).unwrap_or_default();
@@ -444,6 +450,13 @@ fn view_cache_inherits_model_observations_on_cache_hit_layout() {
         bounds,
         "view-cache-observation-inheritance",
         |cx| vec![build_cached(cx, &renders, &model)],
+    );
+    let cache_root_stats = ui.debug_cache_root_stats();
+    assert!(
+        cache_root_stats.iter().any(|stats| {
+            stats.reuse_reason == crate::tree::UiDebugCacheRootReuseReason::NeedsRerender
+        }),
+        "expected cache-root diagnostics to preserve the view-rerender miss reason before clearing scheduling state; stats={cache_root_stats:?}"
     );
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 

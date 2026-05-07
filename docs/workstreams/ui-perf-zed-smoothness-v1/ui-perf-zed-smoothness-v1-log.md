@@ -9815,3 +9815,60 @@ Notes:
 - New follow-up: the content cache root can still report `reuse_reason="not_marked_reuse_root"` during layout-invalidated
   frames, so the next architecture slice should review whether the gallery content pane should be a contained-layout
   view-cache boundary, or whether the invalidation source should be narrowed before crossing that boundary.
+
+## 2026-05-07 23:30 (cache-root miss reason preserves needs-rerender state)
+
+Discovery:
+- A quick experiment that made the gallery content pane a `contained_layout` view-cache root did not improve the
+  Material3 tabs steady script (`p95 total/layout` moved from `5946/4405us` to `6151/4786us`) and introduced contained
+  relayout work on some frames.
+- That experiment showed the previous `not_marked_reuse_root` diagnostic was not actionable enough: `mount_element`
+  cleared `view_cache_needs_rerender` before recording the cache-root miss reason, so view-driven misses could be
+  misreported as generic non-reuse.
+
+Change:
+- Record `UiDebugCacheRootReuseReason` before clearing scheduling-only `view_cache_needs_rerender` state in
+  `mount_element`.
+- Extended the model-observation view-cache test so a contained cache root with a model-driven invalidation reports
+  `NeedsRerender` before that bit is consumed.
+- Rejected the gallery content-pane `contained_layout` experiment for now; it is not part of this slice.
+
+Correctness gates:
+```powershell
+cargo nextest run -p fret-ui view_cache_inherits_model_observations_on_cache_hit_layout
+cargo nextest run -p fret-ui view_cache
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- Focused diagnostic test passed.
+- `fret-ui` view-cache suite: `54` tests run, `54` passed.
+- Release gallery build passed; existing unused warnings remain in `fret-runtime` / `fret-ui`.
+
+Representative diagnostic probe:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-cache-reason-fixed `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Bundle:
+- `target/fret-diag/codex-material3-tabs-cache-reason-fixed/1778167730805/bundle.schema2.json`
+
+Evidence:
+- The content root at `apps\fret-ui-gallery\src\driver\shell.rs:154` now reports
+  `reuse_reason="needs_rerender"` on non-reuse frames.
+- The sidebar root remains `marked_reuse_root`.
+- `paint.cache_misses=0` remains stable.
+
+Implication:
+- The next optimization should not blindly widen layout containment for the content pane. The better target is reducing
+  avoidable view-rerender pressure across the gallery content root, or splitting the content shell so only truly changing
+  model reads sit outside the expensive page subtree.
