@@ -677,7 +677,12 @@ pub(super) fn handle_wait_until_step(
         },
     };
 
-    let cache_eval = svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate);
+    let cache_eval = svc.eval_predicate_from_cached_test_id_bounds_if_allowed(
+        window,
+        predicate_window,
+        semantics_snapshot.is_some(),
+        &predicate,
+    );
     if cache_eval.used_cache {
         let should_log = state
             .cached_test_id_predicate_last_stale

@@ -1307,6 +1307,51 @@ mod tests {
     }
 
     #[test]
+    fn current_window_live_semantics_takes_precedence_over_cached_test_id_bounds() {
+        let current = window_id(1);
+        let other = window_id(2);
+        let pred = UiPredicateV1::NotExists {
+            target: UiSelectorV1::TestId {
+                id: "dialog-close".to_string(),
+                root_z_index: None,
+            },
+        };
+
+        assert!(
+            !UiDiagnosticsService::predicate_should_use_cached_test_id_bounds(
+                current, current, true, &pred
+            ),
+            "fresh current-window semantics must not be masked by cached test_id bounds"
+        );
+        assert!(
+            UiDiagnosticsService::predicate_should_use_cached_test_id_bounds(
+                current, current, false, &pred
+            )
+        );
+        assert!(
+            UiDiagnosticsService::predicate_should_use_cached_test_id_bounds(
+                current, other, true, &pred
+            )
+        );
+
+        let focus_pred = UiPredicateV1::FocusIs {
+            target: UiSelectorV1::TestId {
+                id: "dialog-trigger".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            !UiDiagnosticsService::predicate_should_use_cached_test_id_bounds(
+                current,
+                other,
+                true,
+                &focus_pred
+            ),
+            "focus predicates need semantics, not cached geometry"
+        );
+    }
+
+    #[test]
     fn inspect_controller_pick_run_id_is_strictly_monotonic() {
         let mut c = inspect_controller::InspectController::default();
         let first = c.next_pick_run_id();

@@ -86,6 +86,20 @@ struct CachedTestIdPredicateEval {
     max_age_ms: Option<u64>,
 }
 
+impl CachedTestIdPredicateEval {
+    fn unused() -> Self {
+        Self {
+            used_cache: false,
+            ok: None,
+            stale: false,
+            test_id: None,
+            age_ms: None,
+            window_snapshot_seq: None,
+            max_age_ms: None,
+        }
+    }
+}
+
 thread_local! {
     static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -495,6 +509,42 @@ impl UiDiagnosticsService {
                 target: UiSelectorV1::TestId { .. }
             }
         )
+    }
+
+    fn predicate_should_use_cached_test_id_bounds(
+        current_window: AppWindowId,
+        predicate_window: AppWindowId,
+        has_current_window_semantics: bool,
+        predicate: &UiPredicateV1,
+    ) -> bool {
+        if !Self::predicate_can_eval_from_cached_test_id_bounds(predicate) {
+            return false;
+        }
+
+        // Current-window semantics are authoritative. The cache exists to keep cross-window or
+        // temporarily unrendered windows queryable; it must not mask fresh semantics when the
+        // active window has just removed a `test_id` (notably `not_exists` after dismissing an
+        // overlay).
+        predicate_window != current_window || !has_current_window_semantics
+    }
+
+    fn eval_predicate_from_cached_test_id_bounds_if_allowed(
+        &self,
+        current_window: AppWindowId,
+        predicate_window: AppWindowId,
+        has_current_window_semantics: bool,
+        predicate: &UiPredicateV1,
+    ) -> CachedTestIdPredicateEval {
+        if !Self::predicate_should_use_cached_test_id_bounds(
+            current_window,
+            predicate_window,
+            has_current_window_semantics,
+            predicate,
+        ) {
+            return CachedTestIdPredicateEval::unused();
+        }
+
+        self.eval_predicate_from_cached_test_id_bounds(predicate_window, predicate)
     }
 
     pub(super) fn open_window_count_for_predicates(app: &App) -> u32 {

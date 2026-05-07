@@ -123,6 +123,14 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
         self.request_redraw_all_windows();
     }
 
+    pub(super) fn finish_system_font_rescan_result_state(&mut self) -> bool {
+        self.system_font_rescan_in_flight = false;
+        let should_restart = self.system_font_rescan_pending;
+        self.system_font_rescan_pending = false;
+        self.publish_system_font_rescan_state();
+        should_restart
+    }
+
     fn observe_window_surface_sizes(&mut self, now: Instant) {
         let mut any_changed = false;
         for (id, state) in self.windows.iter() {
@@ -168,13 +176,19 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        self.system_font_rescan_in_flight = false;
+        let should_restart = self.finish_system_font_rescan_result_state();
 
         let Some(renderer) = self.renderer.as_mut() else {
+            if should_restart {
+                self.request_system_font_rescan();
+            }
             return true;
         };
 
         if !renderer.apply_system_font_rescan_result(result) {
+            if should_restart {
+                self.request_system_font_rescan();
+            }
             return true;
         }
 
@@ -186,9 +200,6 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
         );
         self.request_redraw_all_windows();
 
-        let should_restart = self.system_font_rescan_pending;
-        self.system_font_rescan_pending = false;
-        self.publish_system_font_rescan_state();
         if should_restart {
             self.request_system_font_rescan();
         }

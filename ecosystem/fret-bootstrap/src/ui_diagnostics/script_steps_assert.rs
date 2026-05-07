@@ -68,8 +68,12 @@ pub(super) fn handle_assert_step(
     } else if handoff_to.is_some() {
         // This step is window-targeted; the runtime will migrate the script.
     } else {
-        let cache_eval =
-            svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate);
+        let cache_eval = svc.eval_predicate_from_cached_test_id_bounds_if_allowed(
+            window,
+            predicate_window,
+            semantics_snapshot.is_some(),
+            &predicate,
+        );
         if cache_eval.used_cache {
             let kind = if cache_eval.stale {
                 "diag.cached_test_id_predicate.stale"

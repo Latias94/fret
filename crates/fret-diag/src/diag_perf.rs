@@ -31,6 +31,52 @@ fn normalize_perf_regression_script(workspace_root: &Path, script: &str) -> Stri
     normalize_repo_relative_path(workspace_root, Path::new(script))
 }
 
+fn merge_script_env_defaults_for_perf_launch(
+    launch_env: &mut Vec<(String, String)>,
+    scripts: &[PathBuf],
+    prewarm_scripts: &[PathBuf],
+    prelude_scripts: &[PathBuf],
+) -> Result<(), String> {
+    let mut env_defaults: std::collections::BTreeMap<String, String> =
+        std::collections::BTreeMap::new();
+    let mut env_conflicts: Vec<String> = Vec::new();
+
+    for src in scripts
+        .iter()
+        .chain(prewarm_scripts.iter())
+        .chain(prelude_scripts.iter())
+    {
+        for (key, value) in crate::script_env_defaults(src) {
+            if let Some(prev) = env_defaults.insert(key.clone(), value.clone())
+                && prev != value
+            {
+                env_conflicts.push(format!(
+                    "{} wants {}={}, but another script requested {}={}",
+                    src.display(),
+                    key,
+                    value,
+                    key,
+                    prev
+                ));
+            }
+        }
+    }
+
+    if !env_conflicts.is_empty() {
+        env_conflicts.sort();
+        return Err(format!(
+            "conflicting script meta.env_defaults in perf:\n- {}",
+            env_conflicts.join("\n- ")
+        ));
+    }
+
+    for (key, value) in env_defaults {
+        let _ = ensure_env_var(launch_env, &key, &value);
+    }
+
+    Ok(())
+}
+
 fn perf_row_status_and_reason(
     row: &serde_json::Value,
     threshold_failures: &[serde_json::Value],
@@ -683,6 +729,12 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
         .cloned()
         .map(|p| resolve_path(&workspace_root, p))
         .collect();
+    merge_script_env_defaults_for_perf_launch(
+        &mut perf_launch_env,
+        &scripts,
+        &perf_suite_prewarm_scripts,
+        &perf_suite_prelude_scripts,
+    )?;
 
     let run_suite_aux_script_must_pass = |src: &PathBuf,
                                           child: &mut Option<LaunchedDemo>,
@@ -2391,6 +2443,84 @@ fn ensure_perf_fs_transport_connected(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
+
+    fn write_temp_perf_script(tag: &str, env_defaults: serde_json::Value) -> PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("fret-diag-perf-{tag}-{}-{id}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp script dir");
+        let path = dir.join("script.json");
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "meta": {
+                "env_defaults": env_defaults
+            },
+            "steps": []
+        });
+        std::fs::write(&path, serde_json::to_string_pretty(&script).unwrap())
+            .expect("write temp script");
+        path
+    }
+
+    #[test]
+    fn perf_launch_env_merges_script_env_defaults_and_preserves_explicit_env() {
+        let script = write_temp_perf_script(
+            "merge-env",
+            serde_json::json!({
+                "FRET_UI_GALLERY_START_PAGE": "dialog",
+                "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+            }),
+        );
+        let mut launch_env = vec![(
+            "FRET_UI_GALLERY_START_PAGE".to_string(),
+            "button".to_string(),
+        )];
+
+        merge_script_env_defaults_for_perf_launch(&mut launch_env, &[script.clone()], &[], &[])
+            .expect("script env defaults should merge");
+
+        assert!(launch_env.contains(&(
+            "FRET_UI_GALLERY_START_PAGE".to_string(),
+            "button".to_string()
+        )));
+        assert!(launch_env.contains(&(
+            "FRET_UI_GALLERY_BOOTSTRAP_FONTS".to_string(),
+            "1".to_string()
+        )));
+
+        let _ = std::fs::remove_dir_all(script.parent().unwrap());
+    }
+
+    #[test]
+    fn perf_launch_env_rejects_conflicting_script_env_defaults() {
+        let a = write_temp_perf_script(
+            "env-conflict-a",
+            serde_json::json!({ "FRET_UI_GALLERY_START_PAGE": "dialog" }),
+        );
+        let b = write_temp_perf_script(
+            "env-conflict-b",
+            serde_json::json!({ "FRET_UI_GALLERY_START_PAGE": "button" }),
+        );
+        let mut launch_env = Vec::new();
+
+        let err = merge_script_env_defaults_for_perf_launch(
+            &mut launch_env,
+            &[a.clone(), b.clone()],
+            &[],
+            &[],
+        )
+        .expect_err("conflicting script env defaults should fail");
+
+        assert!(err.contains("conflicting script meta.env_defaults in perf"));
+        assert!(err.contains("FRET_UI_GALLERY_START_PAGE"));
+
+        let _ = std::fs::remove_dir_all(a.parent().unwrap());
+        let _ = std::fs::remove_dir_all(b.parent().unwrap());
+    }
 
     #[test]
     fn perf_row_to_regression_item_marks_threshold_failures() {

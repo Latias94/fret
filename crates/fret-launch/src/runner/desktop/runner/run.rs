@@ -754,7 +754,10 @@ mod tests {
         AssetRevision, StaticAssetEntry,
     };
     use fret_core::AppWindowId;
-    use fret_runtime::{asset_capabilities, resolve_asset_locator_bytes, resolve_asset_reference};
+    use fret_runtime::{
+        SystemFontRescanState, asset_capabilities, resolve_asset_locator_bytes,
+        resolve_asset_reference,
+    };
 
     use super::super::{WinitRunner, WinitRunnerConfig};
     use super::WinitAppBuilder;
@@ -841,6 +844,52 @@ mod tests {
         assert_eq!(
             resolved.reference,
             AssetExternalReference::url("https://example.com/logo.png")
+        );
+    }
+
+    #[test]
+    fn system_font_rescan_result_finish_publishes_idle_state() {
+        let mut runner = WinitRunner::new(WinitRunnerConfig::default(), App::new(), TestDriver);
+        runner.system_font_rescan_in_flight = true;
+        runner.system_font_rescan_pending = false;
+        runner.publish_system_font_rescan_state();
+
+        assert_eq!(
+            runner.app.global::<SystemFontRescanState>().copied(),
+            Some(SystemFontRescanState {
+                in_flight: true,
+                pending: false,
+            })
+        );
+
+        let should_restart = runner.finish_system_font_rescan_result_state();
+
+        assert!(!should_restart);
+        assert_eq!(
+            runner.app.global::<SystemFontRescanState>().copied(),
+            Some(SystemFontRescanState {
+                in_flight: false,
+                pending: false,
+            })
+        );
+    }
+
+    #[test]
+    fn system_font_rescan_result_finish_clears_pending_and_reports_restart() {
+        let mut runner = WinitRunner::new(WinitRunnerConfig::default(), App::new(), TestDriver);
+        runner.system_font_rescan_in_flight = true;
+        runner.system_font_rescan_pending = true;
+        runner.publish_system_font_rescan_state();
+
+        let should_restart = runner.finish_system_font_rescan_result_state();
+
+        assert!(should_restart);
+        assert_eq!(
+            runner.app.global::<SystemFontRescanState>().copied(),
+            Some(SystemFontRescanState {
+                in_flight: false,
+                pending: false,
+            })
         );
     }
 
