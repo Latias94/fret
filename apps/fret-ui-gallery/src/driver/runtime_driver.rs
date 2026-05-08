@@ -2112,10 +2112,9 @@ impl WinitAppDriver for UiGalleryDriver {
         );
         if diag_wants_semantics_snapshot {
             // Diagnostics scripts select targets by semantics bounds. Ensure we have a fresh
-            // semantics snapshot for the current frame before we drive scripted input; otherwise,
-            // scripts may act on a 1-frame-stale snapshot and mis-predict visibility in
-            // virtualized lists (estimate -> measured jumps).
-            state.ui.request_semantics_snapshot();
+            // semantics snapshot for the current frame when the accessibility tree changed;
+            // paint-only animation frames can keep using the existing snapshot.
+            state.ui.request_semantics_snapshot_if_dirty();
         }
         state.ui.ingest_paint_cache_source(scene);
 
@@ -2325,9 +2324,9 @@ impl WinitAppDriver for UiGalleryDriver {
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
         // This is the primary semantics hook used by accessibility and other runner integrations.
-        // Requesting semantics here ensures we start producing snapshots on the next frame without
-        // forcing semantics on every frame.
-        state.ui.request_semantics_snapshot();
+        // Accessibility should get fresh snapshots after semantic tree changes, but paint-only
+        // animation frames must not force a full semantics rebuild every frame.
+        state.ui.request_semantics_snapshot_if_dirty();
         state.ui.semantics_snapshot_arc()
     }
 }

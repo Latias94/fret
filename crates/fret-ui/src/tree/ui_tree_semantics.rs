@@ -5,6 +5,15 @@ impl<H: UiHost> UiTree<H> {
         self.semantics_requested = true;
     }
 
+    pub fn request_semantics_snapshot_if_dirty(&mut self) -> bool {
+        if self.semantics.is_none() || self.semantics_dirty {
+            self.request_semantics_snapshot();
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn semantics_snapshot(&self) -> Option<&SemanticsSnapshot> {
         self.semantics.as_deref()
     }
@@ -13,9 +22,43 @@ impl<H: UiHost> UiTree<H> {
         self.semantics.clone()
     }
 
+    pub(in crate::tree) fn mark_semantics_dirty(&mut self) {
+        self.semantics_dirty = true;
+    }
+
+    pub(in crate::tree) fn invalidation_may_affect_semantics(
+        source: UiDebugInvalidationSource,
+        inv: Invalidation,
+        detail: UiDebugInvalidationDetail,
+    ) -> bool {
+        if matches!(
+            detail,
+            UiDebugInvalidationDetail::AnimationFrameRequest
+                | UiDebugInvalidationDetail::PressableHoverEdge
+                | UiDebugInvalidationDetail::HoverRegionEdge
+                | UiDebugInvalidationDetail::FocusVisiblePolicy
+                | UiDebugInvalidationDetail::InputModalityPolicy
+        ) || source == UiDebugInvalidationSource::Hover
+        {
+            return false;
+        }
+
+        match inv {
+            Invalidation::Layout | Invalidation::HitTest | Invalidation::HitTestOnly => true,
+            Invalidation::Paint => matches!(
+                source,
+                UiDebugInvalidationSource::Notify
+                    | UiDebugInvalidationSource::ModelChange
+                    | UiDebugInvalidationSource::GlobalChange
+                    | UiDebugInvalidationSource::Focus
+            ),
+        }
+    }
+
     pub(in crate::tree) fn refresh_semantics_snapshot(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             self.semantics = None;
+            self.semantics_dirty = true;
             return;
         };
 
@@ -36,6 +79,7 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 ..SemanticsSnapshot::default()
             }));
+            self.semantics_dirty = false;
             return;
         }
 
@@ -416,6 +460,7 @@ impl<H: UiHost> UiTree<H> {
             captured,
             nodes,
         }));
+        self.semantics_dirty = false;
 
         if let Some(snapshot) = self.semantics.as_deref() {
             semantics::validate_semantics_if_enabled(snapshot);

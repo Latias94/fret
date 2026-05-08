@@ -10007,3 +10007,79 @@ Decision:
   not know which outer gallery pages are profitable whole-page cache roots.
 - The remaining a11y-active semantics refresh cost is real enough to track, but it belongs to a separate lane because
   it changes AccessKit/diagnostics behavior rather than page cache semantics.
+
+## 2026-05-08 09:42 (gate accessibility semantics refresh on dirty state)
+
+Discovery:
+- The remaining Material3 tabs steady cost under diagnostics/accessibility was not a component-layer issue. The runner
+  and diagnostics hooks requested a semantics snapshot every frame once semantics was active, so paint-only Material3
+  indication animation frames still paid `layout_semantics_refresh_time_us`.
+- `FRET_A11Y_DISABLE=1` was only a diagnostic clue. The correct fix is to preserve semantics freshness on real semantic
+  changes while avoiding full tree rebuilds for paint-only animation and policy-only invalidations.
+
+Change:
+- Added a `UiTree` semantics-dirty bit plus `request_semantics_snapshot_if_dirty()`.
+- Mark semantics dirty for structural mutation, subtree removal, layer order/visibility/barrier changes, focus changes,
+  layout/hit-test invalidations, and paint invalidations from model/global/notify/focus sources.
+- Keep semantics clean for paint-only animation frames, hover edges, focus-visible policy, and input-modality policy.
+- Updated gallery and `fret-bootstrap` accessibility/diagnostics paths to request snapshots only when dirty.
+- In gallery perf mode, diagnostics no longer implicitly mounts the status bar, avoiding changing diagnostic text during
+  representative perf runs.
+
+Correctness gates:
+```powershell
+cargo fmt --package fret-ui --package fret-ui-gallery --package fret-bootstrap
+cargo nextest run -p fret-ui semantics
+cargo check -p fret-bootstrap
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- `fret-ui` semantics suite: `51/51` passed.
+- `fret-bootstrap` check passed.
+- Release gallery build passed; existing unused warnings remain outside this slice.
+
+Representative steady probe:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-a11y-dirty-gate-diag-gated `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| page cache policy | 2270 | 2696 | 2696 | 1956 | 49 | 129 | 650 |
+| semantics dirty gate | 1832 | 1873 | 1873 | 1138 | 275 | 109 | 624 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `1873`
+- bundle: `target/fret-diag/codex-material3-tabs-a11y-dirty-gate-diag-gated/1778204430158/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target/fret-diag/codex-material3-tabs-a11y-dirty-gate-diag-gated/1778204430158/bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- time p50/p95 (us): total=`961/1873`, layout=`225/1140`, paint=`579/969`.
+- status-bar invalidation nodes: `0`, confirming perf mode did not mount changing diagnostics text.
+- animation-frame-only frames no longer refresh semantics; representative animation frames only show
+  `source=other detail=animation_frame_request` with layout around `200us` and paint around `560-640us`.
+- Real tab-selection frames still rebuild semantics, with refresh samples around `885us` and `809us`; this is expected
+  semantic-change work, not per-frame churn.
+- `diag stats` still reports a derived pointer-move dispatch p95 outlier for this bundle. Treat it as a tooling
+  attribution follow-up unless it correlates with `top_total_time_us` failures.
+
+Decision:
+- Keep the fix in `fret-ui` semantics/request mechanics plus runner integration, not in Material3 tabs or gallery page
+  policy. If real semantic-change frames need further reduction, the next architecture step is incremental semantics
+  diffing rather than another filter in `request_semantics_snapshot_if_dirty()`.

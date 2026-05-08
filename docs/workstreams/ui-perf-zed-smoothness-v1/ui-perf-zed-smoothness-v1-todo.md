@@ -958,13 +958,21 @@ Perf acceptance:
   - Evidence: perf log entry `2026-05-07 23:59`; Material3 tabs steady p95 total/layout/paint moves from
     `5946/4405/1453us` to `3210/2502/620us`, with indication-only RAF walks recorded as
     `source=other detail=animation_frame_request` and no cache-root `needs_rerender`.
-- [ ] Attribute a11y-active semantics refresh cost under diagnostics.
+- [x] Attribute a11y-active semantics refresh cost under diagnostics.
   - Evidence from the Material3 tabs page-cache pass: `FRET_A11Y_DISABLE=1` removes roughly `0.8-1.1ms` of
     `layout_semantics_refresh_time_us` from the same representative script.
   - Keep this separate from view-cache/page-cache policy work; the decision surface is AccessKit/diagnostics refresh
     cadence and incremental semantics data, not gallery content topology.
-  - Gate candidates: Material3 tabs steady with diagnostics semantics active, one overlay/focus script, and one large
-    scroll/list script to catch regressions in a11y tree freshness.
+  - Implementation: gate accessibility/diagnostics semantics snapshot requests on a `UiTree` semantics-dirty bit.
+    Structural, layer, focus, layout, hit-test, model/global, and notify invalidations rearm the snapshot; paint-only
+    animation, hover, focus-visible policy, and input-modality policy invalidations keep the previous snapshot.
+  - Gate: `cargo nextest run -p fret-ui semantics`, `cargo check -p fret-bootstrap`, and
+    `cargo build -p fret-ui-gallery --release --features gallery-full`.
+  - Evidence: perf log entry `2026-05-08 09:42`; Material3 tabs steady under diagnostics semantics has
+    `p50/p95/max total=1832/1873/1873us`, animation-frame-only frames no longer refresh semantics, and only real tab
+    selection changes rebuild the semantics snapshot.
+  - Follow-up: if real semantic-change frames become the next bottleneck, design incremental semantics/diffing instead
+    of broadening the dirty filter.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`

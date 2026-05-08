@@ -56,6 +56,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.layer_order = next;
+        self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
 
         // Layer order changes can move the active modal/focus barriers. Ensure focus/capture do
@@ -154,6 +155,7 @@ impl<H: UiHost> UiTree<H> {
         self.root_to_layer.insert(root, id);
         self.layer_order.insert(0, id);
         self.base_layer = Some(id);
+        self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         id
     }
@@ -183,6 +185,7 @@ impl<H: UiHost> UiTree<H> {
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.push(id);
+        self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
 
         if options.blocks_underlay_input {
@@ -223,6 +226,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut removed: Vec<NodeId> = Vec::new();
         self.remove_subtree_inner(services, root, &mut removed);
+        self.mark_semantics_dirty();
 
         Some(root)
     }
@@ -262,6 +266,7 @@ impl<H: UiHost> UiTree<H> {
         // visibility instead of creating/removing roots each time (fearless refactors should keep
         // the behavior consistent).
         if prev_visible != Some(visible) {
+            self.mark_semantics_dirty();
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
             let (active_roots, barrier_root) = self.active_input_layers();
             if barrier_root.is_some() {
@@ -312,6 +317,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if prev_hit_testable != Some(hit_testable) {
+            self.mark_semantics_dirty();
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
             let (active_roots, barrier_root) = self.active_input_layers();
             if barrier_root.is_some() {
@@ -339,6 +345,7 @@ impl<H: UiHost> UiTree<H> {
         l.blocks_underlay_focus = blocks;
 
         if prev != Some(blocks) {
+            self.mark_semantics_dirty();
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
             let (active_roots, barrier_root) = self.active_focus_layers();
             if barrier_root.is_some() {
@@ -642,6 +649,7 @@ impl<H: UiHost> UiTree<H> {
         layer_entry.root = root;
         self.root_to_layer.insert(root, layer);
         self.prune_interaction_state_outside_active_layers("layers: update_layer_root");
+        self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 }

@@ -155,7 +155,7 @@ pub(super) fn begin_frame(
     let show_status_bar = std::env::var_os("FRET_UI_GALLERY_STATUS_BAR")
         .is_some_and(|v| !v.is_empty())
         || hud_on
-        || diag_enabled;
+        || (diag_enabled && !perf_mode);
 
     UiGalleryDriver::sync_shadcn_theme(app, state);
     UiGalleryDriver::sync_motion_preset(app, state);

@@ -87,6 +87,7 @@ impl<H: UiHost> UiTree<H> {
             self.pending_focus_target = None;
         }
         if changed {
+            self.mark_semantics_dirty();
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         }
     }
@@ -99,7 +100,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn set_focus_unchecked(
         &mut self,
         focus: Option<NodeId>,
-        reason: &'static str,
+        _reason: &'static str,
     ) {
         #[cfg(debug_assertions)]
         {
@@ -107,7 +108,7 @@ impl<H: UiHost> UiTree<H> {
             if debug_focus_scope && self.focus != focus {
                 let loc = std::panic::Location::caller();
                 eprintln!(
-                    "debug: set_focus_unchecked({reason}) at {}:{}:{}: {:?} -> {:?}",
+                    "debug: set_focus_unchecked({_reason}) at {}:{}:{}: {:?} -> {:?}",
                     loc.file(),
                     loc.line(),
                     loc.column(),
@@ -126,6 +127,7 @@ impl<H: UiHost> UiTree<H> {
             self.pending_focus_target = None;
         }
         if changed {
+            self.mark_semantics_dirty();
             self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         }
     }

@@ -319,6 +319,7 @@ pub struct UiTree<H: UiHost> {
     invalidated_hit_test_nodes: u32,
 
     semantics: Option<Arc<SemanticsSnapshot>>,
+    semantics_dirty: bool,
     semantics_requested: bool,
     layout_node_profile: Option<LayoutNodeProfileState>,
     measure_node_profile: Option<MeasureNodeProfileState>,

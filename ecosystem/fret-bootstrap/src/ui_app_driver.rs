@@ -2185,10 +2185,9 @@ fn ui_app_render<S>(
     };
     if diag_wants_semantics_snapshot {
         // Diagnostics scripts select targets by semantics bounds. Ensure we have a fresh semantics
-        // snapshot for the current frame before we drive scripted input; otherwise scripts may act
-        // on a 1-frame-stale snapshot and mis-predict visibility in virtualized lists (estimate ->
-        // measured jumps).
-        state.ui.request_semantics_snapshot();
+        // snapshot for the current frame when the accessibility tree changed; paint-only animation
+        // frames can keep using the existing snapshot.
+        state.ui.request_semantics_snapshot_if_dirty();
     }
     state.ui.ingest_paint_cache_source(scene);
     scene.clear();
@@ -2523,10 +2522,10 @@ fn ui_app_accessibility_snapshot<S>(
     _window: AppWindowId,
     state: &mut UiAppWindowState<S>,
 ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
-    // Accessibility snapshots are requested by the runner after layout. Requesting semantics here
-    // ensures we start producing snapshots on the next frame when accessibility activates, without
-    // forcing every app to compute semantics on every frame.
-    state.ui.request_semantics_snapshot();
+    // Accessibility snapshots are requested by the runner after layout. Request when the tree is
+    // semantically dirty (or when no snapshot exists yet) so accessibility activation does not turn
+    // paint-only animation frames into full semantics rebuilds.
+    state.ui.request_semantics_snapshot_if_dirty();
     state.ui.semantics_snapshot_arc()
 }
 

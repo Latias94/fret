@@ -81,6 +81,81 @@ fn semantics_snapshot_exposes_focus_barrier_root_independently_of_pointer_barrie
 }
 
 #[test]
+fn semantics_snapshot_dirty_gate_rearms_on_semantic_invalidations() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    assert!(ui.request_semantics_snapshot_if_dirty());
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(ui.semantics_snapshot().is_some());
+    assert!(
+        !ui.request_semantics_snapshot_if_dirty(),
+        "fresh semantics should not schedule another rebuild"
+    );
+
+    ui.invalidate(root, Invalidation::Paint);
+    assert!(
+        !ui.request_semantics_snapshot_if_dirty(),
+        "plain paint invalidation should not dirty accessibility semantics"
+    );
+
+    ui.invalidate(root, Invalidation::HitTestOnly);
+    assert!(
+        ui.request_semantics_snapshot_if_dirty(),
+        "hit-test/bounds changes can affect semantics bounds and should rearm the snapshot"
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(!ui.request_semantics_snapshot_if_dirty());
+
+    ui.mark_invalidation_with_source(root, Invalidation::Paint, UiDebugInvalidationSource::Notify);
+    assert!(
+        ui.request_semantics_snapshot_if_dirty(),
+        "widget notification paint invalidations may affect semantic state and should rearm the snapshot"
+    );
+}
+
+#[test]
+fn semantics_snapshot_dirty_gate_ignores_animation_frame_paint() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    assert!(ui.request_semantics_snapshot_if_dirty());
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(!ui.request_semantics_snapshot_if_dirty());
+
+    ui.invalidate_with_source_and_detail(
+        root,
+        Invalidation::Paint,
+        UiDebugInvalidationSource::Notify,
+        UiDebugInvalidationDetail::AnimationFrameRequest,
+    );
+    assert!(
+        !ui.request_semantics_snapshot_if_dirty(),
+        "paint-only animation frames should not force accessibility tree rebuilds"
+    );
+}
+
+#[test]
 fn modal_barrier_clears_focus_and_capture_in_underlay() {
     struct CaptureOnDown;
 

@@ -45,6 +45,16 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn mark_invalidation_local(&mut self, node: NodeId, inv: Invalidation) {
+        if self.nodes.contains_key(node)
+            && Self::invalidation_may_affect_semantics(
+                UiDebugInvalidationSource::Other,
+                inv,
+                UiDebugInvalidationDetail::Unknown,
+            )
+        {
+            self.mark_semantics_dirty();
+        }
+
         let (prev, next, layout_before, layout_after) = {
             let Some(n) = self.nodes.get_mut(node) else {
                 return;

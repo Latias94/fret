@@ -200,6 +200,9 @@ impl<H: UiHost> UiTree<H> {
         }
         let mut removed: Vec<NodeId> = Vec::new();
         self.remove_subtree_inner(services, root, &mut removed);
+        if !removed.is_empty() {
+            self.mark_semantics_dirty();
+        }
 
         #[cfg(feature = "diagnostics")]
         if let Some((

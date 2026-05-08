@@ -137,6 +137,12 @@ impl<H: UiHost> UiTree<H> {
         source: UiDebugInvalidationSource,
         detail: UiDebugInvalidationDetail,
     ) {
+        if self.nodes.contains_key(node)
+            && Self::invalidation_may_affect_semantics(source, inv, detail)
+        {
+            self.mark_semantics_dirty();
+        }
+
         let stop_at_view_cache = self.view_cache_active();
         let agg_enabled = self.subtree_layout_dirty_aggregation_enabled();
         self.record_invalidation_walk_call(source);
@@ -371,6 +377,12 @@ impl<H: UiHost> UiTree<H> {
         source: UiDebugInvalidationSource,
         detail: UiDebugInvalidationDetail,
     ) {
+        if self.nodes.contains_key(node)
+            && Self::invalidation_may_affect_semantics(source, inv, detail)
+        {
+            self.mark_semantics_dirty();
+        }
+
         let stop_at_view_cache = self.view_cache_active();
         let agg_enabled = self.subtree_layout_dirty_aggregation_enabled();
         let needed = Self::invalidation_mask(inv);
