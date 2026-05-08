@@ -138,6 +138,8 @@ impl<H: UiHost> UiTree<H> {
         present: bool,
         interactive: bool,
     ) {
+        self.set_layout_dirty_children_suppressed(node, !present);
+
         if self
             .nodes
             .get(node)

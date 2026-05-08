@@ -153,6 +153,7 @@ impl<H: UiHost> UiTree<H> {
         });
         let any_pending_barrier_needs_layout = self.pending_barrier_relayouts.iter().any(|&root| {
             self.node_is_attached_to_layer_tree(root)
+                && !self.node_layout_dirty_suppressed_by_ancestor(root)
                 && self
                     .nodes
                     .get(root)
@@ -161,6 +162,7 @@ impl<H: UiHost> UiTree<H> {
         let any_view_cache_root_needs_layout = self.view_cache_active()
             && self.nodes.iter().any(|(id, node)| {
                 self.node_is_attached_to_layer_tree(id)
+                    && !self.node_layout_dirty_suppressed_by_ancestor(id)
                     && node.view_cache.enabled
                     && node.invalidation.layout
             });
@@ -1255,9 +1257,23 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn any_attached_layout_invalidations(&self) -> bool {
-        self.nodes
-            .iter()
-            .any(|(id, node)| node.invalidation.layout && self.node_is_attached_to_layer_tree(id))
+        let mut stack: Vec<NodeId> = self
+            .visible_layers_in_paint_order()
+            .map(|layer| self.layers[layer].root)
+            .collect();
+        while let Some(id) = stack.pop() {
+            let Some(node) = self.nodes.get(id) else {
+                continue;
+            };
+            if node.invalidation.layout {
+                return true;
+            }
+            if node.layout_dirty_children_suppressed {
+                continue;
+            }
+            stack.extend(node.children.iter().copied());
+        }
+        false
     }
 
     fn prune_detached_layout_followups(&mut self) {
@@ -1301,6 +1317,9 @@ impl<H: UiHost> UiTree<H> {
             }
             engine.mark_seen_if_present(node);
             if let Some(entry) = self.nodes.get(node) {
+                if entry.layout_dirty_children_suppressed {
+                    continue;
+                }
                 for &child in &entry.children {
                     self.scratch_node_stack.push(child);
                 }

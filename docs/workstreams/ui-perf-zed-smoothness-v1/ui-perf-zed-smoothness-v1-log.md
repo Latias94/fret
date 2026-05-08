@@ -10844,3 +10844,53 @@ Decision:
   classified.
 - Next slice should decide whether the repeated `Opacity` / `Scrollbar` initial-mount churn is expected component
   lifecycle behavior or avoidable identity churn in `fret-ui-shadcn` `ScrollArea` / view-cache shell composition.
+
+## 2026-05-08 22:05 (code change)
+
+Question:
+- Are the repeated `Opacity` / `Scrollbar` `initial_mount` dirty descendants under `ScrollArea` caused by real visible
+  layout work, or by `InteractivityGate(present=false)` keeping mounted display-none chrome dirty while still exposing
+  that dirty work to ancestor cached-flow decisions?
+
+Change:
+- Added a node-level `layout_dirty_children_suppressed` flag driven by `InteractivityGate(present=false)`.
+- When suppressed, child layout dirty counts remain stored on the hidden children but no longer contribute to the gate
+  or ancestor `subtree_layout_dirty_count`.
+- `present=true` clears the suppression and recomputes the aggregate count, so previously hidden dirty children become
+  authoritative again and are laid out before they are shown.
+- Request-build/translation-only mark-seen traversal now skips suppressed children so stale hidden flow nodes are not
+  kept alive as active layout work.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-ui absent_interactivity_gate_suppresses_hidden_layout_dirty_for_resize_reuse`
+- `cargo nextest run -p fret-ui interactivity_gate`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+- `cargo nextest run -p fret-ui view_cache`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this change did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-interactivity-gate-hidden-dirty-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle: `target/fret-diag/codex-interactivity-gate-hidden-dirty-smoke/1778248906751/bundle.schema2.json`
+- `fretboard diag stats ... --sort time --top 10` result:
+  - p50/p95 total: `10510/18116us`
+  - p50/p95 layout: `5982/12692us`
+  - p50/p95 paint: `3570/6078us`
+- Request-build root inspection:
+  - cached-flow frames now show `mode=cached_flow_reuse`, `invalidated=false`, `subtree_dirty=false`, `dirty_count=0`
+    (e.g. frame `267`, request-build `379us`).
+  - full rebuild frames now show `detail=interactive_resize_full_rebuild` rather than the prior hidden
+    `Opacity` / `Scrollbar` `initial_mount` descendants (e.g. frame `266`, `dirty_count=2161`).
+
+Decision:
+- The hidden scroll chrome dirty leak is fixed at the mechanism layer; it was a `display:none` / retained-mounted
+  dirty aggregation bug, not a shadcn `ScrollArea` identity issue.
+- The remaining resize-stress tail is now dominated by alternating interactive-resize full rebuild frames and broad
+  root layout application (`layout.nodes` around `2161` on full rebuild frames, around `1083` on cached-flow resize
+  frames), so the next optimization should not revisit hidden chrome. It should focus on resize scheduling / full
+  rebuild cadence or the narrower dirty-frontier layout-apply problem already tracked below.

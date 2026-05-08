@@ -1083,6 +1083,14 @@ Perf acceptance:
     from `8234/4505/3494us` to `8659/4692/3629us`.
   - Decision: do not promote the broad fast path; keep the next implementation pass focused on the narrower
     dirty-frontier / scroll post-layout branch.
+- [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
+  - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
+    `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.
+  - Fix: keep hidden children mounted and dirty, but exclude them from `subtree_layout_dirty_count` while the gate is
+    `present=false`; restore the aggregate when `present=true`.
+  - Gate: `cargo nextest run -p fret-ui interactivity_gate interactive_resize_flow_rebuild view_cache`.
+  - Evidence: perf log entry `2026-05-08 22:05`; cached-flow resize frames now report `subtree_dirty=false`,
+    `dirty_count=0`, while remaining heavy frames are classified as `interactive_resize_full_rebuild`.
 - [ ] Consider a narrower dirty-frontier scroll relayout path if side-effect audit makes the broad fast path too risky.
   - Target: avoid amplifying a few descendant dirty nodes into a full direct child-root relayout when post-layout extents
     can remain authoritative.

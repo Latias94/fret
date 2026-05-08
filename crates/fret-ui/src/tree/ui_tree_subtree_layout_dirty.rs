@@ -7,6 +7,28 @@ impl<H: UiHost> UiTree<H> {
         crate::runtime_config::ui_runtime_config().layout_subtree_dirty_aggregation
     }
 
+    pub(in crate::tree) fn set_layout_dirty_children_suppressed(
+        &mut self,
+        node: NodeId,
+        suppressed: bool,
+    ) {
+        let changed = {
+            let Some(entry) = self.nodes.get_mut(node) else {
+                return;
+            };
+            if entry.layout_dirty_children_suppressed == suppressed {
+                false
+            } else {
+                entry.layout_dirty_children_suppressed = suppressed;
+                true
+            }
+        };
+
+        if changed {
+            self.recompute_node_subtree_layout_dirty_count_and_propagate(node);
+        }
+    }
+
     pub(crate) fn node_subtree_layout_dirty(&self, node: NodeId) -> bool {
         self.subtree_layout_dirty_aggregation_enabled()
             && self
@@ -24,6 +46,25 @@ impl<H: UiHost> UiTree<H> {
             .get(node)
             .map(|n| n.subtree_layout_dirty_count)
             .unwrap_or(0)
+    }
+
+    pub(in crate::tree) fn node_layout_dirty_suppressed_by_ancestor(&self, node: NodeId) -> bool {
+        let mut current = self.nodes.get(node).and_then(|n| n.parent);
+        let mut remaining = self.nodes.len().saturating_add(1);
+        while let Some(id) = current {
+            if remaining == 0 {
+                return false;
+            }
+            remaining = remaining.saturating_sub(1);
+            let Some(entry) = self.nodes.get(id) else {
+                return false;
+            };
+            if entry.layout_dirty_children_suppressed {
+                return true;
+            }
+            current = entry.parent;
+        }
+        false
     }
 
     pub(crate) fn node_subtree_layout_dirty_covered_by_contained_view_cache_roots(
@@ -152,13 +193,15 @@ impl<H: UiHost> UiTree<H> {
                 return;
             };
             let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
-            for &child in &n.children {
-                sum = sum.saturating_add(
-                    self.nodes
-                        .get(child)
-                        .map(|c| c.subtree_layout_dirty_count)
-                        .unwrap_or(0),
-                );
+            if !n.layout_dirty_children_suppressed {
+                for &child in &n.children {
+                    sum = sum.saturating_add(
+                        self.nodes
+                            .get(child)
+                            .map(|c| c.subtree_layout_dirty_count)
+                            .unwrap_or(0),
+                    );
+                }
             }
             (n.parent, n.subtree_layout_dirty_count, sum)
         };
@@ -208,13 +251,15 @@ impl<H: UiHost> UiTree<H> {
             }
 
             let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
-            for &child in &n.children {
-                sum = sum.saturating_add(
-                    self.nodes
-                        .get(child)
-                        .map(|c| c.subtree_layout_dirty_count)
-                        .unwrap_or(0),
-                );
+            if !n.layout_dirty_children_suppressed {
+                for &child in &n.children {
+                    sum = sum.saturating_add(
+                        self.nodes
+                            .get(child)
+                            .map(|c| c.subtree_layout_dirty_count)
+                            .unwrap_or(0),
+                    );
+                }
             }
             if let Some(n) = self.nodes.get_mut(id) {
                 n.subtree_layout_dirty_count = sum;
@@ -263,13 +308,15 @@ impl<H: UiHost> UiTree<H> {
             }
 
             let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
-            for &child in &n.children {
-                sum = sum.saturating_add(
-                    self.nodes
-                        .get(child)
-                        .map(|c| c.subtree_layout_dirty_count)
-                        .unwrap_or(0),
-                );
+            if !n.layout_dirty_children_suppressed {
+                for &child in &n.children {
+                    sum = sum.saturating_add(
+                        self.nodes
+                            .get(child)
+                            .map(|c| c.subtree_layout_dirty_count)
+                            .unwrap_or(0),
+                    );
+                }
             }
             if let Some(n) = self.nodes.get_mut(id) {
                 n.subtree_layout_dirty_count = sum;
@@ -287,13 +334,15 @@ impl<H: UiHost> UiTree<H> {
                     break;
                 };
                 let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
-                for &child in &n.children {
-                    sum = sum.saturating_add(
-                        self.nodes
-                            .get(child)
-                            .map(|c| c.subtree_layout_dirty_count)
-                            .unwrap_or(0),
-                    );
+                if !n.layout_dirty_children_suppressed {
+                    for &child in &n.children {
+                        sum = sum.saturating_add(
+                            self.nodes
+                                .get(child)
+                                .map(|c| c.subtree_layout_dirty_count)
+                                .unwrap_or(0),
+                        );
+                    }
                 }
                 (n.parent, sum)
             };
@@ -427,8 +476,10 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
-                for &child in &n.children {
-                    sum = sum.saturating_add(expected.get(child).copied().unwrap_or(0));
+                if !n.layout_dirty_children_suppressed {
+                    for &child in &n.children {
+                        sum = sum.saturating_add(expected.get(child).copied().unwrap_or(0));
+                    }
                 }
                 expected.insert(id, sum);
             }

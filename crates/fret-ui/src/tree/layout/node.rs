@@ -88,6 +88,9 @@ impl<H: UiHost> UiTree<H> {
                     };
                     n.bounds.origin =
                         Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
+                    if n.layout_dirty_children_suppressed {
+                        continue;
+                    }
                     for &child in &n.children {
                         stack.push(child);
                     }
