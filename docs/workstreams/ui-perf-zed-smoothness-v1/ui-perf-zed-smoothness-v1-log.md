@@ -10530,3 +10530,36 @@ Decision:
   canvas/viewport surfaces, layout-query regions, transforms, and anchored/overlay-related nodes. These may update
   scroll extents, visible ranges, deferred scroll targets, element bounds, semantics, hit testing, or retained widget
   state during layout.
+
+## 2026-05-08 16:45 (code change)
+
+Question:
+- Does a guarded engine-solved clean-subtree apply fast path improve resize-stress enough to justify keeping the extra
+  traversal?
+
+Change:
+- Added a temporary `FRET_UI_LAYOUT_ENGINE_APPLY_CLEAN_SUBTREES` gate.
+- Added a guarded clean-subtree apply path in `crates/fret-ui/src/tree/layout/node.rs` for a narrow structural widget
+  subset during interactive resize.
+- Added a focused test proving clean structural subtrees can apply solved bounds without calling `widget.layout`.
+
+Perf evidence:
+- Baseline bundle:
+  `target/fret-diag/codex-resize-stress-scroll-child-profile-prewarm/1778225557208/bundle.schema2.json`
+  - p50/p95 total: `2327/8234us`
+  - p50/p95 layout: `1871/4505us`
+  - p50/p95 paint: `353/3494us`
+  - worst frame total/layout/solve/paint: `8234/4415/2104/3494us`
+- Experiment bundle:
+  `target/fret-diag/codex-resize-stress-engine-solved-apply/1778229520733/bundle.schema2.json`
+  - p50/p95 total: `2231/8659us`
+  - p50/p95 layout: `1803/4692us`
+  - p50/p95 paint: `326/3629us`
+  - worst frame total/layout/solve/paint: `8659/4692/2191/3629us`
+- Raw run log: `target/fret-diag/engine-solved-apply-resize.log`
+
+Decision:
+- Reject this path for now. It did not improve the tail on the current resize-stress gate; p95 regressed slightly even
+  though some median frames got lighter.
+- Keep the broader layout-side-effect audit open, and move the next pass toward a narrower dirty-frontier /
+  scroll-post-layout path instead of a broad `widget.layout` skip.

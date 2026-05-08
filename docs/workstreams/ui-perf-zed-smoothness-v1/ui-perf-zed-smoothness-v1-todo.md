@@ -1026,6 +1026,11 @@ Perf acceptance:
     input state, and virtual-list visible ranges stay identical to the full `layout_in` path on targeted scripts.
   - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild` plus a prewarmed
     `ui-gallery-window-resize-stress-steady.json` perf sample.
+- [x] Reject the guarded engine-solved subtree apply experiment on the current resize-stress sample.
+  - Evidence: perf log entry `2026-05-08 16:45`; `ui-gallery-window-resize-stress` p95 total/layout/paint worsened
+    from `8234/4505/3494us` to `8659/4692/3629us`.
+  - Decision: do not promote the broad fast path; keep the next implementation pass focused on the narrower
+    dirty-frontier / scroll post-layout branch.
 - [ ] Consider a narrower dirty-frontier scroll relayout path if side-effect audit makes the broad fast path too risky.
   - Target: avoid amplifying a few descendant dirty nodes into a full direct child-root relayout when post-layout extents
     can remain authoritative.
