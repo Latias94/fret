@@ -5,9 +5,10 @@ use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-#[cfg(feature = "gallery-dev")]
-use crate::spec::PAGE_MAGIC_PATTERNS_TORTURE;
-use crate::spec::{BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO};
+use crate::spec::{
+    BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO, PageContentCachePolicy,
+    page_content_cache_policy,
+};
 use crate::ui;
 
 pub(super) fn sidebar_view(
@@ -142,13 +143,11 @@ pub(super) fn content_view(
         .get_model_cloned(selected_page, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
 
-    // Do not cache the content subtree for pages that intentionally animate without input.
-    // View-cache reuse skips rerendering declarative closures, which would freeze time-driven
-    // material params like the magic patterns torture stripes.
-    #[cfg(feature = "gallery-dev")]
-    let cache_content = cache_content && selected.as_ref() != PAGE_MAGIC_PATTERNS_TORTURE;
-    #[cfg(not(feature = "gallery-dev"))]
-    let cache_content = cache_content;
+    // Whole-page content caching is profitable for mostly static documentation pages, but it is
+    // the wrong boundary for pages whose primary examples own local interaction state. Let page
+    // metadata opt those pages out so local state changes do not dirty the entire content pane.
+    let cache_content = cache_content
+        && page_content_cache_policy(selected.as_ref()) == PageContentCachePolicy::Cacheable;
 
     if cache_content {
         cx.view_cache(

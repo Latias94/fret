@@ -221,6 +221,15 @@ mod tests {
 
         assert_eq!(page.as_ref(), PAGE_BUTTON_GROUP);
     }
+
+    #[cfg(feature = "gallery-material3")]
+    #[test]
+    fn material3_tabs_opts_out_of_whole_page_content_cache() {
+        assert_eq!(
+            page_content_cache_policy(PAGE_MATERIAL3_TABS),
+            PageContentCachePolicy::Uncached
+        );
+    }
 }
 
 #[cfg(feature = "gallery-dev")]
@@ -825,6 +834,22 @@ impl PageSpec {
             command,
             tags,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PageContentCachePolicy {
+    Cacheable,
+    Uncached,
+}
+
+pub(crate) fn page_content_cache_policy(id: &str) -> PageContentCachePolicy {
+    match id {
+        #[cfg(feature = "gallery-dev")]
+        PAGE_MAGIC_PATTERNS_TORTURE => PageContentCachePolicy::Uncached,
+        #[cfg(feature = "gallery-material3")]
+        PAGE_MATERIAL3_TABS => PageContentCachePolicy::Uncached,
+        _ => PageContentCachePolicy::Cacheable,
     }
 }
 

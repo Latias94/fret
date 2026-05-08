@@ -930,16 +930,20 @@ Perf acceptance:
   - Gate: focused `fret-ui-gallery` boot-config tests plus release gallery build.
   - Evidence: perf log entry `2026-05-07 22:25`; Material3 tabs steady has `paint.cache_misses=0` and no
     `view_cache_disabled` cache roots under `FRET_UI_GALLERY_VIEW_CACHE=1`.
-- [ ] Review gallery shell/content view-cache boundary semantics after env fix.
+- [x] Review gallery shell/content view-cache boundary semantics after env fix.
   - Evidence: the env-fixed Material3 tabs steady bundle still shows the content cache root can report
     `reuse_reason="needs_rerender"` during most non-reuse frames, moving the hotspot from paint churn to avoidable
     view-rerender pressure.
   - Rejected experiment: blindly making the content pane `contained_layout` worsened the Material3 tabs steady sample
     and did not remove the non-reuse frames.
-  - Decision needed: reduce the model/read surface that marks the whole content page dirty, or split the content shell
-    so stable expensive page subtrees can be cached below a smaller dynamic wrapper.
-  - Gate candidates: Material3 tabs steady, `ui-gallery-steady`, and overlay/content navigation scripts with
-    `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+  - Decision: make whole-page content caching an explicit gallery page policy. Mostly static pages remain cacheable;
+    pages whose primary examples own local interaction state can opt out without coupling component recipes to shell
+    cache topology.
+  - Implementation: `PAGE_MATERIAL3_TABS` opts out via `PageContentCachePolicy`; the Magic Patterns torture opt-out now
+    uses the same metadata hook instead of a shell-only special case.
+  - Gate: focused `fret-ui-gallery` policy test plus release gallery build.
+  - Evidence: perf log entry `2026-05-08 08:33`; Material3 tabs steady p95 total/layout moves from `3210/2502us` to
+    `2696/1956us`, `view_cache_roots_needs_rerender=0`, and tab-switch layout nodes stay at `43`.
 - [x] Fix cache-root diagnostics so view-rerender misses are not hidden as generic non-reuse.
   - Change: record `UiDebugCacheRootReuseReason` before clearing `view_cache_needs_rerender` in `mount_element`.
   - Gate: `cargo nextest run -p fret-ui view_cache` (`54/54` passed).
@@ -954,6 +958,13 @@ Perf acceptance:
   - Evidence: perf log entry `2026-05-07 23:59`; Material3 tabs steady p95 total/layout/paint moves from
     `5946/4405/1453us` to `3210/2502/620us`, with indication-only RAF walks recorded as
     `source=other detail=animation_frame_request` and no cache-root `needs_rerender`.
+- [ ] Attribute a11y-active semantics refresh cost under diagnostics.
+  - Evidence from the Material3 tabs page-cache pass: `FRET_A11Y_DISABLE=1` removes roughly `0.8-1.1ms` of
+    `layout_semantics_refresh_time_us` from the same representative script.
+  - Keep this separate from view-cache/page-cache policy work; the decision surface is AccessKit/diagnostics refresh
+    cadence and incremental semantics data, not gallery content topology.
+  - Gate candidates: Material3 tabs steady with diagnostics semantics active, one overlay/focus script, and one large
+    scroll/list script to catch regressions in a11y tree freshness.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`

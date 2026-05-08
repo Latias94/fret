@@ -9941,3 +9941,69 @@ Bundle evidence:
   `layout_nodes_performed=9`.
 - A few tab-switch frames still report `needs_rerender=1`; those correspond to render-driven tab/indicator state, not
   indication repaint. Keep the shell/content boundary follow-up open for that remaining class.
+
+## 2026-05-08 08:33 (Material3 tabs opt out of whole-page content cache)
+
+Discovery:
+- After the paint-only indication fix, the remaining Material3 tabs steady slow frames came from the gallery content
+  root being marked `needs_rerender` by page-local tab model reads.
+- The whole-page content cache boundary was too coarse for this page: tab selection is intentional local interaction
+  state, but the cache root wrapped the full Demo+Code page subtree and inflated tab-switch work.
+- A/B with `FRET_UI_GALLERY_VIEW_CACHE_CONTENT=0` confirmed the direction: the slow frame no longer dirtied the content
+  cache root, `view_cache_roots_needs_rerender=0`, and tab-switch layout nodes dropped from `172` to `43`.
+- `FRET_A11Y_DISABLE=1` separately showed that active AccessKit/semantics refresh can add roughly `0.8-1.1ms` to these
+  diagnostics frames. Keep that as a separate a11y-active lane instead of hiding it behind the page-cache fix.
+
+Change:
+- Added a gallery `PageContentCachePolicy` so pages can opt out of whole-page content caching when their main examples
+  own local interaction state.
+- `PAGE_MATERIAL3_TABS` now opts out under `gallery-material3`.
+- The existing Magic Patterns torture opt-out moved into the same metadata hook instead of staying as an ad-hoc shell
+  special case.
+
+Correctness gates:
+```powershell
+cargo nextest run -p fret-ui-gallery --features gallery-full material3_tabs_opts_out_of_whole_page_content_cache
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- Focused gallery policy test passed (`1` passed, `637` skipped).
+- Release gallery build passed; existing unused warnings remain in `fret-runtime` / `fret-ui`.
+
+Representative steady probe:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-page-cache-policy `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| paint-only indication | 3203 | 3210 | 3210 | 2502 | 266 | 104 | 620 |
+| page cache policy | 2270 | 2696 | 2696 | 1956 | 49 | 129 | 650 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `2696`
+- bundle: `target/fret-diag/codex-material3-tabs-page-cache-policy/1778200223294/bundle.schema2.json`
+
+Bundle evidence:
+- `view_cache_roots_total=1`, `view_cache_roots_reused=1`, and `view_cache_roots_needs_rerender=0` across retained
+  frames.
+- Tab-switch slow frames now perform `layout.nodes=43` instead of the previous `172`-node full content subtree.
+- `paint.cache_misses=0` remains stable.
+
+Decision:
+- Keep this fix in the gallery shell policy layer. `material3/shared.rs` only owns the Demo+Code composition; it should
+  not know which outer gallery pages are profitable whole-page cache roots.
+- The remaining a11y-active semantics refresh cost is real enough to track, but it belongs to a separate lane because
+  it changes AccessKit/diagnostics behavior rather than page cache semantics.
