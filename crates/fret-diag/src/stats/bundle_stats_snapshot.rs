@@ -179,6 +179,16 @@ pub(super) fn snapshot_layout_request_build_roots(
                 .get("subtree_layout_dirty")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false),
+            subtree_layout_dirty_count: r
+                .get("subtree_layout_dirty_count")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            descendant_layout_dirty_count: r
+                .get("descendant_layout_dirty_count")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
             needs_layout: r
                 .get("needs_layout")
                 .and_then(|v| v.as_bool())

@@ -1313,6 +1313,7 @@ impl<H: UiHost> UiTree<H> {
         had_layout_engine_node: bool,
         layout_invalidated: bool,
         subtree_layout_dirty: bool,
+        subtree_layout_dirty_count: u32,
         needs_layout: bool,
         is_translation_only: bool,
         nodes_marked_seen: u32,
@@ -1336,6 +1337,9 @@ impl<H: UiHost> UiTree<H> {
             had_layout_engine_node,
             layout_invalidated,
             subtree_layout_dirty,
+            subtree_layout_dirty_count,
+            descendant_layout_dirty_count: subtree_layout_dirty_count
+                .saturating_sub(layout_invalidated as u32),
             needs_layout,
             is_translation_only,
             nodes_marked_seen,
@@ -1568,13 +1572,16 @@ impl<H: UiHost> UiTree<H> {
                 has_element,
                 layout_invalidated,
                 subtree_layout_dirty,
+                subtree_layout_dirty_count,
                 prev_bounds,
                 measured,
             )) = self.nodes.get(root).map(|node| {
+                let subtree_layout_dirty_count = self.node_subtree_layout_dirty_count(root);
                 (
                     node.element.is_some(),
                     node.invalidation.layout,
-                    self.node_subtree_layout_dirty(root),
+                    subtree_layout_dirty_count > 0,
+                    subtree_layout_dirty_count,
                     node.bounds,
                     node.measured_size,
                 )
@@ -1601,6 +1608,7 @@ impl<H: UiHost> UiTree<H> {
                     had_layout_engine_node,
                     layout_invalidated,
                     subtree_layout_dirty,
+                    subtree_layout_dirty_count,
                     needs_layout,
                     is_translation_only,
                     0,
@@ -1621,6 +1629,7 @@ impl<H: UiHost> UiTree<H> {
                     had_layout_engine_node,
                     layout_invalidated,
                     subtree_layout_dirty,
+                    subtree_layout_dirty_count,
                     needs_layout,
                     is_translation_only,
                     nodes_marked_seen,
@@ -1646,6 +1655,7 @@ impl<H: UiHost> UiTree<H> {
                     had_layout_engine_node,
                     layout_invalidated,
                     subtree_layout_dirty,
+                    subtree_layout_dirty_count,
                     needs_layout,
                     is_translation_only,
                     nodes_marked_seen,
@@ -1670,6 +1680,7 @@ impl<H: UiHost> UiTree<H> {
                     had_layout_engine_node,
                     layout_invalidated,
                     subtree_layout_dirty,
+                    subtree_layout_dirty_count,
                     needs_layout,
                     is_translation_only,
                     0,
@@ -1837,6 +1848,7 @@ impl<H: UiHost> UiTree<H> {
                 is_translation_only: bool,
                 layout_invalidated: bool,
                 subtree_layout_dirty: bool,
+                subtree_layout_dirty_count: u32,
             }
 
             let mut batch: Vec<ViewportWorkItem> = Vec::with_capacity(batch_end - batch_start);
@@ -1858,6 +1870,7 @@ impl<H: UiHost> UiTree<H> {
                     && prev_bounds.size == bounds.size
                     && prev_bounds.origin != bounds.origin
                     && measured != Size::default();
+                let subtree_layout_dirty_count = self.node_subtree_layout_dirty_count(root);
 
                 batch.push(ViewportWorkItem {
                     root,
@@ -1866,7 +1879,8 @@ impl<H: UiHost> UiTree<H> {
                     needs_layout,
                     is_translation_only,
                     layout_invalidated: invalidated,
-                    subtree_layout_dirty: self.node_subtree_layout_dirty(root),
+                    subtree_layout_dirty: subtree_layout_dirty_count > 0,
+                    subtree_layout_dirty_count,
                 });
             }
 
@@ -1896,6 +1910,7 @@ impl<H: UiHost> UiTree<H> {
                             had_layout_engine_node,
                             item.layout_invalidated,
                             item.subtree_layout_dirty,
+                            item.subtree_layout_dirty_count,
                             item.needs_layout,
                             item.is_translation_only,
                             0,
@@ -1918,6 +1933,7 @@ impl<H: UiHost> UiTree<H> {
                             had_layout_engine_node,
                             item.layout_invalidated,
                             item.subtree_layout_dirty,
+                            item.subtree_layout_dirty_count,
                             item.needs_layout,
                             item.is_translation_only,
                             nodes_marked_seen,
@@ -1946,6 +1962,7 @@ impl<H: UiHost> UiTree<H> {
                             had_layout_engine_node,
                             item.layout_invalidated,
                             item.subtree_layout_dirty,
+                            item.subtree_layout_dirty_count,
                             item.needs_layout,
                             item.is_translation_only,
                             nodes_marked_seen,
@@ -1970,6 +1987,7 @@ impl<H: UiHost> UiTree<H> {
                             had_layout_engine_node,
                             item.layout_invalidated,
                             item.subtree_layout_dirty,
+                            item.subtree_layout_dirty_count,
                             item.needs_layout,
                             item.is_translation_only,
                             0,

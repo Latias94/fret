@@ -461,6 +461,8 @@ pub(super) struct BundleStatsLayoutRequestBuildRoot {
     pub(super) had_layout_engine_node: bool,
     pub(super) layout_invalidated: bool,
     pub(super) subtree_layout_dirty: bool,
+    pub(super) subtree_layout_dirty_count: u32,
+    pub(super) descendant_layout_dirty_count: u32,
     pub(super) needs_layout: bool,
     pub(super) is_translation_only: bool,
     pub(super) nodes_marked_seen: u32,
@@ -1592,10 +1594,12 @@ impl BundleStatsReport {
                             out.push_str(&format!(" mode={mode}"));
                         }
                         out.push_str(&format!(
-                            " engine={} invalidated={} subtree_dirty={} needs_layout={} translation_only={} marked_seen={}",
+                            " engine={} invalidated={} subtree_dirty={} dirty_count={} descendant_dirty={} needs_layout={} translation_only={} marked_seen={}",
                             r.had_layout_engine_node,
                             r.layout_invalidated,
                             r.subtree_layout_dirty,
+                            r.subtree_layout_dirty_count,
+                            r.descendant_layout_dirty_count,
                             r.needs_layout,
                             r.is_translation_only,
                             r.nodes_marked_seen,
@@ -3509,6 +3513,14 @@ impl BundleStatsReport {
                         r_obj.insert(
                             "subtree_layout_dirty".to_string(),
                             Value::from(r.subtree_layout_dirty),
+                        );
+                        r_obj.insert(
+                            "subtree_layout_dirty_count".to_string(),
+                            Value::from(r.subtree_layout_dirty_count),
+                        );
+                        r_obj.insert(
+                            "descendant_layout_dirty_count".to_string(),
+                            Value::from(r.descendant_layout_dirty_count),
                         );
                         r_obj.insert("needs_layout".to_string(), Value::from(r.needs_layout));
                         r_obj.insert(

@@ -112,11 +112,19 @@ Conventions:
         `target/fret-diag/codex-request-build-roots-r3/1778239800406/bundle.schema2.json`.
       - Result: heavy resize frames are `build_flow` dominated; `mark_seen` is cheap, and `cached_flow_reuse` frames
         move the remaining cost to `layout_roots_time_us` / barrier solves rather than request-build.
-    - [ ] Add or inspect root dirty-count/source attribution before considering a self-only root cached-flow reuse
+    - [x] Add root dirty-count attribution before considering a self-only root cached-flow reuse
       optimization.
-      - Rationale: `layout_invalidations_count=1` on the heavy frames suggests the top root may be self-dirty, but
-        `layout_request_build_roots[]` currently records only a boolean `subtree_layout_dirty`. A cached-flow reuse
-        change must distinguish resize-only/root-only invalidation from real root element/style changes.
+      - Fields: `subtree_layout_dirty_count` and `descendant_layout_dirty_count` on
+        `debug.layout_request_build_roots[]`, `fretboard diag stats`, and triage JSON.
+      - Evidence: perf log entry `2026-05-08 20:12`; smoke bundle
+        `target/fret-diag/codex-request-build-roots-dirty-count-smoke/1778241162991/bundle.schema2.json`.
+      - Result: the smoke sample's top heavy root reports `layout_invalidated=false`, `subtree_dirty=true`,
+        `subtree_layout_dirty_count=4`, and `descendant_layout_dirty_count=4`, so the next optimization should not
+        assume a root-only invalidation.
+    - [ ] Attribute the dirty descendant sources inside the top request-build roots before proposing another
+      cached-flow or dirty-frontier optimization.
+      - Target evidence: top dirty descendants with element kind/path and invalidation source/detail, correlated with
+        Scroll/content/view-cache layout hotspots.
   - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
     `Event::WindowResized` when unchanged.
     - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.

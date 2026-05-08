@@ -32,6 +32,8 @@ pub struct UiDebugLayoutRequestBuildRoot {
     pub had_layout_engine_node: bool,
     pub layout_invalidated: bool,
     pub subtree_layout_dirty: bool,
+    pub subtree_layout_dirty_count: u32,
+    pub descendant_layout_dirty_count: u32,
     pub needs_layout: bool,
     pub is_translation_only: bool,
     pub nodes_marked_seen: u32,

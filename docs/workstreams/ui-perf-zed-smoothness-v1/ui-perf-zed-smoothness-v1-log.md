@@ -10707,3 +10707,42 @@ Decision:
 - Before any self-only root reuse optimization, add or inspect enough evidence to distinguish root-only layout
   invalidation from real element/style changes. Reusing a cached flow when the root element's authored layout changed
   would violate the authoritative same-frame rebuild contract covered by `interactive_resize_flow_rebuild`.
+
+## 2026-05-08 20:12 (code change)
+
+Question:
+- Are the heavy resize request-build roots self-dirty, or do they contain real dirty descendants that make a
+  self-only cached-flow reuse unsafe?
+
+Change:
+- Extended `debug.layout_request_build_roots[]` with:
+  - `subtree_layout_dirty_count`
+  - `descendant_layout_dirty_count`
+- Surfaced the same fields through `fretboard diag stats`, triage JSON, and the existing
+  `layout.build_roots_heavy` evidence path.
+- Kept the fields diagnostic-only; they reuse the existing subtree dirty aggregation count instead of walking the
+  subtree during stats capture.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-request-build-roots-dirty-count-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle: `target/fret-diag/codex-request-build-roots-dirty-count-smoke/1778241162991/bundle.schema2.json`
+- Smoke result:
+  - top total/layout/request-build/layout-roots/solve/paint:
+    `8080/4443/404/3715/2136/3330us`
+  - representative request-build row:
+    `mode=build_flow`, `invalidated=false`, `subtree_dirty=true`, `dirty_count=4`, `descendant_dirty=4`
+
+Decision:
+- Do not proceed with a self-only root cached-flow reuse based on the earlier `layout_invalidations_count=1`
+  suspicion. The new count evidence shows at least this smoke sample is descendant-dirty.
+- The next slice should identify the dirty descendant nodes/source details inside the top roots, then correlate them
+  with the Scroll/content/view-cache `layout_roots_time_us` hotspot before changing layout behavior.

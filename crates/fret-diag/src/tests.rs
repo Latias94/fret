@@ -1624,6 +1624,8 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                     "had_layout_engine_node": true,
                     "layout_invalidated": false,
                     "subtree_layout_dirty": true,
+                    "subtree_layout_dirty_count": 3,
+                    "descendant_layout_dirty_count": 3,
                     "needs_layout": true,
                     "is_translation_only": false,
                     "nodes_marked_seen": 0
@@ -1701,6 +1703,16 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("mode"))
             .and_then(|v| v.as_str()),
         Some("build_flow")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("layout_request_build_roots"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("descendant_layout_dirty_count"))
+            .and_then(|v| v.as_u64()),
+        Some(3)
     );
     let build_roots_examples = triage
         .get("hints")
