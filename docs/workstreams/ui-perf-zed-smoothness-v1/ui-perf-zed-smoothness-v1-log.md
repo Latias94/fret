@@ -10233,3 +10233,53 @@ Decision:
 - Do not cache the command registry list for this hotspot; measurement shows registry collection is not the problem.
 - Keep whole-subtree availability as a command dispatch/source fallback concern, not as the window action-availability
   snapshot contract.
+
+## 2026-05-08 13:06 (working tree)
+
+Discovery:
+- The `ui-gallery-steady` investigation exposed a deterministic hang in
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json`: step 18 timed out waiting for
+  `ui-gallery-popover-dismissed`.
+- The popover outside-press contract itself still passed through
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`.
+- The failing bundle showed the last click targeting `ui-gallery-overlay-underlay`, but the app snapshot still reported
+  `last_action=overlay:reset`. The pointer sweep moved from approximately `x=1110` to `x=2010` in a 1280px-wide test
+  window, so the cleanup click was issued after a sweep that had left the pointer outside the hit-test surface.
+
+Change:
+- Normalize the perf script cleanup by moving the pointer back to `ui-gallery-overlay-underlay` and waiting one frame
+  before the outside-press dismissal click.
+- Added `apps/fret-ui-gallery/tests/overlay_perf_surface.rs` to lock the script contract: after the steady-state bundle
+  capture, cleanup must re-enter the underlay before clicking it and must wait for the popover-dismissed flag.
+
+Correctness gates:
+```powershell
+cargo fmt --package fret-ui-gallery
+cargo nextest run -p fret-ui-gallery overlay_pointer_move_perf_cleanup_reenters_underlay_before_outside_press
+```
+
+Results:
+- `fret-ui-gallery::overlay_perf_surface overlay_pointer_move_perf_cleanup_reenters_underlay_before_outside_press`:
+  `1/1` passed.
+- Single-script validation with the normalized cleanup passed:
+  `target/fret-diag/codex-overlay-pointer-move-reentry-check/1778216164094/bundle.schema2.json`.
+
+Validation command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json `
+  --repeat 1 --warmup-frames 0 --reuse-launch --timeout-ms 180000 `
+  --dir target/fret-diag/codex-overlay-pointer-move-reentry-check `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_START_PAGE=overlay `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Decision:
+- Treat this as measurement-surface normalization, not an overlay runtime semantic change. The script intentionally
+  stresses pointer-move dispatch beyond the window edge; cleanup must explicitly return to a known hit-test target before
+  exercising outside-press dismissal.

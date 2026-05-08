@@ -48,6 +48,13 @@ Conventions:
     maintenance or suite membership changes.
   - Evidence: perf log entries `2026-05-07 13:58` and `2026-05-07 14:01`.
 
+- [x] Stabilize `ui-gallery-overlay-pointer-move-steady` cleanup after pointer sweeps.
+  - Change: re-enter `ui-gallery-overlay-underlay` and wait one frame before the outside-press cleanup click, because
+    the sweep intentionally traverses past the 1280px test window and can leave the pointer outside the hit-test surface.
+  - Gate: `cargo nextest run -p fret-ui-gallery overlay_pointer_move_perf_cleanup_reenters_underlay_before_outside_press`.
+  - Evidence: perf log entry `2026-05-08 13:06`; single-script run PASS with bundle
+    `target/fret-diag/codex-overlay-pointer-move-reentry-check/1778216164094/bundle.schema2.json`.
+
 - [ ] Keep the GPUI gap map current and milestone-linked:
   - Reference: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
