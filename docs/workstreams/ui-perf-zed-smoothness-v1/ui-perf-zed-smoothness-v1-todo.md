@@ -1091,6 +1091,15 @@ Perf acceptance:
   - Gate: `cargo nextest run -p fret-ui interactivity_gate interactive_resize_flow_rebuild view_cache`.
   - Evidence: perf log entry `2026-05-08 22:05`; cached-flow resize frames now report `subtree_dirty=false`,
     `dirty_count=0`, while remaining heavy frames are classified as `interactive_resize_full_rebuild`.
+- [x] Keep post-resize authoritative rebuild out of live resize frames by widening the quiet-window default.
+  - Discovery: after hidden dirty suppression, remaining resize-stress tail came from `interactive_resize_full_rebuild`
+    frames being inserted between scripted resize steps, not from a new dirty source.
+  - Fix: default `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES` is now `4` instead of `2`; the deferred rebuild still runs
+    after the configured quiet window.
+  - Gate: `cargo nextest run -p fret-ui interactive_resize_flow_rebuild view_cache`.
+  - Evidence: perf log entry `2026-05-08 22:48`; stress default smoke reports top
+    total/layout/solve/paint `8756/4329/2238/4156us`, and drag-jitter default smoke reports
+    `9049/6447/4283/2336us`.
 - [ ] Consider a narrower dirty-frontier scroll relayout path if side-effect audit makes the broad fast path too risky.
   - Target: avoid amplifying a few descendant dirty nodes into a full direct child-root relayout when post-layout extents
     can remain authoritative.

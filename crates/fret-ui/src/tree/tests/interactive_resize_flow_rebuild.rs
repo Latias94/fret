@@ -10,6 +10,37 @@ fn clear_all_invalidations(ui: &mut UiTree<crate::test_host::TestHost>) {
     ui.invalidated_hit_test_nodes = 0;
 }
 
+fn assert_resize_settles_after_quiet_layout_all(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    services: &mut FakeUiServices,
+    bounds: Rect,
+    scale_factor: f32,
+    context: &str,
+) {
+    let settle_frames = interactive_resize_stable_frames_required();
+    assert!(
+        settle_frames > 0,
+        "{context}: test expects a positive interactive resize settle window"
+    );
+
+    for quiet_frame in 1..settle_frames {
+        app.advance_frame();
+        ui.layout_all(app, services, bounds, scale_factor);
+        assert!(
+            ui.interactive_resize_active(),
+            "{context}: quiet frame {quiet_frame} should still count as interactive resize"
+        );
+    }
+
+    app.advance_frame();
+    ui.layout_all(app, services, bounds, scale_factor);
+    assert!(
+        !ui.interactive_resize_active(),
+        "{context}: resize should settle after {settle_frames} quiet frames"
+    );
+}
+
 fn render_resize_sensitive_root(
     ui: &mut UiTree<crate::test_host::TestHost>,
     app: &mut crate::test_host::TestHost,
@@ -185,29 +216,13 @@ fn interactive_resize_cached_flow_rebuilds_authoritatively_when_descendants_turn
         "cached-flow resize frame",
     );
 
-    app.advance_frame();
-    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
-    assert!(
-        ui.interactive_resize_active(),
-        "first stable frame should still count as interactive resize"
-    );
-    assert_authoritative_compact_flow(
+    assert_resize_settles_after_quiet_layout_all(
         &mut ui,
         &mut app,
-        window,
-        roomy_root,
-        "first stable frame after cached-flow resize",
-    );
-
-    app.advance_frame();
-    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
-    assert!(
-        !ui.interactive_resize_active(),
-        "second stable frame should settle interactive resize state"
-    );
-    assert!(
-        !ui.interactive_resize_needs_full_rebuild,
-        "authoritative same-frame rebuild should not leave a deferred rebuild armed"
+        &mut services,
+        compact_bounds,
+        1.0,
+        "cached-flow resize frame",
     );
     assert_authoritative_compact_flow(
         &mut ui,
@@ -215,6 +230,10 @@ fn interactive_resize_cached_flow_rebuilds_authoritatively_when_descendants_turn
         window,
         roomy_root,
         "settled frame after cached-flow resize",
+    );
+    assert!(
+        !ui.interactive_resize_needs_full_rebuild,
+        "authoritative same-frame rebuild should not leave a deferred rebuild armed"
     );
 }
 
@@ -289,29 +308,13 @@ fn interactive_resize_viewport_root_rebuilds_authoritatively_when_descendants_tu
         "viewport-root resize frame",
     );
 
-    app.advance_frame();
-    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
-    assert!(
-        ui.interactive_resize_active(),
-        "first stable viewport frame should still count as interactive resize"
-    );
-    assert_authoritative_compact_flow(
+    assert_resize_settles_after_quiet_layout_all(
         &mut ui,
         &mut app,
-        window,
-        viewport_root,
-        "first stable viewport frame",
-    );
-
-    app.advance_frame();
-    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
-    assert!(
-        !ui.interactive_resize_active(),
-        "second stable viewport frame should settle interactive resize state"
-    );
-    assert!(
-        !ui.interactive_resize_needs_full_rebuild,
-        "viewport-root resize should not leave a deferred rebuild armed"
+        &mut services,
+        compact_bounds,
+        1.0,
+        "viewport-root resize frame",
     );
     assert_authoritative_compact_flow(
         &mut ui,
@@ -319,6 +322,10 @@ fn interactive_resize_viewport_root_rebuilds_authoritatively_when_descendants_tu
         window,
         viewport_root,
         "settled viewport frame",
+    );
+    assert!(
+        !ui.interactive_resize_needs_full_rebuild,
+        "viewport-root resize should not leave a deferred rebuild armed"
     );
 }
 
@@ -369,16 +376,19 @@ fn interactive_resize_layout_in_keeps_authoritative_flow_without_deferred_rebuil
         "layout_in compact resize frame",
     );
 
-    app.advance_frame();
-    let steady_size = ui.layout_in(&mut app, &mut services, roomy_root, compact_bounds, 1.0);
-    assert_eq!(
-        steady_size, compact_bounds.size,
-        "first stable layout_in should preserve the compact root size while resize is still active"
-    );
-    assert!(
-        ui.interactive_resize_active(),
-        "first stable layout_in should still count as interactive resize"
-    );
+    let settle_frames = interactive_resize_stable_frames_required();
+    for quiet_frame in 1..settle_frames {
+        app.advance_frame();
+        let steady_size = ui.layout_in(&mut app, &mut services, roomy_root, compact_bounds, 1.0);
+        assert_eq!(
+            steady_size, compact_bounds.size,
+            "quiet layout_in frame {quiet_frame} should preserve the compact root size"
+        );
+        assert!(
+            ui.interactive_resize_active(),
+            "quiet layout_in frame {quiet_frame} should still count as interactive resize"
+        );
+    }
 
     app.advance_frame();
     let rebuilt_size = ui.layout_in(&mut app, &mut services, roomy_root, compact_bounds, 1.0);
@@ -392,7 +402,7 @@ fn interactive_resize_layout_in_keeps_authoritative_flow_without_deferred_rebuil
     );
     assert!(
         !ui.interactive_resize_active(),
-        "second stable layout_in should settle interactive resize state"
+        "layout_in should settle after the configured quiet window"
     );
     assert_authoritative_compact_flow(
         &mut ui,
@@ -450,22 +460,25 @@ fn interactive_resize_layout_advances_resize_state_without_deferred_rebuild() {
         "layout compact resize frame",
     );
 
-    app.advance_frame();
-    let steady_size = ui.layout(
-        &mut app,
-        &mut services,
-        roomy_root,
-        compact_bounds.size,
-        1.0,
-    );
-    assert_eq!(
-        steady_size, compact_bounds.size,
-        "first stable layout should preserve the compact root size while resize is still active"
-    );
-    assert!(
-        ui.interactive_resize_active(),
-        "first stable layout should still count as interactive resize"
-    );
+    let settle_frames = interactive_resize_stable_frames_required();
+    for quiet_frame in 1..settle_frames {
+        app.advance_frame();
+        let steady_size = ui.layout(
+            &mut app,
+            &mut services,
+            roomy_root,
+            compact_bounds.size,
+            1.0,
+        );
+        assert_eq!(
+            steady_size, compact_bounds.size,
+            "quiet layout frame {quiet_frame} should preserve the compact root size"
+        );
+        assert!(
+            ui.interactive_resize_active(),
+            "quiet layout frame {quiet_frame} should still count as interactive resize"
+        );
+    }
 
     app.advance_frame();
     let rebuilt_size = ui.layout(
@@ -481,7 +494,7 @@ fn interactive_resize_layout_advances_resize_state_without_deferred_rebuild() {
     );
     assert!(
         !ui.interactive_resize_active(),
-        "second stable layout should settle interactive resize state"
+        "layout should settle after the configured quiet window"
     );
     assert!(
         !ui.interactive_resize_needs_full_rebuild,
@@ -493,6 +506,88 @@ fn interactive_resize_layout_advances_resize_state_without_deferred_rebuild() {
         window,
         roomy_root,
         "settled layout frame",
+    );
+}
+
+#[test]
+fn interactive_resize_cached_flow_reuse_defers_full_rebuild_until_quiet_window() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let initial_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(680.0), Px(760.0)),
+    );
+    let resized_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(760.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let root = ui.create_node_for_element(crate::elements::GlobalElementId(1), TestStack);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, initial_bounds, 1.0);
+    clear_all_invalidations(&mut ui);
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, resized_bounds, 1.0);
+    let resize_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|record| record.root == root)
+        .expect("resize request-build record");
+    assert_eq!(
+        resize_record.mode, "cached_flow_reuse",
+        "clean roots should use cached flow during interactive resize"
+    );
+    assert!(
+        ui.interactive_resize_needs_full_rebuild,
+        "cached-flow resize should arm a post-resize authoritative rebuild"
+    );
+
+    let settle_frames = interactive_resize_stable_frames_required();
+    for quiet_frame in 1..settle_frames {
+        app.advance_frame();
+        ui.layout_all(&mut app, &mut services, resized_bounds, 1.0);
+        assert!(
+            ui.interactive_resize_active(),
+            "quiet frame {quiet_frame} should not settle resize yet"
+        );
+        assert!(
+            ui.interactive_resize_needs_full_rebuild,
+            "quiet frame {quiet_frame} should keep the post-resize rebuild armed"
+        );
+        assert!(
+            ui.debug_layout_request_build_roots().is_empty(),
+            "quiet frame {quiet_frame} should stay on the layout fast path"
+        );
+    }
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, resized_bounds, 1.0);
+    let settle_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|record| record.root == root)
+        .expect("post-resize rebuild request-build record");
+    assert_eq!(
+        settle_record.mode, "build_flow",
+        "post-resize settle should rebuild authoritative flow once"
+    );
+    assert!(
+        settle_record.layout_invalidated,
+        "post-resize rebuild should mark the root layout-dirty"
+    );
+    assert!(
+        !ui.interactive_resize_active(),
+        "resize should settle after the configured quiet window"
+    );
+    assert!(
+        !ui.interactive_resize_needs_full_rebuild,
+        "post-resize rebuild should consume the deferred rebuild flag"
     );
 }
 

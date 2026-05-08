@@ -10894,3 +10894,63 @@ Decision:
   root layout application (`layout.nodes` around `2161` on full rebuild frames, around `1083` on cached-flow resize
   frames), so the next optimization should not revisit hidden chrome. It should focus on resize scheduling / full
   rebuild cadence or the narrower dirty-frontier layout-apply problem already tracked below.
+
+## 2026-05-08 22:48 (code change)
+
+Question:
+- Is the remaining resize-stress tail caused by a real need to run the post-resize authoritative rebuild during the
+  live resize sequence, or by the interactive-resize quiet window settling too early for our one-frame resize script
+  cadence?
+
+Change:
+- Increased the default `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES` quiet window from `2` to `4`.
+- Kept the existing post-resize authoritative rebuild contract: cached-flow reuse still arms a full rebuild, but it
+  now waits for a longer no-resize window before leaving interactive-resize mode.
+- Updated `interactive_resize_flow_rebuild` tests so they assert the configured quiet-window behavior instead of a
+  hard-coded two-frame settle, and added a focused test that cached-flow reuse stays on the layout fast path until the
+  quiet window ends, then consumes the deferred full rebuild exactly once.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo nextest run -p fret-ui interactive_resize_cached_flow_reuse_defers_full_rebuild_until_quiet_window`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+  - Note: the first filtered run timed out with stale `cargo`/`cargo-nextest` processes; after killing those residual
+    processes, the focused test and the full filtered suite passed (`9/9`).
+- `cargo nextest run -p fret-ui view_cache`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this change did not clean unrelated warnings.
+
+Smoke evidence:
+- No-code A/B probe before changing the default:
+  - `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES=3`: bundle
+    `target/fret-diag/codex-resize-stable-frames-3-probe/1778249778520/bundle.schema2.json`,
+    top total/layout/solve `19055/10670/5793us`; top request-build frames are `cached_flow_reuse`.
+  - `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES=4`: bundle
+    `target/fret-diag/codex-resize-stable-frames-4-probe/1778249706535/bundle.schema2.json`,
+    top total/layout/solve `16588/8971/4447us`; top snapshots no longer show
+    `interactive_resize_full_rebuild`.
+- Default smoke after the code change:
+  - Stress command:
+    `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-resize-stable-frames-default4-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Stress bundle:
+    `target/fret-diag/codex-resize-stable-frames-default4-smoke/1778251485467/bundle.schema2.json`
+  - Stress top total/layout/solve/paint: `8756/4329/2238/4156us`.
+  - Stress top request-build frames are `cached_flow_reuse` with `dirty_count=0`, separated by layout fast-path
+    frames; no `interactive_resize_full_rebuild` appears in the top snapshots.
+  - Drag-jitter command:
+    `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json --dir target/fret-diag/codex-resize-stable-frames-default4-drag-jitter-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Drag-jitter bundle:
+    `target/fret-diag/codex-resize-stable-frames-default4-drag-jitter-smoke/1778251534678/bundle.schema2.json`
+  - Drag-jitter top total/layout/solve/paint: `9049/6447/4283/2336us`.
+
+Decision:
+- The remaining `interactive_resize_full_rebuild` spikes after the hidden dirty fix were a settle-cadence issue, not
+  a fresh layout-dirty source.
+- The post-resize authoritative rebuild remains required for correctness, but it should be kept out of live resize
+  frames unless the window is quiet long enough. Defaulting the quiet window to 4 frames is the smallest measured
+  policy change that keeps both stress and drag-jitter probes smooth on this Windows RTX 4090 sample.
+- Next resize work should focus on the cost of cached-flow frames themselves (`layout_roots_time_us` /
+  `layout_engine_solve_time_us`), not on the already-deferred full rebuild.
