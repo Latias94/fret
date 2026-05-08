@@ -59,6 +59,18 @@
       "command": "CARGO_TARGET_DIR=target-codex-check cargo nextest run -p fret-ui scroll_post_layout_budget_hit_shrink_converges_via_pending_probe_next_frame"
     },
     {
+      "name": "scroll-contained-view-cache-dirty-frontier",
+      "command": "cargo nextest run -p fret-ui scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation"
+    },
+    {
+      "name": "scroll-layout-suite",
+      "command": "cargo nextest run -p fret-ui scroll"
+    },
+    {
+      "name": "interactive-resize-flow-rebuild",
+      "command": "cargo nextest run -p fret-ui interactive_resize_flow_rebuild"
+    },
+    {
       "name": "tree-reparent-old-parent-policy",
       "command": "CARGO_TARGET_DIR=target-codex-ui cargo nextest run -p fret-ui set_children_reparents_from_old_barrier_using_barrier_detach_semantics set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_edges"
     },
@@ -126,6 +138,7 @@
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
+    "crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs",
     "crates/fret-ui/src/declarative/mount.rs",
     "crates/fret-ui/src/declarative/tests/identity.rs",
     "crates/fret-ui/src/declarative/tests/view_cache.rs",
@@ -150,6 +163,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, post-layout observation, and resize apply-path churn. Keep any apply-only fast path limited to the audited safe subset, and prefer a narrower dirty-frontier / scroll post-layout branch over a broad widget.layout skip."
+    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, post-layout observation, and resize apply-path churn. Keep contained view-cache-only dirty work on the contained relayout + nearest-scroll follow-up path, and profile the remaining direct-child-invalidated / resize-measure path before attempting another layout skip or apply-only branch."
   }
 }

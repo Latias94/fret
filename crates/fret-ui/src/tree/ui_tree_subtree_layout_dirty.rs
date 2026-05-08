@@ -26,6 +26,69 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(0)
     }
 
+    pub(crate) fn node_subtree_layout_dirty_covered_by_contained_view_cache_roots(
+        &self,
+        node: NodeId,
+    ) -> bool {
+        if !self.view_cache_active() || self.node_layout_invalidated(node) {
+            return false;
+        }
+
+        let total = self.node_subtree_layout_dirty_count(node);
+        if total == 0 || self.dirty_cache_roots.is_empty() {
+            return false;
+        }
+
+        let mut contained_roots: Vec<NodeId> = Vec::new();
+        for &root in &self.dirty_cache_roots {
+            let Some(entry) = self.nodes.get(root) else {
+                continue;
+            };
+            if !entry.view_cache.enabled
+                || !entry.view_cache.contained_layout
+                || !entry.invalidation.layout
+                || !self.node_is_descendant_or_self(root, node)
+            {
+                continue;
+            }
+            contained_roots.push(root);
+        }
+
+        if contained_roots.is_empty() {
+            return false;
+        }
+
+        let mut covered = 0u32;
+        for &root in &contained_roots {
+            let nested_under_another_root = contained_roots
+                .iter()
+                .copied()
+                .any(|other| other != root && self.node_is_descendant_or_self(root, other));
+            if nested_under_another_root {
+                continue;
+            }
+            covered = covered.saturating_add(self.node_subtree_layout_dirty_count(root));
+        }
+
+        covered == total
+    }
+
+    fn node_is_descendant_or_self(&self, node: NodeId, ancestor: NodeId) -> bool {
+        let mut current = Some(node);
+        let mut remaining = self.nodes.len().saturating_add(1);
+        while let Some(id) = current {
+            if remaining == 0 {
+                return false;
+            }
+            remaining = remaining.saturating_sub(1);
+            if id == ancestor {
+                return true;
+            }
+            current = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        false
+    }
+
     pub(in crate::tree) fn note_layout_invalidation_transition_for_subtree_aggregation(
         &mut self,
         node: NodeId,

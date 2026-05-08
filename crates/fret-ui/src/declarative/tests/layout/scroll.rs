@@ -3068,6 +3068,212 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
 }
 
 #[test]
+fn scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    struct CountingWrapper {
+        child: NodeId,
+        content_height: Arc<AtomicUsize>,
+        layout_count: Arc<AtomicUsize>,
+        invalidated_layout_count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountingWrapper {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            Size::new(
+                cx.constraints
+                    .available
+                    .width
+                    .definite()
+                    .unwrap_or(Px(120.0)),
+                Px(self.content_height.load(Ordering::SeqCst) as f32),
+            )
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            self.layout_count.fetch_add(1, Ordering::SeqCst);
+            if cx.tree.node_layout_invalidated(cx.node) {
+                self.invalidated_layout_count.fetch_add(1, Ordering::SeqCst);
+            }
+            let size = Size::new(
+                cx.available.width,
+                Px(self.content_height.load(Ordering::SeqCst) as f32),
+            );
+            let _ = cx.layout_in(self.child, Rect::new(cx.bounds.origin, size));
+            size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct ContainedCacheRoot {
+        child: NodeId,
+        content_height: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for ContainedCacheRoot {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            Size::new(
+                cx.constraints
+                    .available
+                    .width
+                    .definite()
+                    .unwrap_or(Px(120.0)),
+                Px(self.content_height.load(Ordering::SeqCst) as f32),
+            )
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let size = Size::new(
+                cx.available.width,
+                Px(self.content_height.load(Ordering::SeqCst) as f32),
+            );
+            let _ = cx.layout_in(self.child, Rect::new(cx.bounds.origin, size));
+            size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct FixedLeaf {
+        content_height: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for FixedLeaf {
+        fn measure(&mut self, cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            Size::new(
+                cx.constraints
+                    .available
+                    .width
+                    .definite()
+                    .unwrap_or(Px(120.0)),
+                Px(self.content_height.load(Ordering::SeqCst) as f32),
+            )
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            Size::new(
+                cx.available.width,
+                Px(self.content_height.load(Ordering::SeqCst) as f32),
+            )
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let content_height = Arc::new(AtomicUsize::new(160));
+    let wrapper_layout_count = Arc::new(AtomicUsize::new(0));
+    let wrapper_invalidated_layout_count = Arc::new(AtomicUsize::new(0));
+
+    let leaf = ui.create_node(FixedLeaf {
+        content_height: content_height.clone(),
+    });
+    let cache_root = ui.create_node(ContainedCacheRoot {
+        child: leaf,
+        content_height: content_height.clone(),
+    });
+    let wrapper = ui.create_node(CountingWrapper {
+        child: cache_root,
+        content_height: content_height.clone(),
+        layout_count: wrapper_layout_count.clone(),
+        invalidated_layout_count: wrapper_invalidated_layout_count.clone(),
+    });
+    ui.set_node_view_cache_flags(cache_root, true, true, true);
+    ui.set_children(cache_root, vec![leaf]);
+    ui.set_children(wrapper, vec![cache_root]);
+
+    let root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-contained-view-cache-dirty-frontier",
+        {
+            let scroll_handle = scroll_handle.clone();
+            move |cx| {
+                let mut scroll_layout = crate::element::LayoutStyle::default();
+                scroll_layout.size.width = crate::element::Length::Fill;
+                scroll_layout.size.height = crate::element::Length::Fill;
+                scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                vec![cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: scroll_layout,
+                        scroll_handle: Some(scroll_handle),
+                        probe_unbounded: true,
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            }
+        },
+    );
+    let scroll_node = ui.children(root0)[0];
+    ui.set_children(scroll_node, vec![wrapper]);
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    let initial_wrapper_layouts = wrapper_layout_count.load(Ordering::SeqCst);
+    assert!(
+        initial_wrapper_layouts > 0,
+        "expected the direct child root to lay out during the initial scroll frame"
+    );
+    let initial_invalidated_wrapper_layouts =
+        wrapper_invalidated_layout_count.load(Ordering::SeqCst);
+    let max0 = scroll_handle.max_offset().y;
+    assert!(
+        max0.0 > 0.5,
+        "expected initial content to overflow the viewport: max={max0:?}"
+    );
+
+    content_height.store(260, Ordering::SeqCst);
+    ui.invalidate(leaf, Invalidation::Layout);
+    assert!(
+        !ui.node_needs_layout(wrapper),
+        "expected contained view-cache invalidation to avoid invalidating the scroll direct child root"
+    );
+    assert!(
+        ui.node_subtree_layout_dirty(wrapper),
+        "expected direct child root subtree dirty aggregation to reflect the contained cache root"
+    );
+    assert!(
+        ui.node_subtree_layout_dirty_covered_by_contained_view_cache_roots(wrapper),
+        "expected direct child dirty work to be fully covered by contained view-cache roots"
+    );
+    app.advance_frame();
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+
+    assert_eq!(
+        wrapper_invalidated_layout_count.load(Ordering::SeqCst),
+        initial_invalidated_wrapper_layouts,
+        "expected contained view-cache dirty work to avoid forcing a Layout invalidation on the scroll direct child root"
+    );
+    let max1 = scroll_handle.max_offset().y;
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected contained relayout plus scroll follow-up to grow the scroll extent: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
 fn scroll_probe_cache_shrinks_to_observed_bounds_when_probe_overmeasures() {
     struct FixedLeaf {
         size: Size,

@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — Milestones
 
-Date: 2026-03-03  
+Date: 2026-05-08
 Status: Active
 
 ## M0 — Baseline + evidence (1–2 days)
@@ -33,3 +33,12 @@ Status: Active
   mechanism tests.
 - Ensure authoritative observations can finish deferred invalidation cleanup even when the
   observed extent is unchanged.
+
+## M5 — Dirty-frontier resize churn reduction (2–4 days)
+
+- Keep contained view-cache dirty work inside the contained relayout + nearest-scroll follow-up
+  path instead of promoting clean scroll direct child roots to `Layout` invalidation.
+- Profile the remaining direct-child-invalidated / resize-measure path separately before attempting
+  another layout skip or apply-only branch.
+- Keep representative `diag perf` samples normalized; repair stale prewarm command forms before
+  using them as p95 baselines.

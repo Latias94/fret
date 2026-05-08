@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — Evidence And Gates
 
-Date: 2026-04-05  
+Date: 2026-05-08
 Status: Active
 
 ## Current slice — Deferred probe seed vs authoritative extent
@@ -80,6 +80,45 @@ Decision:
 - Prefer a narrower dirty-frontier / scroll post-layout branch that keeps all blacklisted nodes on
   the full layout path and proves identical scroll extents, hit-test bounds, focus/IME state, and
   virtual-list visible ranges against the full `layout_in` path.
+
+Implemented dirty-frontier slice (2026-05-08):
+
+- Change: `Scroll` no longer promotes a clean direct child root to `Invalidation::Layout` when the
+  child root's dirty work is fully covered by contained view-cache roots. The contained relayout
+  pass remains responsible for consuming the cache-root dirty work, and the existing nearest-scroll
+  follow-up remains responsible for observing the reconciled extent.
+- Mechanism evidence:
+  - `crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs`
+    (`node_subtree_layout_dirty_covered_by_contained_view_cache_roots`)
+  - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+    (`forced_barrier_child_roots` filter)
+  - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+    (`scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation`)
+- Verified gates:
+  - `cargo nextest run -p fret-ui scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation`
+    - Result: passed.
+  - `cargo nextest run -p fret-ui scroll`
+    - Result: passed (`147` tests).
+  - `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+    - Result: passed (`4` tests).
+- Perf smoke:
+  - Command:
+    `target\debug\fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Result: passed.
+  - Worst bundle:
+    `target/fret-diag/1778234888082/bundle.schema2.json`
+  - `diag stats --sort cpu_cycles --top 15` summary for the worst bundle:
+    p50/p95 total `2875/17716us`, layout `2309/14325us`, paint `282/3103us`,
+    `layout.engine_solve` p50/p95 `75/6080us`, and `contained_relayouts=0` on the top frames.
+  - Interpretation: this no-prewarm smoke is not a replacement for the earlier prewarm baseline.
+    It shows the representative resize-stress sample is still dominated by direct-child
+    invalidation / measure / solve work, so the next slice should profile that path separately.
+- Local command drift:
+  - The documented `--suite-prewarm` / `--suite-prelude` form is stale for the current local
+    `fretboard-dev diag perf`; the current CLI accepts `--prewarm-script` and `--prelude-script`.
+  - The prewarm-script run timed out at step 0 on
+    `tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json`, so the successful smoke above
+    used the script's own steady waits plus explicit `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1`.
 
 ## Follow-on slice — Contained relayout dirty vs rerender semantics
 

@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1) — TODO
 
-Date: 2026-04-05  
+Date: 2026-05-08
 Status: Active
 
 ## Current slice — Deferred probe seed vs authoritative extent
@@ -32,9 +32,13 @@ Status: Active
   during layout.
 - [x] Keep `Canvas` and `ViewportSurface` provisional rather than whitelisted by default, even
   though they currently look like leaf-like geometry nodes.
-- [ ] Prototype a narrower dirty-frontier scroll relayout path instead of a broad
+- [x] Prototype a narrower dirty-frontier scroll relayout path instead of a broad
   `widget.layout` skip.
-- [ ] Keep the proof bounded to one repro, one gate, and one evidence bundle.
+- [x] Keep the proof bounded to one repro, one gate, and one evidence bundle.
+- [ ] Profile the remaining direct-child-invalidated / resize-measure path separately; do not fold
+  it into the contained view-cache dirty-frontier proof.
+- [ ] Repair or replace the stale prewarm command form for local resize-stress samples so future
+  p95 comparisons use the same normalization surface.
 
 ## Follow-on slice — Command and event focus targets resolve authoritative live attached nodes
 

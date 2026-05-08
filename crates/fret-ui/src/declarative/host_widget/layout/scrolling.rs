@@ -1611,6 +1611,9 @@ impl ElementHostWidget {
                 .filter(|&child| {
                     cx.tree.node_subtree_layout_dirty(child)
                         && !cx.tree.node_layout_invalidated(child)
+                        && !cx
+                            .tree
+                            .node_subtree_layout_dirty_covered_by_contained_view_cache_roots(child)
                 })
                 .collect()
         } else {
