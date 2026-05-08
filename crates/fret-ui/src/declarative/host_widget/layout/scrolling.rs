@@ -37,6 +37,45 @@ fn scroll_layout_profile_config() -> Option<&'static ScrollLayoutProfileConfig> 
         .as_ref()
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct ScrollChildLayoutProfile {
+    nodes_visited: u32,
+    nodes_performed: u32,
+    max_us: u64,
+    max_node: Option<NodeId>,
+    max_invalidated: bool,
+    max_subtree_dirty: bool,
+    max_subtree_dirty_count: u32,
+    max_nodes_visited: u32,
+    max_nodes_performed: u32,
+}
+
+impl ScrollChildLayoutProfile {
+    fn record_child(
+        &mut self,
+        child: NodeId,
+        elapsed: Duration,
+        invalidated: bool,
+        subtree_dirty: bool,
+        subtree_dirty_count: u32,
+        nodes_visited: u32,
+        nodes_performed: u32,
+    ) {
+        let elapsed_us = elapsed.as_micros() as u64;
+        self.nodes_visited = self.nodes_visited.saturating_add(nodes_visited);
+        self.nodes_performed = self.nodes_performed.saturating_add(nodes_performed);
+        if elapsed_us > self.max_us {
+            self.max_us = elapsed_us;
+            self.max_node = Some(child);
+            self.max_invalidated = invalidated;
+            self.max_subtree_dirty = subtree_dirty;
+            self.max_subtree_dirty_count = subtree_dirty_count;
+            self.max_nodes_visited = nodes_visited;
+            self.max_nodes_performed = nodes_performed;
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ScrollLayoutProbeKey {
     avail_w: u64,
@@ -1480,6 +1519,7 @@ impl ElementHostWidget {
         let mut t_measure_children: Duration = Duration::default();
         let mut t_solve_barrier: Duration = Duration::default();
         let mut t_layout_children: Duration = Duration::default();
+        let mut child_layout_profile = ScrollChildLayoutProfile::default();
 
         let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
@@ -2106,7 +2146,31 @@ impl ElementHostWidget {
 
             let layout_started = profile_cfg.is_some().then(Instant::now);
             for &child in cx.children {
-                let _ = cx.layout_in(child, content_bounds);
+                if profile_cfg.is_some() {
+                    let child_invalidated = cx.tree.node_layout_invalidated(child);
+                    let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(child);
+                    let child_subtree_dirty_count = cx.tree.node_subtree_layout_dirty_count(child);
+                    let before = cx.tree.debug_stats();
+                    let child_started = Instant::now();
+                    let _ = cx.layout_in(child, content_bounds);
+                    let child_elapsed = child_started.elapsed();
+                    let after = cx.tree.debug_stats();
+                    child_layout_profile.record_child(
+                        child,
+                        child_elapsed,
+                        child_invalidated,
+                        child_subtree_dirty,
+                        child_subtree_dirty_count,
+                        after
+                            .layout_nodes_visited
+                            .saturating_sub(before.layout_nodes_visited),
+                        after
+                            .layout_nodes_performed
+                            .saturating_sub(before.layout_nodes_performed),
+                    );
+                } else {
+                    let _ = cx.layout_in(child, content_bounds);
+                }
             }
             if let Some(started) = layout_started {
                 t_layout_children = started.elapsed();
@@ -2551,7 +2615,32 @@ impl ElementHostWidget {
 
                     let layout_started = profile_cfg.is_some().then(Instant::now);
                     for &child in cx.children {
-                        let _ = cx.layout_in(child, content_bounds);
+                        if profile_cfg.is_some() {
+                            let child_invalidated = cx.tree.node_layout_invalidated(child);
+                            let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(child);
+                            let child_subtree_dirty_count =
+                                cx.tree.node_subtree_layout_dirty_count(child);
+                            let before = cx.tree.debug_stats();
+                            let child_started = Instant::now();
+                            let _ = cx.layout_in(child, content_bounds);
+                            let child_elapsed = child_started.elapsed();
+                            let after = cx.tree.debug_stats();
+                            child_layout_profile.record_child(
+                                child,
+                                child_elapsed,
+                                child_invalidated,
+                                child_subtree_dirty,
+                                child_subtree_dirty_count,
+                                after
+                                    .layout_nodes_visited
+                                    .saturating_sub(before.layout_nodes_visited),
+                                after
+                                    .layout_nodes_performed
+                                    .saturating_sub(before.layout_nodes_performed),
+                            );
+                        } else {
+                            let _ = cx.layout_in(child, content_bounds);
+                        }
                     }
                     if let Some(started) = layout_started {
                         t_layout_children += started.elapsed();
@@ -2616,9 +2705,24 @@ impl ElementHostWidget {
                     desired_h = desired.height.0,
                     content_w = content_w.0,
                     content_h = content_h.0,
+                    post_layout_extents_mode,
+                    interactive_resize = cx.tree.interactive_resize_active(),
+                    direct_children_layout_invalidated,
+                    descendant_subtree_layout_dirty,
+                    force_barrier_child_root_relayout,
                     measure_children_us = t_measure_children.as_micros() as u64,
                     solve_barrier_us = t_solve_barrier.as_micros() as u64,
                     layout_children_us = t_layout_children.as_micros() as u64,
+                    layout_child_nodes_visited = child_layout_profile.nodes_visited,
+                    layout_child_nodes_performed = child_layout_profile.nodes_performed,
+                    layout_child_max_us = child_layout_profile.max_us,
+                    layout_child_max_node = ?child_layout_profile.max_node,
+                    layout_child_max_invalidated = child_layout_profile.max_invalidated,
+                    layout_child_max_subtree_dirty = child_layout_profile.max_subtree_dirty,
+                    layout_child_max_subtree_dirty_count =
+                        child_layout_profile.max_subtree_dirty_count,
+                    layout_child_max_nodes_visited = child_layout_profile.max_nodes_visited,
+                    layout_child_max_nodes_performed = child_layout_profile.max_nodes_performed,
                     total_us = total.as_micros() as u64,
                     element_path = element_path.as_deref().unwrap_or("<unknown>"),
                     "scroll layout profile"

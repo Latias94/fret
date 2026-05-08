@@ -10443,3 +10443,90 @@ Decision:
 - Keep the barrier cached-flow reuse, but do not let it trigger a global resize-settle rebuild. The next step is to
   inspect whether the remaining `layout_children_us` on the scroll barrier can be reduced further without weakening
   scroll extent correctness.
+
+## 2026-05-08 15:40 (code change)
+
+Question:
+- After cached-flow reuse reduced resize-stress solve cost, what is the remaining `ScrollArea` `layout_children_us`
+  doing during interactive resize: slow leaf measurement, unnecessary child-root relayout, or a broad bounds/state
+  synchronization walk after the engine has already solved child rects?
+
+Change:
+- Extended `FRET_SCROLL_LAYOUT_PROFILE=1` with child-layout fan-out attribution in
+  `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`.
+- New profile fields include:
+  - `layout_child_nodes_visited`
+  - `layout_child_nodes_performed`
+  - `layout_child_max_us`
+  - `layout_child_max_node`
+  - `layout_child_max_invalidated`
+  - `layout_child_max_subtree_dirty`
+  - `layout_child_max_subtree_dirty_count`
+  - `layout_child_max_nodes_visited`
+  - `layout_child_max_nodes_performed`
+- The same log line now also records `post_layout_extents_mode`, `interactive_resize`,
+  `direct_children_layout_invalidated`, `descendant_subtree_layout_dirty`, and
+  `force_barrier_child_root_relayout`.
+- This is env-gated profiling only; when `FRET_SCROLL_LAYOUT_PROFILE` is unset, the layout path stays unchanged.
+
+Commands:
+```powershell
+cargo fmt -p fret-ui
+cargo nextest run -p fret-ui interactive_resize_flow_rebuild
+cargo nextest run -p fret-ui scroll
+cargo build -p fret-ui-gallery --release --features gallery-full
+target\release\fretboard.exe diag perf tools\diag-scripts\ui-gallery-window-resize-stress-steady.json `
+  --dir target\fret-diag\codex-resize-stress-scroll-child-profile-prewarm `
+  --repeat 1 --warmup-frames 5 --timeout-ms 300000 `
+  --prewarm-script tools\diag-scripts\tooling-suite-prewarm-fonts.json `
+  --prelude-script tools\diag-scripts\tooling-suite-prelude-reset-diagnostics.json `
+  --sort time --top 5 --json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=500 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 `
+  --env RUST_LOG=fret_ui=info `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+target\release\fretboard.exe diag stats `
+  target\fret-diag\codex-resize-stress-scroll-child-profile-prewarm\1778225557208\bundle.schema2.json `
+  --sort time --top 5
+```
+
+Results:
+- `cargo nextest run -p fret-ui scroll`: `146/146` passed.
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`: `4/4` passed on the re-run with a longer outer
+  timeout.
+- Release gallery build completed after the outer timeout; `target/release/fret-ui-gallery.exe` was updated at
+  `2026-05-08 15:28:49 +08:00`.
+- Without `--prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json`, the same resize-stress script timed out
+  at step 23 waiting for `font_catalog_populated`. Treat this as setup drift/noise; resize profiling should use the
+  prewarm script while this gate is font-catalog sensitive.
+- Prewarmed bundle:
+  `target/fret-diag/codex-resize-stress-scroll-child-profile-prewarm/1778225557208/bundle.schema2.json`.
+- `diag stats` for the prewarmed bundle:
+  - p50/p95 total: `2327/8234us`
+  - p50/p95 layout: `1871/4505us`
+  - p50/p95 paint: `353/3494us`
+  - worst frame total/layout/solve/paint: `8234/4415/2104/3494us`
+- Scroll child profile shows two separate remaining costs:
+  - `ui-gallery-content-viewport` under interactive resize has
+    `descendant_subtree_layout_dirty=true`, `force_barrier_child_root_relayout=true`,
+    `layout_child_max_invalidated=true`, and `layout_child_max_subtree_dirty_count=3`, but still visits roughly
+    `1020-1044` nodes and performs roughly `776-1035` layout nodes.
+  - `ui-gallery-view-cache-root` can have `direct_children_layout_invalidated=false` and
+    `descendant_subtree_layout_dirty=false`, while still visiting roughly `962` nodes and performing many of them on
+    clean resize frames.
+
+Decision:
+- Do not keep chasing `measure_children_us`; the representative resize path now has `measure_children_us=0` after warmup.
+- The remaining hotspot is the engine-solved subtree apply path: `layout_in` still recursively synchronizes
+  bounds/widget state across large subtrees after Taffy has solved child rects.
+- The next optimization must not blindly skip `widget.layout`. It needs either:
+  - an "engine-solved subtree apply" fast path for a proven-safe widget subset, or
+  - a narrower dirty-frontier relayout path for scroll post-layout overflow observation.
+- Before implementing either path, audit layout side effects for `Scroll`, `VirtualList`, text/text input widgets,
+  canvas/viewport surfaces, layout-query regions, transforms, and anchored/overlay-related nodes. These may update
+  scroll extents, visible ranges, deferred scroll targets, element bounds, semantics, hit testing, or retained widget
+  state during layout.

@@ -1011,6 +1011,26 @@ Perf acceptance:
     selection changes rebuild the semantics snapshot.
   - Follow-up: if real semantic-change frames become the next bottleneck, design incremental semantics/diffing instead
     of broadening the dirty filter.
+- [ ] Audit layout side effects before adding an engine-solved subtree apply fast path.
+  - Scope: `Scroll`, `VirtualList`, text/text input widgets, canvas/viewport surfaces, layout-query regions,
+    transforms, and anchored/overlay-related nodes.
+  - Rationale: resize profiling shows the remaining `ScrollArea` hotspot is broad `layout_in` recursion after Taffy has
+    solved child rects, not unbounded child measurement. Skipping `widget.layout` globally would be incorrect unless the
+    affected subtree has no layout-time side effects.
+  - Evidence: perf log entry `2026-05-08 15:40`; clean or near-clean resize frames can still visit roughly `962-1044`
+    child-layout nodes.
+- [ ] Prototype a guarded engine-solved subtree apply path for proven-safe layout nodes.
+  - Candidate safe subset: pure container/flex/grid/wrapper leaves whose bounds and children are already solved by the
+    layout engine and whose layout method only propagates final rects.
+  - Required proof: scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry, text
+    input state, and virtual-list visible ranges stay identical to the full `layout_in` path on targeted scripts.
+  - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild` plus a prewarmed
+    `ui-gallery-window-resize-stress-steady.json` perf sample.
+- [ ] Consider a narrower dirty-frontier scroll relayout path if side-effect audit makes the broad fast path too risky.
+  - Target: avoid amplifying a few descendant dirty nodes into a full direct child-root relayout when post-layout extents
+    can remain authoritative.
+  - Non-negotiable: deferred `scroll_to_item`, overflow observation, scrollbar thumb geometry, and hit-test bounds must
+    stay correct.
 - [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`
