@@ -10283,3 +10283,65 @@ Decision:
 - Treat this as measurement-surface normalization, not an overlay runtime semantic change. The script intentionally
   stresses pointer-move dispatch beyond the window edge; cleanup must explicitly return to a known hit-test target before
   exercising outside-press dismissal.
+
+## 2026-05-08 13:14 (working tree)
+
+Discovery:
+- After the overlay pointer-move cleanup fix, `ui-gallery-steady` progressed to
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json` and timed out at step 24 waiting for
+  `ui-gallery-virtual-list-row-9000-label`.
+- The virtual-list page initializes `virtual_list_torture_jump` to an empty string. The script clicked `Jump` without
+  typing a row index, so the app correctly parsed the empty value as `0` and never made row 9000 visible.
+- This was script setup drift, not a virtual-list runtime regression.
+
+Change:
+- Seed `ui-gallery-virtual-list-jump-input` with `9000` before clicking `Jump` in both:
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json`
+  - `tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json`
+- In the steady script, keep the input setup before `reset_diagnostics` so keyboard-entry setup does not enter the perf
+  capture window.
+- Added `apps/fret-ui-gallery/tests/virtual_list_perf_surface.rs` to lock both contracts.
+
+Correctness gates:
+```powershell
+cargo fmt --package fret-ui-gallery
+cargo nextest run -p fret-ui-gallery virtual_list_torture_scripts_seed_jump_input_before_waiting_for_row_9000 virtual_list_steady_script_keeps_jump_input_setup_outside_perf_capture_window
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json `
+  --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-vlist-torture-jump-input-check `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+target\release\fretboard.exe diag perf ui-gallery-steady `
+  --repeat 1 --warmup-frames 5 --reuse-launch --reuse-launch-per-script --timeout-ms 300000 `
+  --dir target/fret-diag/codex-ui-gallery-steady-after-vlist-input `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results:
+- Virtual-list script surface tests: `2/2` passed.
+- Single-script validation passed:
+  `target/fret-diag/codex-vlist-torture-jump-input-check/1778217131330/bundle.schema2.json`,
+  `top_total_time_us=6971`, `top_layout_time_us=5788`, `top_solve_time_us=1503`.
+- Full `ui-gallery-steady` repeat=1 passed:
+  `target/fret-diag/codex-ui-gallery-steady-after-vlist-input`.
+- Suite worst overall after script normalization:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json`,
+  `top_total_time_us=10035`,
+  bundle `target/fret-diag/codex-ui-gallery-steady-after-vlist-input/1778217234603/bundle.schema2.json`.
+
+Decision:
+- Keep the virtual-list demo default empty; script targets must seed the control they depend on.
+- Continue performance attribution from the passing suite, with resize stress as the current worst overall sample on this
+  Windows RTX 4090 run.

@@ -45,6 +45,33 @@
     {
       "button": "left",
       "target": {
+        "id": "ui-gallery-virtual-list-jump-input",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "9000",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
         "id": "ui-gallery-virtual-list-jump-button",
         "kind": "test_id"
       },

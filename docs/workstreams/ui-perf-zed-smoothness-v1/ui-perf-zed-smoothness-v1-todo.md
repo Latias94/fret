@@ -55,6 +55,12 @@ Conventions:
   - Evidence: perf log entry `2026-05-08 13:06`; single-script run PASS with bundle
     `target/fret-diag/codex-overlay-pointer-move-reentry-check/1778216164094/bundle.schema2.json`.
 
+- [x] Stabilize `ui-gallery-virtual-list-torture-steady` row-jump setup.
+  - Change: seed `ui-gallery-virtual-list-jump-input` with `9000` before clicking `Jump`; keep the steady script setup
+    before `reset_diagnostics` so text input frames do not pollute the perf capture window.
+  - Gate: `cargo nextest run -p fret-ui-gallery virtual_list_torture_scripts_seed_jump_input_before_waiting_for_row_9000 virtual_list_steady_script_keeps_jump_input_setup_outside_perf_capture_window`.
+  - Evidence: perf log entry `2026-05-08 13:14`; full `ui-gallery-steady` repeat=1 passes after the script fix.
+
 - [ ] Keep the GPUI gap map current and milestone-linked:
   - Reference: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
