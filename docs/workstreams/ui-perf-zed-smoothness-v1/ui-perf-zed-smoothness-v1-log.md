@@ -10345,3 +10345,56 @@ Decision:
 - Keep the virtual-list demo default empty; script targets must seed the control they depend on.
 - Continue performance attribution from the passing suite, with resize stress as the current worst overall sample on this
   Windows RTX 4090 run.
+
+## 2026-05-08 13:36 (no code change)
+
+Question:
+- After the `ui-gallery-steady` script surface was stable again, is the current worst resize stress sample dominated by
+  stale command snapshots, unbounded scroll measurement, or real layout/paint work?
+
+Commands:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-ui-gallery-steady-after-vlist-input\1778217234603\bundle.schema2.json --sort cpu_cycles --top 30
+cargo build -p fret-ui-gallery --release --features gallery-full
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json `
+  --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-resize-stress-scroll-profile-low-threshold `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=500 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results:
+- Suite worst bundle (`1778217234603`) reports p95 total/layout/solve/paint
+  `10035/6059/2299/3654us`.
+- The worst total frames are real layout/paint frames, not command snapshot frames:
+  - layout nodes: `~1103`
+  - paint nodes: `~2161`
+  - paint cache misses: `2`
+  - command availability eval on nearby non-layout frames is `~1.0ms`, but not the dominant worst-frame cause.
+- Scroll layout profiling on a fresh single-script run reports
+  `top_total/layout/solve/paint=9638/5845/2145/3467us`.
+- Captured resize scroll profile:
+  - Inner `view_cache.rs` 240-row list scroll (`apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs:228`):
+    `measure_children_us=0`, `solve_barrier_us≈2491-2637`, `layout_children_us≈554-1034`, `total_us≈3111-3713`.
+  - Outer content scroll (`apps/fret-ui-gallery/src/ui/content.rs:221`):
+    `measure_children_us=0`, `solve_barrier_us≈577-851`, `layout_children_us≈3390-3990`, `total_us≈4205-4853`.
+
+Rejected experiment:
+- Setting the inner view-cache list `ScrollArea` to
+  `viewport_intrinsic_measure_mode(ScrollIntrinsicMeasureMode::Viewport)` did not improve the resize stress path.
+- Evidence: `target/fret-diag/codex-resize-stress-view-cache-list-viewport-intrinsic/1778218002621/bundle.schema2.json`
+  reported repeat=3 p50/p95 total/layout `14803/15712us` and `10877/11816us`, worse than the stable repeat=1
+  samples. The change was reverted before committing.
+
+Decision:
+- Do not pursue the simple `Viewport` intrinsic-mode tweak for this hotspot.
+- The next viable resize-stress optimization needs to target either scroll barrier-child solve cost or repeated content
+  child layout under window-size churn, with a correctness proof that scroll extents remain authoritative.
