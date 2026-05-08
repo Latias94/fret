@@ -37,7 +37,7 @@ Status: Active
 - [x] Keep the proof bounded to one repro, one gate, and one evidence bundle.
 - [ ] Profile the remaining direct-child-invalidated / resize-measure path separately; do not fold
   it into the contained view-cache dirty-frontier proof.
-- [ ] Repair or replace the stale prewarm command form for local resize-stress samples so future
+- [x] Repair or replace the stale prewarm command form for local resize-stress samples so future
   p95 comparisons use the same normalization surface.
 
 ## Follow-on slice — Command and event focus targets resolve authoritative live attached nodes

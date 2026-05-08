@@ -125,12 +125,25 @@ Implemented dirty-frontier slice (2026-05-08):
     frames still report `top_view_cache_contained_relayouts=0`. This dirty-frontier slice is
     correct but not sufficient for the representative resize-stress hot frames; the next
     optimization target is the direct-child-invalidated / resize-measure path.
+- Normalized view-cache perf smoke:
+  - Command:
+    `target\debug\fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Result: passed.
+  - Worst bundle:
+    `target/fret-diag/1778235545947/bundle.schema2.json`
+  - Repeat=3 p50/p95 summary: total `15276/15296us`, layout `11429/11674us`, paint
+    `3649/3732us`, `layout.engine_solve` `505/2174us`.
+  - Interpretation: this restores the current local normalized command form. View-cache reuse is
+    active (`top_view_cache_roots_reused=2`), but top frames still report
+    `top_view_cache_contained_relayouts=0`, confirming the next slice should target
+    direct-child-invalidated resize churn rather than contained-relayout escalation.
 - Local command drift:
   - The documented `--suite-prewarm` / `--suite-prelude` form is stale for the current local
     `fretboard-dev diag perf`; the current CLI accepts `--prewarm-script` and `--prelude-script`.
-  - The prewarm-script run timed out at step 0 on
-    `tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json`, so the successful smoke above
-    used the script's own steady waits plus explicit `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1`.
+  - An initial prewarm-script run without explicit gallery bootstrap env timed out at step 0 on
+    `tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json`; the normalized retry above
+    passed once `FRET_UI_GALLERY_BOOTSTRAP_FONTS=1` and the view-cache envs were explicit launch
+    overrides.
 
 ## Follow-on slice — Contained relayout dirty vs rerender semantics
 
