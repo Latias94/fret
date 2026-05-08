@@ -26,6 +26,61 @@ Verified gates (2026-04-05):
     defer state immediately, so the first stable frame does not schedule a redundant follow-up
     barrier relayout/redraw.
 
+## Current perf slice — Engine-solved apply-path side-effect audit
+
+This audit narrows the contract for any future apply-only fast path under scroll resize stress.
+
+Profiling context (2026-05-08):
+
+- Baseline prewarm bundle:
+  `target/fret-diag/codex-resize-stress-scroll-child-profile-prewarm/1778225557208/bundle.schema2.json`
+  - p50/p95 total: `2327/8234us`
+  - p50/p95 layout: `1871/4505us`
+  - p50/p95 paint: `353/3494us`
+- `ui-gallery-content-viewport` can still visit roughly `1020-1044` child-layout nodes and perform
+  roughly `776-1035` of them while `layout_child_max_subtree_dirty_count` is only `0-3`.
+- The rejected guarded clean-subtree apply experiment worsened the current resize-stress p95
+  (`total/layout/paint` from `8234/4505/3494us` to `8659/4692/3629us`), so the lane must not
+  promote a broad `widget.layout` skip from that experiment.
+
+Layout-side blacklist for apply skipping:
+
+- `Scroll`: updates scroll handles, viewport/content size, deferred probe state, post-layout
+  overflow observation, and child scroll transform during layout.
+- `VirtualList`: updates virtualizer metrics, scroll handle viewport/content state, deferred
+  scroll-to-item requests, visible/render ranges, measured item updates, and child scroll
+  transform during layout.
+- `Text`, `StyledText`, and `SelectableText`: observe font-stack globals and refresh text metrics /
+  blobs / selectable text state from layout.
+- `TextInput`, `TextArea`, and `TextInputRegion`: remain excluded because they participate in
+  focusable text-input, IME, selection, accessibility, and platform text-input snapshot semantics.
+- `LayoutQueryRegion`: is a queryable-bounds primitive, so skipping layout cannot be assumed safe
+  without a dedicated query-snapshot proof.
+- `RenderTransform` and `FractionalRenderTransform`: update retained `render_transform` state
+  during layout.
+- `Anchored`: resolves `anchor_element` to the live node, computes placement, writes
+  `render_transform`, and optionally updates `layout_out` during layout.
+
+Provisional safe subset candidates:
+
+- Pure geometry / passthrough wrappers whose layout body does not write app/model/runtime state and
+  only propagates already-solved child geometry, for example `Container`, `Stack`, `Flex`, `Grid`,
+  `Semantics`, `FocusScope`, `ViewCache`, `ForegroundScope`, `Opacity`, `InteractivityGate`,
+  `HitTestGate`, `FocusTraversalGate`, `DismissibleLayer`, `MaskLayer`, `CompositeGroup`,
+  `EffectLayer`, `BackdropSourceGroup`, `Pressable`, `PointerRegion`, `HoverRegion`, `WheelRegion`,
+  `InternalDragRegion`, and `ExternalDragRegion`.
+- Pure leaf geometry nodes such as `Image`, `SvgIcon`, `SvgImage`, `Spinner`, `Spacer`, and
+  `Scrollbar`.
+- `Canvas` and `ViewportSurface` currently look leaf-like in layout, but stay provisional until
+  the first apply-path proof explicitly checks renderer/resource coupling and hit-test bounds.
+
+Decision:
+
+- Do not implement another broad apply-only whitelist from wrapper names alone.
+- Prefer a narrower dirty-frontier / scroll post-layout branch that keeps all blacklisted nodes on
+  the full layout path and proves identical scroll extents, hit-test bounds, focus/IME state, and
+  virtual-list visible ranges against the full `layout_in` path.
+
 ## Follow-on slice — Contained relayout dirty vs rerender semantics
 
 This follow-on slice locks the contract that:

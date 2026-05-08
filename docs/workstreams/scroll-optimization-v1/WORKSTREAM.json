@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-04-05",
+  "updated": "2026-05-08",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -123,6 +123,7 @@
     "docs/workstreams/scroll-optimization-v1/DESIGN.md",
     "docs/workstreams/scroll-optimization-v1/TODO.md",
     "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-ui/src/declarative/mount.rs",
@@ -149,6 +150,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, and observation work. Start a narrower follow-on only if the seed/authority contract must be generalized beyond scroll surfaces."
+    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, post-layout observation, and resize apply-path churn. Keep any apply-only fast path limited to the audited safe subset, and prefer a narrower dirty-frontier / scroll post-layout branch over a broad widget.layout skip."
   }
 }

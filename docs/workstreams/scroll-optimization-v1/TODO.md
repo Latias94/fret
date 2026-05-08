@@ -19,6 +19,23 @@ Status: Active
 - [x] Record the dedicated verification results for the seed/authority regression gates in
   `EVIDENCE_AND_GATES.md`.
 
+## Current perf slice — Engine-solved apply-path side-effect audit
+
+- [x] Audit layout side effects before adding any engine-solved subtree apply fast path.
+- [x] Confirm `Scroll` and `VirtualList` remain non-pure layout nodes because they update scroll
+  handles, viewport/content extents, deferred-scroll state, and visible ranges during layout.
+- [x] Confirm text and text-input widgets remain non-pure layout nodes because they observe global
+  font state, refresh text caches, and/or update IME / selection / platform snapshot data during
+  layout.
+- [x] Confirm `LayoutQueryRegion`, `RenderTransform`, `FractionalRenderTransform`, and `Anchored`
+  remain non-pure layout nodes because they write query/layout output state or compute transforms
+  during layout.
+- [x] Keep `Canvas` and `ViewportSurface` provisional rather than whitelisted by default, even
+  though they currently look like leaf-like geometry nodes.
+- [ ] Prototype a narrower dirty-frontier scroll relayout path instead of a broad
+  `widget.layout` skip.
+- [ ] Keep the proof bounded to one repro, one gate, and one evidence bundle.
+
 ## Follow-on slice — Command and event focus targets resolve authoritative live attached nodes
 
 - [x] Replace command dispatch source-element resolution so pending command metadata falls back from
