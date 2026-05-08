@@ -113,6 +113,18 @@ Implemented dirty-frontier slice (2026-05-08):
   - Interpretation: this no-prewarm smoke is not a replacement for the earlier prewarm baseline.
     It shows the representative resize-stress sample is still dominated by direct-child
     invalidation / measure / solve work, so the next slice should profile that path separately.
+- View-cache perf smoke:
+  - Command:
+    `target\debug\fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --launch -- target\release\fret-ui-gallery.exe`
+  - Result: passed.
+  - Worst bundle:
+    `target/fret-diag/1778235451027/bundle.schema2.json`
+  - Repeat=3 p50/p95 summary: total `15359/15970us`, layout `11449/12277us`, paint
+    `3765/4052us`, `layout.engine_solve` `533/2127us`.
+  - Interpretation: view-cache reuse is active (`top_view_cache_roots_reused=2`), but the top
+    frames still report `top_view_cache_contained_relayouts=0`. This dirty-frontier slice is
+    correct but not sufficient for the representative resize-stress hot frames; the next
+    optimization target is the direct-child-invalidated / resize-measure path.
 - Local command drift:
   - The documented `--suite-prewarm` / `--suite-prelude` form is stale for the current local
     `fretboard-dev diag perf`; the current CLI accepts `--prewarm-script` and `--prelude-script`.
