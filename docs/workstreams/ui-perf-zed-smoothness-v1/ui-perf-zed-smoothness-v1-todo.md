@@ -106,8 +106,17 @@ Conventions:
         `layout.build_roots_heavy.evidence.examples`
       - Evidence: perf log entry `2026-05-08 19:30`; smoke bundle
         `target/fret-diag/codex-request-build-roots-smoke/1778239301005/bundle.schema2.json`.
-    - [ ] Re-run the normalized resize-stress script and classify the top request-build roots as `mark_seen`,
+    - [x] Re-run the normalized resize-stress script and classify the top request-build roots as `mark_seen`,
       `cached_flow_reuse`, or `build_flow` dominated.
+      - Evidence: perf log entry `2026-05-08 19:50`; repeat=3 worst bundle
+        `target/fret-diag/codex-request-build-roots-r3/1778239800406/bundle.schema2.json`.
+      - Result: heavy resize frames are `build_flow` dominated; `mark_seen` is cheap, and `cached_flow_reuse` frames
+        move the remaining cost to `layout_roots_time_us` / barrier solves rather than request-build.
+    - [ ] Add or inspect root dirty-count/source attribution before considering a self-only root cached-flow reuse
+      optimization.
+      - Rationale: `layout_invalidations_count=1` on the heavy frames suggests the top root may be self-dirty, but
+        `layout_request_build_roots[]` currently records only a boolean `subtree_layout_dirty`. A cached-flow reuse
+        change must distinguish resize-only/root-only invalidation from real root element/style changes.
   - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
     `Event::WindowResized` when unchanged.
     - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.

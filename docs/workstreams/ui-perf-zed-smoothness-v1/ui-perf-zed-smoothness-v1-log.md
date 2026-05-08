@@ -10650,3 +10650,60 @@ Decision:
   - narrowing expensive `mark_seen` traversal,
   - reducing `build_flow` rebuild churn / stabilizing layout-engine identity, or
   - pursuing the separate `layout_roots_time_us` full-walk hotspot.
+
+## 2026-05-08 19:50 (no code change)
+
+Question:
+- On a repeat=3 normalized resize-stress run, are the top request-build roots dominated by `mark_seen`,
+  `cached_flow_reuse`, or `build_flow`?
+
+Command:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json `
+  --dir target/fret-diag/codex-request-build-roots-r3 `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 `
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --sort time --top 15 --json `
+  --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results:
+- Repeat=3 aggregate: p50/p95/max total `15482/15511/15511us`, layout `11764/11927/11927us`,
+  solve `478/2410/2410us`, paint `3614/3751/3751us`.
+- Worst bundle: `target/fret-diag/codex-request-build-roots-r3/1778239800406/bundle.schema2.json`
+  (`top_total_time_us=15511`).
+- Worst bundle `diag stats --verbose`:
+  - time p50/p95 total/layout/paint: `9082/15511us`, `5594/11764us`, `3215/3614us`
+  - layout breakdown p50/p95 roots/request-build: `3413/7931us`, `252/3182us`
+  - worst frame total/layout/request-build/layout-roots/solve/paint:
+    `15511/11764/3182/7931/478/3614us`
+
+Request-build classification:
+- Heavy resize frames are `build_flow` dominated:
+  - frame `387`: `layout_request_build_roots=3182us`, top root `build_flow`, root elapsed `2939us`,
+    `layout_invalidated=true`, `subtree_layout_dirty=true`
+  - adjacent heavy frames `381`, `384`, `390` show the same shape with request-build around `2.8-2.9ms`
+- `cached_flow_reuse` frames are not request-build dominated:
+  - frames `382`, `385`, `388` have request-build around `243-255us`, but still spend
+    `layout_roots≈3.4ms` and `solve≈2.1ms`
+- `mark_seen` frames are cheap:
+  - frames `383`, `386`, `389` have total time below `0.8ms` and request-build below `70us`
+- Top layout hotspots on heavy frames are Scroll nodes:
+  - worst frame top three exclusive/inclusive hotspots:
+    `Scroll 1811/3064us`, `Scroll 1614/2816us`, `Scroll 1431/4496us`
+
+Decision:
+- Do not spend the next slice on `mark_seen`; it is already cheap in this representative run.
+- `build_flow` is real work on the first resize frame in each cadence, but the larger remaining budget is
+  `layout_roots_time_us` plus Scroll apply/synchronization.
+- Before any self-only root reuse optimization, add or inspect enough evidence to distinguish root-only layout
+  invalidation from real element/style changes. Reusing a cached flow when the root element's authored layout changed
+  would violate the authoritative same-frame rebuild contract covered by `interactive_resize_flow_rebuild`.
