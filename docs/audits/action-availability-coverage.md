@@ -25,9 +25,13 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
   - `WindowCommandEnabledService` (explicit overrides)
   - `WindowCommandActionAvailabilityService` (dispatch-path availability)
   - via `WindowCommandGatingSnapshot`
-  - Note: the availability map is best-effort and may omit commands with `NotHandled` availability
-    (treat missing entries as "unknown", not "disabled"). `focus.next` / `focus.previous` are
-    always published as `true/false` via the UiTree focus traversal fallback.
+  - Note: the retained-runtime helper publishes registered widget-scoped commands and treats
+    `NotHandled` on the current dispatch path as "unavailable" (`false`). Filtered/app-owned
+    publishers may still omit commands, and consumers should treat missing entries as "unknown",
+    not "disabled".
+  - Snapshot availability is dispatch-path scoped (current focus/default route plus explicit
+    `focus.next` / `focus.previous` and `focus.menu_bar` hooks); it intentionally does not scan
+    unfocused subtrees.
   - Providers should use `CommandAvailability::Blocked` (not `NotHandled`) for "owned but currently
     unavailable" states (e.g. `text.copy` with an empty selection) so menus/palettes can disable
     commands deterministically.

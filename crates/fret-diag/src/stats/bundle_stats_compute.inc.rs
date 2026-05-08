@@ -417,6 +417,37 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("dispatch_post_dispatch_snapshot_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let window_runtime_snapshot_focus_repair_time_us = stats
+                .and_then(|m| m.get("window_runtime_snapshot_focus_repair_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_runtime_snapshot_input_context_time_us = stats
+                .and_then(|m| m.get("window_runtime_snapshot_input_context_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_runtime_snapshot_command_availability_time_us = stats
+                .and_then(|m| m.get("window_runtime_snapshot_command_availability_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_runtime_snapshot_widget_command_count = stats
+                .and_then(|m| m.get("window_runtime_snapshot_widget_command_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let window_runtime_snapshot_command_registry_collect_time_us = stats
+                .and_then(|m| {
+                    m.get("window_runtime_snapshot_command_registry_collect_time_us")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_runtime_snapshot_command_availability_eval_time_us = stats
+                .and_then(|m| m.get("window_runtime_snapshot_command_availability_eval_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_runtime_snapshot_shortcut_overlay_time_us = stats
+                .and_then(|m| m.get("window_runtime_snapshot_shortcut_overlay_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let dispatch_events = stats
                 .and_then(|m| m.get("dispatch_events"))
                 .and_then(|v| v.as_u64())
@@ -1600,6 +1631,13 @@ pub(super) fn bundle_stats_from_json_with_options(
                 dispatch_synth_hover_observer_time_us,
                 dispatch_cursor_effect_time_us,
                 dispatch_post_dispatch_snapshot_time_us,
+                window_runtime_snapshot_focus_repair_time_us,
+                window_runtime_snapshot_input_context_time_us,
+                window_runtime_snapshot_command_availability_time_us,
+                window_runtime_snapshot_widget_command_count,
+                window_runtime_snapshot_command_registry_collect_time_us,
+                window_runtime_snapshot_command_availability_eval_time_us,
+                window_runtime_snapshot_shortcut_overlay_time_us,
                 dispatch_events,
                 hit_test_queries,
                 hit_test_bounds_tree_queries,

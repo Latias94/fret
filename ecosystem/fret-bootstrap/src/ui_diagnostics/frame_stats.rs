@@ -215,6 +215,20 @@ pub struct UiFrameStatsV1 {
     pub dispatch_cursor_effect_time_us: u64,
     #[serde(default)]
     pub dispatch_post_dispatch_snapshot_time_us: u64,
+    #[serde(default)]
+    pub window_runtime_snapshot_focus_repair_time_us: u64,
+    #[serde(default)]
+    pub window_runtime_snapshot_input_context_time_us: u64,
+    #[serde(default)]
+    pub window_runtime_snapshot_command_availability_time_us: u64,
+    #[serde(default)]
+    pub window_runtime_snapshot_widget_command_count: u32,
+    #[serde(default)]
+    pub window_runtime_snapshot_command_registry_collect_time_us: u64,
+    #[serde(default)]
+    pub window_runtime_snapshot_command_availability_eval_time_us: u64,
+    #[serde(default)]
+    pub window_runtime_snapshot_shortcut_overlay_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -847,6 +861,26 @@ impl UiFrameStatsV1 {
             dispatch_cursor_effect_time_us: stats.dispatch_cursor_effect_time.as_micros() as u64,
             dispatch_post_dispatch_snapshot_time_us: stats
                 .dispatch_post_dispatch_snapshot_time
+                .as_micros() as u64,
+            window_runtime_snapshot_focus_repair_time_us: stats
+                .window_runtime_snapshot_focus_repair_time
+                .as_micros() as u64,
+            window_runtime_snapshot_input_context_time_us: stats
+                .window_runtime_snapshot_input_context_time
+                .as_micros() as u64,
+            window_runtime_snapshot_command_availability_time_us: stats
+                .window_runtime_snapshot_command_availability_time
+                .as_micros() as u64,
+            window_runtime_snapshot_widget_command_count: stats
+                .window_runtime_snapshot_widget_command_count,
+            window_runtime_snapshot_command_registry_collect_time_us: stats
+                .window_runtime_snapshot_command_registry_collect_time
+                .as_micros() as u64,
+            window_runtime_snapshot_command_availability_eval_time_us: stats
+                .window_runtime_snapshot_command_availability_eval_time
+                .as_micros() as u64,
+            window_runtime_snapshot_shortcut_overlay_time_us: stats
+                .window_runtime_snapshot_shortcut_overlay_time
                 .as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,

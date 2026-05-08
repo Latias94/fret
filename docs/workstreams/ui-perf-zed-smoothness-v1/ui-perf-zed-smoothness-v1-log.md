@@ -10083,3 +10083,153 @@ Decision:
 - Keep the fix in `fret-ui` semantics/request mechanics plus runner integration, not in Material3 tabs or gallery page
   policy. If real semantic-change frames need further reduction, the next architecture step is incremental semantics
   diffing rather than another filter in `request_semantics_snapshot_if_dirty()`.
+
+## 2026-05-08 11:46:31 (working tree)
+
+Change:
+- Narrow `command_availability_revision` bumps to invalidations that can actually affect command availability /
+  semantics; keep paint-only animation and hover churn out of the revision path.
+- Add `CommandRegistry::revision()` into the window availability snapshot signature and skip recomputation when the
+  signature is unchanged.
+- Extend the snapshot regression test to cover `UiDebugInvalidationDetail::AnimationFrameRequest`.
+
+Correctness gates:
+```powershell
+cargo nextest run -p fret-runtime register_bumps_revision
+cargo nextest run -p fret-ui window_command_action_availability_snapshot
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- `window_runtime_snapshot_command_availability_time_us` sum: `4781081us` -> `1117167us`
+- peak: `651032us` -> `335809us`
+
+Representative steady probe:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-command-avail-recompute-v2 `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| steady probe | 927 | 1798 | 1798 | 1116 | 62 | 113 | 615 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json`
+- top_total_time_us: `1798`
+- bundle: `target/fret-diag/codex-material3-tabs-command-avail-recompute-v2/1778211909446/bundle.schema2.json`
+
+CPU attribution:
+```powershell
+target\release\fretboard.exe diag stats target\fret-diag\codex-material3-tabs-command-avail-recompute-v2\1778211909446\bundle.schema2.json --sort cpu_cycles --top 20
+```
+
+Summary:
+- time p50/p95 (us): total=`927/1798`, layout=`216/1116`, prepaint=`93/113`, paint=`553/615`, dispatch=`0/224470`, hit_test=`7/24`.
+- hot p50/p95 (us): layout.engine_solve=`0/62`, paint.widget=`201/217`, paint.text_prepare=`0/0`.
+- The remaining expensive slice is the live dispatch-snapshot path on frames that genuinely change focus/context; stable
+  animation-frame requests no longer trigger a full availability recompute.
+
+Notes:
+- Compared to `target/fret-diag/codex-material3-tabs-dispatch-snapshot-breakdown/1778206858305/bundle.schema2.json`,
+  the command-availability sum drops from `4781081us` to `1117167us`, and the worst frame drops from `651032us` to
+  `335809us`.
+- The residual `dispatch_post_dispatch_snapshot_time_us` is now the real command/focus context refresh cost, not a
+  revision-churn artifact.
+
+## 2026-05-08 12:42 (working tree)
+
+Discovery:
+- The new command-availability detail counters showed the residual snapshot cost was not command-registry enumeration:
+  the Material3 tabs probe had only `11` widget commands, registry collection cost was `~6-19us`, and availability
+  evaluation was `215586-322040us` on the expensive snapshot frames.
+- The expensive path was the retained-runtime snapshot helper falling back to `command_availability_in_subtree(...)`
+  for each widget command. That is both too broad for the ADR 0218 dispatch-path contract and a `commands * nodes *
+  depth` hot path.
+
+Change:
+- Added diagnostics fields to split command availability snapshot work:
+  - `window_runtime_snapshot_widget_command_count`
+  - `window_runtime_snapshot_command_registry_collect_time_us`
+  - `window_runtime_snapshot_command_availability_eval_time_us`
+- Kept `UiTree::publish_window_command_action_availability_snapshot(...)` dispatch-path scoped: focus/default-route
+  availability plus explicit focus traversal and menu-bar hooks; no whole-subtree fallback scan for unfocused widgets.
+- Added `action_availability_snapshot_does_not_scan_unfocused_subtree` to lock the dispatch-path snapshot contract.
+- Updated `docs/audits/action-availability-coverage.md` so the snapshot wording matches the current retained-runtime
+  behavior.
+
+Correctness gates:
+```powershell
+cargo fmt --package fret-ui --package fret-bootstrap --package fret-diag
+cargo nextest run -p fret-ui window_command_action_availability_snapshot
+cargo check -p fret-diag -p fret-bootstrap
+cargo build -p fretboard --release
+cargo build -p fret-ui-gallery --release --features gallery-full
+```
+
+Results:
+- `fret-ui` window command action availability tests: `8/8` passed.
+- `fret-diag` / `fret-bootstrap` check passed.
+- Release `fretboard` and release gallery builds passed; existing unused warnings remain in `fret-runtime` / `fret-ui`.
+
+Before dispatch-path scoping:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-command-avail-detail `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Before bundle:
+- `target/fret-diag/codex-material3-tabs-command-avail-detail/1778214235516/bundle.schema2.json`
+
+Before CPU attribution:
+- time p50/p95 (us): total=`868/1859`, layout=`211/1185`, prepaint=`92/96`, paint=`535/582`, dispatch=`0/220550`.
+- worst command snapshot detail: widget_count=`11`, collect_us=`19`, eval_us=`322040`.
+
+After dispatch-path scoping:
+```powershell
+target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json `
+  --repeat 3 --warmup-frames 5 --reuse-launch --timeout-ms 300000 `
+  --dir target/fret-diag/codex-material3-tabs-command-avail-dispatch-path `
+  --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json `
+  --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
+  --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch-high-priority --launch -- target\release\fret-ui-gallery.exe
+```
+
+Results (us):
+| run | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| command detail | 1732 | 1859 | 1859 | 1185 | 0 | 93 | 582 |
+| dispatch-path snapshot | 1801 | 1829 | 1829 | 1150 | 0 | 102 | 592 |
+
+After bundle:
+- `target/fret-diag/codex-material3-tabs-command-avail-dispatch-path/1778215344719/bundle.schema2.json`
+
+After CPU attribution:
+- time p50/p95 (us): total=`840/1829`, layout=`214/1150`, prepaint=`90/105`, paint=`526/577`, dispatch=`0/1095`.
+- worst command snapshot detail: widget_count=`11`, collect_us=`10`, eval_us=`911`.
+
+Decision:
+- Do not cache the command registry list for this hotspot; measurement shows registry collection is not the problem.
+- Keep whole-subtree availability as a command dispatch/source fallback concern, not as the window action-availability
+  snapshot contract.

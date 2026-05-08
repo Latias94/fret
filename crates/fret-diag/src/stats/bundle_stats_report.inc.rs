@@ -250,6 +250,13 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) dispatch_synth_hover_observer_time_us: u64,
     pub(super) dispatch_cursor_effect_time_us: u64,
     pub(super) dispatch_post_dispatch_snapshot_time_us: u64,
+    pub(super) window_runtime_snapshot_focus_repair_time_us: u64,
+    pub(super) window_runtime_snapshot_input_context_time_us: u64,
+    pub(super) window_runtime_snapshot_command_availability_time_us: u64,
+    pub(super) window_runtime_snapshot_widget_command_count: u32,
+    pub(super) window_runtime_snapshot_command_registry_collect_time_us: u64,
+    pub(super) window_runtime_snapshot_command_availability_eval_time_us: u64,
+    pub(super) window_runtime_snapshot_shortcut_overlay_time_us: u64,
     pub(super) dispatch_events: u32,
     pub(super) hit_test_queries: u32,
     pub(super) hit_test_bounds_tree_queries: u32,
@@ -835,6 +842,32 @@ impl BundleStatsReport {
                 ));
             }
             println!("{line}");
+            if row.dispatch_post_dispatch_snapshot_time_us > 0
+                || row.window_runtime_snapshot_focus_repair_time_us > 0
+                || row.window_runtime_snapshot_input_context_time_us > 0
+                || row.window_runtime_snapshot_command_availability_time_us > 0
+                || row.window_runtime_snapshot_shortcut_overlay_time_us > 0
+            {
+                println!(
+                    "    dispatch_snapshot.us(total/focus_repair/input_ctx/command_availability/shortcut_overlay)={}/{}/{}/{}/{}",
+                    row.dispatch_post_dispatch_snapshot_time_us,
+                    row.window_runtime_snapshot_focus_repair_time_us,
+                    row.window_runtime_snapshot_input_context_time_us,
+                    row.window_runtime_snapshot_command_availability_time_us,
+                    row.window_runtime_snapshot_shortcut_overlay_time_us
+                );
+            }
+            if row.window_runtime_snapshot_widget_command_count > 0
+                || row.window_runtime_snapshot_command_registry_collect_time_us > 0
+                || row.window_runtime_snapshot_command_availability_eval_time_us > 0
+            {
+                println!(
+                    "    dispatch_snapshot.command_availability(widget_count/collect_us/eval_us)={}/{}/{}",
+                    row.window_runtime_snapshot_widget_command_count,
+                    row.window_runtime_snapshot_command_registry_collect_time_us,
+                    row.window_runtime_snapshot_command_availability_eval_time_us
+                );
+            }
         }
     }
 
@@ -1208,6 +1241,32 @@ impl BundleStatsReport {
                     row.paint_collect_roots_time_us,
                     row.paint_publish_text_input_snapshot_time_us,
                     row.paint_collapse_observations_time_us
+                );
+            }
+            if row.dispatch_post_dispatch_snapshot_time_us > 0
+                || row.window_runtime_snapshot_focus_repair_time_us > 0
+                || row.window_runtime_snapshot_input_context_time_us > 0
+                || row.window_runtime_snapshot_command_availability_time_us > 0
+                || row.window_runtime_snapshot_shortcut_overlay_time_us > 0
+            {
+                println!(
+                    "    dispatch_snapshot.us(total/focus_repair/input_ctx/command_availability/shortcut_overlay)={}/{}/{}/{}/{}",
+                    row.dispatch_post_dispatch_snapshot_time_us,
+                    row.window_runtime_snapshot_focus_repair_time_us,
+                    row.window_runtime_snapshot_input_context_time_us,
+                    row.window_runtime_snapshot_command_availability_time_us,
+                    row.window_runtime_snapshot_shortcut_overlay_time_us
+                );
+            }
+            if row.window_runtime_snapshot_widget_command_count > 0
+                || row.window_runtime_snapshot_command_registry_collect_time_us > 0
+                || row.window_runtime_snapshot_command_availability_eval_time_us > 0
+            {
+                println!(
+                    "    dispatch_snapshot.command_availability(widget_count/collect_us/eval_us)={}/{}/{}",
+                    row.window_runtime_snapshot_widget_command_count,
+                    row.window_runtime_snapshot_command_registry_collect_time_us,
+                    row.window_runtime_snapshot_command_availability_eval_time_us
                 );
             }
             if row.paint_cache_key_time_us > 0
@@ -2698,6 +2757,34 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_post_dispatch_snapshot_time_us".to_string(),
                     Value::from(row.dispatch_post_dispatch_snapshot_time_us),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_focus_repair_time_us".to_string(),
+                    Value::from(row.window_runtime_snapshot_focus_repair_time_us),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_input_context_time_us".to_string(),
+                    Value::from(row.window_runtime_snapshot_input_context_time_us),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_command_availability_time_us".to_string(),
+                    Value::from(row.window_runtime_snapshot_command_availability_time_us),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_widget_command_count".to_string(),
+                    Value::from(row.window_runtime_snapshot_widget_command_count),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_command_registry_collect_time_us".to_string(),
+                    Value::from(row.window_runtime_snapshot_command_registry_collect_time_us),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_command_availability_eval_time_us".to_string(),
+                    Value::from(row.window_runtime_snapshot_command_availability_eval_time_us),
+                );
+                obj.insert(
+                    "window_runtime_snapshot_shortcut_overlay_time_us".to_string(),
+                    Value::from(row.window_runtime_snapshot_shortcut_overlay_time_us),
                 );
                 obj.insert(
                     "dispatch_events".to_string(),

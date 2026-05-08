@@ -337,6 +337,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         removed: &mut Vec<NodeId>,
     ) {
+        let removed_before = removed.len();
         // Avoid recursion: removing or cleaning up deep trees can overflow the stack.
         //
         // We remove nodes in a post-order traversal so children are removed before their parent.
@@ -396,6 +397,9 @@ impl<H: UiHost> UiTree<H> {
             self.observed_globals_in_layout.remove_node(node);
             self.observed_globals_in_paint.remove_node(node);
             removed.push(node);
+        }
+        if removed.len() != removed_before {
+            self.bump_command_availability_revision();
         }
     }
 }

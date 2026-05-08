@@ -116,6 +116,20 @@ pub struct UiDebugFrameStats {
     /// Total wall time spent publishing post-dispatch window integration snapshots (input context,
     /// command availability) during dispatch.
     pub dispatch_post_dispatch_snapshot_time: Duration,
+    /// Total wall time spent repairing focus/routing state while publishing window runtime snapshots.
+    pub window_runtime_snapshot_focus_repair_time: Duration,
+    /// Total wall time spent building and publishing window input-context snapshots.
+    pub window_runtime_snapshot_input_context_time: Duration,
+    /// Total wall time spent computing and publishing command/action availability snapshots.
+    pub window_runtime_snapshot_command_availability_time: Duration,
+    /// Number of widget-scoped commands considered while publishing the availability snapshot.
+    pub window_runtime_snapshot_widget_command_count: u32,
+    /// Time spent collecting widget-scoped command ids from the registry.
+    pub window_runtime_snapshot_command_registry_collect_time: Duration,
+    /// Time spent evaluating availability for the collected widget-scoped commands.
+    pub window_runtime_snapshot_command_availability_eval_time: Duration,
+    /// Total wall time spent refreshing pending shortcut overlay state during window snapshot publish.
+    pub window_runtime_snapshot_shortcut_overlay_time: Duration,
     pub layout_time: Duration,
     pub layout_collect_roots_time: Duration,
     pub layout_invalidate_scroll_handle_bindings_time: Duration,

@@ -81,6 +81,18 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dispatch_synth_hover_observer_time = Duration::default();
         self.debug_stats.dispatch_cursor_effect_time = Duration::default();
         self.debug_stats.dispatch_post_dispatch_snapshot_time = Duration::default();
+        self.debug_stats.window_runtime_snapshot_focus_repair_time = Duration::default();
+        self.debug_stats.window_runtime_snapshot_input_context_time = Duration::default();
+        self.debug_stats
+            .window_runtime_snapshot_command_availability_time = Duration::default();
+        self.debug_stats
+            .window_runtime_snapshot_widget_command_count = 0;
+        self.debug_stats
+            .window_runtime_snapshot_command_registry_collect_time = Duration::default();
+        self.debug_stats
+            .window_runtime_snapshot_command_availability_eval_time = Duration::default();
+        self.debug_stats
+            .window_runtime_snapshot_shortcut_overlay_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();

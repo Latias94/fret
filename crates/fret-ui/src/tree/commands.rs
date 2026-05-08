@@ -184,14 +184,22 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         event: &Event,
     ) {
+        let started = self.debug_enabled.then(Instant::now);
         let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
+        if let Some(started) = started {
+            self.debug_stats.window_runtime_snapshot_focus_repair_time += started.elapsed();
+        }
 
         let (_active_layers, barrier_root) = self.active_input_layers();
         if matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })) {
+            let started = self.debug_enabled.then(Instant::now);
             let input_ctx =
                 self.current_window_input_context(app, barrier_root.is_some(), focus_is_text_input);
             self.publish_window_input_context_snapshot_untracked(app, &input_ctx, false);
+            if let Some(started) = started {
+                self.debug_stats.window_runtime_snapshot_input_context_time += started.elapsed();
+            }
         } else {
             self.publish_window_runtime_snapshots(app);
         }
@@ -216,6 +224,7 @@ impl<H: UiHost> UiTree<H> {
     /// Call this after imperative tree mutations when later same-frame consumers must observe the
     /// new authoritative window state immediately.
     pub fn publish_window_runtime_snapshots(&mut self, app: &mut H) {
+        let started = self.debug_enabled.then(Instant::now);
         self.pending_declarative_window_snapshot_roots
             .retain(|pending| self.nodes.contains_key(*pending));
         self.resolve_pending_focus_target_if_needed(app);
@@ -252,7 +261,11 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.revalidate_pending_shortcut_for_current_routing_context(app, barrier_root);
+        if let Some(started) = started {
+            self.debug_stats.window_runtime_snapshot_focus_repair_time += started.elapsed();
+        }
 
+        let started = self.debug_enabled.then(Instant::now);
         let focus_is_text_input = self.focus_is_text_input(app);
         let input_ctx = self.current_window_input_context(
             app,
@@ -261,8 +274,23 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.publish_window_input_context_snapshot(app, &input_ctx);
+        if let Some(started) = started {
+            self.debug_stats.window_runtime_snapshot_input_context_time += started.elapsed();
+        }
+
+        let started = self.debug_enabled.then(Instant::now);
         self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+        if let Some(started) = started {
+            self.debug_stats
+                .window_runtime_snapshot_command_availability_time += started.elapsed();
+        }
+
+        let started = self.debug_enabled.then(Instant::now);
         self.refresh_pending_shortcut_overlay_state_if_needed(app, &input_ctx);
+        if let Some(started) = started {
+            self.debug_stats
+                .window_runtime_snapshot_shortcut_overlay_time += started.elapsed();
+        }
     }
 
     pub(crate) fn request_post_layout_window_runtime_snapshot_refine(&mut self) {
@@ -695,6 +723,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
     ) {
         let Some(window) = self.window else {
+            self.last_window_command_action_availability_snapshot_signature = None;
             return;
         };
 
@@ -702,6 +731,7 @@ impl<H: UiHost> UiTree<H> {
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
         else {
+            self.last_window_command_action_availability_snapshot_signature = None;
             return;
         };
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
@@ -724,15 +754,53 @@ impl<H: UiHost> UiTree<H> {
         let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
         let start = focus.unwrap_or(default_root);
         let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+        let menu_bar_present = app
+            .global::<fret_runtime::WindowMenuBarFocusService>()
+            .is_some_and(|svc| svc.present(window));
+        let snapshot_signature = WindowCommandActionAvailabilitySnapshotSignature {
+            window: Some(window),
+            base_root: Some(base_root),
+            active_focus_layers: active_focus_layers.clone(),
+            barrier_root,
+            focus,
+            command_availability_revision: self.command_availability_revision,
+            input_ctx: input_ctx.clone(),
+            key_contexts: next_key_contexts.clone(),
+            command_registry_revision: app.commands().revision(),
+            menu_bar_present,
+        };
+        let has_pending_window_runtime_snapshot_changes =
+            !self.pending_declarative_window_snapshot_roots.is_empty()
+                || self.pending_post_layout_window_runtime_snapshot_refine;
+        if !has_pending_window_runtime_snapshot_changes
+            && self
+                .last_window_command_action_availability_snapshot_signature
+                .as_ref()
+                .is_some_and(|prev| prev == &snapshot_signature)
+        {
+            return;
+        }
+        self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
         let mut focus_traversal_snapshot: Option<(CommandAvailability, bool)> = None;
 
+        let collect_started = self.debug_enabled.then(Instant::now);
         let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
         let widget_commands: Vec<CommandId> = app
             .commands()
             .iter()
             .filter_map(|(id, meta)| (meta.scope == CommandScope::Widget).then_some(id.clone()))
             .collect();
+        if let Some(started) = collect_started {
+            self.debug_stats
+                .window_runtime_snapshot_command_registry_collect_time += started.elapsed();
+        }
+        if self.debug_enabled {
+            self.debug_stats
+                .window_runtime_snapshot_widget_command_count =
+                widget_commands.len().min(u32::MAX as usize) as u32;
+        }
 
+        let eval_started = self.debug_enabled.then(Instant::now);
         for id in widget_commands {
             if id.as_str() == "focus.menu_bar" {
                 let present = app
@@ -768,18 +836,9 @@ impl<H: UiHost> UiTree<H> {
                     self.pending_post_layout_window_runtime_snapshot_refine = true;
                 }
             }
-            if availability == CommandAvailability::NotHandled && barrier_root.is_none() {
-                availability = self
-                    .command_availability_in_subtree(app, input_ctx, base_root, &id)
-                    .0;
-            }
-            if availability == CommandAvailability::NotHandled && id.as_str() == "focus.menu_bar" {
-                let present = app
-                    .global::<fret_runtime::WindowMenuBarFocusService>()
-                    .is_some_and(|svc| svc.present(window));
-                snapshot.insert(id, present);
-                continue;
-            }
+            // Cross-surface action availability is dispatch-path availability. Whole-subtree
+            // fallback is intentionally excluded here: it can mark actions available from
+            // unfocused widgets and turns snapshot publication into commands * nodes * depth work.
             match availability {
                 CommandAvailability::Available => {
                     snapshot.insert(id, true);
@@ -795,8 +854,10 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
-
-        self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
+        if let Some(started) = eval_started {
+            self.debug_stats
+                .window_runtime_snapshot_command_availability_eval_time += started.elapsed();
+        }
 
         let needs_update = app
             .global::<fret_runtime::WindowCommandActionAvailabilityService>()
@@ -810,6 +871,7 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
         }
+        self.last_window_command_action_availability_snapshot_signature = Some(snapshot_signature);
     }
 
     pub(in crate::tree) fn refine_pending_window_runtime_snapshots_after_layout(

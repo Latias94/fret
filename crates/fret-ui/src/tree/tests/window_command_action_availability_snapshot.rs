@@ -45,6 +45,37 @@ impl<H: UiHost> Widget<H> for FocusableLeaf {
     }
 }
 
+#[derive(Debug, Default)]
+struct CountingAvailabilityNode;
+
+#[derive(Debug, Default)]
+struct CommandAvailabilityQueryCount {
+    count: u32,
+}
+
+impl<H: UiHost> Widget<H> for CountingAvailabilityNode {
+    fn command_availability(
+        &self,
+        cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> crate::widget::CommandAvailability {
+        if command.as_str() == "test.available" {
+            cx.app.with_global_mut_untracked(
+                CommandAvailabilityQueryCount::default,
+                |counter, _app| {
+                    counter.count = counter.count.saturating_add(1);
+                },
+            );
+            return crate::widget::CommandAvailability::Available;
+        }
+        crate::widget::CommandAvailability::NotHandled
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
 fn widget_command_meta(title: &str) -> CommandMeta {
     CommandMeta::new(title).with_scope(CommandScope::Widget)
 }
@@ -187,6 +218,110 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
     assert_eq!(
         svc.available(window, &CommandId::from("focus.previous")),
         Some(true)
+    );
+}
+
+#[test]
+fn action_availability_snapshot_skips_recompute_when_inputs_are_unchanged() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAvailabilityNode);
+    let leaf_a = ui.create_node(FocusableLeaf);
+    let leaf_b = ui.create_node(FocusableLeaf);
+    ui.set_root(root);
+    ui.add_child(root, leaf_a);
+    ui.add_child(root, leaf_b);
+    ui.set_focus(Some(leaf_a));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+    let first_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(first_count, 1);
+
+    publish_snapshot(&mut ui, &mut app, window);
+    let second_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(second_count, 1);
+
+    ui.invalidate_with_detail(
+        root,
+        Invalidation::Paint,
+        UiDebugInvalidationDetail::AnimationFrameRequest,
+    );
+    publish_snapshot(&mut ui, &mut app, window);
+    let third_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(third_count, 1);
+
+    ui.set_focus(Some(leaf_b));
+    publish_snapshot(&mut ui, &mut app, window);
+    let fourth_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(fourth_count, 2);
+}
+
+#[test]
+fn action_availability_snapshot_does_not_scan_unfocused_subtree() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let focused = ui.create_node(FocusableLeaf);
+    let unfocused_sibling = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, focused);
+    ui.add_child(root, unfocused_sibling);
+    ui.set_focus(Some(focused));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(query_count, 0);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(false)
     );
 }
 

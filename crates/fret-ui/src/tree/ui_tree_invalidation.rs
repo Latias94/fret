@@ -44,8 +44,22 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn bump_command_availability_revision(&mut self) {
+        self.command_availability_revision = self.command_availability_revision.wrapping_add(1);
+    }
+
     pub(in crate::tree) fn mark_invalidation_local(&mut self, node: NodeId, inv: Invalidation) {
-        if self.nodes.contains_key(node)
+        let node_exists = self.nodes.contains_key(node);
+        if node_exists
+            && Self::invalidation_may_affect_semantics(
+                UiDebugInvalidationSource::Other,
+                inv,
+                UiDebugInvalidationDetail::Unknown,
+            )
+        {
+            self.bump_command_availability_revision();
+        }
+        if node_exists
             && Self::invalidation_may_affect_semantics(
                 UiDebugInvalidationSource::Other,
                 inv,

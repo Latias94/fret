@@ -20,6 +20,7 @@ pub enum OsAction {
 /// command palettes, and menu surfaces.
 pub struct CommandRegistry {
     commands: HashMap<CommandId, CommandMeta>,
+    revision: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -119,6 +120,11 @@ impl CommandMeta {
 impl CommandRegistry {
     pub fn register(&mut self, id: CommandId, meta: CommandMeta) {
         self.commands.insert(id, meta);
+        self.revision = self.revision.saturating_add(1);
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.revision
     }
 
     pub fn get(&self, id: CommandId) -> Option<&CommandMeta> {
@@ -127,5 +133,22 @@ impl CommandRegistry {
 
     pub fn iter(&self) -> impl Iterator<Item = (&CommandId, &CommandMeta)> {
         self.commands.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn register_bumps_revision() {
+        let mut registry = CommandRegistry::default();
+        assert_eq!(registry.revision(), 0);
+
+        registry.register(CommandId::from("app.test"), CommandMeta::new("Test"));
+        assert_eq!(registry.revision(), 1);
+
+        registry.register(CommandId::from("app.test"), CommandMeta::new("Test"));
+        assert_eq!(registry.revision(), 2);
     }
 }

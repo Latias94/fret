@@ -114,6 +114,31 @@ Conventions:
     previous children vec in `TaffyLayoutEngine::set_children`).
     - Implementation: commit `10e30dac1`.
     - Evidence: perf log entry `2026-02-09 09:10:11` in `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.
+  - [x] Narrow command-availability revision bumps so paint-only animation frames do not recompute window gating.
+    - Change: only bump `command_availability_revision` for invalidations that can affect command availability /
+      semantics; keep paint-only animation and hover churn out of the revision path.
+    - Gates:
+      - `cargo nextest run -p fret-ui window_command_action_availability_snapshot`
+      - `cargo nextest run -p fret-runtime register_bumps_revision`
+      - `cargo build -p fret-ui-gallery --release --features gallery-full`
+    - Evidence: perf log entry `2026-05-08 11:46:31`; on the Material3 tabs steady probe the aggregated
+      `window_runtime_snapshot_command_availability_time_us` sum drops from `4781081us` to `1117167us`
+      and the max frame drops from `651032us` to `335809us` after the revision scope is narrowed.
+  - [x] Keep command/action availability snapshots dispatch-path scoped and avoid whole-subtree fallback scans.
+    - Change: `publish_window_command_action_availability_snapshot` no longer runs
+      `command_availability_in_subtree` for each widget command; it keeps focus/default-route availability plus
+      explicit focus traversal and menu-bar hooks.
+    - Diagnostics: `diag stats` now reports
+      `window_runtime_snapshot_widget_command_count`,
+      `window_runtime_snapshot_command_registry_collect_time_us`, and
+      `window_runtime_snapshot_command_availability_eval_time_us`.
+    - Gates:
+      - `cargo nextest run -p fret-ui window_command_action_availability_snapshot`
+      - `cargo check -p fret-diag -p fret-bootstrap`
+      - `cargo build -p fret-ui-gallery --release --features gallery-full`
+    - Evidence: perf log entry `2026-05-08 12:42`; Material3 tabs dispatch p95 drops from
+      `220550us` to `1095us`, and availability eval on the worst command snapshot drops from
+      `322040us` to `911us`.
 - [x] **P0.5 Code editor resize drag smoothness**: close the remaining 2–3× gap to the editor resize threshold.
   - Evidence snapshot: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`) showing the gate passing 3/3
     with `top_total_time_us≈15.6–16.0ms` vs `16308us` target.

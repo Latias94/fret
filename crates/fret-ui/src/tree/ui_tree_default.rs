@@ -54,6 +54,8 @@ impl<H: UiHost> Default for UiTree<H> {
             pending_barrier_relayouts: Vec::new(),
             pending_declarative_window_snapshot_roots: HashSet::new(),
             pending_post_layout_window_runtime_snapshot_refine: false,
+            command_availability_revision: 0,
+            last_window_command_action_availability_snapshot_signature: None,
             #[cfg(debug_assertions)]
             debug_last_declarative_render_root_frame_id: None,
             debug_enabled: false,

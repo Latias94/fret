@@ -176,6 +176,20 @@ impl InvalidationFlags {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WindowCommandActionAvailabilitySnapshotSignature {
+    pub(crate) window: Option<AppWindowId>,
+    pub(crate) base_root: Option<NodeId>,
+    pub(crate) active_focus_layers: Vec<NodeId>,
+    pub(crate) barrier_root: Option<NodeId>,
+    pub(crate) focus: Option<NodeId>,
+    pub(crate) command_availability_revision: u64,
+    pub(crate) input_ctx: InputContext,
+    pub(crate) key_contexts: Vec<Arc<str>>,
+    pub(crate) command_registry_revision: u64,
+    pub(crate) menu_bar_present: bool,
+}
+
 /// Retained UI tree and per-window interaction state machine.
 ///
 /// `UiTree` owns the widget/node graph for a single window and is responsible for:
@@ -239,6 +253,9 @@ pub struct UiTree<H: UiHost> {
     pending_barrier_relayouts: Vec<NodeId>,
     pending_declarative_window_snapshot_roots: HashSet<NodeId>,
     pending_post_layout_window_runtime_snapshot_refine: bool,
+    command_availability_revision: u64,
+    last_window_command_action_availability_snapshot_signature:
+        Option<WindowCommandActionAvailabilitySnapshotSignature>,
 
     #[cfg(debug_assertions)]
     debug_last_declarative_render_root_frame_id: Option<FrameId>,

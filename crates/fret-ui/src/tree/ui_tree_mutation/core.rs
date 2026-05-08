@@ -363,6 +363,9 @@ impl<H: UiHost> UiTree<H> {
                 n.parent = Some(parent);
             }
         }
+        if repaired_parent_pointer {
+            self.bump_command_availability_revision();
+        }
 
         self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
 
