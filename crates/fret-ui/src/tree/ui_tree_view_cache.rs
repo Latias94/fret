@@ -400,7 +400,7 @@ impl<H: UiHost> UiTree<H> {
                     id,
                     root,
                     UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::Unknown,
+                    UiDebugInvalidationDetail::ViewCacheLayoutDirtyExpansion,
                 );
             }
             self.update_invalidation_counters(prev, next);

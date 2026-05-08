@@ -54,6 +54,15 @@ pub enum UiDebugInvalidationSource {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugInvalidationDetail {
     Unknown,
+    InitialMount,
+    LocalInvalidation,
+    StructuralChildrenChanged,
+    StructuralParentRepair,
+    BarrierFollowupRelayout,
+    ViewCacheLayoutDirtyExpansion,
+    SubtreeLayoutDirtyRepair,
+    InteractiveResizeFullRebuild,
+    PrepaintInvalidation,
     ModelObservation,
     GlobalObservation,
     NotifyCall,
@@ -102,6 +111,15 @@ impl UiDebugInvalidationDetail {
     pub fn as_str(self) -> Option<&'static str> {
         match self {
             Self::Unknown => None,
+            Self::InitialMount => Some("initial_mount"),
+            Self::LocalInvalidation => Some("local_invalidation"),
+            Self::StructuralChildrenChanged => Some("structural_children_changed"),
+            Self::StructuralParentRepair => Some("structural_parent_repair"),
+            Self::BarrierFollowupRelayout => Some("barrier_followup_relayout"),
+            Self::ViewCacheLayoutDirtyExpansion => Some("view_cache_layout_dirty_expansion"),
+            Self::SubtreeLayoutDirtyRepair => Some("subtree_layout_dirty_repair"),
+            Self::InteractiveResizeFullRebuild => Some("interactive_resize_full_rebuild"),
+            Self::PrepaintInvalidation => Some("prepaint_invalidation"),
             Self::ModelObservation => Some("model_observation"),
             Self::GlobalObservation => Some("global_observation"),
             Self::NotifyCall => Some("notify_call"),

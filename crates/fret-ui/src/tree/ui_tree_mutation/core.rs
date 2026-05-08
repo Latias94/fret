@@ -14,7 +14,7 @@ impl<H: UiHost> UiTree<H> {
                 id,
                 id,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::InitialMount,
             );
         }
         id
@@ -56,7 +56,7 @@ impl<H: UiHost> UiTree<H> {
                 id,
                 id,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::InitialMount,
             );
         }
         id
@@ -141,7 +141,7 @@ impl<H: UiHost> UiTree<H> {
                 node,
                 node,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::LocalInvalidation,
             );
         } else if layout_before && !layout_after {
             self.debug_clear_layout_dirty_source(node);
@@ -151,7 +151,7 @@ impl<H: UiHost> UiTree<H> {
             self.mark_cache_root_dirty(
                 node,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::LocalInvalidation,
             );
         } else if !value {
             self.dirty_cache_roots.remove(&node);
@@ -372,7 +372,7 @@ impl<H: UiHost> UiTree<H> {
                 parent,
                 parent,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::StructuralChildrenChanged,
             );
         }
 
@@ -382,10 +382,11 @@ impl<H: UiHost> UiTree<H> {
             // Structural changes must invalidate ancestors so the next layout pass walks far
             // enough to place newly mounted subtrees, even when view-cache invalidation
             // truncation is enabled.
-            self.mark_invalidation_with_source(
+            self.invalidate_with_source_and_detail(
                 parent,
                 Invalidation::HitTest,
                 UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::StructuralChildrenChanged,
             );
         }
     }
@@ -419,10 +420,11 @@ impl<H: UiHost> UiTree<H> {
             // GC flows. If a descendant became layout-dirty while detached, reconnect the parent to
             // the authoritative layout invalidation walk so the next frame descends back into the
             // repaired subtree.
-            self.mark_invalidation_with_source(
+            self.invalidate_with_source_and_detail(
                 parent,
                 Invalidation::Layout,
                 UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::StructuralParentRepair,
             );
         }
     }

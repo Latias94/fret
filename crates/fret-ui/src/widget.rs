@@ -964,7 +964,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
         self.tree.invalidate_with_detail(
             node,
             kind,
-            crate::tree::UiDebugInvalidationDetail::Unknown,
+            crate::tree::UiDebugInvalidationDetail::PrepaintInvalidation,
         );
     }
 

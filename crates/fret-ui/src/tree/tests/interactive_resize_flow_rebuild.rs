@@ -555,3 +555,138 @@ fn layout_request_build_roots_sample_dirty_descendant_sources() {
     );
     assert_eq!(root_record.descendant_layout_dirty_count, 2);
 }
+
+#[test]
+fn layout_request_build_roots_classify_initial_mount_dirty_descendants() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let leaf = ui.create_node_for_element(crate::elements::GlobalElementId(3), TestStack);
+    let child = ui.create_node_for_element(crate::elements::GlobalElementId(2), TestStack);
+    let root = ui.create_node_for_element(crate::elements::GlobalElementId(1), TestStack);
+    ui.set_children(child, vec![leaf]);
+    ui.set_children(root, vec![child]);
+    ui.set_root(root);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let root_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|r| r.root == root)
+        .expect("request-build record for root");
+
+    assert!(
+        root_record.dirty_descendants.iter().any(|d| {
+            d.source_root == Some(d.node)
+                && d.detail == Some(UiDebugInvalidationDetail::InitialMount)
+        }),
+        "expected initial layout-dirty descendants to be classified as InitialMount: {:?}",
+        root_record.dirty_descendants
+    );
+}
+
+#[test]
+fn layout_request_build_roots_classify_structural_child_rewrites() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let leaf = ui.create_node_for_element(crate::elements::GlobalElementId(3), TestStack);
+    let parent = ui.create_node_for_element(crate::elements::GlobalElementId(2), TestStack);
+    let root = ui.create_node_for_element(crate::elements::GlobalElementId(1), TestStack);
+    ui.set_children(root, vec![parent]);
+    ui.set_root(root);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for node in [leaf, parent, root] {
+        ui.test_clear_node_invalidations(node);
+    }
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.set_children(parent, vec![leaf]);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let root_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|r| r.root == root)
+        .expect("request-build record for root");
+
+    let sample = root_record
+        .dirty_descendants
+        .iter()
+        .find(|d| d.node == parent)
+        .expect("dirty descendant sample for structurally changed parent");
+    assert_eq!(
+        sample.detail,
+        Some(UiDebugInvalidationDetail::StructuralChildrenChanged)
+    );
+}
+
+#[test]
+fn layout_request_build_roots_classify_view_cache_layout_dirty_expansion() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let leaf = ui.create_node_for_element(crate::elements::GlobalElementId(3), TestStack);
+    let boundary = ui.create_node_for_element(crate::elements::GlobalElementId(2), TestStack);
+    let root = ui.create_node_for_element(crate::elements::GlobalElementId(1), TestStack);
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.set_children(boundary, vec![leaf]);
+    ui.set_children(root, vec![boundary]);
+    ui.set_root(root);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for node in [leaf, boundary, root] {
+        ui.test_clear_node_invalidations(node);
+    }
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.test_set_layout_invalidation(boundary, true);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let root_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|r| r.root == root)
+        .expect("request-build record for root");
+
+    assert!(
+        root_record.dirty_descendants.iter().any(|d| {
+            d.node == leaf
+                && d.source_root == Some(boundary)
+                && d.detail == Some(UiDebugInvalidationDetail::ViewCacheLayoutDirtyExpansion)
+        }),
+        "expected expanded view-cache descendants to carry ViewCacheLayoutDirtyExpansion detail: {:?}",
+        root_record.dirty_descendants
+    );
+}

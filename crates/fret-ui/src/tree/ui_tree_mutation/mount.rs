@@ -119,7 +119,7 @@ impl<H: UiHost> UiTree<H> {
                 parent,
                 parent,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::StructuralChildrenChanged,
             );
         }
 
@@ -129,10 +129,11 @@ impl<H: UiHost> UiTree<H> {
             // Structural changes must invalidate ancestors so the next layout pass walks far
             // enough to place newly mounted subtrees, even when view-cache invalidation
             // truncation is enabled.
-            self.mark_invalidation_with_source(
+            self.invalidate_with_source_and_detail(
                 parent,
                 Invalidation::HitTest,
                 UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::StructuralChildrenChanged,
             );
         }
     }

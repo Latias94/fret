@@ -10790,3 +10790,57 @@ Decision:
 - The next optimization slice should not change layout behavior yet. First refine the `unknown` source details for the
   sampled `Opacity` / `Scrollbar` nodes so we can distinguish scroll-handle authored layout from structural child
   rewrites, view-cache repair, or generic local invalidation.
+
+## 2026-05-08 21:29 (code change)
+
+Question:
+- Are the sampled `Opacity` / `Scrollbar` dirty descendants truly unknown, or can we classify the mechanism that made
+  them layout-dirty before changing cached-flow / dirty-frontier behavior?
+
+Change:
+- Added mechanism-layer `UiDebugInvalidationDetail` variants for:
+  - `initial_mount`
+  - `local_invalidation`
+  - `structural_children_changed`
+  - `structural_parent_repair`
+  - `barrier_followup_relayout`
+  - `view_cache_layout_dirty_expansion`
+  - `subtree_layout_dirty_repair`
+  - `interactive_resize_full_rebuild`
+  - `prepaint_invalidation`
+- Wired the new details into node creation, direct local invalidation, structural child rewrites, barrier follow-ups,
+  view-cache layout-dirty expansion, subtree dirty repair, interactive-resize forced rebuilds, and prepaint-driven
+  invalidations.
+- Kept this as a diagnostic attribution change only; no layout reuse behavior changed.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-ui layout_request_build_roots_sample_dirty_descendant_sources layout_request_build_roots_classify_initial_mount_dirty_descendants layout_request_build_roots_classify_structural_child_rewrites layout_request_build_roots_classify_view_cache_layout_dirty_expansion`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+- `cargo nextest run -p fret-ui view_cache`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this change did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-dirty-source-detail-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle: `target/fret-diag/codex-dirty-source-detail-smoke/1778246942782/bundle.schema2.json`
+- `fretboard diag stats ... --sort time --top 10 --verbose` result:
+  - top total/layout/request-build/layout-roots/solve/paint:
+    `8824/4846/430/4077/2325/3681us`
+  - representative request-build row:
+    `mode=build_flow`, `invalidated=false`, `subtree_dirty=true`, `dirty_count=4`, `descendant_dirty=4`
+  - sampled dirty descendants now show:
+    - `Opacity`, `dirty_count=2`, `source=other`, `detail=initial_mount`
+    - `Scrollbar`, `dirty_count=1`, `source=other`, `detail=initial_mount`
+
+Decision:
+- The prior `unknown` samples were not scroll-handle authored layout or view-cache repair in this smoke; they are
+  initial-mount dirty descendants under the scroll-area chrome.
+- Continue to reject a root-only cached-flow reuse: the root is clean, but descendant dirty work is real and now
+  classified.
+- Next slice should decide whether the repeated `Opacity` / `Scrollbar` initial-mount churn is expected component
+  lifecycle behavior or avoidable identity churn in `fret-ui-shadcn` `ScrollArea` / view-cache shell composition.

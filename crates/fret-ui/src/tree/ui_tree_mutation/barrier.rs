@@ -43,7 +43,7 @@ impl<H: UiHost> UiTree<H> {
                 self.schedule_barrier_relayout_with_source_and_detail(
                     parent,
                     UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::Unknown,
+                    UiDebugInvalidationDetail::BarrierFollowupRelayout,
                 );
             }
             return;
@@ -157,16 +157,17 @@ impl<H: UiHost> UiTree<H> {
                 parent,
                 parent,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::StructuralChildrenChanged,
             );
         }
 
         // Structural changes must invalidate paint/hit-testing so routing and rendering see the
         // updated tree, but we intentionally avoid forcing a full ancestor relayout.
-        self.mark_invalidation_with_source(
+        self.invalidate_with_source_and_detail(
             parent,
             Invalidation::HitTestOnly,
             UiDebugInvalidationSource::Other,
+            UiDebugInvalidationDetail::StructuralChildrenChanged,
         );
 
         // Keep subtree layout-dirty aggregation in sync with barrier child changes.

@@ -1027,7 +1027,7 @@ impl<H: UiHost> UiTree<H> {
                             self.schedule_barrier_relayout_with_source_and_detail(
                                 id,
                                 UiDebugInvalidationSource::Other,
-                                UiDebugInvalidationDetail::Unknown,
+                                UiDebugInvalidationDetail::BarrierFollowupRelayout,
                             );
                         }
                         break;
@@ -1061,7 +1061,11 @@ impl<H: UiHost> UiTree<H> {
         self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
-            self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+            self.mark_subtree_invalidation_local_with_detail(
+                root,
+                Invalidation::Layout,
+                UiDebugInvalidationDetail::InteractiveResizeFullRebuild,
+            );
         }
 
         if self.invalidated_layout_nodes == 0
@@ -1118,7 +1122,11 @@ impl<H: UiHost> UiTree<H> {
         self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
-            self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+            self.mark_subtree_invalidation_local_with_detail(
+                root,
+                Invalidation::Layout,
+                UiDebugInvalidationDetail::InteractiveResizeFullRebuild,
+            );
         }
         if self.invalidated_layout_nodes == 0
             && self.invalidated_hit_test_nodes == 0
@@ -1619,7 +1627,7 @@ impl<H: UiHost> UiTree<H> {
                         self.schedule_barrier_relayout_with_source_and_detail(
                             id,
                             UiDebugInvalidationSource::Other,
-                            UiDebugInvalidationDetail::Unknown,
+                            UiDebugInvalidationDetail::BarrierFollowupRelayout,
                         );
                     }
                     break;
@@ -1675,7 +1683,11 @@ impl<H: UiHost> UiTree<H> {
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
         if force_post_resize_rebuild {
             for &root in roots {
-                self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+                self.mark_subtree_invalidation_local_with_detail(
+                    root,
+                    Invalidation::Layout,
+                    UiDebugInvalidationDetail::InteractiveResizeFullRebuild,
+                );
             }
         }
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
@@ -1949,7 +1961,11 @@ impl<H: UiHost> UiTree<H> {
                     .map(|(root, _)| *root)
                     .collect();
                 for root in roots_to_invalidate {
-                    self.mark_subtree_invalidation_local(root, Invalidation::Layout);
+                    self.mark_subtree_invalidation_local_with_detail(
+                        root,
+                        Invalidation::Layout,
+                        UiDebugInvalidationDetail::InteractiveResizeFullRebuild,
+                    );
                 }
             }
 

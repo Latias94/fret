@@ -48,24 +48,32 @@ impl<H: UiHost> UiTree<H> {
         self.command_availability_revision = self.command_availability_revision.wrapping_add(1);
     }
 
-    pub(in crate::tree) fn mark_invalidation_local(&mut self, node: NodeId, inv: Invalidation) {
+    pub(in crate::tree) fn mark_invalidation_local_with_detail(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        self.mark_invalidation_local_with_source_and_detail(
+            node,
+            inv,
+            UiDebugInvalidationSource::Other,
+            detail,
+        );
+    }
+
+    pub(in crate::tree) fn mark_invalidation_local_with_source_and_detail(
+        &mut self,
+        node: NodeId,
+        inv: Invalidation,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
         let node_exists = self.nodes.contains_key(node);
-        if node_exists
-            && Self::invalidation_may_affect_semantics(
-                UiDebugInvalidationSource::Other,
-                inv,
-                UiDebugInvalidationDetail::Unknown,
-            )
-        {
+        if node_exists && Self::invalidation_may_affect_semantics(source, inv, detail) {
             self.bump_command_availability_revision();
         }
-        if node_exists
-            && Self::invalidation_may_affect_semantics(
-                UiDebugInvalidationSource::Other,
-                inv,
-                UiDebugInvalidationDetail::Unknown,
-            )
-        {
+        if node_exists && Self::invalidation_may_affect_semantics(source, inv, detail) {
             self.mark_semantics_dirty();
         }
 
@@ -92,22 +100,18 @@ impl<H: UiHost> UiTree<H> {
             layout_after,
         );
         if !layout_before && layout_after {
-            self.debug_note_layout_dirty_source(
-                node,
-                node,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
-            );
+            self.debug_note_layout_dirty_source(node, node, source, detail);
         } else if layout_before && !layout_after {
             self.debug_clear_layout_dirty_source(node);
         }
         self.update_invalidation_counters(prev, next);
     }
 
-    pub(in crate::tree) fn mark_subtree_invalidation_local(
+    pub(in crate::tree) fn mark_subtree_invalidation_local_with_detail(
         &mut self,
         root: NodeId,
         inv: Invalidation,
+        detail: UiDebugInvalidationDetail,
     ) {
         if !self.nodes.contains_key(root) {
             return;
@@ -121,7 +125,7 @@ impl<H: UiHost> UiTree<H> {
                 .get(node)
                 .map(|entry| entry.children.to_vec())
                 .unwrap_or_default();
-            self.mark_invalidation_local(node, inv);
+            self.mark_invalidation_local_with_detail(node, inv, detail);
             self.scratch_node_stack.extend(children);
         }
     }

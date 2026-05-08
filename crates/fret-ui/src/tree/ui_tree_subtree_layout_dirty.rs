@@ -110,7 +110,7 @@ impl<H: UiHost> UiTree<H> {
             self.mark_cache_root_dirty(
                 node,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
             );
         }
 
@@ -139,7 +139,7 @@ impl<H: UiHost> UiTree<H> {
             self.mark_cache_root_dirty(
                 root,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
+                UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
             );
         }
 

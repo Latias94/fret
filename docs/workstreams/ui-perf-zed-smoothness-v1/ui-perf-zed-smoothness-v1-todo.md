@@ -129,9 +129,18 @@ Conventions:
         `target/fret-diag/codex-request-build-roots-dirty-desc-final-smoke/1778245207520/bundle.schema2.json`.
       - Result: the top root is still descendant-dirty, and the sampled dirty descendants are `Opacity` /
         `Scrollbar` nodes with `source=other` and `detail=unknown`.
-    - [ ] Refine `unknown` dirty-source details for the sampled `Opacity` / `Scrollbar` descendants.
+    - [x] Refine `unknown` dirty-source details for the sampled `Opacity` / `Scrollbar` descendants.
       - Target: distinguish scroll-handle authored layout, structural child rewrites, view-cache repair, and generic
         local invalidations before changing cached-flow or dirty-frontier behavior.
+      - Implementation: added mechanism-layer detail categories for `initial_mount`, `local_invalidation`,
+        `structural_children_changed`, `structural_parent_repair`, `barrier_followup_relayout`,
+        `view_cache_layout_dirty_expansion`, `subtree_layout_dirty_repair`,
+        `interactive_resize_full_rebuild`, and `prepaint_invalidation`.
+      - Evidence: perf log entry `2026-05-08 21:29`; smoke bundle
+        `target/fret-diag/codex-dirty-source-detail-smoke/1778246942782/bundle.schema2.json`.
+      - Result: the same `Opacity` / `Scrollbar` descendants now classify as `detail=initial_mount` instead of
+        `unknown`, so the next layout behavior change should focus on whether these scroll-area chrome mounts are
+        expected resize churn or avoidable subtree identity churn.
   - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
     `Event::WindowResized` when unchanged.
     - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.
