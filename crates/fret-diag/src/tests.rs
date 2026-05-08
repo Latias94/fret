@@ -1595,12 +1595,14 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             "frame_id": 1,
             "window": 1,
             "timestamp_unix_ms": 123,
-            "debug": { "stats": {
+            "debug": {
+                "stats": {
                 "layout_time_us": 10_000,
                 "prepaint_time_us": 0,
                 "paint_time_us": 0,
                 "layout_engine_solves": 1,
                 "layout_engine_solve_time_us": 7_000,
+                "layout_request_build_roots_time_us": 3_000,
                 "layout_observation_record_time_us": 3_000,
                 "layout_observation_record_models_items": 100,
                     "layout_observation_record_globals_items": 0,
@@ -1611,7 +1613,22 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                     "renderer_record_passes_us": 45,
                     "renderer_encoder_finish_us": 67,
                     "renderer_text_atlas_upload_bytes": 2_000_000,
-                } }
+                },
+                "layout_request_build_roots": [{
+                    "root_node": 42,
+                    "root_kind": "window",
+                    "root_element": 100,
+                    "root_element_kind": "PerfRoot",
+                    "elapsed_us": 2_100,
+                    "mode": "build_flow",
+                    "had_layout_engine_node": true,
+                    "layout_invalidated": false,
+                    "subtree_layout_dirty": true,
+                    "needs_layout": true,
+                    "is_translation_only": false,
+                    "nodes_marked_seen": 0
+                }]
+            }
             }]
         }]
     });
@@ -1638,6 +1655,7 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
 
     assert!(codes.contains(&"layout.observation_heavy"));
     assert!(codes.contains(&"layout.solve_heavy"));
+    assert!(codes.contains(&"layout.build_roots_heavy"));
     assert!(codes.contains(&"paint.text_prepare_churn"));
     assert!(codes.contains(&"renderer.upload_churn"));
 
@@ -1673,6 +1691,33 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.as_u64())
             .unwrap_or(0),
         7_000
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("layout_request_build_roots"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("mode"))
+            .and_then(|v| v.as_str()),
+        Some("build_flow")
+    );
+    let build_roots_examples = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .unwrap()
+        .iter()
+        .find(|h| h.get("code").and_then(|v| v.as_str()) == Some("layout.build_roots_heavy"))
+        .and_then(|h| h.get("evidence"))
+        .and_then(|v| v.get("examples"))
+        .and_then(|v| v.as_array())
+        .expect("layout.build_roots_heavy examples");
+    assert_eq!(
+        build_roots_examples
+            .first()
+            .and_then(|v| v.get("elapsed_us"))
+            .and_then(|v| v.as_u64()),
+        Some(2_100)
     );
 }
 

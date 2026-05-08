@@ -378,6 +378,26 @@ impl<H: UiHost> UiTree<H> {
         *self.debug_paint_cache_replays.entry(node).or_default() += replayed_ops;
     }
 
+    pub(crate) fn debug_record_layout_request_build_root(
+        &mut self,
+        record: UiDebugLayoutRequestBuildRoot,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        const MAX_LAYOUT_REQUEST_BUILD_ROOTS: usize = 16;
+        let idx = self
+            .debug_layout_request_build_roots
+            .iter()
+            .position(|h| h.elapsed < record.elapsed)
+            .unwrap_or(self.debug_layout_request_build_roots.len());
+        self.debug_layout_request_build_roots.insert(idx, record);
+        if self.debug_layout_request_build_roots.len() > MAX_LAYOUT_REQUEST_BUILD_ROOTS {
+            self.debug_layout_request_build_roots
+                .truncate(MAX_LAYOUT_REQUEST_BUILD_ROOTS);
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_layout_engine_solve(
         &mut self,

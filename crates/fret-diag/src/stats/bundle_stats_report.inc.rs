@@ -437,6 +437,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) virtual_list_visible_range_refreshes: u32,
     pub(super) top_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
+    pub(super) layout_request_build_roots: Vec<BundleStatsLayoutRequestBuildRoot>,
     pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     pub(super) layout_hotspots: Vec<BundleStatsLayoutHotspot>,
     pub(super) widget_measure_hotspots: Vec<BundleStatsWidgetMeasureHotspot>,
@@ -446,6 +447,25 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsLayoutRequestBuildRoot {
+    pub(super) root_node: u64,
+    pub(super) root_kind: Option<String>,
+    pub(super) root_element: Option<u64>,
+    pub(super) root_element_kind: Option<String>,
+    pub(super) root_element_path: Option<String>,
+    pub(super) elapsed_us: u64,
+    pub(super) mode: Option<String>,
+    pub(super) had_layout_engine_node: bool,
+    pub(super) layout_invalidated: bool,
+    pub(super) subtree_layout_dirty: bool,
+    pub(super) needs_layout: bool,
+    pub(super) is_translation_only: bool,
+    pub(super) nodes_marked_seen: u32,
+    pub(super) root_role: Option<String>,
+    pub(super) root_test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1553,6 +1573,61 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    hover_layout_hotspots: {}", items.join(" | "));
+            }
+            if !row.layout_request_build_roots.is_empty() {
+                let items: Vec<String> = row
+                    .layout_request_build_roots
+                    .iter()
+                    .take(3)
+                    .map(|r| {
+                        let mut out = format!("us={} root={}", r.elapsed_us, r.root_node);
+                        if let Some(kind) = r.root_kind.as_deref()
+                            && !kind.is_empty()
+                        {
+                            out.push_str(&format!(" kind={kind}"));
+                        }
+                        if let Some(mode) = r.mode.as_deref()
+                            && !mode.is_empty()
+                        {
+                            out.push_str(&format!(" mode={mode}"));
+                        }
+                        out.push_str(&format!(
+                            " engine={} invalidated={} subtree_dirty={} needs_layout={} translation_only={} marked_seen={}",
+                            r.had_layout_engine_node,
+                            r.layout_invalidated,
+                            r.subtree_layout_dirty,
+                            r.needs_layout,
+                            r.is_translation_only,
+                            r.nodes_marked_seen,
+                        ));
+                        if let Some(test_id) = r.root_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            out.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = r.root_role.as_deref()
+                            && !role.is_empty()
+                        {
+                            out.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(element_kind) = r.root_element_kind.as_deref()
+                            && !element_kind.is_empty()
+                        {
+                            out.push_str(&format!(" element_kind={element_kind}"));
+                        }
+                        if let Some(element) = r.root_element {
+                            out.push_str(&format!(" element={element}"));
+                        }
+                        if let Some(path) = r.root_element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            let path = compact_debug_path(path);
+                            out.push_str(&format!(" path={path}"));
+                        }
+                        out
+                    })
+                    .collect();
+                println!("    layout_request_build_roots: {}", items.join(" | "));
             }
             if !row.top_layout_engine_solves.is_empty() {
                 let items: Vec<String> = row
@@ -3388,6 +3463,79 @@ impl BundleStatsReport {
                 obj.insert(
                     "top_contained_relayout_cache_roots".to_string(),
                     Value::Array(top_contained_relayout_cache_roots),
+                );
+
+                let layout_request_build_roots = row
+                    .layout_request_build_roots
+                    .iter()
+                    .map(|r| {
+                        let mut r_obj = Map::new();
+                        r_obj.insert("root_node".to_string(), Value::from(r.root_node));
+                        r_obj.insert(
+                            "root_kind".to_string(),
+                            r.root_kind.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        r_obj.insert(
+                            "root_element".to_string(),
+                            r.root_element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        r_obj.insert(
+                            "root_element_kind".to_string(),
+                            r.root_element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        r_obj.insert(
+                            "root_element_path".to_string(),
+                            r.root_element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        r_obj.insert("elapsed_us".to_string(), Value::from(r.elapsed_us));
+                        r_obj.insert(
+                            "mode".to_string(),
+                            r.mode.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        r_obj.insert(
+                            "had_layout_engine_node".to_string(),
+                            Value::from(r.had_layout_engine_node),
+                        );
+                        r_obj.insert(
+                            "layout_invalidated".to_string(),
+                            Value::from(r.layout_invalidated),
+                        );
+                        r_obj.insert(
+                            "subtree_layout_dirty".to_string(),
+                            Value::from(r.subtree_layout_dirty),
+                        );
+                        r_obj.insert("needs_layout".to_string(), Value::from(r.needs_layout));
+                        r_obj.insert(
+                            "is_translation_only".to_string(),
+                            Value::from(r.is_translation_only),
+                        );
+                        r_obj.insert(
+                            "nodes_marked_seen".to_string(),
+                            Value::from(r.nodes_marked_seen),
+                        );
+                        r_obj.insert(
+                            "root_role".to_string(),
+                            r.root_role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        r_obj.insert(
+                            "root_test_id".to_string(),
+                            r.root_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(r_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "layout_request_build_roots".to_string(),
+                    Value::Array(layout_request_build_roots),
                 );
 
                 let top_layout_engine_solves = row

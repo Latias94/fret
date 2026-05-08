@@ -64,6 +64,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_paint_widget_exclusive_started: None,
+            debug_layout_request_build_roots: Vec::new(),
             debug_layout_engine_solves: Vec::new(),
             debug_layout_hotspots: Vec::new(),
             debug_layout_inclusive_hotspots: Vec::new(),

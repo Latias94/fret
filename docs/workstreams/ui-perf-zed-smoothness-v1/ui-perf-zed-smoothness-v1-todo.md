@@ -99,6 +99,15 @@ Conventions:
       `layout.engine_solve` `505/2174us`
     - Contract pressure: GPUI says reuse boundaries should avoid broad subtree churn; egui says any repeated pass/cache
       work must be explicitly accounted and tied to frame cause.
+    - [x] Add root-level request-build attribution so `layout_request_build_roots_time_us` can be split by root and
+      mode before another optimization is proposed.
+      - Bundle field: `debug.layout_request_build_roots[]`
+      - Stats/triage surface: `layout_request_build_roots` row output and internal `fret-diag`
+        `layout.build_roots_heavy.evidence.examples`
+      - Evidence: perf log entry `2026-05-08 19:30`; smoke bundle
+        `target/fret-diag/codex-request-build-roots-smoke/1778239301005/bundle.schema2.json`.
+    - [ ] Re-run the normalized resize-stress script and classify the top request-build roots as `mark_seen`,
+      `cached_flow_reuse`, or `build_flow` dominated.
   - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
     `Event::WindowResized` when unchanged.
     - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.

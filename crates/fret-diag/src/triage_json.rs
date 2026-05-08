@@ -252,6 +252,27 @@ pub(crate) fn triage_json_from_stats(
                 worst.layout_time_us,
             );
             if worst.layout_request_build_roots_time_us >= 2_000 || pct >= 20.0 {
+                let examples: Vec<serde_json::Value> = worst
+                    .layout_request_build_roots
+                    .iter()
+                    .take(4)
+                    .map(|r| {
+                        json!({
+                            "root_node": r.root_node,
+                            "root_kind": r.root_kind,
+                            "elapsed_us": r.elapsed_us,
+                            "mode": r.mode,
+                            "had_layout_engine_node": r.had_layout_engine_node,
+                            "layout_invalidated": r.layout_invalidated,
+                            "subtree_layout_dirty": r.subtree_layout_dirty,
+                            "needs_layout": r.needs_layout,
+                            "is_translation_only": r.is_translation_only,
+                            "nodes_marked_seen": r.nodes_marked_seen,
+                            "root_role": r.root_role,
+                            "root_test_id": r.root_test_id,
+                        })
+                    })
+                    .collect();
                 out.push(json!({
                     "code": "layout.build_roots_heavy",
                     "severity": "info",
@@ -263,6 +284,7 @@ pub(crate) fn triage_json_from_stats(
                         "sum_layout_request_build_roots_time_us": sum_layout_request_build_roots_time_us,
                         "sum_layout_time_us": sum_layout_time_us,
                         "sum_layout_request_build_roots_pct_of_layout": ratio_pct(sum_layout_request_build_roots_time_us, sum_layout_time_us),
+                        "examples": examples,
                     }
                 }));
             }
@@ -835,6 +857,24 @@ pub(crate) fn triage_json_from_stats(
                     "contained_layout": r.contained_layout,
                     "paint_replayed_ops": r.paint_replayed_ops,
                     "reuse_reason": r.reuse_reason,
+                    "root_role": r.root_role,
+                    "root_test_id": r.root_test_id,
+                })
+            }).collect::<Vec<_>>(),
+            "layout_request_build_roots": row.layout_request_build_roots.iter().take(10).map(|r| {
+                json!({
+                    "root_node": r.root_node,
+                    "root_kind": r.root_kind,
+                    "root_element": r.root_element,
+                    "root_element_kind": r.root_element_kind,
+                    "elapsed_us": r.elapsed_us,
+                    "mode": r.mode,
+                    "had_layout_engine_node": r.had_layout_engine_node,
+                    "layout_invalidated": r.layout_invalidated,
+                    "subtree_layout_dirty": r.subtree_layout_dirty,
+                    "needs_layout": r.needs_layout,
+                    "is_translation_only": r.is_translation_only,
+                    "nodes_marked_seen": r.nodes_marked_seen,
                     "root_role": r.root_role,
                     "root_test_id": r.root_test_id,
                 })

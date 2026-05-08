@@ -1279,14 +1279,18 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         engine: &mut crate::layout_engine::TaffyLayoutEngine,
         root: NodeId,
-    ) {
+    ) -> u32 {
         if engine.layout_id_for_node(root).is_none() {
-            return;
+            return 0;
         }
 
+        let mut marked = 0u32;
         self.scratch_node_stack.clear();
         self.scratch_node_stack.push(root);
         while let Some(node) = self.scratch_node_stack.pop() {
+            if engine.layout_id_for_node(node).is_some() {
+                marked = marked.saturating_add(1);
+            }
             engine.mark_seen_if_present(node);
             if let Some(entry) = self.nodes.get(node) {
                 for &child in &entry.children {
@@ -1294,6 +1298,48 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+        marked
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn debug_record_layout_request_build_root_if_enabled(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        root_kind: &'static str,
+        root: NodeId,
+        started: Option<Instant>,
+        mode: &'static str,
+        had_layout_engine_node: bool,
+        layout_invalidated: bool,
+        subtree_layout_dirty: bool,
+        needs_layout: bool,
+        is_translation_only: bool,
+        nodes_marked_seen: u32,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        let Some(started) = started else {
+            return;
+        };
+        let (root_element, root_element_kind, root_element_path) =
+            self.debug_resolve_layout_solve_root_label(app, window, root);
+        self.debug_record_layout_request_build_root(super::UiDebugLayoutRequestBuildRoot {
+            root,
+            root_kind,
+            root_element,
+            root_element_kind,
+            root_element_path,
+            elapsed: started.elapsed(),
+            mode,
+            had_layout_engine_node,
+            layout_invalidated,
+            subtree_layout_dirty,
+            needs_layout,
+            is_translation_only,
+            nodes_marked_seen,
+        });
     }
 
     fn layout_contained_view_cache_roots_if_needed(
@@ -1517,6 +1563,7 @@ impl<H: UiHost> UiTree<H> {
         }
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
+            let root_started = self.debug_enabled.then(Instant::now);
             let Some((
                 has_element,
                 layout_invalidated,
@@ -1535,10 +1582,7 @@ impl<H: UiHost> UiTree<H> {
             else {
                 continue;
             };
-            if !has_element {
-                continue;
-            }
-
+            let had_layout_engine_node = engine.layout_id_for_node(root).is_some();
             let needs_layout = layout_invalidated || prev_bounds != bounds;
             let is_translation_only = allow_translation_only_skip
                 && !layout_invalidated
@@ -1546,18 +1590,66 @@ impl<H: UiHost> UiTree<H> {
                 && prev_bounds.origin != bounds.origin
                 && measured != Size::default();
 
-            if engine.layout_id_for_node(root).is_some() && (!needs_layout || is_translation_only) {
-                self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
+            if !has_element {
+                self.debug_record_layout_request_build_root_if_enabled(
+                    app,
+                    window,
+                    "window",
+                    root,
+                    root_started,
+                    "skip_no_element",
+                    had_layout_engine_node,
+                    layout_invalidated,
+                    subtree_layout_dirty,
+                    needs_layout,
+                    is_translation_only,
+                    0,
+                );
+                continue;
+            }
+
+            if had_layout_engine_node && (!needs_layout || is_translation_only) {
+                let nodes_marked_seen =
+                    self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
+                self.debug_record_layout_request_build_root_if_enabled(
+                    app,
+                    window,
+                    "window",
+                    root,
+                    root_started,
+                    "mark_seen",
+                    had_layout_engine_node,
+                    layout_invalidated,
+                    subtree_layout_dirty,
+                    needs_layout,
+                    is_translation_only,
+                    nodes_marked_seen,
+                );
                 continue;
             }
             if reuse_cached_flow
-                && engine.layout_id_for_node(root).is_some()
+                && had_layout_engine_node
                 && !layout_invalidated
                 && !subtree_layout_dirty
             {
                 engine.set_viewport_root_override_size(root, bounds.size, sf);
                 self.note_interactive_resize_cached_flow_reuse();
-                self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
+                let nodes_marked_seen =
+                    self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
+                self.debug_record_layout_request_build_root_if_enabled(
+                    app,
+                    window,
+                    "window",
+                    root,
+                    root_started,
+                    "cached_flow_reuse",
+                    had_layout_engine_node,
+                    layout_invalidated,
+                    subtree_layout_dirty,
+                    needs_layout,
+                    is_translation_only,
+                    nodes_marked_seen,
+                );
             } else {
                 build_viewport_flow_subtree(
                     &mut engine,
@@ -1567,6 +1659,20 @@ impl<H: UiHost> UiTree<H> {
                     sf,
                     root,
                     bounds.size,
+                );
+                self.debug_record_layout_request_build_root_if_enabled(
+                    app,
+                    window,
+                    "window",
+                    root,
+                    root_started,
+                    "build_flow",
+                    had_layout_engine_node,
+                    layout_invalidated,
+                    subtree_layout_dirty,
+                    needs_layout,
+                    is_translation_only,
+                    0,
                 );
             }
         }
@@ -1726,6 +1832,7 @@ impl<H: UiHost> UiTree<H> {
             struct ViewportWorkItem {
                 root: NodeId,
                 bounds: Rect,
+                has_element: bool,
                 needs_layout: bool,
                 is_translation_only: bool,
                 layout_invalidated: bool,
@@ -1741,6 +1848,10 @@ impl<H: UiHost> UiTree<H> {
                 else {
                     continue;
                 };
+                let has_element = self
+                    .nodes
+                    .get(root)
+                    .is_some_and(|node| node.element.is_some());
 
                 let needs_layout = invalidated || prev_bounds != bounds;
                 let is_translation_only = !invalidated
@@ -1751,6 +1862,7 @@ impl<H: UiHost> UiTree<H> {
                 batch.push(ViewportWorkItem {
                     root,
                     bounds,
+                    has_element,
                     needs_layout,
                     is_translation_only,
                     layout_invalidated: invalidated,
@@ -1771,32 +1883,72 @@ impl<H: UiHost> UiTree<H> {
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
                 for item in &batch {
-                    if self
-                        .nodes
-                        .get(item.root)
-                        .is_none_or(|node| node.element.is_none())
-                    {
+                    let root_started = self.debug_enabled.then(Instant::now);
+                    let had_layout_engine_node = engine.layout_id_for_node(item.root).is_some();
+                    if !item.has_element {
+                        self.debug_record_layout_request_build_root_if_enabled(
+                            app,
+                            window,
+                            "viewport",
+                            item.root,
+                            root_started,
+                            "skip_no_element",
+                            had_layout_engine_node,
+                            item.layout_invalidated,
+                            item.subtree_layout_dirty,
+                            item.needs_layout,
+                            item.is_translation_only,
+                            0,
+                        );
                         continue;
                     }
-                    if engine.layout_id_for_node(item.root).is_some()
-                        && (!item.needs_layout || item.is_translation_only)
-                    {
-                        self.mark_layout_engine_seen_subtree_from_ui_children(
-                            &mut engine,
+                    if had_layout_engine_node && (!item.needs_layout || item.is_translation_only) {
+                        let nodes_marked_seen = self
+                            .mark_layout_engine_seen_subtree_from_ui_children(
+                                &mut engine,
+                                item.root,
+                            );
+                        self.debug_record_layout_request_build_root_if_enabled(
+                            app,
+                            window,
+                            "viewport",
                             item.root,
+                            root_started,
+                            "mark_seen",
+                            had_layout_engine_node,
+                            item.layout_invalidated,
+                            item.subtree_layout_dirty,
+                            item.needs_layout,
+                            item.is_translation_only,
+                            nodes_marked_seen,
                         );
                         continue;
                     }
                     if reuse_cached_flow
-                        && engine.layout_id_for_node(item.root).is_some()
+                        && had_layout_engine_node
                         && !item.layout_invalidated
                         && !item.subtree_layout_dirty
                     {
                         engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
                         self.note_interactive_resize_cached_flow_reuse();
-                        self.mark_layout_engine_seen_subtree_from_ui_children(
-                            &mut engine,
+                        let nodes_marked_seen = self
+                            .mark_layout_engine_seen_subtree_from_ui_children(
+                                &mut engine,
+                                item.root,
+                            );
+                        self.debug_record_layout_request_build_root_if_enabled(
+                            app,
+                            window,
+                            "viewport",
                             item.root,
+                            root_started,
+                            "cached_flow_reuse",
+                            had_layout_engine_node,
+                            item.layout_invalidated,
+                            item.subtree_layout_dirty,
+                            item.needs_layout,
+                            item.is_translation_only,
+                            nodes_marked_seen,
                         );
                     } else {
                         build_viewport_flow_subtree(
@@ -1807,6 +1959,20 @@ impl<H: UiHost> UiTree<H> {
                             sf,
                             item.root,
                             item.bounds.size,
+                        );
+                        self.debug_record_layout_request_build_root_if_enabled(
+                            app,
+                            window,
+                            "viewport",
+                            item.root,
+                            root_started,
+                            "build_flow",
+                            had_layout_engine_node,
+                            item.layout_invalidated,
+                            item.subtree_layout_dirty,
+                            item.needs_layout,
+                            item.is_translation_only,
+                            0,
                         );
                     }
                 }

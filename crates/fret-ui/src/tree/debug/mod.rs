@@ -22,8 +22,8 @@ pub use invalidation::{
 pub use layers::{PointerOcclusion, UiDebugHitTest, UiDebugLayerInfo, UiInputArbitrationSnapshot};
 pub use layout::{
     UiDebugLayoutEngineMeasureChildHotspot, UiDebugLayoutEngineMeasureHotspot,
-    UiDebugLayoutEngineSolve, UiDebugLayoutHotspot, UiDebugPaintWidgetHotspot,
-    UiDebugWidgetMeasureHotspot,
+    UiDebugLayoutEngineSolve, UiDebugLayoutHotspot, UiDebugLayoutRequestBuildRoot,
+    UiDebugPaintWidgetHotspot, UiDebugWidgetMeasureHotspot,
 };
 pub use scroll::{
     UiDebugScrollAxis, UiDebugScrollHandleChange, UiDebugScrollHandleChangeKind,

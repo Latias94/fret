@@ -182,6 +182,13 @@ impl<H: UiHost> UiTree<H> {
         self.debug_layout_engine_solves.as_slice()
     }
 
+    pub fn debug_layout_request_build_roots(&self) -> &[UiDebugLayoutRequestBuildRoot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_request_build_roots.as_slice()
+    }
+
     pub fn debug_layout_hotspots(&self) -> &[UiDebugLayoutHotspot] {
         if !self.debug_enabled {
             return &[];

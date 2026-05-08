@@ -58,6 +58,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
+    pub layout_request_build_roots: Vec<UiLayoutRequestBuildRootV1>,
+    #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     #[serde(default)]
     pub layout_hotspots: Vec<UiLayoutHotspotV1>,

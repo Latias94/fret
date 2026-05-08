@@ -10608,3 +10608,45 @@ Decision:
   considered acceptable.
 - The next resize slice should attribute direct layout-root / request-build churn before proposing another broad
   layout skip.
+
+## 2026-05-08 19:30 (code change)
+
+Question:
+- Can the current `layout_request_build_roots_time_us` hotspot be attributed per root before another resize-path
+  optimization is proposed?
+
+Change:
+- Export `debug.layout_request_build_roots[]` in UI diagnostics bundles.
+- Each record is top-N bounded and includes:
+  - `root_node`, `root_kind`, root element labels/path, and `elapsed_us`
+  - `mode`: `skip_no_element`, `mark_seen`, `cached_flow_reuse`, or `build_flow`
+  - `had_layout_engine_node`, `layout_invalidated`, `subtree_layout_dirty`, `needs_layout`,
+    `is_translation_only`, and `nodes_marked_seen`
+- Surface the same records in `fretboard diag stats` row output and in `triage` evidence for
+  `layout.build_roots_heavy` in the internal `fret-diag` triage JSON.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo check -p fret-ui`
+- `cargo check -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild` (`4/4` passed on the re-run with a longer outer
+  timeout)
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-request-build-roots-smoke --repeat 1 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle: `target/fret-diag/codex-request-build-roots-smoke/1778239301005/bundle.schema2.json`
+- `diag stats --verbose` summary:
+  - worst total/layout/request-build/layout-roots/solve/paint:
+    `8438/4606/390/3866/2218/3515us`
+  - top request-build root:
+    `root_kind=window`, `mode=build_flow`, `elapsed_us=197`, `subtree_layout_dirty=true`
+
+Decision:
+- This is diagnostic infrastructure only; it intentionally does not change layout behavior.
+- The smoke run shows request-build is now attributable but is not the dominant worst-frame slice in this sample.
+- The next normalized resize-stress run should inspect `layout_request_build_roots[]` before choosing between:
+  - narrowing expensive `mark_seen` traversal,
+  - reducing `build_flow` rebuild churn / stabilizing layout-engine identity, or
+  - pursuing the separate `layout_roots_time_us` full-walk hotspot.

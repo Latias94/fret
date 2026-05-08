@@ -1,4 +1,44 @@
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutRequestBuildRootV1 {
+    pub root_node: u64,
+    pub root_kind: String,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub root_element_kind: Option<String>,
+    #[serde(default)]
+    pub root_element_path: Option<String>,
+    pub elapsed_us: u64,
+    pub mode: String,
+    pub had_layout_engine_node: bool,
+    pub layout_invalidated: bool,
+    pub subtree_layout_dirty: bool,
+    pub needs_layout: bool,
+    pub is_translation_only: bool,
+    pub nodes_marked_seen: u32,
+}
+
+impl UiLayoutRequestBuildRootV1 {
+    fn from_record(r: &fret_ui::tree::UiDebugLayoutRequestBuildRoot) -> Self {
+        Self {
+            root_node: r.root.data().as_ffi(),
+            root_kind: r.root_kind.to_string(),
+            root_element: r.root_element.map(|id| id.0),
+            root_element_kind: r.root_element_kind.map(|s| s.to_string()),
+            root_element_path: r.root_element_path.clone(),
+            elapsed_us: r.elapsed.as_micros().min(u64::MAX as u128) as u64,
+            mode: r.mode.to_string(),
+            had_layout_engine_node: r.had_layout_engine_node,
+            layout_invalidated: r.layout_invalidated,
+            subtree_layout_dirty: r.subtree_layout_dirty,
+            needs_layout: r.needs_layout,
+            is_translation_only: r.is_translation_only,
+            nodes_marked_seen: r.nodes_marked_seen,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineSolveV1 {
     pub root_node: u64,
     #[serde(default)]

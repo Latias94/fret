@@ -1,9 +1,10 @@
 use super::{
     BundleStatsGlobalChangeHotspot, BundleStatsGlobalChangeUnobserved,
     BundleStatsLayoutEngineMeasureChildHotspot, BundleStatsLayoutEngineMeasureHotspot,
-    BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot, BundleStatsModelChangeHotspot,
-    BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
-    BundleStatsPaintWidgetHotspot, BundleStatsWidgetMeasureHotspot,
+    BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot, BundleStatsLayoutRequestBuildRoot,
+    BundleStatsModelChangeHotspot, BundleStatsModelChangeUnobserved,
+    BundleStatsPaintTextPrepareHotspot, BundleStatsPaintWidgetHotspot,
+    BundleStatsWidgetMeasureHotspot,
 };
 
 pub(super) fn snapshot_paint_widget_hotspots(
@@ -120,6 +121,89 @@ pub(super) fn snapshot_layout_hotspots(
         let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
         item.role = role;
         item.test_id = test_id;
+    }
+
+    out
+}
+
+pub(super) fn snapshot_layout_request_build_roots(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsLayoutRequestBuildRoot> {
+    let roots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("layout_request_build_roots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if roots.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
+
+    let mut out: Vec<BundleStatsLayoutRequestBuildRoot> = roots
+        .iter()
+        .take(max.max(1))
+        .map(|r| BundleStatsLayoutRequestBuildRoot {
+            root_node: r.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
+            root_kind: r
+                .get("root_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            root_element: r.get("root_element").and_then(|v| v.as_u64()),
+            root_element_kind: r
+                .get("root_element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            root_element_path: r
+                .get("root_element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            elapsed_us: r.get("elapsed_us").and_then(|v| v.as_u64()).unwrap_or(0),
+            mode: r
+                .get("mode")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            had_layout_engine_node: r
+                .get("had_layout_engine_node")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            layout_invalidated: r
+                .get("layout_invalidated")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            subtree_layout_dirty: r
+                .get("subtree_layout_dirty")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            needs_layout: r
+                .get("needs_layout")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            is_translation_only: r
+                .get("is_translation_only")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            nodes_marked_seen: r
+                .get("nodes_marked_seen")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            root_role: None,
+            root_test_id: None,
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.elapsed_us.cmp(&a.elapsed_us));
+    out.truncate(max);
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.root_node);
+        item.root_role = role;
+        item.root_test_id = test_id;
     }
 
     out
