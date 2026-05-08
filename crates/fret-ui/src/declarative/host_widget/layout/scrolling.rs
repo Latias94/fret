@@ -48,6 +48,9 @@ struct ScrollChildLayoutProfile {
     max_subtree_dirty_count: u32,
     max_nodes_visited: u32,
     max_nodes_performed: u32,
+    max_bounds_before: Option<Rect>,
+    max_bounds_after: Option<Rect>,
+    max_input_bounds: Rect,
 }
 
 impl ScrollChildLayoutProfile {
@@ -60,6 +63,9 @@ impl ScrollChildLayoutProfile {
         subtree_dirty_count: u32,
         nodes_visited: u32,
         nodes_performed: u32,
+        bounds_before: Option<Rect>,
+        bounds_after: Option<Rect>,
+        input_bounds: Rect,
     ) {
         let elapsed_us = elapsed.as_micros() as u64;
         self.nodes_visited = self.nodes_visited.saturating_add(nodes_visited);
@@ -72,7 +78,26 @@ impl ScrollChildLayoutProfile {
             self.max_subtree_dirty_count = subtree_dirty_count;
             self.max_nodes_visited = nodes_visited;
             self.max_nodes_performed = nodes_performed;
+            self.max_bounds_before = bounds_before;
+            self.max_bounds_after = bounds_after;
+            self.max_input_bounds = input_bounds;
         }
+    }
+
+    fn max_bounds_changed(&self) -> Option<bool> {
+        Some(self.max_bounds_before? != self.max_bounds_after?)
+    }
+
+    fn max_bounds_size_changed(&self) -> Option<bool> {
+        Some(self.max_bounds_before?.size != self.max_bounds_after?.size)
+    }
+
+    fn max_input_matches_before(&self) -> Option<bool> {
+        Some(self.max_bounds_before? == self.max_input_bounds)
+    }
+
+    fn max_input_size_matches_before(&self) -> Option<bool> {
+        Some(self.max_bounds_before?.size == self.max_input_bounds.size)
     }
 }
 
@@ -2153,11 +2178,13 @@ impl ElementHostWidget {
                     let child_invalidated = cx.tree.node_layout_invalidated(child);
                     let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(child);
                     let child_subtree_dirty_count = cx.tree.node_subtree_layout_dirty_count(child);
+                    let child_bounds_before = cx.tree.node_bounds(child);
                     let before = cx.tree.debug_stats();
                     let child_started = Instant::now();
                     let _ = cx.layout_in(child, content_bounds);
                     let child_elapsed = child_started.elapsed();
                     let after = cx.tree.debug_stats();
+                    let child_bounds_after = cx.tree.node_bounds(child);
                     child_layout_profile.record_child(
                         child,
                         child_elapsed,
@@ -2170,6 +2197,9 @@ impl ElementHostWidget {
                         after
                             .layout_nodes_performed
                             .saturating_sub(before.layout_nodes_performed),
+                        child_bounds_before,
+                        child_bounds_after,
+                        content_bounds,
                     );
                 } else {
                     let _ = cx.layout_in(child, content_bounds);
@@ -2623,11 +2653,13 @@ impl ElementHostWidget {
                             let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(child);
                             let child_subtree_dirty_count =
                                 cx.tree.node_subtree_layout_dirty_count(child);
+                            let child_bounds_before = cx.tree.node_bounds(child);
                             let before = cx.tree.debug_stats();
                             let child_started = Instant::now();
                             let _ = cx.layout_in(child, content_bounds);
                             let child_elapsed = child_started.elapsed();
                             let after = cx.tree.debug_stats();
+                            let child_bounds_after = cx.tree.node_bounds(child);
                             child_layout_profile.record_child(
                                 child,
                                 child_elapsed,
@@ -2640,6 +2672,9 @@ impl ElementHostWidget {
                                 after
                                     .layout_nodes_performed
                                     .saturating_sub(before.layout_nodes_performed),
+                                child_bounds_before,
+                                child_bounds_after,
+                                content_bounds,
                             );
                         } else {
                             let _ = cx.layout_in(child, content_bounds);
@@ -2726,6 +2761,17 @@ impl ElementHostWidget {
                         child_layout_profile.max_subtree_dirty_count,
                     layout_child_max_nodes_visited = child_layout_profile.max_nodes_visited,
                     layout_child_max_nodes_performed = child_layout_profile.max_nodes_performed,
+                    layout_child_max_bounds_changed =
+                        child_layout_profile.max_bounds_changed(),
+                    layout_child_max_bounds_size_changed =
+                        child_layout_profile.max_bounds_size_changed(),
+                    layout_child_max_input_matches_before =
+                        child_layout_profile.max_input_matches_before(),
+                    layout_child_max_input_size_matches_before =
+                        child_layout_profile.max_input_size_matches_before(),
+                    layout_child_max_bounds_before = ?child_layout_profile.max_bounds_before,
+                    layout_child_max_bounds_after = ?child_layout_profile.max_bounds_after,
+                    layout_child_max_input_bounds = ?child_layout_profile.max_input_bounds,
                     total_us = total.as_micros() as u64,
                     element_path = element_path.as_deref().unwrap_or("<unknown>"),
                     "scroll layout profile"

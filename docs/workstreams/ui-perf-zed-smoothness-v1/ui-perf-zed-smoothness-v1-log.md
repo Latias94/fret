@@ -10954,3 +10954,46 @@ Decision:
   policy change that keeps both stress and drag-jitter probes smooth on this Windows RTX 4090 sample.
 - Next resize work should focus on the cost of cached-flow frames themselves (`layout_roots_time_us` /
   `layout_engine_solve_time_us`), not on the already-deferred full rebuild.
+
+## 2026-05-08 23:16 (diagnostics change)
+
+Question:
+- Before attempting the narrower dirty-frontier / scroll post-layout optimization, can we tell whether the expensive
+  `Scroll` child-root `layout_in(...)` calls are applying real bounds changes or only resynchronizing an already
+  solved clean subtree?
+
+Change:
+- Extended the opt-in `FRET_SCROLL_LAYOUT_PROFILE=1` trace event with child-root bounds delta fields:
+  `layout_child_max_bounds_changed`, `layout_child_max_bounds_size_changed`,
+  `layout_child_max_input_matches_before`, `layout_child_max_input_size_matches_before`,
+  `layout_child_max_bounds_before`, `layout_child_max_bounds_after`, and `layout_child_max_input_bounds`.
+- The profiling-only fields are recorded around the existing child `layout_in(...)` calls in the first layout pass and
+  the corrected-content-bounds relayout pass. Runtime behavior is unchanged when profiling is disabled.
+
+Validation:
+- `cargo fmt -p fret-ui`
+- `cargo check -p fret-ui`
+- `cargo nextest run -p fret-ui scroll` (`147/147` passed)
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild` (`9/9` passed)
+- `cargo nextest run -p fret-ui view_cache` (`57/57` passed)
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this diagnostics change did not address unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-scroll-bounds-delta-profile-r2 --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-scroll-bounds-delta-profile-r2/1778253370943/bundle.schema2.json`
+- Top-frame summary: total/layout/solve/paint `8256/4318/2228/3604us`.
+- New trace fields were visible after rebuilding the release gallery binary:
+  - `ui-gallery-nav-scroll`: `layout_child_max_bounds_changed=true`,
+    `layout_child_max_bounds_size_changed=true`, before `0x0`, after/input `248x7364`.
+  - `ui-gallery-content-viewport` sample: before `0x0`, after/input roughly `752x1108`.
+
+Decision:
+- The new profile fields work, but the first heavy samples are fresh/initial mount frames, not the stable cached-flow
+  resize frames we need to optimize.
+- Next step: capture stable resize-frame scroll profiles or promote these fields into the diagnostics bundle so
+  bundle triage can sort by `layout_child_max_bounds_changed=false` / `input_matches_before=true`. Only then decide
+  whether a clean-child-root apply skip or a more specific scroll post-layout dirty frontier is justified.

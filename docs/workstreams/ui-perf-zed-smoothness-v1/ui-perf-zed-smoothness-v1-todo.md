@@ -1083,6 +1083,15 @@ Perf acceptance:
     from `8234/4505/3494us` to `8659/4692/3629us`.
   - Decision: do not promote the broad fast path; keep the next implementation pass focused on the narrower
     dirty-frontier / scroll post-layout branch.
+- [x] Add Scroll child-root bounds delta profiling before attempting the narrower dirty-frontier path.
+  - Fields: `layout_child_max_bounds_changed`, `layout_child_max_bounds_size_changed`,
+    `layout_child_max_input_matches_before`, `layout_child_max_input_size_matches_before`,
+    `layout_child_max_bounds_before`, `layout_child_max_bounds_after`, and `layout_child_max_input_bounds`.
+  - Evidence: perf log entry `2026-05-08 23:16`; rebuilt release smoke bundle
+    `target/fret-diag/codex-scroll-bounds-delta-profile-r2/1778253370943/bundle.schema2.json`.
+  - Result: the first heavy Scroll profile samples are initial/fresh mount frames where the child root changes from
+    zero bounds to content bounds; next attribution should capture stable resize frames and separate real geometry
+    deltas from clean subtree state sync.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.
