@@ -1275,7 +1275,7 @@ impl<H: UiHost> UiTree<H> {
         self.viewport_roots.clear();
     }
 
-    fn mark_layout_engine_seen_subtree_from_ui_children(
+    pub(super) fn mark_layout_engine_seen_subtree_from_ui_children(
         &mut self,
         engine: &mut crate::layout_engine::TaffyLayoutEngine,
         root: NodeId,

@@ -4,6 +4,46 @@ use crate::layout_constraints::AvailableSpace;
 use crate::layout_constraints::LayoutSize;
 
 impl<H: UiHost> UiTree<H> {
+    fn build_or_reuse_barrier_flow_subtree_for_resize(
+        &mut self,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        app: &mut H,
+        window: AppWindowId,
+        scale_factor: f32,
+        root: NodeId,
+        root_size: Size,
+    ) {
+        let reuse_cached_flow = self.interactive_resize_active();
+        let root_layout_invalidated = self
+            .nodes
+            .get(root)
+            .is_some_and(|node| node.invalidation.layout);
+        let root_subtree_layout_dirty = self.node_subtree_layout_dirty(root);
+        if reuse_cached_flow
+            && engine.layout_id_for_node(root).is_some()
+            && !root_layout_invalidated
+            && !root_subtree_layout_dirty
+        {
+            // Barrier child roots are already explicit, authoritative layout roots. Reusing their
+            // cached flow during resize only updates the local containing block; dirty descendants
+            // still rebuild through normal invalidation. Do not arm the global post-resize rebuild
+            // flag here, because that flag invalidates the whole window root and turns steady
+            // resize samples into full-tree settle spikes.
+            engine.set_viewport_root_override_size(root, root_size, scale_factor);
+            self.mark_layout_engine_seen_subtree_from_ui_children(engine, root);
+        } else {
+            crate::layout_engine::build_viewport_flow_subtree(
+                engine,
+                app,
+                &*self,
+                window,
+                scale_factor,
+                root,
+                root_size,
+            );
+        }
+    }
+
     pub(crate) fn record_layout_engine_widget_fallback_solve(
         &mut self,
         app: &mut H,
@@ -83,10 +123,9 @@ impl<H: UiHost> UiTree<H> {
         engine.set_measure_profiling_enabled(
             self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
         );
-        crate::layout_engine::build_viewport_flow_subtree(
+        self.build_or_reuse_barrier_flow_subtree_for_resize(
             &mut engine,
             app,
-            &*self,
             window,
             scale_factor,
             root,
@@ -254,10 +293,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_enabled && crate::runtime_config::ui_runtime_config().layout_profile,
         );
         for &(root, root_bounds) in &batch {
-            crate::layout_engine::build_viewport_flow_subtree(
+            self.build_or_reuse_barrier_flow_subtree_for_resize(
                 &mut engine,
                 app,
-                &*self,
                 window,
                 scale_factor,
                 root,

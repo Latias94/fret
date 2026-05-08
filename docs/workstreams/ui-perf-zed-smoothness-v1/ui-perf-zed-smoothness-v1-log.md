@@ -10398,3 +10398,48 @@ Decision:
 - Do not pursue the simple `Viewport` intrinsic-mode tweak for this hotspot.
 - The next viable resize-stress optimization needs to target either scroll barrier-child solve cost or repeated content
   child layout under window-size churn, with a correctness proof that scroll extents remain authoritative.
+
+## 2026-05-08 13:52 (no code change)
+
+Question:
+- Is the current resize-stress hotspot caused by the inner view-cache boundary semantics, or by the general scroll/layout
+  solve path under resize?
+
+Rejected experiments:
+- Marking the inner view-cache cached subtree as contained layout did not improve the resize-stress sample.
+  Evidence: `target/fret-diag/codex-resize-stress-inner-contained-layout/1778219448217/bundle.schema2.json`
+  reported `top_total/layout/solve/paint=9970/5800/2137/3748us`, essentially matching the stable baseline.
+- Disabling the inner view-cache with `FRET_UI_GALLERY_VIEW_CACHE_INNER=0` also did not improve the sample.
+  Evidence: `target/fret-diag/codex-resize-stress-inner-cache-off/1778219482322/bundle.schema2.json`
+  reported `top_total/layout/solve/paint=9765/5892/2187/3553us`.
+
+Decision:
+- Treat the inner view-cache boundary as disproven for this hotspot. The next investigation should stay at the
+  mechanism layer: scroll barrier solve, child layout under resize, and authoritative post-layout scroll extents.
+
+## 2026-05-08 14:28 (code change)
+
+Change:
+- Extended the interactive-resize cached-flow reuse path to barrier child-root solves so clean `ScrollArea` barrier roots
+  can reuse their existing Taffy flow identity during resize while still rebuilding dirty descendants normally.
+- Kept the change local to `crates/fret-ui/src/tree/layout/solve.rs` and reused the existing
+  `build_viewport_flow_subtree` / `set_viewport_root_override_size` contract instead of introducing new layout semantics.
+
+Rejected follow-up:
+- Do not arm the global post-resize rebuild flag from barrier-root cached-flow reuse. That caused the stable resize tail
+  to jump from `9.55ms` to `14.99ms` on the same `ui-gallery-window-resize-stress-steady` run because the whole window
+  was forced into a settle rebuild.
+
+Perf evidence:
+- Regression attempt bundle: `target/fret-diag/codex-resize-stress-barrier-cached-flow/1778220761216/bundle.schema2.json`
+  (`top_total/layout/solve/paint=14991/11149/470/3726us`)
+- Final bundle: `target/fret-diag/codex-resize-stress-barrier-cached-flow-local/1778221371593/bundle.schema2.json`
+  (`top_total/layout/solve/paint=8559/4530/2224/3716us`)
+- Baseline bundle for comparison:
+  `target/fret-diag/codex-ui-gallery-steady-after-vlist-input/1778217234603/bundle.schema2.json`
+  (`top_total/layout/solve/paint=10035/6059/2299/3654us`)
+
+Decision:
+- Keep the barrier cached-flow reuse, but do not let it trigger a global resize-settle rebuild. The next step is to
+  inspect whether the remaining `layout_children_us` on the scroll barrier can be reduced further without weakening
+  scroll extent correctness.
