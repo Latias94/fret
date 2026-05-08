@@ -10,6 +10,12 @@ impl<H: UiHost> UiTree<H> {
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
         if inv.layout {
             self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+            self.debug_note_layout_dirty_source(
+                id,
+                id,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
         }
         id
     }
@@ -46,6 +52,12 @@ impl<H: UiHost> UiTree<H> {
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
         if inv.layout {
             self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+            self.debug_note_layout_dirty_source(
+                id,
+                id,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
         }
         id
     }
@@ -71,6 +83,9 @@ impl<H: UiHost> UiTree<H> {
             layout_before,
             layout_after,
         );
+        if layout_before && !layout_after {
+            self.debug_clear_layout_dirty_source(node);
+        }
     }
 
     #[cfg(test)]
@@ -121,6 +136,16 @@ impl<H: UiHost> UiTree<H> {
             layout_before,
             layout_after,
         );
+        if !layout_before && layout_after {
+            self.debug_note_layout_dirty_source(
+                node,
+                node,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
+        } else if layout_before && !layout_after {
+            self.debug_clear_layout_dirty_source(node);
+        }
 
         if should_mark_contained_cache_root_dirty {
             self.mark_cache_root_dirty(
@@ -320,21 +345,35 @@ impl<H: UiHost> UiTree<H> {
 
         let mut propagate = false;
         let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
+        let mut layout_transition: Option<(bool, bool)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
             let prev = n.invalidation;
             n.children = children;
             let layout_before = n.invalidation.layout;
             n.invalidation.mark(Invalidation::HitTest);
+            let layout_after = n.invalidation.layout;
             record_layout_invalidation_transition(
                 &mut self.layout_invalidations_count,
                 layout_before,
-                n.invalidation.layout,
+                layout_after,
             );
             counter_update = Some((prev, n.invalidation));
+            layout_transition = Some((layout_before, layout_after));
             propagate = true;
         }
         if let Some((prev, next)) = counter_update {
             self.update_invalidation_counters(prev, next);
+        }
+        if let Some((layout_before, layout_after)) = layout_transition
+            && !layout_before
+            && layout_after
+        {
+            self.debug_note_layout_dirty_source(
+                parent,
+                parent,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
         }
 
         self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);

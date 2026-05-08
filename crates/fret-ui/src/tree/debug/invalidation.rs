@@ -161,3 +161,10 @@ pub struct UiDebugInvalidationWalk {
     pub walked_nodes: u32,
     pub truncated_at: Option<NodeId>,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub(in crate::tree) struct UiDebugLayoutDirtySource {
+    pub source_root: NodeId,
+    pub source: UiDebugInvalidationSource,
+    pub detail: UiDebugInvalidationDetail,
+}

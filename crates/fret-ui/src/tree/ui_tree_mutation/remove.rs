@@ -390,6 +390,7 @@ impl<H: UiHost> UiTree<H> {
                     true,
                     false,
                 );
+                self.debug_clear_layout_dirty_source(node);
             }
             self.nodes.remove(node);
             self.observed_in_layout.remove_node(node);

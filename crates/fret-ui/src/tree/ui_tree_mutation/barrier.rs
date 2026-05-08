@@ -131,20 +131,34 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
+        let mut layout_transition: Option<(bool, bool)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
             let prev = n.invalidation;
             n.children = children;
             let layout_before = n.invalidation.layout;
             n.invalidation.mark(Invalidation::HitTest);
+            let layout_after = n.invalidation.layout;
             record_layout_invalidation_transition(
                 &mut self.layout_invalidations_count,
                 layout_before,
-                n.invalidation.layout,
+                layout_after,
             );
             counter_update = Some((prev, n.invalidation));
+            layout_transition = Some((layout_before, layout_after));
         }
         if let Some((prev, next)) = counter_update {
             self.update_invalidation_counters(prev, next);
+        }
+        if let Some((layout_before, layout_after)) = layout_transition
+            && !layout_before
+            && layout_after
+        {
+            self.debug_note_layout_dirty_source(
+                parent,
+                parent,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
         }
 
         // Structural changes must invalidate paint/hit-testing so routing and rendering see the
@@ -200,6 +214,9 @@ impl<H: UiHost> UiTree<H> {
                 layout_before,
                 layout_after,
             );
+            if !layout_before && layout_after {
+                self.debug_note_layout_dirty_source(parent, parent, source, detail);
+            }
         }
 
         // Ensure routing/painting sees the follow-up frame, but avoid bubbling a full relayout.

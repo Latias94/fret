@@ -91,6 +91,16 @@ impl<H: UiHost> UiTree<H> {
             layout_before,
             layout_after,
         );
+        if !layout_before && layout_after {
+            self.debug_note_layout_dirty_source(
+                node,
+                node,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
+        } else if layout_before && !layout_after {
+            self.debug_clear_layout_dirty_source(node);
+        }
         self.update_invalidation_counters(prev, next);
     }
 

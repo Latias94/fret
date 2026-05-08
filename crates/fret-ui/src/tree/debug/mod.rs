@@ -21,9 +21,9 @@ pub use invalidation::{
 };
 pub use layers::{PointerOcclusion, UiDebugHitTest, UiDebugLayerInfo, UiInputArbitrationSnapshot};
 pub use layout::{
-    UiDebugLayoutEngineMeasureChildHotspot, UiDebugLayoutEngineMeasureHotspot,
-    UiDebugLayoutEngineSolve, UiDebugLayoutHotspot, UiDebugLayoutRequestBuildRoot,
-    UiDebugPaintWidgetHotspot, UiDebugWidgetMeasureHotspot,
+    UiDebugLayoutDirtyDescendant, UiDebugLayoutEngineMeasureChildHotspot,
+    UiDebugLayoutEngineMeasureHotspot, UiDebugLayoutEngineSolve, UiDebugLayoutHotspot,
+    UiDebugLayoutRequestBuildRoot, UiDebugPaintWidgetHotspot, UiDebugWidgetMeasureHotspot,
 };
 pub use scroll::{
     UiDebugScrollAxis, UiDebugScrollHandleChange, UiDebugScrollHandleChangeKind,
@@ -55,4 +55,5 @@ pub(in crate::tree) use internal::{
     DebugLayoutStackFrame, DebugPaintStackFrame, DebugWidgetMeasureStackFrame,
 };
 pub(in crate::tree) use invalidation::UiDebugHoverDeclarativeInvalidationCounts;
+pub(in crate::tree) use invalidation::UiDebugLayoutDirtySource;
 pub(in crate::tree) use view_cache::DebugViewCacheRootRecord;

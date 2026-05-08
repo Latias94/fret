@@ -1628,7 +1628,17 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                     "descendant_layout_dirty_count": 3,
                     "needs_layout": true,
                     "is_translation_only": false,
-                    "nodes_marked_seen": 0
+                    "nodes_marked_seen": 0,
+                    "dirty_descendants": [{
+                        "node": 43,
+                        "element": 101,
+                        "element_kind": "Scroll",
+                        "element_path": "root/scroll",
+                        "subtree_layout_dirty_count": 1,
+                        "source_root_node": 43,
+                        "source": "other",
+                        "detail": "scroll_handle_layout"
+                    }]
                 }]
             }
             }]
@@ -1714,6 +1724,19 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.as_u64()),
         Some(3)
     );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("layout_request_build_roots"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("dirty_descendants"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("detail"))
+            .and_then(|v| v.as_str()),
+        Some("scroll_handle_layout")
+    );
     let build_roots_examples = triage
         .get("hints")
         .and_then(|v| v.as_array())
@@ -1730,6 +1753,16 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("elapsed_us"))
             .and_then(|v| v.as_u64()),
         Some(2_100)
+    );
+    assert_eq!(
+        build_roots_examples
+            .first()
+            .and_then(|v| v.get("dirty_descendants"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("source"))
+            .and_then(|v| v.as_str()),
+        Some("other")
     );
 }
 

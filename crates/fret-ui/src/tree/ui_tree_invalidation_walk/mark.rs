@@ -146,6 +146,7 @@ impl<H: UiHost> UiTree<H> {
         let stop_at_view_cache = self.view_cache_active();
         let agg_enabled = self.subtree_layout_dirty_aggregation_enabled();
         self.record_invalidation_walk_call(source);
+        let source_root = node;
         let mut current = Some(node);
         let mut hit_cache_root: Option<NodeId> = None;
         let root_element = self.nodes.get(node).and_then(|n| n.element);
@@ -244,6 +245,11 @@ impl<H: UiHost> UiTree<H> {
             if let Some((prev, next)) = counter_update {
                 self.update_invalidation_counters(prev, next);
             }
+            if self_delta > 0 {
+                self.debug_note_layout_dirty_source(id, source_root, source, detail);
+            } else if self_delta < 0 {
+                self.debug_clear_layout_dirty_source(id);
+            }
 
             if rebuild_subtree_layout_dirty {
                 self.repair_subtree_layout_dirty_counts_from(id);
@@ -334,6 +340,11 @@ impl<H: UiHost> UiTree<H> {
                     self.note_layout_invalidation_transition_for_subtree_aggregation(
                         id, before, after,
                     );
+                    if !before && after {
+                        self.debug_note_layout_dirty_source(id, source_root, source, detail);
+                    } else if before && !after {
+                        self.debug_clear_layout_dirty_source(id);
+                    }
                 }
                 if let Some((prev, next)) = counter_update {
                     self.update_invalidation_counters(prev, next);
@@ -390,6 +401,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.record_invalidation_walk_call(source);
+        let source_root = node;
 
         let mut current = Some(node);
         let mut hit_cache_root: Option<NodeId> = None;
@@ -498,6 +510,12 @@ impl<H: UiHost> UiTree<H> {
                 break;
             };
 
+            if self_delta > 0 {
+                self.debug_note_layout_dirty_source(id, source_root, source, detail);
+            } else if self_delta < 0 {
+                self.debug_clear_layout_dirty_source(id);
+            }
+
             if rebuild_subtree_layout_dirty {
                 self.repair_subtree_layout_dirty_counts_from(id);
             }
@@ -588,6 +606,11 @@ impl<H: UiHost> UiTree<H> {
                         self.note_layout_invalidation_transition_for_subtree_aggregation(
                             id, before, after,
                         );
+                        if !before && after {
+                            self.debug_note_layout_dirty_source(id, source_root, source, detail);
+                        } else if before && !after {
+                            self.debug_clear_layout_dirty_source(id);
+                        }
                     }
                     if let Some((prev, next)) = counter_update {
                         self.update_invalidation_counters(prev, next);

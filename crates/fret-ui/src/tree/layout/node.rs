@@ -345,6 +345,9 @@ impl<H: UiHost> UiTree<H> {
                     layout_before,
                     layout_after,
                 );
+                if layout_before && !layout_after {
+                    self.debug_clear_layout_dirty_source(node);
+                }
                 self.update_invalidation_counters(prev, next);
                 // Main-pass layout can consume a cache root's scheduling-only layout dirty marker
                 // before the contained-relayout pass ever looks at it (for example, initial mount

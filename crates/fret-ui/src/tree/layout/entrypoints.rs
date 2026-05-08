@@ -1326,6 +1326,8 @@ impl<H: UiHost> UiTree<H> {
         };
         let (root_element, root_element_kind, root_element_path) =
             self.debug_resolve_layout_solve_root_label(app, window, root);
+        let dirty_descendants =
+            self.debug_collect_layout_dirty_descendant_samples(app, window, root, 4);
         self.debug_record_layout_request_build_root(super::UiDebugLayoutRequestBuildRoot {
             root,
             root_kind,
@@ -1343,7 +1345,115 @@ impl<H: UiHost> UiTree<H> {
             needs_layout,
             is_translation_only,
             nodes_marked_seen,
+            dirty_descendants,
         });
+    }
+
+    fn debug_collect_layout_dirty_descendant_samples(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+        max_samples: usize,
+    ) -> Vec<super::UiDebugLayoutDirtyDescendant> {
+        if !self.debug_enabled
+            || max_samples == 0
+            || !self.subtree_layout_dirty_aggregation_enabled()
+        {
+            return Vec::new();
+        }
+
+        let mut stack: Vec<NodeId> = Vec::new();
+        if let Some(entry) = self.nodes.get(root) {
+            for &child in entry.children.iter().rev() {
+                if self.node_subtree_layout_dirty_count(child) > 0 {
+                    stack.push(child);
+                }
+            }
+        }
+
+        let mut samples = Vec::new();
+        while let Some(node) = stack.pop() {
+            let (layout_invalidated, subtree_layout_dirty_count) = {
+                let Some(entry) = self.nodes.get(node) else {
+                    continue;
+                };
+                if entry.subtree_layout_dirty_count == 0 {
+                    continue;
+                }
+                for &child in entry.children.iter().rev() {
+                    if self.node_subtree_layout_dirty_count(child) > 0 {
+                        stack.push(child);
+                    }
+                }
+                (entry.invalidation.layout, entry.subtree_layout_dirty_count)
+            };
+
+            if !layout_invalidated {
+                continue;
+            }
+
+            let (source_root, source, detail) =
+                self.debug_layout_invalidation_origin_for_node(node);
+            let (element, element_kind, element_path) =
+                self.debug_resolve_layout_solve_root_label(app, window, node);
+            samples.push(super::UiDebugLayoutDirtyDescendant {
+                node,
+                element,
+                element_kind,
+                element_path,
+                subtree_layout_dirty_count,
+                source_root,
+                source,
+                detail,
+            });
+            if samples.len() >= max_samples {
+                break;
+            }
+        }
+        samples
+    }
+
+    fn debug_layout_invalidation_origin_for_node(
+        &self,
+        node: NodeId,
+    ) -> (
+        Option<NodeId>,
+        Option<super::UiDebugInvalidationSource>,
+        Option<super::UiDebugInvalidationDetail>,
+    ) {
+        if let Some(source) = self.debug_layout_dirty_sources.get(&node) {
+            return (
+                Some(source.source_root),
+                Some(source.source),
+                Some(source.detail),
+            );
+        }
+        for walk in self.debug_invalidation_walks.iter().rev() {
+            if !matches!(walk.inv, Invalidation::Layout | Invalidation::HitTest) {
+                continue;
+            }
+            if self.debug_node_is_descendant_or_self(walk.root, node) {
+                return (Some(walk.root), Some(walk.source), Some(walk.detail));
+            }
+        }
+        (None, None, None)
+    }
+
+    fn debug_node_is_descendant_or_self(&self, node: NodeId, ancestor: NodeId) -> bool {
+        let mut current = Some(node);
+        let mut remaining = self.nodes.len().saturating_add(1);
+        while let Some(id) = current {
+            if remaining == 0 {
+                return false;
+            }
+            remaining = remaining.saturating_sub(1);
+            if id == ancestor {
+                return true;
+            }
+            current = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        false
     }
 
     fn layout_contained_view_cache_roots_if_needed(
@@ -1482,6 +1592,9 @@ impl<H: UiHost> UiTree<H> {
                     layout_before,
                     layout_after,
                 );
+                if layout_before && !layout_after {
+                    self.debug_clear_layout_dirty_source(root);
+                }
                 self.update_invalidation_counters(prev, next);
             }
             // Contained relayout is a layout-only repair path. It may consume a layout-invalidated

@@ -10746,3 +10746,47 @@ Decision:
   suspicion. The new count evidence shows at least this smoke sample is descendant-dirty.
 - The next slice should identify the dirty descendant nodes/source details inside the top roots, then correlate them
   with the Scroll/content/view-cache `layout_roots_time_us` hotspot before changing layout behavior.
+
+## 2026-05-08 21:00 (code change)
+
+Question:
+- Which dirty descendant nodes inside the top request-build roots are keeping resize frames from taking the clean
+  cached-flow path?
+
+Change:
+- Added bounded `dirty_descendants[]` samples under each `debug.layout_request_build_roots[]` record.
+- Each sample includes node id, element id/kind/path, `subtree_layout_dirty_count`, `source_root_node`, `source`, and
+  `detail`.
+- Added a debug-only `debug_layout_dirty_sources` map so source attribution survives across frames until layout
+  consumes the dirty bit. This avoids adding per-node source fields to the hot `Node` storage.
+- Surfaced the nested samples through `fretboard diag stats`, triage JSON, and the `layout.build_roots_heavy`
+  evidence path.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui layout_request_build_roots_sample_dirty_descendant_sources`
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-request-build-roots-dirty-desc-final-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle: `target/fret-diag/codex-request-build-roots-dirty-desc-final-smoke/1778245207520/bundle.schema2.json`
+- Smoke result:
+  - top total/layout/solve/paint: `15787/8574/3712/6751us`
+  - top request-build root: `mode=build_flow`, `invalidated=false`, `subtree_dirty=true`, `dirty_count=4`,
+    `descendant_dirty=4`
+  - sampled dirty descendants:
+    - `Opacity`, `dirty_count=2`, `source=other`, `detail=unknown`
+    - `Scrollbar`, `dirty_count=1`, `source=other`, `detail=unknown`
+    - `Opacity`, `dirty_count=2`, `source=other`, `detail=unknown`
+    - `Scrollbar`, `dirty_count=1`, `source=other`, `detail=unknown`
+
+Decision:
+- This still argues against a root-only cached-flow reuse: the root is clean, but concrete descendants remain dirty.
+- The next optimization slice should not change layout behavior yet. First refine the `unknown` source details for the
+  sampled `Opacity` / `Scrollbar` nodes so we can distinguish scroll-handle authored layout from structural child
+  rewrites, view-cache repair, or generic local invalidation.

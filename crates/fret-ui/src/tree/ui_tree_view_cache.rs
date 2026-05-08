@@ -395,6 +395,14 @@ impl<H: UiHost> UiTree<H> {
                 layout_before,
                 layout_after,
             );
+            if !layout_before && layout_after {
+                self.debug_note_layout_dirty_source(
+                    id,
+                    root,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                );
+            }
             self.update_invalidation_counters(prev, next);
         }
 

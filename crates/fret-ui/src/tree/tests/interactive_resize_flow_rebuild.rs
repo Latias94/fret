@@ -495,3 +495,63 @@ fn interactive_resize_layout_advances_resize_state_without_deferred_rebuild() {
         "settled layout frame",
     );
 }
+
+#[test]
+fn layout_request_build_roots_sample_dirty_descendant_sources() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let leaf = ui.create_node_for_element(crate::elements::GlobalElementId(3), TestStack);
+    let child = ui.create_node_for_element(crate::elements::GlobalElementId(2), TestStack);
+    let root = ui.create_node_for_element(crate::elements::GlobalElementId(1), TestStack);
+    ui.set_children(child, vec![leaf]);
+    ui.set_children(root, vec![child]);
+    ui.set_root(root);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for node in [leaf, child, root] {
+        ui.test_clear_node_invalidations(node);
+    }
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.invalidate_with_source_and_detail(
+        leaf,
+        Invalidation::Layout,
+        UiDebugInvalidationSource::Other,
+        UiDebugInvalidationDetail::ScrollHandleLayout,
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let root_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|r| r.root == root)
+        .expect("request-build record for root");
+    let sample = root_record
+        .dirty_descendants
+        .iter()
+        .find(|d| d.source_root == Some(leaf))
+        .expect("dirty descendant sample attributed to leaf invalidation");
+
+    assert_eq!(
+        sample.detail,
+        Some(UiDebugInvalidationDetail::ScrollHandleLayout)
+    );
+    assert_eq!(sample.source, Some(UiDebugInvalidationSource::Other));
+    assert!(
+        sample.node == child || sample.node == leaf,
+        "sample should point at a dirty descendant, got {:?}",
+        sample.node
+    );
+    assert_eq!(root_record.descendant_layout_dirty_count, 2);
+}

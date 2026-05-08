@@ -1,10 +1,10 @@
 use super::{
     BundleStatsGlobalChangeHotspot, BundleStatsGlobalChangeUnobserved,
-    BundleStatsLayoutEngineMeasureChildHotspot, BundleStatsLayoutEngineMeasureHotspot,
-    BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot, BundleStatsLayoutRequestBuildRoot,
-    BundleStatsModelChangeHotspot, BundleStatsModelChangeUnobserved,
-    BundleStatsPaintTextPrepareHotspot, BundleStatsPaintWidgetHotspot,
-    BundleStatsWidgetMeasureHotspot,
+    BundleStatsLayoutDirtyDescendant, BundleStatsLayoutEngineMeasureChildHotspot,
+    BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot,
+    BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
+    BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
+    BundleStatsPaintWidgetHotspot, BundleStatsWidgetMeasureHotspot,
 };
 
 pub(super) fn snapshot_paint_widget_hotspots(
@@ -202,6 +202,45 @@ pub(super) fn snapshot_layout_request_build_roots(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32,
+            dirty_descendants: r
+                .get("dirty_descendants")
+                .and_then(|v| v.as_array())
+                .map(|items| {
+                    items
+                        .iter()
+                        .take(4)
+                        .map(|d| BundleStatsLayoutDirtyDescendant {
+                            node: d.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+                            element: d.get("element").and_then(|v| v.as_u64()),
+                            element_kind: d
+                                .get("element_kind")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            element_path: d
+                                .get("element_path")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            subtree_layout_dirty_count: d
+                                .get("subtree_layout_dirty_count")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0)
+                                .min(u32::MAX as u64)
+                                as u32,
+                            source_root_node: d.get("source_root_node").and_then(|v| v.as_u64()),
+                            source: d
+                                .get("source")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            detail: d
+                                .get("detail")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            role: None,
+                            test_id: None,
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
             root_role: None,
             root_test_id: None,
         })
@@ -214,6 +253,11 @@ pub(super) fn snapshot_layout_request_build_roots(
         let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.root_node);
         item.root_role = role;
         item.root_test_id = test_id;
+        for dirty in &mut item.dirty_descendants {
+            let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(dirty.node);
+            dirty.role = role;
+            dirty.test_id = test_id;
+        }
     }
 
     out

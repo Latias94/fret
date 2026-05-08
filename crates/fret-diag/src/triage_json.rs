@@ -272,6 +272,20 @@ pub(crate) fn triage_json_from_stats(
                             "nodes_marked_seen": r.nodes_marked_seen,
                             "root_role": r.root_role,
                             "root_test_id": r.root_test_id,
+                            "dirty_descendants": r.dirty_descendants.iter().take(4).map(|d| {
+                                json!({
+                                    "node": d.node,
+                                    "element": d.element,
+                                    "element_kind": d.element_kind,
+                                    "element_path": d.element_path,
+                                    "subtree_layout_dirty_count": d.subtree_layout_dirty_count,
+                                    "source_root_node": d.source_root_node,
+                                    "source": d.source,
+                                    "detail": d.detail,
+                                    "role": d.role,
+                                    "test_id": d.test_id,
+                                })
+                            }).collect::<Vec<_>>(),
                         })
                     })
                     .collect();
@@ -881,6 +895,20 @@ pub(crate) fn triage_json_from_stats(
                     "nodes_marked_seen": r.nodes_marked_seen,
                     "root_role": r.root_role,
                     "root_test_id": r.root_test_id,
+                    "dirty_descendants": r.dirty_descendants.iter().take(4).map(|d| {
+                        json!({
+                            "node": d.node,
+                            "element": d.element,
+                            "element_kind": d.element_kind,
+                            "element_path": d.element_path,
+                            "subtree_layout_dirty_count": d.subtree_layout_dirty_count,
+                            "source_root_node": d.source_root_node,
+                            "source": d.source,
+                            "detail": d.detail,
+                            "role": d.role,
+                            "test_id": d.test_id,
+                        })
+                    }).collect::<Vec<_>>(),
                 })
             }).collect::<Vec<_>>(),
             "top_layout_engine_solves": row.top_layout_engine_solves.iter().take(4).map(|s| {

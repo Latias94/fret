@@ -121,10 +121,17 @@ Conventions:
       - Result: the smoke sample's top heavy root reports `layout_invalidated=false`, `subtree_dirty=true`,
         `subtree_layout_dirty_count=4`, and `descendant_layout_dirty_count=4`, so the next optimization should not
         assume a root-only invalidation.
-    - [ ] Attribute the dirty descendant sources inside the top request-build roots before proposing another
+    - [x] Attribute the dirty descendant sources inside the top request-build roots before proposing another
       cached-flow or dirty-frontier optimization.
-      - Target evidence: top dirty descendants with element kind/path and invalidation source/detail, correlated with
-        Scroll/content/view-cache layout hotspots.
+      - Fields: `dirty_descendants[]` under each `debug.layout_request_build_roots[]` entry, with element kind/path,
+        `subtree_layout_dirty_count`, `source_root_node`, `source`, and `detail`.
+      - Evidence: perf log entry `2026-05-08 21:00`; smoke bundle
+        `target/fret-diag/codex-request-build-roots-dirty-desc-final-smoke/1778245207520/bundle.schema2.json`.
+      - Result: the top root is still descendant-dirty, and the sampled dirty descendants are `Opacity` /
+        `Scrollbar` nodes with `source=other` and `detail=unknown`.
+    - [ ] Refine `unknown` dirty-source details for the sampled `Opacity` / `Scrollbar` descendants.
+      - Target: distinguish scroll-handle authored layout, structural child rewrites, view-cache repair, and generic
+        local invalidations before changing cached-flow or dirty-frontier behavior.
   - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
     `Event::WindowResized` when unchanged.
     - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.

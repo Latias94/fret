@@ -450,6 +450,20 @@ pub(super) struct BundleStatsSnapshotRow {
 }
 
 #[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsLayoutDirtyDescendant {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) element_path: Option<String>,
+    pub(super) subtree_layout_dirty_count: u32,
+    pub(super) source_root_node: Option<u64>,
+    pub(super) source: Option<String>,
+    pub(super) detail: Option<String>,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsLayoutRequestBuildRoot {
     pub(super) root_node: u64,
     pub(super) root_kind: Option<String>,
@@ -468,6 +482,7 @@ pub(super) struct BundleStatsLayoutRequestBuildRoot {
     pub(super) nodes_marked_seen: u32,
     pub(super) root_role: Option<String>,
     pub(super) root_test_id: Option<String>,
+    pub(super) dirty_descendants: Vec<BundleStatsLayoutDirtyDescendant>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1627,6 +1642,42 @@ impl BundleStatsReport {
                         {
                             let path = compact_debug_path(path);
                             out.push_str(&format!(" path={path}"));
+                        }
+                        if !r.dirty_descendants.is_empty() {
+                            let dirty = r
+                                .dirty_descendants
+                                .iter()
+                                .take(2)
+                                .map(|d| {
+                                    let mut item = format!(
+                                        "node={} dirty_count={}",
+                                        d.node, d.subtree_layout_dirty_count
+                                    );
+                                    if let Some(source) = d.source.as_deref()
+                                        && !source.is_empty()
+                                    {
+                                        item.push_str(&format!(" source={source}"));
+                                    }
+                                    if let Some(detail) = d.detail.as_deref()
+                                        && !detail.is_empty()
+                                    {
+                                        item.push_str(&format!(" detail={detail}"));
+                                    }
+                                    if let Some(test_id) = d.test_id.as_deref()
+                                        && !test_id.is_empty()
+                                    {
+                                        item.push_str(&format!(" test_id={test_id}"));
+                                    }
+                                    if let Some(kind) = d.element_kind.as_deref()
+                                        && !kind.is_empty()
+                                    {
+                                        item.push_str(&format!(" element_kind={kind}"));
+                                    }
+                                    item
+                                })
+                                .collect::<Vec<_>>()
+                                .join(",");
+                            out.push_str(&format!(" dirty_desc=[{dirty}]"));
                         }
                         out
                     })
@@ -3541,6 +3592,61 @@ impl BundleStatsReport {
                                 .clone()
                                 .map(Value::from)
                                 .unwrap_or(Value::Null),
+                        );
+                        let dirty_descendants = r
+                            .dirty_descendants
+                            .iter()
+                            .map(|d| {
+                                let mut d_obj = Map::new();
+                                d_obj.insert("node".to_string(), Value::from(d.node));
+                                d_obj.insert(
+                                    "element".to_string(),
+                                    d.element.map(Value::from).unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "element_kind".to_string(),
+                                    d.element_kind
+                                        .clone()
+                                        .map(Value::from)
+                                        .unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "element_path".to_string(),
+                                    d.element_path
+                                        .clone()
+                                        .map(Value::from)
+                                        .unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "subtree_layout_dirty_count".to_string(),
+                                    Value::from(d.subtree_layout_dirty_count),
+                                );
+                                d_obj.insert(
+                                    "source_root_node".to_string(),
+                                    d.source_root_node.map(Value::from).unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "source".to_string(),
+                                    d.source.clone().map(Value::from).unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "detail".to_string(),
+                                    d.detail.clone().map(Value::from).unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "role".to_string(),
+                                    d.role.clone().map(Value::from).unwrap_or(Value::Null),
+                                );
+                                d_obj.insert(
+                                    "test_id".to_string(),
+                                    d.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                                );
+                                Value::Object(d_obj)
+                            })
+                            .collect::<Vec<_>>();
+                        r_obj.insert(
+                            "dirty_descendants".to_string(),
+                            Value::Array(dirty_descendants),
                         );
                         Value::Object(r_obj)
                     })

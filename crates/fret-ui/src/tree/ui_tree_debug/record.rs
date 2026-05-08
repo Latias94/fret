@@ -1,6 +1,33 @@
 use super::super::*;
 
 impl<H: UiHost> UiTree<H> {
+    pub(in crate::tree) fn debug_note_layout_dirty_source(
+        &mut self,
+        node: NodeId,
+        source_root: NodeId,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_layout_dirty_sources.insert(
+            node,
+            UiDebugLayoutDirtySource {
+                source_root,
+                source,
+                detail,
+            },
+        );
+    }
+
+    pub(in crate::tree) fn debug_clear_layout_dirty_source(&mut self, node: NodeId) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_layout_dirty_sources.remove(&node);
+    }
+
     pub(crate) fn debug_resolve_layout_solve_root_label(
         &self,
         app: &mut H,

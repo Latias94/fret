@@ -21,6 +21,18 @@ pub struct UiDebugLayoutEngineMeasureChildHotspot {
 }
 
 #[derive(Debug, Clone)]
+pub struct UiDebugLayoutDirtyDescendant {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
+    pub subtree_layout_dirty_count: u32,
+    pub source_root: Option<NodeId>,
+    pub source: Option<UiDebugInvalidationSource>,
+    pub detail: Option<UiDebugInvalidationDetail>,
+}
+
+#[derive(Debug, Clone)]
 pub struct UiDebugLayoutRequestBuildRoot {
     pub root: NodeId,
     pub root_kind: &'static str,
@@ -37,6 +49,7 @@ pub struct UiDebugLayoutRequestBuildRoot {
     pub needs_layout: bool,
     pub is_translation_only: bool,
     pub nodes_marked_seen: u32,
+    pub dirty_descendants: Vec<UiDebugLayoutDirtyDescendant>,
 }
 
 #[derive(Debug, Clone)]

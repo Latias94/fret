@@ -1,3 +1,51 @@
+fn invalidation_source_as_str(source: fret_ui::tree::UiDebugInvalidationSource) -> &'static str {
+    match source {
+        fret_ui::tree::UiDebugInvalidationSource::ModelChange => "model_change",
+        fret_ui::tree::UiDebugInvalidationSource::GlobalChange => "global_change",
+        fret_ui::tree::UiDebugInvalidationSource::Notify => "notify",
+        fret_ui::tree::UiDebugInvalidationSource::Hover => "hover",
+        fret_ui::tree::UiDebugInvalidationSource::Focus => "focus",
+        fret_ui::tree::UiDebugInvalidationSource::Other => "other",
+    }
+}
+
+fn invalidation_detail_as_str(detail: fret_ui::tree::UiDebugInvalidationDetail) -> &'static str {
+    detail.as_str().unwrap_or("unknown")
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutDirtyDescendantV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    #[serde(default)]
+    pub element_path: Option<String>,
+    pub subtree_layout_dirty_count: u32,
+    #[serde(default)]
+    pub source_root_node: Option<u64>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub detail: Option<String>,
+}
+
+impl UiLayoutDirtyDescendantV1 {
+    fn from_record(r: &fret_ui::tree::UiDebugLayoutDirtyDescendant) -> Self {
+        Self {
+            node: r.node.data().as_ffi(),
+            element: r.element.map(|id| id.0),
+            element_kind: r.element_kind.map(|s| s.to_string()),
+            element_path: r.element_path.clone(),
+            subtree_layout_dirty_count: r.subtree_layout_dirty_count,
+            source_root_node: r.source_root.map(|id| id.data().as_ffi()),
+            source: r.source.map(|s| invalidation_source_as_str(s).to_string()),
+            detail: r.detail.map(|d| invalidation_detail_as_str(d).to_string()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutRequestBuildRootV1 {
     pub root_node: u64,
@@ -18,6 +66,8 @@ pub struct UiLayoutRequestBuildRootV1 {
     pub needs_layout: bool,
     pub is_translation_only: bool,
     pub nodes_marked_seen: u32,
+    #[serde(default)]
+    pub dirty_descendants: Vec<UiLayoutDirtyDescendantV1>,
 }
 
 impl UiLayoutRequestBuildRootV1 {
@@ -38,6 +88,11 @@ impl UiLayoutRequestBuildRootV1 {
             needs_layout: r.needs_layout,
             is_translation_only: r.is_translation_only,
             nodes_marked_seen: r.nodes_marked_seen,
+            dirty_descendants: r
+                .dirty_descendants
+                .iter()
+                .map(UiLayoutDirtyDescendantV1::from_record)
+                .collect(),
         }
     }
 }

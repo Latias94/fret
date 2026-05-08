@@ -160,6 +160,9 @@ impl UiTreeDebugSnapshotV1 {
             .collect();
         for r in &mut layout_request_build_roots {
             truncate_opt_string_bytes(&mut r.root_element_path, max_debug_string_bytes);
+            for d in &mut r.dirty_descendants {
+                truncate_opt_string_bytes(&mut d.element_path, max_debug_string_bytes);
+            }
         }
 
         let mut layout_hotspots: Vec<UiLayoutHotspotV1> = ui

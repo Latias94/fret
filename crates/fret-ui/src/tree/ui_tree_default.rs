@@ -69,6 +69,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_layout_hotspots: Vec::new(),
             debug_layout_inclusive_hotspots: Vec::new(),
             debug_layout_stack: Vec::new(),
+            debug_layout_dirty_sources: HashMap::new(),
             debug_widget_measure_hotspots: Vec::new(),
             debug_widget_measure_stack: Vec::new(),
             debug_paint_widget_hotspots: Vec::new(),
