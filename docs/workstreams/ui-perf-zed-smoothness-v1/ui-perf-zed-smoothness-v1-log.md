@@ -10563,3 +10563,48 @@ Decision:
   though some median frames got lighter.
 - Keep the broader layout-side-effect audit open, and move the next pass toward a narrower dirty-frontier /
   scroll-post-layout path instead of a broad `widget.layout` skip.
+
+## 2026-05-08 19:20 (docs alignment)
+
+Question:
+- Is the current resize optimization direction explicitly grounded in both Zed/GPUI and egui reference pressure?
+
+Change:
+- Added egui as the immediate-mode counter-reference for pass/repaint/cache accounting.
+- Linked the current normalized Windows RTX 4090 resize-stress sample back to the Zed smoothness workstream, rather
+  than leaving it only in the scroll execution lane.
+
+Reference anchors:
+- Zed/GPUI:
+  - `repo-ref/zed/crates/gpui/src/arena.rs`
+  - `repo-ref/zed/crates/gpui/src/view.rs`
+  - `repo-ref/zed/crates/gpui/src/text_system/line_layout.rs`
+  - `repo-ref/zed/crates/gpui/src/scene.rs`
+- egui:
+  - `repo-ref/egui/crates/egui/src/context.rs`
+  - `repo-ref/egui/crates/egui/src/cache/frame_cache.rs`
+  - `repo-ref/egui/crates/egui/src/cache/cache_storage.rs`
+  - `repo-ref/egui/crates/egui/src/viewport.rs`
+
+Evidence:
+- Normalized resize-stress bundle:
+  `target/fret-diag/1778235545947/bundle.schema2.json`
+- Repeat=3 p50/p95 summary:
+  - total `15276/15296us`
+  - layout `11429/11674us`
+  - paint `3649/3732us`
+  - `layout.engine_solve` `505/2174us`
+- Worst-bundle stats:
+  - `layout_roots_time_us=7777`
+  - `layout_request_build_roots_time_us=2913`
+  - `layout_nodes_visited=2167`
+  - `layout_nodes_performed=2166`
+  - `view_cache_roots_reused=2`
+  - `view_cache_contained_relayouts=0`
+
+Decision:
+- Continue using Zed/GPUI as the target architecture pressure for retained view/text/scene reuse.
+- Use egui as the counter-reference that keeps pass/repaint/cache churn explicit even when rebuild-like work is
+  considered acceptable.
+- The next resize slice should attribute direct layout-root / request-build churn before proposing another broad
+  layout skip.

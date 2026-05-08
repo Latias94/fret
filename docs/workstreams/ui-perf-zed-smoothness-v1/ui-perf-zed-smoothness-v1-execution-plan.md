@@ -12,7 +12,7 @@ This document is the **execution-focused companion** to:
 - Workstream plan: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md`
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md`
 - Evidence log: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
-- GPUI gap analysis: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
+- Zed/GPUI + egui gap analysis: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
 - Renderer profiling playbook: `docs/workstreams/standalone/ui-perf-renderer-profiling-v1.md`
 
 The intent is to stop drifting into “endless experiments” by pinning:
@@ -51,6 +51,12 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.
+
+Reference posture:
+- Use Zed/GPUI to choose high-leverage retained-runtime directions (view caching, text layout reuse, scene replay,
+  per-frame arena discipline).
+- Use egui to keep immediate rebuild-like work honest: every extra pass, repaint cause, cache miss/eviction, and
+  multi-viewport repaint coupling must be visible before it is accepted as “cheap enough”.
 
 Note:
 - Resize probes currently use a relatively generous baseline headroom to avoid flakiness from known resize tails.

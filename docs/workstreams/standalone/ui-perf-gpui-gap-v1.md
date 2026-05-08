@@ -7,6 +7,7 @@ This document references optional local checkouts under `repo-ref/` for convenie
 Upstream sources:
 
 - Zed: https://github.com/zed-industries/zed
+- egui: https://github.com/emilk/egui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; ADRs remain the source of truth)
@@ -14,17 +15,18 @@ Status: Draft (workstream note; ADRs remain the source of truth)
 This document captures a concrete, code-linked list of **performance gaps** between:
 
 - **Fret** (this repo), and
-- the **GPUI** substrate as used by Zed (reference: `repo-ref/zed/crates/gpui`).
+- the **GPUI** substrate as used by Zed (reference: `repo-ref/zed/crates/gpui`),
+- the **egui** immediate-mode runtime (reference: `repo-ref/egui`) where it gives a useful counter-model.
 
-The goal is not to copy GPUI, but to identify the *mechanisms* that matter for “Zed feel” and make them measurable
-via `fretboard-dev diag perf` scripts and perf logs.
+The goal is not to copy GPUI or egui, but to identify the *mechanisms* that matter for editor-grade smoothness and
+make them measurable via `fretboard-dev diag perf` scripts and perf logs.
 
 Related:
 
 - Zed smoothness workstream: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md`
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md`
 - Perf log: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
-- Perf workflow skill (how to run/gate/log): `.agents/skills/fret-perf-workflow/SKILL.md`
+- Perf optimization skill (how to run/gate/log): `.agents/skills/fret-perf-optimization/SKILL.md`
 
 ---
 
@@ -124,6 +126,37 @@ What is less transferable 1:1:
 
 For effect/renderer architecture, it is often more productive to cross-check against render-graph style engines
 (and existing large-scale UIs like Flutter/Skia) while using GPUI as the interaction + caching reference model.
+
+## 0.1.1 Why egui is the counter-reference
+
+egui is intentionally not an editor-shell architecture target for Fret, but it is useful because it proves how far an
+immediate-mode runtime can get when frame lifecycle, repaint scheduling, and cache eviction are explicit.
+
+What is transferable for Fret:
+
+- **Repaint requests are part of the runtime contract.** egui records repaint causes and delays per viewport
+  (`repo-ref/egui/crates/egui/src/context.rs`, `begin_pass_repaint_logic` / `request_repaint_after`). Fret should keep
+  diagnostics that explain why a frame exists, not only how expensive the frame was.
+- **Extra passes are exceptional and bounded.** egui's `request_discard` path is deliberately limited by
+  `Options::max_passes`. Fret should treat any hidden second layout/build pass as a performance event that needs
+  counters and an explicit reason.
+- **Frame caches evict by use, not by hope.** egui's `FrameCache` keeps values used in the current generation and drops
+  unused entries on the next update (`repo-ref/egui/crates/egui/src/cache/frame_cache.rs`). Fret's view/text/paint
+  caches should keep hit/miss/eviction signals tied to frame budgets.
+- **Do not compare giant output blobs to guess reuse.** egui's tessellation path documents that comparing shapes can be
+  a large fraction of the tessellation cost (`repo-ref/egui/crates/egui/src/context.rs`, `tessellate`). For Fret, this
+  reinforces the current direction: prefer explicit dirty contracts (`ViewCache`, paint-cache keys, invalidation
+  kinds) over whole-scene equality checks.
+- **Multi-viewport work must be budgeted per viewport.** egui's viewport docs call out that immediate child viewports
+  can multiply CPU work (`repo-ref/egui/crates/egui/src/viewport.rs`). Fret's multi-window/docking direction should
+  keep independent viewport gates rather than only a single-window gallery gate.
+
+What is less transferable 1:1:
+
+- egui rebuilds UI every pass and does not provide GPUI-style cached view layout/paint reuse as the main architecture.
+- egui's layout and painting model is deliberately simpler than Fret's retained `UiTree` + GPU-first editor shell.
+- egui is therefore a **churn discipline floor**, while Zed/GPUI remains the closer target for editor-grade retained
+  view reuse, text reuse, and scene replay.
 
 ## 0.2 Profiling playbook (bottom-up, editor-class)
 
@@ -392,6 +425,18 @@ GPUI’s `Scene` supports replaying a range of previous paint operations:
 - `Scene::replay`: `repo-ref/zed/crates/gpui/src/scene.rs`
 
 This is tightly coupled with view caching: cached views can effectively “replay” previously built primitives.
+
+### 1.5 egui reference pressure: explicit pass/cache/repaint accounting
+
+egui adds a useful pressure test for any Fret optimization that says “this is cheap enough to rebuild”:
+
+| egui mechanism | Fret contract pressure | Fret evidence surface |
+| --- | --- | --- |
+| `Context::run_ui` normally performs one pass, while `request_discard` is bounded by `max_passes` | Hidden multi-pass layout/build work must be observable and rare | `diag perf` frame counts, layout/build counters, future pass-reason counters |
+| `Context::request_repaint_after` records repaint timing/cause per viewport | A frame should have an explainable cause: input, animation, timer, resize, model/global change | bundle events + `changed_models` / `changed_globals` + dispatch/layout/paint phase counters |
+| `FrameCache` evicts values not used in the current generation | Cache wins should be measured as hit/miss/eviction behavior, not assumed from lower average time | text cache stats, view-cache root reuse/miss reasons, paint-cache replay counters |
+| `Context::tessellate` avoids whole-shape equality because comparison is itself costly | Fret should keep using explicit dirty/invalidation contracts instead of whole-scene diffing | view-cache keys, paint-cache keys, invalidation kind attribution |
+| deferred viewports repaint independently; immediate viewports can multiply CPU work | multi-window/docking perf needs per-window gates and should avoid parent-child repaint coupling by default | future multi-window diag suite + existing per-window bundle stats |
 
 ---
 

@@ -7,6 +7,7 @@ This document references optional local checkouts under `repo-ref/` for convenie
 Upstream sources:
 
 - Zed: https://github.com/zed-industries/zed
+- egui: https://github.com/emilk/egui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; ADRs remain the source of truth)
@@ -36,6 +37,40 @@ Tracking:
 
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md`
 - Perf log (commit-addressable results): `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
+
+---
+
+## Reference Compass (2026-05-08)
+
+This workstream uses two upstream reference styles:
+
+- **Zed/GPUI is the editor-grade target shape.** It is the better reference for retained view caching, text layout
+  reuse, per-frame element arenas, scene replay, scroll coalescing, and resize scheduling.
+- **egui is the immediate-mode churn discipline reference.** It is useful for pass/repaint/cache accounting:
+  `request_repaint_after`, bounded `request_discard`, generation-based `FrameCache`, and the warning that comparing
+  large paint outputs can cost enough to erase the win.
+
+Fret's contract stays local and measurable:
+
+- representative scripts report `p50/p95/max` through `fretboard-dev diag perf`,
+- worst bundles must explain the dominant phase (`layout`, `prepaint`, `paint`, dispatch/hit-test, renderer churn),
+- a fearless refactor is acceptable only when the bundle evidence shows the hot path is real and the follow-up gate
+  prevents the same churn from returning.
+
+Current Windows RTX 4090 resize-stress evidence (normalized local sample, 2026-05-08):
+
+- Script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json`
+- Bundle: `target/fret-diag/1778235545947/bundle.schema2.json`
+- Repeat=3 p50/p95: total `15276/15296us`, layout `11429/11674us`, paint `3649/3732us`,
+  `layout.engine_solve` `505/2174us`
+- Interpretation: view-cache reuse is active, but the sample is still above the Tier A p95 target and dominated by
+  direct layout-root / resize churn rather than contained view-cache relayout escalation.
+
+Reference map:
+
+- GPUI gap map: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
+- Resize path note: `docs/workstreams/standalone/ui-perf-resize-path-v1.md`
+- Scroll resize execution lane: `docs/workstreams/scroll-optimization-v1/`
 
 ---
 

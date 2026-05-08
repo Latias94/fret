@@ -11,6 +11,7 @@ This document references optional local checkouts under `repo-ref/` for convenie
 Upstream sources:
 
 - Zed: https://github.com/zed-industries/zed
+- egui: https://github.com/emilk/egui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
@@ -61,13 +62,15 @@ Conventions:
   - Gate: `cargo nextest run -p fret-ui-gallery virtual_list_torture_scripts_seed_jump_input_before_waiting_for_row_9000 virtual_list_steady_script_keeps_jump_input_setup_outside_perf_capture_window`.
   - Evidence: perf log entry `2026-05-08 13:14`; full `ui-gallery-steady` repeat=1 passes after the script fix.
 
-- [ ] Keep the GPUI gap map current and milestone-linked:
+- [ ] Keep the Zed/GPUI + egui reference map current and milestone-linked:
   - Reference: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
+  - egui adds the pass/repaint/cache accounting counter-reference; keep it updated when a Fret optimization changes
+    frame cause accounting, extra-pass behavior, cache eviction, scene diff/replay, or multi-viewport repaint coupling.
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
 
 - [ ] Dev tooling: keep the “perf investigation loop” crisp for contributors (skills + checklists + attribution playbooks).
   - Workstream: `docs/workstreams/standalone/perf-devtools-skills-v1.md`
-  - Deliverable (initial): expand `fret-perf-workflow` attribution recipes + add a single “worked example”.
+  - Deliverable (initial): expand `fret-perf-optimization` attribution recipes + add a single “worked example”.
   - Latest:
     - Added `fret-perf-attribution` skill (tail-hitch playbook): commit `7ea708d2f`.
     - Added `click_stable` diag script step to reduce selector-driven flakiness: commit `75ac42db9`.
@@ -89,6 +92,13 @@ Conventions:
   - [ ] Explain why `top_layout_engine_solves` is typically > 1 in resize probes, and decide which roots should be
     solved separately vs batched.
     - Background: `docs/workstreams/standalone/ui-perf-resize-path-v1.md`
+  - [ ] Attribute the current Windows RTX 4090 normalized resize-stress sample where view-cache reuse is active but
+    `layout_roots_time_us` / `layout_request_build_roots_time_us` still dominate.
+    - Baseline evidence: `target/fret-diag/1778235545947/bundle.schema2.json`
+    - Current p50/p95: total `15276/15296us`, layout `11429/11674us`, paint `3649/3732us`,
+      `layout.engine_solve` `505/2174us`
+    - Contract pressure: GPUI says reuse boundaries should avoid broad subtree churn; egui says any repeated pass/cache
+      work must be explicitly accounted and tied to frame cause.
   - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
     `Event::WindowResized` when unchanged.
     - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.

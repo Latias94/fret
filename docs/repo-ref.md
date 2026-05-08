@@ -45,6 +45,7 @@ As a baseline, the project tracks the following reference SHAs (local checkouts 
 - `repo-ref/cmdk`: `dd2250e`
 - `repo-ref/dear-imgui-rs`: `5768e5a`
 - `repo-ref/echarts`: `09198192b`
+- `repo-ref/egui`: `e3d7a01a6a`
 - `repo-ref/egui_plot`: `ed3d2c2`
 - `repo-ref/floating-ui`: `0681dbb6`
 - `repo-ref/fret-ui-precision`: `c52a90d`
@@ -59,7 +60,7 @@ As a baseline, the project tracks the following reference SHAs (local checkouts 
 - `repo-ref/ui` (shadcn/ui): `d07a7af8`
 - `repo-ref/vello`: `cc2dd70e`
 - `repo-ref/virtualizer`: `f9c72f7a`
-- `repo-ref/zed`: `f4aad4bb`
+- `repo-ref/zed`: `f5945344cc`
 - `repo-ref/makepad`: `b40b9af49`
 - `repo-ref/winit`: `da622006`
 
@@ -99,6 +100,23 @@ Core “GPUI-style declarative UI” and rendering references:
   - `repo-ref/zed/crates/gpui/src/platform/windows/events.rs` (search `handle_ime_composition`)
 - SDF/border/shadow + text quality shader helpers:
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
+
+## egui (Immediate-mode frame/cache/repaint discipline)
+
+egui is not Fret's target architecture, but it is a useful counter-reference for keeping a UI runtime honest when
+large portions of the UI are rebuilt every pass:
+
+- Frame/pass lifecycle and repaint scheduling:
+  - `repo-ref/egui/crates/egui/src/context.rs` (search `run_ui`, `begin_pass_repaint_logic`,
+    `request_repaint_after`, and `request_discard`)
+- Per-frame cache vocabulary:
+  - `repo-ref/egui/crates/egui/src/cache/frame_cache.rs`
+  - `repo-ref/egui/crates/egui/src/cache/cache_storage.rs`
+- Tessellation and shape-output cost trade-offs:
+  - `repo-ref/egui/crates/egui/src/context.rs` (search `tessellate`)
+  - `repo-ref/egui/crates/epaint/src/tessellator.rs`
+- Multi-viewport repaint cost vocabulary:
+  - `repo-ref/egui/crates/egui/src/viewport.rs`
 
 ## `gpui-component` (shadcn-inspired components + themes)
 
