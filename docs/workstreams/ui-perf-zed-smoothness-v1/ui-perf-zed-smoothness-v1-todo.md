@@ -1123,18 +1123,19 @@ Perf acceptance:
     `layout_child_kind_profiles`.
   - Evidence update: perf log entry `2026-05-09 12:24`; smoke bundle
     `target/fret-diag/codex-scroll-kind-profile-smoke/1778300270796/bundle.schema2.json`.
-  - Result: in the top-frame `ui-gallery-content-viewport` profile, `Text` self time is only `56us` across 53 nodes.
-    The dominant self costs are structural (`Scroll=1859us`, `Flex=589us`, `Container=431us`,
-    `Pressable=263us`), while inclusive totals stack through container/flex wrappers. Do not spend the next pass on a
-    text-specific fast path without fresh evidence.
+  - Result: in filtered live-resize real-bounds-delta frames, `ui-gallery-content-viewport` has 27 profiles with max
+    `total_us=4377`, max first-pass child layout `3699us`, max traversal `1042` nodes, and no child invalidation or
+    subtree dirty flag. The largest filtered content profile records kind self costs of `Scroll=1805us`,
+    `Text=645us`, `Flex=458us`, `Container=201us`, and `Pressable=73us`; inclusive totals still stack through
+    container/flex wrappers. Do not spend the next pass on a text-specific fast path without fresh evidence.
 - [ ] Investigate content scroll real bounds application cost.
   - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
     `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
     `layout_child_max_subtree_dirty=false`.
   - Question: can a clean subtree whose size changed receive final bounds through a narrower geometry-propagation path
     without rerunning layout-time widget side effects?
-  - Latest evidence: kind-level attribution points at structural layout propagation (`Scroll` / `Flex` / `Container`
-    / `Pressable`) rather than a component-local `Text` hotspot.
+  - Latest evidence: kind-level attribution points at structural layout application and inclusive propagation
+    (`Scroll` / `Flex` / `Container` / `Pressable`) rather than a component-local `Text` hotspot.
   - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
     text input layout state, virtual-list visible ranges, and layout query semantics.
   - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled

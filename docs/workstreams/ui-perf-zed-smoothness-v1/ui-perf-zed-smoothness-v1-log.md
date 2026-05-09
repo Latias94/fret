@@ -11164,7 +11164,8 @@ Smoke evidence:
   `target/fret-diag/codex-scroll-kind-profile-smoke/1778300270796/bundle.schema2.json`
 - Stats JSON:
   `target/fret-diag/codex-scroll-kind-profile-smoke/stats-top1.json`
-- Top-frame summary:
+- Top-frame summary (`--top 1`; useful for schema smoke, but this frame is a non-interactive dirty frame rather
+  than the live-resize optimization target):
   - frame `195`
   - total/layout/solve/paint `16884/12857/707/3896us`
   - 3 captured scroll layout profiles
@@ -11180,11 +11181,24 @@ Smoke evidence:
   - `total_us=3365`, `layout_children_first_pass_us=1565`, `solve_barrier_us=1434`,
     child traversal `962/962` nodes
   - top kind self costs: `Flex=501us`, `Container=332us`, `Pressable=251us`, `Text=38us`
+- Interactive real-bounds-delta classification (`diag stats ... --sort time --top 140 --json`, then filtered to
+  `interactive_resize=true` and `layout_child_max_bounds_changed=true`):
+  - `ui-gallery-content-viewport`: 27 profiles, max `total_us=4377`, max first-pass child layout `3699us`,
+    max barrier `713us`, max traversal `1042` nodes, `dirty=false`, `invalidated=false`
+  - largest content profile: frame `222`, frame total/layout `9781/5600us`, profile
+    `total/first/barrier=4377/3699/671us`, child traversal `1042/1042`
+  - content profile top kind self costs: `Scroll=1805us` (1 node), `Text=645us` (256 nodes),
+    `Flex=458us` (258 nodes), `Container=201us` (267 nodes), `Pressable=73us` (241 nodes)
+  - `ui-gallery-view-cache-root`: 27 profiles, max `total_us=3158`, max first-pass child layout `1488us`,
+    max barrier `1808us`, max traversal `962` nodes, `dirty=false`, `invalidated=false`
+  - largest view-cache-root profile: frame `273`, frame total/layout `9387/5164us`, profile
+    `total/first/barrier=3158/1437/1665us`, child traversal `962/962`
 
 Decision:
-- The remaining measured child-layout cost is not a single text measurement hotspot. `Text` self time is small in the
-  top-frame profiles; the cost is distributed across structural layout application (`Scroll`, `Flex`, `Container`,
-  `Pressable`) and their inclusive subtree propagation.
+- The live-resize child-layout cost is not a single text measurement hotspot. In the filtered real-bounds-delta frames,
+  `Text` self time is meaningful but not dominant enough to justify a text-only pass; the larger mechanism pressure is
+  structural layout application and inclusive geometry propagation across `Scroll`, `Flex`, `Container`, and
+  `Pressable` wrappers.
 - This points the next optimization pass toward the layout data model / geometry propagation boundary, not toward a
   text-specific fast path.
 - Keep the prior rejection of a broad clean-child-root apply skip. The next candidate should be a narrow, proof-backed
