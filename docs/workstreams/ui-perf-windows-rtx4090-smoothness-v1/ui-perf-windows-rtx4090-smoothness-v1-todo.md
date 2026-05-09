@@ -31,6 +31,8 @@
 ## Instrumentation gaps (candidate fearless refactor items)
 
 - [ ] Inventory “hot scratch structures” that can reallocate in spikes; add cheap grow counters (opt-in or always-on).
+- [ ] Prototype row/fragment replay for `ui-gallery-code-editor-torture-autoscroll-steady` so unchanged rows do not
+  repaint the whole visible canvas every frame; keep the dedicated Windows baseline as the guardrail.
 - [x] Add percentiles (p50/p95) for `diag stats` bundle summaries (typical perf review).
 - [x] Export phase sub-events in `trace.chrome.json` derived from `debug.stats.*_time_us`.
 - [x] Export per-run frame percentiles into `check.perf_thresholds.json` for quick scanning.
