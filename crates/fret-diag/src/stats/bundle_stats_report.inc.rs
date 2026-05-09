@@ -384,6 +384,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
+    pub(super) layout_engine_child_rect_queries: u64,
+    pub(super) layout_engine_child_rect_time_us: u64,
+    pub(super) layout_engine_widget_fallback_solves: u64,
     pub(super) changed_models: u32,
     pub(super) changed_globals: u32,
     pub(super) changed_global_types_sample: Vec<String>,
@@ -670,12 +673,25 @@ pub(super) struct BundleStatsLayoutEngineSolve {
     pub(super) root_element_kind: Option<String>,
     pub(super) root_element_path: Option<String>,
     pub(super) solve_time_us: u64,
+    pub(super) solve_profile: Option<BundleStatsLayoutEngineSolveProfile>,
     pub(super) measure_calls: u64,
     pub(super) measure_cache_hits: u64,
     pub(super) measure_time_us: u64,
     pub(super) top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot>,
     pub(super) root_role: Option<String>,
     pub(super) root_test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsLayoutEngineSolveProfile {
+    pub(super) reason: String,
+    pub(super) available_w_kind: String,
+    pub(super) available_h_kind: String,
+    pub(super) available_w: Option<f64>,
+    pub(super) available_h: Option<f64>,
+    pub(super) scale_factor: f64,
+    pub(super) batch_roots: u64,
+    pub(super) subtree_nodes: u64,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1878,6 +1894,25 @@ impl BundleStatsReport {
                             && !kind.is_empty()
                         {
                             out.push_str(&format!(" root.kind={kind}"));
+                        }
+                        if let Some(profile) = s.solve_profile.as_ref() {
+                            if !profile.reason.is_empty() {
+                                out.push_str(&format!(" reason={}", profile.reason));
+                            }
+                            out.push_str(&format!(" subtree_nodes={}", profile.subtree_nodes));
+                            if profile.batch_roots > 1 {
+                                out.push_str(&format!(" batch_roots={}", profile.batch_roots));
+                            }
+                            if let Some(w) = profile.available_w {
+                                out.push_str(&format!(" avail.w={w:.1}"));
+                            } else if !profile.available_w_kind.is_empty() {
+                                out.push_str(&format!(" avail.w={}", profile.available_w_kind));
+                            }
+                            if let Some(h) = profile.available_h {
+                                out.push_str(&format!(" avail.h={h:.1}"));
+                            } else if !profile.available_h_kind.is_empty() {
+                                out.push_str(&format!(" avail.h={}", profile.available_h_kind));
+                            }
                         }
                         if let Some(el) = s.root_element {
                             out.push_str(&format!(" root.element={el}"));
@@ -3176,6 +3211,18 @@ impl BundleStatsReport {
                     Value::from(row.layout_engine_solve_time_us),
                 );
                 obj.insert(
+                    "layout_engine_child_rect_queries".to_string(),
+                    Value::from(row.layout_engine_child_rect_queries),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_time_us".to_string(),
+                    Value::from(row.layout_engine_child_rect_time_us),
+                );
+                obj.insert(
+                    "layout_engine_widget_fallback_solves".to_string(),
+                    Value::from(row.layout_engine_widget_fallback_solves),
+                );
+                obj.insert(
                     "layout_collect_roots_time_us".to_string(),
                     Value::from(row.layout_collect_roots_time_us),
                 );
@@ -4113,6 +4160,48 @@ impl BundleStatsReport {
                                 .unwrap_or(Value::Null),
                         );
                         s_obj.insert("solve_time_us".to_string(), Value::from(s.solve_time_us));
+                        s_obj.insert(
+                            "solve_profile".to_string(),
+                            s.solve_profile
+                                .as_ref()
+                                .map(|p| {
+                                    let mut p_obj = Map::new();
+                                    p_obj.insert(
+                                        "reason".to_string(),
+                                        Value::from(p.reason.clone()),
+                                    );
+                                    p_obj.insert(
+                                        "available_w_kind".to_string(),
+                                        Value::from(p.available_w_kind.clone()),
+                                    );
+                                    p_obj.insert(
+                                        "available_h_kind".to_string(),
+                                        Value::from(p.available_h_kind.clone()),
+                                    );
+                                    p_obj.insert(
+                                        "available_w".to_string(),
+                                        p.available_w.map(Value::from).unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "available_h".to_string(),
+                                        p.available_h.map(Value::from).unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "scale_factor".to_string(),
+                                        Value::from(p.scale_factor),
+                                    );
+                                    p_obj.insert(
+                                        "batch_roots".to_string(),
+                                        Value::from(p.batch_roots),
+                                    );
+                                    p_obj.insert(
+                                        "subtree_nodes".to_string(),
+                                        Value::from(p.subtree_nodes),
+                                    );
+                                    Value::Object(p_obj)
+                                })
+                                .unwrap_or(Value::Null),
+                        );
                         s_obj.insert("measure_calls".to_string(), Value::from(s.measure_calls));
                         s_obj.insert(
                             "measure_cache_hits".to_string(),

@@ -1148,6 +1148,8 @@ Perf acceptance:
   - Latest evidence: kind-level attribution points at structural layout application and inclusive propagation
     (`Scroll` / `Flex` / `Container` / `Pressable`) rather than a component-local `Text` hotspot; phase attribution
     shows `layout_children_first_pass` dominates (`p95=3640us`) and measure/probe/overflow phases are negligible.
+  - Latest child-rect evidence: `layout_engine_child_rect_queries=1196` costs only `70us` in the latest worst frame,
+    so the content lane should stay focused on clean bounds-size application, not child-rect lookup overhead.
   - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
     text input layout state, virtual-list visible ranges, and layout query semantics.
   - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled
@@ -1159,6 +1161,18 @@ Perf acceptance:
     deltas without stale layout engine rects?
   - Latest evidence: phase attribution shows `solve_barrier` dominates (`p95=1674us`, max `1712us`) while
     `measure max=0us` and probe/cache/overflow phases are negligible.
+  - Latest solve-profile evidence: `diag stats` now emits `top_layout_engine_solves[].solve_profile`; in the latest
+    smoke the view-cache root reports `reason=new_frame_same_key` with `available_w=852`, `available_h=8636`, and
+    `subtree_nodes=962`, while another sample in the same run reports `reason=new_frame_key_changed` when the root
+    width changes. The remaining question is not whether the solve is happening, but whether the root solve can be
+    made cheaper or better coalesced without stale rects.
+  - Latest child-rect evidence: `layout.perf.summary.v1.json` and `diag stats` now expose
+    `layout_engine_child_rect_queries`, `layout_engine_child_rect_time_us`, and
+    `layout_engine_widget_fallback_solves`; the latest worst frame reports `1196` queries for `70us` and `0`
+    widget-local fallback solves. The current hotspot is not child-rect lookup/replay.
+  - Latest root-solve evidence: clean live-resize view-cache frames still show
+    `solve_barrier_us=1616..1795us` with view-cache root solve profile
+    `reason=new_frame_key_changed`, `subtree_nodes=962`, and `batch_roots=1`.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.

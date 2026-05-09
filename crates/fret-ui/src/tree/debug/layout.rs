@@ -59,10 +59,38 @@ pub struct UiDebugLayoutEngineSolve {
     pub root_element_kind: Option<&'static str>,
     pub root_element_path: Option<String>,
     pub solve_time: Duration,
+    pub solve_profile: Option<UiDebugLayoutEngineSolveProfile>,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,
     pub measure_time: Duration,
     pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugLayoutEngineSolveProfile {
+    pub reason: &'static str,
+    pub available_w_kind: &'static str,
+    pub available_h_kind: &'static str,
+    pub available_w: Option<f32>,
+    pub available_h: Option<f32>,
+    pub scale_factor: f32,
+    pub batch_roots: u32,
+    pub subtree_nodes: u32,
+}
+
+impl From<crate::layout_engine::LayoutEngineSolveProfile> for UiDebugLayoutEngineSolveProfile {
+    fn from(profile: crate::layout_engine::LayoutEngineSolveProfile) -> Self {
+        Self {
+            reason: profile.reason,
+            available_w_kind: profile.available_w_kind,
+            available_h_kind: profile.available_h_kind,
+            available_w: profile.available_w,
+            available_h: profile.available_h,
+            scale_factor: profile.scale_factor,
+            batch_roots: profile.batch_roots,
+            subtree_nodes: profile.subtree_nodes,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

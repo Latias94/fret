@@ -1011,6 +1011,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_engine_child_rect_queries = stats
+                .and_then(|m| m.get("layout_engine_child_rect_queries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_child_rect_time_us = stats
+                .and_then(|m| m.get("layout_engine_child_rect_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_widget_fallback_solves = stats
+                .and_then(|m| m.get("layout_engine_widget_fallback_solves"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_collect_roots_time_us = stats
                 .and_then(|m| m.get("layout_collect_roots_time_us"))
                 .and_then(|v| v.as_u64())
@@ -1765,6 +1777,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
+                layout_engine_child_rect_queries,
+                layout_engine_child_rect_time_us,
+                layout_engine_widget_fallback_solves,
                 changed_models,
                 changed_globals,
                 changed_global_types_sample,

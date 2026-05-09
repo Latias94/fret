@@ -107,12 +107,28 @@ pub struct UiLayoutEngineSolveV1 {
     #[serde(default)]
     pub root_element_path: Option<String>,
     pub solve_time_us: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub solve_profile: Option<UiLayoutEngineSolveProfileV1>,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,
     #[serde(default)]
     pub measure_time_us: u64,
     #[serde(default)]
     pub top_measures: Vec<UiLayoutEngineMeasureHotspotV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutEngineSolveProfileV1 {
+    pub reason: String,
+    pub available_w_kind: String,
+    pub available_h_kind: String,
+    #[serde(default)]
+    pub available_w: Option<f32>,
+    #[serde(default)]
+    pub available_h: Option<f32>,
+    pub scale_factor: f32,
+    pub batch_roots: u32,
+    pub subtree_nodes: u32,
 }
 
 impl UiLayoutEngineSolveV1 {
@@ -123,6 +139,18 @@ impl UiLayoutEngineSolveV1 {
             root_element_kind: s.root_element_kind.map(|s| s.to_string()),
             root_element_path: s.root_element_path.clone(),
             solve_time_us: s.solve_time.as_micros().min(u64::MAX as u128) as u64,
+            solve_profile: s
+                .solve_profile
+                .map(|p| UiLayoutEngineSolveProfileV1 {
+                    reason: p.reason.to_string(),
+                    available_w_kind: p.available_w_kind.to_string(),
+                    available_h_kind: p.available_h_kind.to_string(),
+                    available_w: p.available_w,
+                    available_h: p.available_h,
+                    scale_factor: p.scale_factor,
+                    batch_roots: p.batch_roots,
+                    subtree_nodes: p.subtree_nodes,
+                }),
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,
             measure_time_us: s.measure_time.as_micros().min(u64::MAX as u128) as u64,
