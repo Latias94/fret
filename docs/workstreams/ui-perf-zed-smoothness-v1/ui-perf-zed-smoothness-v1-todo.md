@@ -1200,6 +1200,12 @@ Perf acceptance:
     Decision: this is a real logical width delta, not float jitter; do not pursue root-solve-key quantization as the
     next optimization. Focus next on reducing the 962-node root's width sensitivity, splitting the solve boundary, or
     optimizing Taffy solve cost with evidence.
+  - Latest harness-topology evidence: perf log entry `2026-05-09 17:52` replaces the view-cache torture page's
+    artificial 240-row non-virtualized button list with a retained virtual list. The page-local view-cache reuse root
+    element count drops from `1104` to `137`; top layout nodes drop from `278` to `34`; and the normalized resize
+    smoke drops from `total/layout/solve/paint=8810/4774/2229/3711us` to `3971/1788/784/1988us`.
+    Decision: keep this as a gallery/component-layer correction, not a core-layout shortcut. Remaining core work should
+    target legitimate wide or width-sensitive roots after demo pressure sources are removed.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.

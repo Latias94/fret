@@ -11461,3 +11461,45 @@ Decision:
 - The next correct direction is to reduce the 962-node root's solve sensitivity or solve boundary size, or to optimize
   Taffy solve cost directly. Keep this aligned with the GPUI/Zed direction of explicit per-root layout work and solved
   geometry reuse, rather than hiding retained-state invalidation behind broad cross-frame skips.
+
+## 2026-05-09 17:52 (pre-commit evidence)
+
+Question:
+- Is the view-cache resize harness itself manufacturing an avoidably broad solve boundary by rendering a long
+  non-virtualized row list inside the cached subtree?
+
+Change:
+- Replaced the 240 plain shadcn button rows in the view-cache torture preview with
+  `fret_ui_kit::declarative::list::list_virtualized_retained_v0`.
+- Kept this in the gallery/component layer. The mechanism-layer conclusion from the previous slice still stands:
+  real width deltas must not be hidden by root-solve-key quantization.
+
+Validation:
+- `cargo fmt -p fret-ui-gallery --check`
+- `cargo check -p fret-ui-gallery --features gallery-full`
+- `cargo nextest run -p fret-ui-gallery harness_preview_shells_prefer_ui_cx_on_the_internal_gallery_surface selected_internal_preview_pages_use_typed_doc_sections`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release gallery build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this slice did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-view-cache-virtualized-list-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 12 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-view-cache-virtualized-list-smoke/1778319357983/bundle.schema2.json`
+- Result:
+  - New smoke top frame: `total/layout/solve/paint=3971/1788/784/1988us`.
+  - Previous comparable smoke top frame:
+    `target/fret-diag/codex-root-solve-delta-smoke/1778317739977/bundle.schema2.json`, with
+    `total/layout/solve/paint=8810/4774/2229/3711us`.
+  - `diag stats` top layout nodes dropped from `278` to `34`, paint nodes from `2161` to `1196`, and cache replay
+    ops from `1667` to `708`.
+  - Bundle runtime evidence shows the main view-cache reuse root element count dropped from `1104` to `137`; the shell
+    reuse root remains `1015`, so the harness fix reduced the page-local torture subtree rather than hiding the shell
+    cost.
+
+Decision:
+- Keep the harness virtualized. This follows the GPUI/Zed-style direction of shrinking hot layout boundaries and using
+  retained/virtualized surfaces for editor-grade long lists instead of relying on broad root solve skips.
+- Do not treat this as a full core-layout closure. Remaining performance work should continue on real application
+  roots that are legitimately wide or width-sensitive after the demo no longer injects an artificial 240-row subtree.

@@ -1,10 +1,12 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use fret::AppComponentCx;
+use fret_ui::VirtualListScrollHandle;
+use fret_ui::element::ContainerProps;
 
 pub(in crate::ui) fn preview_view_cache(
     cx: &mut AppComponentCx<'_>,
-    _theme: &Theme,
+    theme: &Theme,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
     view_cache_cache_content: Model<bool>,
@@ -208,24 +210,40 @@ pub(in crate::ui) fn preview_view_cache(
                 },
             );
 
-        let mut rows: Vec<AnyElement> = Vec::new();
-        rows.reserve(240);
-        for i in 0..240u32 {
-            rows.push(cx.keyed(i, |cx| {
-                shadcn::Button::new(format!("Row {i}"))
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx)
-            }));
-        }
-
-        let list = shadcn::ScrollArea::new([ui::v_flex(|_cx| rows)
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N1)
-            .into_element(cx)])
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
-        .into_element(cx);
+        let list_scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
+        let list_selection =
+            cx.local_model_keyed("view_cache_list_selection", || Option::<usize>::None);
+        let list = cx
+            .container(
+                ContainerProps {
+                    layout: decl_style::layout_style(
+                        theme,
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .h_px(MetricRef::Px(Px(280.0))),
+                    ),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![
+                        fret_ui_kit::declarative::list::list_virtualized_retained_v0(
+                            cx,
+                            Some(list_selection),
+                            fret_ui_kit::Size::Small,
+                            Some(Px(28.0)),
+                            240,
+                            6,
+                            &list_scroll_handle,
+                            0,
+                            |i| i as u64,
+                            |_i| None,
+                            |cx, i| vec![cx.text(format!("Row {i}"))],
+                        ),
+                    ]
+                },
+            )
+            .test_id("ui-gallery-view-cache-list");
 
         vec![
             shadcn::Card::new(vec![
