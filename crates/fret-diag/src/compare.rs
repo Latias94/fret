@@ -2261,7 +2261,6 @@ pub(super) fn apply_perf_baseline_floor(value: u64, headroom_pct: u32) -> u64 {
     floored.max(1)
 }
 
-#[cfg(test)]
 pub(super) fn apply_perf_baseline_headroom_with_slack_and_quantum(
     value_us: u64,
     headroom_pct: u32,

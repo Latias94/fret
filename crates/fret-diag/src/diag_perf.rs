@@ -1890,6 +1890,20 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     policy.seed_for(&script_key, PerfSeedMetric::FrameP95LayoutTimeUs);
                 let seed_frame_p95_solve =
                     policy.seed_for(&script_key, PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs);
+                let tuning_total = policy.tuning_for(&script_key, PerfSeedMetric::TopTotalTimeUs);
+                let tuning_layout = policy.tuning_for(&script_key, PerfSeedMetric::TopLayoutTimeUs);
+                let tuning_solve =
+                    policy.tuning_for(&script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs);
+                let tuning_frame_p95_total =
+                    policy.tuning_for(&script_key, PerfSeedMetric::FrameP95TotalTimeUs);
+                let tuning_frame_p95_layout =
+                    policy.tuning_for(&script_key, PerfSeedMetric::FrameP95LayoutTimeUs);
+                let tuning_frame_p95_solve =
+                    policy.tuning_for(&script_key, PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs);
+                let tuning_pointer_move_dispatch =
+                    policy.tuning_for(&script_key, PerfSeedMetric::PointerMoveDispatchTimeUs);
+                let tuning_pointer_move_hit_test =
+                    policy.tuning_for(&script_key, PerfSeedMetric::PointerMoveHitTestTimeUs);
 
                 let seed_total_value = match seed_total {
                     PerfBaselineSeed::Max => max_total,
@@ -1922,40 +1936,62 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     PerfBaselineSeed::P95 => p95_frame_p95_solve,
                 };
 
-                let thr_total =
-                    apply_perf_baseline_headroom(seed_total_value, perf_baseline_headroom_pct);
-                let thr_layout =
-                    apply_perf_baseline_headroom(seed_layout_value, perf_baseline_headroom_pct);
-                let thr_solve =
-                    apply_perf_baseline_headroom(seed_solve_value, perf_baseline_headroom_pct);
+                let thr_total = apply_perf_baseline_headroom_with_slack_and_quantum(
+                    seed_total_value,
+                    perf_baseline_headroom_pct,
+                    tuning_total.min_slack_us,
+                    tuning_total.quantum_us,
+                );
+                let thr_layout = apply_perf_baseline_headroom_with_slack_and_quantum(
+                    seed_layout_value,
+                    perf_baseline_headroom_pct,
+                    tuning_layout.min_slack_us,
+                    tuning_layout.quantum_us,
+                );
+                let thr_solve = apply_perf_baseline_headroom_with_slack_and_quantum(
+                    seed_solve_value,
+                    perf_baseline_headroom_pct,
+                    tuning_solve.min_slack_us,
+                    tuning_solve.quantum_us,
+                );
                 let wants_frame_p95_thresholds = suite_name
                     .as_deref()
                     .is_some_and(|name| name.contains("typical"));
                 let thr_frame_p95_total = wants_frame_p95_thresholds.then(|| {
-                    apply_perf_baseline_headroom(
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
                         seed_frame_p95_total_value,
                         perf_baseline_headroom_pct,
+                        tuning_frame_p95_total.min_slack_us,
+                        tuning_frame_p95_total.quantum_us,
                     )
                 });
                 let thr_frame_p95_layout = wants_frame_p95_thresholds.then(|| {
-                    apply_perf_baseline_headroom(
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
                         seed_frame_p95_layout_value,
                         perf_baseline_headroom_pct,
+                        tuning_frame_p95_layout.min_slack_us,
+                        tuning_frame_p95_layout.quantum_us,
                     )
                 });
                 let thr_frame_p95_solve = wants_frame_p95_thresholds.then(|| {
-                    apply_perf_baseline_headroom(
+                    apply_perf_baseline_headroom_with_slack_and_quantum(
                         seed_frame_p95_solve_value,
                         perf_baseline_headroom_pct,
+                        tuning_frame_p95_solve.min_slack_us,
+                        tuning_frame_p95_solve.quantum_us,
                     )
                 });
-                let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
+                let thr_pointer_move_dispatch = apply_perf_baseline_headroom_with_slack_and_quantum(
                     max_pointer_move_dispatch,
                     perf_baseline_headroom_pct,
+                    tuning_pointer_move_dispatch.min_slack_us,
+                    tuning_pointer_move_dispatch.quantum_us,
                 );
-                let thr_pointer_move_hit_test = apply_perf_baseline_headroom(
+                let thr_pointer_move_hit_test = apply_perf_baseline_headroom_with_slack_and_quantum(
                     max_pointer_move_hit_test,
                     perf_baseline_headroom_pct,
+                    tuning_pointer_move_hit_test.min_slack_us,
+                    tuning_pointer_move_hit_test.quantum_us,
                 );
                 let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
                     max_pointer_move_global_changes,

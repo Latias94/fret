@@ -102,6 +102,10 @@ The selector validates each candidate using the same repeat count as the generat
 copying to `--baseline-out` unless `--allow-failures` is explicitly passed for an investigation artifact. The selector
 writes `selection-summary.json` in `--work-dir`.
 
+For mixed suites whose scripts declare different launch-time `meta.env_defaults`, pass
+`--reuse-launch-per-script` so `diag perf` reuses one launched process per compatible script group instead of forcing a
+single launch environment across the entire suite.
+
 ## Validation Workflow
 
 After re-seeding, validate the new baseline with the matching gate:

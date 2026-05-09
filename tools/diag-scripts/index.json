@@ -5639,13 +5639,20 @@
     {
       "id": "ui-gallery-context-menu-right-click-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
+        "perf-ui-gallery-context-menu-right-click-steady",
+        "perf-ui-gallery-overlay-interaction-steady",
+        "perf-ui-gallery-overlay-steady",
         "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],
       "tags": [],
-      "target_hints": []
+      "target_hints": [
+        "Requires fret-ui-gallery with the gallery-dev feature because the overlay preview page is dev-only."
+      ]
     },
     {
       "id": "ui-gallery-context-menu-rtl-open-screenshot",
@@ -6022,13 +6029,27 @@
     {
       "id": "ui-gallery-dialog-escape-focus-restore-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
+        "perf-ui-gallery-dialog-escape-focus-restore-steady",
+        "perf-ui-gallery-overlay-interaction-steady",
+        "perf-ui-gallery-overlay-steady",
         "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "dialog",
+        "focus_restore",
+        "perf",
+        "steady",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Measures Dialog open/Escape close/focus restore on the default Dialog component page.",
+        "Starts on `dialog` so the script does not depend on the gallery-dev Overlay page or sidebar navigation."
+      ]
     },
     {
       "id": "ui-gallery-drawer-docs-smoke",
@@ -6266,6 +6287,8 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery-dropdown-open-select-steady",
+        "perf-ui-gallery-overlay-steady",
         "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],
@@ -7119,12 +7142,22 @@
     {
       "id": "ui-gallery-material3-tabs-switch-perf-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "perf-ui-gallery-steady"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "material3",
+        "perf",
+        "steady",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on material3_tabs via env defaults so the steady probe measures tabs switching rather than sidebar navigation."
+      ]
     },
     {
       "id": "ui-gallery-menubar-keyboard-nav",
@@ -7441,6 +7474,9 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "perf-ui-gallery-overlay-interaction-steady",
+        "perf-ui-gallery-overlay-pointer-move-steady",
+        "perf-ui-gallery-overlay-steady",
         "perf-ui-gallery-steady"
       ],
       "tags": [
@@ -7472,6 +7508,8 @@
       "required_capabilities": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady",
+        "perf-ui-gallery-overlay-steady",
+        "perf-ui-gallery-overlay-torture-steady",
         "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],

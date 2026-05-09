@@ -36,6 +36,34 @@ impl std::str::FromStr for PerfBaselineSeed {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PerfThresholdTuning {
+    pub(crate) min_slack_us: u64,
+    pub(crate) quantum_us: u64,
+}
+
+impl Default for PerfThresholdTuning {
+    fn default() -> Self {
+        Self {
+            min_slack_us: 0,
+            quantum_us: 1,
+        }
+    }
+}
+
+impl PerfThresholdTuning {
+    pub(crate) fn as_json(self) -> Option<Value> {
+        let default = Self::default();
+        if self == default {
+            return None;
+        }
+        Some(serde_json::json!({
+            "min_slack_us": self.min_slack_us,
+            "quantum_us": self.quantum_us,
+        }))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(clippy::enum_variant_names)]
 pub(crate) enum PerfSeedMetric {
@@ -45,6 +73,8 @@ pub(crate) enum PerfSeedMetric {
     FrameP95TotalTimeUs,
     FrameP95LayoutTimeUs,
     FrameP95LayoutEngineSolveTimeUs,
+    PointerMoveDispatchTimeUs,
+    PointerMoveHitTestTimeUs,
 }
 
 impl PerfSeedMetric {
@@ -58,6 +88,8 @@ impl PerfSeedMetric {
             PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs => {
                 "frame_p95_layout_engine_solve_time_us"
             }
+            PerfSeedMetric::PointerMoveDispatchTimeUs => "pointer_move_max_dispatch_time_us",
+            PerfSeedMetric::PointerMoveHitTestTimeUs => "pointer_move_max_hit_test_time_us",
         }
     }
 }
@@ -75,8 +107,10 @@ impl std::str::FromStr for PerfSeedMetric {
             "frame_p95_layout_engine_solve_time_us" => {
                 Ok(PerfSeedMetric::FrameP95LayoutEngineSolveTimeUs)
             }
+            "pointer_move_max_dispatch_time_us" => Ok(PerfSeedMetric::PointerMoveDispatchTimeUs),
+            "pointer_move_max_hit_test_time_us" => Ok(PerfSeedMetric::PointerMoveHitTestTimeUs),
             _ => Err(format!(
-                "invalid metric (expected top_total_time_us|top_layout_time_us|top_layout_engine_solve_time_us|frame_p95_total_time_us|frame_p95_layout_time_us|frame_p95_layout_engine_solve_time_us): {s:?}"
+                "invalid metric (expected top_total_time_us|top_layout_time_us|top_layout_engine_solve_time_us|frame_p95_total_time_us|frame_p95_layout_time_us|frame_p95_layout_engine_solve_time_us|pointer_move_max_dispatch_time_us|pointer_move_max_hit_test_time_us): {s:?}"
             )),
         }
     }
@@ -107,7 +141,7 @@ impl RuleSourceKind {
 pub(crate) struct ResolvedPerfBaselineSeedPolicy {
     pub(crate) default_seed: PerfBaselineSeed,
     // Final per-(script, metric) override map (only for scripts in the current invocation).
-    overrides: HashMap<(String, PerfSeedMetric), (PerfBaselineSeed, RuleSourceKind)>,
+    overrides: HashMap<(String, PerfSeedMetric), ResolvedPerfRule>,
     // Audit-friendly expanded rules (only for scripts in the current invocation).
     pub(crate) audit_rules: Vec<Value>,
 }
@@ -116,8 +150,15 @@ impl ResolvedPerfBaselineSeedPolicy {
     pub(crate) fn seed_for(&self, script: &str, metric: PerfSeedMetric) -> PerfBaselineSeed {
         self.overrides
             .get(&(script.to_string(), metric))
-            .map(|(seed, _src)| *seed)
+            .map(|rule| rule.seed)
             .unwrap_or(self.default_seed)
+    }
+
+    pub(crate) fn tuning_for(&self, script: &str, metric: PerfSeedMetric) -> PerfThresholdTuning {
+        self.overrides
+            .get(&(script.to_string(), metric))
+            .map(|rule| rule.tuning)
+            .unwrap_or_default()
     }
 
     pub(crate) fn threshold_seed_policy_json(&self) -> Value {
@@ -141,19 +182,53 @@ struct SeedRuleSpec {
     scope: String,
     metric: PerfSeedMetric,
     seed: PerfBaselineSeed,
+    min_slack_us: u64,
+    quantum_us: u64,
     source: RuleSourceKind,
 }
 
 #[derive(Debug, Clone)]
 struct SeedPresetFile {
     default_seed: Option<PerfBaselineSeed>,
-    rules: Vec<(String, PerfSeedMetric, PerfBaselineSeed)>,
+    rules: Vec<(String, PerfSeedMetric, PerfBaselineSeed, u64, u64)>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ResolvedPerfRule {
+    seed: PerfBaselineSeed,
+    tuning: PerfThresholdTuning,
+    source: RuleSourceKind,
 }
 
 fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
     match name {
         "ui-gallery" | "perf-ui-gallery" => Some("perf-ui-gallery"),
         "ui-gallery-steady" | "perf-ui-gallery-steady" => Some("perf-ui-gallery-steady"),
+        "ui-gallery-overlay-steady" | "perf-ui-gallery-overlay-steady" => {
+            Some("perf-ui-gallery-overlay-steady")
+        }
+        "ui-gallery-overlay-interaction-steady" | "perf-ui-gallery-overlay-interaction-steady" => {
+            Some("perf-ui-gallery-overlay-interaction-steady")
+        }
+        "ui-gallery-context-menu-right-click-steady"
+        | "perf-ui-gallery-context-menu-right-click-steady" => {
+            Some("perf-ui-gallery-context-menu-right-click-steady")
+        }
+        "ui-gallery-dialog-escape-focus-restore-steady"
+        | "perf-ui-gallery-dialog-escape-focus-restore-steady" => {
+            Some("perf-ui-gallery-dialog-escape-focus-restore-steady")
+        }
+        "ui-gallery-dropdown-open-select-steady"
+        | "perf-ui-gallery-dropdown-open-select-steady" => {
+            Some("perf-ui-gallery-dropdown-open-select-steady")
+        }
+        "ui-gallery-overlay-pointer-move-steady"
+        | "perf-ui-gallery-overlay-pointer-move-steady" => {
+            Some("perf-ui-gallery-overlay-pointer-move-steady")
+        }
+        "ui-gallery-overlay-torture-steady" | "perf-ui-gallery-overlay-torture-steady" => {
+            Some("perf-ui-gallery-overlay-torture-steady")
+        }
         "ui-gallery-layout-steady" | "perf-ui-gallery-layout-steady" => {
             Some("perf-ui-gallery-layout-steady")
         }
@@ -247,18 +322,24 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
                 scope: script_key.clone(),
                 metric: PerfSeedMetric::TopTotalTimeUs,
                 seed: PerfBaselineSeed::P95,
+                min_slack_us: 0,
+                quantum_us: 1,
                 source: RuleSourceKind::Default,
             });
             specs.push(SeedRuleSpec {
                 scope: script_key.clone(),
                 metric: PerfSeedMetric::TopLayoutTimeUs,
                 seed: PerfBaselineSeed::P95,
+                min_slack_us: 0,
+                quantum_us: 1,
                 source: RuleSourceKind::Default,
             });
             specs.push(SeedRuleSpec {
                 scope: script_key.clone(),
                 metric: PerfSeedMetric::TopLayoutEngineSolveTimeUs,
                 seed: PerfBaselineSeed::P95,
+                min_slack_us: 0,
+                quantum_us: 1,
                 source: RuleSourceKind::Default,
             });
         }
@@ -270,7 +351,7 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
         if let Some(seed) = preset.default_seed {
             default_seed = seed;
         }
-        for (scope, metric, seed) in preset.rules {
+        for (scope, metric, seed, min_slack_us, quantum_us) in preset.rules {
             let source = if scope_is_suite_like(&scope, suite_name) {
                 RuleSourceKind::PresetSuite
             } else {
@@ -280,6 +361,8 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
                 scope,
                 metric,
                 seed,
+                min_slack_us,
+                quantum_us,
                 source,
             });
         }
@@ -292,6 +375,8 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
             scope,
             metric,
             seed,
+            min_slack_us: 0,
+            quantum_us: 1,
             source: if suite_like {
                 RuleSourceKind::CliSuite
             } else {
@@ -301,31 +386,43 @@ pub(crate) fn resolve_perf_baseline_seed_policy(
     }
 
     // Apply layered overrides (last match wins).
-    let mut overrides: HashMap<(String, PerfSeedMetric), (PerfBaselineSeed, RuleSourceKind)> =
-        HashMap::new();
-    let mut audit: HashMap<(String, PerfSeedMetric), (PerfBaselineSeed, RuleSourceKind)> =
-        HashMap::new();
+    let mut overrides: HashMap<(String, PerfSeedMetric), ResolvedPerfRule> = HashMap::new();
+    let mut audit: HashMap<(String, PerfSeedMetric), ResolvedPerfRule> = HashMap::new();
 
     for spec in specs {
         let script_keys =
             expand_scope_to_script_keys(workspace_root, suite_name, &scripts_by_key, &spec.scope)?;
         for key in script_keys {
-            overrides.insert((key.clone(), spec.metric), (spec.seed, spec.source));
-            audit.insert((key, spec.metric), (spec.seed, spec.source));
+            let rule = ResolvedPerfRule {
+                seed: spec.seed,
+                tuning: PerfThresholdTuning {
+                    min_slack_us: spec.min_slack_us,
+                    quantum_us: spec.quantum_us,
+                },
+                source: spec.source,
+            };
+            overrides.insert((key.clone(), spec.metric), rule);
+            audit.insert((key, spec.metric), rule);
         }
     }
 
     let mut audit_rules: Vec<Value> = Vec::new();
-    for ((script, metric), (seed, source)) in audit.into_iter() {
-        if seed == default_seed {
+    for ((script, metric), rule) in audit.into_iter() {
+        if rule.seed == default_seed && rule.tuning == PerfThresholdTuning::default() {
             continue;
         }
-        audit_rules.push(serde_json::json!({
+        let mut obj = serde_json::json!({
             "script": script,
             "metric": metric.as_str(),
-            "seed": seed.as_str(),
-            "source": source.as_str(),
-        }));
+            "seed": rule.seed.as_str(),
+            "source": rule.source.as_str(),
+        });
+        if let Some(tuning) = rule.tuning.as_json() {
+            if let Some(map) = obj.as_object_mut() {
+                map.insert("tuning".to_string(), tuning);
+            }
+        }
+        audit_rules.push(obj);
     }
     audit_rules.sort_by(|a, b| {
         let as_script = a
@@ -410,7 +507,7 @@ fn read_seed_preset(workspace_root: &Path, path: &Path) -> Result<SeedPresetFile
             )
         })?;
 
-    let mut out: Vec<(String, PerfSeedMetric, PerfBaselineSeed)> = Vec::new();
+    let mut out: Vec<(String, PerfSeedMetric, PerfBaselineSeed, u64, u64)> = Vec::new();
     for rule in rules {
         let Some(scope) = rule.get("scope").and_then(|v| v.as_str()) else {
             continue;
@@ -421,10 +518,26 @@ fn read_seed_preset(workspace_root: &Path, path: &Path) -> Result<SeedPresetFile
         let Some(seed) = rule.get("seed").and_then(|v| v.as_str()) else {
             continue;
         };
+        let min_slack_us = rule
+            .get("min_slack_us")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let quantum_us = match rule.get("quantum_us").and_then(|v| v.as_u64()) {
+            Some(0) => {
+                return Err(format!(
+                    "invalid perf baseline seed preset: quantum_us must be > 0: {}",
+                    resolved.display()
+                ));
+            }
+            Some(v) => v,
+            None => 1,
+        };
         out.push((
             scope.to_string(),
             metric.parse::<PerfSeedMetric>()?,
             seed.parse::<PerfBaselineSeed>()?,
+            min_slack_us,
+            quantum_us,
         ));
     }
 
@@ -526,8 +639,8 @@ mod tests {
   "default_seed": "max",
   "rules": [
     { "scope": "extras-marquee-steady", "metric": "top_total_time_us", "seed": "p90" },
-    { "scope": "extras-marquee-steady", "metric": "top_layout_time_us", "seed": "p90" },
-    { "scope": "tools/diag-scripts/extras/extras-marquee-steady.json", "metric": "top_layout_engine_solve_time_us", "seed": "p95" }
+    { "scope": "extras-marquee-steady", "metric": "top_layout_time_us", "seed": "p90", "min_slack_us": 12, "quantum_us": 4 },
+    { "scope": "tools/diag-scripts/extras/extras-marquee-steady.json", "metric": "top_layout_engine_solve_time_us", "seed": "p95", "min_slack_us": 24, "quantum_us": 8 }
   ]
 }"#,
         )
@@ -554,6 +667,24 @@ mod tests {
         assert_eq!(
             policy.seed_for(script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs),
             PerfBaselineSeed::P95
+        );
+        assert_eq!(
+            policy.tuning_for(script_key, PerfSeedMetric::TopTotalTimeUs),
+            PerfThresholdTuning::default()
+        );
+        assert_eq!(
+            policy.tuning_for(script_key, PerfSeedMetric::TopLayoutTimeUs),
+            PerfThresholdTuning {
+                min_slack_us: 12,
+                quantum_us: 4,
+            }
+        );
+        assert_eq!(
+            policy.tuning_for(script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs),
+            PerfThresholdTuning {
+                min_slack_us: 24,
+                quantum_us: 8,
+            }
         );
 
         let policy = resolve_perf_baseline_seed_policy(
@@ -598,5 +729,106 @@ mod tests {
             policy.seed_for(key, PerfSeedMetric::TopLayoutEngineSolveTimeUs),
             PerfBaselineSeed::P95
         );
+    }
+
+    #[test]
+    fn seed_policy_preset_can_tune_pointer_move_hit_test_thresholds() {
+        let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test-pointer-move");
+        let script_path = workspace_root
+            .join("tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json");
+        let scripts = vec![script_path];
+
+        let preset_path = workspace_root.join("preset.json");
+        std::fs::create_dir_all(&workspace_root).unwrap();
+        std::fs::write(
+            &preset_path,
+            r#"{
+  "schema_version": 1,
+  "kind": "perf_baseline_seed_policy",
+  "default_seed": "max",
+  "rules": [
+    {
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "metric": "pointer_move_max_hit_test_time_us",
+      "seed": "max",
+      "quantum_us": 4
+    }
+  ]
+}"#,
+        )
+        .unwrap();
+
+        let policy = resolve_perf_baseline_seed_policy(
+            &workspace_root,
+            Some("ui-gallery-overlay-steady"),
+            &scripts,
+            std::slice::from_ref(&preset_path),
+            &[],
+        )
+        .unwrap();
+
+        let script_key =
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json";
+        assert_eq!(
+            policy.tuning_for(script_key, PerfSeedMetric::PointerMoveHitTestTimeUs),
+            PerfThresholdTuning {
+                min_slack_us: 0,
+                quantum_us: 4,
+            }
+        );
+        assert_eq!(
+            policy.seed_for(script_key, PerfSeedMetric::PointerMoveHitTestTimeUs),
+            PerfBaselineSeed::Max
+        );
+    }
+
+    #[test]
+    fn perf_suite_membership_name_covers_overlay_single_script_follow_ons() {
+        let cases = [
+            (
+                "ui-gallery-context-menu-right-click-steady",
+                "perf-ui-gallery-context-menu-right-click-steady",
+            ),
+            (
+                "perf-ui-gallery-context-menu-right-click-steady",
+                "perf-ui-gallery-context-menu-right-click-steady",
+            ),
+            (
+                "ui-gallery-dialog-escape-focus-restore-steady",
+                "perf-ui-gallery-dialog-escape-focus-restore-steady",
+            ),
+            (
+                "perf-ui-gallery-dialog-escape-focus-restore-steady",
+                "perf-ui-gallery-dialog-escape-focus-restore-steady",
+            ),
+            (
+                "ui-gallery-dropdown-open-select-steady",
+                "perf-ui-gallery-dropdown-open-select-steady",
+            ),
+            (
+                "perf-ui-gallery-dropdown-open-select-steady",
+                "perf-ui-gallery-dropdown-open-select-steady",
+            ),
+            (
+                "ui-gallery-overlay-pointer-move-steady",
+                "perf-ui-gallery-overlay-pointer-move-steady",
+            ),
+            (
+                "perf-ui-gallery-overlay-pointer-move-steady",
+                "perf-ui-gallery-overlay-pointer-move-steady",
+            ),
+            (
+                "ui-gallery-overlay-torture-steady",
+                "perf-ui-gallery-overlay-torture-steady",
+            ),
+            (
+                "perf-ui-gallery-overlay-torture-steady",
+                "perf-ui-gallery-overlay-torture-steady",
+            ),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(perf_suite_membership_name(input), Some(expected));
+        }
     }
 }

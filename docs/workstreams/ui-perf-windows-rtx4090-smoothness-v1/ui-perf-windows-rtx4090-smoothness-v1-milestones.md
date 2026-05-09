@@ -15,6 +15,12 @@ Exit criteria:
 - `ui-resize-probes` passes `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json` with
   `attempts=3`, `repeat=7`, and default suite hooks reliably.
 - `ui-code-editor-resize-probes` does not regress.
+- The broad `ui-gallery-steady` repeat=7 surface is maintenance/evidence-only until it is split into narrower
+  steady-contract groups.
+- The context-menu, dialog, dropdown, overlay pointer-move, and overlay-torture interaction follow-ons are checked in
+  as their own Windows baselines and pass with the reset-diagnostics prelude on each run.
+- `ui-gallery-overlay-steady` is not promoted yet; keep it as evidence because the broad suite still mixes overlay,
+  modal, inspector, and legacy members.
 
 ## M2 — Tail attribution is one-command
 

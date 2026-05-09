@@ -69,12 +69,20 @@ Preset files are versioned policy artifacts (commit into `docs/workstreams/perf-
     {
       "scope": "ui-gallery-steady",
       "metric": "top_total_time_us",
-      "seed": "p90"
+      "seed": "p90",
+      "min_slack_us": 8,
+      "quantum_us": 4
     },
     {
       "scope": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
       "metric": "top_layout_time_us",
       "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "metric": "pointer_move_max_hit_test_time_us",
+      "seed": "max",
+      "quantum_us": 4
     }
   ]
 }
@@ -87,6 +95,13 @@ Requirements:
 - `default_seed` is optional (`max|p90|p95`), and overrides built-in default seed when present.
 - `rules` is required (can be empty).
 - Each rule requires `scope`, `metric`, `seed`.
+- Each rule may also declare:
+  - `min_slack_us`: a fixed minimum headroom floor applied before the final threshold is rounded.
+  - `quantum_us`: the rounding bucket applied to the final threshold (`1` keeps the raw value).
+- Omit both fields unless the script shows repeatable microsecond-level flakiness that needs a narrow, reviewable
+  buffer. The defaults are `min_slack_us=0` and `quantum_us=1`.
+- Direct max-based gate metrics such as pointer-move hit-test/dispatch can also use this schema. Keep `seed: "max"`
+  and use a narrow `min_slack_us` / `quantum_us` pair when the metric flaps by only a few microseconds.
 
 ## Recommended baseline profile (v15)
 
@@ -98,6 +113,8 @@ Current default bias:
     - `top_total_time_us`
     - `top_layout_time_us`
     - `top_layout_engine_solve_time_us`
+- If a rule still flaps by 1-2us after headroom is chosen, prefer a small `min_slack_us` plus a modest
+  `quantum_us` over widening the entire suite or adding ad-hoc special cases.
 
 Example command (steady suite + preset + local override):
 

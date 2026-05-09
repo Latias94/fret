@@ -197,6 +197,15 @@ def main() -> int:
         help="Forwarded to `fretboard-dev diag perf --prelude-each-run`.",
     )
     ap.add_argument(
+        "--reuse-launch-per-script",
+        action="store_true",
+        default=False,
+        help=(
+            "Forwarded to `fretboard-dev diag perf --reuse-launch-per-script`. "
+            "Use this for suites whose scripts declare conflicting launch env defaults."
+        ),
+    )
+    ap.add_argument(
         "--no-default-suite-hooks",
         action="store_true",
         default=False,
@@ -283,6 +292,8 @@ def main() -> int:
             "time",
             "--json",
         ]
+        if bool(args.reuse_launch_per_script):
+            cmd += ["--reuse-launch-per-script"]
         return cmd
 
     def diag_cmd_with_env_and_launch(cmd: list[str]) -> list[str]:
@@ -445,6 +456,7 @@ def main() -> int:
             "prewarm": prewarm_scripts,
             "prelude": prelude_scripts,
             "prelude_each_run": bool(args.prelude_each_run),
+            "reuse_launch_per_script": bool(args.reuse_launch_per_script),
             "default_suite_hooks": not bool(args.no_default_suite_hooks),
         },
         "threshold_surface": str(args.threshold_surface),

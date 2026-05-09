@@ -64,11 +64,18 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - The failed attempt was paint-dominant, not layout-dominant:
     `top_total_time_us=13800` vs threshold `11282`, while layout/solve were below threshold and
     `diag stats --sort cpu_cycles` showed `paint.widget p95=10922us`.
+- `ui-gallery-steady` re-seed attempts after `--reuse-launch-per-script` and `--prelude-each-run` normalization:
+  - `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3b/selection-summary.json`:
+    candidate-1 validated with `fail_total=2`, both failures on `ui-gallery-view-cache-toggle-perf-steady`.
+  - `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3c/selection-summary.json`:
+    candidate-1 still failed across multiple scripts (`hover-layout`, `dropdown`, `overlay`, `view-cache-toggle`,
+    `virtual-list`, `window-resize`), showing the suite is still too broad for a stable single Windows baseline.
 
 ## Open Gaps
 
-1. Re-seed the remaining primary checked-in baselines with `measured_p50` only through the documented selector workflow.
-   - Next candidate: `ui-gallery-steady.windows-rtx4090.v2.json`.
+1. Split `ui-gallery-steady` into narrower steady-contract groups, or mark the broad suite as evidence-only until the
+   membership is narrowed. The current Windows `ui-gallery-steady.windows-rtx4090.v2.json` re-seed is blocked by
+   cross-script drift, not by a single threshold tweak.
 2. Run the remaining full formal gates after the helper normalization change.
    - Done: `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7`
    - Done: `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
@@ -80,5 +87,5 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 ## Audit Conclusion
 
 The goal is not complete. The Windows `ui-resize-probes` and `ui-code-editor-resize-probes` contracts now have
-checked-in `measured_p50` evidence and green formal repeat=7 gates, but the broader editor-grade contract still lacks a
-p50 re-seed for the steady-gallery baseline and a stricter editor paint-tail stressor.
+checked-in `measured_p50` evidence and green formal repeat=7 gates, but the broader editor-grade contract still needs
+the steady-gallery suite split/narrowing work before `ui-gallery-steady` can be promoted as a stable Windows baseline.

@@ -11897,3 +11897,52 @@ Decision:
   rewrite.
 - Keep `ui-gallery-steady.windows-rtx4090.v2.json` as the next p50 re-seed candidate; its selector is substantially
   heavier than this single-script code-editor suite and should be landed as a separate evidence chunk.
+
+## 2026-05-09 23:54 (steady-suite re-seed blocked)
+
+Question:
+- Can the broad `ui-gallery-steady` Windows suite be promoted to a p50-carrying v2 baseline after adding
+  `--reuse-launch-per-script` support and `--prelude-each-run` normalization?
+
+Attempts:
+- `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3b/selection-summary.json`
+  - `--reuse-launch-per-script --prelude-each-run`
+  - candidate-1 `fail_total=2`
+  - failures were only on `ui-gallery-view-cache-toggle-perf-steady`:
+    `top_total_time_us=3146/2948`, `top_layout_time_us=2548/2404`
+- `target/fret-diag-baseline-select-ui-gallery-steady-windows-rtx4090-v3c/selection-summary.json`
+  - `--reuse-launch-per-script --prelude-each-run --headroom-pct 30`
+  - candidate-1 still failed across multiple scripts:
+    hover-layout, dropdown, overlay, view-cache-toggle, virtual-list, and window-resize
+
+Decision:
+- The suite is too broad for a stable single Windows steady baseline under current membership.
+- Keep the selector and baseline policy tuning support, but do not promote `ui-gallery-steady.windows-rtx4090.v2.json`
+  yet.
+- The next workstream action should be to split `ui-gallery-steady` into narrower steady-contract groups or reclassify
+  the broad suite as evidence-only until the membership is narrowed.
+
+## 2026-05-10 (core trio split attempt rejected)
+
+Question:
+- Can the daily smoke trio (`context-menu`, `dialog`, `material3-tabs`) be promoted into a new
+  `ui-gallery-core-steady` Windows baseline?
+
+Attempt:
+- Registry and manifest were added for `perf-ui-gallery-core-steady`, then selected with
+  `python tools/perf/diag_perf_baseline_select.py --suite ui-gallery-core-steady --baseline-out docs/workstreams/perf-baselines/ui-gallery-core-steady.windows-rtx4090.v1.json --preset docs/workstreams/perf-baselines/policies/ui-gallery-core-steady.v1.json --candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 --threshold-surface ui --work-dir target/fret-diag-baseline-select-ui-gallery-core-steady-windows-rtx4090-v1 --launch-bin target/release/fret-ui-gallery.exe --reuse-launch-per-script --prelude-each-run --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0`
+- Candidate results:
+  - candidate-1 `fail_total=10`
+  - candidate-2 `fail_total=11`
+- Failure aggregation:
+  - `ui-gallery-context-menu-right-click-steady`: `top_total_time_us` + `top_layout_time_us`
+  - `ui-gallery-dialog-escape-focus-restore-steady`: `top_total_time_us` + `top_layout_time_us`
+  - `ui-gallery-material3-tabs-switch-perf-steady`: `top_layout_engine_solve_time_us` + pointer-move max metrics
+
+Decision:
+- Do not promote the combined `ui-gallery-core-steady` baseline. It is not a stable contract boundary under the
+  current membership and seed policy.
+- Keep the existing narrower suites (`ui-gallery-overlay-steady`, `perf-ui-gallery`) as the correct partitioning
+  boundary for these scripts.
+- Broad `ui-gallery-steady` remains maintenance/evidence-only until a narrower split is promoted with cleaner
+  thresholds.

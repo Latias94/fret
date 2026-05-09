@@ -18,6 +18,7 @@ Usage:
     [--launch-bin <path>] \
     [--prewarm-script <path>] \
     [--prelude-script <path>] \
+    [--reuse-launch-per-script] \
     [--no-default-suite-hooks] \
     [--allow-failures]
 
@@ -57,6 +58,7 @@ threshold_surface="ui"
 work_dir="target/fret-diag-baseline-select-$(date +%s)"
 launch_bin="target/release/fret-ui-gallery"
 default_suite_hooks=true
+reuse_launch_per_script=false
 allow_failures=false
 declare -a preset_paths=()
 declare -a prewarm_scripts=()
@@ -115,6 +117,10 @@ while [[ $# -gt 0 ]]; do
     --prelude-script)
       prelude_scripts+=("$2")
       shift 2
+      ;;
+    --reuse-launch-per-script)
+      reuse_launch_per_script=true
+      shift
       ;;
     --no-default-suite-hooks)
       default_suite_hooks=false
@@ -199,6 +205,11 @@ run_baseline() {
   done
   cmd+=(
     --reuse-launch
+  )
+  if [[ "$reuse_launch_per_script" == "true" ]]; then
+    cmd+=(--reuse-launch-per-script)
+  fi
+  cmd+=(
     --repeat "$repeat"
     --warmup-frames "$warmup_frames"
     --sort time
@@ -247,6 +258,11 @@ run_validation() {
   done
   cmd+=(
     --reuse-launch
+  )
+  if [[ "$reuse_launch_per_script" == "true" ]]; then
+    cmd+=(--reuse-launch-per-script)
+  fi
+  cmd+=(
     --repeat "$repeat"
     --warmup-frames "$warmup_frames"
     --sort time
@@ -366,6 +382,7 @@ jq -n \
   --argjson prewarm_scripts "$prewarm_scripts_json" \
   --argjson prelude_scripts "$prelude_scripts_json" \
   --argjson default_suite_hooks "$default_suite_hooks" \
+  --argjson reuse_launch_per_script "$reuse_launch_per_script" \
   --argjson repeat "$repeat" \
   --argjson allow_failures "$([[ "$allow_failures" == "true" ]] && echo true || echo false)" \
   --argjson candidate_results "$candidate_results_payload" \
@@ -377,6 +394,7 @@ jq -n \
     suite_hooks: {
       prewarm: $prewarm_scripts,
       prelude: $prelude_scripts,
+      reuse_launch_per_script: $reuse_launch_per_script,
       default_suite_hooks: $default_suite_hooks
     },
     threshold_surface: $threshold_surface,

@@ -16,6 +16,11 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 ## Baselines (source of truth)
 
 - `docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-context-menu-right-click-steady.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-dialog-escape-focus-restore-steady.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-dropdown-open-select-steady.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-overlay-pointer-move-steady.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/ui-gallery-overlay-torture-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
@@ -67,8 +72,10 @@ Current boundary (2026-05-10):
   verification.
 - Keep `ui-gallery-complex-steady` and the broad `ui-gallery-steady` repeat=7 run as tail evidence while the suite
   membership is narrowed or split into narrower steady-contract groups.
-- The experimental combined `ui-gallery-core-steady` baseline was not promoted; the overlay scripts belong in
-  `ui-gallery-overlay-steady`, but that suite still needs to be split into narrower follow-ons before promotion.
+- The experimental combined `ui-gallery-core-steady` baseline was not promoted; `ui-gallery-context-menu-right-click-steady`,
+  `ui-gallery-dialog-escape-focus-restore-steady`, `ui-gallery-dropdown-open-select-steady`,
+  `ui-gallery-overlay-pointer-move-steady`, and `ui-gallery-overlay-torture-steady` now each have their own
+  baselines, but `ui-gallery-overlay-steady` still needs to remain evidence-only because the broad suite is still mixed.
   `ui-gallery-material3-tabs-switch-perf-steady` should stay with the existing `perf-ui-gallery` path unless a later
   narrower follow-on proves it needs its own contract.
 
@@ -81,6 +88,14 @@ Workflow when it fails:
   - Renderer stage timings (CPU-side) are also available in `diag stats`:
     - `--sort ensure_pipelines|plan_compile|upload|record_passes|encoder_finish`
     - The human summary prints `renderer p50/p95` and `renderer max` when the fields are present.
+
+First places to look on Windows:
+
+- `top_total_time_us` / `frame_p95_total_time_us`: the contract miss itself. Start with `diag stats --sort time --top 30`.
+- `top_layout_time_us` / `top_layout_engine_solve_time_us`: layout-root churn or solver pressure. Inspect layout hotspots
+  and, if needed, re-run with `FRET_LAYOUT_NODE_PROFILE=1`.
+- `top_paint_time_us` / `frame_max_paint_time_us`: paint-tail or renderer churn. Inspect renderer stage timings and trace.
+- `pointer_move_max_dispatch_time_us` / `pointer_move_max_hit_test_time_us`: overlay/pointer interaction suites.
 
 If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use
 suite normalization hooks to reduce cross-script state contamination:
@@ -247,7 +262,18 @@ frame-time distributions.
 
 Tail / spikes (worst-frame `top_*`):
 
-- `target/release/fretboard.exe diag perf ui-gallery-complex-steady --repeat 7 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+- `target/release/fretboard.exe diag perf ui-gallery-complex-steady --repeat 7 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-ui-gallery-normalize.json --prelude-each-run --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+Current status:
+
+- The normalized `ui-gallery-complex-steady` run with `--prelude-each-run` now completes. Keep the legacy no-prelude
+  failure in `ui-gallery-chrome-torture-steady.json` step 9 (`subtree layout dirty count underflow` at
+  `crates/fret-ui/src/tree/ui_tree_mutation/remove.rs:374`) as a suite-normalization warning, not as the steady-state.
+- The current Windows paint exemplar is `target/fret-diag/1778364986668/bundle.schema2.json`.
+- `diag stats --sort time` for that bundle reports `time p50/p95 (us)` total `1898/7326`, layout `264/1296`,
+  prepaint `98/119`, paint `1347/6070`, with `hot p50/p95` paint.widget `962/5667`.
+- Use this bundle when you need paint-tail attribution for the editor-grade lane; the smaller resize and overlay
+  contracts remain the gating surface for routine regressions.
 
 Typical perf gate (bundle frame percentiles `frame_p95_*`):
 
@@ -345,6 +371,18 @@ Interpretation:
 - High **ReadyThread** time + low sampled CPU in the spike window ⇒ scheduling contention / priority / background noise.
 - High sampled CPU with stable stacks in Fret code ⇒ real work regression (optimize the hottest phase).
 - DPC/ISR spikes aligned with frame spikes ⇒ driver/OS noise; consider isolating (priority, affinity, power plan, background activity).
+
+## Windows PIX GPU capture (GPU-side sanity when CPU looks fine)
+
+Use PIX when the renderer is on a PIX-compatible Direct3D path and CPU-side evidence does not explain the hitch.
+
+Runbook:
+
+1. Install the latest main PIX build from the Microsoft PIX download page, or from an approved internal package source.
+2. In PIX, open the Connection view and launch or attach to `fret-ui-gallery.exe` with GPU capture enabled.
+3. Take the capture with the `Take GPU Capture` button, or use the PIX shortcut (`Alt+Print Screen`; `F11` is configurable).
+4. Open the capture and inspect Overview / Events / Timeline. For timing analysis, collect timing data first.
+5. If the capture is noisy, close other GPU-heavy apps before capturing.
 
 ## In-app CPU-time signal (when ETW/WPR is unavailable)
 
@@ -450,8 +488,11 @@ Result (local, `repeat=3`):
 
 - `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` now stays under the baseline with
   `top_layout_engine_solve_time_us` max around ~1.1ms (previously ~1.9ms worst frames).
-- `ui-gallery-steady`, `ui-resize-probes`, and `ui-code-editor-resize-probes` all pass their
-  `windows-rtx4090.v1` baselines.
+- `ui-gallery-steady` passes its `windows-rtx4090.v1` baseline, and `ui-resize-probes` /
+  `ui-code-editor-resize-probes` pass their `windows-rtx4090.v2` baselines.
+- 2026-05-10 repeat=7 gate evidence:
+  - `ui-resize-probes`: `target/fret-diag-resize-probes-gate-1778363042/summary.json` passed `3/3`; `ui-gallery-window-resize-drag-jitter-steady.json` p50/p95/max total `1855/1980/1980us` vs threshold `4028us`; `ui-gallery-window-resize-stress-steady.json` p50/p95/max total `3800/3993/3993us` vs threshold `5584us`.
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-1778363387/summary.json` passed `3/3`; `ui-gallery-code-editor-window-resize-drag-jitter-steady.json` p50/p95/max total `2809/3582/3582us` vs threshold `11282us`.
 
 ## Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)
 
@@ -525,8 +566,77 @@ Evidence after the change:
     `ui-gallery-context-menu-right-click-steady`,
     `ui-gallery-dialog-escape-focus-restore-steady`, and
     `ui-gallery-overlay-pointer-move-steady`.
-  - That means the suite is still too broad for one Windows baseline and should stay
-    evidence-only until it is split into narrower follow-ons.
+  - That means the original interaction suite is still too broad for one Windows baseline and should stay
+    evidence-only even though its context-menu/dialog/pointer-move members now have their own baselines.
+
+## Finding (2026-05-10): overlay interaction follow-ons now have dedicated baselines
+
+Observed:
+
+- The single-script `ui-gallery-overlay-pointer-move-steady` follow-on was still noisy when selection ran
+  without per-run normalization, especially on `pointer_move_max_dispatch_time_us` and
+  `pointer_move_max_hit_test_time_us`.
+- A successful selection required keeping only the reset-diagnostics prelude, enabling
+  `--prelude-each-run`, and raising baseline headroom to 50%.
+- `ui-gallery-context-menu-right-click-steady`, `ui-gallery-dialog-escape-focus-restore-steady`,
+  `ui-gallery-dropdown-open-select-steady`, and `ui-gallery-overlay-torture-steady` selected cleanly with the same
+  per-run reset shape.
+
+Change:
+
+- Added single-script suite manifests for
+  `ui-gallery-context-menu-right-click-steady`,
+  `ui-gallery-dialog-escape-focus-restore-steady`,
+  `ui-gallery-dropdown-open-select-steady`,
+  `ui-gallery-overlay-pointer-move-steady`, and
+  `ui-gallery-overlay-torture-steady`.
+- Added `perf_seed_policy` name mapping + regression coverage for the new suite names.
+- Seeded:
+  - `docs/workstreams/perf-baselines/ui-gallery-context-menu-right-click-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-dialog-escape-focus-restore-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-dropdown-open-select-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-overlay-pointer-move-steady.windows-rtx4090.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-overlay-torture-steady.windows-rtx4090.v1.json`
+
+Evidence:
+
+- Selection summaries:
+  - `target/fret-diag-baseline-select-ui-gallery-context-menu-right-click-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json`
+    - `selected_fail_total=0`
+  - `target/fret-diag-baseline-select-ui-gallery-dialog-escape-focus-restore-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json`
+    - `selected_fail_total=0`
+  - `target/fret-diag-baseline-select-ui-gallery-dropdown-open-select-steady-windows-rtx4090-v1-reset-each-run-v2/selection-summary.json`
+    - `best_candidate.fail_total=0`
+    - `threshold_sum_max_top_total_us=808`
+  - `target/fret-diag-baseline-select-ui-gallery-overlay-pointer-move-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json`
+    - `selected_fail_total=0`
+  - `target/fret-diag-baseline-select-ui-gallery-overlay-torture-steady-windows-rtx4090-v1-reset-each-run/selection-summary.json`
+    - `best_candidate.fail_total=0`
+    - `threshold_sum_max_top_total_us=5819`
+- Direct gates (all use `--prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json`
+  and `--prelude-each-run`):
+  - `ui-gallery-context-menu-right-click-steady`:
+    - `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=572/217/0/85/280/0/6`
+    - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=728/230/0/90/421/0/7`
+  - `ui-gallery-dialog-escape-focus-restore-steady`:
+    - `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=641/262/0/102/272/0/0`
+    - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=666/274/0/121/292/0/0`
+  - `ui-gallery-dropdown-open-select-steady`:
+    - `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=587/216/0/84/267/0/7`
+    - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=621/242/0/97/275/0/8`
+  - `ui-gallery-overlay-pointer-move-steady`:
+    - `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1534/1153/0/85/251/101/1`
+    - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1786/1416/0/97/296/107/1`
+- `ui-gallery-overlay-torture-steady`:
+    - `p50.us(total/layout/solve)=3963/3299/890`
+    - `p95.us(total/layout/solve)=4156/3423/946`
+    - `pointer_move.max(dispatch/hit_test)=1211/27`
+
+## Failure exemplar map
+
+- Layout-root build spikes: `Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)`.
+- Layout-engine solve spikes: `Finding (2026-02-15): Batch-solve barrier roots to eliminate per-root solve spikes`.
+- Paint spikes: `Finding (2026-05-10): ui-gallery-complex-steady now yields a paint-dominant Windows exemplar when run with --prelude-each-run; use target/fret-diag/1778364986668/bundle.schema2.json for paint-tail attribution.`
 
 ## Next steps
 
