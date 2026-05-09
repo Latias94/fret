@@ -79,6 +79,21 @@ Current boundary (2026-05-10):
   `ui-gallery-material3-tabs-switch-perf-steady` should stay with the existing `perf-ui-gallery` path unless a later
   narrower follow-on proves it needs its own contract.
 
+Paint-tail note (2026-05-10):
+
+- Probe: `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json`
+  (`repeat=3`, release gallery, view-cache shell on, diagnostics semantics off).
+- New `paint.widget_heavy` triage points the worst frame at the code-editor `Canvas` host:
+  `ElementHostWidget` / `Canvas`, `exclusive_scene_ops_delta=581`.
+- A/B for `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING=1` did **not** materially change the worst bundle:
+  - baseline: `paint_widget_time_us=5591`, `paint_time_us=5966`
+    (`target/fret-diag/perf-code-editor-paint-cache-relax-off/1778367007568/bundle.schema2.json`)
+  - relaxed: `paint_widget_time_us=5549`, `paint_time_us=5781`
+    (`target/fret-diag/perf-code-editor-paint-cache-relax-on/1778367132446/bundle.schema2.json`)
+- Interpretation: do not promote broader paint-cache gating as the primary fix for this workload. The auto-scroll editor
+  changes visible canvas content every frame, so the next GPUI-aligned target is the code-editor/Canvas paint structure
+  itself: retain or replay stable row/layer fragments by explicit keys, and only repaint the moving/changed slice.
+
 Workflow when it fails:
 
 - Read `target/fret-diag/check.perf_thresholds.json` and follow the bundle path printed as `worst overall`.
