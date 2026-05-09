@@ -233,14 +233,13 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let mem = handle.memory_snapshot();
                                 let paint_perf = handle.paint_perf_frame().map(|frame| {
                                     serde_json::json!({
-                                        "schema_version": 1,
+                                        "schema_version": 2,
                                         "frame_seq": frame.frame_seq,
                                         "visible_start": frame.visible_start,
                                         "visible_end": frame.visible_end,
                                         "visible_rows": frame.visible_rows,
                                         "rows_painted": frame.rows_painted,
                                         "rows_drew_rich": frame.rows_drew_rich,
-                                        "quads_background": frame.quads_background,
                                         "quads_selection": frame.quads_selection,
                                         "quads_caret": frame.quads_caret,
                                         "us_total": frame.us_total,

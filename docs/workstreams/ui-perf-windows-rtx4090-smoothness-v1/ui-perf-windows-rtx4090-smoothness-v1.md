@@ -23,6 +23,7 @@ GPU tooling (PIX/Nsight/RenderDoc) available for “GPU is the bottleneck” cas
 - `docs/workstreams/perf-baselines/ui-gallery-overlay-torture-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json`
 - `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json`
+- `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v1.json`
 - `docs/workstreams/perf-baselines/ui-gallery-complex-steady.windows-rtx4090.v1.json` (tail / spikes, `top_*`)
 - `docs/workstreams/perf-baselines/ui-gallery-complex-typical.windows-rtx4090.v1.json` (typical perf, `frame_p95_*`)
 
@@ -93,6 +94,28 @@ Paint-tail note (2026-05-10):
 - Interpretation: do not promote broader paint-cache gating as the primary fix for this workload. The auto-scroll editor
   changes visible canvas content every frame, so the next GPUI-aligned target is the code-editor/Canvas paint structure
   itself: retain or replay stable row/layer fragments by explicit keys, and only repaint the moving/changed slice.
+
+Finding (2026-05-10): redundant row background quads are pure scene-op churn
+
+- Change: `ecosystem/fret-code-editor/src/editor/paint/mod.rs` no longer emits a transparent background `Quad` for
+  every painted row. Pointer handling already lives in the outer `PointerRegion`, so the row background op was not
+  contributing visible output or hit-testing.
+- Diagnostics cleanup: `app_snapshot.code_editor.torture.paint_perf.schema_version` is now `2`, and the stale
+  `quads_background` field was removed instead of preserved as an always-zero compatibility field.
+- Evidence run:
+  - `target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --dir target/fret-diag/perf-code-editor-drop-transparent-row-bg --launch -- target/release/fret-ui-gallery.exe`
+  - Bundle: `target/fret-diag/perf-code-editor-drop-transparent-row-bg/1778369038936/bundle.schema2.json`
+- Result:
+  - Worst-frame `scene_ops` dropped from `1368` to `994` compared with the previous reference bundle.
+  - `paint_widget_time_us` p95 dropped from `5667` to `5276`.
+  - `paint_cache_replayed_ops` dropped from `604` to `519`.
+- Contract:
+  - The probe now has a dedicated Windows baseline at
+    `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-steady.windows-rtx4090.v1.json`.
+  - The 7-repeat gate now passes with `p50/p95/max total=2587/6657/6657us`,
+    `layout=1059/1123/1123us`, `paint=1430/5490/5707us`.
+- Interpretation: this is a safe cleanup, but it is still a local optimization. The structural follow-on remains
+  row/fragment retention or replay by stable keys, not more global cache gating.
 
 Workflow when it fails:
 

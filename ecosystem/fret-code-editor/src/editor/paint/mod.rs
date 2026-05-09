@@ -97,21 +97,9 @@ pub(super) fn paint_row(
     };
     #[cfg(not(feature = "syntax"))]
     let _ = &row_spans;
-    painter.scene().push(SceneOp::Quad {
-        order: DrawOrder(0),
-        rect,
-        background: fret_core::Paint::TRANSPARENT.into(),
-
-        border: Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-        corner_radii: Corners::all(Px(0.0)),
-    });
-    if perf_enabled {
-        st.paint_perf_frame.quads_background =
-            st.paint_perf_frame.quads_background.saturating_add(1);
-    }
-
+    // Rows do not emit an inert transparent background quad here.
+    // Hit-testing already lives in the surrounding PointerRegion.
+    //
     // Align the text baseline within the row rect.
     //
     // `SceneOp::Text` expects a baseline origin. However, our editor rows are expressed as
