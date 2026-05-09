@@ -146,9 +146,17 @@ impl ButtonGroupText {
 
         let content = self.content;
         let test_id = self.test_id;
+        let px_4 = MetricRef::space(Space::N4).resolve(&theme);
 
         let mut props = decl_style::container_props(&theme, chrome, self.layout);
         props.corner_radii = corner_radii;
+        props.padding = Edges {
+            top: Px(0.0),
+            right: px_4,
+            bottom: Px(0.0),
+            left: px_4,
+        }
+        .into();
         props.snap_to_device_pixels = true;
 
         if let Some(w) = self.border_width_override.top {
@@ -164,23 +172,22 @@ impl ButtonGroupText {
             props.border.left = w;
         }
 
-        let px_4 = MetricRef::space(Space::N4).resolve(&theme);
         let text_px = theme.metric_token("metric.font.size");
         let line_height = theme.metric_token("metric.font.line_height");
 
         let mut el = cx.container(props, move |cx| {
             let content = cx.flex(
                 FlexProps {
-                    layout: LayoutStyle::default(),
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
                     direction: Axis::Horizontal,
                     gap: Px(8.0).into(),
-                    padding: Edges {
-                        top: Px(0.0),
-                        right: px_4,
-                        bottom: Px(0.0),
-                        left: px_4,
-                    }
-                    .into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: fret_ui::element::MainAlign::Start,
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,
@@ -666,10 +673,21 @@ impl ButtonGroup {
                                     }
                                 }
                             };
-                            let text = if let Some(order) = order {
-                                text.refine_layout(LayoutRefinement::default().order(order))
-                            } else {
-                                text
+                            let mut text_layout = LayoutRefinement::default();
+                            if let Some(order) = order {
+                                text_layout = text_layout.order(order);
+                            }
+                            let text = match orientation {
+                                ButtonGroupOrientation::Horizontal => {
+                                    text.refine_layout(text_layout.self_stretch())
+                                }
+                                ButtonGroupOrientation::Vertical => {
+                                    if order.is_some() {
+                                        text.refine_layout(text_layout)
+                                    } else {
+                                        text
+                                    }
+                                }
                             };
 
                             text.corner_radii_override(corners).into_element(cx)
@@ -900,7 +918,7 @@ mod tests {
     use crate::direction::LayoutDirection;
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::{ElementKind, Length, MarginEdge};
+    use fret_ui::element::{ElementKind, Length, MarginEdge, SpacingLength};
 
     use crate::rtl;
 
@@ -1111,6 +1129,43 @@ mod tests {
     }
 
     #[test]
+    fn button_group_horizontal_text_items_fill_stretched_control_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let outer = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new([
+                ButtonGroupText::new("https://").into(),
+                ButtonGroupText::new(".com").into(),
+            ]),
+        );
+        assert_eq!(outer.children.len(), 2);
+
+        let left = &outer.children[0];
+        let ElementKind::Container(left_props) = &left.kind else {
+            panic!("expected ButtonGroupText to render a container");
+        };
+        assert_eq!(left_props.layout.size.height, Length::Auto);
+        assert_eq!(
+            left_props.layout.flex.align_self,
+            Some(fret_ui::element::CrossAlign::Stretch)
+        );
+        assert_eq!(left_props.padding.left, SpacingLength::Px(Px(16.0)));
+        assert_eq!(left_props.padding.right, SpacingLength::Px(Px(16.0)));
+
+        let ElementKind::Flex(row_props) = &left.children[0].kind else {
+            panic!("expected ButtonGroupText inner content to render as a flex row");
+        };
+        assert_eq!(row_props.layout.size.height, Length::Fill);
+        assert_eq!(row_props.align, fret_ui::element::CrossAlign::Center);
+        assert_eq!(row_props.padding.left, SpacingLength::Px(Px(0.0)));
+        assert_eq!(row_props.padding.right, SpacingLength::Px(Px(0.0)));
+    }
+
+    #[test]
     fn button_group_horizontal_uses_logical_visual_order_in_rtl() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1221,9 +1276,11 @@ mod tests {
         };
         assert_eq!(text.children.len(), 1);
 
-        let ElementKind::Flex(_) = &text.children[0].kind else {
+        let ElementKind::Flex(props) = &text.children[0].kind else {
             panic!("expected ButtonGroupText content row to render as a flex element");
         };
+        assert_eq!(props.layout.size.height, Length::Fill);
+        assert_eq!(props.align, fret_ui::element::CrossAlign::Center);
         assert_eq!(text.children[0].children.len(), 2);
     }
 

@@ -22,6 +22,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .into(),
             shadcn::Button::new("Search")
                 .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-input-button-group-search-button")
                 .into(),
         ])
         .into_element(cx),

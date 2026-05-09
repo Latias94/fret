@@ -67,6 +67,239 @@ fn container_does_not_stretch_spacer_child_in_engine_tree() {
 }
 
 #[test]
+fn chrome_container_with_single_semantics_child_keeps_outer_stretched_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "chrome-container-single-semantics-child",
+        |cx| {
+            let row = crate::element::FlexProps {
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Stretch,
+                ..Default::default()
+            };
+            let mut addon = crate::element::ContainerProps {
+                padding: fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(8.0),
+                    bottom: Px(0.0),
+                    left: Px(8.0),
+                }
+                .into(),
+                border: fret_core::Edges::all(Px(1.0)),
+                background: Some(Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            };
+            addon.layout.flex.align_self = Some(CrossAlign::Stretch);
+
+            let mut control = crate::element::ContainerProps::default();
+            control.layout.size.width = Length::Px(Px(120.0));
+            control.layout.size.height = Length::Px(Px(36.0));
+
+            vec![cx.flex(row, |cx| {
+                vec![
+                    cx.container(addon, |cx| {
+                        vec![cx.semantics(
+                            crate::element::SemanticsProps {
+                                role: fret_core::SemanticsRole::Text,
+                                label: Some(Arc::from("https://")),
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.text("https://")],
+                        )]
+                    })
+                    .test_id("addon"),
+                    cx.container(control, |_cx| Vec::new()).test_id("control"),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let addon_node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("addon"))
+        .expect("addon test id");
+    let control_node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("control"))
+        .expect("control test id");
+
+    let addon_bounds = ui
+        .debug_node_bounds(addon_node.id)
+        .expect("addon layout bounds");
+    let control_bounds = ui
+        .debug_node_bounds(control_node.id)
+        .expect("control layout bounds");
+    let addon_child = ui.children(addon_node.id)[0];
+    let addon_child_bounds = ui
+        .debug_node_bounds(addon_child)
+        .expect("addon child layout bounds");
+
+    assert_eq!(control_bounds.size.height, Px(36.0));
+    assert_eq!(addon_bounds.size.height, control_bounds.size.height);
+    assert!(
+        addon_bounds.size.width.0 > addon_child_bounds.size.width.0 + 16.0,
+        "expected addon chrome padding/border to remain part of the outer layout box: addon={addon_bounds:?} child={addon_child_bounds:?}"
+    );
+}
+
+#[test]
+fn chrome_container_with_label_like_wrapper_chain_keeps_outer_stretched_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "chrome-container-label-like-wrapper-chain",
+        |cx| {
+            let row = crate::element::FlexProps {
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Stretch,
+                ..Default::default()
+            };
+            let mut addon = crate::element::ContainerProps {
+                padding: fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(16.0),
+                    bottom: Px(0.0),
+                    left: Px(16.0),
+                }
+                .into(),
+                border: fret_core::Edges::all(Px(1.0)),
+                background: Some(Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            };
+            addon.layout.flex.align_self = Some(CrossAlign::Stretch);
+
+            let label_root = crate::element::ContainerProps::default();
+
+            let content_row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Center,
+                ..Default::default()
+            };
+
+            let mut control = crate::element::ContainerProps::default();
+            control.layout.size.width = Length::Px(Px(120.0));
+            control.layout.size.height = Length::Px(Px(36.0));
+
+            vec![cx.flex(row, |cx| {
+                vec![
+                    cx.container(addon, |cx| {
+                        vec![cx.flex(content_row, |cx| {
+                            vec![cx.semantics(
+                                crate::element::SemanticsProps {
+                                    role: fret_core::SemanticsRole::Text,
+                                    label: Some(Arc::from("https://")),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![cx.pointer_region(
+                                        crate::element::PointerRegionProps::default(),
+                                        |cx| {
+                                            vec![cx.container(label_root, |cx| {
+                                                vec![cx.text("https://")]
+                                            })]
+                                        },
+                                    )]
+                                },
+                            )]
+                        })]
+                    })
+                    .test_id("addon"),
+                    cx.container(control, |_cx| Vec::new()).test_id("control"),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let addon_node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("addon"))
+        .expect("addon test id");
+    let control_node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("control"))
+        .expect("control test id");
+
+    let addon_bounds = ui
+        .debug_node_bounds(addon_node.id)
+        .expect("addon layout bounds");
+    let control_bounds = ui
+        .debug_node_bounds(control_node.id)
+        .expect("control layout bounds");
+    let content_row = ui.children(addon_node.id)[0];
+    let semantics = ui.children(content_row)[0];
+    let pointer_region = ui.children(semantics)[0];
+    let inner_container = ui.children(pointer_region)[0];
+    let inner_bounds = ui
+        .debug_node_bounds(inner_container)
+        .expect("inner label container layout bounds");
+
+    assert_eq!(control_bounds.size.height, Px(36.0));
+    assert_eq!(addon_bounds.size.height, control_bounds.size.height);
+    assert!(
+        addon_bounds.size.width.0 > inner_bounds.size.width.0 + 32.0,
+        "expected addon chrome padding/border to remain part of the outer layout box: addon={addon_bounds:?} inner={inner_bounds:?}"
+    );
+}
+
+#[test]
 fn container_absolute_inset_positions_child() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

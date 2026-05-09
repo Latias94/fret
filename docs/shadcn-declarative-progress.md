@@ -24,6 +24,7 @@ Related trackers:
 
 - Cross-repo priorities: `docs/roadmap.md`, `docs/todo-tracker.md`
 - Web conformance harness: `docs/shadcn-web-goldens.md`, `docs/audits/shadcn-web-layout-conformance.md`
+- Shadcn parity harness v1 seed workflow: `docs/workstreams/shadcn-parity-harness-v1/README.md`
 - new-york-v4 coverage snapshot: `docs/audits/shadcn-new-york-v4-coverage.md`
 - new-york-v4 alignment notes: `docs/audits/shadcn-new-york-v4-alignment.md`
 

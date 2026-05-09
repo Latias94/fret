@@ -21,6 +21,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let dropdown_trigger = shadcn::Button::new("")
         .a11y_label("More")
         .variant(shadcn::ButtonVariant::Outline)
+        .test_id("ui-gallery-button-group-dropdown-trigger")
         .refine_style(ChromeRefinement::default().pl(Space::N2))
         .children([icon::icon(cx, icon_id("lucide.chevron-down"))])
         .toggle_model(open.clone())

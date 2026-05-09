@@ -13,14 +13,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         shadcn::ButtonGroupText::new_children([shadcn::Label::new("https://")
             .for_control(control_id)
             .into_element(cx)])
+        .test_id("ui-gallery-button-group-text-prefix")
         .into(),
         shadcn::Input::new(url_value)
             .control_id(control_id)
             .a11y_label("URL")
             .placeholder("my-app")
+            .test_id("ui-gallery-button-group-text-control")
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())
             .into(),
-        shadcn::ButtonGroupText::new(".com").into(),
+        shadcn::ButtonGroupText::new(".com")
+            .test_id("ui-gallery-button-group-text-suffix")
+            .into(),
     ])
     .into_element(cx)
     .test_id("ui-gallery-button-group-text")

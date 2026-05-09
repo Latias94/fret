@@ -3538,6 +3538,62 @@ mod tests {
     }
 
     #[test]
+    fn gallery_button_group_shadcn_parity_seed_layout_invariants() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-button-group-input-content");
+        let search = visual_bounds_by_test_id(
+            &rendered,
+            "ui-gallery-button-group-input-search-button",
+        );
+        assert!(
+            search.size.width.0 >= 36.0 && search.size.width.0 <= 56.0,
+            "expected default-size icon-only Button inside ButtonGroup to keep shadcn compact px-3 width, not collapse to the raw icon width: search={search:?}"
+        );
+        assert!(
+            search.size.height.0 >= 32.0,
+            "expected default-size icon-only Button inside ButtonGroup to keep the control height: search={search:?}"
+        );
+
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-button-group-dropdown-content",
+        );
+        let trigger = visual_bounds_by_test_id(
+            &rendered,
+            "ui-gallery-button-group-dropdown-trigger",
+        );
+        assert!(
+            trigger.size.width.0 >= 32.0 && trigger.size.width.0 <= 56.0,
+            "expected dropdown trigger to keep upstream compact icon-button padding after `!pl-2`, not collapse around the chevron: trigger={trigger:?}"
+        );
+        assert!(
+            trigger.size.height.0 >= 32.0,
+            "expected dropdown trigger to keep the default control height: trigger={trigger:?}"
+        );
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-button-group-text-content");
+        let prefix = layout_bounds_by_test_id(&rendered, "ui-gallery-button-group-text-prefix");
+        let control = layout_bounds_by_test_id(&rendered, "ui-gallery-button-group-text-control");
+        let suffix = layout_bounds_by_test_id(&rendered, "ui-gallery-button-group-text-suffix");
+        let center_y = |rect: fret_core::Rect| rect.origin.y.0 + rect.size.height.0 * 0.5;
+        let control_center = center_y(control);
+        let epsilon = 2.0;
+
+        for (name, bounds) in [("prefix", prefix), ("suffix", suffix)] {
+            let delta = (center_y(bounds) - control_center).abs();
+            assert!(
+                delta <= epsilon,
+                "expected ButtonGroupText {name} addon to stay vertically centered with the adjacent input: addon={bounds:?} control={control:?} delta={delta:.2}"
+            );
+            assert!(
+                bounds.size.height.0 >= 32.0,
+                "expected ButtonGroupText {name} addon to participate in stretched shadcn control height: addon={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_separator_menu_example_keeps_docs_copy_within_row_bounds() {
         let mut rendered = render_gallery_page(PAGE_SEPARATOR);
         scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-separator-menu");

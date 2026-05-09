@@ -1144,7 +1144,7 @@ impl Button {
                 let fg = ColorRef::Color(fg_motion.value);
                 let border_color = ColorRef::Color(border_motion.value);
 
-                let padding = if is_icon {
+                let padding = if is_icon_button {
                     ChromeRefinement::default()
                 } else {
                     // Upstream shadcn buttons compact only the occupied inline side when icon-like
@@ -1767,6 +1767,55 @@ mod tests {
             assert_eq!(props.padding.left, expected_px.into());
             assert_eq!(props.padding.right, expected_px.into());
         }
+    }
+
+    #[test]
+    fn default_size_icon_only_button_keeps_compact_inline_padding() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let theme = Theme::global(&app).snapshot();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let icon_bytes: &'static [u8] =
+            br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>"#;
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-icon-only-default-padding",
+            |cx| {
+                let icon = cx.svg_icon_props(fret_ui::element::SvgIconProps::new(
+                    SvgSource::Static(icon_bytes),
+                ));
+
+                Button::new("")
+                    .a11y_label("Search")
+                    .children(vec![icon])
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Pressable(props) = &element.kind else {
+            panic!("expected button to render as a Pressable");
+        };
+        assert_eq!(props.layout.size.width, Length::Auto);
+
+        let chrome = element
+            .children
+            .first()
+            .expect("expected button pressable to contain chrome container");
+        let ElementKind::Container(props) = &chrome.kind else {
+            panic!("expected chrome container");
+        };
+
+        let compact_px = fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N3).resolve(&theme);
+        assert_eq!(props.padding.left, compact_px.into());
+        assert_eq!(props.padding.right, compact_px.into());
     }
 
     #[test]

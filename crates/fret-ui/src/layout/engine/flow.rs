@@ -27,6 +27,26 @@ pub(crate) enum ParentLayoutKind {
     Overlay,
 }
 
+fn should_promote_auto_wrapper_for_fill(
+    parent_kind: ParentLayoutKind,
+    axis: fret_core::Axis,
+) -> bool {
+    !matches!(
+        (parent_kind, axis),
+        (
+            ParentLayoutKind::Flex {
+                direction: fret_core::Axis::Horizontal,
+            },
+            fret_core::Axis::Vertical
+        ) | (
+            ParentLayoutKind::Flex {
+                direction: fret_core::Axis::Vertical,
+            },
+            fret_core::Axis::Horizontal
+        )
+    )
+}
+
 pub(crate) fn layout_children_from_engine_if_solved<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,
 ) -> Option<Size> {
@@ -316,11 +336,13 @@ fn build_flow_subtree_impl<H: UiHost>(
 
         if matches!(wrapper_style.size.width, crate::element::Length::Auto)
             && descendant_requests_fill_width
+            && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Horizontal)
         {
             style.size.width = Dimension::percent(1.0);
         }
         if matches!(wrapper_style.size.height, crate::element::Length::Auto)
             && descendant_requests_fill_height
+            && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Vertical)
         {
             style.size.height = Dimension::percent(1.0);
         }
@@ -687,11 +709,13 @@ fn build_flow_subtree_impl<H: UiHost>(
             // stacks, expecting the outer wrapper (CardHeader/CardContent, etc) to fill the card.
             if matches!(wrapper_style.size.width, crate::element::Length::Auto)
                 && has_flow_child_fill_w
+                && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Horizontal)
             {
                 style.size.width = Dimension::percent(1.0);
             }
             if matches!(wrapper_style.size.height, crate::element::Length::Auto)
                 && has_flow_child_fill_h
+                && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Vertical)
             {
                 style.size.height = Dimension::percent(1.0);
             }
@@ -1209,6 +1233,20 @@ fn overlay_grid_line() -> TaffyLine<GridPlacement> {
     }
 }
 
+fn container_is_layout_transparent(props: &crate::element::ContainerProps) -> bool {
+    props.padding == crate::element::SpacingEdges::all(crate::element::SpacingLength::Px(Px(0.0)))
+        && matches!(props.layout.overflow, crate::element::Overflow::Visible)
+        && props.background.is_none()
+        && props.background_paint.is_none()
+        && props.shadow.is_none()
+        && props.border == fret_core::Edges::all(Px(0.0))
+        && props.border_color.is_none()
+        && props.border_paint.is_none()
+        && props.border_dash.is_none()
+        && props.focus_ring.is_none()
+        && props.focus_border_color.is_none()
+}
+
 fn passthrough_wrapper_child<H: UiHost>(
     app: &mut H,
     tree: &UiTree<H>,
@@ -1247,8 +1285,10 @@ fn passthrough_wrapper_child<H: UiHost>(
         ElementInstance::FocusTraversalGate(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
-        ElementInstance::Container(_)
-        | ElementInstance::Pressable(_)
+        ElementInstance::Container(props) if container_is_layout_transparent(props) => {
+            Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
+        }
+        ElementInstance::Pressable(_)
         | ElementInstance::ForegroundScope(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)

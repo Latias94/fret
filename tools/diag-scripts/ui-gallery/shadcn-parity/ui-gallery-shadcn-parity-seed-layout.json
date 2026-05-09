@@ -1,0 +1,139 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: shadcn parity seed layout",
+    "tags": ["ui-gallery", "shadcn", "button-group", "input", "dropdown-menu", "layout", "parity-seed"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "button_group"
+    },
+    "target_hints": [
+      "Uses the Button Group page as the first shadcn parity seed harness.",
+      "Asserts icon-only default buttons keep shadcn compact padding instead of collapsing to raw icon width.",
+      "Captures layout sidecars and screenshots for ButtonGroupText vertical-centering review."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-button-group" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-content" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-search-button" },
+        "min_w_px": 36.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-input-search-button" },
+        "max_w_px": 56.0,
+        "max_h_px": 48.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-shadcn-parity-seed.button-group-input.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-shadcn-parity-seed.button-group-input" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-button-group-dropdown-content" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-dropdown-trigger" },
+        "min_w_px": 32.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-dropdown-trigger" },
+        "max_w_px": 56.0,
+        "max_h_px": 48.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-shadcn-parity-seed.button-group-dropdown.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-shadcn-parity-seed.button-group-dropdown" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-button-group-text-content" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-text-prefix" },
+        "min_w_px": 64.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-text-suffix" },
+        "min_w_px": 48.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-text-control" },
+        "min_w_px": 180.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-shadcn-parity-seed.button-group-text.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-shadcn-parity-seed.button-group-text" },
+
+    { "type": "capture_bundle", "label": "ui-gallery-shadcn-parity-seed-layout" }
+  ]
+}
