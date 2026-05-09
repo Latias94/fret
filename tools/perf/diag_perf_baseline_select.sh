@@ -14,10 +14,14 @@ Usage:
     [--warmup-frames <n>] \
     [--headroom-pct <n>] \
     [--work-dir <path>] \
-    [--launch-bin <path>]
+    [--launch-bin <path>] \
+    [--prewarm-script <path>] \
+    [--prelude-script <path>] \
+    [--no-default-suite-hooks]
 
 Notes:
   - Designed for Fret `diag perf` baseline generation/selection.
+  - By default, applies the font prewarm and reset-diagnostics prelude hooks used by the perf workstream.
   - Candidate winner priority:
       1) fewer validation failures
       2) lower suite p90 (sum of top_total_time_us)
@@ -45,7 +49,10 @@ warmup_frames=5
 headroom_pct=20
 work_dir="target/fret-diag-baseline-select-$(date +%s)"
 launch_bin="target/release/fret-ui-gallery"
+default_suite_hooks=true
 declare -a preset_paths=()
+declare -a prewarm_scripts=()
+declare -a prelude_scripts=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -89,6 +96,18 @@ while [[ $# -gt 0 ]]; do
       launch_bin="$2"
       shift 2
       ;;
+    --prewarm-script)
+      prewarm_scripts+=("$2")
+      shift 2
+      ;;
+    --prelude-script)
+      prelude_scripts+=("$2")
+      shift 2
+      ;;
+    --no-default-suite-hooks)
+      default_suite_hooks=false
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -118,6 +137,25 @@ if [[ "$baseline_out" = /* ]]; then
   baseline_out_abs="$baseline_out"
 fi
 
+if [[ "$default_suite_hooks" == "true" ]]; then
+  prewarm_scripts=("tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json" "${prewarm_scripts[@]}")
+  prelude_scripts=("tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json" "${prelude_scripts[@]}")
+fi
+
+for hook in "${prewarm_scripts[@]}" "${prelude_scripts[@]}"; do
+  if [[ ! -f "$hook" ]]; then
+    echo "error: suite hook script not found: $hook" >&2
+    exit 2
+  fi
+done
+
+printf '[select] prewarm:'
+printf ' %s' "${prewarm_scripts[@]}"
+echo
+printf '[select] prelude:'
+printf ' %s' "${prelude_scripts[@]}"
+echo
+
 candidate_results_path="$work_dir/candidate-results.json"
 candidate_results_payload='[]'
 
@@ -136,6 +174,14 @@ run_baseline() {
     diag perf "$suite"
     --dir "$candidate_out_dir"
     --timeout-ms 300000
+  )
+  for script in "${prewarm_scripts[@]}"; do
+    cmd+=(--prewarm-script "$script")
+  done
+  for script in "${prelude_scripts[@]}"; do
+    cmd+=(--prelude-script "$script")
+  done
+  cmd+=(
     --reuse-launch
     --repeat "$repeat"
     --warmup-frames "$warmup_frames"
@@ -175,6 +221,14 @@ run_validation() {
     diag perf "$suite"
     --dir "$validation_out_dir"
     --timeout-ms 300000
+  )
+  for script in "${prewarm_scripts[@]}"; do
+    cmd+=(--prewarm-script "$script")
+  done
+  for script in "${prelude_scripts[@]}"; do
+    cmd+=(--prelude-script "$script")
+  done
+  cmd+=(
     --reuse-launch
     --repeat 3
     --warmup-frames "$warmup_frames"
@@ -276,6 +330,15 @@ mkdir -p "$(dirname "$baseline_out_abs")"
 cp "$best_candidate" "$baseline_out_abs"
 printf '%s\n' "$candidate_results_payload" > "$candidate_results_path"
 
+prewarm_scripts_json="[]"
+if [[ "${#prewarm_scripts[@]}" -gt 0 ]]; then
+  prewarm_scripts_json="$(printf '%s\n' "${prewarm_scripts[@]}" | jq -R . | jq -s .)"
+fi
+prelude_scripts_json="[]"
+if [[ "${#prelude_scripts[@]}" -gt 0 ]]; then
+  prelude_scripts_json="$(printf '%s\n' "${prelude_scripts[@]}" | jq -R . | jq -s .)"
+fi
+
 summary_file="$work_dir/selection-summary.json"
 jq -n \
   --arg suite "$suite" \
@@ -284,12 +347,20 @@ jq -n \
   --argjson best_failures "$best_failures" \
   --argjson best_resize_p90 "$best_resize_p90" \
   --argjson best_threshold_sum "$best_threshold_sum" \
+  --argjson prewarm_scripts "$prewarm_scripts_json" \
+  --argjson prelude_scripts "$prelude_scripts_json" \
+  --argjson default_suite_hooks "$default_suite_hooks" \
   --argjson candidate_results "$candidate_results_payload" \
   '{
     schema_version: 1,
     kind: "perf_baseline_selection",
     suite: $suite,
     baseline_out: $baseline_out,
+    suite_hooks: {
+      prewarm: $prewarm_scripts,
+      prelude: $prelude_scripts,
+      default_suite_hooks: $default_suite_hooks
+    },
     best_candidate: {
       path: $best_candidate,
       fail_total: $best_failures,

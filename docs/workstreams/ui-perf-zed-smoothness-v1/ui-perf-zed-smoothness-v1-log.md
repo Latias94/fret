@@ -11613,3 +11613,31 @@ Decision:
 - Keep the helper default platform-aware, but keep machine-profile overrides explicit through `--baseline`; do not infer
   GPU model or loosen thresholds automatically.
 - Keep the normalization hooks on by default; disabling them is a targeted setup-debugging mode, not the normal gate.
+
+## 2026-05-09 18:36 (pre-commit evidence)
+
+Question:
+- Is there a concrete maintenance contract for re-seeding checked-in perf baselines without silently loosening gates or
+  losing the p50/p95/max evidence requirement?
+
+Change:
+- Added `docs/workstreams/perf-baselines/README.md` with baseline maintenance rules:
+  - machine-tag policy,
+  - when re-seeding is allowed,
+  - required normalization hooks,
+  - candidate-selection and validation workflows,
+  - old-baseline `measured_p50` handling,
+  - review checklist before committing a baseline.
+- Updated the seed-policy template and contract matrix to link the runbook and clarify p50/default-hook rules.
+- `tools/perf/diag_perf_baseline_select.py` and `.sh` now apply the same default font prewarm and reset-diagnostics
+  prelude hooks as the resize gate helpers, unless `--no-default-suite-hooks` is passed.
+
+Validation:
+- `python tools/perf/diag_perf_baseline_select.py --help`
+- `bash -n tools/perf/diag_perf_baseline_select.sh`
+- `bash tools/perf/diag_perf_baseline_select.sh --help`
+- `git ls-files --eol tools/perf/diag_perf_baseline_select.py tools/perf/diag_perf_baseline_select.sh docs/workstreams/perf-baselines/seed-policy-template.md`
+
+Decision:
+- Treat `docs/workstreams/perf-baselines/README.md` as the baseline maintenance runbook. Re-seeding remains an
+  explicit workstream action with command/evidence in the perf log; old baselines are not mass-edited just to add p50.

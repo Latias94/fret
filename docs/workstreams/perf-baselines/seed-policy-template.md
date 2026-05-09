@@ -9,6 +9,8 @@ scope: perf, baseline, thresholds, anti-noise
 
 This template defines how `diag perf --perf-baseline-out` derives thresholds from run statistics.
 
+Maintenance runbook: `docs/workstreams/perf-baselines/README.md`
+
 ## Why this exists
 
 - Keep threshold derivation auditable (`threshold_seed_policy` in baseline JSON).
@@ -51,6 +53,8 @@ Notes:
 
 - The flag is repeatable; later rules override earlier ones for the same `(script, metric)`.
 - Built-in defaults still apply unless overridden by preset/CLI rules.
+- New baseline rows should include `measured_p50`, `measured_p90`, `measured_p95`, and `measured_max`. Do not backfill
+  `measured_p50` into old baselines without an intentional re-seed.
 
 ## JSON preset schema (`--perf-baseline-seed-preset`)
 
@@ -144,6 +148,9 @@ tools/perf/diag_perf_baseline_select.sh \
   --work-dir target/fret-diag-codex-perf-v18-select \
   --launch-bin target/release/fret-ui-gallery
 ```
+
+The Python and shell selectors apply the default font prewarm and reset-diagnostics prelude hooks. Use
+`--no-default-suite-hooks` only when intentionally debugging setup behavior.
 
 Selection priority:
 

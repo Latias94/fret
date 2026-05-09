@@ -12,6 +12,7 @@ Related:
 - Perf log: `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
 - GPUI/egui gap map: `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md`
 - Baselines: `docs/workstreams/perf-baselines/`
+- Baseline maintenance: `docs/workstreams/perf-baselines/README.md`
 
 ## Contract Rules
 

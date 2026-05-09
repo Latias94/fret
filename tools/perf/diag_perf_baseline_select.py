@@ -36,6 +36,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+DEFAULT_PREWARM_SCRIPT = "tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json"
+DEFAULT_PRELUDE_SCRIPT = "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json"
+
 
 def _workspace_root() -> Path:
     # tools/perf/<this file> -> repo root
@@ -174,6 +177,12 @@ def main() -> int:
         help="Forwarded to `fretboard-dev diag perf --prelude-each-run`.",
     )
     ap.add_argument(
+        "--no-default-suite-hooks",
+        action="store_true",
+        default=False,
+        help="Do not add the default font prewarm and reset-diagnostics prelude scripts.",
+    )
+    ap.add_argument(
         "--env",
         action="append",
         default=[],
@@ -198,8 +207,23 @@ def main() -> int:
     baseline_out.parent.mkdir(parents=True, exist_ok=True)
 
     env_specs = _split_env_specs(list(args.env))
-    prewarm_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.prewarm_script]
-    prelude_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.prelude_script]
+    prewarm_script_specs = list(args.prewarm_script)
+    prelude_script_specs = list(args.prelude_script)
+    if not bool(args.no_default_suite_hooks):
+        prewarm_script_specs.insert(0, DEFAULT_PREWARM_SCRIPT)
+        prelude_script_specs.insert(0, DEFAULT_PRELUDE_SCRIPT)
+    prewarm_script_paths = [_resolve_workspace_path(workspace_root, p) for p in prewarm_script_specs]
+    prelude_script_paths = [_resolve_workspace_path(workspace_root, p) for p in prelude_script_specs]
+    prewarm_scripts = [str(p) for p in prewarm_script_paths]
+    prelude_scripts = [str(p) for p in prelude_script_paths]
+
+    for hook_path in [*prewarm_script_paths, *prelude_script_paths]:
+        if not hook_path.is_file():
+            print(f"error: suite hook script not found: {hook_path}", file=sys.stderr)
+            return 2
+
+    print(f"[select] prewarm: {prewarm_scripts}")
+    print(f"[select] prelude: {prelude_scripts}")
 
     candidate_results: list[dict[str, Any]] = []
     best: tuple[int, int, int, str] | None = None
@@ -363,6 +387,12 @@ def main() -> int:
         "kind": "perf_baseline_selection",
         "suite": suite,
         "baseline_out": str(baseline_out),
+        "suite_hooks": {
+            "prewarm": prewarm_scripts,
+            "prelude": prelude_scripts,
+            "prelude_each_run": bool(args.prelude_each_run),
+            "default_suite_hooks": not bool(args.no_default_suite_hooks),
+        },
         "best_candidate": {
             "path": str(selected_baseline_path),
             "fail_total": int(best[0]),
