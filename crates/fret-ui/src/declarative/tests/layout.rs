@@ -28,6 +28,7 @@ mod container;
 mod flex_wrap_intrinsic_min_size;
 mod interactivity;
 mod layout_engine;
+mod mechanism_harness;
 mod scroll;
 mod text;
 mod viewport_roots;

@@ -2555,6 +2555,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-mechanism-harness"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-diag-protocol",
+ "serde",
+ "serde_json",
+ "slotmap",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "fret-minimal"
 version = "0.1.0"
 dependencies = [
@@ -2916,6 +2928,7 @@ name = "fret-ui"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-mechanism-harness",
  "fret-perf",
  "fret-runtime",
  "fret-text-nav",
@@ -3153,6 +3166,7 @@ dependencies = [
  "fret-core",
  "fret-executor",
  "fret-icons",
+ "fret-mechanism-harness",
  "fret-query",
  "fret-runtime",
  "fret-selector",

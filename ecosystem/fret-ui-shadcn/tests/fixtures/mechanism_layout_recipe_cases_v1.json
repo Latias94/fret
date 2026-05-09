@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui-shadcn.layout-recipes.mechanism-harness-v2",
+  "owner_layer": "ecosystem/fret-ui-shadcn",
+  "domains": ["layout", "semantics"],
+  "cases": [
+    {
+      "id": "button-group-text-addons-center-with-input-control",
+      "scenario": { "kind": "button_group_text_addons_center_with_input_control" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "bounds_min_size",
+              "target": { "kind": "test_id", "id": "mechanism-button-group-text-prefix" },
+              "min_w_px": 32.0,
+              "min_h_px": 32.0,
+              "eps_px": 1.0
+            }
+          },
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "bounds_min_size",
+              "target": { "kind": "test_id", "id": "mechanism-button-group-text-suffix" },
+              "min_w_px": 32.0,
+              "min_h_px": 32.0,
+              "eps_px": 1.0
+            }
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "mechanism-button-group-text-prefix" },
+            "b": { "kind": "test_id", "id": "mechanism-button-group-text-control" },
+            "metric": "center_y",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 2.0
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "mechanism-button-group-text-suffix" },
+            "b": { "kind": "test_id", "id": "mechanism-button-group-text-control" },
+            "metric": "center_y",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 2.0
+          }
+        ]
+      }
+    }
+  ]
+}

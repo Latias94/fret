@@ -1754,6 +1754,27 @@ pub enum UiWindowHitTestRegionV1 {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiBoundsMetricV1 {
+    Left,
+    Top,
+    Right,
+    Bottom,
+    Width,
+    Height,
+    CenterX,
+    CenterY,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiComparisonV1 {
+    Eq,
+    Ge,
+    Le,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -2227,6 +2248,20 @@ pub enum UiPredicateV1 {
     BoundsCenterApproxEqual {
         a: UiSelectorV1,
         b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when a scalar bounds metric delta satisfies a comparison.
+    ///
+    /// The evaluated value is `metric(a.bounds) - metric(b.bounds)`. This keeps script-only
+    /// geometry gates expressive enough for self-drawn layout invariants such as "center_y aligns"
+    /// without adding a bespoke predicate for every axis.
+    BoundsMetricDelta {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        metric: UiBoundsMetricV1,
+        comparison: UiComparisonV1,
+        value_px: f32,
         #[serde(default)]
         eps_px: f32,
     },
@@ -3741,6 +3776,41 @@ mod tests {
             roundtrip,
             UiPredicateV1::BoundsCenterApproxEqual { .. }
         ));
+    }
+
+    #[test]
+    fn predicate_bounds_metric_delta_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::BoundsMetricDelta {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+                root_z_index: None,
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+                root_z_index: None,
+            },
+            metric: UiBoundsMetricV1::CenterY,
+            comparison: UiComparisonV1::Eq,
+            value_px: 0.0,
+            eps_px: 2.0,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "bounds_metric_delta",
+                "a": { "kind": "test_id", "id": "a" },
+                "b": { "kind": "test_id", "id": "b" },
+                "metric": "center_y",
+                "comparison": "eq",
+                "value_px": 0.0,
+                "eps_px": 2.0
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::BoundsMetricDelta { .. }));
     }
 
     #[test]

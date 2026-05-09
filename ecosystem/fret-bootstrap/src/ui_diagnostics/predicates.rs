@@ -67,6 +67,31 @@ fn app_snapshot_field_equals(
     Some(app_snapshot.pointer(pointer) == Some(want))
 }
 
+fn bounds_metric_value(bounds: Rect, metric: UiBoundsMetricV1) -> f32 {
+    let left = bounds.origin.x.0;
+    let top = bounds.origin.y.0;
+    let width = bounds.size.width.0.max(0.0);
+    let height = bounds.size.height.0.max(0.0);
+    match metric {
+        UiBoundsMetricV1::Left => left,
+        UiBoundsMetricV1::Top => top,
+        UiBoundsMetricV1::Right => left + width,
+        UiBoundsMetricV1::Bottom => top + height,
+        UiBoundsMetricV1::Width => width,
+        UiBoundsMetricV1::Height => height,
+        UiBoundsMetricV1::CenterX => left + width * 0.5,
+        UiBoundsMetricV1::CenterY => top + height * 0.5,
+    }
+}
+
+fn compare_px_delta(have: f32, comparison: UiComparisonV1, want: f32, eps: f32) -> bool {
+    match comparison {
+        UiComparisonV1::Eq => (have - want).abs() <= eps,
+        UiComparisonV1::Ge => have + eps >= want,
+        UiComparisonV1::Le => have <= want + eps,
+    }
+}
+
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
@@ -1141,6 +1166,25 @@ fn eval_predicate(
             let bcy = by + bh * 0.5;
 
             (acx - bcx).abs() <= eps && (acy - bcy).abs() <= eps
+        }
+        UiPredicateV1::BoundsMetricDelta {
+            a,
+            b,
+            metric,
+            comparison,
+            value_px,
+            eps_px,
+        } => {
+            let Some(a) = select_node(a) else {
+                return false;
+            };
+            let Some(b) = select_node(b) else {
+                return false;
+            };
+
+            let delta =
+                bounds_metric_value(a.bounds, *metric) - bounds_metric_value(b.bounds, *metric);
+            compare_px_delta(delta, *comparison, *value_px, eps_px.max(0.0))
         }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_node(a) else {

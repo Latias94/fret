@@ -131,6 +131,30 @@
         "eps_px": 1.0
       }
     },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-text-prefix" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-text-control" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 2.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-text-suffix" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-text-control" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 2.0
+      }
+    },
     { "type": "capture_layout_sidecar", "label": "ui-gallery-shadcn-parity-seed.button-group-text.layout" },
     { "type": "capture_screenshot", "label": "ui-gallery-shadcn-parity-seed.button-group-text" },
 

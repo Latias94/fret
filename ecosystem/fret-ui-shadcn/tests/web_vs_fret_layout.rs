@@ -112,6 +112,8 @@ mod layout_input_fixtures;
 mod layout_scroll_fixtures;
 #[path = "web_vs_fret_layout/typography.rs"]
 mod layout_typography_fixtures;
+#[path = "web_vs_fret_layout/mechanism_harness.rs"]
+mod mechanism_harness;
 #[path = "web_vs_fret_layout/native_select.rs"]
 mod native_select;
 #[path = "web_vs_fret_layout/pagination.rs"]

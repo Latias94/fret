@@ -33,6 +33,9 @@ virtualizer.workspace = true
 unicode-segmentation.workspace = true
 unicode-ident.workspace = true
 
+[dev-dependencies]
+fret-mechanism-harness = { version = "0.1.0", path = "../fret-mechanism-harness" }
+
 [lints.clippy]
 arc_with_non_send_sync = "allow"
 default_constructed_unit_structs = "allow"

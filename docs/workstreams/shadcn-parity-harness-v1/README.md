@@ -17,6 +17,11 @@ GPU-first shadcn implementation. The first seed set is deliberately small:
 - Button Group / ButtonGroupText: the `https://` and `.com` addons must participate in the
   stretched control row and remain vertically centered with the adjacent input.
 
+Mechanism Harness v2 (`docs/mechanism-harness-v2.md`) generalizes the reusable part of this seed:
+scenario fixtures, observed runtime trees, shared geometry predicates, and case-id-addressable
+runner output. This v1 workstream remains the shadcn/UI Gallery seed evidence; new mechanism-level
+layout, hit-test, overlay, focus, or semantics regressions should start from the v2 harness shape.
+
 ## Source Precedence
 
 Use the source that owns the axis being tested:
@@ -91,9 +96,9 @@ Use the source that owns the axis being tested:
 - Proof: unit test `button_group_text_new_children_preserves_inline_custom_content`; render-flow test
   `gallery_button_group_shadcn_parity_seed_layout_invariants`; diag script captures a layout sidecar
   and screenshot for review.
-- Residual risk: the current diag predicate can gate minimum sizes, while center alignment is gated in
-  Rust. Add a diagnostics center-delta predicate if more visual centering cases need script-only CI
-  coverage.
+- Residual risk: the current seed still focuses on ButtonGroupText in one docs-path viewport; the
+  script now gates center-y alignment through `UiPredicateV1::BoundsMetricDelta`, so future visual
+  centering cases can be added without app-specific Rust assertions.
 
 ## Gate Set
 

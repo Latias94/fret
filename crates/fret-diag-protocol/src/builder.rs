@@ -6,9 +6,10 @@
 //! - Prefer stable selectors (`test_id`, semantics role/name) over pixel coordinates.
 
 use crate::{
-    UiActionScriptV2, UiActionStepV2, UiCommandDispatchTraceQueryV1, UiImeEventV1,
-    UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1, UiOverlayPlacementTraceQueryV1,
-    UiPointerKindV1, UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
+    UiActionScriptV2, UiActionStepV2, UiBoundsMetricV1, UiCommandDispatchTraceQueryV1,
+    UiComparisonV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1,
+    UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
+    UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -104,6 +105,24 @@ pub fn value_equals(target: UiSelectorV1, text: impl Into<String>) -> UiPredicat
     UiPredicateV1::ValueEquals {
         target,
         text: text.into(),
+    }
+}
+
+pub fn bounds_metric_delta(
+    a: UiSelectorV1,
+    b: UiSelectorV1,
+    metric: UiBoundsMetricV1,
+    comparison: UiComparisonV1,
+    value_px: f32,
+    eps_px: f32,
+) -> UiPredicateV1 {
+    UiPredicateV1::BoundsMetricDelta {
+        a,
+        b,
+        metric,
+        comparison,
+        value_px,
+        eps_px,
     }
 }
 

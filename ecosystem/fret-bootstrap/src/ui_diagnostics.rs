@@ -11,10 +11,10 @@ use fret_diag_protocol::{
 };
 use fret_diag_protocol::{
     UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiActivationPolicyV1, UiArtifactStatsV1,
-    UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1,
+    UiBoundsMetricV1, UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1,
     UiCommandDispatchTraceEntryV1 as UiScriptCommandDispatchTraceEntryV1,
-    UiCommandDispatchTraceQueryV1 as UiScriptCommandDispatchTraceQueryV1, UiEdgesV1,
-    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
+    UiCommandDispatchTraceQueryV1 as UiScriptCommandDispatchTraceQueryV1, UiComparisonV1,
+    UiEdgesV1, UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
     UiHostMonitorSelectorV1, UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1,
     UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
     UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,

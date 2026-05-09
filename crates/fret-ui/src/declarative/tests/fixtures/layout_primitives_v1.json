@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.layout-primitives.mechanism-harness-v2",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["layout", "hit_test", "semantics"],
+  "cases": [
+    {
+      "id": "auto-size-shrink-wraps-text",
+      "scenario": { "kind": "auto_size_shrink_wraps_text" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "auto-box" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "auto-box" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "fill-resolves-under-definite-container",
+      "scenario": { "kind": "fill_resolves_under_definite_container" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "fill-box" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 120.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-cross-axis-stretch-matches-control-height",
+      "scenario": { "kind": "flex_cross_axis_stretch" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "stretch-control" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 36.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "stretch-addon" },
+            "b": { "kind": "test_id", "id": "stretch-control" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "transparent-wrapper-preserves-fill",
+      "scenario": { "kind": "transparent_wrapper_preserves_fill" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transparent-fill" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 100.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "transparent-wrapper" },
+            "b": { "kind": "test_id", "id": "transparent-fill" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "chrome-container-stretch-keeps-outer-box",
+      "scenario": { "kind": "chrome_container_stretch_keeps_outer_box" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "chrome-addon" },
+            "b": { "kind": "test_id", "id": "chrome-control" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "chrome-addon" },
+            "b": { "kind": "test_id", "id": "chrome-inner" },
+            "metric": "width",
+            "comparison": "ge",
+            "value_px": 18.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "grid-fr-auto-track-negotiation",
+      "scenario": { "kind": "grid_fr_auto_track_negotiation" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "grid-fr-cell" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 160.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "grid-auto-cell" },
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 160.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "grid-auto-cell" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "visual-vs-hit-bounds-follow-render-transform",
+      "scenario": { "kind": "visual_vs_hit_bounds_follow_render_transform" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "transformed-pressable" },
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-pressable" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-pressable" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "layout-center",
+            "target": { "kind": "test_id", "id": "transformed-pressable" }
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "visual-center",
+            "target": { "kind": "test_id", "id": "transformed-pressable" }
+          }
+        ]
+      }
+    }
+  ]
+}
