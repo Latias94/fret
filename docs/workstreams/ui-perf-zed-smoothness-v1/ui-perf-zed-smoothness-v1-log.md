@@ -11129,3 +11129,63 @@ Decision:
     unavoidable without a GPUI-style bounds propagation model.
   - View-cache scroll root: investigate barrier solve/override cost for clean real bounds deltas; this is Taffy solve
     input churn, not corrected relayout or dirty frontier amplification.
+
+## 2026-05-09 12:24 (diagnostics attribution)
+
+Question:
+- After splitting scroll child layout into first-pass vs corrected-content work, which element kinds are responsible
+  for the remaining child layout cost?
+
+Change:
+- Added opt-in `FRET_SCROLL_LAYOUT_PROFILE=1` kind-level attribution for scroll child layout.
+- Each captured profile now includes `layout_child_first_pass_kind_profiles`,
+  `layout_child_corrected_content_kind_profiles`, and `layout_child_kind_profiles`.
+- The kind profile records per-kind node count, self time, inclusive total time, max self time, and max inclusive time.
+- Nested scroll kind-profile scopes now fold their captured kind totals into the parent scroll scope so the parent
+  profile accounts for nested scroll work instead of only the immediate local scope.
+- Surfaced the new arrays through diagnostics bundle serialization, `fretboard diag stats` human/JSON output, and
+  triage JSON examples. Runtime layout behavior remains unchanged when profiling is disabled.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui -p fret-bootstrap -p fret-diag`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame`
+- `cargo nextest run -p fret-ui scroll` (`147/147` passed)
+- `cargo nextest run -p fret-ui interactive_resize_flow_rebuild view_cache` (`65/65` passed)
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this diagnostics change did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-scroll-kind-profile-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=140 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 5 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-scroll-kind-profile-smoke/1778300270796/bundle.schema2.json`
+- Stats JSON:
+  `target/fret-diag/codex-scroll-kind-profile-smoke/stats-top1.json`
+- Top-frame summary:
+  - frame `195`
+  - total/layout/solve/paint `16884/12857/707/3896us`
+  - 3 captured scroll layout profiles
+- Representative `ui-gallery-content-viewport` profile from the top frame:
+  - `total_us=5277`, `layout_children_first_pass_us=3728`,
+    `layout_children_corrected_content_us=0`, `solve_barrier_us=1472`
+  - child traversal `1065/1065` visited/performed nodes
+  - top kind self costs: `Scroll=1859us` (1 node), `Flex=589us` (261 nodes),
+    `Container=431us` (277 nodes), `Pressable=263us` (249 nodes), `Text=56us` (53 nodes)
+  - top kind inclusive totals: `Container=46350us`, `Flex=27817us`, `Semantics=7150us`,
+    `Scroll=3418us`
+- Representative `ui-gallery-view-cache-root` profile from the top frame:
+  - `total_us=3365`, `layout_children_first_pass_us=1565`, `solve_barrier_us=1434`,
+    child traversal `962/962` nodes
+  - top kind self costs: `Flex=501us`, `Container=332us`, `Pressable=251us`, `Text=38us`
+
+Decision:
+- The remaining measured child-layout cost is not a single text measurement hotspot. `Text` self time is small in the
+  top-frame profiles; the cost is distributed across structural layout application (`Scroll`, `Flex`, `Container`,
+  `Pressable`) and their inclusive subtree propagation.
+- This points the next optimization pass toward the layout data model / geometry propagation boundary, not toward a
+  text-specific fast path.
+- Keep the prior rejection of a broad clean-child-root apply skip. The next candidate should be a narrow, proof-backed
+  geometry propagation or barrier-solve reduction that preserves layout-time side effects.

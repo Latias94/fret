@@ -1673,13 +1673,44 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                         "layout_child_first_pass_nodes_visited": 15,
                         "layout_child_first_pass_nodes_performed": 6,
                         "layout_child_first_pass_max_us": 1_500,
+                        "layout_child_first_pass_kind_profiles": [{
+                            "kind": "Text",
+                            "nodes": 4,
+                            "self_us": 900,
+                            "total_us": 1_100,
+                            "max_self_us": 400,
+                            "max_total_us": 500
+                        }],
                         "corrected_content_relayout": true,
                         "layout_children_corrected_content_us": 500,
                         "layout_child_corrected_content_nodes_visited": 5,
                         "layout_child_corrected_content_nodes_performed": 2,
                         "layout_child_corrected_content_max_us": 500,
+                        "layout_child_corrected_content_kind_profiles": [{
+                            "kind": "Flex",
+                            "nodes": 2,
+                            "self_us": 300,
+                            "total_us": 450,
+                            "max_self_us": 300,
+                            "max_total_us": 450
+                        }],
                         "layout_child_nodes_visited": 20,
                         "layout_child_nodes_performed": 8,
+                        "layout_child_kind_profiles": [{
+                            "kind": "Text",
+                            "nodes": 4,
+                            "self_us": 900,
+                            "total_us": 1_100,
+                            "max_self_us": 400,
+                            "max_total_us": 500
+                        }, {
+                            "kind": "Flex",
+                            "nodes": 2,
+                            "self_us": 300,
+                            "total_us": 450,
+                            "max_self_us": 300,
+                            "max_total_us": 450
+                        }],
                         "layout_child_max_us": 2_000,
                         "layout_child_max_node": 51,
                         "layout_child_max_invalidated": true,
@@ -1830,9 +1861,48 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("scroll_layout_profiles"))
             .and_then(|v| v.as_array())
             .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("Text")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_first_pass_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("nodes"))
+            .and_then(|v| v.as_u64()),
+        Some(4)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
             .and_then(|v| v.get("corrected_content_relayout"))
             .and_then(|v| v.as_bool()),
         Some(true)
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("scroll_layout_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("layout_child_corrected_content_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("Flex")
     );
     let scroll_profile_examples = triage
         .get("hints")
@@ -1857,6 +1927,16 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("layout_children_corrected_content_us"))
             .and_then(|v| v.as_u64()),
         Some(500)
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
+            .and_then(|v| v.get("layout_child_kind_profiles"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("Text")
     );
     let build_roots_examples = triage
         .get("hints")

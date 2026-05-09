@@ -4,7 +4,8 @@ use super::{
     BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve, BundleStatsLayoutHotspot,
     BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
-    BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutProfile, BundleStatsWidgetMeasureHotspot,
+    BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
+    BundleStatsScrollLayoutProfile, BundleStatsWidgetMeasureHotspot,
 };
 
 pub(super) fn snapshot_paint_widget_hotspots(
@@ -281,6 +282,41 @@ pub(super) fn snapshot_scroll_layout_profiles(
 
     let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
+    let parse_kind_profiles = |p: &serde_json::Map<String, serde_json::Value>,
+                               key: &str|
+     -> Vec<BundleStatsScrollLayoutKindProfile> {
+        p.get(key)
+            .and_then(|v| v.as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_object())
+                    .map(|item| BundleStatsScrollLayoutKindProfile {
+                        kind: item
+                            .get("kind")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string()),
+                        nodes: item
+                            .get("nodes")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                            .min(u32::MAX as u64) as u32,
+                        self_us: item.get("self_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                        total_us: item.get("total_us").and_then(|v| v.as_u64()).unwrap_or(0),
+                        max_self_us: item
+                            .get("max_self_us")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0),
+                        max_total_us: item
+                            .get("max_total_us")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
     let mut out: Vec<BundleStatsScrollLayoutProfile> = scroll_nodes
         .iter()
         .filter_map(|n| {
@@ -385,6 +421,10 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     .get("layout_child_first_pass_max_us")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0),
+                layout_child_first_pass_kind_profiles: parse_kind_profiles(
+                    p,
+                    "layout_child_first_pass_kind_profiles",
+                ),
                 corrected_content_relayout: p
                     .get("corrected_content_relayout")
                     .and_then(|v| v.as_bool())
@@ -409,6 +449,10 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     .get("layout_child_corrected_content_max_us")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0),
+                layout_child_corrected_content_kind_profiles: parse_kind_profiles(
+                    p,
+                    "layout_child_corrected_content_kind_profiles",
+                ),
                 layout_child_nodes_visited: p
                     .get("layout_child_nodes_visited")
                     .and_then(|v| v.as_u64())
@@ -419,6 +463,7 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0)
                     .min(u32::MAX as u64) as u32,
+                layout_child_kind_profiles: parse_kind_profiles(p, "layout_child_kind_profiles"),
                 layout_child_max_us: p
                     .get("layout_child_max_us")
                     .and_then(|v| v.as_u64())

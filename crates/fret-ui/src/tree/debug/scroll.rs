@@ -21,6 +21,16 @@ pub enum UiDebugScrollLayoutPassKind {
 }
 
 #[derive(Debug, Clone)]
+pub struct UiDebugScrollLayoutKindProfile {
+    pub kind: &'static str,
+    pub nodes: u32,
+    pub self_us: u64,
+    pub total_us: u64,
+    pub max_self_us: u64,
+    pub max_total_us: u64,
+}
+
+#[derive(Debug, Clone)]
 pub struct UiDebugScrollLayoutProfile {
     pub pass: UiDebugScrollLayoutPassKind,
     pub probe_unbounded: bool,
@@ -40,13 +50,16 @@ pub struct UiDebugScrollLayoutProfile {
     pub layout_child_first_pass_nodes_visited: u32,
     pub layout_child_first_pass_nodes_performed: u32,
     pub layout_child_first_pass_max_us: u64,
+    pub layout_child_first_pass_kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
     pub corrected_content_relayout: bool,
     pub layout_children_corrected_content_us: u64,
     pub layout_child_corrected_content_nodes_visited: u32,
     pub layout_child_corrected_content_nodes_performed: u32,
     pub layout_child_corrected_content_max_us: u64,
+    pub layout_child_corrected_content_kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
     pub layout_child_nodes_visited: u32,
     pub layout_child_nodes_performed: u32,
+    pub layout_child_kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
     pub layout_child_max_us: u64,
     pub layout_child_max_node: Option<NodeId>,
     pub layout_child_max_invalidated: bool,

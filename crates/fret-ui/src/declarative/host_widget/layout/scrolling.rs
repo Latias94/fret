@@ -6,8 +6,8 @@ use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{
     UiDebugInvalidationDetail, UiDebugInvalidationSource, UiDebugScrollAxis,
-    UiDebugScrollLayoutPassKind, UiDebugScrollLayoutProfile, UiDebugScrollNodeTelemetry,
-    UiDebugScrollOverflowObservationTelemetry,
+    UiDebugScrollLayoutKindProfile, UiDebugScrollLayoutPassKind, UiDebugScrollLayoutProfile,
+    UiDebugScrollNodeTelemetry, UiDebugScrollOverflowObservationTelemetry,
 };
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
@@ -38,7 +38,7 @@ fn scroll_layout_profile_config() -> Option<&'static ScrollLayoutProfileConfig> 
         .as_ref()
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct ScrollChildLayoutProfile {
     nodes_visited: u32,
     nodes_performed: u32,
@@ -52,6 +52,7 @@ struct ScrollChildLayoutProfile {
     max_bounds_before: Option<Rect>,
     max_bounds_after: Option<Rect>,
     max_input_bounds: Rect,
+    kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
 }
 
 impl ScrollChildLayoutProfile {
@@ -71,10 +72,12 @@ impl ScrollChildLayoutProfile {
         bounds_before: Option<Rect>,
         bounds_after: Option<Rect>,
         input_bounds: Rect,
+        kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
     ) {
         let elapsed_us = Self::saturating_elapsed_us(elapsed);
         self.nodes_visited = self.nodes_visited.saturating_add(nodes_visited);
         self.nodes_performed = self.nodes_performed.saturating_add(nodes_performed);
+        self.merge_kind_profiles(&kind_profiles);
         if elapsed_us > self.max_us {
             self.max_us = elapsed_us;
             self.max_node = Some(child);
@@ -92,6 +95,7 @@ impl ScrollChildLayoutProfile {
     fn merge_from(&mut self, other: &Self) {
         self.nodes_visited = self.nodes_visited.saturating_add(other.nodes_visited);
         self.nodes_performed = self.nodes_performed.saturating_add(other.nodes_performed);
+        self.merge_kind_profiles(&other.kind_profiles);
         if other.max_us > self.max_us {
             self.max_us = other.max_us;
             self.max_node = other.max_node;
@@ -104,6 +108,28 @@ impl ScrollChildLayoutProfile {
             self.max_bounds_after = other.max_bounds_after;
             self.max_input_bounds = other.max_input_bounds;
         }
+    }
+
+    fn merge_kind_profiles(&mut self, profiles: &[UiDebugScrollLayoutKindProfile]) {
+        const MAX_KIND_PROFILES: usize = 12;
+        for profile in profiles {
+            if let Some(existing) = self
+                .kind_profiles
+                .iter_mut()
+                .find(|entry| entry.kind == profile.kind)
+            {
+                existing.nodes = existing.nodes.saturating_add(profile.nodes);
+                existing.self_us = existing.self_us.saturating_add(profile.self_us);
+                existing.total_us = existing.total_us.saturating_add(profile.total_us);
+                existing.max_self_us = existing.max_self_us.max(profile.max_self_us);
+                existing.max_total_us = existing.max_total_us.max(profile.max_total_us);
+            } else {
+                self.kind_profiles.push(profile.clone());
+            }
+        }
+        self.kind_profiles
+            .sort_by(|a, b| b.self_us.cmp(&a.self_us).then_with(|| a.kind.cmp(b.kind)));
+        self.kind_profiles.truncate(MAX_KIND_PROFILES);
     }
 
     fn max_bounds_changed(&self) -> Option<bool> {
@@ -146,6 +172,10 @@ impl ScrollChildLayoutProfile {
         total_us: u64,
         element_path: Option<String>,
     ) -> UiDebugScrollLayoutProfile {
+        let max_bounds_changed = self.max_bounds_changed();
+        let max_bounds_size_changed = self.max_bounds_size_changed();
+        let max_input_matches_before = self.max_input_matches_before();
+        let max_input_size_matches_before = self.max_input_size_matches_before();
         UiDebugScrollLayoutProfile {
             pass: match pass {
                 crate::layout_pass::LayoutPassKind::Probe => UiDebugScrollLayoutPassKind::Probe,
@@ -168,13 +198,16 @@ impl ScrollChildLayoutProfile {
             layout_child_first_pass_nodes_visited: first_pass.nodes_visited,
             layout_child_first_pass_nodes_performed: first_pass.nodes_performed,
             layout_child_first_pass_max_us: first_pass.max_us,
+            layout_child_first_pass_kind_profiles: first_pass.kind_profiles,
             corrected_content_relayout,
             layout_children_corrected_content_us: corrected_content_us,
             layout_child_corrected_content_nodes_visited: corrected_content.nodes_visited,
             layout_child_corrected_content_nodes_performed: corrected_content.nodes_performed,
             layout_child_corrected_content_max_us: corrected_content.max_us,
+            layout_child_corrected_content_kind_profiles: corrected_content.kind_profiles,
             layout_child_nodes_visited: self.nodes_visited,
             layout_child_nodes_performed: self.nodes_performed,
+            layout_child_kind_profiles: self.kind_profiles,
             layout_child_max_us: self.max_us,
             layout_child_max_node: self.max_node,
             layout_child_max_invalidated: self.max_invalidated,
@@ -182,10 +215,10 @@ impl ScrollChildLayoutProfile {
             layout_child_max_subtree_dirty_count: self.max_subtree_dirty_count,
             layout_child_max_nodes_visited: self.max_nodes_visited,
             layout_child_max_nodes_performed: self.max_nodes_performed,
-            layout_child_max_bounds_changed: self.max_bounds_changed(),
-            layout_child_max_bounds_size_changed: self.max_bounds_size_changed(),
-            layout_child_max_input_matches_before: self.max_input_matches_before(),
-            layout_child_max_input_size_matches_before: self.max_input_size_matches_before(),
+            layout_child_max_bounds_changed: max_bounds_changed,
+            layout_child_max_bounds_size_changed: max_bounds_size_changed,
+            layout_child_max_input_matches_before: max_input_matches_before,
+            layout_child_max_input_size_matches_before: max_input_size_matches_before,
             layout_child_max_bounds_before: self.max_bounds_before,
             layout_child_max_bounds_after: self.max_bounds_after,
             layout_child_max_input_bounds: self.max_input_bounds,
@@ -2280,9 +2313,11 @@ impl ElementHostWidget {
                     let child_subtree_dirty_count = cx.tree.node_subtree_layout_dirty_count(child);
                     let child_bounds_before = cx.tree.node_bounds(child);
                     let before = cx.tree.debug_stats();
+                    cx.tree.begin_scroll_layout_kind_profile();
                     let child_started = Instant::now();
                     let _ = cx.layout_in(child, content_bounds);
                     let child_elapsed = child_started.elapsed();
+                    let kind_profiles = cx.tree.end_scroll_layout_kind_profile();
                     let after = cx.tree.debug_stats();
                     let child_bounds_after = cx.tree.node_bounds(child);
                     child_layout_first_pass_profile.record_child(
@@ -2300,6 +2335,7 @@ impl ElementHostWidget {
                         child_bounds_before,
                         child_bounds_after,
                         content_bounds,
+                        kind_profiles,
                     );
                 } else {
                     let _ = cx.layout_in(child, content_bounds);
@@ -2761,9 +2797,11 @@ impl ElementHostWidget {
                                 cx.tree.node_subtree_layout_dirty_count(child);
                             let child_bounds_before = cx.tree.node_bounds(child);
                             let before = cx.tree.debug_stats();
+                            cx.tree.begin_scroll_layout_kind_profile();
                             let child_started = Instant::now();
                             let _ = cx.layout_in(child, content_bounds);
                             let child_elapsed = child_started.elapsed();
+                            let kind_profiles = cx.tree.end_scroll_layout_kind_profile();
                             let after = cx.tree.debug_stats();
                             let child_bounds_after = cx.tree.node_bounds(child);
                             child_layout_corrected_content_profile.record_child(
@@ -2781,6 +2819,7 @@ impl ElementHostWidget {
                                 child_bounds_before,
                                 child_bounds_after,
                                 content_bounds,
+                                kind_profiles,
                             );
                         } else {
                             let _ = cx.layout_in(child, content_bounds);

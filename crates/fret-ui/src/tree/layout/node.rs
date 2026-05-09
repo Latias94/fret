@@ -160,9 +160,11 @@ impl<H: UiHost> UiTree<H> {
         if let Some(profile) = self.layout_node_profile.as_mut() {
             profile.enter(node, pass_kind, bounds);
         }
-        let widget_started = self.debug_enabled.then(Instant::now);
+        let profile_widget_timing =
+            self.debug_enabled || !self.scroll_layout_kind_profile_stack.is_empty();
+        let widget_started = profile_widget_timing.then(Instant::now);
         let mut widget_type: &'static str = "<unknown>";
-        if self.debug_enabled {
+        if profile_widget_timing {
             self.debug_layout_stack.push(super::DebugLayoutStackFrame {
                 child_inclusive_time: Duration::default(),
             });
@@ -223,22 +225,34 @@ impl<H: UiHost> UiTree<H> {
                 .map(|f| f.child_inclusive_time)
                 .unwrap_or_default();
             let exclusive_time = inclusive_time.saturating_sub(child_inclusive_time);
+            if let Some(scope) = self.scroll_layout_kind_profile_stack.last_mut() {
+                let element_kind = self
+                    .window
+                    .and_then(|window| {
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                            .map(|record| record.instance.kind_name())
+                    })
+                    .unwrap_or("<unknown>");
+                scope.record(element_kind, exclusive_time, inclusive_time);
+            }
             if let Some(parent) = self.debug_layout_stack.last_mut() {
                 parent.child_inclusive_time += inclusive_time;
             }
 
-            let wants_exclusive = self.debug_layout_hotspots.len() < MAX_LAYOUT_HOTSPOTS
-                || self
-                    .debug_layout_hotspots
-                    .last()
-                    .map(|h| h.exclusive_time < exclusive_time)
-                    .unwrap_or(true);
-            let wants_inclusive = self.debug_layout_inclusive_hotspots.len() < MAX_LAYOUT_HOTSPOTS
-                || self
-                    .debug_layout_inclusive_hotspots
-                    .last()
-                    .map(|h| h.inclusive_time < inclusive_time)
-                    .unwrap_or(true);
+            let wants_exclusive = self.debug_enabled
+                && (self.debug_layout_hotspots.len() < MAX_LAYOUT_HOTSPOTS
+                    || self
+                        .debug_layout_hotspots
+                        .last()
+                        .map(|h| h.exclusive_time < exclusive_time)
+                        .unwrap_or(true));
+            let wants_inclusive = self.debug_enabled
+                && (self.debug_layout_inclusive_hotspots.len() < MAX_LAYOUT_HOTSPOTS
+                    || self
+                        .debug_layout_inclusive_hotspots
+                        .last()
+                        .map(|h| h.inclusive_time < inclusive_time)
+                        .unwrap_or(true));
 
             if wants_exclusive || wants_inclusive {
                 let element = self.nodes.get(node).and_then(|n| n.element);

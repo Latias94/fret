@@ -33,6 +33,29 @@ impl UiScrollLayoutPassKindV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollLayoutKindProfileV1 {
+    pub kind: String,
+    pub nodes: u32,
+    pub self_us: u64,
+    pub total_us: u64,
+    pub max_self_us: u64,
+    pub max_total_us: u64,
+}
+
+impl UiScrollLayoutKindProfileV1 {
+    fn from_profile(profile: &fret_ui::tree::UiDebugScrollLayoutKindProfile) -> Self {
+        Self {
+            kind: profile.kind.to_string(),
+            nodes: profile.nodes,
+            self_us: profile.self_us,
+            total_us: profile.total_us,
+            max_self_us: profile.max_self_us,
+            max_total_us: profile.max_total_us,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiScrollLayoutProfileV1 {
     pub pass: UiScrollLayoutPassKindV1,
     pub probe_unbounded: bool,
@@ -59,6 +82,8 @@ pub struct UiScrollLayoutProfileV1 {
     pub layout_child_first_pass_nodes_performed: u32,
     #[serde(default)]
     pub layout_child_first_pass_max_us: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layout_child_first_pass_kind_profiles: Vec<UiScrollLayoutKindProfileV1>,
     #[serde(default)]
     pub corrected_content_relayout: bool,
     #[serde(default)]
@@ -69,8 +94,12 @@ pub struct UiScrollLayoutProfileV1 {
     pub layout_child_corrected_content_nodes_performed: u32,
     #[serde(default)]
     pub layout_child_corrected_content_max_us: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layout_child_corrected_content_kind_profiles: Vec<UiScrollLayoutKindProfileV1>,
     pub layout_child_nodes_visited: u32,
     pub layout_child_nodes_performed: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layout_child_kind_profiles: Vec<UiScrollLayoutKindProfileV1>,
     pub layout_child_max_us: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_child_max_node: Option<u64>,
@@ -122,6 +151,11 @@ impl UiScrollLayoutProfileV1 {
             layout_child_first_pass_nodes_performed:
                 profile.layout_child_first_pass_nodes_performed,
             layout_child_first_pass_max_us: profile.layout_child_first_pass_max_us,
+            layout_child_first_pass_kind_profiles: profile
+                .layout_child_first_pass_kind_profiles
+                .iter()
+                .map(UiScrollLayoutKindProfileV1::from_profile)
+                .collect(),
             corrected_content_relayout: profile.corrected_content_relayout,
             layout_children_corrected_content_us: profile.layout_children_corrected_content_us,
             layout_child_corrected_content_nodes_visited:
@@ -129,8 +163,18 @@ impl UiScrollLayoutProfileV1 {
             layout_child_corrected_content_nodes_performed:
                 profile.layout_child_corrected_content_nodes_performed,
             layout_child_corrected_content_max_us: profile.layout_child_corrected_content_max_us,
+            layout_child_corrected_content_kind_profiles: profile
+                .layout_child_corrected_content_kind_profiles
+                .iter()
+                .map(UiScrollLayoutKindProfileV1::from_profile)
+                .collect(),
             layout_child_nodes_visited: profile.layout_child_nodes_visited,
             layout_child_nodes_performed: profile.layout_child_nodes_performed,
+            layout_child_kind_profiles: profile
+                .layout_child_kind_profiles
+                .iter()
+                .map(UiScrollLayoutKindProfileV1::from_profile)
+                .collect(),
             layout_child_max_us: profile.layout_child_max_us,
             layout_child_max_node: profile.layout_child_max_node.map(key_to_u64),
             layout_child_max_invalidated: profile.layout_child_max_invalidated,

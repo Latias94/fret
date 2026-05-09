@@ -1116,12 +1116,25 @@ Perf acceptance:
   - Result: live resize cost is first-pass real bounds application / barrier solve, not corrected-content relayout and
     not repeated root scheduling. In the smoke bundle, `ui-gallery-content-viewport` reports `sum_child=83113us`,
     `sum_first=83113us`, `sum_corrected=0us`; `ui-gallery-view-cache-root` reports `sum_barrier=43615us`.
+- [x] Add kind-level attribution for scroll child layout before choosing a component-specific optimization.
+  - Target: separate text measurement cost from structural layout propagation inside the real bounds-delta child
+    layout path.
+  - Fields: `layout_child_first_pass_kind_profiles`, `layout_child_corrected_content_kind_profiles`, and
+    `layout_child_kind_profiles`.
+  - Evidence update: perf log entry `2026-05-09 12:24`; smoke bundle
+    `target/fret-diag/codex-scroll-kind-profile-smoke/1778300270796/bundle.schema2.json`.
+  - Result: in the top-frame `ui-gallery-content-viewport` profile, `Text` self time is only `56us` across 53 nodes.
+    The dominant self costs are structural (`Scroll=1859us`, `Flex=589us`, `Container=431us`,
+    `Pressable=263us`), while inclusive totals stack through container/flex wrappers. Do not spend the next pass on a
+    text-specific fast path without fresh evidence.
 - [ ] Investigate content scroll real bounds application cost.
   - Target: clean live resize frames where `ui-gallery-content-viewport` visits roughly `1042` child nodes with
     `bounds_changed=true`, `input_matches_before=false`, `layout_child_max_invalidated=false`, and
     `layout_child_max_subtree_dirty=false`.
   - Question: can a clean subtree whose size changed receive final bounds through a narrower geometry-propagation path
     without rerunning layout-time widget side effects?
+  - Latest evidence: kind-level attribution points at structural layout propagation (`Scroll` / `Flex` / `Container`
+    / `Pressable`) rather than a component-local `Text` hotspot.
   - Guardrails: preserve scroll extents, hit testing, element bounds cache, semantics bounds, focus/overlay geometry,
     text input layout state, virtual-list visible ranges, and layout query semantics.
   - Gate: `cargo nextest run -p fret-ui scroll interactive_resize_flow_rebuild view_cache` plus a profile-enabled

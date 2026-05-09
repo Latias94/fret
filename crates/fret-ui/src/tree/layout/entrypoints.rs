@@ -1194,6 +1194,23 @@ impl<H: UiHost> UiTree<H> {
         )
     }
 
+    pub(crate) fn begin_scroll_layout_kind_profile(&mut self) {
+        self.scroll_layout_kind_profile_stack
+            .push(ScrollLayoutKindProfileScope::default());
+    }
+
+    pub(crate) fn end_scroll_layout_kind_profile(&mut self) -> Vec<UiDebugScrollLayoutKindProfile> {
+        let profiles = self
+            .scroll_layout_kind_profile_stack
+            .pop()
+            .map(ScrollLayoutKindProfileScope::into_debug_profiles)
+            .unwrap_or_default();
+        if let Some(parent) = self.scroll_layout_kind_profile_stack.last_mut() {
+            parent.absorb_debug_profiles(&profiles);
+        }
+        profiles
+    }
+
     fn sync_element_bounds_cache_after_layout(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             return;

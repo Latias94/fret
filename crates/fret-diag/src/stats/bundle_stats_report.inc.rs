@@ -477,13 +477,17 @@ pub(super) struct BundleStatsScrollLayoutProfile {
     pub(super) layout_child_first_pass_nodes_visited: u32,
     pub(super) layout_child_first_pass_nodes_performed: u32,
     pub(super) layout_child_first_pass_max_us: u64,
+    pub(super) layout_child_first_pass_kind_profiles: Vec<BundleStatsScrollLayoutKindProfile>,
     pub(super) corrected_content_relayout: bool,
     pub(super) layout_children_corrected_content_us: u64,
     pub(super) layout_child_corrected_content_nodes_visited: u32,
     pub(super) layout_child_corrected_content_nodes_performed: u32,
     pub(super) layout_child_corrected_content_max_us: u64,
+    pub(super) layout_child_corrected_content_kind_profiles:
+        Vec<BundleStatsScrollLayoutKindProfile>,
     pub(super) layout_child_nodes_visited: u32,
     pub(super) layout_child_nodes_performed: u32,
+    pub(super) layout_child_kind_profiles: Vec<BundleStatsScrollLayoutKindProfile>,
     pub(super) layout_child_max_us: u64,
     pub(super) layout_child_max_node: Option<u64>,
     pub(super) layout_child_max_invalidated: bool,
@@ -499,6 +503,16 @@ pub(super) struct BundleStatsScrollLayoutProfile {
     pub(super) element_path: Option<String>,
     pub(super) role: Option<String>,
     pub(super) semantics_test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsScrollLayoutKindProfile {
+    pub(super) kind: Option<String>,
+    pub(super) nodes: u32,
+    pub(super) self_us: u64,
+    pub(super) total_us: u64,
+    pub(super) max_self_us: u64,
+    pub(super) max_total_us: u64,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1776,6 +1790,23 @@ impl BundleStatsReport {
                             p.layout_child_corrected_content_nodes_visited,
                             p.layout_child_corrected_content_nodes_performed,
                         ));
+                        if !p.layout_child_kind_profiles.is_empty() {
+                            let kinds = p
+                                .layout_child_kind_profiles
+                                .iter()
+                                .take(4)
+                                .map(|k| {
+                                    format!(
+                                        "{}:{}us/{}n",
+                                        k.kind.as_deref().unwrap_or("<unknown>"),
+                                        k.self_us,
+                                        k.nodes
+                                    )
+                                })
+                                .collect::<Vec<_>>()
+                                .join(",");
+                            out.push_str(&format!(" child_kind_self=[{kinds}]"));
+                        }
                         if let Some(test_id) = p.test_id.as_deref()
                             && !test_id.is_empty()
                         {
@@ -2071,6 +2102,22 @@ impl BundleStatsReport {
                 return 0.0;
             }
             (numer as f64) * 100.0 / (denom as f64)
+        }
+
+        fn scroll_layout_kind_profile_to_json(
+            p: &BundleStatsScrollLayoutKindProfile,
+        ) -> Value {
+            let mut obj = Map::new();
+            obj.insert(
+                "kind".to_string(),
+                p.kind.clone().map(Value::from).unwrap_or(Value::Null),
+            );
+            obj.insert("nodes".to_string(), Value::from(p.nodes));
+            obj.insert("self_us".to_string(), Value::from(p.self_us));
+            obj.insert("total_us".to_string(), Value::from(p.total_us));
+            obj.insert("max_self_us".to_string(), Value::from(p.max_self_us));
+            obj.insert("max_total_us".to_string(), Value::from(p.max_total_us));
+            Value::Object(obj)
         }
 
         let mut root = Map::new();
@@ -3873,6 +3920,15 @@ impl BundleStatsReport {
                             Value::from(p.layout_child_first_pass_max_us),
                         );
                         p_obj.insert(
+                            "layout_child_first_pass_kind_profiles".to_string(),
+                            Value::Array(
+                                p.layout_child_first_pass_kind_profiles
+                                    .iter()
+                                    .map(scroll_layout_kind_profile_to_json)
+                                    .collect(),
+                            ),
+                        );
+                        p_obj.insert(
                             "corrected_content_relayout".to_string(),
                             Value::from(p.corrected_content_relayout),
                         );
@@ -3893,12 +3949,30 @@ impl BundleStatsReport {
                             Value::from(p.layout_child_corrected_content_max_us),
                         );
                         p_obj.insert(
+                            "layout_child_corrected_content_kind_profiles".to_string(),
+                            Value::Array(
+                                p.layout_child_corrected_content_kind_profiles
+                                    .iter()
+                                    .map(scroll_layout_kind_profile_to_json)
+                                    .collect(),
+                            ),
+                        );
+                        p_obj.insert(
                             "layout_child_nodes_visited".to_string(),
                             Value::from(p.layout_child_nodes_visited),
                         );
                         p_obj.insert(
                             "layout_child_nodes_performed".to_string(),
                             Value::from(p.layout_child_nodes_performed),
+                        );
+                        p_obj.insert(
+                            "layout_child_kind_profiles".to_string(),
+                            Value::Array(
+                                p.layout_child_kind_profiles
+                                    .iter()
+                                    .map(scroll_layout_kind_profile_to_json)
+                                    .collect(),
+                            ),
                         );
                         p_obj.insert(
                             "layout_child_max_us".to_string(),
