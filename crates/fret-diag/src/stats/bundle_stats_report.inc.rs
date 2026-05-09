@@ -689,7 +689,16 @@ pub(super) struct BundleStatsLayoutEngineSolveProfile {
     pub(super) available_h_kind: String,
     pub(super) available_w: Option<f64>,
     pub(super) available_h: Option<f64>,
+    pub(super) previous_available_w_kind: Option<String>,
+    pub(super) previous_available_h_kind: Option<String>,
+    pub(super) previous_available_w: Option<f64>,
+    pub(super) previous_available_h: Option<f64>,
+    pub(super) available_w_delta: Option<f64>,
+    pub(super) available_h_delta: Option<f64>,
     pub(super) scale_factor: f64,
+    pub(super) previous_scale_factor: Option<f64>,
+    pub(super) scale_factor_delta: Option<f64>,
+    pub(super) previous_frame_delta: Option<u64>,
     pub(super) batch_roots: u64,
     pub(super) subtree_nodes: u64,
 }
@@ -1912,6 +1921,23 @@ impl BundleStatsReport {
                                 out.push_str(&format!(" avail.h={h:.1}"));
                             } else if !profile.available_h_kind.is_empty() {
                                 out.push_str(&format!(" avail.h={}", profile.available_h_kind));
+                            }
+                            if let Some(dw) = profile.available_w_delta {
+                                out.push_str(&format!(" delta.w={dw:.1}"));
+                            } else if let Some(kind) = profile.previous_available_w_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" prev.w={kind}"));
+                            }
+                            if let Some(dh) = profile.available_h_delta {
+                                out.push_str(&format!(" delta.h={dh:.1}"));
+                            } else if let Some(kind) = profile.previous_available_h_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" prev.h={kind}"));
+                            }
+                            if let Some(frame_delta) = profile.previous_frame_delta {
+                                out.push_str(&format!(" frame_delta={frame_delta}"));
                             }
                         }
                         if let Some(el) = s.root_element {
@@ -4187,8 +4213,64 @@ impl BundleStatsReport {
                                         p.available_h.map(Value::from).unwrap_or(Value::Null),
                                     );
                                     p_obj.insert(
+                                        "previous_available_w_kind".to_string(),
+                                        p.previous_available_w_kind
+                                            .clone()
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_available_h_kind".to_string(),
+                                        p.previous_available_h_kind
+                                            .clone()
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_available_w".to_string(),
+                                        p.previous_available_w
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_available_h".to_string(),
+                                        p.previous_available_h
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "available_w_delta".to_string(),
+                                        p.available_w_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "available_h_delta".to_string(),
+                                        p.available_h_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
                                         "scale_factor".to_string(),
                                         Value::from(p.scale_factor),
+                                    );
+                                    p_obj.insert(
+                                        "previous_scale_factor".to_string(),
+                                        p.previous_scale_factor
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "scale_factor_delta".to_string(),
+                                        p.scale_factor_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
+                                    );
+                                    p_obj.insert(
+                                        "previous_frame_delta".to_string(),
+                                        p.previous_frame_delta
+                                            .map(Value::from)
+                                            .unwrap_or(Value::Null),
                                     );
                                     p_obj.insert(
                                         "batch_roots".to_string(),

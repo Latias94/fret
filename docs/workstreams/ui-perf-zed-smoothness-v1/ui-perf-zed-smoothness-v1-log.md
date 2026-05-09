@@ -11415,3 +11415,49 @@ Decision:
   or broad structural `layout()` replay.
 - Unprewarmed resize script timeouts remain a setup drift around `font_catalog_populated`; perf evidence for this lane
   should continue to use `tooling-suite-prewarm-fonts.json`.
+
+## 2026-05-09 17:18 (pre-commit evidence)
+
+Question:
+- Is the remaining clean view-cache root `new_frame_key_changed` barrier solve caused by small float/scale jitter, or
+  by real logical resize deltas that must not be skipped with a looser root solve key?
+
+Change:
+- Extended `top_layout_engine_solves[].solve_profile` with previous root solve inputs:
+  `previous_available_w_kind`, `previous_available_h_kind`, `previous_available_w`, `previous_available_h`,
+  `available_w_delta`, `available_h_delta`, `previous_scale_factor`, `scale_factor_delta`, and
+  `previous_frame_delta`.
+- Surfaced the fields through the diagnostics bundle schema, `fretboard diag stats` text/JSON output,
+  `layout.perf.summary.v1.json`, and triage JSON.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check`
+- `cargo check -p fret-ui -p fret-diag -p fret-bootstrap`
+- `cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame summary_extracts_layout_lists_from_stats_json summary_clips_arrays_by_top`
+- `cargo nextest run -p fret-ui solve_barrier_flow_root_reuses_solved_root_even_after_other_solves solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes`
+- `cargo build -p fretboard --release`
+- `cargo build -p fret-ui-gallery --release --features gallery-full`
+  - Note: release gallery build still reports pre-existing unused-variable/unused-field warnings in `fret-runtime` and
+    `fret-ui`; this diagnostics slice did not clean unrelated warnings.
+
+Smoke evidence:
+- Command:
+  `target\release\fretboard.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag/codex-root-solve-delta-smoke --repeat 1 --warmup-frames 5 --reuse-launch --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 12 --json --launch -- target\release\fret-ui-gallery.exe`
+- Bundle:
+  `target/fret-diag/codex-root-solve-delta-smoke/1778317739977/bundle.schema2.json`
+- Layout summary:
+  `target/fret-diag/codex-root-solve-delta-smoke/layout.perf.summary.v1.json`
+- Result:
+  - Smoke top frame: `total/layout/solve/paint=8810/4774/2229/3711us`.
+  - Top view-cache root solve reports `reason=new_frame_key_changed`, `subtree_nodes=962`,
+    `available_w=930`, `previous_available_w=692`, `available_w_delta=238`, `available_h_delta=0`,
+    `scale_factor_delta=0`, and `previous_frame_delta=3`.
+  - Content root and window root solve profiles show similarly large width/height deltas (`available_w_delta=320`
+    for content/window roots in this sample), not sub-pixel churn.
+
+Decision:
+- Do not pursue root-solve-key quantization as the next optimization for this lane. The sampled key changes are real
+  scripted resize deltas, so reusing old engine rects would risk stale layout geometry.
+- The next correct direction is to reduce the 962-node root's solve sensitivity or solve boundary size, or to optimize
+  Taffy solve cost directly. Keep this aligned with the GPUI/Zed direction of explicit per-root layout work and solved
+  geometry reuse, rather than hiding retained-state invalidation behind broad cross-frame skips.

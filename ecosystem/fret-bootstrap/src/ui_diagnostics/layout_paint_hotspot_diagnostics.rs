@@ -126,7 +126,25 @@ pub struct UiLayoutEngineSolveProfileV1 {
     pub available_w: Option<f32>,
     #[serde(default)]
     pub available_h: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_w_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_h_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_available_h: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub available_w_delta: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub available_h_delta: Option<f32>,
     pub scale_factor: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_scale_factor: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scale_factor_delta: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_frame_delta: Option<u64>,
     pub batch_roots: u32,
     pub subtree_nodes: u32,
 }
@@ -147,7 +165,16 @@ impl UiLayoutEngineSolveV1 {
                     available_h_kind: p.available_h_kind.to_string(),
                     available_w: p.available_w,
                     available_h: p.available_h,
+                    previous_available_w_kind: p.previous_available_w_kind.map(str::to_string),
+                    previous_available_h_kind: p.previous_available_h_kind.map(str::to_string),
+                    previous_available_w: p.previous_available_w,
+                    previous_available_h: p.previous_available_h,
+                    available_w_delta: p.available_w_delta,
+                    available_h_delta: p.available_h_delta,
                     scale_factor: p.scale_factor,
+                    previous_scale_factor: p.previous_scale_factor,
+                    scale_factor_delta: p.scale_factor_delta,
+                    previous_frame_delta: p.previous_frame_delta,
                     batch_roots: p.batch_roots,
                     subtree_nodes: p.subtree_nodes,
                 }),

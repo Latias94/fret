@@ -117,7 +117,16 @@ pub(crate) struct LayoutEngineSolveProfile {
     pub(crate) available_h_kind: &'static str,
     pub(crate) available_w: Option<f32>,
     pub(crate) available_h: Option<f32>,
+    pub(crate) previous_available_w_kind: Option<&'static str>,
+    pub(crate) previous_available_h_kind: Option<&'static str>,
+    pub(crate) previous_available_w: Option<f32>,
+    pub(crate) previous_available_h: Option<f32>,
+    pub(crate) available_w_delta: Option<f32>,
+    pub(crate) available_h_delta: Option<f32>,
     pub(crate) scale_factor: f32,
+    pub(crate) previous_scale_factor: Option<f32>,
+    pub(crate) scale_factor_delta: Option<f32>,
+    pub(crate) previous_frame_delta: Option<u64>,
     pub(crate) batch_roots: u32,
     pub(crate) subtree_nodes: u32,
 }
@@ -129,7 +138,16 @@ struct LayoutEngineSolveProfileBase {
     available_h_kind: &'static str,
     available_w: Option<f32>,
     available_h: Option<f32>,
+    previous_available_w_kind: Option<&'static str>,
+    previous_available_h_kind: Option<&'static str>,
+    previous_available_w: Option<f32>,
+    previous_available_h: Option<f32>,
+    available_w_delta: Option<f32>,
+    available_h_delta: Option<f32>,
     scale_factor: f32,
+    previous_scale_factor: Option<f32>,
+    scale_factor_delta: Option<f32>,
+    previous_frame_delta: Option<u64>,
     batch_roots: u32,
 }
 
@@ -393,18 +411,30 @@ impl TaffyLayoutEngine {
         }
     }
 
-    fn root_solve_key(available: LayoutSize<AvailableSpace>, scale_factor: f32) -> RootSolveKey {
-        fn key_bits(axis: AvailableSpace) -> u64 {
-            match axis {
-                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
-                AvailableSpace::MinContent => 1u64 << 32,
-                AvailableSpace::MaxContent => 2u64 << 32,
-            }
-        }
+    const ROOT_SOLVE_KEY_MIN_CONTENT_BITS: u64 = 1u64 << 32;
+    const ROOT_SOLVE_KEY_MAX_CONTENT_BITS: u64 = 2u64 << 32;
 
+    fn root_solve_key_axis_bits(axis: AvailableSpace) -> u64 {
+        match axis {
+            AvailableSpace::Definite(px) => px.0.to_bits() as u64,
+            AvailableSpace::MinContent => Self::ROOT_SOLVE_KEY_MIN_CONTENT_BITS,
+            AvailableSpace::MaxContent => Self::ROOT_SOLVE_KEY_MAX_CONTENT_BITS,
+        }
+    }
+
+    fn root_solve_key_axis_profile(bits: u64) -> (&'static str, Option<f32>) {
+        match bits {
+            Self::ROOT_SOLVE_KEY_MIN_CONTENT_BITS => ("min_content", None),
+            Self::ROOT_SOLVE_KEY_MAX_CONTENT_BITS => ("max_content", None),
+            bits if bits <= u32::MAX as u64 => ("definite", Some(f32::from_bits(bits as u32))),
+            _ => ("unknown", None),
+        }
+    }
+
+    fn root_solve_key(available: LayoutSize<AvailableSpace>, scale_factor: f32) -> RootSolveKey {
         RootSolveKey {
-            width_bits: key_bits(available.width),
-            height_bits: key_bits(available.height),
+            width_bits: Self::root_solve_key_axis_bits(available.width),
+            height_bits: Self::root_solve_key_axis_bits(available.height),
             scale_bits: Self::sanitized_scale_factor(scale_factor).to_bits(),
         }
     }
@@ -426,7 +456,8 @@ impl TaffyLayoutEngine {
 
         let sf = Self::sanitized_scale_factor(scale_factor);
         let key = Self::root_solve_key(available, sf);
-        let reason = match self.debug_last_root_solve_key.get(root).copied() {
+        let previous = self.debug_last_root_solve_key.get(root).copied();
+        let reason = match previous {
             None => "first_solve",
             Some(prev) if prev.frame_id == self.frame_id && prev.key == key => {
                 "same_frame_same_key_forced"
@@ -437,6 +468,35 @@ impl TaffyLayoutEngine {
         };
         let (available_w_kind, available_w) = axis_profile(available.width);
         let (available_h_kind, available_h) = axis_profile(available.height);
+        let (
+            previous_available_w_kind,
+            previous_available_h_kind,
+            previous_available_w,
+            previous_available_h,
+            previous_scale_factor,
+            previous_frame_delta,
+        ) = previous.map_or((None, None, None, None, None, None), |prev| {
+            let (prev_w_kind, prev_w) = Self::root_solve_key_axis_profile(prev.key.width_bits);
+            let (prev_h_kind, prev_h) = Self::root_solve_key_axis_profile(prev.key.height_bits);
+            let prev_scale_factor = f32::from_bits(prev.key.scale_bits);
+            let frame_delta = match (prev.frame_id, self.frame_id) {
+                (Some(prev), Some(current)) => Some(current.0.saturating_sub(prev.0)),
+                _ => None,
+            };
+            (
+                Some(prev_w_kind),
+                Some(prev_h_kind),
+                prev_w,
+                prev_h,
+                Some(prev_scale_factor),
+                frame_delta,
+            )
+        });
+        let available_w_delta =
+            previous_available_w.and_then(|previous| available_w.map(|current| current - previous));
+        let available_h_delta =
+            previous_available_h.and_then(|previous| available_h.map(|current| current - previous));
+        let scale_factor_delta = previous_scale_factor.map(|previous| sf - previous);
 
         LayoutEngineSolveProfileBase {
             reason,
@@ -444,7 +504,16 @@ impl TaffyLayoutEngine {
             available_h_kind,
             available_w,
             available_h,
+            previous_available_w_kind,
+            previous_available_h_kind,
+            previous_available_w,
+            previous_available_h,
+            available_w_delta,
+            available_h_delta,
             scale_factor: sf,
+            previous_scale_factor,
+            scale_factor_delta,
+            previous_frame_delta,
             batch_roots,
         }
     }
@@ -970,7 +1039,16 @@ impl TaffyLayoutEngine {
                 available_h_kind: profile.available_h_kind,
                 available_w: profile.available_w,
                 available_h: profile.available_h,
+                previous_available_w_kind: profile.previous_available_w_kind,
+                previous_available_h_kind: profile.previous_available_h_kind,
+                previous_available_w: profile.previous_available_w,
+                previous_available_h: profile.previous_available_h,
+                available_w_delta: profile.available_w_delta,
+                available_h_delta: profile.available_h_delta,
                 scale_factor: profile.scale_factor,
+                previous_scale_factor: profile.previous_scale_factor,
+                scale_factor_delta: profile.scale_factor_delta,
+                previous_frame_delta: profile.previous_frame_delta,
                 batch_roots: profile.batch_roots,
                 subtree_nodes,
             });
@@ -1692,7 +1770,16 @@ impl TaffyLayoutEngine {
                     available_h_kind: profile.available_h_kind,
                     available_w: profile.available_w,
                     available_h: profile.available_h,
+                    previous_available_w_kind: profile.previous_available_w_kind,
+                    previous_available_h_kind: profile.previous_available_h_kind,
+                    previous_available_w: profile.previous_available_w,
+                    previous_available_h: profile.previous_available_h,
+                    available_w_delta: profile.available_w_delta,
+                    available_h_delta: profile.available_h_delta,
                     scale_factor: profile.scale_factor,
+                    previous_scale_factor: profile.previous_scale_factor,
+                    scale_factor_delta: profile.scale_factor_delta,
+                    previous_frame_delta: profile.previous_frame_delta,
                     batch_roots: profile.batch_roots,
                     subtree_nodes,
                 });

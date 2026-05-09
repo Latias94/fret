@@ -1194,6 +1194,12 @@ Perf acceptance:
   - Latest root-solve evidence: clean live-resize view-cache frames still show
     `solve_barrier_us=1616..1795us` with view-cache root solve profile
     `reason=new_frame_key_changed`, `subtree_nodes=962`, and `batch_roots=1`.
+  - Latest root-solve delta evidence: solve profiles now include previous available size / scale factor and deltas.
+    The resize-stress smoke reports the view-cache root solve at `available_w=930`, `previous_available_w=692`,
+    `available_w_delta=238`, `available_h_delta=0`, `scale_factor_delta=0`, and `previous_frame_delta=3`.
+    Decision: this is a real logical width delta, not float jitter; do not pursue root-solve-key quantization as the
+    next optimization. Focus next on reducing the 962-node root's width sensitivity, splitting the solve boundary, or
+    optimizing Taffy solve cost with evidence.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`
     model; keep Fret's retained state semantics explicit rather than adding broad clean-subtree skips.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
