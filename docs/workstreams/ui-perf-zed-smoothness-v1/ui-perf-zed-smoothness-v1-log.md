@@ -11032,3 +11032,40 @@ Decision:
 - The scroll profile evidence is now durable and queryable.
 - Next optimization step should classify stable cached-flow frames from fresh mount frames before deciding whether a
   clean-child-root apply skip or a narrower dirty-frontier scroll relayout is actually justified.
+
+## 2026-05-09 10:10 (attribution decision)
+
+Question:
+- Does the normalized resize-stress sample contain enough clean scroll child-root state-sync work to justify a
+  clean-child-root apply skip?
+
+Method:
+- Re-ran the resize-stress script with a zero scroll-profile threshold and full script dump retention so stable frames
+  are visible in the bundle:
+  `FRET_SCROLL_LAYOUT_PROFILE=1`, `FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0`,
+  `FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0`, `FRET_DIAG_MAX_SNAPSHOTS=300`, and
+  `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=300`.
+- Classified `fretboard diag stats ... --sort time --top 300 --json` `scroll_layout_profiles` by
+  `layout_child_max_bounds_changed`, `layout_child_max_input_matches_before`, resize state, and dirty flags.
+
+Evidence:
+- Bundle:
+  `target/fret-diag/codex-scroll-layout-profile-stable-fullsnap/1778292518840/bundle.schema2.json`
+- Bundle coverage: 85 retained snapshots, 28 snapshots with scroll profiles, 83 captured scroll profiles.
+- Classification:
+  - 78 profiles: `bounds_changed=true`, `input_matches_before=false`, `interactive_resize=true`,
+    `direct_children_layout_invalidated=false`, `descendant_subtree_layout_dirty=false`,
+    `layout_child_max_invalidated=false`, `layout_child_max_subtree_dirty=false`.
+  - 3 profiles: `bounds_changed=false`, `input_matches_before=true`, but they are non-interactive dirty frames rather
+    than live cached-flow resize frames.
+  - 2 profiles: non-interactive real bounds deltas.
+- Largest clean candidate: frame `197`, `layout_child_max_us=3049us`, `solve_barrier_us=1273us`.
+- Largest live resize real-delta candidate: frame `269`, `layout_child_max_us=4459us`,
+  `solve_barrier_us=508us`.
+
+Decision:
+- Do not implement a clean-child-root apply skip from this evidence. The live resize hotspot is dominated by real child
+  bounds changes, not clean state synchronization.
+- The next performance step should stay on the measured path: attribute real bounds-delta scroll relayout and decide
+  whether the safe optimization belongs in resize scheduling/root coalescing, scroll geometry propagation, or layout
+  data-structure cost.

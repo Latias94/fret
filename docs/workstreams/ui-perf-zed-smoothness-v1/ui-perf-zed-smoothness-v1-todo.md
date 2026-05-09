@@ -1094,14 +1094,25 @@ Perf acceptance:
     `debug.scroll_nodes[].layout_profile`, surfaced in `fretboard diag stats` as `scroll_layout_profiles`, and
     mirrored into triage JSON as `layout.scroll_profile_present`; next attribution should capture stable resize
     frames and separate real geometry deltas from clean subtree state sync.
-- [ ] Capture stable cached-flow resize-frame scroll profiles and classify whether clean-child-root apply skipping is
+- [x] Capture stable cached-flow resize-frame scroll profiles and classify whether clean-child-root apply skipping is
   justified.
   - Target: use `layout_child_max_bounds_changed=false` / `layout_child_max_input_matches_before=true` frames from the
     new stats surface to separate genuine geometry changes from pure state sync.
   - Gate: `target\release\fretboard.exe diag stats <bundle.json> --sort time --top 5 --json`
-  - Evidence anchor: `target/fret-diag/codex-scroll-layout-profile-bundle/1778291374724/bundle.schema2.json`.
-  - Outcome to decide: if stable cached-flow frames are clean, consider a narrower scroll post-layout apply skip; if
-    they still carry real bounds deltas, keep optimizing the existing layout path instead.
+  - Evidence anchor: `target/fret-diag/codex-scroll-layout-profile-stable-fullsnap/1778292518840/bundle.schema2.json`.
+  - Result: the full-snapshot low-threshold probe captured 83 scroll profiles across 85 retained snapshots. 78 profiles
+    are interactive-resize real bounds deltas (`bounds_changed=true`, `input_matches_before=false`); only 3 profiles
+    are clean state-sync candidates, and those are not the live cached-flow resize frames.
+  - Decision: do not implement a clean-child-root apply skip from this sample. Keep optimizing the existing resize
+    layout path, especially real bounds-delta scroll child relayout and layout-root scheduling.
+- [ ] Attribute the real bounds-delta scroll resize path before changing layout semantics.
+  - Target: split the `layout_child_max_us` cost between unavoidable child bounds application, layout-engine solve
+    input churn, and any redundant repeated root scheduling.
+  - Start from: `target/fret-diag/codex-scroll-layout-profile-stable-fullsnap/1778292518840/bundle.schema2.json`,
+    especially the interactive-resize profiles where `direct_children_layout_invalidated=false`,
+    `descendant_subtree_layout_dirty=false`, but `layout_child_max_bounds_changed=true`.
+  - Outcome to decide: whether the next safe optimization belongs in resize scheduling/root coalescing, scroll layout
+    geometry propagation, or layout data-structure costs.
 - [x] Suppress display-none `InteractivityGate` child layout dirty from ancestor cached-flow decisions.
   - Discovery: resize request-build roots that were clean except for descendant dirty samples traced to
     `Opacity` / `Scrollbar` `initial_mount` nodes under absent `ScrollArea` chrome.
