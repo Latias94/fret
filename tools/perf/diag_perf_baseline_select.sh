@@ -13,15 +13,21 @@ Usage:
     [--repeat <n>] \
     [--warmup-frames <n>] \
     [--headroom-pct <n>] \
+    [--threshold-surface <ui|renderer|all>] \
     [--work-dir <path>] \
     [--launch-bin <path>] \
     [--prewarm-script <path>] \
     [--prelude-script <path>] \
-    [--no-default-suite-hooks]
+    [--no-default-suite-hooks] \
+    [--allow-failures]
 
 Notes:
   - Designed for Fret `diag perf` baseline generation/selection.
   - By default, applies the font prewarm and reset-diagnostics prelude hooks used by the perf workstream.
+  - By default, uses the UI threshold surface; renderer timings stay measured but are not hard
+    thresholds unless --threshold-surface renderer/all is passed.
+  - Validation repeats use the same repeat count as baseline generation.
+  - The selected candidate must have zero validation failures unless --allow-failures is passed.
   - Candidate winner priority:
       1) fewer validation failures
       2) lower suite p90 (sum of top_total_time_us)
@@ -47,9 +53,11 @@ validate_runs=3
 repeat=7
 warmup_frames=5
 headroom_pct=20
+threshold_surface="ui"
 work_dir="target/fret-diag-baseline-select-$(date +%s)"
 launch_bin="target/release/fret-ui-gallery"
 default_suite_hooks=true
+allow_failures=false
 declare -a preset_paths=()
 declare -a prewarm_scripts=()
 declare -a prelude_scripts=()
@@ -88,6 +96,10 @@ while [[ $# -gt 0 ]]; do
       headroom_pct="$2"
       shift 2
       ;;
+    --threshold-surface)
+      threshold_surface="$2"
+      shift 2
+      ;;
     --work-dir)
       work_dir="$2"
       shift 2
@@ -106,6 +118,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-default-suite-hooks)
       default_suite_hooks=false
+      shift
+      ;;
+    --allow-failures)
+      allow_failures=true
       shift
       ;;
     -h|--help)
@@ -190,6 +206,7 @@ run_baseline() {
     --json
     --perf-baseline-out "$candidate_baseline"
     --perf-baseline-headroom-pct "$headroom_pct"
+    --perf-baseline-threshold-surface "$threshold_surface"
   )
 
   if ((${#preset_paths[@]})); then
@@ -230,7 +247,7 @@ run_validation() {
   done
   cmd+=(
     --reuse-launch
-    --repeat 3
+    --repeat "$repeat"
     --warmup-frames "$warmup_frames"
     --sort time
     --top 3
@@ -326,8 +343,6 @@ if [[ -z "$best_candidate" ]]; then
   exit 3
 fi
 
-mkdir -p "$(dirname "$baseline_out_abs")"
-cp "$best_candidate" "$baseline_out_abs"
 printf '%s\n' "$candidate_results_payload" > "$candidate_results_path"
 
 prewarm_scripts_json="[]"
@@ -344,12 +359,15 @@ jq -n \
   --arg suite "$suite" \
   --arg baseline_out "$baseline_out_abs" \
   --arg best_candidate "$best_candidate" \
+  --arg threshold_surface "$threshold_surface" \
   --argjson best_failures "$best_failures" \
   --argjson best_resize_p90 "$best_resize_p90" \
   --argjson best_threshold_sum "$best_threshold_sum" \
   --argjson prewarm_scripts "$prewarm_scripts_json" \
   --argjson prelude_scripts "$prelude_scripts_json" \
   --argjson default_suite_hooks "$default_suite_hooks" \
+  --argjson repeat "$repeat" \
+  --argjson allow_failures "$([[ "$allow_failures" == "true" ]] && echo true || echo false)" \
   --argjson candidate_results "$candidate_results_payload" \
   '{
     schema_version: 1,
@@ -361,6 +379,9 @@ jq -n \
       prelude: $prelude_scripts,
       default_suite_hooks: $default_suite_hooks
     },
+    threshold_surface: $threshold_surface,
+    validate_repeat: $repeat,
+    allow_failures: $allow_failures,
     best_candidate: {
       path: $best_candidate,
       fail_total: $best_failures,
@@ -370,6 +391,14 @@ jq -n \
     },
     candidates: $candidate_results
   }' > "$summary_file"
+
+if ((best_failures != 0)) && [[ "$allow_failures" != "true" ]]; then
+  echo "error: selected candidate still has validation failures (fail_total=${best_failures}). See: ${summary_file}" >&2
+  exit 4
+fi
+
+mkdir -p "$(dirname "$baseline_out_abs")"
+cp "$best_candidate" "$baseline_out_abs"
 
 echo "[done] baseline_out=${baseline_out_abs}"
 echo "[done] candidate_results=${candidate_results_path}"

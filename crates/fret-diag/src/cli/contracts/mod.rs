@@ -390,6 +390,8 @@ mod tests {
             "--prelude-each-run",
             "--perf-threshold-agg",
             "p95",
+            "--perf-baseline-threshold-surface",
+            "renderer",
             "--max-frame-p95-total-us",
             "18000",
             "--check-perf-hints",
@@ -432,6 +434,10 @@ mod tests {
         assert_eq!(
             args.perf_threshold_agg,
             Some(crate::PerfThresholdAggregate::P95)
+        );
+        assert_eq!(
+            args.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::Renderer
         );
         assert_eq!(args.max_frame_p95_total_us, Some(18_000));
         assert!(args.check_perf_hints);
@@ -481,6 +487,8 @@ mod tests {
             "target/perf.baseline.json",
             "--perf-baseline-headroom-pct",
             "25",
+            "--perf-baseline-threshold-surface",
+            "all",
             "--warmup-frames",
             "5",
             "--json",
@@ -508,6 +516,10 @@ mod tests {
             PathBuf::from("target/perf.baseline.json")
         );
         assert_eq!(args.perf_baseline_headroom_pct, 25);
+        assert_eq!(
+            args.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::All
+        );
         assert_eq!(args.warmup.warmup_frames, 5);
         assert!(args.json);
     }

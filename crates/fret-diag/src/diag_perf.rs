@@ -467,6 +467,7 @@ pub(crate) struct PerfCmdContext {
     pub perf_baseline_path: Option<PathBuf>,
     pub perf_baseline_seed_preset_paths: Vec<PathBuf>,
     pub perf_baseline_seed_specs: Vec<String>,
+    pub perf_baseline_threshold_surface: PerfBaselineThresholdSurface,
     pub perf_repeat: u64,
     pub perf_threshold_agg: PerfThresholdAggregate,
     pub poll_ms: u64,
@@ -525,6 +526,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         perf_baseline_path,
         perf_baseline_seed_preset_paths,
         perf_baseline_seed_specs,
+        perf_baseline_threshold_surface,
         perf_repeat,
         perf_threshold_agg,
         poll_ms,
@@ -1213,6 +1215,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     baseline_rows::push_perf_baseline_row_single(
                         &mut perf_baseline_rows,
                         script_key.as_str(),
+                        perf_baseline_threshold_surface,
                         baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
                         baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
                         baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
@@ -1996,6 +1999,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 baseline_rows::push_perf_baseline_row_repeat(
                     &mut perf_baseline_rows,
                     script_key.as_str(),
+                    perf_baseline_threshold_surface,
                     baseline_rows::TopTimesUs::new(max_total, max_layout, max_solve),
                     baseline_rows::TopTimesUs::new(
                         max_frame_p95_total,
@@ -2333,6 +2337,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
             sort,
             repeat,
             perf_baseline_headroom_pct,
+            perf_baseline_threshold_surface,
             policy.threshold_seed_policy_json(),
             &perf_baseline_rows,
             stats_json,

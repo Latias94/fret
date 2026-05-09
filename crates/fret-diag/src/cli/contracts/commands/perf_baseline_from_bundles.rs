@@ -8,6 +8,12 @@ fn parse_bundle_stats_sort(raw: &str) -> Result<crate::BundleStatsSort, String> 
     crate::BundleStatsSort::parse(raw)
 }
 
+fn parse_perf_baseline_threshold_surface(
+    raw: &str,
+) -> Result<crate::PerfBaselineThresholdSurface, String> {
+    raw.parse::<crate::PerfBaselineThresholdSurface>()
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct PerfBaselineFromBundlesCommandArgs {
     #[arg(value_name = "SCRIPT")]
@@ -28,6 +34,14 @@ pub(crate) struct PerfBaselineFromBundlesCommandArgs {
 
     #[arg(long = "perf-baseline-headroom-pct", default_value_t = 20)]
     pub perf_baseline_headroom_pct: u32,
+
+    #[arg(
+        long = "perf-baseline-threshold-surface",
+        value_name = "SURFACE",
+        default_value_t = crate::PerfBaselineThresholdSurface::Ui,
+        value_parser = parse_perf_baseline_threshold_surface
+    )]
+    pub perf_baseline_threshold_surface: crate::PerfBaselineThresholdSurface,
 
     #[command(flatten)]
     pub warmup: WarmupFramesArgs,

@@ -5,12 +5,17 @@ Select a stable `diag perf` baseline from multiple candidates (cross-platform, n
 This mirrors the intent of `tools/perf/diag_perf_baseline_select.sh`:
   - Generate N candidate baselines (via `--perf-baseline-out`)
   - Validate each candidate M times (via `--perf-baseline`)
+  - Validation uses the same repeat count as baseline generation by default so the selected
+    contract matches the intended gate surface.
   - Generated baselines record p50/p90/p95/max; selection still ranks by p90 to favor
     stable typical performance before threshold size.
+  - By default, generated baselines use the UI threshold surface. Renderer timings remain
+    recorded under measured_* but are not hard thresholds unless explicitly requested.
   - Pick a winner with priority:
       1) fewer validation failures
       2) lower suite p90 sum (rows[].measured_p90.top_total_time_us)
       3) lower sum of max_top_total_us thresholds
+  - The selected candidate must have zero validation failures unless --allow-failures is passed.
 
 Example:
   python tools/perf/diag_perf_baseline_select.py \
@@ -152,9 +157,24 @@ def main() -> int:
     ap.add_argument("--preset", action="append", default=[], help="Seed policy preset JSON (repeatable).")
     ap.add_argument("--candidates", type=int, default=2)
     ap.add_argument("--validate-runs", type=int, default=3)
+    ap.add_argument(
+        "--validate-repeat",
+        type=int,
+        default=0,
+        help="Repeat count for validation runs. Defaults to --repeat when unset/0.",
+    )
     ap.add_argument("--repeat", type=int, default=7)
     ap.add_argument("--warmup-frames", type=int, default=5)
     ap.add_argument("--headroom-pct", type=int, default=20)
+    ap.add_argument(
+        "--threshold-surface",
+        default="ui",
+        choices=["ui", "renderer", "all"],
+        help=(
+            "Forwarded to `diag perf --perf-baseline-threshold-surface`. "
+            "Use 'ui' for resize/layout contracts; use 'renderer' or 'all' for renderer-focused gates."
+        ),
+    )
     ap.add_argument("--work-dir", default="")
     ap.add_argument("--launch-bin", default="target/release/fret-ui-gallery")
     ap.add_argument("--timeout-ms", type=int, default=300_000)
@@ -188,6 +208,12 @@ def main() -> int:
         default=[],
         help="Forwarded to `fretboard-dev diag perf --env KEY=VALUE` (repeatable).",
     )
+    ap.add_argument(
+        "--allow-failures",
+        action="store_true",
+        default=False,
+        help="Copy the best candidate even if validation failures remain.",
+    )
 
     args = ap.parse_args()
 
@@ -197,6 +223,7 @@ def main() -> int:
     baseline_out = _resolve_workspace_path(workspace_root, args.baseline_out)
     preset_paths = [_resolve_workspace_path(workspace_root, p) for p in args.preset]
     launch_bin = _resolve_workspace_path(workspace_root, args.launch_bin)
+    validate_repeat = int(args.validate_repeat) if int(args.validate_repeat) > 0 else int(args.repeat)
 
     work_dir = args.work_dir.strip()
     if not work_dir:
@@ -283,6 +310,8 @@ def main() -> int:
             str(candidate_baseline),
             "--perf-baseline-headroom-pct",
             str(int(args.headroom_pct)),
+            "--perf-baseline-threshold-surface",
+            str(args.threshold_surface),
         ]
         for preset in preset_paths:
             cmd += ["--perf-baseline-seed-preset", str(preset)]
@@ -325,7 +354,7 @@ def main() -> int:
             vcmd = diag_cmd_common(validation_out_dir)
             vcmd += [
                 "--repeat",
-                "3",
+                str(validate_repeat),
                 "--warmup-frames",
                 str(int(args.warmup_frames)),
                 "--top",
@@ -380,6 +409,31 @@ def main() -> int:
         return 3
 
     selected_baseline_path = Path(best[3])
+    if int(best[0]) != 0 and not bool(args.allow_failures):
+        summary = {
+            "schema_version": 1,
+            "kind": "perf_baseline_selection",
+            "suite": suite,
+            "baseline_out": str(baseline_out),
+            "threshold_surface": str(args.threshold_surface),
+            "validate_repeat": int(validate_repeat),
+            "allow_failures": False,
+            "selected_candidate": str(selected_baseline_path),
+            "selected_fail_total": int(best[0]),
+            "candidates": candidate_results,
+        }
+        summary_path = work_dir_path / "selection-summary.json"
+        summary_path.write_text(
+            json.dumps(summary, indent=2, sort_keys=False) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            f"error: selected candidate still has validation failures "
+            f"(fail_total={int(best[0])}). See: {summary_path}",
+            file=sys.stderr,
+        )
+        return 4
+
     shutil.copyfile(selected_baseline_path, baseline_out)
 
     summary = {
@@ -393,6 +447,9 @@ def main() -> int:
             "prelude_each_run": bool(args.prelude_each_run),
             "default_suite_hooks": not bool(args.no_default_suite_hooks),
         },
+        "threshold_surface": str(args.threshold_surface),
+        "validate_repeat": int(validate_repeat),
+        "allow_failures": bool(args.allow_failures),
         "best_candidate": {
             "path": str(selected_baseline_path),
             "fail_total": int(best[0]),

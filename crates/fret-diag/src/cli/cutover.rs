@@ -1021,6 +1021,7 @@ fn parse_perf_baseline_from_bundles_command(
             sort_override: args.sort,
             perf_baseline_out: Some(args.perf_baseline_out),
             perf_baseline_headroom_pct: args.perf_baseline_headroom_pct,
+            perf_baseline_threshold_surface: args.perf_baseline_threshold_surface,
             warmup_frames: args.warmup.warmup_frames,
             stats_json: args.json,
         },
@@ -2690,6 +2691,7 @@ fn parse_perf_command(
             perf_baseline_path: args.perf_baseline_path,
             perf_baseline_seed_preset_paths: args.perf_baseline_seed_preset_paths,
             perf_baseline_seed_specs: args.perf_baseline_seed_specs,
+            perf_baseline_threshold_surface: args.perf_baseline_threshold_surface,
             perf_repeat: args.repeat,
             perf_threshold_agg: args
                 .perf_threshold_agg
@@ -5495,6 +5497,8 @@ mod tests {
             "target/perf.baseline.json".to_string(),
             "--perf-baseline-headroom-pct".to_string(),
             "25".to_string(),
+            "--perf-baseline-threshold-surface".to_string(),
+            "all".to_string(),
             "--warmup-frames".to_string(),
             "5".to_string(),
             "--json".to_string(),
@@ -5523,6 +5527,10 @@ mod tests {
             Some(PathBuf::from("target/perf.baseline.json"))
         );
         assert_eq!(ctx.perf_baseline_headroom_pct, 25);
+        assert_eq!(
+            ctx.perf_baseline_threshold_surface,
+            crate::PerfBaselineThresholdSurface::All
+        );
         assert_eq!(ctx.warmup_frames, 5);
         assert!(ctx.stats_json);
     }

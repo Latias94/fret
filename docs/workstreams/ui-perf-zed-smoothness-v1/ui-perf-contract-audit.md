@@ -22,7 +22,7 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 | Gates use the correct machine baseline. | `tools/perf/diag_resize_probes_gate.py` and `.sh` choose Windows RTX 4090 or macOS baseline by host platform. | Covered for resize helpers; other gate helpers remain explicit-baseline by design. |
 | Gates use normalization hooks. | Resize gate helpers and baseline selectors now apply `tooling-suite-prewarm-fonts.json` and `tooling-suite-prelude-reset-diagnostics.json` by default. | Covered for the updated helpers/selectors. |
 | A short real gate proves the helper path works. | `target/fret-diag/codex-resize-gate-default-hooks-smoke/summary.json`: `ui-resize-probes`, attempts=1, repeat=1, PASS, Windows baseline selected, default hooks recorded. | Smoke covered, not a full formal gate. |
-| Full formal gates are green after the helper changes. | No attempts=3 repeat=7 run was performed after the helper default-hook change. | Not covered. |
+| Full formal gates are green after the helper changes. | `target/fret-diag/codex-resize-gate-v2/summary.json`: attempts=3 repeat=7 against an attempted Windows v2 baseline produced passes=1/3. The v2 baseline was deleted and is not checked in. | Not covered; attempted and blocked by layout/resize threshold failures. |
 | Zed/GPUI and egui comparison remains explicit. | `docs/workstreams/standalone/ui-perf-gpui-gap-v1.md` plus the contract matrix reference pressure column. | Covered as a design map; still needs updates when new gaps close. |
 | Churn reduction is evidence-led. | Perf log entries show measured view-cache harness virtualization, code editor resize attribution, and decisions not to start broad root-solve quantization or `WindowedRowsSurface` rewrites without evidence. | Covered for recent work. |
 | Baseline maintenance rules are documented. | `docs/workstreams/perf-baselines/README.md` defines machine tags, re-seed criteria, required hooks, selector workflow, validation workflow, and review checklist. | Covered. |
@@ -40,6 +40,12 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
   - Result: PASS, `failures=0`
   - `drag-jitter`: `top_total/layout/solve=1728/1103/661us`
   - `resize-stress`: `top_total/layout/solve=4021/1664/671us`
+- Attempted Windows `ui-resize-probes` v2 re-seed:
+  - 20% headroom first selected a candidate with `fail_total=0` only because selector validation still used
+    `repeat=3`; the formal attempts=3 repeat=7 gate failed with passes=1/3.
+  - Selector validation now defaults to the same repeat count as baseline generation and refuses to copy a candidate
+    with validation failures unless `--allow-failures` is explicit.
+  - Repeat=7 selector reruns rejected both 20% and 40% headroom candidates, so no v2 baseline is checked in.
 - Baseline p50 coverage scan:
   - `TOTAL_FILES=58`
   - `TOTAL_ROWS=296`
@@ -51,6 +57,8 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    - First candidates: `ui-resize-probes.windows-rtx4090.v2.json`,
      `ui-code-editor-resize-probes.windows-rtx4090.v2.json`, and
      `ui-gallery-steady.windows-rtx4090.v2.json`.
+   - `ui-resize-probes.windows-rtx4090.v2.json` is currently blocked by repeat=7 layout/resize validation failures;
+     do not commit it until selector and matching gate are green.
 2. Run full formal gates after the helper normalization change.
    - `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7`
    - `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7`
@@ -61,5 +69,5 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
 
 ## Audit Conclusion
 
-The goal is not complete. The contract foundation is now in place, but checked-in baseline artifacts do not yet carry
-`measured_p50`, and the full formal gates have not been re-run after normalizing the helper defaults.
+The goal is not complete. The contract foundation is stronger, but checked-in baseline artifacts do not yet carry
+`measured_p50`, and the full formal resize gate is not green after the attempted Windows v2 re-seed.

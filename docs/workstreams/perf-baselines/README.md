@@ -17,6 +17,11 @@ Related:
 - New `diag perf --perf-baseline-out` files record `measured_p50`, `measured_p90`, `measured_p95`, and
   `measured_max` per row.
 - Thresholds live in `rows[].thresholds`; gates read those threshold values, not the measured fields directly.
+- New baselines also declare `threshold_surface`:
+  - `ui`: frame/layout/pointer/cache thresholds only. Renderer timings stay in `measured_*` for attribution, but are
+    not hard gate thresholds.
+  - `renderer`: renderer micro-thresholds only.
+  - `all`: both surfaces. Use this only for suites that intentionally gate renderer micro timings.
 - Existing baselines created before `measured_p50` was added remain valid. Do not synthesize `measured_p50` into old
   JSON files. Add it only by intentionally re-seeding on the target machine profile.
 - Baselines are environment-specific. Do not use a macOS baseline to judge Windows, or a high-end Windows baseline to
@@ -77,6 +82,7 @@ python tools/perf/diag_perf_baseline_select.py `
   --repeat 7 `
   --warmup-frames 5 `
   --headroom-pct 20 `
+  --threshold-surface ui `
   --work-dir target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2 `
   --launch-bin target/release/fret-ui-gallery.exe `
   --env FRET_UI_GALLERY_VIEW_CACHE=1 `
@@ -91,7 +97,10 @@ Selection priority:
 2. Lower suite p90 sum (`rows[].measured_p90.top_total_time_us`).
 3. Lower threshold sum (`rows[].thresholds.max_top_total_us`).
 
-The selected baseline is copied to `--baseline-out`, and the selector writes `selection-summary.json` in `--work-dir`.
+The selector validates each candidate using the same repeat count as the generated baseline unless
+`--validate-repeat` is passed. The selected candidate must have `fail_total=0`; otherwise the selector exits without
+copying to `--baseline-out` unless `--allow-failures` is explicitly passed for an investigation artifact. The selector
+writes `selection-summary.json` in `--work-dir`.
 
 ## Validation Workflow
 
@@ -117,6 +126,8 @@ Before committing a new or replaced baseline:
 - Confirm the baseline filename has the correct suite, machine tag, and version.
 - Confirm the JSON row set matches the intended suite.
 - Confirm new rows include `measured_p50` unless the baseline is intentionally old and unchanged.
+- Confirm `threshold_surface` matches the suite intent. Resize/layout suites normally use `ui`; renderer/effects suites
+  use `renderer` or `all` only when those micro timings are the contract.
 - Confirm validation passes with `failures=[]`.
 - Record the exact commands, selected candidate, validation result, and worst bundles in the perf log.
 - Update `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md` if the suite, baseline path, or gate

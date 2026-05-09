@@ -11656,3 +11656,49 @@ Audit:
 Decision:
 - Do not mark the goal complete. The next concrete work is to intentionally re-seed primary Windows baselines with
   `measured_p50` and run full formal gates, or explicitly defer that re-seed with owner/date in the workstream.
+
+## 2026-05-09 19:19 (baseline surface hardening)
+
+Question:
+- Can `ui-resize-probes.windows-rtx4090.v2.json` be re-seeded with `measured_p50` without turning renderer micro
+  timing noise into resize/layout hard thresholds?
+
+Change:
+- Added `--perf-baseline-threshold-surface ui|renderer|all` to `diag perf --perf-baseline-out` and
+  `diag perf-baseline-from-bundles`.
+- Resize/layout baselines now use `threshold_surface=ui` by default: renderer timings are still recorded under
+  `measured_*`, but `rows[].thresholds.max_renderer_*` stay null unless `renderer` or `all` is requested.
+- Hardened `tools/perf/diag_perf_baseline_select.py` and `.sh`:
+  - validation repeat defaults to the same value as baseline generation,
+  - selected candidates must have `fail_total=0` unless `--allow-failures` is explicitly passed.
+
+Evidence:
+- Smoke baseline:
+  `cargo run -q -p fretboard -- diag perf ui-resize-probes --dir target/fret-diag/codex-threshold-surface-smoke --timeout-ms 300000 --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --reuse-launch --repeat 1 --warmup-frames 5 --sort time --top 5 --json --perf-baseline-out target/fret-diag/codex-threshold-surface-smoke/baseline.json --perf-baseline-headroom-pct 20 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery.exe`
+  - `threshold_surface=ui`
+  - `rows[0].thresholds.max_top_total_us=3110`
+  - `rows[0].thresholds.max_renderer_prepare_text_us=null`
+- Selector attempt with old repeat=3 validation selected a 20% headroom candidate, but the formal gate rejected it:
+  - `target/fret-diag/codex-resize-gate-v2/summary.json`
+  - attempts=3, repeat=7, passes=1/3.
+- Selector attempt with consistent repeat=7 validation rejected 20% headroom:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2b/selection-summary.json`
+  - best candidate `fail_total=5`; no baseline copied.
+- Selector attempt with consistent repeat=7 validation also rejected 40% headroom:
+  - `target/fret-diag-baseline-select-ui-resize-probes-windows-rtx4090-v2-headroom40/selection-summary.json`
+  - best candidate `fail_total=2`; no baseline copied.
+
+Validation:
+- `cargo fmt -p fret-diag --check`
+- `cargo check -p fret-diag`
+- `cargo nextest run -p fret-diag single_baseline_row_records_measured_p50 repeat_baseline_row_records_measured_p50 ui_threshold_surface_keeps_renderer_measurements_but_omits_renderer_thresholds renderer_threshold_surface_omits_ui_thresholds perf_contract_captures_threshold_and_suite_args perf_baseline_from_bundles_contract_captures_script_bundle_and_threshold_args migrated_perf_baseline_from_bundles_builds_a_real_context`
+- `python tools/perf/diag_perf_baseline_select.py --help`
+- `bash -n tools/perf/diag_perf_baseline_select.sh`
+- `bash tools/perf/diag_perf_baseline_select.sh --help`
+
+Decision:
+- Do not commit `ui-resize-probes.windows-rtx4090.v2.json` yet. Removing renderer thresholds was necessary, but the
+  repeat=7 evidence still shows real resize/layout threshold failures.
+- Next work should attribute the remaining `top_layout_time_us` / `top_layout_engine_solve_time_us` variability in
+  `ui-gallery-window-resize-drag-jitter-steady.json` and `ui-gallery-window-resize-stress-steady.json`, or decide on a
+  deliberately broader Windows resize contract with matching selector and formal gate evidence.

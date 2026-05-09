@@ -8,6 +8,7 @@ pub(crate) struct PerfBaselineFromBundlesContext {
     pub sort_override: Option<BundleStatsSort>,
     pub perf_baseline_out: Option<PathBuf>,
     pub perf_baseline_headroom_pct: u32,
+    pub perf_baseline_threshold_surface: PerfBaselineThresholdSurface,
     pub warmup_frames: u64,
     pub stats_json: bool,
 }
@@ -23,6 +24,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         sort_override,
         perf_baseline_out,
         perf_baseline_headroom_pct,
+        perf_baseline_threshold_surface,
         warmup_frames,
         stats_json,
     } = ctx;
@@ -129,21 +131,23 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         }
     }
 
+    let wants_ui_thresholds = perf_baseline_threshold_surface.includes_ui();
+    let wants_renderer_thresholds = perf_baseline_threshold_surface.includes_renderer();
     let thresholds = serde_json::json!({
-        "max_top_total_us": apply_perf_baseline_headroom(measured_max_top_total_us, perf_baseline_headroom_pct),
-        "max_top_layout_us": apply_perf_baseline_headroom(measured_max_top_layout_us, perf_baseline_headroom_pct),
-        "max_top_solve_us": apply_perf_baseline_headroom(measured_max_top_solve_us, perf_baseline_headroom_pct),
-        "max_pointer_move_dispatch_us": apply_perf_baseline_headroom(measured_max_pointer_move_dispatch_us, perf_baseline_headroom_pct),
-        "max_pointer_move_hit_test_us": apply_perf_baseline_headroom(measured_max_pointer_move_hit_test_us, perf_baseline_headroom_pct),
-        "max_pointer_move_global_changes": apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct),
-        "min_run_paint_cache_hit_test_only_replay_allowed_max": apply_perf_baseline_floor(measured_max_run_paint_cache_hit_test_only_replay_allowed_max, perf_baseline_headroom_pct),
-        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": apply_perf_baseline_headroom(measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max, perf_baseline_headroom_pct),
-        "max_renderer_encode_scene_us": apply_perf_baseline_headroom(measured_max_renderer_encode_scene_us, perf_baseline_headroom_pct),
-        "max_renderer_upload_us": apply_perf_baseline_headroom(measured_max_renderer_upload_us, perf_baseline_headroom_pct),
-        "max_renderer_record_passes_us": apply_perf_baseline_headroom(measured_max_renderer_record_passes_us, perf_baseline_headroom_pct),
-        "max_renderer_encoder_finish_us": apply_perf_baseline_headroom(measured_max_renderer_encoder_finish_us, perf_baseline_headroom_pct),
-        "max_renderer_prepare_text_us": apply_perf_baseline_headroom(measured_max_renderer_prepare_text_us, perf_baseline_headroom_pct),
-        "max_renderer_prepare_svg_us": apply_perf_baseline_headroom(measured_max_renderer_prepare_svg_us, perf_baseline_headroom_pct),
+        "max_top_total_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_total_us, perf_baseline_headroom_pct)),
+        "max_top_layout_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_layout_us, perf_baseline_headroom_pct)),
+        "max_top_solve_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_top_solve_us, perf_baseline_headroom_pct)),
+        "max_pointer_move_dispatch_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_dispatch_us, perf_baseline_headroom_pct)),
+        "max_pointer_move_hit_test_us": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_hit_test_us, perf_baseline_headroom_pct)),
+        "max_pointer_move_global_changes": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct)),
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": wants_ui_thresholds.then_some(apply_perf_baseline_floor(measured_max_run_paint_cache_hit_test_only_replay_allowed_max, perf_baseline_headroom_pct)),
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": wants_ui_thresholds.then_some(apply_perf_baseline_headroom(measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max, perf_baseline_headroom_pct)),
+        "max_renderer_encode_scene_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encode_scene_us, perf_baseline_headroom_pct)),
+        "max_renderer_upload_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_upload_us, perf_baseline_headroom_pct)),
+        "max_renderer_record_passes_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_record_passes_us, perf_baseline_headroom_pct)),
+        "max_renderer_encoder_finish_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_encoder_finish_us, perf_baseline_headroom_pct)),
+        "max_renderer_prepare_text_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_text_us, perf_baseline_headroom_pct)),
+        "max_renderer_prepare_svg_us": wants_renderer_thresholds.then_some(apply_perf_baseline_headroom(measured_max_renderer_prepare_svg_us, perf_baseline_headroom_pct)),
     });
 
     let measured_max = serde_json::json!({
@@ -182,6 +186,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         "sort": sort.as_str(),
         "repeat": (rest.len() - 1) as u64,
         "headroom_pct": perf_baseline_headroom_pct,
+        "threshold_surface": perf_baseline_threshold_surface.as_str(),
         "rows": [row],
     });
 

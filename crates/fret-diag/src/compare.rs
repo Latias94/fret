@@ -2357,6 +2357,60 @@ impl std::str::FromStr for PerfThresholdAggregate {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PerfBaselineThresholdSurface {
+    Ui,
+    Renderer,
+    All,
+}
+
+impl PerfBaselineThresholdSurface {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            PerfBaselineThresholdSurface::Ui => "ui",
+            PerfBaselineThresholdSurface::Renderer => "renderer",
+            PerfBaselineThresholdSurface::All => "all",
+        }
+    }
+
+    pub(super) fn includes_ui(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineThresholdSurface::Ui | PerfBaselineThresholdSurface::All
+        )
+    }
+
+    pub(super) fn includes_renderer(self) -> bool {
+        matches!(
+            self,
+            PerfBaselineThresholdSurface::Renderer | PerfBaselineThresholdSurface::All
+        )
+    }
+}
+
+impl std::fmt::Display for PerfBaselineThresholdSurface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for PerfBaselineThresholdSurface {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "ui" | "cpu" | "frame" | "frames" => Ok(PerfBaselineThresholdSurface::Ui),
+            "renderer" | "render" => Ok(PerfBaselineThresholdSurface::Renderer),
+            "all" | "ui+renderer" | "renderer+ui" | "frame+renderer" | "renderer+frame" => {
+                Ok(PerfBaselineThresholdSurface::All)
+            }
+            _ => Err(format!(
+                "invalid threshold surface (expected ui|renderer|all): {s:?}"
+            )),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn scan_perf_threshold_failures(
     script: &str,
