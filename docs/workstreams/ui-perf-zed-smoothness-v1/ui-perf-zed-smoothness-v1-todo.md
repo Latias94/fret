@@ -1204,6 +1204,8 @@ Perf acceptance:
     artificial 240-row non-virtualized button list with a retained virtual list. The page-local view-cache reuse root
     element count drops from `1104` to `137`; top layout nodes drop from `278` to `34`; and the normalized resize
     smoke drops from `total/layout/solve/paint=8810/4774/2229/3711us` to `3971/1788/784/1988us`.
+    Repeat=3 confirmation reports resize-stress p95 `4252/1719/717/2352us` and drag-jitter p95
+    `2066/1310/754/643us`, both with `view_cache_roots_reused=2/2`.
     Decision: keep this as a gallery/component-layer correction, not a core-layout shortcut. Remaining core work should
     target legitimate wide or width-sensitive roots after demo pressure sources are removed.
   - Reference direction: compare with GPUI/Zed's per-frame `request_layout` / `compute_layout` / `layout_bounds`

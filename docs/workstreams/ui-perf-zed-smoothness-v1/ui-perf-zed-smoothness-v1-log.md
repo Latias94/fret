@@ -11497,6 +11497,15 @@ Smoke evidence:
   - Bundle runtime evidence shows the main view-cache reuse root element count dropped from `1104` to `137`; the shell
     reuse root remains `1015`, so the harness fix reduced the page-local torture subtree rather than hiding the shell
     cost.
+- Repeat=3 confirmation after commit:
+  - Stress summary:
+    `target/fret-diag/codex-view-cache-virtualized-list-stress-r3/regression.summary.json`; worst bundle
+    `target/fret-diag/codex-view-cache-virtualized-list-stress-r3/1778319562851/bundle.schema2.json`.
+    Result: `total/layout/solve/paint p95=4252/1719/717/2352us`, with `view_cache_roots_reused=2/2`.
+  - Drag-jitter summary:
+    `target/fret-diag/codex-view-cache-virtualized-list-drag-jitter-r3/regression.summary.json`; worst bundle
+    `target/fret-diag/codex-view-cache-virtualized-list-drag-jitter-r3/1778319609621/bundle.schema2.json`.
+    Result: `total/layout/solve/paint p95=2066/1310/754/643us`, with `view_cache_roots_reused=2/2`.
 
 Decision:
 - Keep the harness virtualized. This follows the GPUI/Zed-style direction of shrinking hot layout boundaries and using
